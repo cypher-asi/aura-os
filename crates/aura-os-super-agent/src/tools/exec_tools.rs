@@ -19,9 +19,15 @@ pub struct StartDevLoopTool;
 
 #[async_trait]
 impl SuperAgentTool for StartDevLoopTool {
-    fn name(&self) -> &str { "start_dev_loop" }
-    fn description(&self) -> &str { "Start a development loop for an agent instance on a project" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Execution }
+    fn name(&self) -> &str {
+        "start_dev_loop"
+    }
+    fn description(&self) -> &str {
+        "Start a development loop for an agent instance on a project"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Execution
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -34,7 +40,11 @@ impl SuperAgentTool for StartDevLoopTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let project_id = input["project_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
@@ -50,6 +60,8 @@ impl SuperAgentTool for StartDevLoopTool {
             task_id: None,
             git_repo_url: None,
             git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
         };
 
         let result = ctx
@@ -77,9 +89,15 @@ pub struct PauseDevLoopTool;
 
 #[async_trait]
 impl SuperAgentTool for PauseDevLoopTool {
-    fn name(&self) -> &str { "pause_dev_loop" }
-    fn description(&self) -> &str { "Pause a running development loop" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Execution }
+    fn name(&self) -> &str {
+        "pause_dev_loop"
+    }
+    fn description(&self) -> &str {
+        "Pause a running development loop"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Execution
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -91,7 +109,11 @@ impl SuperAgentTool for PauseDevLoopTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let automaton_id = input["automaton_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("automaton_id is required".into()))?;
@@ -116,9 +138,15 @@ pub struct StopDevLoopTool;
 
 #[async_trait]
 impl SuperAgentTool for StopDevLoopTool {
-    fn name(&self) -> &str { "stop_dev_loop" }
-    fn description(&self) -> &str { "Stop a running development loop" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Execution }
+    fn name(&self) -> &str {
+        "stop_dev_loop"
+    }
+    fn description(&self) -> &str {
+        "Stop a running development loop"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Execution
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -130,7 +158,11 @@ impl SuperAgentTool for StopDevLoopTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let automaton_id = input["automaton_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("automaton_id is required".into()))?;
@@ -155,9 +187,15 @@ pub struct GetLoopStatusTool;
 
 #[async_trait]
 impl SuperAgentTool for GetLoopStatusTool {
-    fn name(&self) -> &str { "get_loop_status" }
-    fn description(&self) -> &str { "Get the current status of a development loop" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Execution }
+    fn name(&self) -> &str {
+        "get_loop_status"
+    }
+    fn description(&self) -> &str {
+        "Get the current status of a development loop"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Execution
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -169,7 +207,11 @@ impl SuperAgentTool for GetLoopStatusTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let automaton_id = input["automaton_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("automaton_id is required".into()))?;
@@ -195,9 +237,15 @@ pub struct SendToAgentTool;
 
 #[async_trait]
 impl SuperAgentTool for SendToAgentTool {
-    fn name(&self) -> &str { "send_to_agent" }
-    fn description(&self) -> &str { "Send a message/instruction to a running agent instance" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Execution }
+    fn name(&self) -> &str {
+        "send_to_agent"
+    }
+    fn description(&self) -> &str {
+        "Send a message/instruction to a running agent instance"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Execution
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -211,7 +259,11 @@ impl SuperAgentTool for SendToAgentTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let project_id = input["project_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;

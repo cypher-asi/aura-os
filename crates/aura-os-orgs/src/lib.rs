@@ -142,6 +142,7 @@ impl OrgService {
         kind: OrgIntegrationKind,
         default_model: Option<String>,
         provider_config: Option<serde_json::Value>,
+        enabled: Option<bool>,
         secret_update: IntegrationSecretUpdate,
     ) -> Result<OrgIntegration, OrgError> {
         let integration_id = integration_id
@@ -202,6 +203,7 @@ impl OrgService {
             default_model,
             provider_config,
             has_secret,
+            enabled: enabled.unwrap_or_else(|| existing.as_ref().map(|it| it.enabled).unwrap_or(true)),
             secret_last4,
             created_at: existing.as_ref().map(|it| it.created_at).unwrap_or(now),
             updated_at: now,

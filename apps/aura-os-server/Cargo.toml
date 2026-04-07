@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 aura-os-core = { path = "../../crates/aura-os-core" }
+aura-os-integrations = { path = "../../crates/aura-os-integrations" }
 aura-os-store = { path = "../../crates/aura-os-store" }
 aura-os-billing = { path = "../../crates/aura-os-billing" }
 aura-os-orgs = { path = "../../crates/aura-os-orgs" }

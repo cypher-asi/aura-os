@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use tokio::sync::{broadcast, mpsc};
 
-use aura_protocol::{ConversationMessage, InboundMessage, OutboundMessage, SessionProviderConfig};
+use aura_protocol::{
+    ConversationMessage, InboundMessage, InstalledIntegration, OutboundMessage,
+    SessionProviderConfig,
+};
 
 pub struct SessionConfig {
     pub system_prompt: Option<String>,
@@ -20,6 +23,8 @@ pub struct SessionConfig {
     pub project_path: Option<String>,
     /// Domain tools to register with the harness for this session.
     pub installed_tools: Option<Vec<aura_protocol::InstalledTool>>,
+    /// Enabled integrations to authorize for this runtime session.
+    pub installed_integrations: Option<Vec<InstalledIntegration>>,
     /// Storage session UUID for X-Aura-Session-Id billing header.
     pub aura_session_id: Option<String>,
     /// Org UUID for X-Aura-Org-Id billing header.
@@ -43,6 +48,7 @@ impl Default for SessionConfig {
             project_id: None,
             project_path: None,
             installed_tools: None,
+            installed_integrations: None,
             aura_session_id: None,
             aura_org_id: None,
             provider_config: None,

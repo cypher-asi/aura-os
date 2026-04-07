@@ -12,12 +12,16 @@ use tracing::{info, warn};
 use aura_os_agents::AgentService;
 use aura_os_core::{
     Agent, ArtifactType, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessEventId,
-    ProcessEventStatus, ProcessNode, ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId,
-    ProcessRunStatus, ProcessRunTrigger, ProcessId, ProjectId, TaskStatus,
+    ProcessEventStatus, ProcessId, ProcessNode, ProcessNodeId, ProcessNodeType, ProcessRun,
+    ProcessRunId, ProcessRunStatus, ProcessRunTrigger, ProjectId, TaskStatus,
+};
+use aura_os_integrations::{
+    installed_workspace_app_tools as build_installed_workspace_app_tools,
+    installed_workspace_integrations as build_installed_workspace_integrations,
 };
 use aura_os_link::{
-    AutomatonClient, AutomatonStartParams, RunCompletion, start_and_connect,
-    collect_automaton_events,
+    collect_automaton_events, start_and_connect, AutomatonClient, AutomatonStartParams,
+    InstalledIntegration, InstalledTool, RunCompletion,
 };
 use aura_os_orgs::OrgService;
 use aura_os_storage::StorageClient;
@@ -77,7 +81,11 @@ async fn find_workspace_output(workspace: &Path) -> Option<String> {
             }
         }
     }
-    if combined.trim().is_empty() { None } else { Some(combined) }
+    if combined.trim().is_empty() {
+        None
+    } else {
+        Some(combined)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -132,7 +140,11 @@ fn forward_process_event(
     if let Some(sub) = sub_task {
         v["sub_task"] = sub.into();
     }
-    if let Some(t) = v.get("type").and_then(|t| t.as_str()).map(|t| t.to_string()) {
+    if let Some(t) = v
+        .get("type")
+        .and_then(|t| t.as_str())
+        .map(|t| t.to_string())
+    {
         if t == "tool_call_started" {
             v["type"] = "tool_use_start".into();
         }
@@ -376,12 +388,7 @@ impl ProcessExecutor {
         )
         .await
         {
-            mark_run_failed_if_active(
-                &self.store,
-                &self.event_broadcast,
-                &run,
-                &e.to_string(),
-            );
+            mark_run_failed_if_active(&self.store, &self.event_broadcast, &run, &e.to_string());
             return Err(e);
         }
 
@@ -443,9 +450,7 @@ fn topological_sort(
     }
 
     if sorted.len() != nodes.len() {
-        return Err(ProcessError::InvalidGraph(
-            "Graph contains a cycle".into(),
-        ));
+        return Err(ProcessError::InvalidGraph("Graph contains a cycle".into()));
     }
 
     Ok(sorted)
@@ -506,315 +511,428 @@ fn execute_run<'a>(
     org_service: &'a OrgService,
 ) -> Pin<Box<dyn Future<Output = Result<(), ProcessError>> + Send + 'a>> {
     Box::pin(async move {
-    let mut current_run = run.clone();
-    current_run.status = ProcessRunStatus::Running;
-    store.save_run(&current_run)?;
+        let mut current_run = run.clone();
+        current_run.status = ProcessRunStatus::Running;
+        store.save_run(&current_run)?;
 
-    let nodes = store.list_nodes(&run.process_id)?;
-    let connections = store.list_connections(&run.process_id)?;
+        let nodes = store.list_nodes(&run.process_id)?;
+        let connections = store.list_connections(&run.process_id)?;
 
-    let sorted = topological_sort(&nodes, &connections)?;
-    let reachable = reachable_from_ignition(&nodes, &connections);
-    let sorted: Vec<ProcessNodeId> = sorted
-        .into_iter()
-        .filter(|id| reachable.contains(id))
-        .collect();
-    let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
-        nodes.iter().map(|n| (n.node_id, n)).collect();
-
-    let jwt = rocks_store.get_jwt();
-
-    let workspace_dir = data_dir
-        .join("process-workspaces")
-        .join(run.process_id.to_string())
-        .join(run.run_id.to_string());
-    tokio::fs::create_dir_all(&workspace_dir)
-        .await
-        .map_err(|e| ProcessError::Execution(format!("Failed to create process workspace: {e}")))?;
-    let workspace_path = workspace_dir.to_string_lossy().to_string();
-
-    // ── create spec + tasks ────────────────────────────────────────────
-    let process = store.get_process(&run.process_id)?
-        .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?;
-    let project_id = process.project_id
-        .ok_or_else(|| ProcessError::Execution("Process has no project_id".into()))?;
-    let storage = executor.storage_client.as_ref()
-        .ok_or_else(|| ProcessError::Execution("StorageClient required for process execution".into()))?;
-    let (spec_id_for_run, node_task_ids) = create_spec_and_tasks(
-        storage, jwt.as_deref(), &project_id, &process, &nodes, &sorted, &reachable,
-    ).await?;
-
-    // node_id → output text (only present for completed nodes)
-    let mut node_outputs: HashMap<ProcessNodeId, String> = HashMap::new();
-    // condition node_id → whether it evaluated true
-    let mut condition_results: HashMap<ProcessNodeId, bool> = HashMap::new();
-    // aggregate token usage across the run
-    let mut run_input_tokens: u64 = 0;
-    let mut run_output_tokens: u64 = 0;
-
-    for &node_id in &sorted {
-        let node = *nodes_by_id
-            .get(&node_id)
-            .ok_or_else(|| ProcessError::NodeNotFound(node_id.to_string()))?;
-
-        // ── gather upstream context ────────────────────────────────────
-        let incoming: Vec<_> = connections
-            .iter()
-            .filter(|c| c.target_node_id == node_id)
+        let sorted = topological_sort(&nodes, &connections)?;
+        let reachable = reachable_from_ignition(&nodes, &connections);
+        let sorted: Vec<ProcessNodeId> = sorted
+            .into_iter()
+            .filter(|id| reachable.contains(id))
             .collect();
+        let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
+            nodes.iter().map(|n| (n.node_id, n)).collect();
 
-        let mut upstream_parts: Vec<&str> = Vec::new();
-        let mut has_valid_upstream = false;
+        let jwt = rocks_store.get_jwt();
 
-        for conn in &incoming {
-            if let Some(&cond_result) = condition_results.get(&conn.source_node_id) {
-                let is_false_edge = conn.source_handle.as_deref() == Some("false");
-                if (cond_result && is_false_edge) || (!cond_result && !is_false_edge) {
+        let workspace_dir = data_dir
+            .join("process-workspaces")
+            .join(run.process_id.to_string())
+            .join(run.run_id.to_string());
+        tokio::fs::create_dir_all(&workspace_dir)
+            .await
+            .map_err(|e| {
+                ProcessError::Execution(format!("Failed to create process workspace: {e}"))
+            })?;
+        let workspace_path = workspace_dir.to_string_lossy().to_string();
+
+        // ── create spec + tasks ────────────────────────────────────────────
+        let process = store
+            .get_process(&run.process_id)?
+            .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?;
+        let project_id = process
+            .project_id
+            .ok_or_else(|| ProcessError::Execution("Process has no project_id".into()))?;
+        let storage = executor.storage_client.as_ref().ok_or_else(|| {
+            ProcessError::Execution("StorageClient required for process execution".into())
+        })?;
+        let (spec_id_for_run, node_task_ids) = create_spec_and_tasks(
+            storage,
+            jwt.as_deref(),
+            &project_id,
+            &process,
+            &nodes,
+            &sorted,
+            &reachable,
+        )
+        .await?;
+
+        // node_id → output text (only present for completed nodes)
+        let mut node_outputs: HashMap<ProcessNodeId, String> = HashMap::new();
+        // condition node_id → whether it evaluated true
+        let mut condition_results: HashMap<ProcessNodeId, bool> = HashMap::new();
+        // aggregate token usage across the run
+        let mut run_input_tokens: u64 = 0;
+        let mut run_output_tokens: u64 = 0;
+
+        for &node_id in &sorted {
+            let node = *nodes_by_id
+                .get(&node_id)
+                .ok_or_else(|| ProcessError::NodeNotFound(node_id.to_string()))?;
+
+            // ── gather upstream context ────────────────────────────────────
+            let incoming: Vec<_> = connections
+                .iter()
+                .filter(|c| c.target_node_id == node_id)
+                .collect();
+
+            let mut upstream_parts: Vec<&str> = Vec::new();
+            let mut has_valid_upstream = false;
+
+            for conn in &incoming {
+                if let Some(&cond_result) = condition_results.get(&conn.source_node_id) {
+                    let is_false_edge = conn.source_handle.as_deref() == Some("false");
+                    if (cond_result && is_false_edge) || (!cond_result && !is_false_edge) {
+                        continue;
+                    }
+                }
+
+                if let Some(output) = node_outputs.get(&conn.source_node_id) {
+                    has_valid_upstream = true;
+                    if !output.is_empty() {
+                        upstream_parts.push(output);
+                    }
+                }
+            }
+
+            // Nodes with upstream dependencies but no valid completed parent → skip
+            if !incoming.is_empty() && !has_valid_upstream {
+                let now = Utc::now();
+                record_terminal_event(
+                    store,
+                    broadcast,
+                    run,
+                    node,
+                    ProcessEventStatus::Skipped,
+                    "",
+                    "",
+                    now,
+                    now,
+                );
+                continue;
+            }
+
+            let mut upstream_context = upstream_parts.join("\n\n---\n\n");
+
+            // ── resolve input artifact refs ────────────────────────────────
+            if let Some(refs) = node
+                .config
+                .get("input_artifact_refs")
+                .and_then(|v| v.as_array())
+            {
+                for aref in refs {
+                    if let Some(artifact_ctx) = resolve_artifact_ref(aref, store, data_dir).await {
+                        if !upstream_context.is_empty() {
+                            upstream_context.push_str("\n\n---\n\n");
+                        }
+                        upstream_context.push_str(&artifact_ctx);
+                    }
+                }
+            }
+
+            // ── inject vault_path into context if configured ───────────────
+            if let Some(vault_path) = node.config.get("vault_path").and_then(|v| v.as_str()) {
+                if !vault_path.is_empty() {
+                    upstream_context.push_str(&format!(
+                        "\n\n## Obsidian Vault\n\nWrite output to: {vault_path}"
+                    ));
+                }
+            }
+
+            // ── persist + broadcast running status ───────────────────────────
+            let node_started_at = Utc::now();
+            let mut running_event = start_event(
+                store,
+                broadcast,
+                run,
+                node,
+                &upstream_context,
+                node_started_at,
+            );
+
+            // ── check for pinned output (skip execution) ──────────────────
+            if let Some(pinned) = node.config.get("pinned_output").and_then(|v| v.as_str()) {
+                if let Some(ref mut evt) = running_event {
+                    complete_event(
+                        store,
+                        broadcast,
+                        run,
+                        node,
+                        evt,
+                        ProcessEventStatus::Completed,
+                        pinned,
+                        Utc::now(),
+                        None,
+                        None,
+                    );
+                } else {
+                    record_terminal_event(
+                        store,
+                        broadcast,
+                        run,
+                        node,
+                        ProcessEventStatus::Completed,
+                        &upstream_context,
+                        pinned,
+                        node_started_at,
+                        Utc::now(),
+                    );
+                }
+                node_outputs.insert(node_id, pinned.to_string());
+
+                let _ = broadcast.send(serde_json::json!({
+                    "type": "process_run_progress",
+                    "process_id": run.process_id.to_string(),
+                    "run_id": run.run_id.to_string(),
+                    "total_input_tokens": run_input_tokens,
+                    "total_output_tokens": run_output_tokens,
+                    "cost_usd": estimate_cost_usd(run_input_tokens, run_output_tokens),
+                }));
+                continue;
+            }
+
+            // ── execute node ───────────────────────────────────────────────
+            if node.node_type == ProcessNodeType::Ignition {
+                if let Some(ref override_text) = run.input_override {
+                    let now = Utc::now();
+                    if let Some(ref mut evt) = running_event {
+                        complete_event(
+                            store,
+                            broadcast,
+                            run,
+                            node,
+                            evt,
+                            ProcessEventStatus::Completed,
+                            override_text,
+                            now,
+                            None,
+                            None,
+                        );
+                    }
+                    node_outputs.insert(node_id, override_text.clone());
                     continue;
                 }
             }
 
-            if let Some(output) = node_outputs.get(&conn.source_node_id) {
-                has_valid_upstream = true;
-                if !output.is_empty() {
-                    upstream_parts.push(output);
-                }
-            }
-        }
-
-        // Nodes with upstream dependencies but no valid completed parent → skip
-        if !incoming.is_empty() && !has_valid_upstream {
-            let now = Utc::now();
-            record_terminal_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", now, now);
-            continue;
-        }
-
-        let mut upstream_context = upstream_parts.join("\n\n---\n\n");
-
-        // ── resolve input artifact refs ────────────────────────────────
-        if let Some(refs) = node.config.get("input_artifact_refs").and_then(|v| v.as_array()) {
-            for aref in refs {
-                if let Some(artifact_ctx) = resolve_artifact_ref(aref, store, data_dir).await {
-                    if !upstream_context.is_empty() {
-                        upstream_context.push_str("\n\n---\n\n");
-                    }
-                    upstream_context.push_str(&artifact_ctx);
-                }
-            }
-        }
-
-        // ── inject vault_path into context if configured ───────────────
-        if let Some(vault_path) = node.config.get("vault_path").and_then(|v| v.as_str()) {
-            if !vault_path.is_empty() {
-                upstream_context.push_str(&format!(
-                    "\n\n## Obsidian Vault\n\nWrite output to: {vault_path}"
-                ));
-            }
-        }
-
-        // ── persist + broadcast running status ───────────────────────────
-        let node_started_at = Utc::now();
-        let mut running_event = start_event(
-            store, broadcast, run, node, &upstream_context, node_started_at,
-        );
-
-        // ── check for pinned output (skip execution) ──────────────────
-        if let Some(pinned) = node.config.get("pinned_output").and_then(|v| v.as_str()) {
-            if let Some(ref mut evt) = running_event {
-                complete_event(
-                    store, broadcast, run, node, evt,
-                    ProcessEventStatus::Completed, pinned, Utc::now(),
-                    None, None,
-                );
-            } else {
-                record_terminal_event(
-                    store, broadcast, run, node,
-                    ProcessEventStatus::Completed, &upstream_context, pinned,
-                    node_started_at, Utc::now(),
-                );
-            }
-            node_outputs.insert(node_id, pinned.to_string());
-
-            let _ = broadcast.send(serde_json::json!({
-                "type": "process_run_progress",
-                "process_id": run.process_id.to_string(),
-                "run_id": run.run_id.to_string(),
-                "total_input_tokens": run_input_tokens,
-                "total_output_tokens": run_output_tokens,
-                "cost_usd": estimate_cost_usd(run_input_tokens, run_output_tokens),
-            }));
-            continue;
-        }
-
-        // ── execute node ───────────────────────────────────────────────
-        if node.node_type == ProcessNodeType::Ignition {
-            if let Some(ref override_text) = run.input_override {
-                let now = Utc::now();
-                if let Some(ref mut evt) = running_event {
-                    complete_event(
-                        store, broadcast, run, node, evt,
-                        ProcessEventStatus::Completed, override_text, now,
-                        None, None,
-                    );
-                }
-                node_outputs.insert(node_id, override_text.clone());
-                continue;
-            }
-        }
-
-        let result: Result<NodeResult, ProcessError> = match node.node_type {
-            ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult {
-                downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
-            }),
-            ProcessNodeType::Action | ProcessNodeType::Prompt | ProcessNodeType::Artifact | ProcessNodeType::Condition => {
-                let task_id = node_task_ids.get(&node_id)
-                    .ok_or_else(|| ProcessError::Execution(format!("No task created for node {}", node_id)))?;
-                let timeout_secs = node.config.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
-                execute_action_via_automaton(
-                    node, task_id, &project_id, &run.process_id, &run.run_id,
-                    &executor.automaton_client, store, storage, &spec_id_for_run,
-                    Some(broadcast), &workspace_path,
-                    timeout_secs, jwt.as_deref(), &executor.task_service,
-                    agent_service, org_service, &upstream_context,
-                ).await
-            }
-            ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
-                downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
-            }),
-            ProcessNodeType::SubProcess => {
-                execute_subprocess(node, &upstream_context, executor, &run.run_id).await
-            }
-            ProcessNodeType::ForEach => {
-                execute_foreach(node, &upstream_context, executor, &run.run_id).await
-            }
-            ProcessNodeType::Merge => {
-                let display = format!(
-                    "Merged {} upstream output(s) ({} bytes)",
-                    incoming.len(), upstream_context.len(),
-                );
-                Ok(NodeResult {
-                    downstream_output: upstream_context.clone(),
-                    display_output: Some(display),
+            let result: Result<NodeResult, ProcessError> = match node.node_type {
+                ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult {
+                    downstream_output: s,
+                    display_output: None,
                     token_usage: None,
                     content_blocks: None,
-                })
-            }
-        };
-
-        let node_completed_at = Utc::now();
-
-        match result {
-            Ok(node_result) => {
-                if node.node_type == ProcessNodeType::Condition {
-                    condition_results.insert(node_id, parse_condition_result(&node_result.downstream_output));
+                }),
+                ProcessNodeType::Action
+                | ProcessNodeType::Prompt
+                | ProcessNodeType::Artifact
+                | ProcessNodeType::Condition => {
+                    let task_id = node_task_ids.get(&node_id).ok_or_else(|| {
+                        ProcessError::Execution(format!("No task created for node {}", node_id))
+                    })?;
+                    let timeout_secs = node
+                        .config
+                        .get("timeout_seconds")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
+                    execute_action_via_automaton(
+                        node,
+                        task_id,
+                        &project_id,
+                        &run.process_id,
+                        &run.run_id,
+                        &executor.automaton_client,
+                        store,
+                        storage,
+                        &spec_id_for_run,
+                        Some(broadcast),
+                        &workspace_path,
+                        timeout_secs,
+                        jwt.as_deref(),
+                        &executor.task_service,
+                        agent_service,
+                        org_service,
+                        &upstream_context,
+                    )
+                    .await
                 }
-
-                if let Some(ref usage) = node_result.token_usage {
-                    run_input_tokens += usage.input_tokens;
-                    run_output_tokens += usage.output_tokens;
+                ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
+                    downstream_output: s,
+                    display_output: None,
+                    token_usage: None,
+                    content_blocks: None,
+                }),
+                ProcessNodeType::SubProcess => {
+                    execute_subprocess(node, &upstream_context, executor, &run.run_id).await
                 }
-
-                let event_output = node_result.display_output.as_deref()
-                    .unwrap_or(&node_result.downstream_output);
-
-                if let Some(ref mut evt) = running_event {
-                    complete_event(
-                        store, broadcast, run, node, evt,
-                        ProcessEventStatus::Completed, event_output, node_completed_at,
-                        node_result.token_usage.as_ref(),
-                        node_result.content_blocks.as_deref(),
+                ProcessNodeType::ForEach => {
+                    execute_foreach(node, &upstream_context, executor, &run.run_id).await
+                }
+                ProcessNodeType::Merge => {
+                    let display = format!(
+                        "Merged {} upstream output(s) ({} bytes)",
+                        incoming.len(),
+                        upstream_context.len(),
                     );
+                    Ok(NodeResult {
+                        downstream_output: upstream_context.clone(),
+                        display_output: Some(display),
+                        token_usage: None,
+                        content_blocks: None,
+                    })
                 }
+            };
 
-                if let Some(tid) = node_task_ids.get(&node_id) {
-                    if let (Some(task_id), Some(spec_id)) = (tid.parse().ok(), spec_id_for_run.parse().ok()) {
-                        if let Err(e) = executor.task_service.transition_task(&project_id, &spec_id, &task_id, TaskStatus::Done).await {
-                            warn!(task_id = %tid, error = %e, "Failed to transition task to Done");
+            let node_completed_at = Utc::now();
+
+            match result {
+                Ok(node_result) => {
+                    if node.node_type == ProcessNodeType::Condition {
+                        condition_results.insert(
+                            node_id,
+                            parse_condition_result(&node_result.downstream_output),
+                        );
+                    }
+
+                    if let Some(ref usage) = node_result.token_usage {
+                        run_input_tokens += usage.input_tokens;
+                        run_output_tokens += usage.output_tokens;
+                    }
+
+                    let event_output = node_result
+                        .display_output
+                        .as_deref()
+                        .unwrap_or(&node_result.downstream_output);
+
+                    if let Some(ref mut evt) = running_event {
+                        complete_event(
+                            store,
+                            broadcast,
+                            run,
+                            node,
+                            evt,
+                            ProcessEventStatus::Completed,
+                            event_output,
+                            node_completed_at,
+                            node_result.token_usage.as_ref(),
+                            node_result.content_blocks.as_deref(),
+                        );
+                    }
+
+                    if let Some(tid) = node_task_ids.get(&node_id) {
+                        if let (Some(task_id), Some(spec_id)) =
+                            (tid.parse().ok(), spec_id_for_run.parse().ok())
+                        {
+                            if let Err(e) = executor
+                                .task_service
+                                .transition_task(&project_id, &spec_id, &task_id, TaskStatus::Done)
+                                .await
+                            {
+                                warn!(task_id = %tid, error = %e, "Failed to transition task to Done");
+                            }
                         }
                     }
-                }
 
-                node_outputs.insert(node_id, node_result.downstream_output);
-            }
-            Err(e) => {
-                let err_msg = e.to_string();
-                if let Some(ref mut evt) = running_event {
-                    complete_event(
-                        store, broadcast, run, node, evt,
-                        ProcessEventStatus::Failed, &err_msg, node_completed_at,
-                        None, None,
-                    );
+                    node_outputs.insert(node_id, node_result.downstream_output);
                 }
+                Err(e) => {
+                    let err_msg = e.to_string();
+                    if let Some(ref mut evt) = running_event {
+                        complete_event(
+                            store,
+                            broadcast,
+                            run,
+                            node,
+                            evt,
+                            ProcessEventStatus::Failed,
+                            &err_msg,
+                            node_completed_at,
+                            None,
+                            None,
+                        );
+                    }
 
-                if let Some(tid) = node_task_ids.get(&node_id) {
-                    if let (Some(task_id), Some(spec_id)) = (tid.parse().ok(), spec_id_for_run.parse().ok()) {
-                        if let Err(te) = executor.task_service.transition_task(&project_id, &spec_id, &task_id, TaskStatus::Failed).await {
-                            warn!(task_id = %tid, error = %te, "Failed to transition task to Failed");
+                    if let Some(tid) = node_task_ids.get(&node_id) {
+                        if let (Some(task_id), Some(spec_id)) =
+                            (tid.parse().ok(), spec_id_for_run.parse().ok())
+                        {
+                            if let Err(te) = executor
+                                .task_service
+                                .transition_task(
+                                    &project_id,
+                                    &spec_id,
+                                    &task_id,
+                                    TaskStatus::Failed,
+                                )
+                                .await
+                            {
+                                warn!(task_id = %tid, error = %te, "Failed to transition task to Failed");
+                            }
                         }
                     }
+
+                    current_run.status = ProcessRunStatus::Failed;
+                    current_run.error = Some(err_msg);
+                    current_run.completed_at = Some(Utc::now());
+                    current_run.total_input_tokens = Some(run_input_tokens);
+                    current_run.total_output_tokens = Some(run_output_tokens);
+                    current_run.cost_usd =
+                        Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
+                    store.save_run(&current_run)?;
+
+                    let _ = broadcast.send(serde_json::json!({
+                        "type": "process_run_failed",
+                        "process_id": run.process_id.to_string(),
+                        "run_id": run.run_id.to_string(),
+                        "error": current_run.error,
+                        "total_input_tokens": run_input_tokens,
+                        "total_output_tokens": run_output_tokens,
+                        "cost_usd": current_run.cost_usd,
+                    }));
+
+                    return Err(e);
                 }
-
-                current_run.status = ProcessRunStatus::Failed;
-                current_run.error = Some(err_msg);
-                current_run.completed_at = Some(Utc::now());
-                current_run.total_input_tokens = Some(run_input_tokens);
-                current_run.total_output_tokens = Some(run_output_tokens);
-                current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
-                store.save_run(&current_run)?;
-
-                let _ = broadcast.send(serde_json::json!({
-                    "type": "process_run_failed",
-                    "process_id": run.process_id.to_string(),
-                    "run_id": run.run_id.to_string(),
-                    "error": current_run.error,
-                    "total_input_tokens": run_input_tokens,
-                    "total_output_tokens": run_output_tokens,
-                    "cost_usd": current_run.cost_usd,
-                }));
-
-                return Err(e);
             }
         }
-    }
 
-    // Determine canonical run output from terminal (leaf) nodes — those with
-    // no outgoing edges in the graph.
-    let nodes_with_outgoing: std::collections::HashSet<ProcessNodeId> = connections
-        .iter()
-        .map(|c| c.source_node_id)
-        .collect();
-    let terminal_outputs: Vec<&str> = sorted
-        .iter()
-        .filter(|id| !nodes_with_outgoing.contains(id))
-        .filter_map(|id| node_outputs.get(id).map(|s| s.as_str()))
-        .collect();
+        // Determine canonical run output from terminal (leaf) nodes — those with
+        // no outgoing edges in the graph.
+        let nodes_with_outgoing: std::collections::HashSet<ProcessNodeId> =
+            connections.iter().map(|c| c.source_node_id).collect();
+        let terminal_outputs: Vec<&str> = sorted
+            .iter()
+            .filter(|id| !nodes_with_outgoing.contains(id))
+            .filter_map(|id| node_outputs.get(id).map(|s| s.as_str()))
+            .collect();
 
-    let run_output = if terminal_outputs.len() == 1 {
-        Some(terminal_outputs[0].to_string())
-    } else if terminal_outputs.len() > 1 {
-        Some(terminal_outputs.join("\n\n---\n\n"))
-    } else {
-        None
-    };
+        let run_output = if terminal_outputs.len() == 1 {
+            Some(terminal_outputs[0].to_string())
+        } else if terminal_outputs.len() > 1 {
+            Some(terminal_outputs.join("\n\n---\n\n"))
+        } else {
+            None
+        };
 
-    current_run.status = ProcessRunStatus::Completed;
-    current_run.completed_at = Some(Utc::now());
-    current_run.total_input_tokens = Some(run_input_tokens);
-    current_run.total_output_tokens = Some(run_output_tokens);
-    current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
-    current_run.output = run_output;
-    store.save_run(&current_run)?;
+        current_run.status = ProcessRunStatus::Completed;
+        current_run.completed_at = Some(Utc::now());
+        current_run.total_input_tokens = Some(run_input_tokens);
+        current_run.total_output_tokens = Some(run_output_tokens);
+        current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
+        current_run.output = run_output;
+        store.save_run(&current_run)?;
 
-    let _ = broadcast.send(serde_json::json!({
-        "type": "process_run_completed",
-        "process_id": run.process_id.to_string(),
-        "run_id": run.run_id.to_string(),
-        "total_input_tokens": run_input_tokens,
-        "total_output_tokens": run_output_tokens,
-        "cost_usd": current_run.cost_usd,
-    }));
+        let _ = broadcast.send(serde_json::json!({
+            "type": "process_run_completed",
+            "process_id": run.process_id.to_string(),
+            "run_id": run.run_id.to_string(),
+            "total_input_tokens": run_input_tokens,
+            "total_output_tokens": run_output_tokens,
+            "cost_usd": current_run.cost_usd,
+        }));
 
-    Ok(())
+        Ok(())
     }) // end Box::pin(async move { ... })
 }
 
@@ -864,6 +982,30 @@ fn resolve_agent_integration(
     Some(ResolvedIntegration { metadata, secret })
 }
 
+fn installed_capabilities_for_agent(
+    agent: Option<&Agent>,
+    org_service: &OrgService,
+    bearer_token: Option<&str>,
+) -> (
+    Option<Vec<InstalledTool>>,
+    Option<Vec<InstalledIntegration>>,
+) {
+    let Some(agent) = agent else {
+        return (None, None);
+    };
+    let Some(org_id) = agent.org_id.as_ref() else {
+        return (None, None);
+    };
+    let Ok(integrations) = org_service.list_integrations(org_id) else {
+        return (None, None);
+    };
+
+    let installed_tools =
+        bearer_token.map(|token| build_installed_workspace_app_tools(org_id, &integrations, token));
+    let installed_integrations = Some(build_installed_workspace_integrations(&integrations));
+    (installed_tools, installed_integrations)
+}
+
 /// Resolve the effective model using the same cascade as the chat handler:
 /// node config override > agent default > integration default.
 fn effective_model(
@@ -901,7 +1043,8 @@ async fn create_spec_and_tasks(
     sorted: &[ProcessNodeId],
     reachable: &HashSet<ProcessNodeId>,
 ) -> Result<(String, HashMap<ProcessNodeId, String>), ProcessError> {
-    let jwt = jwt.ok_or_else(|| ProcessError::Execution("No JWT available for task creation".into()))?;
+    let jwt =
+        jwt.ok_or_else(|| ProcessError::Execution("No JWT available for task creation".into()))?;
     let pid = project_id.to_string();
 
     let spec = storage
@@ -927,10 +1070,15 @@ async fn create_spec_and_tasks(
         if !reachable.contains(&nid) {
             continue;
         }
-        let Some(node) = nodes_by_id.get(&nid) else { continue };
+        let Some(node) = nodes_by_id.get(&nid) else {
+            continue;
+        };
         let eligible = matches!(
             node.node_type,
-            ProcessNodeType::Action | ProcessNodeType::Prompt | ProcessNodeType::Artifact | ProcessNodeType::Condition
+            ProcessNodeType::Action
+                | ProcessNodeType::Prompt
+                | ProcessNodeType::Artifact
+                | ProcessNodeType::Condition
         );
         if !eligible {
             continue;
@@ -952,7 +1100,12 @@ async fn create_spec_and_tasks(
                 },
             )
             .await
-            .map_err(|e| ProcessError::Execution(format!("Failed to create task for node {}: {e}", node.label)))?;
+            .map_err(|e| {
+                ProcessError::Execution(format!(
+                    "Failed to create task for node {}: {e}",
+                    node.label
+                ))
+            })?;
 
         task_map.insert(nid, task.id.clone());
         info!(node_id = %nid, task_id = %task.id, "Created task for process node");
@@ -971,10 +1124,7 @@ async fn create_spec_and_tasks(
 ///   2. If upstream has `---` delimited sections → one sub-task per section
 ///   3. If upstream has bullet/numbered lists → one sub-task per item
 ///   4. Otherwise → single task (no split)
-fn plan_sub_tasks(
-    node: &ProcessNode,
-    upstream_context: &str,
-) -> Vec<SubTaskPlan> {
+fn plan_sub_tasks(node: &ProcessNode, upstream_context: &str) -> Vec<SubTaskPlan> {
     let trimmed = upstream_context.trim();
     if trimmed.is_empty() {
         return vec![SubTaskPlan {
@@ -987,59 +1137,94 @@ fn plan_sub_tasks(
     if trimmed.starts_with('[') {
         if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(trimmed) {
             if arr.len() > 1 {
-                return arr.iter().enumerate().map(|(i, v)| {
-                    let item_str = if let Some(s) = v.as_str() {
-                        s.to_string()
-                    } else {
-                        serde_json::to_string(v).unwrap_or_default()
-                    };
-                    let title = v.get("name").or_else(|| v.get("title"))
-                        .and_then(|n| n.as_str())
-                        .unwrap_or(&item_str);
-                    let short_title = if title.len() > 60 { &title[..60] } else { title };
-                    SubTaskPlan {
-                        title: format!("#{}: {}", i + 1, short_title),
-                        description: format!("{}\n\nItem:\n{}", node.prompt, item_str),
-                    }
-                }).collect();
+                return arr
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let item_str = if let Some(s) = v.as_str() {
+                            s.to_string()
+                        } else {
+                            serde_json::to_string(v).unwrap_or_default()
+                        };
+                        let title = v
+                            .get("name")
+                            .or_else(|| v.get("title"))
+                            .and_then(|n| n.as_str())
+                            .unwrap_or(&item_str);
+                        let short_title = if title.len() > 60 {
+                            &title[..60]
+                        } else {
+                            title
+                        };
+                        SubTaskPlan {
+                            title: format!("#{}: {}", i + 1, short_title),
+                            description: format!("{}\n\nItem:\n{}", node.prompt, item_str),
+                        }
+                    })
+                    .collect();
             }
         }
     }
 
     // 2. Section-delimited upstream (---) → one sub-task per section
-    let sections: Vec<&str> = trimmed.split("\n---\n")
+    let sections: Vec<&str> = trimmed
+        .split("\n---\n")
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
     if sections.len() > 1 {
-        return sections.iter().enumerate().map(|(i, section)| {
-            let first_line = section.lines().next().unwrap_or("Section");
-            let title = first_line.trim_start_matches('#').trim();
-            let short_title = if title.len() > 60 { &title[..60] } else { title };
-            SubTaskPlan {
-                title: format!("#{}: {}", i + 1, short_title),
-                description: format!("{}\n\nSection:\n{}", node.prompt, section),
-            }
-        }).collect();
+        return sections
+            .iter()
+            .enumerate()
+            .map(|(i, section)| {
+                let first_line = section.lines().next().unwrap_or("Section");
+                let title = first_line.trim_start_matches('#').trim();
+                let short_title = if title.len() > 60 {
+                    &title[..60]
+                } else {
+                    title
+                };
+                SubTaskPlan {
+                    title: format!("#{}: {}", i + 1, short_title),
+                    description: format!("{}\n\nSection:\n{}", node.prompt, section),
+                }
+            })
+            .collect();
     }
 
     // 3. Bullet/numbered list upstream → one sub-task per item
-    let list_items: Vec<&str> = trimmed.lines()
+    let list_items: Vec<&str> = trimmed
+        .lines()
         .map(|l| l.trim())
         .filter(|l| {
-            l.starts_with("- ") || l.starts_with("* ") ||
-            l.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) && l.contains(". ")
+            l.starts_with("- ")
+                || l.starts_with("* ")
+                || l.chars()
+                    .next()
+                    .map(|c| c.is_ascii_digit())
+                    .unwrap_or(false)
+                    && l.contains(". ")
         })
         .collect();
     if list_items.len() > 1 {
-        return list_items.iter().enumerate().map(|(i, item)| {
-            let cleaned = item.trim_start_matches(|c: char| c == '-' || c == '*' || c.is_ascii_digit() || c == '.' || c == ' ');
-            let short_title = if cleaned.len() > 60 { &cleaned[..60] } else { cleaned };
-            SubTaskPlan {
-                title: format!("#{}: {}", i + 1, short_title),
-                description: format!("{}\n\nItem: {}", node.prompt, cleaned),
-            }
-        }).collect();
+        return list_items
+            .iter()
+            .enumerate()
+            .map(|(i, item)| {
+                let cleaned = item.trim_start_matches(|c: char| {
+                    c == '-' || c == '*' || c.is_ascii_digit() || c == '.' || c == ' '
+                });
+                let short_title = if cleaned.len() > 60 {
+                    &cleaned[..60]
+                } else {
+                    cleaned
+                };
+                SubTaskPlan {
+                    title: format!("#{}: {}", i + 1, short_title),
+                    description: format!("{}\n\nItem: {}", node.prompt, cleaned),
+                }
+            })
+            .collect();
     }
 
     // 4. Default: single task
@@ -1076,23 +1261,55 @@ async fn execute_action_via_automaton(
 
     if node.node_type == ProcessNodeType::Condition {
         return execute_single_automaton(
-            node, task_id, project_id, process_id, run_id,
-            automaton_client, store, broadcast, project_path,
-            timeout_secs, token, task_service, agent_service, org_service,
-        ).await;
+            node,
+            task_id,
+            project_id,
+            process_id,
+            run_id,
+            automaton_client,
+            store,
+            broadcast,
+            project_path,
+            timeout_secs,
+            token,
+            task_service,
+            agent_service,
+            org_service,
+        )
+        .await;
     }
 
     let sub_tasks = plan_sub_tasks(node, upstream_context);
 
     if sub_tasks.len() <= 1 {
         if let Some(tx) = broadcast {
-            send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, "Single task — executing directly.\n\n");
+            send_process_text(
+                tx,
+                &proj_str,
+                task_id,
+                &pid_str,
+                &rid_str,
+                &nid_str,
+                "Single task — executing directly.\n\n",
+            );
         }
         return execute_single_automaton(
-            node, task_id, project_id, process_id, run_id,
-            automaton_client, store, broadcast, project_path,
-            timeout_secs, token, task_service, agent_service, org_service,
-        ).await;
+            node,
+            task_id,
+            project_id,
+            process_id,
+            run_id,
+            automaton_client,
+            store,
+            broadcast,
+            project_path,
+            timeout_secs,
+            token,
+            task_service,
+            agent_service,
+            org_service,
+        )
+        .await;
     }
 
     info!(
@@ -1102,7 +1319,15 @@ async fn execute_action_via_automaton(
     );
 
     if let Some(tx) = broadcast {
-        send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
+        send_process_text(
+            tx,
+            &proj_str,
+            task_id,
+            &pid_str,
+            &rid_str,
+            &nid_str,
+            &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()),
+        );
     }
 
     let max_concurrency = node
@@ -1111,7 +1336,8 @@ async fn execute_action_via_automaton(
         .and_then(|v| v.as_u64())
         .unwrap_or(3) as usize;
 
-    let jwt = token.ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
+    let jwt =
+        token.ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
     let pid = project_id.to_string();
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
@@ -1145,8 +1371,20 @@ async fn execute_action_via_automaton(
         );
 
         if let Some(tx) = broadcast {
-            send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
-                &format!("  Creating task {}/{}... {}\n", idx + 1, sub_tasks.len(), sub_task.title));
+            send_process_text(
+                tx,
+                &proj_str,
+                task_id,
+                &pid_str,
+                &rid_str,
+                &nid_str,
+                &format!(
+                    "  Creating task {}/{}... {}\n",
+                    idx + 1,
+                    sub_tasks.len(),
+                    sub_task.title
+                ),
+            );
         }
 
         let sem = semaphore.clone();
@@ -1162,20 +1400,32 @@ async fn execute_action_via_automaton(
         let sub_title = sub_task.title.clone();
         let broadcast_tx = broadcast.cloned();
         let model = {
-            let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
-                agent_service.get_agent_local(aid).ok()
-            });
-            let ri = loaded_agent.as_ref().and_then(|a| resolve_agent_integration(a, org_service));
+            let loaded_agent = node
+                .agent_id
+                .as_ref()
+                .and_then(|aid| agent_service.get_agent_local(aid).ok());
+            let ri = loaded_agent
+                .as_ref()
+                .and_then(|a| resolve_agent_integration(a, org_service));
             effective_model(node, loaded_agent.as_ref(), ri.as_ref())
         };
+        let loaded_agent = node
+            .agent_id
+            .as_ref()
+            .and_then(|aid| agent_service.get_agent_local(aid).ok());
+        let (installed_tools, installed_integrations) = installed_capabilities_for_agent(
+            loaded_agent.as_ref(),
+            org_service,
+            sub_token.as_deref(),
+        );
 
         handles.push(tokio::spawn(async move {
-            let _permit = sem.acquire().await.map_err(|e| {
-                ProcessError::Execution(format!("Semaphore error: {e}"))
-            })?;
+            let _permit = sem
+                .acquire()
+                .await
+                .map_err(|e| ProcessError::Execution(format!("Semaphore error: {e}")))?;
 
-            let authed_ac = ac.clone()
-                .with_auth(sub_token.clone());
+            let authed_ac = ac.clone().with_auth(sub_token.clone());
             let (_start_result, events_tx) = start_and_connect(
                 &authed_ac,
                 AutomatonStartParams {
@@ -1186,6 +1436,8 @@ async fn execute_action_via_automaton(
                     task_id: Some(sub_task_id.clone()),
                     git_repo_url: None,
                     git_branch: None,
+                    installed_tools,
+                    installed_integrations,
                 },
                 2,
             )
@@ -1200,24 +1452,37 @@ async fn execute_action_via_automaton(
             let fwd_nid = sub_node_id.to_string();
             let fwd_title = sub_title.clone();
 
-            let completion = collect_automaton_events(
-                rx,
-                Duration::from_secs(sub_timeout),
-                |evt, evt_type| {
+            let completion =
+                collect_automaton_events(rx, Duration::from_secs(sub_timeout), |evt, evt_type| {
                     if let Some(ref tx) = broadcast_tx {
-                        if matches!(evt_type, "text_delta" | "thinking_delta"
-                            | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
-                            forward_process_event(tx, &fwd_proj, &fwd_tid, &fwd_pid, &fwd_rid, &fwd_nid, evt, Some(&fwd_title));
+                        if matches!(
+                            evt_type,
+                            "text_delta"
+                                | "thinking_delta"
+                                | "tool_use_start"
+                                | "tool_call_started"
+                                | "tool_call_snapshot"
+                                | "tool_result"
+                        ) {
+                            forward_process_event(
+                                tx,
+                                &fwd_proj,
+                                &fwd_tid,
+                                &fwd_pid,
+                                &fwd_rid,
+                                &fwd_nid,
+                                evt,
+                                Some(&fwd_title),
+                            );
                         }
                     }
-                },
-            )
-            .await;
+                })
+                .await;
 
             match completion {
                 RunCompletion::Done(out) | RunCompletion::StreamClosed(out) => {
-                    let output_file_path = Path::new(&sub_project_path)
-                        .join(format!("output-{}.txt", sub_task_id));
+                    let output_file_path =
+                        Path::new(&sub_project_path).join(format!("output-{}.txt", sub_task_id));
                     let file_content = match tokio::fs::read_to_string(&output_file_path).await {
                         Ok(content) if !content.trim().is_empty() => Some(content),
                         _ => None,
@@ -1232,21 +1497,28 @@ async fn execute_action_via_automaton(
                         .unwrap_or(out.output_text);
                     Ok((final_output, out.input_tokens, out.output_tokens, out.model))
                 }
-                RunCompletion::Failed { message, .. } => {
-                    Err(ProcessError::Execution(message))
-                }
-                RunCompletion::Timeout(_) => {
-                    Err(ProcessError::Execution(format!(
-                        "Sub-task timed out after {sub_timeout}s for node {sub_node_id}"
-                    )))
-                }
+                RunCompletion::Failed { message, .. } => Err(ProcessError::Execution(message)),
+                RunCompletion::Timeout(_) => Err(ProcessError::Execution(format!(
+                    "Sub-task timed out after {sub_timeout}s for node {sub_node_id}"
+                ))),
             }
         }));
     }
 
     if let Some(tx) = broadcast {
-        send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
-            &format!("\nExecuting {} sub-tasks (max {} concurrent)...\n\n", sub_tasks.len(), max_concurrency));
+        send_process_text(
+            tx,
+            &proj_str,
+            task_id,
+            &pid_str,
+            &rid_str,
+            &nid_str,
+            &format!(
+                "\nExecuting {} sub-tasks (max {} concurrent)...\n\n",
+                sub_tasks.len(),
+                max_concurrency
+            ),
+        );
     }
 
     let mut merged_parts: Vec<String> = Vec::with_capacity(handles.len());
@@ -1265,8 +1537,21 @@ async fn execute_action_via_automaton(
                     last_model = model;
                 }
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
-                        &format!("\n--- Sub-task {}/{} completed: {} ({} bytes) ---\n", idx + 1, sub_tasks.len(), task_title, output.len()));
+                    send_process_text(
+                        tx,
+                        &proj_str,
+                        task_id,
+                        &pid_str,
+                        &rid_str,
+                        &nid_str,
+                        &format!(
+                            "\n--- Sub-task {}/{} completed: {} ({} bytes) ---\n",
+                            idx + 1,
+                            sub_tasks.len(),
+                            task_title,
+                            output.len()
+                        ),
+                    );
                 }
                 merged_parts.push(output);
             }
@@ -1274,7 +1559,15 @@ async fn execute_action_via_automaton(
                 let msg = format!("Sub-task #{} ({}) failed: {}", idx, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
+                    send_process_text(
+                        tx,
+                        &proj_str,
+                        task_id,
+                        &pid_str,
+                        &rid_str,
+                        &nid_str,
+                        &format!("\n--- {} ---\n", msg),
+                    );
                 }
                 merged_parts.push(format!("(sub-task #{} failed: {})", idx, e));
             }
@@ -1282,7 +1575,15 @@ async fn execute_action_via_automaton(
                 let msg = format!("Sub-task #{} ({}) panicked: {}", idx, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
+                    send_process_text(
+                        tx,
+                        &proj_str,
+                        task_id,
+                        &pid_str,
+                        &rid_str,
+                        &nid_str,
+                        &format!("\n--- {} ---\n", msg),
+                    );
                 }
                 merged_parts.push(format!("(sub-task #{} panicked: {})", idx, e));
             }
@@ -1310,7 +1611,10 @@ async fn execute_action_via_automaton(
         warn!(node_id = %node.node_id, error = %e, "Failed to write merged output");
     }
 
-    let rel_path = format!("process-workspaces/{}/{}/{}", process_id, run_id, output_file);
+    let rel_path = format!(
+        "process-workspaces/{}/{}/{}",
+        process_id, run_id, output_file
+    );
     let artifact = ProcessArtifact {
         artifact_id: ProcessArtifactId::new(),
         process_id: *process_id,
@@ -1329,7 +1633,9 @@ async fn execute_action_via_automaton(
 
     let display = format!(
         "Executed {} sub-tasks in parallel ({} failures), {} total bytes",
-        sub_tasks.len(), failures.len(), merged_output.len()
+        sub_tasks.len(),
+        failures.len(),
+        merged_output.len()
     );
 
     let token_usage = if total_input_tokens > 0 || total_output_tokens > 0 {
@@ -1368,12 +1674,21 @@ async fn execute_single_automaton(
     org_service: &OrgService,
 ) -> Result<NodeResult, ProcessError> {
     let model = {
-        let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
-            agent_service.get_agent_local(aid).ok()
-        });
-        let ri = loaded_agent.as_ref().and_then(|a| resolve_agent_integration(a, org_service));
+        let loaded_agent = node
+            .agent_id
+            .as_ref()
+            .and_then(|aid| agent_service.get_agent_local(aid).ok());
+        let ri = loaded_agent
+            .as_ref()
+            .and_then(|a| resolve_agent_integration(a, org_service));
         effective_model(node, loaded_agent.as_ref(), ri.as_ref())
     };
+    let loaded_agent = node
+        .agent_id
+        .as_ref()
+        .and_then(|aid| agent_service.get_agent_local(aid).ok());
+    let (installed_tools, installed_integrations) =
+        installed_capabilities_for_agent(loaded_agent.as_ref(), org_service, token);
 
     let output_file = node
         .config
@@ -1387,7 +1702,8 @@ async fn execute_single_automaton(
     let instructions_path = Path::new(project_path).join(".process-instructions");
     let _ = tokio::fs::write(&instructions_path, instructions.as_bytes()).await;
 
-    let authed_client = automaton_client.clone()
+    let authed_client = automaton_client
+        .clone()
         .with_auth(token.map(|s| s.to_string()));
     let (start_result, events_tx) = start_and_connect(
         &authed_client,
@@ -1399,6 +1715,8 @@ async fn execute_single_automaton(
             task_id: Some(task_id.to_string()),
             git_repo_url: None,
             git_branch: None,
+            installed_tools,
+            installed_integrations,
         },
         2,
     )
@@ -1420,19 +1738,23 @@ async fn execute_single_automaton(
     let nid = node.node_id.to_string();
     let tx = broadcast.cloned();
 
-    let completion = collect_automaton_events(
-        rx,
-        Duration::from_secs(timeout_secs),
-        |evt, evt_type| {
+    let completion =
+        collect_automaton_events(rx, Duration::from_secs(timeout_secs), |evt, evt_type| {
             if let Some(ref tx) = tx {
-                if matches!(evt_type, "text_delta" | "thinking_delta"
-                    | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
+                if matches!(
+                    evt_type,
+                    "text_delta"
+                        | "thinking_delta"
+                        | "tool_use_start"
+                        | "tool_call_started"
+                        | "tool_call_snapshot"
+                        | "tool_result"
+                ) {
                     forward_process_event(tx, &proj, &tid, &pid, &rid, &nid, evt, None);
                 }
             }
-        },
-    )
-    .await;
+        })
+        .await;
 
     let out = match completion {
         RunCompletion::Done(out) | RunCompletion::StreamClosed(out) => out,
@@ -1441,7 +1763,8 @@ async fn execute_single_automaton(
         }
         RunCompletion::Timeout(_) => {
             return Err(ProcessError::Execution(format!(
-                "Automaton timed out after {timeout_secs}s for node {}", node.node_id
+                "Automaton timed out after {timeout_secs}s for node {}",
+                node.node_id
             )));
         }
     };
@@ -1464,11 +1787,15 @@ async fn execute_single_automaton(
 
     if downstream.trim().is_empty() {
         return Err(ProcessError::Execution(format!(
-            "Automaton produced no output for node {}", node.node_id
+            "Automaton produced no output for node {}",
+            node.node_id
         )));
     }
 
-    let rel_path = format!("process-workspaces/{}/{}/{}", process_id, run_id, output_file);
+    let rel_path = format!(
+        "process-workspaces/{}/{}/{}",
+        process_id, run_id, output_file
+    );
     let artifact = ProcessArtifact {
         artifact_id: ProcessArtifactId::new(),
         process_id: *process_id,
@@ -1499,7 +1826,11 @@ async fn execute_single_automaton(
         downstream_output: downstream,
         display_output: None,
         token_usage,
-        content_blocks: if out.content_blocks.is_empty() { None } else { Some(out.content_blocks) },
+        content_blocks: if out.content_blocks.is_empty() {
+            None
+        } else {
+            Some(out.content_blocks)
+        },
     })
 }
 
@@ -1534,15 +1865,13 @@ async fn execute_subprocess(
         .config
         .get("child_process_id")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| ProcessError::Execution(
-            "SubProcess node missing 'child_process_id' in config".into(),
-        ))?;
+        .ok_or_else(|| {
+            ProcessError::Execution("SubProcess node missing 'child_process_id' in config".into())
+        })?;
 
-    let child_process_id: ProcessId = child_process_id_str
-        .parse()
-        .map_err(|_| ProcessError::Execution(format!(
-            "Invalid child_process_id: {child_process_id_str}"
-        )))?;
+    let child_process_id: ProcessId = child_process_id_str.parse().map_err(|_| {
+        ProcessError::Execution(format!("Invalid child_process_id: {child_process_id_str}"))
+    })?;
 
     let timeout_secs = node
         .config
@@ -1574,15 +1903,17 @@ async fn execute_subprocess(
         ),
     )
     .await
-    .map_err(|_| ProcessError::Execution(format!(
+    .map_err(|_| {
+        ProcessError::Execution(format!(
         "SubProcess timed out after {timeout_secs}s waiting for child process {child_process_id}"
-    )))?
-    ?;
+    ))
+    })??;
 
     let output = child_run.output.unwrap_or_default();
     let display = format!(
         "SubProcess completed (child run {}): {} bytes output",
-        child_run.run_id, output.len()
+        child_run.run_id,
+        output.len()
     );
 
     let mut token_usage = None;
@@ -1612,15 +1943,13 @@ async fn execute_foreach(
         .config
         .get("child_process_id")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| ProcessError::Execution(
-            "ForEach node missing 'child_process_id' in config".into(),
-        ))?;
+        .ok_or_else(|| {
+            ProcessError::Execution("ForEach node missing 'child_process_id' in config".into())
+        })?;
 
-    let child_process_id: ProcessId = child_process_id_str
-        .parse()
-        .map_err(|_| ProcessError::Execution(format!(
-            "Invalid child_process_id: {child_process_id_str}"
-        )))?;
+    let child_process_id: ProcessId = child_process_id_str.parse().map_err(|_| {
+        ProcessError::Execution(format!("Invalid child_process_id: {child_process_id_str}"))
+    })?;
 
     let max_concurrency = node
         .config
@@ -1649,24 +1978,32 @@ async fn execute_foreach(
     let items: Vec<String> = match iterator_mode {
         "json_array" => {
             let parsed: Vec<serde_json::Value> = serde_json::from_str(upstream_context.trim())
-                .map_err(|e| ProcessError::Execution(format!(
-                    "ForEach: failed to parse upstream as JSON array: {e}"
-                )))?;
-            parsed.iter().map(|v| {
-                if let Some(s) = v.as_str() { s.to_string() }
-                else { serde_json::to_string(v).unwrap_or_default() }
-            }).collect()
-        }
-        "line_delimited" => {
-            upstream_context
-                .lines()
-                .map(|l| l.trim())
-                .filter(|l| !l.is_empty())
-                .map(|l| l.to_string())
+                .map_err(|e| {
+                    ProcessError::Execution(format!(
+                        "ForEach: failed to parse upstream as JSON array: {e}"
+                    ))
+                })?;
+            parsed
+                .iter()
+                .map(|v| {
+                    if let Some(s) = v.as_str() {
+                        s.to_string()
+                    } else {
+                        serde_json::to_string(v).unwrap_or_default()
+                    }
+                })
                 .collect()
         }
+        "line_delimited" => upstream_context
+            .lines()
+            .map(|l| l.trim())
+            .filter(|l| !l.is_empty())
+            .map(|l| l.to_string())
+            .collect(),
         _ => {
-            let sep = node.config.get("separator")
+            let sep = node
+                .config
+                .get("separator")
                 .and_then(|v| v.as_str())
                 .unwrap_or("\n");
             upstream_context
@@ -1711,9 +2048,10 @@ async fn execute_foreach(
         let item_var = item_variable.to_string();
 
         handles.push(tokio::spawn(async move {
-            let _permit = sem.acquire().await.map_err(|e| {
-                ProcessError::Execution(format!("ForEach semaphore error: {e}"))
-            })?;
+            let _permit = sem
+                .acquire()
+                .await
+                .map_err(|e| ProcessError::Execution(format!("ForEach semaphore error: {e}")))?;
 
             let input = if prompt.is_empty() {
                 format!("## {item_var} (#{idx})\n\n{item}")
@@ -1721,18 +2059,13 @@ async fn execute_foreach(
                 format!("## {item_var} (#{idx})\n\n{item}\n\n## Task\n\n{prompt}")
             };
 
-            exec.trigger_and_await(
-                &cpid,
-                ProcessRunTrigger::Manual,
-                Some(input),
-                Some(prid),
-            ).await
+            exec.trigger_and_await(&cpid, ProcessRunTrigger::Manual, Some(input), Some(prid))
+                .await
         }));
     }
 
-    let timeout_result = tokio::time::timeout(
-        Duration::from_secs(timeout_secs),
-        async {
+    let timeout_result =
+        tokio::time::timeout(Duration::from_secs(timeout_secs), async {
             let mut results = Vec::with_capacity(handles.len());
             for handle in handles {
                 results.push(handle.await.map_err(|e| {
@@ -1740,15 +2073,17 @@ async fn execute_foreach(
                 })?);
             }
             Ok::<Vec<Result<ProcessRun, ProcessError>>, ProcessError>(results)
-        }
-    ).await;
+        })
+        .await;
 
     let child_results = match timeout_result {
         Ok(Ok(results)) => results,
         Ok(Err(e)) => return Err(e),
-        Err(_) => return Err(ProcessError::Execution(format!(
-            "ForEach timed out after {timeout_secs}s"
-        ))),
+        Err(_) => {
+            return Err(ProcessError::Execution(format!(
+                "ForEach timed out after {timeout_secs}s"
+            )))
+        }
     };
 
     let mut outputs = Vec::new();
@@ -1761,7 +2096,10 @@ async fn execute_foreach(
             Ok(run) => {
                 total_input += run.total_input_tokens.unwrap_or(0);
                 total_output += run.total_output_tokens.unwrap_or(0);
-                outputs.push(run.output.unwrap_or_else(|| format!("(no output for item #{})", idx)));
+                outputs.push(
+                    run.output
+                        .unwrap_or_else(|| format!("(no output for item #{})", idx)),
+                );
             }
             Err(e) => {
                 failures += 1;
@@ -1778,7 +2116,8 @@ async fn execute_foreach(
 
     let downstream = match collect_mode {
         "json_array" => {
-            let arr: Vec<serde_json::Value> = outputs.iter()
+            let arr: Vec<serde_json::Value> = outputs
+                .iter()
                 .map(|s| serde_json::Value::String(s.clone()))
                 .collect();
             serde_json::to_string_pretty(&arr).unwrap_or_else(|_| outputs.join("\n\n---\n\n"))
@@ -1788,7 +2127,10 @@ async fn execute_foreach(
 
     let display = format!(
         "ForEach completed: {} items, {} failures, {} input tokens, {} output tokens",
-        items.len(), failures, total_input, total_output
+        items.len(),
+        failures,
+        total_input,
+        total_output
     );
 
     let token_usage = if total_input > 0 || total_output > 0 {
@@ -1851,9 +2193,7 @@ async fn resolve_artifact_ref(
         return None;
     }
 
-    let artifacts = store
-        .list_artifacts_for_process(&source_process_id)
-        .ok()?;
+    let artifacts = store.list_artifacts_for_process(&source_process_id).ok()?;
 
     let matched = if let Some(name) = artifact_name {
         artifacts.into_iter().filter(|a| a.name == name).last()
@@ -1875,11 +2215,15 @@ fn mark_run_failed_if_active(
     run: &ProcessRun,
     error: &str,
 ) {
-    let current = store.list_runs(&run.process_id).ok().and_then(|runs| {
-        runs.into_iter().find(|r| r.run_id == run.run_id)
-    });
+    let current = store
+        .list_runs(&run.process_id)
+        .ok()
+        .and_then(|runs| runs.into_iter().find(|r| r.run_id == run.run_id));
     let dominated = current.as_ref().map_or(true, |r| {
-        matches!(r.status, ProcessRunStatus::Pending | ProcessRunStatus::Running)
+        matches!(
+            r.status,
+            ProcessRunStatus::Pending | ProcessRunStatus::Running
+        )
     });
     if !dominated {
         return;

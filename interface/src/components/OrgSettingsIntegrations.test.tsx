@@ -166,6 +166,7 @@ describe("OrgSettingsIntegrations", () => {
           kind: "workspace_connection",
           default_model: null,
           has_secret: false,
+          enabled: true,
           secret_last4: null,
           provider_config: null,
           created_at: new Date().toISOString(),
@@ -184,5 +185,37 @@ describe("OrgSettingsIntegrations", () => {
 
     expect(screen.getByLabelText(/Integration name for UI Test OpenAI/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+  });
+
+  it("shows and toggles enabled state for app integrations", async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn().mockResolvedValue(null);
+
+    render(
+      <OrgSettingsIntegrations
+        integrations={[{
+          integration_id: "int-github",
+          org_id: "org-1",
+          name: "GitHub Ops",
+          provider: "github",
+          kind: "workspace_integration",
+          default_model: null,
+          has_secret: true,
+          enabled: false,
+          secret_last4: "1234",
+          provider_config: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }]}
+        busyId={null}
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={onUpdate}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText("Disabled")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Enable" }));
+    expect(onUpdate).toHaveBeenCalledWith("int-github", { enabled: true });
   });
 });

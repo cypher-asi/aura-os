@@ -258,6 +258,8 @@ pub(crate) struct CreateOrgIntegrationRequest {
     pub provider_config: Option<serde_json::Value>,
     #[serde(default)]
     pub api_key: Option<String>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -272,6 +274,8 @@ pub(crate) struct UpdateOrgIntegrationRequest {
     pub provider_config: Option<Option<serde_json::Value>>,
     #[serde(default, deserialize_with = "deserialize_patch_option")]
     pub api_key: Option<Option<String>>,
+    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    pub enabled: Option<Option<bool>>,
 }
 
 fn default_org_integration_kind() -> aura_os_core::OrgIntegrationKind {

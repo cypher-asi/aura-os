@@ -13,6 +13,9 @@ use aura_os_projects::CreateProjectInput;
 use crate::dto::{CreateProjectRequest, ImportedProjectFile};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
+use crate::handlers::agents::workspace_tools::{
+    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -105,7 +108,10 @@ pub(crate) fn normalize_project_workspace(state: &AppState, project: &Project) -
     project.clone()
 }
 
-pub(crate) fn canonical_workspace_path(data_dir: &std::path::Path, project_id: &ProjectId) -> PathBuf {
+pub(crate) fn canonical_workspace_path(
+    data_dir: &std::path::Path,
+    project_id: &ProjectId,
+) -> PathBuf {
     data_dir.join("workspaces").join(project_id.to_string())
 }
 
@@ -174,7 +180,9 @@ async fn resolve_project_tool_workspace_path(
     harness_mode: HarnessMode,
     agent_instance_id: Option<AgentInstanceId>,
 ) -> Option<String> {
-    if let Some(path) = resolve_agent_instance_workspace_path(state, project_id, agent_instance_id).await {
+    if let Some(path) =
+        resolve_agent_instance_workspace_path(state, project_id, agent_instance_id).await
+    {
         return Some(path);
     }
 
@@ -183,7 +191,12 @@ async fn resolve_project_tool_workspace_path(
         HarnessMode::Local => "local",
         HarnessMode::Swarm => "remote",
     };
-    resolve_project_workspace_path_for_machine(state, project_id, Some(project.name.as_str()), machine_type)
+    resolve_project_workspace_path_for_machine(
+        state,
+        project_id,
+        Some(project.name.as_str()),
+        machine_type,
+    )
 }
 
 /// Build a standard project tool session config with JWT propagation.
@@ -211,6 +224,28 @@ pub(crate) async fn project_tool_session_config(
     let project_path =
         resolve_project_tool_workspace_path(state, project_id, harness_mode, agent_instance_id)
             .await;
+    let installed_tools = match state.project_service.get_project(project_id).ok() {
+        Some(project) => {
+            let tools = installed_workspace_app_tools(state, &project.org_id, jwt);
+            if tools.is_empty() {
+                None
+            } else {
+                Some(tools)
+            }
+        }
+        None => None,
+    };
+    let installed_integrations = match state.project_service.get_project(project_id).ok() {
+        Some(project) => {
+            let integrations = installed_workspace_integrations_for_org(state, &project.org_id);
+            if integrations.is_empty() {
+                None
+            } else {
+                Some(integrations)
+            }
+        }
+        None => None,
+    };
     SessionConfig {
         agent_id: if let Some(instance) = remote_instance.as_ref() {
             Some(instance.agent_id.to_string())
@@ -228,6 +263,8 @@ pub(crate) async fn project_tool_session_config(
         token: Some(jwt.to_string()),
         project_id: Some(project_id.to_string()),
         project_path,
+        installed_tools,
+        installed_integrations,
         ..Default::default()
     }
 }

@@ -133,9 +133,9 @@ fn validate_mcp_server_config(
             "MCP server integrations must use the `mcp_server` provider.",
         ));
     }
-    let config = provider_config
-        .and_then(Value::as_object)
-        .ok_or_else(|| ApiError::bad_request("MCP server integrations require an object provider_config."))?;
+    let config = provider_config.and_then(Value::as_object).ok_or_else(|| {
+        ApiError::bad_request("MCP server integrations require an object provider_config.")
+    })?;
     let transport = config
         .get("transport")
         .and_then(Value::as_str)
@@ -158,7 +158,9 @@ fn validate_mcp_server_config(
                 ApiError::bad_request("HTTP MCP servers require a non-empty `url`.")
             })?;
             if Url::parse(url).is_err() {
-                return Err(ApiError::bad_request("HTTP MCP servers require a valid absolute `url`."));
+                return Err(ApiError::bad_request(
+                    "HTTP MCP servers require a valid absolute `url`.",
+                ));
             }
         }
         other => {
@@ -195,10 +197,74 @@ fn validate_mcp_server_config(
             ApiError::bad_request("MCP server `cwd` must be a string when provided.")
         })?;
         if cwd.is_empty() {
-            return Err(ApiError::bad_request("MCP server `cwd` cannot be empty when provided."));
+            return Err(ApiError::bad_request(
+                "MCP server `cwd` cannot be empty when provided.",
+            ));
         }
     }
 
+    Ok(())
+}
+
+fn validate_workspace_integration_config(
+    kind: &OrgIntegrationKind,
+    provider: &str,
+    provider_config: Option<&Value>,
+) -> ApiResult<()> {
+    if *kind != OrgIntegrationKind::WorkspaceIntegration {
+        return Ok(());
+    }
+
+    match provider.trim() {
+        "metricool" => {
+            let config = provider_config.and_then(Value::as_object).ok_or_else(|| {
+                ApiError::bad_request(
+                    "Metricool integrations require provider_config with `userId` and `blogId`.",
+                )
+            })?;
+            for key in ["userId", "blogId"] {
+                let value = config.get(key).and_then(Value::as_str).map(str::trim);
+                if value.filter(|value| !value.is_empty()).is_none() {
+                    return Err(ApiError::bad_request(format!(
+                        "Metricool integrations require a non-empty `{key}` config field."
+                    )));
+                }
+            }
+        }
+        "mailchimp" => {
+            if let Some(config) = provider_config {
+                let config = config.as_object().ok_or_else(|| {
+                    ApiError::bad_request(
+                        "Mailchimp provider_config must be a JSON object when provided.",
+                    )
+                })?;
+                if let Some(server_prefix) = config.get("serverPrefix") {
+                    let server_prefix = server_prefix.as_str().map(str::trim).ok_or_else(|| {
+                        ApiError::bad_request(
+                            "Mailchimp `serverPrefix` must be a string when provided.",
+                        )
+                    })?;
+                    if server_prefix.is_empty() {
+                        return Err(ApiError::bad_request(
+                            "Mailchimp `serverPrefix` cannot be empty when provided.",
+                        ));
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn validate_org_integration_config(
+    kind: &OrgIntegrationKind,
+    provider: &str,
+    provider_config: Option<&Value>,
+) -> ApiResult<()> {
+    validate_mcp_server_config(kind, provider, provider_config)?;
+    validate_workspace_integration_config(kind, provider, provider_config)?;
     Ok(())
 }
 
@@ -312,7 +378,7 @@ pub(crate) async fn create_integration(
     Path(org_id): Path<OrgId>,
     Json(req): Json<CreateOrgIntegrationRequest>,
 ) -> ApiResult<(StatusCode, Json<OrgIntegration>)> {
-    validate_mcp_server_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
+    validate_org_integration_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
     let integration = state
         .org_service
         .upsert_integration(
@@ -323,6 +389,7 @@ pub(crate) async fn create_integration(
             req.kind,
             req.default_model,
             req.provider_config,
+            req.enabled,
             match req.api_key {
                 Some(secret) => IntegrationSecretUpdate::Set(secret),
                 None => IntegrationSecretUpdate::Preserve,
@@ -343,13 +410,20 @@ pub(crate) async fn update_integration(
         .get_integration(&org_id, &integration_id)
         .map_err(map_org_err)?
         .ok_or_else(|| ApiError::not_found("integration not found"))?;
-    let provider = req.provider.clone().unwrap_or_else(|| existing.provider.clone());
+    let provider = req
+        .provider
+        .clone()
+        .unwrap_or_else(|| existing.provider.clone());
     let kind = req.kind.clone().unwrap_or_else(|| existing.kind.clone());
     let provider_config = match req.provider_config.clone() {
         Some(value) => value,
         None => existing.provider_config.clone(),
     };
-    validate_mcp_server_config(&kind, &provider, provider_config.as_ref())?;
+    let enabled = match req.enabled {
+        Some(value) => value,
+        None => Some(existing.enabled),
+    };
+    validate_org_integration_config(&kind, &provider, provider_config.as_ref())?;
     let integration = state
         .org_service
         .upsert_integration(
@@ -363,6 +437,7 @@ pub(crate) async fn update_integration(
                 None => existing.default_model,
             },
             provider_config,
+            enabled,
             match req.api_key {
                 Some(Some(value)) => IntegrationSecretUpdate::Set(value),
                 Some(None) => IntegrationSecretUpdate::Clear,

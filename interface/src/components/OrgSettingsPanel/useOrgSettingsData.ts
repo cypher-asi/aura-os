@@ -97,6 +97,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     default_model?: string | null;
     provider_config?: Record<string, unknown> | null;
     api_key?: string | null;
+    enabled?: boolean | null;
   }) => {
     if (!orgId) return null;
     setIntegrationBusyId("new");
@@ -117,6 +118,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       default_model?: string | null;
       provider_config?: Record<string, unknown> | null;
       api_key?: string | null;
+      enabled?: boolean | null;
     },
   ) => {
     if (!orgId) return null;

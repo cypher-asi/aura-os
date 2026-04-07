@@ -1,12 +1,12 @@
 mod common;
 
-use axum::Json;
 use axum::body::Body;
-use axum::routing::{get, post};
 use axum::http::{Request, StatusCode};
+use axum::routing::{get, post};
+use axum::Json;
 use axum::Router;
-use tower::ServiceExt;
 use tokio::net::TcpListener;
+use tower::ServiceExt;
 
 use aura_os_core::*;
 
@@ -127,6 +127,7 @@ async fn org_integrations_support_tool_and_model_provider_strings() {
     assert_eq!(created["kind"], "workspace_integration");
     assert_eq!(created["default_model"], serde_json::Value::Null);
     assert_eq!(created["has_secret"], true);
+    assert_eq!(created["enabled"], true);
 
     let req = json_request("GET", &format!("/api/orgs/{org_id}/integrations"), None);
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -154,6 +155,7 @@ async fn org_integrations_support_tool_and_model_provider_strings() {
     assert_eq!(updated["kind"], "workspace_connection");
     assert_eq!(updated["default_model"], "gpt-5.1");
     assert_eq!(updated["has_secret"], true);
+    assert_eq!(updated["enabled"], true);
 
     let req = json_request(
         "DELETE",
@@ -198,7 +200,11 @@ async fn org_integrations_support_mcp_server_provider_config() {
     assert_eq!(created["kind"], "mcp_server");
     assert_eq!(created["provider"], "mcp_server");
     assert_eq!(created["provider_config"]["transport"], "stdio");
-    assert_eq!(created["provider_config"]["secretEnvVar"], "GITHUB_PERSONAL_ACCESS_TOKEN");
+    assert_eq!(created["enabled"], true);
+    assert_eq!(
+        created["provider_config"]["secretEnvVar"],
+        "GITHUB_PERSONAL_ACCESS_TOKEN"
+    );
     assert_eq!(
         state
             .org_service
@@ -227,6 +233,7 @@ async fn org_integrations_support_mcp_server_provider_config() {
     assert_eq!(resp.status(), StatusCode::OK);
     let updated = response_json(resp).await;
     assert_eq!(updated["has_secret"], false);
+    assert_eq!(updated["enabled"], true);
     assert_eq!(
         state
             .org_service
@@ -268,6 +275,45 @@ async fn org_integrations_reject_invalid_mcp_server_configs() {
             "provider_config": {
                 "transport": "http",
                 "url": "not-a-url"
+            }
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
+}
+
+#[tokio::test]
+async fn org_integrations_reject_invalid_workspace_integration_configs() {
+    let (app, _state, _db) = build_test_app();
+    let org_id = OrgId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/integrations"),
+        Some(serde_json::json!({
+            "name": "Metricool",
+            "provider": "metricool",
+            "kind": "workspace_integration",
+            "api_key": "metricool_test"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/integrations"),
+        Some(serde_json::json!({
+            "name": "Mailchimp",
+            "provider": "mailchimp",
+            "kind": "workspace_integration",
+            "api_key": "mailchimp_test-us19",
+            "provider_config": {
+                "serverPrefix": ""
             }
         })),
     );
@@ -384,6 +430,160 @@ async fn org_tool_actions_use_saved_integrations() {
                     }
                 }))
             }),
+        )
+        .route(
+            "/brave/res/v1/web/search",
+            get(|| async {
+                Json(serde_json::json!({
+                    "web": {
+                        "results": [{
+                            "title": "Brave result",
+                            "url": "https://example.com",
+                            "description": "Example result"
+                        }]
+                    },
+                    "query": { "more_results_available": false }
+                }))
+            }),
+        )
+        .route(
+            "/brave/res/v1/news/search",
+            get(|| async {
+                Json(serde_json::json!({
+                    "news": {
+                        "results": [{
+                            "title": "Brave news",
+                            "url": "https://news.example.com",
+                            "description": "Headline"
+                        }]
+                    },
+                    "query": { "more_results_available": false }
+                }))
+            }),
+        )
+        .route(
+            "/freepik/v1/icons",
+            get(|| async {
+                Json(serde_json::json!({
+                    "data": [{
+                        "id": 52912,
+                        "name": "Cat Icon",
+                        "slug": "cat-icon",
+                        "family": { "name": "Outline" },
+                        "style": { "name": "solid" }
+                    }],
+                    "meta": { "page": 1 }
+                }))
+            }),
+        )
+        .route(
+            "/freepik/v1/ai/improve-prompt",
+            post(|| async {
+                Json(serde_json::json!({
+                    "data": {
+                        "task_id": "task-1",
+                        "status": "CREATED",
+                        "generated": []
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/buffer/profiles.json",
+            get(|| async {
+                Json(serde_json::json!([{
+                    "id": "profile-1",
+                    "formatted_username": "@aura",
+                    "service": "twitter",
+                    "service_username": "aura"
+                }]))
+            }),
+        )
+        .route(
+            "/buffer/updates/create.json",
+            post(|| async {
+                Json(serde_json::json!({
+                    "success": true,
+                    "updates": [{
+                        "id": "update-1",
+                        "status": "buffer",
+                        "text": "Ship it",
+                        "service": "twitter"
+                    }]
+                }))
+            }),
+        )
+        .route(
+            "/apify/acts",
+            get(|| async {
+                Json(serde_json::json!({
+                    "data": {
+                        "items": [{
+                            "id": "actor-1",
+                            "name": "Example Actor",
+                            "username": "aura"
+                        }]
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/apify/acts/my-actor/runs",
+            post(|| async {
+                Json(serde_json::json!({
+                    "data": {
+                        "id": "run-1",
+                        "status": "READY",
+                        "actId": "actor-1"
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/metricool/admin/simpleProfiles",
+            get(|| async {
+                Json(serde_json::json!([{
+                    "id": 654321,
+                    "userId": 123456,
+                    "label": "Aura Brand"
+                }]))
+            }),
+        )
+        .route(
+            "/metricool/stats/posts",
+            get(|| async {
+                Json(serde_json::json!([{
+                    "id": 1,
+                    "title": "Metricool post",
+                    "url": "https://example.com/post",
+                    "published": true
+                }]))
+            }),
+        )
+        .route(
+            "/mailchimp/lists",
+            get(|| async {
+                Json(serde_json::json!({
+                    "lists": [{
+                        "id": "list-1",
+                        "name": "Players",
+                        "stats": { "member_count": 128 }
+                    }]
+                }))
+            }),
+        )
+        .route(
+            "/mailchimp/campaigns",
+            get(|| async {
+                Json(serde_json::json!({
+                    "campaigns": [{
+                        "id": "camp-1",
+                        "status": "save",
+                        "settings": { "title": "Launch Email" },
+                        "emails_sent": 0
+                    }]
+                }))
+            }),
         );
 
     let provider_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -393,29 +593,108 @@ async fn org_tool_actions_use_saved_integrations() {
 
     unsafe {
         std::env::set_var("AURA_GITHUB_API_BASE_URL", format!("{provider_url}/github"));
-        std::env::set_var("AURA_LINEAR_API_BASE_URL", format!("{provider_url}/linear/graphql"));
+        std::env::set_var(
+            "AURA_LINEAR_API_BASE_URL",
+            format!("{provider_url}/linear/graphql"),
+        );
         std::env::set_var("AURA_SLACK_API_BASE_URL", format!("{provider_url}/slack"));
         std::env::set_var("AURA_NOTION_API_BASE_URL", format!("{provider_url}/notion"));
+        std::env::set_var(
+            "AURA_BRAVE_SEARCH_API_BASE_URL",
+            format!("{provider_url}/brave"),
+        );
+        std::env::set_var(
+            "AURA_FREEPIK_API_BASE_URL",
+            format!("{provider_url}/freepik"),
+        );
+        std::env::set_var("AURA_BUFFER_API_BASE_URL", format!("{provider_url}/buffer"));
+        std::env::set_var("AURA_APIFY_API_BASE_URL", format!("{provider_url}/apify"));
+        std::env::set_var(
+            "AURA_METRICOOL_API_BASE_URL",
+            format!("{provider_url}/metricool"),
+        );
+        std::env::set_var(
+            "AURA_MAILCHIMP_API_BASE_URL",
+            format!("{provider_url}/mailchimp"),
+        );
     }
 
     let (app, _state, _db) = build_test_app();
     let org_id = OrgId::new();
 
-    for (name, provider, api_key) in [
-        ("GitHub", "github", "ghp_test"),
-        ("Linear", "linear", "lin_api_test"),
-        ("Slack", "slack", "xoxb-test"),
-        ("Notion", "notion", "secret_test"),
+    for payload in [
+        serde_json::json!({
+            "name": "GitHub",
+            "provider": "github",
+            "kind": "workspace_integration",
+            "api_key": "ghp_test"
+        }),
+        serde_json::json!({
+            "name": "Linear",
+            "provider": "linear",
+            "kind": "workspace_integration",
+            "api_key": "lin_api_test"
+        }),
+        serde_json::json!({
+            "name": "Slack",
+            "provider": "slack",
+            "kind": "workspace_integration",
+            "api_key": "xoxb-test"
+        }),
+        serde_json::json!({
+            "name": "Notion",
+            "provider": "notion",
+            "kind": "workspace_integration",
+            "api_key": "secret_test"
+        }),
+        serde_json::json!({
+            "name": "Brave Search",
+            "provider": "brave_search",
+            "kind": "workspace_integration",
+            "api_key": "brave_test"
+        }),
+        serde_json::json!({
+            "name": "Freepik",
+            "provider": "freepik",
+            "kind": "workspace_integration",
+            "api_key": "freepik_test"
+        }),
+        serde_json::json!({
+            "name": "Buffer",
+            "provider": "buffer",
+            "kind": "workspace_integration",
+            "api_key": "buffer_test"
+        }),
+        serde_json::json!({
+            "name": "Apify",
+            "provider": "apify",
+            "kind": "workspace_integration",
+            "api_key": "apify_test"
+        }),
+        serde_json::json!({
+            "name": "Metricool",
+            "provider": "metricool",
+            "kind": "workspace_integration",
+            "api_key": "metricool_test",
+            "provider_config": {
+                "userId": "123456",
+                "blogId": "654321"
+            }
+        }),
+        serde_json::json!({
+            "name": "Mailchimp",
+            "provider": "mailchimp",
+            "kind": "workspace_integration",
+            "api_key": "mailchimp_test-us19",
+            "provider_config": {
+                "serverPrefix": "us19"
+            }
+        }),
     ] {
         let req = json_request(
             "POST",
             &format!("/api/orgs/{org_id}/integrations"),
-            Some(serde_json::json!({
-                "name": name,
-                "provider": provider,
-                "kind": "workspace_integration",
-                "api_key": api_key
-            })),
+            Some(payload),
         );
         let resp = app.clone().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -429,7 +708,7 @@ async fn org_tool_actions_use_saved_integrations() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let listed = response_json(resp).await;
-    assert_eq!(listed["integrations"].as_array().unwrap().len(), 4);
+    assert_eq!(listed["integrations"].as_array().unwrap().len(), 10);
 
     let req = json_request(
         "POST",
@@ -527,12 +806,199 @@ async fn org_tool_actions_use_saved_integrations() {
     let notion_page = response_json(resp).await;
     assert_eq!(notion_page["page"]["id"], "page-2");
 
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({
+            "query": "aura"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let brave_web = response_json(resp).await;
+    assert_eq!(brave_web["results"][0]["title"], "Brave result");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_news"),
+        Some(serde_json::json!({
+            "query": "aura"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let brave_news = response_json(resp).await;
+    assert_eq!(brave_news["results"][0]["title"], "Brave news");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/freepik_list_icons"),
+        Some(serde_json::json!({
+            "term": "cat"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let freepik_icons = response_json(resp).await;
+    assert_eq!(freepik_icons["icons"][0]["slug"], "cat-icon");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/freepik_improve_prompt"),
+        Some(serde_json::json!({
+            "prompt": "cute cat mascot"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let freepik_prompt = response_json(resp).await;
+    assert_eq!(freepik_prompt["task"]["task_id"], "task-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/buffer_list_profiles"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let buffer_profiles = response_json(resp).await;
+    assert_eq!(buffer_profiles["profiles"][0]["id"], "profile-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/buffer_create_update"),
+        Some(serde_json::json!({
+            "profile_id": "profile-1",
+            "text": "Ship it"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let buffer_update = response_json(resp).await;
+    assert_eq!(buffer_update["updates"][0]["id"], "update-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/apify_list_actors"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let apify_actors = response_json(resp).await;
+    assert_eq!(apify_actors["actors"][0]["id"], "actor-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/apify_run_actor"),
+        Some(serde_json::json!({
+            "actor_id": "my-actor",
+            "input": { "query": "aura" }
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let apify_run = response_json(resp).await;
+    assert_eq!(apify_run["run"]["id"], "run-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/metricool_list_brands"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let metricool_brands = response_json(resp).await;
+    assert_eq!(metricool_brands["brands"][0]["label"], "Aura Brand");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/metricool_list_posts"),
+        Some(serde_json::json!({
+            "start": 1710000000,
+            "end": 1710086400
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let metricool_posts = response_json(resp).await;
+    assert_eq!(metricool_posts["posts"][0]["title"], "Metricool post");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/mailchimp_list_audiences"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let mailchimp_lists = response_json(resp).await;
+    assert_eq!(mailchimp_lists["audiences"][0]["id"], "list-1");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/mailchimp_list_campaigns"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let mailchimp_campaigns = response_json(resp).await;
+    assert_eq!(mailchimp_campaigns["campaigns"][0]["id"], "camp-1");
+
     unsafe {
         std::env::remove_var("AURA_GITHUB_API_BASE_URL");
         std::env::remove_var("AURA_LINEAR_API_BASE_URL");
         std::env::remove_var("AURA_SLACK_API_BASE_URL");
         std::env::remove_var("AURA_NOTION_API_BASE_URL");
+        std::env::remove_var("AURA_BRAVE_SEARCH_API_BASE_URL");
+        std::env::remove_var("AURA_FREEPIK_API_BASE_URL");
+        std::env::remove_var("AURA_BUFFER_API_BASE_URL");
+        std::env::remove_var("AURA_APIFY_API_BASE_URL");
+        std::env::remove_var("AURA_METRICOOL_API_BASE_URL");
+        std::env::remove_var("AURA_MAILCHIMP_API_BASE_URL");
     }
+}
+
+#[tokio::test]
+async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capabilities() {
+    let (app, _state, _db) = build_test_app();
+    let org_id = OrgId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/integrations"),
+        Some(serde_json::json!({
+            "name": "Brave Search",
+            "provider": "brave_search",
+            "kind": "workspace_integration",
+            "api_key": "brave_test",
+            "enabled": false
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created = response_json(resp).await;
+    assert_eq!(created["enabled"], false);
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/list_org_integrations"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert_eq!(listed["integrations"][0]["enabled"], false);
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/brave_search_web"),
+        Some(serde_json::json!({
+            "query": "aura"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
 }
 
 // ---------------------------------------------------------------------------
@@ -569,7 +1035,11 @@ async fn spec_routes_support_storage_backed_crud() {
     assert_eq!(listed.as_array().unwrap().len(), 1);
     assert_eq!(listed[0]["spec_id"], spec_id);
 
-    let req = json_request("GET", &format!("/api/projects/{project_id}/specs/{spec_id}"), None);
+    let req = json_request(
+        "GET",
+        &format!("/api/projects/{project_id}/specs/{spec_id}"),
+        None,
+    );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let fetched = response_json(resp).await;
@@ -661,7 +1131,11 @@ async fn task_routes_support_storage_backed_crud_and_state_changes() {
     let listed = response_json(resp).await;
     assert_eq!(listed.as_array().unwrap().len(), 1);
 
-    let req = json_request("GET", &format!("/api/projects/{project_id}/tasks/{task_id}"), None);
+    let req = json_request(
+        "GET",
+        &format!("/api/projects/{project_id}/tasks/{task_id}"),
+        None,
+    );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let fetched = response_json(resp).await;

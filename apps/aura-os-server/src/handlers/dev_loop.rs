@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, TaskStatus};
-use aura_os_link::{AutomatonStartError, AutomatonStartParams, connect_with_retries};
+use aura_os_link::{connect_with_retries, AutomatonStartError, AutomatonStartParams};
 use aura_os_network::{NetworkClient, ReportUsageRequest};
 use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_storage::StorageTaskFileChangeSummary;
@@ -16,6 +16,9 @@ use aura_os_tasks::TaskService;
 use super::projects_helpers::resolve_agent_instance_workspace_path;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::workspace_tools::{
+    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+};
 use crate::persistence;
 use crate::state::{
     ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
@@ -1282,6 +1285,13 @@ pub(crate) async fn start_loop(
     };
 
     let jwt_for_persist = jwt.clone();
+    let installed_tools = jwt
+        .as_deref()
+        .zip(project.as_ref().map(|project| &project.org_id))
+        .map(|(jwt, org_id)| installed_workspace_app_tools(&state, org_id, jwt));
+    let installed_integrations = project
+        .as_ref()
+        .map(|project| installed_workspace_integrations_for_org(&state, &project.org_id));
     let start_params = AutomatonStartParams {
         project_id: project_id.to_string(),
         auth_token: jwt,
@@ -1290,6 +1300,8 @@ pub(crate) async fn start_loop(
         task_id: None,
         git_repo_url: resolve_git_repo_url(project.as_ref()),
         git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
+        installed_tools,
+        installed_integrations,
     };
 
     let (automaton_id, adopted, event_stream_url) = match automaton_client
@@ -1775,6 +1787,13 @@ pub(crate) async fn run_single_task(
     .await;
 
     let jwt_for_persist = jwt.clone();
+    let installed_tools = jwt
+        .as_deref()
+        .zip(project.as_ref().map(|project| &project.org_id))
+        .map(|(jwt, org_id)| installed_workspace_app_tools(&state, org_id, jwt));
+    let installed_integrations = project
+        .as_ref()
+        .map(|project| installed_workspace_integrations_for_org(&state, &project.org_id));
     let result = automaton_client
         .start(AutomatonStartParams {
             project_id: project_id.to_string(),
@@ -1784,6 +1803,8 @@ pub(crate) async fn run_single_task(
             task_id: Some(task_id.to_string()),
             git_repo_url: resolve_git_repo_url(project.as_ref()),
             git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
+            installed_tools,
+            installed_integrations,
         })
         .await
         .map_err(|e| match e {
@@ -1806,11 +1827,9 @@ pub(crate) async fn run_single_task(
     // Connect to the event stream as early as possible to minimise the window
     // between automaton start and WS attach.  Retry a few times because the
     // harness may reset the connection if the automaton isn't ready yet.
-    let events_tx = connect_with_retries(
-        &automaton_client, &automaton_id, &event_stream_url, 2,
-    )
-    .await
-    .ok();
+    let events_tx = connect_with_retries(&automaton_client, &automaton_id, &event_stream_url, 2)
+        .await
+        .ok();
 
     // Emit task_started immediately so the frontend gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
@@ -2068,4 +2087,3 @@ mod tests {
         assert!((exact - 3.0).abs() < 1e-9);
     }
 }
-

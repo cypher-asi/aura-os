@@ -30,7 +30,10 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::{
     setup_agent_chat_persistence, spawn_chat_persist_task, SseResponse, SseStream,
 };
-use crate::handlers::agents::workspace_tools::{active_workspace_tools, workspace_tool};
+use crate::handlers::agents::workspace_tools::{
+    active_workspace_tools, control_plane_api_base_url as workspace_control_plane_api_base_url,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org, workspace_tool,
+};
 use crate::handlers::projects_helpers::resolve_project_workspace_path_for_machine;
 use crate::handlers::sse::harness_event_to_sse;
 use crate::state::{AppState, AuthJwt};
@@ -440,6 +443,16 @@ async fn run_harness_test(
     model: Option<String>,
     integration: Option<&ResolvedIntegration>,
 ) -> ApiResult<RuntimeOutcome> {
+    let installed_tools = agent
+        .org_id
+        .as_ref()
+        .map(|org_id| installed_workspace_app_tools(state, org_id, jwt))
+        .filter(|tools| !tools.is_empty());
+    let installed_integrations = agent
+        .org_id
+        .as_ref()
+        .map(|org_id| installed_workspace_integrations_for_org(state, org_id))
+        .filter(|integrations| !integrations.is_empty());
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(agent.agent_id.to_string()),
@@ -447,6 +460,8 @@ async fn run_harness_test(
         model: model.clone(),
         token: Some(jwt.to_string()),
         provider_config: build_harness_provider_config(integration, model.as_deref())?,
+        installed_tools,
+        installed_integrations,
         ..Default::default()
     };
 
@@ -1324,22 +1339,7 @@ async fn resolve_or_create_project_agent_instance_id(
 }
 
 fn control_plane_api_base_url() -> String {
-    let port = std::env::var("AURA_SERVER_PORT")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| "3100".to_string());
-    let host = std::env::var("AURA_SERVER_HOST")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| "127.0.0.1".to_string());
-
-    let normalized_host = match host.as_str() {
-        "0.0.0.0" | "::" => "127.0.0.1".to_string(),
-        other if other.contains(':') && !other.starts_with('[') => format!("[{other}]"),
-        other => other.to_string(),
-    };
-
-    format!("http://{normalized_host}:{port}")
+    workspace_control_plane_api_base_url()
 }
 
 fn mcp_server_secrets_json(state: &AppState, agent: &Agent) -> Option<String> {
@@ -1348,7 +1348,10 @@ fn mcp_server_secrets_json(state: &AppState, agent: &Agent) -> Option<String> {
     let mut secrets = serde_json::Map::new();
 
     for integration in integrations {
-        if !integration.has_secret || integration.kind != aura_os_core::OrgIntegrationKind::McpServer {
+        if !integration.has_secret
+            || !integration.enabled
+            || integration.kind != aura_os_core::OrgIntegrationKind::McpServer
+        {
             continue;
         }
         let secret = state

@@ -241,6 +241,7 @@ export interface OrgIntegration {
   default_model?: string | null;
   provider_config?: Record<string, unknown> | null;
   has_secret: boolean;
+  enabled: boolean;
   secret_last4?: string | null;
   created_at: string;
   updated_at: string;
