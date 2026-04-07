@@ -183,6 +183,7 @@ where
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
                         out.content_blocks.push(serde_json::json!({
                             "type": "tool_use", "id": id, "name": name,
+                            "input": serde_json::Value::Null,
                         }));
                     }
                     "tool_call_snapshot" => {
@@ -192,12 +193,20 @@ where
                             .get("input")
                             .cloned()
                             .unwrap_or_else(|| serde_json::json!({}));
-                        out.content_blocks.push(serde_json::json!({
-                            "type": "tool_call_snapshot",
-                            "id": id,
-                            "name": name,
-                            "input": input,
-                        }));
+                        if let Some(block) = out.content_blocks.iter_mut().rev().find(|block| {
+                            block.get("type").and_then(|v| v.as_str()) == Some("tool_use")
+                                && block.get("id").and_then(|v| v.as_str()) == Some(id)
+                        }) {
+                            block["name"] = serde_json::Value::String(name.to_string());
+                            block["input"] = input;
+                        } else {
+                            out.content_blocks.push(serde_json::json!({
+                                "type": "tool_use",
+                                "id": id,
+                                "name": name,
+                                "input": input,
+                            }));
+                        }
                     }
                     "tool_result" => {
                         let tool_use_id = evt
@@ -298,7 +307,7 @@ mod tests {
     use tokio::sync::broadcast;
 
     #[tokio::test]
-    async fn collect_automaton_events_preserves_tool_snapshots() {
+    async fn collect_automaton_events_merges_tool_snapshots() {
         let (tx, rx) = broadcast::channel(16);
 
         tx.send(serde_json::json!({
@@ -333,9 +342,9 @@ mod tests {
             other => panic!("expected completed output, got {other:?}"),
         };
 
-        assert_eq!(output.content_blocks.len(), 3);
-        assert_eq!(output.content_blocks[1]["type"], "tool_call_snapshot");
-        assert_eq!(output.content_blocks[1]["input"]["path"], "notes.txt");
-        assert_eq!(output.content_blocks[1]["input"]["content"], "hello");
+        assert_eq!(output.content_blocks.len(), 2);
+        assert_eq!(output.content_blocks[0]["type"], "tool_use");
+        assert_eq!(output.content_blocks[0]["input"]["path"], "notes.txt");
+        assert_eq!(output.content_blocks[0]["input"]["content"], "hello");
     }
 }

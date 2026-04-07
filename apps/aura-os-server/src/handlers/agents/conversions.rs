@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 
@@ -204,7 +204,9 @@ pub fn events_to_session_history(
 
                 let content_blocks: Option<Vec<ChatContentBlock>> = content
                     .and_then(|c| c.get("content_blocks"))
-                    .and_then(|v| serde_json::from_value(v.clone()).ok());
+                    .and_then(|v| serde_json::from_value(v.clone()).ok())
+                    .map(sanitize_assistant_content_blocks)
+                    .filter(|blocks| !blocks.is_empty());
 
                 if text.is_empty() && content_blocks.is_none() && thinking.is_none() {
                     continue;
@@ -247,4 +249,84 @@ pub fn events_to_session_history(
     }
 
     messages
+}
+
+fn sanitize_assistant_content_blocks(blocks: Vec<ChatContentBlock>) -> Vec<ChatContentBlock> {
+    let mut suppressed_tool_use_ids = HashSet::new();
+    let mut sanitized = Vec::with_capacity(blocks.len());
+
+    for block in blocks {
+        match block {
+            ChatContentBlock::ToolUse { id, name, input }
+                if is_incomplete_write_tool_use(&name, &input) =>
+            {
+                suppressed_tool_use_ids.insert(id);
+            }
+            ChatContentBlock::ToolResult { tool_use_id, .. }
+                if suppressed_tool_use_ids.contains(&tool_use_id) =>
+            {
+                continue;
+            }
+            other => sanitized.push(other),
+        }
+    }
+
+    sanitized
+}
+
+fn is_incomplete_write_tool_use(name: &str, input: &serde_json::Value) -> bool {
+    if name != "write_file" {
+        return false;
+    }
+
+    match input {
+        serde_json::Value::Null => true,
+        serde_json::Value::Object(map) => {
+            !matches!(map.get("content"), Some(serde_json::Value::String(_)))
+        }
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::events_to_session_history;
+    use aura_os_storage::StorageSessionEvent;
+
+    #[test]
+    fn events_to_session_history_skips_incomplete_write_only_turns() {
+        let events = vec![StorageSessionEvent {
+            id: "evt-1".to_string(),
+            session_id: Some("session-1".to_string()),
+            user_id: None,
+            agent_id: None,
+            sender: None,
+            project_id: Some("project-1".to_string()),
+            org_id: None,
+            event_type: Some("assistant_message_end".to_string()),
+            content: Some(serde_json::json!({
+                "text": "",
+                "thinking": null,
+                "content_blocks": [
+                    {
+                        "type": "tool_use",
+                        "id": "tool-1",
+                        "name": "write_file",
+                        "input": null,
+                    },
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "tool-1",
+                        "content": "ok",
+                        "is_error": false,
+                    }
+                ]
+            })),
+            created_at: Some("2026-01-01T00:00:00Z".to_string()),
+        }];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert!(history.is_empty());
+    }
 }

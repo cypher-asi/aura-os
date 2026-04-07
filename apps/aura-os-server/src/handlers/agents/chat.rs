@@ -255,7 +255,7 @@ pub(crate) fn spawn_chat_persist_task(
                                 "type": "tool_use",
                                 "id": &tool.id,
                                 "name": &tool.name,
-                                "input": {}
+                                "input": serde_json::Value::Null
                             }));
                             persist(
                                 "tool_use_start",
@@ -274,6 +274,13 @@ pub(crate) fn spawn_chat_persist_task(
                                     && b.get("id").and_then(|i| i.as_str()) == Some(&snap.id)
                             }) {
                                 block["input"] = snap.input.clone();
+                            } else {
+                                content_blocks.push(serde_json::json!({
+                                    "type": "tool_use",
+                                    "id": &snap.id,
+                                    "name": &snap.name,
+                                    "input": &snap.input,
+                                }));
                             }
                             persist(
                                 "tool_call_snapshot",
