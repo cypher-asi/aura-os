@@ -33,8 +33,9 @@ use crate::process_store::ProcessStore;
 
 use super::cost::{estimate_cost_usd, merge_usage_totals};
 use super::payload::{
-    sanitize_content_blocks, sanitize_process_payload, should_skip_streamed_process_event,
-    summarize_input_snapshot, truncate_for_artifact_context,
+    compact_process_output, parse_output_compaction_mode, sanitize_content_blocks,
+    sanitize_process_payload, should_skip_streamed_process_event, summarize_input_snapshot,
+    truncate_for_artifact_context, OutputCompactionMode,
 };
 
 const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 600; // 10 minutes
@@ -198,6 +199,31 @@ fn resolve_action_plan_mode(config: &serde_json::Value) -> ActionPlanMode {
         "auto" | "on" | "llm" | "decompose" | "parallel" => ActionPlanMode::Decompose,
         _ => ActionPlanMode::SinglePath,
     }
+}
+
+fn resolve_output_max_chars(config: &serde_json::Value, key: &str) -> Option<usize> {
+    config
+        .get(key)
+        .and_then(|value| value.as_u64())
+        .map(|value| value as usize)
+        .filter(|value| *value > 0)
+}
+
+fn compact_node_output(
+    config: &serde_json::Value,
+    content: &str,
+    default_mode: OutputCompactionMode,
+    max_chars_key: &str,
+) -> String {
+    let mode = parse_output_compaction_mode(
+        config
+            .get("output_compaction")
+            .and_then(|value| value.as_str()),
+        default_mode,
+    );
+    let max_chars = resolve_output_max_chars(config, max_chars_key)
+        .or_else(|| resolve_output_max_chars(config, "max_output_chars"));
+    compact_process_output(content, mode, max_chars)
 }
 
 fn single_sub_task(node: &ProcessNode, upstream_context: &str) -> SubTaskPlan {
@@ -2445,14 +2471,21 @@ async fn execute_single_automaton(
         _ => None,
     };
 
-    let downstream = file_content.unwrap_or_else(|| out.output_text.clone());
+    let raw_downstream = file_content.unwrap_or_else(|| out.output_text.clone());
 
-    if downstream.trim().is_empty() {
+    if raw_downstream.trim().is_empty() {
         return Err(ProcessError::Execution(format!(
             "Automaton produced no output for node {}",
             node.node_id
         )));
     }
+
+    let downstream = compact_node_output(
+        &node.config,
+        &raw_downstream,
+        OutputCompactionMode::Auto,
+        "max_downstream_chars",
+    );
 
     let rel_path = format!(
         "process-workspaces/{}/{}/{}",
@@ -2466,7 +2499,7 @@ async fn execute_single_automaton(
         artifact_type: ArtifactType::Document,
         name: output_file.to_string(),
         file_path: rel_path,
-        size_bytes: downstream.len() as u64,
+        size_bytes: raw_downstream.len() as u64,
         metadata: serde_json::json!({}),
         created_at: Utc::now(),
     };
@@ -2907,10 +2940,15 @@ async fn execute_foreach(
             Ok(run) => {
                 total_input += run.total_input_tokens.unwrap_or(0);
                 total_output += run.total_output_tokens.unwrap_or(0);
-                outputs.push(
-                    run.output
-                        .unwrap_or_else(|| format!("(no output for item #{})", idx)),
-                );
+                let raw_output = run
+                    .output
+                    .unwrap_or_else(|| format!("(no output for item #{idx})"));
+                outputs.push(compact_node_output(
+                    &node.config,
+                    &raw_output,
+                    OutputCompactionMode::Auto,
+                    "max_child_output_chars",
+                ));
             }
             Err(e) => {
                 failures += 1;
@@ -2931,7 +2969,7 @@ async fn execute_foreach(
                 .iter()
                 .map(|s| serde_json::Value::String(s.clone()))
                 .collect();
-            serde_json::to_string_pretty(&arr).unwrap_or_else(|_| outputs.join("\n\n---\n\n"))
+            serde_json::to_string(&arr).unwrap_or_else(|_| outputs.join("\n\n---\n\n"))
         }
         _ => outputs.join("\n\n---\n\n"),
     };
@@ -3200,8 +3238,9 @@ fn broadcast_node_status(
 mod tests {
     use super::{
         apply_foreach_max_items, build_parent_mirrored_process_event, build_workspace_instructions,
-        emit_parent_progress_update, parse_foreach_json_array, resolve_action_plan_mode,
-        ActionPlanMode, ChildRunProgress, ParentProgressMirrorState, ParentStreamMirrorContext,
+        compact_node_output, emit_parent_progress_update, parse_foreach_json_array,
+        resolve_action_plan_mode, ActionPlanMode, ChildRunProgress, OutputCompactionMode,
+        ParentProgressMirrorState, ParentStreamMirrorContext,
     };
     use crate::process_store::ProcessStore;
     use aura_os_store::RocksStore;
@@ -3325,6 +3364,36 @@ mod tests {
         apply_foreach_max_items(&mut items, Some(0));
 
         assert_eq!(items, vec!["first".to_string(), "second".to_string()]);
+    }
+
+    #[test]
+    fn compact_node_output_minifies_json_by_default() {
+        let config = serde_json::json!({});
+
+        let compacted = compact_node_output(
+            &config,
+            "{\n  \"entries\": [\n    \"a\",\n    \"b\"\n  ]\n}",
+            OutputCompactionMode::Auto,
+            "max_child_output_chars",
+        );
+
+        assert_eq!(compacted, r#"{"entries":["a","b"]}"#);
+    }
+
+    #[test]
+    fn compact_node_output_honors_per_child_char_limit() {
+        let config = serde_json::json!({
+            "max_child_output_chars": 5
+        });
+
+        let compacted = compact_node_output(
+            &config,
+            "   hello world   ",
+            OutputCompactionMode::Trim,
+            "max_child_output_chars",
+        );
+
+        assert_eq!(compacted, "hello\n[truncated]");
     }
 
     #[test]

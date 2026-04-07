@@ -8,6 +8,14 @@ const MAX_PROCESS_TOOL_RESULT_CHARS: usize = 8_000;
 const MAX_PROCESS_WRITE_FILE_CONTENT_CHARS: usize = 4_000;
 const MAX_ARTIFACT_CONTEXT_CHARS: usize = 16_000;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OutputCompactionMode {
+    None,
+    Trim,
+    Json,
+    Auto,
+}
+
 pub(crate) fn truncate_with_marker(input: &str, limit: usize) -> String {
     if input.chars().count() <= limit {
         return input.to_string();
@@ -23,6 +31,58 @@ pub(crate) fn summarize_input_snapshot(input: &str) -> String {
 
 pub(crate) fn truncate_for_artifact_context(content: &str) -> String {
     truncate_with_marker(content, MAX_ARTIFACT_CONTEXT_CHARS)
+}
+
+pub(crate) fn parse_output_compaction_mode(
+    raw: Option<&str>,
+    default: OutputCompactionMode,
+) -> OutputCompactionMode {
+    let Some(raw) = raw else {
+        return default;
+    };
+
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "none" | "off" | "full" => OutputCompactionMode::None,
+        "trim" | "text" => OutputCompactionMode::Trim,
+        "json" | "compact_json" | "minify_json" => OutputCompactionMode::Json,
+        "auto" => OutputCompactionMode::Auto,
+        _ => default,
+    }
+}
+
+pub(crate) fn compact_process_output(
+    content: &str,
+    mode: OutputCompactionMode,
+    max_chars: Option<usize>,
+) -> String {
+    let mut compacted = match mode {
+        OutputCompactionMode::None => content.to_string(),
+        OutputCompactionMode::Trim => content.trim().to_string(),
+        OutputCompactionMode::Json => {
+            compact_json_string(content).unwrap_or_else(|| content.trim().to_string())
+        }
+        OutputCompactionMode::Auto => {
+            let trimmed = content.trim();
+            compact_json_string(trimmed).unwrap_or_else(|| trimmed.to_string())
+        }
+    };
+
+    if let Some(limit) = max_chars.filter(|limit| *limit > 0) {
+        compacted = truncate_with_marker(&compacted, limit);
+    }
+
+    compacted
+}
+
+fn compact_json_string(content: &str) -> Option<String> {
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        return Some(String::new());
+    }
+
+    serde_json::from_str::<serde_json::Value>(trimmed)
+        .ok()
+        .and_then(|value| serde_json::to_string(&value).ok())
 }
 
 fn is_incomplete_write_input(input: &serde_json::Value) -> bool {
@@ -153,4 +213,35 @@ pub(crate) fn sanitize_content_blocks(blocks: &[serde_json::Value]) -> Vec<serde
     }
 
     sanitized
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{compact_process_output, parse_output_compaction_mode, OutputCompactionMode};
+
+    #[test]
+    fn compact_process_output_minifies_json_in_auto_mode() {
+        let compacted = compact_process_output(
+            "{\n  \"name\": \"Aura\",\n  \"items\": [1, 2]\n}\n",
+            OutputCompactionMode::Auto,
+            None,
+        );
+
+        assert_eq!(compacted, r#"{"items":[1,2],"name":"Aura"}"#);
+    }
+
+    #[test]
+    fn compact_process_output_truncates_after_compaction() {
+        let compacted =
+            compact_process_output("   hello world   ", OutputCompactionMode::Trim, Some(5));
+
+        assert_eq!(compacted, "hello\n[truncated]");
+    }
+
+    #[test]
+    fn parse_output_compaction_mode_uses_default_for_unknown_values() {
+        let mode = parse_output_compaction_mode(Some("surprise"), OutputCompactionMode::Auto);
+
+        assert_eq!(mode, OutputCompactionMode::Auto);
+    }
 }
