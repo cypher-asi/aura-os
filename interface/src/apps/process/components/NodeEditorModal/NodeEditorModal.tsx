@@ -115,6 +115,9 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const [itemVariableName, setItemVariableName] = useState(
     node.node_type === "for_each" ? (cfg?.item_variable_name as string) ?? "item" : "item",
   );
+  const [jsonArrayKey, setJsonArrayKey] = useState(
+    node.node_type === "for_each" ? (cfg?.json_array_key as string) ?? "entries" : "entries",
+  );
   const [collectMode, setCollectMode] = useState(
     node.node_type === "for_each" ? (cfg?.collect_mode as string) ?? "json_array" : "json_array",
   );
@@ -190,6 +193,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         setMaxConcurrency(String(c?.max_concurrency ?? "3"));
         setIteratorMode((c?.iterator_mode as string) ?? "json_array");
         setItemVariableName((c?.item_variable_name as string) ?? "item");
+        setJsonArrayKey((c?.json_array_key as string) ?? "entries");
         setCollectMode((c?.collect_mode as string) ?? "json_array");
       }
       if (node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt") setOutputFile((c?.output_file as string) ?? "");
@@ -256,6 +260,8 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         config.max_concurrency = Number(maxConcurrency) || 3;
         config.iterator_mode = iteratorMode;
         if (itemVariableName) config.item_variable_name = itemVariableName;
+        if (jsonArrayKey.trim()) config.json_array_key = jsonArrayKey.trim();
+        else delete config.json_array_key;
         config.collect_mode = collectMode;
       }
       if ((node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt") && outputFile) {
@@ -294,7 +300,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     } finally {
       setSaving(false);
     }
-  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, childProcessId, maxConcurrency, iteratorMode, itemVariableName, collectMode, outputFile, watchlist, model, timeoutSeconds, maxTurns, isPinned, pinnedOutput, fetchNodes, onClose]);
+  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, childProcessId, maxConcurrency, iteratorMode, itemVariableName, jsonArrayKey, collectMode, outputFile, watchlist, model, timeoutSeconds, maxTurns, isPinned, pinnedOutput, fetchNodes, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!processId || node.node_type === "ignition") return;
@@ -467,6 +473,14 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
               <EditField label="Item Variable Name">
                 <input style={inputStyle} value={itemVariableName} onChange={(e) => setItemVariableName(e.target.value)} placeholder="item" />
               </EditField>
+              {iteratorMode === "json_array" && (
+                <EditField label="JSON Array Key">
+                  <input style={inputStyle} value={jsonArrayKey} onChange={(e) => setJsonArrayKey(e.target.value)} placeholder="entries" />
+                  <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>
+                    If upstream is a JSON object, read the iterable array from this key. Defaults to <code>entries</code>.
+                  </Text>
+                </EditField>
+              )}
               <EditField label="Collect Mode">
                 <Select
                   value={collectMode}

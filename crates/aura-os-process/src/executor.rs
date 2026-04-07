@@ -2568,6 +2568,86 @@ fn extract_json_array_from_mixed(text: &str) -> Option<Vec<serde_json::Value>> {
     None
 }
 
+fn extract_json_array_from_value(
+    value: &serde_json::Value,
+    preferred_keys: &[&str],
+) -> Result<Option<Vec<serde_json::Value>>, String> {
+    match value {
+        serde_json::Value::Array(items) => Ok(Some(items.clone())),
+        serde_json::Value::Object(map) => {
+            for key in preferred_keys {
+                if let Some(candidate) = map.get(*key) {
+                    return match candidate {
+                        serde_json::Value::Array(items) => Ok(Some(items.clone())),
+                        _ => Err(format!(
+                            "ForEach: object key `{key}` exists but is not a JSON array"
+                        )),
+                    };
+                }
+            }
+
+            Ok(None)
+        }
+        _ => Ok(None),
+    }
+}
+
+fn parse_foreach_json_array(
+    upstream_context: &str,
+    json_array_key: Option<&str>,
+) -> Result<Vec<serde_json::Value>, ProcessError> {
+    let trimmed = upstream_context.trim();
+    let mut checked_keys = Vec::new();
+
+    if let Some(key) = json_array_key.filter(|key| !key.trim().is_empty()) {
+        checked_keys.push(key.trim().to_string());
+    }
+    if !checked_keys.iter().any(|key| key == "entries") {
+        checked_keys.push("entries".to_string());
+    }
+
+    if let Ok(parsed_value) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        let key_refs = checked_keys.iter().map(String::as_str).collect::<Vec<_>>();
+        match extract_json_array_from_value(&parsed_value, &key_refs) {
+            Ok(Some(items)) => return Ok(items),
+            Ok(None) => {
+                if let serde_json::Value::Object(map) = &parsed_value {
+                    let available_keys = map.keys().cloned().collect::<Vec<_>>().join(", ");
+                    return Err(ProcessError::Execution(format!(
+                        "ForEach: upstream JSON is an object, but none of these keys contain an array: {}. Available keys: {}",
+                        checked_keys.join(", "),
+                        if available_keys.is_empty() {
+                            "(none)".to_string()
+                        } else {
+                            available_keys
+                        }
+                    )));
+                }
+            }
+            Err(message) => return Err(ProcessError::Execution(message)),
+        }
+    }
+
+    serde_json::from_str::<Vec<serde_json::Value>>(trimmed)
+        .or_else(|_| {
+            extract_json_array_from_mixed(trimmed)
+                .ok_or_else(|| serde_json::from_str::<serde_json::Value>("!").unwrap_err())
+        })
+        .map_err(|_| {
+            let key_hint = if checked_keys.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    " or a JSON object containing an array under one of: {}",
+                    checked_keys.join(", ")
+                )
+            };
+            ProcessError::Execution(format!(
+                "ForEach: upstream does not contain a valid JSON array{key_hint}"
+            ))
+        })
+}
+
 async fn execute_foreach(
     node: &ProcessNode,
     upstream_context: &str,
@@ -2610,19 +2690,11 @@ async fn execute_foreach(
         .and_then(|v| v.as_str())
         .unwrap_or("item");
 
+    let json_array_key = node.config.get("json_array_key").and_then(|v| v.as_str());
+
     let items: Vec<String> = match iterator_mode {
         "json_array" => {
-            let trimmed = upstream_context.trim();
-            let parsed: Vec<serde_json::Value> = serde_json::from_str(trimmed)
-                .or_else(|_| {
-                    extract_json_array_from_mixed(trimmed)
-                        .ok_or_else(|| serde_json::from_str::<serde_json::Value>("!").unwrap_err())
-                })
-                .map_err(|_| {
-                    ProcessError::Execution(
-                        "ForEach: upstream does not contain a valid JSON array".into(),
-                    )
-                })?;
+            let parsed = parse_foreach_json_array(upstream_context, json_array_key)?;
             parsed
                 .iter()
                 .map(|v| {
@@ -3027,7 +3099,10 @@ fn broadcast_node_status(
 
 #[cfg(test)]
 mod tests {
-    use super::{build_workspace_instructions, resolve_action_plan_mode, ActionPlanMode};
+    use super::{
+        build_workspace_instructions, parse_foreach_json_array, resolve_action_plan_mode,
+        ActionPlanMode,
+    };
 
     #[test]
     fn action_plan_mode_defaults_to_single_path() {
@@ -3074,5 +3149,46 @@ mod tests {
         assert!(instructions.contains("process_node_prompt.txt"));
         assert!(instructions.contains("upstream_context.txt"));
         assert!(instructions.contains("Read the provided workspace input files"));
+    }
+
+    #[test]
+    fn foreach_json_array_accepts_top_level_array() {
+        let parsed = parse_foreach_json_array(r#"["a", "b"]"#, None).unwrap();
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0].as_str(), Some("a"));
+        assert_eq!(parsed[1].as_str(), Some("b"));
+    }
+
+    #[test]
+    fn foreach_json_array_accepts_entries_object() {
+        let parsed = parse_foreach_json_array(
+            r#"{"entries":[{"name":"Cursor"},{"name":"Windsurf"}]}"#,
+            None,
+        )
+        .unwrap();
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0]["name"], "Cursor");
+        assert_eq!(parsed[1]["name"], "Windsurf");
+    }
+
+    #[test]
+    fn foreach_json_array_accepts_custom_object_key() {
+        let parsed = parse_foreach_json_array(
+            r#"{"items":[{"name":"Cursor"},{"name":"Windsurf"}]}"#,
+            Some("items"),
+        )
+        .unwrap();
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0]["name"], "Cursor");
+    }
+
+    #[test]
+    fn foreach_json_array_reports_checked_keys_for_object_input() {
+        let error = parse_foreach_json_array(r#"{"results":"not-an-array"}"#, Some("items"))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("items"));
+        assert!(error.contains("entries"));
+        assert!(error.contains("results"));
     }
 }
