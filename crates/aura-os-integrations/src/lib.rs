@@ -1,3 +1,9 @@
+pub mod client;
+pub mod error;
+
+pub use client::IntegrationsClient;
+pub use error::IntegrationsError;
+
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 

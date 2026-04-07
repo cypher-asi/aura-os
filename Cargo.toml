@@ -6,6 +6,7 @@ members = [
     "crates/aura-os-core",
     "crates/aura-os-integrations",
     "crates/aura-os-link",
+    "crates/aura-os-integrations",
     "crates/aura-os-network",
     "crates/aura-os-orgs",
     "crates/aura-os-projects",

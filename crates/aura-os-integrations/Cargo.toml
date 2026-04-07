@@ -6,8 +6,12 @@ edition = "2021"
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-os-link = { path = "../aura-os-link" }
+reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "1"
+tracing = "0.1"
+tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
 chrono = { version = "0.4", features = ["serde"] }
