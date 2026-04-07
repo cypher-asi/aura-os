@@ -31,57 +31,6 @@ use crate::process_store::ProcessStore;
 
 const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 600; // 10 minutes
 
-/// Scan a workspace directory for output files written by the automaton.
-///
-/// Called as a fallback when the expected output file (e.g. `output.txt`) is
-/// missing. Since process workspaces are fresh directories, every file present
-/// was written by the automaton.
-///
-/// When multiple non-hidden files exist (e.g. `part1`, `part2`, ...) they are
-/// concatenated in sorted order -- this covers the common case where the model
-/// splits a large deliverable across numbered segment files.  When only a
-/// single file exists it is returned directly.
-async fn find_workspace_output(workspace: &Path) -> Option<String> {
-    let mut files: Vec<PathBuf> = Vec::new();
-    let mut entries = tokio::fs::read_dir(workspace).await.ok()?;
-    while let Ok(Some(entry)) = entries.next_entry().await {
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-        if name_str.starts_with('.') || name_str == "node_modules" {
-            continue;
-        }
-        if let Ok(meta) = entry.metadata().await {
-            if meta.is_file() && meta.len() > 0 {
-                files.push(entry.path());
-            }
-        }
-    }
-    if files.is_empty() {
-        return None;
-    }
-    files.sort();
-
-    if files.len() == 1 {
-        return tokio::fs::read_to_string(&files[0])
-            .await
-            .ok()
-            .filter(|s| !s.trim().is_empty());
-    }
-
-    let mut combined = String::new();
-    for path in &files {
-        if let Ok(content) = tokio::fs::read_to_string(path).await {
-            if !content.trim().is_empty() {
-                if !combined.is_empty() {
-                    combined.push('\n');
-                }
-                combined.push_str(&content);
-            }
-        }
-    }
-    if combined.trim().is_empty() { None } else { Some(combined) }
-}
-
 #[derive(Debug, Clone, Default)]
 struct NodeTokenUsage {
     input_tokens: u64,
@@ -1187,6 +1136,7 @@ fn plan_sub_tasks(
 const PLANNING_MODEL: &str = "claude-haiku-4-5";
 const PLANNING_MAX_TOKENS: u32 = 4096;
 const PLANNING_CONTEXT_CHAR_LIMIT: usize = 12_000;
+const DECOMPOSED_SUBTASK_MAX_CONCURRENCY: usize = 1;
 
 const PLANNING_SYSTEM_PROMPT: &str = "\
 You are a task planner for an AI process engine. Each sub-task you produce will be \
@@ -1369,18 +1319,27 @@ async fn execute_action_via_automaton(
     info!(
         node_id = %node.node_id,
         sub_task_count = sub_tasks.len(),
-        "Executing node with parallel sub-tasks"
+        "Executing node with decomposed sub-tasks"
     );
 
     if let Some(tx) = broadcast {
         send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
     }
 
-    let max_concurrency = node
+    let requested_max_concurrency = node
         .config
         .get("max_concurrency")
         .and_then(|v| v.as_u64())
         .unwrap_or(3) as usize;
+    let max_concurrency = requested_max_concurrency.min(DECOMPOSED_SUBTASK_MAX_CONCURRENCY);
+    if requested_max_concurrency > max_concurrency {
+        warn!(
+            node_id = %node.node_id,
+            requested_max_concurrency,
+            max_concurrency,
+            "Serializing decomposed sub-tasks to avoid shared workspace races"
+        );
+    }
 
     let jwt = token.ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
     let pid = project_id.to_string();
@@ -1530,13 +1489,7 @@ async fn execute_action_via_automaton(
                         Ok(content) if !content.trim().is_empty() => Some(content),
                         _ => None,
                     };
-                    let workspace_content = if file_content.is_none() {
-                        find_workspace_output(Path::new(&sub_project_path)).await
-                    } else {
-                        None
-                    };
                     let final_output = file_content
-                        .or(workspace_content)
                         .unwrap_or(out.output_text);
                     Ok((final_output, out.input_tokens, out.output_tokens, out.model))
                 }
@@ -1579,14 +1532,14 @@ async fn execute_action_via_automaton(
                 merged_parts.push(output);
             }
             Ok(Err(e)) => {
-                let msg = format!("Sub-task #{} ({}) failed: {}", idx, task_title, e);
+                let msg = format!("Sub-task #{} ({}) failed: {}", idx + 1, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
                     send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
             }
             Err(e) => {
-                let msg = format!("Sub-task #{} ({}) panicked: {}", idx, task_title, e);
+                let msg = format!("Sub-task #{} ({}) panicked: {}", idx + 1, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
                     send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
@@ -1774,14 +1727,7 @@ async fn execute_single_automaton(
         _ => None,
     };
 
-    let workspace_content = if file_content.is_none() {
-        find_workspace_output(Path::new(project_path)).await
-    } else {
-        None
-    };
-
     let downstream = file_content
-        .or(workspace_content)
         .unwrap_or_else(|| out.output_text.clone());
 
     if downstream.trim().is_empty() {
