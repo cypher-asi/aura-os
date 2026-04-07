@@ -144,6 +144,74 @@ fn single_sub_task(node: &ProcessNode, upstream_context: &str) -> SubTaskPlan {
     }
 }
 
+async fn materialize_workspace_inputs(
+    workspace_dir: &Path,
+    inputs: &[(&str, &str, &str)],
+) -> Result<Vec<(String, String)>, ProcessError> {
+    let mut written = Vec::new();
+
+    for (file_name, purpose, content) in inputs {
+        if content.trim().is_empty() {
+            continue;
+        }
+
+        let file_path = workspace_dir.join(file_name);
+        tokio::fs::write(&file_path, content.as_bytes())
+            .await
+            .map_err(|e| {
+                ProcessError::Execution(format!(
+                    "Failed to write workspace input file {file_name}: {e}"
+                ))
+            })?;
+        written.push(((*file_name).to_string(), (*purpose).to_string()));
+    }
+
+    if !written.is_empty() {
+        let manifest = serde_json::json!({
+            "files": written
+                .iter()
+                .map(|(file_name, purpose)| serde_json::json!({
+                    "file_name": file_name,
+                    "purpose": purpose,
+                }))
+                .collect::<Vec<_>>(),
+        });
+        let manifest_path = workspace_dir.join(".process-inputs.json");
+        tokio::fs::write(&manifest_path, manifest.to_string().as_bytes())
+            .await
+            .map_err(|e| {
+                ProcessError::Execution(format!(
+                    "Failed to write workspace input manifest {}: {e}",
+                    manifest_path.display()
+                ))
+            })?;
+    }
+
+    Ok(written)
+}
+
+fn build_workspace_instructions(output_file: &str, input_files: &[(String, String)]) -> String {
+    let mut lines = vec![
+        format!("Write your final deliverable to `{output_file}` in the workspace root."),
+        "This file is used as the node's downstream output for the next process step.".to_string(),
+        "Read the provided workspace input files before deciding the workspace has no input data."
+            .to_string(),
+        "Do NOT create project scaffolding (no Cargo.toml, package.json, etc.).".to_string(),
+        "Use shell commands and write files directly.".to_string(),
+    ];
+
+    if !input_files.is_empty() {
+        let listed = input_files
+            .iter()
+            .map(|(file_name, purpose)| format!("`{file_name}` ({purpose})"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        lines.push(format!("Input files available in the workspace: {listed}."));
+    }
+
+    lines.join("\n")
+}
+
 /// Forward a raw automaton event to the app broadcast, stamping it with
 /// process-specific identifiers.  Only forwards streamable event types.
 fn emit_process_event(
@@ -1531,6 +1599,7 @@ async fn execute_action_via_automaton(
             task_service,
             agent_service,
             org_service,
+            upstream_context,
             run_base_input,
             run_base_output,
             run_base_cost,
@@ -1612,6 +1681,7 @@ async fn execute_action_via_automaton(
             task_service,
             agent_service,
             org_service,
+            upstream_context,
             run_base_input,
             run_base_output,
             run_base_cost,
@@ -1714,6 +1784,8 @@ async fn execute_action_via_automaton(
         let sub_timeout = timeout_secs;
         let sub_node_id = node.node_id;
         let sub_title = sub_task.title.clone();
+        let sub_task_description = sub_task.description.clone();
+        let sub_node_prompt = node.prompt.clone();
         let broadcast_tx = broadcast.cloned();
         let sub_store = transcript_store.clone();
         let task_usage_totals = shared_usage_totals.clone();
@@ -1743,14 +1815,31 @@ async fn execute_action_via_automaton(
                 })?;
 
             let output_file = format!("output-{}.txt", sub_task_id);
-            let instructions = format!(
-                "Write your final deliverable to `{output_file}` in the workspace root.\n\
-                 This file is used as the sub-task's output for the next process step.\n\
-                 Do NOT create project scaffolding (no Cargo.toml, package.json, etc.).\n\
-                 Use shell commands and write files directly."
-            );
+            let input_files = materialize_workspace_inputs(
+                &sub_workspace_dir,
+                &[
+                    (
+                        "process_node_prompt.txt",
+                        "original node prompt",
+                        sub_node_prompt.as_str(),
+                    ),
+                    (
+                        "sub_task_context.txt",
+                        "sub-task instructions and context",
+                        sub_task_description.as_str(),
+                    ),
+                ],
+            )
+            .await?;
+            let instructions = build_workspace_instructions(&output_file, &input_files);
             let instructions_path = sub_workspace_dir.join(".process-instructions");
-            let _ = tokio::fs::write(&instructions_path, instructions.as_bytes()).await;
+            tokio::fs::write(&instructions_path, instructions.as_bytes())
+                .await
+                .map_err(|e| {
+                    ProcessError::Execution(format!(
+                        "Failed to write sub-task instructions for {sub_task_id}: {e}"
+                    ))
+                })?;
             let sub_workspace_path = sub_workspace_dir.to_string_lossy().to_string();
 
             let authed_ac = ac.clone().with_auth(sub_token.clone());
@@ -2006,6 +2095,7 @@ async fn execute_single_automaton(
     _task_service: &TaskService,
     agent_service: &AgentService,
     org_service: &OrgService,
+    upstream_context: &str,
     run_base_input: u64,
     run_base_output: u64,
     run_base_cost: f64,
@@ -2026,12 +2116,32 @@ async fn execute_single_automaton(
         .get("output_file")
         .and_then(|v| v.as_str())
         .unwrap_or("output.txt");
-    let instructions = format!(
-        "Write your final deliverable to `{output_file}` in the workspace root. \
-         This file is used as the node's downstream output for the next process step."
-    );
+    let input_files = materialize_workspace_inputs(
+        Path::new(project_path),
+        &[
+            (
+                "process_node_prompt.txt",
+                "original node prompt",
+                node.prompt.as_str(),
+            ),
+            (
+                "upstream_context.txt",
+                "upstream node output and referenced artifacts",
+                upstream_context,
+            ),
+        ],
+    )
+    .await?;
+    let instructions = build_workspace_instructions(output_file, &input_files);
     let instructions_path = Path::new(project_path).join(".process-instructions");
-    let _ = tokio::fs::write(&instructions_path, instructions.as_bytes()).await;
+    tokio::fs::write(&instructions_path, instructions.as_bytes())
+        .await
+        .map_err(|e| {
+            ProcessError::Execution(format!(
+                "Failed to write node instructions for {}: {e}",
+                node.node_id
+            ))
+        })?;
 
     let authed_client = automaton_client
         .clone()
@@ -2762,7 +2872,7 @@ fn broadcast_node_status(
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_action_plan_mode, ActionPlanMode};
+    use super::{build_workspace_instructions, resolve_action_plan_mode, ActionPlanMode};
 
     #[test]
     fn action_plan_mode_defaults_to_single_path() {
@@ -2785,10 +2895,29 @@ mod tests {
 
         for enabled in ["auto", "on", "llm", "decompose", "parallel"] {
             let config = serde_json::json!({ "plan_mode": enabled });
-            assert_eq!(
-                resolve_action_plan_mode(&config),
-                ActionPlanMode::Decompose
-            );
+            assert_eq!(resolve_action_plan_mode(&config), ActionPlanMode::Decompose);
         }
+    }
+
+    #[test]
+    fn workspace_instructions_list_available_input_files() {
+        let instructions = build_workspace_instructions(
+            "structured_output.txt",
+            &[
+                (
+                    "process_node_prompt.txt".to_string(),
+                    "original node prompt".to_string(),
+                ),
+                (
+                    "upstream_context.txt".to_string(),
+                    "upstream node output".to_string(),
+                ),
+            ],
+        );
+
+        assert!(instructions.contains("structured_output.txt"));
+        assert!(instructions.contains("process_node_prompt.txt"));
+        assert!(instructions.contains("upstream_context.txt"));
+        assert!(instructions.contains("Read the provided workspace input files"));
     }
 }
