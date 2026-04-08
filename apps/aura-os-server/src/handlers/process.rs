@@ -35,6 +35,19 @@ async fn resolve_org_ids(state: &AppState, jwt: &str) -> Vec<String> {
     vec![OrgId::nil().to_string()]
 }
 
+/// Resolve org_id from a project's org membership. Falls back to first user org.
+fn resolve_org_for_project(state: &AppState, project_id: &str, fallback_org_ids: &[String]) -> String {
+    if let Ok(pid) = project_id.parse::<ProjectId>() {
+        if let Ok(project) = state.project_service.get_project(&pid) {
+            let oid = project.org_id.to_string();
+            if oid != OrgId::nil().to_string() {
+                return oid;
+            }
+        }
+    }
+    fallback_org_ids.first().cloned().unwrap_or_default()
+}
+
 // ---------------------------------------------------------------------------
 // StorageX → local entity conversions
 // ---------------------------------------------------------------------------
@@ -292,8 +305,9 @@ pub(crate) async fn create_process(
 ) -> ApiResult<Json<Process>> {
     if let Some(client) = &state.storage_client {
         let org_ids = resolve_org_ids(&state, &jwt).await;
+        let org_id = resolve_org_for_project(&state, &req.project_id, &org_ids);
         let storage_req = aura_os_storage::CreateProcessRequest {
-            org_id: org_ids.first().cloned().unwrap_or_default(),
+            org_id,
             name: req.name.clone(),
             project_id: Some(req.project_id.clone()),
             folder_id: req.folder_id.clone(),
