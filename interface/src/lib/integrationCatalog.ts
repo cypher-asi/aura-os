@@ -230,6 +230,18 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     ],
   },
   {
+    id: "resend",
+    label: "Resend",
+    kind: "workspace_integration",
+    description: "Transactional email and sending-domain workflows for workspace notifications and outreach.",
+    secretLabel: "Resend API Key",
+    secretPlaceholder: "Paste the Resend API key",
+    authHint: "Use a Resend API key with access to the domains and email flows your workspace should send from.",
+    docsUrl: "https://resend.com/docs/api-reference/emails/send-email",
+    supportsDefaultModel: false,
+    runtimeCompatibleAdapters: [],
+  },
+  {
     id: "mcp_server",
     label: "Custom MCP Server",
     kind: "mcp_server",

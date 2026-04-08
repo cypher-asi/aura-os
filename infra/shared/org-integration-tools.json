@@ -325,5 +325,54 @@
         "integration_id": { "type": "string" }
       }
     }
+  },
+  {
+    "name": "resend_list_domains",
+    "provider": "resend",
+    "description": "List Resend sending domains through a saved org integration.",
+    "promptSignature": "resend_list_domains(integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "resend_send_email",
+    "provider": "resend",
+    "description": "Send an email through a saved Resend org integration.",
+    "promptSignature": "resend_send_email(from, to, subject, html?, text?, cc?, bcc?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "from": { "type": "string", "description": "Sender email, optionally with a display name like \"Aura <ops@example.com>\"." },
+        "to": {
+          "oneOf": [
+            { "type": "string", "description": "Single recipient email address." },
+            { "type": "array", "items": { "type": "string" }, "description": "List of recipient email addresses." }
+          ]
+        },
+        "subject": { "type": "string", "description": "Email subject." },
+        "html": { "type": "string", "description": "Optional HTML email body." },
+        "text": { "type": "string", "description": "Optional plain text email body." },
+        "cc": {
+          "oneOf": [
+            { "type": "string", "description": "Single cc email address." },
+            { "type": "array", "items": { "type": "string" }, "description": "List of cc email addresses." }
+          ]
+        },
+        "bcc": {
+          "oneOf": [
+            { "type": "string", "description": "Single bcc email address." },
+            { "type": "array", "items": { "type": "string" }, "description": "List of bcc email addresses." }
+          ]
+        }
+      },
+      "required": ["from", "to", "subject"]
+    }
   }
 ]

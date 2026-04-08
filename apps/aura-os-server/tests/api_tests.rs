@@ -584,6 +584,34 @@ async fn org_tool_actions_use_saved_integrations() {
                     }]
                 }))
             }),
+        )
+        .route(
+            "/resend/domains",
+            get(|| async {
+                Json(serde_json::json!({
+                    "object": "list",
+                    "has_more": false,
+                    "data": [{
+                        "id": "domain-1",
+                        "name": "example.com",
+                        "status": "verified",
+                        "created_at": "2024-01-01T00:00:00.000Z",
+                        "region": "us-east-1",
+                        "capabilities": {
+                            "sending": "enabled",
+                            "receiving": "disabled"
+                        }
+                    }]
+                }))
+            }),
+        )
+        .route(
+            "/resend/emails",
+            post(|| async {
+                Json(serde_json::json!({
+                    "id": "email-1"
+                }))
+            }),
         );
 
     let provider_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -617,6 +645,7 @@ async fn org_tool_actions_use_saved_integrations() {
             "AURA_MAILCHIMP_API_BASE_URL",
             format!("{provider_url}/mailchimp"),
         );
+        std::env::set_var("AURA_RESEND_API_BASE_URL", format!("{provider_url}/resend"));
     }
 
     let (app, _state, _db) = build_test_app();
@@ -690,6 +719,12 @@ async fn org_tool_actions_use_saved_integrations() {
                 "serverPrefix": "us19"
             }
         }),
+        serde_json::json!({
+            "name": "Resend",
+            "provider": "resend",
+            "kind": "workspace_integration",
+            "api_key": "re_test"
+        }),
     ] {
         let req = json_request(
             "POST",
@@ -708,7 +743,7 @@ async fn org_tool_actions_use_saved_integrations() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let listed = response_json(resp).await;
-    assert_eq!(listed["integrations"].as_array().unwrap().len(), 10);
+    assert_eq!(listed["integrations"].as_array().unwrap().len(), 11);
 
     let req = json_request(
         "POST",
@@ -943,6 +978,31 @@ async fn org_tool_actions_use_saved_integrations() {
     let mailchimp_campaigns = response_json(resp).await;
     assert_eq!(mailchimp_campaigns["campaigns"][0]["id"], "camp-1");
 
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/resend_list_domains"),
+        Some(serde_json::json!({})),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let resend_domains = response_json(resp).await;
+    assert_eq!(resend_domains["domains"][0]["name"], "example.com");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/tool-actions/resend_send_email"),
+        Some(serde_json::json!({
+            "from": "Aura <ops@example.com>",
+            "to": ["user@example.com"],
+            "subject": "Aura test email",
+            "html": "<p>Hello from Aura</p>"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let resend_email = response_json(resp).await;
+    assert_eq!(resend_email["email"]["id"], "email-1");
+
     unsafe {
         std::env::remove_var("AURA_GITHUB_API_BASE_URL");
         std::env::remove_var("AURA_LINEAR_API_BASE_URL");
@@ -954,6 +1014,7 @@ async fn org_tool_actions_use_saved_integrations() {
         std::env::remove_var("AURA_APIFY_API_BASE_URL");
         std::env::remove_var("AURA_METRICOOL_API_BASE_URL");
         std::env::remove_var("AURA_MAILCHIMP_API_BASE_URL");
+        std::env::remove_var("AURA_RESEND_API_BASE_URL");
     }
 }
 

@@ -1,9 +1,9 @@
-use axum::extract::{Path, State};
-use axum::Json;
 use aura_os_integrations::{
     app_provider_authenticated_url, app_provider_base_url, app_provider_contract_by_tool,
     app_provider_headers, AppProviderKind,
 };
+use axum::extract::{Path, State};
+use axum::Json;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use serde_json::{json, Value};
 
@@ -110,6 +110,13 @@ async fn dispatch_app_provider_tool(
             "mailchimp_list_campaigns" => mailchimp_list_campaigns(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown mailchimp app tool `{other}`"
+            ))),
+        },
+        AppProviderKind::Resend => match tool_name {
+            "resend_list_domains" => resend_list_domains(state, org_id, args).await,
+            "resend_send_email" => resend_send_email(state, org_id, args).await,
+            other => Err(ApiError::not_found(format!(
+                "unknown resend app tool `{other}`"
             ))),
         },
     }
@@ -874,6 +881,94 @@ async fn mailchimp_list_campaigns(
     Ok(json!({ "campaigns": campaigns }))
 }
 
+async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
+    let integration = resolve_org_integration(state, org_id, "resend", args)?;
+    let base_url = app_provider_base_url(AppProviderKind::Resend)
+        .expect("resend provider contract must declare a base url");
+    let response = provider_json_request(
+        &state.super_agent_service.http_client,
+        state,
+        reqwest::Method::GET,
+        &format!("{base_url}/domains"),
+        map_provider_headers(AppProviderKind::Resend, &integration.secret)?,
+        None,
+    )
+    .await?;
+    let domains = response
+        .get("data")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|domain| {
+            json!({
+                "id": domain.get("id").and_then(Value::as_str).unwrap_or_default(),
+                "name": domain.get("name").and_then(Value::as_str).unwrap_or_default(),
+                "status": domain.get("status").and_then(Value::as_str).unwrap_or_default(),
+                "created_at": domain.get("created_at").and_then(Value::as_str),
+                "region": domain.get("region").and_then(Value::as_str),
+                "capabilities": domain.get("capabilities").cloned().unwrap_or_else(|| json!({})),
+            })
+        })
+        .collect::<Vec<_>>();
+    Ok(json!({
+        "domains": domains,
+        "has_more": response.get("has_more").and_then(Value::as_bool).unwrap_or(false),
+    }))
+}
+
+async fn resend_send_email(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
+    let integration = resolve_org_integration(state, org_id, "resend", args)?;
+    let from = required_string(args, &["from"])?;
+    let to = required_string_list(args, &["to"])?;
+    let subject = required_string(args, &["subject"])?;
+    let html = optional_string(args, &["html"]);
+    let text = optional_string(args, &["text"]);
+    let cc = optional_string_list(args, &["cc"]);
+    let bcc = optional_string_list(args, &["bcc"]);
+
+    if html.is_none() && text.is_none() {
+        return Err(ApiError::bad_request(
+            "resend_send_email requires at least one of `html` or `text`",
+        ));
+    }
+
+    let base_url = app_provider_base_url(AppProviderKind::Resend)
+        .expect("resend provider contract must declare a base url");
+    let mut payload = json!({
+        "from": from,
+        "to": to,
+        "subject": subject,
+    });
+    if let Some(html) = html {
+        payload["html"] = Value::String(html);
+    }
+    if let Some(text) = text {
+        payload["text"] = Value::String(text);
+    }
+    if let Some(cc) = cc {
+        payload["cc"] = json!(cc);
+    }
+    if let Some(bcc) = bcc {
+        payload["bcc"] = json!(bcc);
+    }
+
+    let response = provider_json_request(
+        &state.super_agent_service.http_client,
+        state,
+        reqwest::Method::POST,
+        &format!("{base_url}/emails"),
+        map_provider_headers(AppProviderKind::Resend, &integration.secret)?,
+        Some(payload),
+    )
+    .await?;
+    Ok(json!({
+        "email": {
+            "id": response.get("id").and_then(Value::as_str).unwrap_or_default(),
+        }
+    }))
+}
+
 fn resolve_org_integration(
     state: &AppState,
     org_id: &OrgId,
@@ -1062,6 +1157,36 @@ fn optional_string(args: &Value, keys: &[&str]) -> Option<String> {
     })
 }
 
+fn required_string_list(args: &Value, keys: &[&str]) -> ApiResult<Vec<String>> {
+    optional_string_list(args, keys)
+        .ok_or_else(|| ApiError::bad_request(format!("missing required field `{}`", keys[0])))
+}
+
+fn optional_string_list(args: &Value, keys: &[&str]) -> Option<Vec<String>> {
+    keys.iter().find_map(|key| {
+        let value = args.get(*key)?;
+        if let Some(single) = value
+            .as_str()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            return Some(vec![single.to_string()]);
+        }
+        value
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
+            .filter(|items| !items.is_empty())
+    })
+}
+
 fn optional_positive_number(args: &Value, keys: &[&str]) -> Option<u64> {
     keys.iter()
         .find_map(|key| args.get(*key).and_then(Value::as_u64))
@@ -1191,7 +1316,7 @@ mod tests {
     use super::app_provider_contract_by_tool;
     use aura_os_integrations::{
         app_provider_authenticated_url, app_provider_contracts, app_provider_headers,
-        AppProviderKind, org_integration_tool_manifest_entries,
+        org_integration_tool_manifest_entries, AppProviderKind,
     };
     use reqwest::header::AUTHORIZATION;
     use std::collections::{HashMap, HashSet};
@@ -1251,8 +1376,8 @@ mod tests {
 
     #[test]
     fn linear_headers_use_raw_api_key_without_bearer_prefix() {
-        let headers = app_provider_headers(AppProviderKind::Linear, "lin_test_123")
-            .expect("linear headers");
+        let headers =
+            app_provider_headers(AppProviderKind::Linear, "lin_test_123").expect("linear headers");
         let auth = headers
             .get(AUTHORIZATION)
             .and_then(|value| value.to_str().ok())

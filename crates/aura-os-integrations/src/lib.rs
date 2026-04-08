@@ -28,6 +28,7 @@ pub enum AppProviderKind {
     Apify,
     Metricool,
     Mailchimp,
+    Resend,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -68,6 +69,7 @@ impl AppProviderKind {
             AppProviderKind::Apify => "apify",
             AppProviderKind::Metricool => "metricool",
             AppProviderKind::Mailchimp => "mailchimp",
+            AppProviderKind::Resend => "resend",
         }
     }
 }
@@ -81,7 +83,10 @@ pub fn app_provider_contracts() -> &'static [AppProviderContract] {
                 env_base_url_key: Some("AURA_GITHUB_API_BASE_URL"),
                 default_base_url: Some("https://api.github.com"),
                 auth_scheme: AppProviderAuthScheme::AuthorizationBearer,
-                static_headers: &[("X-GitHub-Api-Version", "2022-11-28"), ("User-Agent", "aura-os")],
+                static_headers: &[
+                    ("X-GitHub-Api-Version", "2022-11-28"),
+                    ("User-Agent", "aura-os"),
+                ],
             },
         },
         AppProviderContract {
@@ -176,6 +181,16 @@ pub fn app_provider_contracts() -> &'static [AppProviderContract] {
                 static_headers: &[],
             },
         },
+        AppProviderContract {
+            kind: AppProviderKind::Resend,
+            tool_names: &["resend_list_domains", "resend_send_email"],
+            request: AppProviderRequestContract {
+                env_base_url_key: Some("AURA_RESEND_API_BASE_URL"),
+                default_base_url: Some("https://api.resend.com"),
+                auth_scheme: AppProviderAuthScheme::AuthorizationBearer,
+                static_headers: &[],
+            },
+        },
     ]
 }
 
@@ -206,18 +221,12 @@ pub fn app_provider_base_url(kind: AppProviderKind) -> Option<String> {
     })
 }
 
-pub fn app_provider_headers(
-    kind: AppProviderKind,
-    secret: &str,
-) -> Result<HeaderMap, String> {
+pub fn app_provider_headers(kind: AppProviderKind, secret: &str) -> Result<HeaderMap, String> {
     let contract = app_provider_request_contract(kind);
     let mut headers = default_json_headers();
 
     for (name, value) in contract.static_headers {
-        headers.insert(
-            *name,
-            HeaderValue::from_static(value),
-        );
+        headers.insert(*name, HeaderValue::from_static(value));
     }
 
     match contract.auth_scheme {
@@ -253,12 +262,17 @@ pub fn app_provider_authenticated_url(
     path: &str,
     secret: &str,
 ) -> Result<reqwest::Url, String> {
-    let base_url = app_provider_base_url(kind)
-        .ok_or_else(|| format!("provider `{}` does not define a base url", kind.provider_id()))?;
+    let base_url = app_provider_base_url(kind).ok_or_else(|| {
+        format!(
+            "provider `{}` does not define a base url",
+            kind.provider_id()
+        )
+    })?;
     let mut url = reqwest::Url::parse(&format!("{base_url}{path}"))
         .map_err(|e| format!("invalid {} base url: {e}", kind.provider_id()))?;
 
-    if let AppProviderAuthScheme::QueryParam(param) = app_provider_request_contract(kind).auth_scheme
+    if let AppProviderAuthScheme::QueryParam(param) =
+        app_provider_request_contract(kind).auth_scheme
     {
         url.query_pairs_mut().append_pair(param, secret);
     }
@@ -541,7 +555,9 @@ mod tests {
             Some("2022-11-28")
         );
         assert_eq!(
-            headers.get("User-Agent").and_then(|value| value.to_str().ok()),
+            headers
+                .get("User-Agent")
+                .and_then(|value| value.to_str().ok()),
             Some("aura-os")
         );
     }
@@ -560,12 +576,9 @@ mod tests {
 
     #[test]
     fn buffer_urls_use_query_token_auth() {
-        let url = app_provider_authenticated_url(
-            AppProviderKind::Buffer,
-            "/profiles.json",
-            "buf_test",
-        )
-        .expect("buffer url");
+        let url =
+            app_provider_authenticated_url(AppProviderKind::Buffer, "/profiles.json", "buf_test")
+                .expect("buffer url");
         assert_eq!(
             url.query_pairs().find(|(key, _)| key == "access_token"),
             Some(("access_token".into(), "buf_test".into()))

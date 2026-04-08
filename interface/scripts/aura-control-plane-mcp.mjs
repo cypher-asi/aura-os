@@ -705,6 +705,14 @@ async function mailchimpListCampaigns(args) {
   return callAppProviderTool("mailchimp_list_campaigns", args);
 }
 
+async function resendListDomains(args) {
+  return callAppProviderTool("resend_list_domains", args);
+}
+
+async function resendSendEmail(args) {
+  return callAppProviderTool("resend_send_email", args);
+}
+
 const toolHandlers = {
   list_specs: listSpecs,
   get_spec: getSpec,
@@ -747,6 +755,8 @@ const toolHandlers = {
   metricool_list_posts: metricoolListPosts,
   mailchimp_list_audiences: mailchimpListAudiences,
   mailchimp_list_campaigns: mailchimpListCampaigns,
+  resend_list_domains: resendListDomains,
+  resend_send_email: resendSendEmail,
 };
 
 function validateSharedTools() {

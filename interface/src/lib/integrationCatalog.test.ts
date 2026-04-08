@@ -43,6 +43,7 @@ describe("integrationCatalog auth labels", () => {
       "apify",
       "metricool",
       "mailchimp",
+      "resend",
     ]) {
       expect(getIntegrationDefinition(provider)?.kind).toBe("workspace_integration");
       expect(appIds.has(provider)).toBe(true);
