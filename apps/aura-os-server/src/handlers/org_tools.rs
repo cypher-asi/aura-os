@@ -1,21 +1,30 @@
 use aura_os_integrations::{
     app_provider_authenticated_url, app_provider_base_url, app_provider_contract_by_tool,
-    app_provider_headers, AppProviderKind, IntegrationsError,
+    app_provider_headers, trusted_integration_method_by_tool, AppProviderKind, IntegrationsError,
 };
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use tracing::warn;
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
+use crate::handlers::trusted_mcp;
+use crate::handlers::trusted_runtime::execute_trusted_integration_tool;
 use crate::state::{AppState, AuthJwt};
 
 struct ResolvedOrgIntegration {
     metadata: OrgIntegration,
     secret: String,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct McpToolQuery {
+    tool_name: String,
 }
 
 pub(crate) async fn call_tool(
@@ -35,6 +44,49 @@ pub(crate) async fn call_tool(
     Ok(Json(result))
 }
 
+pub(crate) async fn list_tool_catalog(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(org_id): Path<OrgId>,
+) -> ApiResult<Json<Value>> {
+    let tools = installed_workspace_app_tools(&state, &org_id, &jwt).await;
+    let catalog = tools
+        .into_iter()
+        .map(|tool| {
+            json!({
+                "name": tool.name,
+                "description": tool.description,
+                "inputSchema": tool.input_schema,
+                "namespace": tool.namespace,
+                "endpoint": tool.endpoint,
+                "sourceKind": tool.metadata.get("aura_source_kind").cloned().unwrap_or(Value::Null),
+                "trustClass": tool.metadata.get("aura_trust_class").cloned().unwrap_or(Value::Null),
+                "metadata": tool.metadata,
+            })
+        })
+        .collect::<Vec<_>>();
+    Ok(Json(json!({ "tools": catalog })))
+}
+
+pub(crate) async fn call_mcp_tool(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    Path((org_id, integration_id)): Path<(OrgId, String)>,
+    Query(query): Query<McpToolQuery>,
+    Json(args): Json<Value>,
+) -> ApiResult<Json<Value>> {
+    let integration = resolve_mcp_server_integration(&state, &org_id, &integration_id).await?;
+    let result = trusted_mcp::call_tool(
+        &integration.metadata,
+        Some(&integration.secret),
+        &query.tool_name,
+        &args,
+    )
+    .await
+    .map_err(ApiError::bad_gateway)?;
+    Ok(Json(result))
+}
+
 async fn dispatch_app_provider_tool(
     kind: AppProviderKind,
     state: &AppState,
@@ -42,24 +94,30 @@ async fn dispatch_app_provider_tool(
     tool_name: &str,
     args: &Value,
 ) -> ApiResult<Value> {
+    if let Some(method) = trusted_integration_method_by_tool(tool_name) {
+        let integration = resolve_org_integration(state, org_id, &method.provider, args).await?;
+        return execute_trusted_integration_tool(
+            &state.super_agent_service.http_client,
+            kind,
+            &integration.secret,
+            args,
+            &method.runtime,
+        )
+        .await;
+    }
+
     match kind {
         AppProviderKind::Github => match tool_name {
-            "github_list_repos" => github_list_repos(state, org_id, args).await,
-            "github_create_issue" => github_create_issue(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown github app tool `{other}`"
             ))),
         },
         AppProviderKind::Linear => match tool_name {
-            "linear_list_teams" => linear_list_teams(state, org_id, args).await,
-            "linear_create_issue" => linear_create_issue(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown linear app tool `{other}`"
             ))),
         },
         AppProviderKind::Slack => match tool_name {
-            "slack_list_channels" => slack_list_channels(state, org_id, args).await,
-            "slack_post_message" => slack_post_message(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown slack app tool `{other}`"
             ))),
@@ -72,8 +130,6 @@ async fn dispatch_app_provider_tool(
             ))),
         },
         AppProviderKind::BraveSearch => match tool_name {
-            "brave_search_web" => brave_search_web(state, org_id, args).await,
-            "brave_search_news" => brave_search_news(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown brave search app tool `{other}`"
             ))),
@@ -86,8 +142,6 @@ async fn dispatch_app_provider_tool(
             ))),
         },
         AppProviderKind::Buffer => match tool_name {
-            "buffer_list_profiles" => buffer_list_profiles(state, org_id, args).await,
-            "buffer_create_update" => buffer_create_update(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown buffer app tool `{other}`"
             ))),
@@ -114,8 +168,6 @@ async fn dispatch_app_provider_tool(
             ))),
         },
         AppProviderKind::Resend => match tool_name {
-            "resend_list_domains" => resend_list_domains(state, org_id, args).await,
-            "resend_send_email" => resend_send_email(state, org_id, args).await,
             other => Err(ApiError::not_found(format!(
                 "unknown resend app tool `{other}`"
             ))),
@@ -1186,6 +1238,117 @@ fn validate_org_tool_integration(
     Ok(integration)
 }
 
+fn validate_mcp_tool_integration(integration: OrgIntegration) -> ApiResult<OrgIntegration> {
+    if integration.kind != OrgIntegrationKind::McpServer {
+        return Err(ApiError::bad_request(format!(
+            "integration `{}` is not an MCP server integration",
+            integration.name
+        )));
+    }
+    if !integration.enabled {
+        return Err(ApiError::bad_request(format!(
+            "integration `{}` is disabled",
+            integration.name
+        )));
+    }
+    Ok(integration)
+}
+
+async fn resolve_mcp_server_integration(
+    state: &AppState,
+    org_id: &OrgId,
+    integration_id: &str,
+) -> ApiResult<ResolvedOrgIntegration> {
+    let integration = if let Some(client) = &state.integrations_client {
+        match client
+            .get_integration_internal(org_id, integration_id)
+            .await
+        {
+            Ok(integration) => {
+                let integration = validate_mcp_tool_integration(integration)?;
+                if let Err(error) = state.org_service.sync_integration_shadow(
+                    &integration,
+                    aura_os_orgs::IntegrationSecretUpdate::Preserve,
+                ) {
+                    warn!(
+                        %org_id,
+                        integration_id = %integration.integration_id,
+                        error = %error,
+                        "failed to sync compatibility-only local MCP integration shadow after canonical lookup"
+                    );
+                }
+                integration
+            }
+            Err(IntegrationsError::Server { status: 404, .. }) => {
+                return Err(ApiError::not_found("integration not found"));
+            }
+            Err(error) => {
+                warn!(
+                    %org_id,
+                    integration_id,
+                    error = %error,
+                    "failed to load canonical aura-integrations MCP metadata; falling back to compatibility-only local shadow"
+                );
+                validate_mcp_tool_integration(
+                    state
+                        .org_service
+                        .get_integration(org_id, integration_id)
+                        .map_err(|e| ApiError::internal(format!("loading org integration: {e}")))?
+                        .ok_or_else(|| ApiError::not_found("integration not found"))?,
+                )?
+            }
+        }
+    } else {
+        validate_mcp_tool_integration(
+            state
+                .org_service
+                .get_integration(org_id, integration_id)
+                .map_err(|e| ApiError::internal(format!("loading org integration: {e}")))?
+                .ok_or_else(|| ApiError::not_found("integration not found"))?,
+        )?
+    };
+
+    let secret = if let Some(client) = &state.integrations_client {
+        match client.get_integration_secret(org_id, integration_id).await {
+            Ok(secret) => secret
+                .filter(|value| !value.trim().is_empty())
+                .or_else(|| {
+                    state
+                        .org_service
+                        .get_integration_secret(integration_id)
+                        .ok()
+                        .flatten()
+                        .filter(|value| !value.trim().is_empty())
+                }),
+            Err(error) => {
+                warn!(
+                    %org_id,
+                    integration_id,
+                    error = %error,
+                    "failed to load canonical aura-integrations MCP secret; falling back to compatibility-only local shadow"
+                );
+                state
+                    .org_service
+                    .get_integration_secret(integration_id)
+                    .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
+                    .filter(|value| !value.trim().is_empty())
+            }
+        }
+    } else {
+        state
+            .org_service
+            .get_integration_secret(integration_id)
+            .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
+            .filter(|value| !value.trim().is_empty())
+    }
+    .unwrap_or_default();
+
+    Ok(ResolvedOrgIntegration {
+        metadata: integration,
+        secret,
+    })
+}
+
 fn matches_org_tool_provider(integration: &OrgIntegration, provider: &str) -> bool {
     integration.provider == provider
         && integration.has_secret
@@ -1473,7 +1636,9 @@ fn notion_page_title(page: &Value) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{app_provider_contract_by_tool, resolve_org_integration};
+    use super::{
+        app_provider_contract_by_tool, resolve_mcp_server_integration, resolve_org_integration,
+    };
     use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
     use aura_os_integrations::{
         app_provider_authenticated_url, app_provider_contracts, app_provider_headers,
@@ -1736,5 +1901,35 @@ mod tests {
 
         assert_eq!(resolved.metadata, canonical);
         assert_eq!(resolved.secret, "canonical-secret");
+    }
+
+    #[tokio::test]
+    async fn resolve_mcp_server_integration_accepts_enabled_mcp_server() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let db_path = db_dir.path().join("settings.db");
+        let state = crate::build_app_state(&db_path).expect("build app state");
+        let org_id = OrgId::new();
+
+        let integration = state
+            .org_service
+            .upsert_integration(
+                &org_id,
+                Some("mcp-1"),
+                "Docs MCP".to_string(),
+                "mcp_server".to_string(),
+                OrgIntegrationKind::McpServer,
+                None,
+                Some(serde_json::json!({"transport":"stdio","command":"demo"})),
+                Some(true),
+                IntegrationSecretUpdate::Preserve,
+            )
+            .expect("save mcp integration");
+
+        let resolved = resolve_mcp_server_integration(&state, &org_id, "mcp-1")
+            .await
+            .expect("resolve mcp integration");
+
+        assert_eq!(resolved.metadata, integration);
+        assert_eq!(resolved.secret, "");
     }
 }

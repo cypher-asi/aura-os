@@ -3,9 +3,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -14,26 +11,11 @@ const apiBaseUrl = requiredEnv("AURA_MCP_API_BASE_URL");
 const projectId = requiredEnv("AURA_MCP_PROJECT_ID");
 const jwt = requiredEnv("AURA_MCP_JWT");
 const orgId = optionalEnv("AURA_MCP_ORG_ID");
-const integrationSecretsById = (() => {
-  const raw = optionalEnv("AURA_MCP_INTEGRATION_SECRETS_JSON");
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-})();
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sharedProjectTools = JSON.parse(
   fs.readFileSync(path.resolve(currentDir, "../../infra/shared/project-control-plane-tools.json"), "utf8"),
 );
-const appProviderTools = JSON.parse(
-  fs.readFileSync(path.resolve(currentDir, "../../infra/shared/org-integration-tools.json"), "utf8"),
-);
-const allSharedTools = [...sharedProjectTools, ...appProviderTools];
-let orgIntegrationsPromise;
-let dynamicMcpRegistryPromise;
+let orgToolCatalogPromise;
 
 function requiredEnv(name) {
   const value = process.env[name]?.trim();
@@ -66,15 +48,34 @@ async function api(path, init = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-async function getOrgIntegrations() {
+async function apiRequest(url, init = {}) {
+  const finalUrl = typeof url === "string" && url.startsWith("/")
+    ? `${apiBaseUrl}${url}`
+    : url;
+  const response = await fetch(finalUrl, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}: ${text}`.trim());
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+async function getOrgToolCatalog() {
   if (!orgId) {
     return [];
   }
-  if (!orgIntegrationsPromise) {
-    orgIntegrationsPromise = api(`/api/orgs/${orgId}/integrations`);
+  if (!orgToolCatalogPromise) {
+    orgToolCatalogPromise = api(`/api/orgs/${orgId}/tool-actions`);
   }
-  const integrations = await orgIntegrationsPromise;
-  return Array.isArray(integrations) ? integrations : [];
+  const response = await orgToolCatalogPromise;
+  return Array.isArray(response?.tools) ? response.tools : [];
 }
 
 function configObject(value) {
@@ -100,13 +101,6 @@ function expandConfigTemplates(value) {
   return value;
 }
 
-function slugify(value) {
-  return String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "") || "mcp";
-}
-
 function normalizeArgs(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item));
@@ -117,156 +111,16 @@ function normalizeArgs(value) {
   return [];
 }
 
-function transportKind(config) {
-  const transport = String(config.transport ?? "").trim().toLowerCase();
-  if (transport === "http" || transport === "streamable_http") return "http";
-  if (transport === "stdio") return "stdio";
-  return null;
-}
-
-async function getDynamicMcpRegistry() {
-  if (!orgId) {
-    return { tools: [], toolEntries: new Map(), transports: [] };
-  }
-  if (!dynamicMcpRegistryPromise) {
-    dynamicMcpRegistryPromise = buildDynamicMcpRegistry();
-  }
-  return dynamicMcpRegistryPromise;
-}
-
-async function listSavedMcpServers() {
-  const integrations = await getOrgIntegrations();
-  return integrations.filter((integration) => {
-    if (integration?.kind !== "mcp_server") return false;
-    if (integration?.enabled === false) return false;
-    const config = configObject(integration.provider_config);
-    return transportKind(config) === "http"
-      ? typeof config.url === "string" && config.url.trim().length > 0
-      : transportKind(config) === "stdio"
-        ? typeof config.command === "string" && config.command.trim().length > 0
-        : false;
-  });
-}
-
-async function connectDynamicMcpServer(integration) {
-  const config = configObject(expandConfigTemplates(integration.provider_config));
-  const transport = transportKind(config);
-  if (!transport) {
-    throw new Error(`Unsupported MCP transport for ${integration.name}`);
-  }
-
-  const client = new Client({
-    name: "aura-control-plane-sidecar",
-    version: "0.1.0",
-  });
-
-  let clientTransport;
-  if (transport === "http") {
-    const headers = {};
-    const secret = integrationSecretsById[integration.integration_id];
-    if (typeof secret === "string" && secret.trim()) {
-      headers.Authorization = `Bearer ${secret.trim()}`;
-    }
-    clientTransport = new StreamableHTTPClientTransport(new URL(String(config.url)), {
-      requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
-    });
-  } else {
-    const env = configObject(config.env);
-    const secret = integrationSecretsById[integration.integration_id];
-    if (typeof secret === "string" && secret.trim() && typeof config.secretEnvVar === "string" && config.secretEnvVar.trim()) {
-      env[config.secretEnvVar.trim()] = secret.trim();
-    }
-    clientTransport = new StdioClientTransport({
-      command: String(config.command),
-      args: normalizeArgs(config.args),
-      cwd: typeof config.cwd === "string" && config.cwd.trim() ? config.cwd.trim() : undefined,
-      env,
-      stderr: "pipe",
-    });
-  }
-
-  await client.connect(clientTransport);
-  const result = await client.listTools();
-  return { client, transport: clientTransport, tools: result.tools };
-}
-
-async function buildDynamicMcpRegistry() {
-  const integrations = await listSavedMcpServers();
-  const toolEntries = new Map();
-  const tools = [];
-  const clients = [];
-  const transports = [];
-
-  for (const integration of integrations) {
-    try {
-      const { client, transport, tools: discoveredTools } = await connectDynamicMcpServer(integration);
-      clients.push(client);
-      transports.push(transport);
-      const prefix = `mcp_${slugify(integration.integration_id)}`;
-
-      for (const tool of discoveredTools) {
-        const namespacedName = `${prefix}__${tool.name}`;
-        if (toolEntries.has(namespacedName)) continue;
-        toolEntries.set(namespacedName, {
-          client,
-          originalName: tool.name,
-          integrationId: integration.integration_id,
-          integrationName: integration.name,
-        });
-        tools.push({
-          name: namespacedName,
-          description: `[${integration.name}] ${tool.description ?? tool.name}`,
-          inputSchema: tool.inputSchema ?? { type: "object", additionalProperties: true },
-          source: "mcp",
-          integration_id: integration.integration_id,
-        });
-      }
-    } catch (error) {
-      process.stderr.write(
-        `[aura-control-plane-mcp] Skipping MCP server ${integration.name}: ${error instanceof Error ? error.message : String(error)}\n`,
-      );
-    }
-  }
-
-  return { tools, toolEntries, clients, transports };
-}
-
-async function dynamicMcpTools() {
-  const registry = await getDynamicMcpRegistry();
-  return registry.tools;
-}
-
-async function callDynamicMcpTool(toolName, args = {}) {
-  const registry = await getDynamicMcpRegistry();
-  const entry = registry.toolEntries.get(toolName);
-  if (!entry) {
-    throw new Error(`Unknown dynamic MCP tool: ${toolName}`);
-  }
-  return entry.client.callTool({
-    name: entry.originalName,
-    arguments: args,
-  });
-}
-
-async function availableAppProviderTools() {
-  if (!orgId) {
-    return [];
-  }
-  const integrations = await getOrgIntegrations();
-  const availableProviders = new Set(
-    integrations
-      .filter((integration) => integration?.has_secret && integration?.enabled !== false && integration?.kind === "workspace_integration")
-      .map((integration) => integration.provider)
-      .filter((provider) => typeof provider === "string" && provider),
-  );
-  return appProviderTools.filter((tool) => !tool.provider || availableProviders.has(tool.provider));
-}
-
-async function callAppProviderTool(toolName, args = {}) {
+async function callCatalogTool(toolName, args = {}) {
   if (!orgId) {
     throw new Error(`${toolName} requires AURA_MCP_ORG_ID to be set by the Aura OS server`);
   }
-  return api(`/api/orgs/${orgId}/tool-actions/${toolName}`, {
+  const tools = await getOrgToolCatalog();
+  const tool = tools.find((entry) => entry?.name === toolName);
+  if (!tool || typeof tool.endpoint !== "string" || !tool.endpoint) {
+    throw new Error(`Unknown org tool: ${toolName}`);
+  }
+  return apiRequest(tool.endpoint, {
     method: "POST",
     body: JSON.stringify(args),
   });
@@ -609,110 +463,6 @@ async function getLoopStatus() {
   return { loop_status: loopStatus };
 }
 
-async function listOrgIntegrations(args) {
-  const provider = optionalTrimmedString(args?.provider);
-  const integrations = await getOrgIntegrations();
-  return {
-    integrations: integrations
-      .filter((integration) => !provider || integration.provider === provider)
-      .map((integration) => ({
-        integration_id: integration.integration_id,
-        name: integration.name,
-        provider: integration.provider,
-        default_model: integration.default_model ?? null,
-        has_secret: Boolean(integration.has_secret),
-      })),
-  };
-}
-
-async function githubListRepos(args) {
-  return callAppProviderTool("github_list_repos", args);
-}
-
-async function githubCreateIssue(args) {
-  return callAppProviderTool("github_create_issue", args);
-}
-
-async function linearListTeams(args) {
-  return callAppProviderTool("linear_list_teams", args);
-}
-
-async function linearCreateIssue(args) {
-  return callAppProviderTool("linear_create_issue", args);
-}
-
-async function slackListChannels(args) {
-  return callAppProviderTool("slack_list_channels", args);
-}
-
-async function slackPostMessage(args) {
-  return callAppProviderTool("slack_post_message", args);
-}
-
-async function notionSearchPages(args) {
-  return callAppProviderTool("notion_search_pages", args);
-}
-
-async function notionCreatePage(args) {
-  return callAppProviderTool("notion_create_page", args);
-}
-
-async function braveSearchWeb(args) {
-  return callAppProviderTool("brave_search_web", args);
-}
-
-async function braveSearchNews(args) {
-  return callAppProviderTool("brave_search_news", args);
-}
-
-async function freepikListIcons(args) {
-  return callAppProviderTool("freepik_list_icons", args);
-}
-
-async function freepikImprovePrompt(args) {
-  return callAppProviderTool("freepik_improve_prompt", args);
-}
-
-async function bufferListProfiles(args) {
-  return callAppProviderTool("buffer_list_profiles", args);
-}
-
-async function bufferCreateUpdate(args) {
-  return callAppProviderTool("buffer_create_update", args);
-}
-
-async function apifyListActors(args) {
-  return callAppProviderTool("apify_list_actors", args);
-}
-
-async function apifyRunActor(args) {
-  return callAppProviderTool("apify_run_actor", args);
-}
-
-async function metricoolListBrands(args) {
-  return callAppProviderTool("metricool_list_brands", args);
-}
-
-async function metricoolListPosts(args) {
-  return callAppProviderTool("metricool_list_posts", args);
-}
-
-async function mailchimpListAudiences(args) {
-  return callAppProviderTool("mailchimp_list_audiences", args);
-}
-
-async function mailchimpListCampaigns(args) {
-  return callAppProviderTool("mailchimp_list_campaigns", args);
-}
-
-async function resendListDomains(args) {
-  return callAppProviderTool("resend_list_domains", args);
-}
-
-async function resendSendEmail(args) {
-  return callAppProviderTool("resend_send_email", args);
-}
-
 const toolHandlers = {
   list_specs: listSpecs,
   get_spec: getSpec,
@@ -734,36 +484,13 @@ const toolHandlers = {
   pause_dev_loop: pauseDevLoop,
   stop_dev_loop: stopDevLoop,
   get_loop_status: getLoopStatus,
-  list_org_integrations: listOrgIntegrations,
-  github_list_repos: githubListRepos,
-  github_create_issue: githubCreateIssue,
-  linear_list_teams: linearListTeams,
-  linear_create_issue: linearCreateIssue,
-  slack_list_channels: slackListChannels,
-  slack_post_message: slackPostMessage,
-  notion_search_pages: notionSearchPages,
-  notion_create_page: notionCreatePage,
-  brave_search_web: braveSearchWeb,
-  brave_search_news: braveSearchNews,
-  freepik_list_icons: freepikListIcons,
-  freepik_improve_prompt: freepikImprovePrompt,
-  buffer_list_profiles: bufferListProfiles,
-  buffer_create_update: bufferCreateUpdate,
-  apify_list_actors: apifyListActors,
-  apify_run_actor: apifyRunActor,
-  metricool_list_brands: metricoolListBrands,
-  metricool_list_posts: metricoolListPosts,
-  mailchimp_list_audiences: mailchimpListAudiences,
-  mailchimp_list_campaigns: mailchimpListCampaigns,
-  resend_list_domains: resendListDomains,
-  resend_send_email: resendSendEmail,
 };
 
 function validateSharedTools() {
-  const manifestNames = new Set(allSharedTools.map((tool) => tool.name));
+  const manifestNames = new Set(sharedProjectTools.map((tool) => tool.name));
   const handlerNames = new Set(Object.keys(toolHandlers));
 
-  for (const tool of allSharedTools) {
+  for (const tool of sharedProjectTools) {
     if (typeof tool.name !== "string" || !tool.name) {
       throw new Error("Shared tool manifest contains a tool without a valid name");
     }
@@ -800,7 +527,7 @@ const server = new Server(
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [...sharedProjectTools, ...(await availableAppProviderTools()), ...(await dynamicMcpTools())].map((tool) => ({
+  tools: [...sharedProjectTools, ...(await getOrgToolCatalog())].map((tool) => ({
     name: tool.name,
     description: tool.description,
     inputSchema: tool.inputSchema,
@@ -818,9 +545,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [{ type: "text", text: JSON.stringify(result) }],
       };
     }
-    const dynamicRegistry = await getDynamicMcpRegistry();
-    if (dynamicRegistry.toolEntries.has(name)) {
-      return await callDynamicMcpTool(name, args ?? {});
+    const catalog = await getOrgToolCatalog();
+    if (catalog.some((tool) => tool?.name === name)) {
+      const result = await callCatalogTool(name, args ?? {});
+      if (result && typeof result === "object" && Array.isArray(result.content)) {
+        return result;
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+      };
     }
     throw new Error(`Unknown tool: ${name}`);
   } catch (error) {
@@ -838,22 +571,3 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-
-async function closeDynamicMcpRegistry() {
-  if (!dynamicMcpRegistryPromise) return;
-  try {
-    const registry = await dynamicMcpRegistryPromise;
-    await Promise.allSettled(registry.clients.map((client) => client.close()));
-    await Promise.allSettled(
-      registry.transports
-        .filter((transport) => transport && typeof transport.close === "function")
-        .map((transport) => transport.close()),
-    );
-  } catch {
-    // ignore cleanup errors
-  }
-}
-
-process.on("exit", () => {
-  void closeDynamicMcpRegistry();
-});

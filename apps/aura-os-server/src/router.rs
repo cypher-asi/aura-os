@@ -182,6 +182,14 @@ fn org_routes() -> Router<AppState> {
             "/api/orgs/:org_id/tool-actions/:tool_name",
             post(org_tools::call_tool),
         )
+        .route(
+            "/api/orgs/:org_id/tool-actions",
+            get(org_tools::list_tool_catalog),
+        )
+        .route(
+            "/api/orgs/:org_id/tool-actions/mcp/:integration_id",
+            post(org_tools::call_mcp_tool),
+        )
         .route("/api/invites/:token/accept", post(orgs::accept_invite))
         .route(
             "/api/orgs/:org_id/billing",
@@ -520,10 +528,7 @@ fn process_routes() -> Router<AppState> {
             "/api/processes/:id/runs/:run_id/artifacts",
             get(process::list_run_artifacts),
         )
-        .route(
-            "/api/process-artifacts/:id",
-            get(process::get_artifact),
-        )
+        .route("/api/process-artifacts/:id", get(process::get_artifact))
         .route(
             "/api/process-artifacts/:id/content",
             get(process::get_artifact_content),

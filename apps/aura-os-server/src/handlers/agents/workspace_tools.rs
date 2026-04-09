@@ -8,15 +8,21 @@ use aura_os_integrations::{
     installed_tool_runtime_execution_for_provider,
     installed_workspace_app_tools as build_installed_workspace_app_tools,
     installed_workspace_integrations as build_installed_workspace_integrations,
-    org_integration_tool_manifest_entries,
+    org_integration_tool_manifest_entries, TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY,
 };
 use serde::Deserialize;
 use serde_json::Value;
 use tracing::warn;
 
 use aura_os_core::{Agent, OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_link::{InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration};
+use aura_os_link::{
+    InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration, ToolAuth,
+};
 
+use crate::handlers::trusted_mcp::{
+    self, MCP_INTEGRATION_ID_METADATA_KEY, MCP_INTEGRATION_NAME_METADATA_KEY,
+    MCP_TOOL_NAME_METADATA_KEY, TOOL_SOURCE_KIND_METADATA_KEY, TOOL_TRUST_CLASS_METADATA_KEY,
+};
 use crate::state::AppState;
 
 #[allow(dead_code)]
@@ -193,6 +199,7 @@ pub(crate) async fn installed_workspace_app_tools(
     let runtime_integrations = load_runtime_integrations(state, org_id, &integrations).await;
     let mut tools = build_installed_workspace_app_tools(org_id, &integrations, bearer_token);
     for tool in &mut tools {
+        annotate_tool_metadata(tool);
         let Some(contract) = app_provider_contract_by_tool(&tool.name) else {
             continue;
         };
@@ -202,7 +209,156 @@ pub(crate) async fn installed_workspace_app_tools(
         tool.runtime_execution =
             installed_tool_runtime_execution_for_provider(contract.kind, integrations.clone());
     }
+    tools.extend(discovered_trusted_mcp_tools(state, org_id, bearer_token, &integrations).await);
     tools
+}
+
+fn annotate_tool_metadata(tool: &mut InstalledTool) {
+    if tool
+        .metadata
+        .contains_key(TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY)
+    {
+        tool.metadata.insert(
+            TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+            Value::String("app_provider".to_string()),
+        );
+        tool.metadata.insert(
+            TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+            Value::String("trusted".to_string()),
+        );
+        return;
+    }
+
+    if tool.required_integration.is_some() {
+        tool.metadata.insert(
+            TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+            Value::String("app_provider".to_string()),
+        );
+        tool.metadata.insert(
+            TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+            Value::String("general".to_string()),
+        );
+        return;
+    }
+
+    tool.metadata.insert(
+        TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+        Value::String("aura_native".to_string()),
+    );
+    tool.metadata.insert(
+        TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+        Value::String("platform".to_string()),
+    );
+}
+
+async fn discovered_trusted_mcp_tools(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: &str,
+    integrations: &[OrgIntegration],
+) -> Vec<InstalledTool> {
+    let base_url = control_plane_api_base_url();
+    let mut tools = Vec::new();
+
+    for integration in integrations.iter().filter(|integration| {
+        integration.enabled && matches!(integration.kind, OrgIntegrationKind::McpServer)
+    }) {
+        let secret = load_integration_secret(state, org_id, integration).await;
+        match trusted_mcp::discover_tools(integration, secret.as_deref()).await {
+            Ok(discovered) => {
+                for tool in discovered {
+                    let endpoint = match discovered_mcp_tool_endpoint(
+                        &base_url,
+                        org_id,
+                        &integration.integration_id,
+                        &tool.original_name,
+                    ) {
+                        Ok(endpoint) => endpoint,
+                        Err(error) => {
+                            warn!(
+                                %org_id,
+                                integration_id = %integration.integration_id,
+                                tool_name = %tool.original_name,
+                                error = %error,
+                                "failed to build trusted MCP tool endpoint"
+                            );
+                            continue;
+                        }
+                    };
+                    let mut metadata = HashMap::new();
+                    metadata.insert(
+                        TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+                        Value::String("mcp".to_string()),
+                    );
+                    metadata.insert(
+                        TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+                        Value::String("trusted_mcp".to_string()),
+                    );
+                    metadata.insert(
+                        MCP_INTEGRATION_ID_METADATA_KEY.to_string(),
+                        Value::String(integration.integration_id.clone()),
+                    );
+                    metadata.insert(
+                        MCP_INTEGRATION_NAME_METADATA_KEY.to_string(),
+                        Value::String(integration.name.clone()),
+                    );
+                    metadata.insert(
+                        MCP_TOOL_NAME_METADATA_KEY.to_string(),
+                        Value::String(tool.original_name.clone()),
+                    );
+
+                    tools.push(InstalledTool {
+                        name: trusted_mcp::projected_tool_name(
+                            &integration.integration_id,
+                            &tool.original_name,
+                        ),
+                        description: format!("[{}] {}", integration.name, tool.description),
+                        input_schema: tool.input_schema,
+                        endpoint,
+                        auth: ToolAuth::Bearer {
+                            token: bearer_token.to_string(),
+                        },
+                        timeout_ms: Some(30_000),
+                        namespace: Some("aura_trusted_mcp".to_string()),
+                        required_integration: Some(
+                            aura_os_link::InstalledToolIntegrationRequirement {
+                                integration_id: Some(integration.integration_id.clone()),
+                                provider: Some(integration.provider.clone()),
+                                kind: Some("mcp_server".to_string()),
+                            },
+                        ),
+                        runtime_execution: None,
+                        metadata,
+                    });
+                }
+            }
+            Err(error) => warn!(
+                %org_id,
+                integration_id = %integration.integration_id,
+                integration_name = %integration.name,
+                error = %error,
+                "failed to discover trusted MCP tools; skipping dynamic MCP projection"
+            ),
+        }
+    }
+
+    tools
+}
+
+fn discovered_mcp_tool_endpoint(
+    base_url: &str,
+    org_id: &OrgId,
+    integration_id: &str,
+    original_tool_name: &str,
+) -> Result<String, String> {
+    let mut endpoint = reqwest::Url::parse(&format!(
+        "{base_url}/api/orgs/{org_id}/tool-actions/mcp/{integration_id}"
+    ))
+    .map_err(|error| format!("invalid control plane base url: {error}"))?;
+    endpoint
+        .query_pairs_mut()
+        .append_pair("tool_name", original_tool_name);
+    Ok(endpoint.to_string())
 }
 
 async fn workspace_integrations_for_org(state: &AppState, org_id: &OrgId) -> Vec<OrgIntegration> {
@@ -327,7 +483,20 @@ pub(crate) async fn installed_workspace_integrations_for_org(
     org_id: &OrgId,
 ) -> Vec<InstalledIntegration> {
     let integrations = workspace_integrations_for_org(state, org_id).await;
-    build_installed_workspace_integrations(&integrations)
+    let mut installed = build_installed_workspace_integrations(&integrations);
+    for integration in &mut installed {
+        if integration.kind == "mcp_server" {
+            integration.metadata.insert(
+                TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+                Value::String("mcp".to_string()),
+            );
+            integration.metadata.insert(
+                TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+                Value::String("trusted_mcp".to_string()),
+            );
+        }
+    }
+    installed
 }
 
 #[cfg(test)]
@@ -449,6 +618,74 @@ mod tests {
 
         assert!(ids.contains(&"brave_search"));
         assert!(ids.contains(&"mcp_server"));
+    }
+
+    #[tokio::test]
+    async fn installed_workspace_app_tools_include_discovered_trusted_mcp_tools() {
+        let script_dir = tempfile::tempdir().unwrap();
+        let script_path = script_dir.path().join("trusted-mcp-mock.sh");
+        std::fs::write(
+            &script_path,
+            r#"#!/bin/sh
+printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSchema":{"type":"object","properties":{"query":{"type":"string"}}}}]'
+"#,
+        )
+        .unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&script_path, perms).unwrap();
+        }
+        crate::handlers::trusted_mcp::set_script_override_for_tests(script_path);
+
+        let db_dir = tempfile::tempdir().unwrap();
+        let db_path = db_dir.path().join("settings.db");
+        let state = crate::build_app_state(&db_path).expect("build app state");
+        let org_id = OrgId::new();
+
+        state
+            .org_service
+            .upsert_integration(
+                &org_id,
+                None,
+                "Docs MCP".to_string(),
+                "mcp_server".to_string(),
+                OrgIntegrationKind::McpServer,
+                None,
+                Some(serde_json::json!({"transport":"stdio","command":"demo"})),
+                Some(true),
+                IntegrationSecretUpdate::Preserve,
+            )
+            .expect("save mcp integration");
+
+        let integration = state
+            .org_service
+            .list_integrations(&org_id)
+            .expect("list integrations")
+            .into_iter()
+            .find(|integration| integration.provider == "mcp_server")
+            .expect("mcp integration exists");
+        let discovered = crate::handlers::trusted_mcp::discover_tools(&integration, None)
+            .await
+            .expect("discover trusted MCP tools");
+        assert_eq!(discovered.len(), 1);
+        assert_eq!(discovered[0].original_name, "search_docs");
+
+        let tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
+        let tool = tools
+            .iter()
+            .find(|tool| tool.name.contains("search_docs"))
+            .expect("trusted MCP tool installed");
+
+        assert_eq!(tool.namespace.as_deref(), Some("aura_trusted_mcp"));
+        assert!(tool.endpoint.contains("/tool-actions/mcp/"));
+        assert!(matches!(tool.auth, ToolAuth::Bearer { .. }));
+        assert_eq!(
+            tool.metadata.get(TOOL_TRUST_CLASS_METADATA_KEY),
+            Some(&Value::String("trusted_mcp".to_string()))
+        );
     }
 
     async fn start_mock_integrations_server(secret: Option<&'static str>) -> String {

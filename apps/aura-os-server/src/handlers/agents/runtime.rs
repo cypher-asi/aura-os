@@ -32,7 +32,8 @@ use crate::handlers::agents::chat::{
 };
 use crate::handlers::agents::workspace_tools::{
     active_workspace_tools, control_plane_api_base_url as workspace_control_plane_api_base_url,
-    installed_workspace_app_tools, installed_workspace_integrations_for_org, workspace_tool,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+    shared_workspace_tools, workspace_tool, WorkspaceToolSourceKind,
 };
 use crate::handlers::projects_helpers::resolve_project_workspace_path_for_machine;
 use crate::handlers::sse::harness_event_to_sse;
@@ -193,6 +194,7 @@ async fn send_external_project_agent_event_stream(
 
     let prompt = build_external_prompt(state, agent, &body.content, Some(project_id.as_str()));
     let mcp_config = build_external_project_mcp_config(state, &project_id, jwt, agent).await?;
+    let tool_infos = external_project_tool_infos(state, agent, jwt).await;
     let (events_tx, _) = broadcast::channel::<HarnessOutbound>(256);
     let (sse_tx, sse_rx) = mpsc::unbounded_channel::<Result<Event, Infallible>>();
     let message_id = Uuid::new_v4().to_string();
@@ -210,7 +212,7 @@ async fn send_external_project_agent_event_stream(
             &sse_tx,
             HarnessOutbound::SessionReady(SessionReady {
                 session_id: Uuid::new_v4().to_string(),
-                tools: external_project_tool_infos(&state, &agent),
+                tools: tool_infos.clone(),
                 skills: Vec::new(),
             }),
         );
@@ -311,14 +313,29 @@ fn opencode_default_model(provider: &str) -> Option<&'static str> {
     }
 }
 
-fn external_project_tool_infos(state: &AppState, agent: &Agent) -> Vec<ToolInfo> {
-    active_workspace_tools(state, agent)
-        .into_iter()
+async fn external_project_tool_infos(state: &AppState, agent: &Agent, jwt: &str) -> Vec<ToolInfo> {
+    let mut tools = shared_workspace_tools()
+        .iter()
+        .filter(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative)
         .map(|tool| ToolInfo {
             name: tool.name.clone(),
             description: tool.description.clone(),
         })
-        .collect()
+        .collect::<Vec<_>>();
+
+    if let Some(org_id) = agent.org_id.as_ref() {
+        tools.extend(
+            installed_workspace_app_tools(state, org_id, jwt)
+                .await
+                .into_iter()
+                .map(|tool| ToolInfo {
+                    name: tool.name,
+                    description: tool.description,
+                }),
+        );
+    }
+
+    tools
 }
 
 pub(crate) fn effective_model(
