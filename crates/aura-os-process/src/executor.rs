@@ -26,7 +26,7 @@ use aura_os_link::{
     InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration, RunCompletion,
 };
 use aura_os_orgs::OrgService;
-use aura_os_storage::StorageClient;
+use aura_os_storage::{StorageClient, StorageError};
 use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
 
@@ -242,6 +242,23 @@ fn internal_process_sync_client(
     storage_client
         .map(Arc::as_ref)
         .filter(|client| client.has_internal_token())
+}
+
+fn authoritative_process_storage_error(
+    process_id: &ProcessId,
+    action: &str,
+    error: &StorageError,
+) -> ProcessError {
+    ProcessError::Execution(format!(
+        "Failed to {action} from authoritative process storage for process {process_id}: {error}"
+    ))
+}
+
+fn authoritative_process_read_error(process_id: &ProcessId, error: &StorageError) -> ProcessError {
+    match error {
+        StorageError::Server { status: 404, .. } => ProcessError::NotFound(process_id.to_string()),
+        _ => authoritative_process_storage_error(process_id, "load process", error),
+    }
 }
 
 /// Scan a workspace directory for output files written by the automaton.
@@ -471,13 +488,17 @@ impl ProcessExecutor {
         process_id: &ProcessId,
         trigger: ProcessRunTrigger,
     ) -> Result<ProcessRun, ProcessError> {
-        // Try storage first (process may only exist there when proxy is configured)
+        // When authoritative storage is enabled, process definitions must come
+        // from storage to avoid executing a stale local shadow copy.
         let process =
             if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-                match client.get_process_internal(&process_id.to_string()).await {
-                    Ok(sp) => Some(conv_process(sp)),
-                    Err(_) => self.store.get_process(process_id)?,
-                }
+                Some(
+                    client
+                        .get_process_internal(&process_id.to_string())
+                        .await
+                        .map(conv_process)
+                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+                )
             } else {
                 self.store.get_process(process_id)?
             };
@@ -566,10 +587,13 @@ impl ProcessExecutor {
     ) -> Result<ProcessRun, ProcessError> {
         let process =
             if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-                match client.get_process_internal(&process_id.to_string()).await {
-                    Ok(sp) => Some(conv_process(sp)),
-                    Err(_) => self.store.get_process(process_id)?,
-                }
+                Some(
+                    client
+                        .get_process_internal(&process_id.to_string())
+                        .await
+                        .map(conv_process)
+                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+                )
             } else {
                 self.store.get_process(process_id)?
             };
@@ -753,26 +777,35 @@ fn execute_run<'a>(
             sync_run_to_storage(client, &current_run, false).await;
         }
 
-        // Read nodes/connections from storage if available, else local
+        // When authoritative storage is enabled, fail closed on process graph
+        // reads instead of reviving the local shadow copy.
         let nodes = if let Some(client) = internal_storage_client {
-            match client
+            client
                 .list_process_nodes_internal(&run.process_id.to_string())
                 .await
-            {
-                Ok(sn) => sn.into_iter().map(conv_node).collect(),
-                Err(_) => store.list_nodes(&run.process_id)?,
-            }
+                .map(|sn| sn.into_iter().map(conv_node).collect())
+                .map_err(|error| {
+                    authoritative_process_storage_error(
+                        &run.process_id,
+                        "load process nodes",
+                        &error,
+                    )
+                })?
         } else {
             store.list_nodes(&run.process_id)?
         };
         let connections = if let Some(client) = internal_storage_client {
-            match client
+            client
                 .list_process_connections_internal(&run.process_id.to_string())
                 .await
-            {
-                Ok(sc) => sc.into_iter().map(conv_connection).collect(),
-                Err(_) => store.list_connections(&run.process_id)?,
-            }
+                .map(|sc| sc.into_iter().map(conv_connection).collect())
+                .map_err(|error| {
+                    authoritative_process_storage_error(
+                        &run.process_id,
+                        "load process connections",
+                        &error,
+                    )
+                })?
         } else {
             store.list_connections(&run.process_id)?
         };
@@ -801,15 +834,11 @@ fn execute_run<'a>(
 
         // ── create spec + tasks ────────────────────────────────────────────
         let process = if let Some(client) = internal_storage_client {
-            match client
+            client
                 .get_process_internal(&run.process_id.to_string())
                 .await
-            {
-                Ok(sp) => conv_process(sp),
-                Err(_) => store
-                    .get_process(&run.process_id)?
-                    .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?,
-            }
+                .map(conv_process)
+                .map_err(|error| authoritative_process_read_error(&run.process_id, &error))?
         } else {
             store
                 .get_process(&run.process_id)?
@@ -2739,9 +2768,14 @@ fn broadcast_node_status(
 
 #[cfg(test)]
 mod tests {
-    use aura_os_storage::StorageClient;
+    use crate::error::ProcessError;
+    use aura_os_core::ProcessId;
+    use aura_os_storage::{StorageClient, StorageError};
 
-    use super::internal_process_sync_client;
+    use super::{
+        authoritative_process_read_error, authoritative_process_storage_error,
+        internal_process_sync_client,
+    };
 
     #[test]
     fn internal_process_sync_client_requires_internal_token() {
@@ -2752,6 +2786,36 @@ mod tests {
             StorageClient::with_base_url_and_token("http://localhost:8080", "internal-token");
         assert!(
             internal_process_sync_client(Some(&std::sync::Arc::new(internal_client))).is_some()
+        );
+    }
+
+    #[test]
+    fn authoritative_process_read_error_maps_404_to_not_found() {
+        let process_id: ProcessId = "11111111-1111-1111-1111-111111111111"
+            .parse()
+            .expect("process id");
+        let error = StorageError::Server {
+            status: 404,
+            body: "not found".to_string(),
+        };
+
+        let mapped = authoritative_process_read_error(&process_id, &error);
+
+        assert!(matches!(mapped, ProcessError::NotFound(_)));
+    }
+
+    #[test]
+    fn authoritative_process_storage_error_includes_context() {
+        let process_id: ProcessId = "11111111-1111-1111-1111-111111111111"
+            .parse()
+            .expect("process id");
+        let error = StorageError::Validation("boom".to_string());
+
+        let mapped = authoritative_process_storage_error(&process_id, "load process nodes", &error);
+
+        assert_eq!(
+            mapped.to_string(),
+            "Execution error: Failed to load process nodes from authoritative process storage for process 11111111-1111-1111-1111-111111111111: validation error: boom"
         );
     }
 }

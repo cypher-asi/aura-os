@@ -23,7 +23,11 @@ impl ProcessScheduler {
         executor: Arc<ProcessExecutor>,
         storage_client: Option<Arc<StorageClient>>,
     ) -> Self {
-        Self { store, executor, storage_client }
+        Self {
+            store,
+            executor,
+            storage_client,
+        }
     }
 
     pub fn spawn(self: Arc<Self>) {
@@ -38,15 +42,23 @@ impl ProcessScheduler {
     }
 
     async fn tick(&self) -> Result<(), String> {
-        // Try reading scheduled processes from storage, fall back to local
+        // When authoritative storage is enabled, fail closed instead of
+        // resurrecting a stale local shadow copy of scheduled processes.
         let processes = if let Some(client) = &self.storage_client {
-            match client.list_scheduled_processes_internal().await {
-                Ok(storage_procs) => storage_procs
-                    .into_iter()
-                    .map(super::executor::conv_process)
-                    .collect(),
-                Err(_) => self.store.list_processes().map_err(|e| e.to_string())?,
-            }
+            client
+                .list_scheduled_processes_internal()
+                .await
+                .map(|storage_procs| {
+                    storage_procs
+                        .into_iter()
+                        .map(super::executor::conv_process)
+                        .collect()
+                })
+                .map_err(|error| {
+                    format!(
+                        "failed to list scheduled processes from authoritative process storage: {error}"
+                    )
+                })?
         } else {
             self.store.list_processes().map_err(|e| e.to_string())?
         };
