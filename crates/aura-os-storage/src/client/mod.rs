@@ -92,6 +92,10 @@ impl StorageClient {
         &self.base_url
     }
 
+    pub fn has_internal_token(&self) -> bool {
+        self.internal_token.is_some()
+    }
+
     pub async fn health_check(&self) -> Result<(), StorageError> {
         let url = format!("{}/health", self.base_url);
         let resp = self.http.get(&url).send().await?;
@@ -141,7 +145,13 @@ impl StorageClient {
         jwt: &str,
         body: &B,
     ) -> Result<T, StorageError> {
-        let resp = self.http.put(url).bearer_auth(jwt).json(body).send().await?;
+        let resp = self
+            .http
+            .put(url)
+            .bearer_auth(jwt)
+            .json(body)
+            .send()
+            .await?;
         self.handle_response(resp).await
     }
 
@@ -187,9 +197,9 @@ impl StorageClient {
     // -----------------------------------------------------------------------
 
     pub(crate) fn internal_token(&self) -> Result<&str, StorageError> {
-        self.internal_token
-            .as_deref()
-            .ok_or_else(|| StorageError::Validation("AURA_STORAGE_INTERNAL_TOKEN not configured".into()))
+        self.internal_token.as_deref().ok_or_else(|| {
+            StorageError::Validation("AURA_STORAGE_INTERNAL_TOKEN not configured".into())
+        })
     }
 
     pub(crate) async fn get_internal<T: serde::de::DeserializeOwned>(

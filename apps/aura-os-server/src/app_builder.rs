@@ -28,6 +28,13 @@ fn spawn_health_checks(
     integrations_client: &Option<Arc<IntegrationsClient>>,
 ) {
     if let Some(ref client) = storage_client {
+        if client.has_internal_token() {
+            info!("aura-storage internal token configured; remote process proxy is enabled");
+        } else {
+            warn!(
+                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; remote process proxy is disabled and process execution will stay local"
+            );
+        }
         let health_client = client.clone();
         tokio::spawn(async move {
             match health_client.health_check().await {
@@ -305,12 +312,18 @@ fn migrate_orphan_processes(
         }
     };
 
-    let orphans: Vec<_> = processes.into_iter().filter(|p| p.project_id.is_none()).collect();
+    let orphans: Vec<_> = processes
+        .into_iter()
+        .filter(|p| p.project_id.is_none())
+        .collect();
     if orphans.is_empty() {
         return;
     }
 
-    info!(orphan_count = orphans.len(), "migrate_orphan_processes: found orphan processes, spawning migration task");
+    info!(
+        orphan_count = orphans.len(),
+        "migrate_orphan_processes: found orphan processes, spawning migration task"
+    );
 
     let ps = process_store.clone();
     let proj_svc = project_service.clone();
@@ -327,7 +340,9 @@ fn migrate_orphan_processes(
                 if let Some(jwt) = rocks.get_jwt() {
                     if let Ok(orgs) = client.list_orgs(&jwt).await {
                         for org in &orgs {
-                            if let Ok(net_projects) = client.list_projects_by_org(&org.id, &jwt).await {
+                            if let Ok(net_projects) =
+                                client.list_projects_by_org(&org.id, &jwt).await
+                            {
                                 for np in &net_projects {
                                     if let Ok(pid) = np.id.parse::<aura_os_core::ProjectId>() {
                                         let local = proj_svc.get_project(&pid).ok();
@@ -342,7 +357,10 @@ fn migrate_orphan_processes(
                                             test_command: None,
                                             specs_summary: None,
                                             specs_title: None,
-                                            created_at: local.as_ref().map(|l| l.created_at).unwrap_or_else(chrono::Utc::now),
+                                            created_at: local
+                                                .as_ref()
+                                                .map(|l| l.created_at)
+                                                .unwrap_or_else(chrono::Utc::now),
                                             updated_at: chrono::Utc::now(),
                                             git_repo_url: np.git_repo_url.clone(),
                                             git_branch: np.git_branch.clone(),
@@ -366,17 +384,16 @@ fn migrate_orphan_processes(
             return;
         }
 
-        let name_map: std::collections::HashMap<&str, &aura_os_core::Project> = [
-            ("Competitive Intel", "Competition"),
-        ]
-        .into_iter()
-        .filter_map(|(process_name, project_name)| {
-            projects
-                .iter()
-                .find(|p| p.name == project_name)
-                .map(|proj| (process_name, proj))
-        })
-        .collect();
+        let name_map: std::collections::HashMap<&str, &aura_os_core::Project> =
+            [("Competitive Intel", "Competition")]
+                .into_iter()
+                .filter_map(|(process_name, project_name)| {
+                    projects
+                        .iter()
+                        .find(|p| p.name == project_name)
+                        .map(|proj| (process_name, proj))
+                })
+                .collect();
 
         for orphan in &orphans {
             if let Some(project) = name_map.get(orphan.name.as_str()) {
@@ -430,8 +447,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     };
 
     let automaton_client = Arc::new(aura_os_link::AutomatonClient::new(
-        &std::env::var("LOCAL_HARNESS_URL")
-            .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+        &std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()),
     ));
 
     let router_url = std::env::var("AURA_ROUTER_URL")

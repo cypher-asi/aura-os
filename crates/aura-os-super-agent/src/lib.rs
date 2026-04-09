@@ -91,6 +91,10 @@ impl SuperAgentService {
         ));
 
         let process_store = Arc::new(aura_os_process::ProcessStore::new(store.clone()));
+        let process_storage_client = storage_client
+            .as_ref()
+            .filter(|client| client.has_internal_token())
+            .cloned();
         let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
             process_store.clone(),
             event_broadcast.clone(),
@@ -99,7 +103,7 @@ impl SuperAgentService {
             agent_service.clone(),
             org_service.clone(),
             automaton_client.clone(),
-            storage_client.clone(),
+            process_storage_client.clone(),
             task_service.clone(),
         ));
 
@@ -146,7 +150,10 @@ impl SuperAgentService {
         let process_sched = Arc::new(aura_os_process::ProcessScheduler::new(
             self.process_store.clone(),
             self.process_executor.clone(),
-            self.storage_client.clone(),
+            self.storage_client
+                .as_ref()
+                .filter(|client| client.has_internal_token())
+                .cloned(),
         ));
         process_sched.spawn();
         info!("Process scheduler spawned");
