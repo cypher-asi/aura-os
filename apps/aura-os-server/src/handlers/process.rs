@@ -110,6 +110,22 @@ async fn list_remote_process_folders_for_orgs(
     Ok(all)
 }
 
+fn resolve_remote_folder_org_id(
+    request_org_id: Option<&str>,
+    org_ids: &[String],
+) -> ApiResult<String> {
+    if let Some(org_id) = request_org_id {
+        if org_ids.iter().any(|candidate| candidate == org_id) {
+            return Ok(org_id.to_string());
+        }
+        return Err(ApiError::forbidden(
+            "requested org is not available for remote process folder creation",
+        ));
+    }
+
+    select_remote_process_org_id(None, org_ids)
+}
+
 // ---------------------------------------------------------------------------
 // StorageX → local entity conversions
 // ---------------------------------------------------------------------------
@@ -314,6 +330,7 @@ pub(crate) struct UpdateProcessRequest {
 #[derive(Deserialize)]
 pub(crate) struct CreateFolderRequest {
     pub name: String,
+    pub org_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -1131,7 +1148,7 @@ pub(crate) async fn create_folder(
     if let Some(client) = remote_process_storage_client(&state) {
         let org_ids = resolve_org_ids(&state, &jwt).await?;
         let storage_req = aura_os_storage::CreateProcessFolderRequest {
-            org_id: select_remote_process_org_id(None, &org_ids)?,
+            org_id: resolve_remote_folder_org_id(req.org_id.as_deref(), &org_ids)?,
             name: req.name.clone(),
         };
         let folder = client
@@ -1383,7 +1400,9 @@ mod tests {
 
     use aura_os_storage::StorageClient;
 
-    use super::{remote_process_storage_client, select_remote_process_org_id};
+    use super::{
+        remote_process_storage_client, resolve_remote_folder_org_id, select_remote_process_org_id,
+    };
 
     #[test]
     fn select_remote_process_org_id_prefers_project_org() {
@@ -1419,6 +1438,34 @@ mod tests {
         .expect_err("ambiguous orgs should fail");
 
         assert!(error.1 .0.error.contains("could not resolve a single org"));
+    }
+
+    #[test]
+    fn resolve_remote_folder_org_id_accepts_explicit_membership() {
+        let org_id = resolve_remote_folder_org_id(
+            Some("22222222-2222-2222-2222-222222222222"),
+            &[
+                "11111111-1111-1111-1111-111111111111".to_string(),
+                "22222222-2222-2222-2222-222222222222".to_string(),
+            ],
+        )
+        .expect("resolve org");
+
+        assert_eq!(org_id, "22222222-2222-2222-2222-222222222222");
+    }
+
+    #[test]
+    fn resolve_remote_folder_org_id_rejects_non_member_org() {
+        let error = resolve_remote_folder_org_id(
+            Some("33333333-3333-3333-3333-333333333333"),
+            &[
+                "11111111-1111-1111-1111-111111111111".to_string(),
+                "22222222-2222-2222-2222-222222222222".to_string(),
+            ],
+        )
+        .expect_err("non-member org should fail");
+
+        assert!(error.1 .0.error.contains("requested org is not available"));
     }
 
     #[tokio::test]

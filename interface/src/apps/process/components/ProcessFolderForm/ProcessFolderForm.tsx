@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
 import { processApi } from "../../../../api/process";
 import { useProcessStore } from "../../stores/process-store";
+import { useOrgStore } from "../../../../stores/org-store";
 
 interface ProcessFolderFormProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ export function ProcessFolderForm({ onClose }: ProcessFolderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addFolder = useProcessStore((s) => s.addFolder);
+  const activeOrgId = useOrgStore((s) => s.activeOrg?.org_id);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -23,7 +25,10 @@ export function ProcessFolderForm({ onClose }: ProcessFolderFormProps) {
     setLoading(true);
     setError(null);
     try {
-      const folder = await processApi.createFolder({ name: name.trim() });
+      const folder = await processApi.createFolder({
+        name: name.trim(),
+        org_id: activeOrgId,
+      });
       addFolder(folder);
       onClose();
     } catch {
