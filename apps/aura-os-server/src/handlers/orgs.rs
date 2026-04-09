@@ -4,6 +4,7 @@ use axum::Json;
 use reqwest::Url;
 use serde::Serialize;
 use serde_json::Value;
+use tracing::warn;
 
 use aura_os_core::*;
 use aura_os_network::{NetworkOrg, NetworkOrgInvite, NetworkOrgMember};
@@ -370,6 +371,16 @@ pub(crate) async fn list_integrations(
             .list_integrations(&org_id, &jwt)
             .await
             .map_err(map_integrations_error)?;
+        if let Err(error) = state
+            .org_service
+            .sync_integrations_shadow(&org_id, &integrations)
+        {
+            warn!(
+                %org_id,
+                error = %error,
+                "failed to sync compatibility-only local integration shadow after canonical list"
+            );
+        }
         return Ok(Json(integrations));
     }
     let integrations = state
@@ -391,6 +402,19 @@ pub(crate) async fn create_integration(
             .create_integration(&org_id, &jwt, &body)
             .await
             .map_err(map_integrations_error)?;
+        if let Err(error) = state.org_service.sync_integration_shadow(
+            &integration,
+            match req.api_key.clone() {
+                Some(secret) => IntegrationSecretUpdate::Set(secret),
+                None => IntegrationSecretUpdate::Preserve,
+            },
+        ) {
+            warn!(
+                integration_id = %integration.integration_id,
+                error = %error,
+                "failed to sync compatibility-only local integration shadow after canonical create"
+            );
+        }
         return Ok((StatusCode::CREATED, Json(integration)));
     }
     validate_org_integration_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
@@ -426,6 +450,20 @@ pub(crate) async fn update_integration(
             .update_integration(&org_id, &integration_id, &jwt, &body)
             .await
             .map_err(map_integrations_error)?;
+        if let Err(error) = state.org_service.sync_integration_shadow(
+            &integration,
+            match req.api_key.clone() {
+                Some(Some(value)) => IntegrationSecretUpdate::Set(value),
+                Some(None) => IntegrationSecretUpdate::Clear,
+                None => IntegrationSecretUpdate::Preserve,
+            },
+        ) {
+            warn!(
+                integration_id = %integration.integration_id,
+                error = %error,
+                "failed to sync compatibility-only local integration shadow after canonical update"
+            );
+        }
         return Ok(Json(integration));
     }
     let existing = state
@@ -481,6 +519,16 @@ pub(crate) async fn delete_integration(
             .delete_integration(&org_id, &integration_id, &jwt)
             .await
             .map_err(map_integrations_error)?;
+        if let Err(error) = state
+            .org_service
+            .delete_integration(&org_id, &integration_id)
+        {
+            warn!(
+                %integration_id,
+                error = %error,
+                "failed to prune compatibility-only local integration shadow after canonical delete"
+            );
+        }
         return Ok(Json(()));
     }
     state

@@ -34,14 +34,35 @@ pub struct IntegrationsClient {
 }
 
 impl IntegrationsClient {
-    /// Create from env vars. Returns `None` if `AURA_INTEGRATIONS_URL` is not set.
+    /// Create from env vars.
+    ///
+    /// `aura-integrations` is the canonical integration backend when both
+    /// `AURA_INTEGRATIONS_URL` and `AURA_INTEGRATIONS_INTERNAL_TOKEN` are set.
+    /// Otherwise Aura OS remains in compatibility-only local fallback mode.
     pub fn from_env() -> Option<Self> {
         let base_url = env::var("AURA_INTEGRATIONS_URL")
             .ok()
-            .filter(|s| !s.is_empty())?;
+            .filter(|s| !s.is_empty());
         let internal_token = env::var("AURA_INTEGRATIONS_INTERNAL_TOKEN")
             .ok()
-            .filter(|s| !s.is_empty())?;
+            .filter(|s| !s.is_empty());
+
+        let (base_url, internal_token) = match (base_url, internal_token) {
+            (Some(base_url), Some(internal_token)) => (base_url, internal_token),
+            (Some(_), None) => {
+                warn!(
+                    "AURA_INTEGRATIONS_URL is set without AURA_INTEGRATIONS_INTERNAL_TOKEN; using compatibility-only local integration storage"
+                );
+                return None;
+            }
+            (None, Some(_)) => {
+                warn!(
+                    "AURA_INTEGRATIONS_INTERNAL_TOKEN is set without AURA_INTEGRATIONS_URL; using compatibility-only local integration storage"
+                );
+                return None;
+            }
+            (None, None) => return None,
+        };
 
         let base_url = base_url.trim_end_matches('/').to_string();
         info!(%base_url, "aura-integrations client configured");
@@ -152,10 +173,7 @@ impl IntegrationsClient {
             self.base_url, org_id, integration_id
         );
         let resp: Value = self.get_internal(&url).await?;
-        Ok(resp
-            .get("secret")
-            .and_then(Value::as_str)
-            .map(String::from))
+        Ok(resp.get("secret").and_then(Value::as_str).map(String::from))
     }
 
     // ── HTTP helpers ──

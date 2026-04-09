@@ -1,6 +1,7 @@
 mod error;
 pub use error::OrgError;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use aura_os_core::*;
@@ -100,6 +101,8 @@ impl OrgService {
     }
 
     // -- OrgIntegration CRUD (API-key-bearing provider integrations) --------
+    // These methods back Aura OS's compatibility-only local shadow store when
+    // `aura-integrations` is configured as the canonical integration backend.
 
     pub fn list_integrations(&self, org_id: &OrgId) -> Result<Vec<OrgIntegration>, OrgError> {
         let prefix = org_integration_prefix(org_id);
@@ -203,7 +206,8 @@ impl OrgService {
             default_model,
             provider_config,
             has_secret,
-            enabled: enabled.unwrap_or_else(|| existing.as_ref().map(|it| it.enabled).unwrap_or(true)),
+            enabled: enabled
+                .unwrap_or_else(|| existing.as_ref().map(|it| it.enabled).unwrap_or(true)),
             secret_last4,
             created_at: existing.as_ref().map(|it| it.created_at).unwrap_or(now),
             updated_at: now,
@@ -215,6 +219,73 @@ impl OrgService {
             .put_setting(&org_integration_key(org_id, &integration_id), &bytes)
             .map_err(OrgError::Store)?;
         Ok(integration)
+    }
+
+    /// Mirror canonical integration metadata into the local compatibility shadow
+    /// store while optionally updating the shadowed secret value.
+    pub fn sync_integration_shadow(
+        &self,
+        integration: &OrgIntegration,
+        secret_update: IntegrationSecretUpdate,
+    ) -> Result<(), OrgError> {
+        match secret_update {
+            IntegrationSecretUpdate::Set(secret_value) => {
+                self.store
+                    .put_setting(
+                        &org_integration_secret_key(&integration.integration_id),
+                        secret_value.as_bytes(),
+                    )
+                    .map_err(OrgError::Store)?;
+            }
+            IntegrationSecretUpdate::Clear => match self
+                .store
+                .delete_setting(&org_integration_secret_key(&integration.integration_id))
+            {
+                Ok(()) | Err(aura_os_store::StoreError::NotFound(_)) => {}
+                Err(e) => return Err(OrgError::Store(e)),
+            },
+            IntegrationSecretUpdate::Preserve => {}
+        }
+
+        let bytes = serde_json::to_vec(integration)
+            .map_err(|e| OrgError::Store(aura_os_store::StoreError::Serialization(e)))?;
+        self.store
+            .put_setting(
+                &org_integration_key(&integration.org_id, &integration.integration_id),
+                &bytes,
+            )
+            .map_err(OrgError::Store)?;
+        Ok(())
+    }
+
+    /// Reconcile the local compatibility shadow store with the canonical list
+    /// returned by `aura-integrations`.
+    pub fn sync_integrations_shadow(
+        &self,
+        org_id: &OrgId,
+        integrations: &[OrgIntegration],
+    ) -> Result<(), OrgError> {
+        let expected_ids = integrations
+            .iter()
+            .map(|integration| integration.integration_id.clone())
+            .collect::<HashSet<_>>();
+        for existing in self.list_integrations(org_id)? {
+            if !expected_ids.contains(&existing.integration_id) {
+                self.delete_integration(org_id, &existing.integration_id)?;
+            }
+        }
+
+        for integration in integrations {
+            self.sync_integration_shadow(
+                integration,
+                if integration.has_secret {
+                    IntegrationSecretUpdate::Preserve
+                } else {
+                    IntegrationSecretUpdate::Clear
+                },
+            )?;
+        }
+        Ok(())
     }
 
     pub fn delete_integration(&self, org_id: &OrgId, integration_id: &str) -> Result<(), OrgError> {
@@ -241,5 +312,90 @@ impl OrgService {
             Err(e) => return Err(OrgError::Store(e)),
         };
         Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use aura_os_core::OrgId;
+    use aura_os_core::OrgIntegration;
+    use aura_os_core::OrgIntegrationKind;
+
+    use super::*;
+
+    fn sample_integration(org_id: OrgId, integration_id: &str, has_secret: bool) -> OrgIntegration {
+        let now = Utc::now();
+        OrgIntegration {
+            integration_id: integration_id.to_string(),
+            org_id,
+            name: format!("Integration {integration_id}"),
+            provider: "github".to_string(),
+            kind: OrgIntegrationKind::WorkspaceIntegration,
+            default_model: None,
+            provider_config: None,
+            has_secret,
+            enabled: true,
+            secret_last4: if has_secret {
+                Some("1234".to_string())
+            } else {
+                None
+            },
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[test]
+    fn sync_integration_shadow_preserves_canonical_metadata_and_secret() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let service = OrgService::new(store);
+        let org_id = OrgId::new();
+        let integration = sample_integration(org_id, "integration-1", true);
+
+        service
+            .sync_integration_shadow(
+                &integration,
+                IntegrationSecretUpdate::Set("secret-value".to_string()),
+            )
+            .unwrap();
+
+        assert_eq!(
+            service.get_integration(&org_id, "integration-1").unwrap(),
+            Some(integration.clone())
+        );
+        assert_eq!(
+            service.get_integration_secret("integration-1").unwrap(),
+            Some("secret-value".to_string())
+        );
+    }
+
+    #[test]
+    fn sync_integrations_shadow_removes_missing_entries_and_clears_missing_secrets() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let service = OrgService::new(store);
+        let org_id = OrgId::new();
+
+        let stale = sample_integration(org_id, "stale", true);
+        service
+            .sync_integration_shadow(
+                &stale,
+                IntegrationSecretUpdate::Set("stale-secret".to_string()),
+            )
+            .unwrap();
+
+        let retained = sample_integration(org_id, "retained", false);
+        service
+            .sync_integrations_shadow(&org_id, &[retained.clone()])
+            .unwrap();
+
+        assert_eq!(service.get_integration(&org_id, "stale").unwrap(), None);
+        assert_eq!(service.get_integration_secret("stale").unwrap(), None);
+        assert_eq!(
+            service.get_integration(&org_id, "retained").unwrap(),
+            Some(retained)
+        );
+        assert_eq!(service.get_integration_secret("retained").unwrap(), None);
     }
 }

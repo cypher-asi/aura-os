@@ -8,16 +8,16 @@ use tracing::{info, warn};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
-use aura_os_link::{HarnessLink, LocalHarness, SwarmHarness};
 use aura_os_integrations::IntegrationsClient;
+use aura_os_link::{HarnessLink, LocalHarness, SwarmHarness};
 use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_store::{RocksStore, StoreError};
-use aura_os_tasks::TaskService;
 use aura_os_super_agent::SuperAgentService;
+use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
 use crate::state::AppState;
@@ -65,7 +65,7 @@ fn spawn_health_checks(
         let health_client = client.clone();
         tokio::spawn(async move {
             match health_client.health_check().await {
-                Ok(()) => info!("aura-integrations is reachable"),
+                Ok(()) => info!("aura-integrations is reachable and serving as the canonical integration backend"),
                 Err(e) => tracing::warn!(
                     error = %e,
                     "aura-integrations health check failed on startup (will retry on first request)"
@@ -73,7 +73,9 @@ fn spawn_health_checks(
             }
         });
     } else {
-        info!("aura-integrations integration disabled (AURA_INTEGRATIONS_URL not set)");
+        info!(
+            "aura-integrations is not configured; Aura OS will use compatibility-only local integration storage"
+        );
     }
 }
 
