@@ -6,6 +6,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use serde_json::{json, Value};
+use tracing::warn;
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 
@@ -153,7 +154,7 @@ async fn list_org_integrations(state: &AppState, org_id: &OrgId, args: &Value) -
 }
 
 async fn github_list_repos(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "github", args)?;
+    let integration = resolve_org_integration(state, org_id, "github", args).await?;
     let url = format!(
         "{}/user/repos?per_page=20&sort=updated",
         app_provider_base_url(AppProviderKind::Github)
@@ -188,7 +189,7 @@ async fn github_list_repos(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
 }
 
 async fn github_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "github", args)?;
+    let integration = resolve_org_integration(state, org_id, "github", args).await?;
     let owner = required_string(args, &["owner"])?;
     let repo = required_string(args, &["repo"])?;
     let title = required_string(args, &["title"])?;
@@ -221,7 +222,7 @@ async fn github_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> 
 }
 
 async fn linear_list_teams(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "linear", args)?;
+    let integration = resolve_org_integration(state, org_id, "linear", args).await?;
     let response = linear_graphql(
         state,
         &integration.secret,
@@ -238,7 +239,7 @@ async fn linear_list_teams(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
 }
 
 async fn linear_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "linear", args)?;
+    let integration = resolve_org_integration(state, org_id, "linear", args).await?;
     let team_id = required_string(args, &["team_id", "teamId"])?;
     let title = required_string(args, &["title"])?;
     let description = optional_string(
@@ -269,7 +270,7 @@ async fn linear_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> 
 }
 
 async fn slack_list_channels(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "slack", args)?;
+    let integration = resolve_org_integration(state, org_id, "slack", args).await?;
     let url = format!(
         "{}/conversations.list?types=public_channel,private_channel&exclude_archived=true&limit=100",
         app_provider_base_url(AppProviderKind::Slack)
@@ -303,7 +304,7 @@ async fn slack_list_channels(state: &AppState, org_id: &OrgId, args: &Value) -> 
 }
 
 async fn slack_post_message(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "slack", args)?;
+    let integration = resolve_org_integration(state, org_id, "slack", args).await?;
     let channel_id = required_string(args, &["channel_id", "channelId"])?;
     let text = required_string(args, &["text", "message"])?;
     let url = format!(
@@ -333,7 +334,7 @@ async fn slack_post_message(state: &AppState, org_id: &OrgId, args: &Value) -> A
 }
 
 async fn notion_search_pages(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "notion", args)?;
+    let integration = resolve_org_integration(state, org_id, "notion", args).await?;
     let query = required_string(args, &["query"])?;
     let url = format!(
         "{}/search",
@@ -370,7 +371,7 @@ async fn notion_search_pages(state: &AppState, org_id: &OrgId, args: &Value) -> 
 }
 
 async fn notion_create_page(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "notion", args)?;
+    let integration = resolve_org_integration(state, org_id, "notion", args).await?;
     let parent_page_id = required_string(args, &["parent_page_id", "parentPageId"])?;
     let title = required_string(args, &["title"])?;
     let content = optional_string(
@@ -411,12 +412,12 @@ async fn notion_create_page(state: &AppState, org_id: &OrgId, args: &Value) -> A
 }
 
 async fn brave_search_web(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "brave_search", args)?;
+    let integration = resolve_org_integration(state, org_id, "brave_search", args).await?;
     brave_search(state, &integration, args, "web").await
 }
 
 async fn brave_search_news(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "brave_search", args)?;
+    let integration = resolve_org_integration(state, org_id, "brave_search", args).await?;
     brave_search(state, &integration, args, "news").await
 }
 
@@ -490,7 +491,7 @@ async fn brave_search(
 }
 
 async fn freepik_list_icons(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "freepik", args)?;
+    let integration = resolve_org_integration(state, org_id, "freepik", args).await?;
     let base_url = app_provider_base_url(AppProviderKind::Freepik)
         .expect("freepik provider contract must declare a base url");
     let mut url = reqwest::Url::parse(&format!("{base_url}/v1/icons"))
@@ -563,7 +564,7 @@ async fn freepik_improve_prompt(
     org_id: &OrgId,
     args: &Value,
 ) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "freepik", args)?;
+    let integration = resolve_org_integration(state, org_id, "freepik", args).await?;
     let prompt = required_string(args, &["prompt"])?;
     let generation_type = optional_string(args, &["type"]).unwrap_or_else(|| "image".to_string());
     let mut payload = json!({
@@ -597,7 +598,7 @@ async fn freepik_improve_prompt(
 }
 
 async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "buffer", args)?;
+    let integration = resolve_org_integration(state, org_id, "buffer", args).await?;
     let url = app_provider_authenticated_url(
         AppProviderKind::Buffer,
         "/profiles.json",
@@ -631,7 +632,7 @@ async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) ->
 }
 
 async fn buffer_create_update(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "buffer", args)?;
+    let integration = resolve_org_integration(state, org_id, "buffer", args).await?;
     let profile_id = required_string(args, &["profile_id", "profileId"])?;
     let text = required_string(args, &["text"])?;
     let url = app_provider_authenticated_url(
@@ -672,7 +673,7 @@ async fn buffer_create_update(state: &AppState, org_id: &OrgId, args: &Value) ->
 }
 
 async fn apify_list_actors(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "apify", args)?;
+    let integration = resolve_org_integration(state, org_id, "apify", args).await?;
     let base_url = app_provider_base_url(AppProviderKind::Apify)
         .expect("apify provider contract must declare a base url");
     let mut url = reqwest::Url::parse(&format!("{base_url}/acts"))
@@ -714,7 +715,7 @@ async fn apify_list_actors(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
 }
 
 async fn apify_run_actor(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "apify", args)?;
+    let integration = resolve_org_integration(state, org_id, "apify", args).await?;
     let actor_id = required_string(args, &["actor_id", "actorId"])?;
     let mut payload = args.get("input").cloned().unwrap_or_else(|| json!({}));
     if payload.is_null() {
@@ -744,7 +745,7 @@ async fn apify_run_actor(state: &AppState, org_id: &OrgId, args: &Value) -> ApiR
 }
 
 async fn metricool_list_brands(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "metricool", args)?;
+    let integration = resolve_org_integration(state, org_id, "metricool", args).await?;
     let url = metricool_url(
         &app_provider_base_url(AppProviderKind::Metricool)
             .expect("metricool provider contract must declare a base url"),
@@ -779,7 +780,7 @@ async fn metricool_list_brands(state: &AppState, org_id: &OrgId, args: &Value) -
 }
 
 async fn metricool_list_posts(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "metricool", args)?;
+    let integration = resolve_org_integration(state, org_id, "metricool", args).await?;
     let url = metricool_url(
         &app_provider_base_url(AppProviderKind::Metricool)
             .expect("metricool provider contract must declare a base url"),
@@ -819,7 +820,7 @@ async fn mailchimp_list_audiences(
     org_id: &OrgId,
     args: &Value,
 ) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "mailchimp", args)?;
+    let integration = resolve_org_integration(state, org_id, "mailchimp", args).await?;
     let base_url = mailchimp_base_url(&integration)?;
     let response = provider_json_request(
         &state.super_agent_service.http_client,
@@ -852,7 +853,7 @@ async fn mailchimp_list_campaigns(
     org_id: &OrgId,
     args: &Value,
 ) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "mailchimp", args)?;
+    let integration = resolve_org_integration(state, org_id, "mailchimp", args).await?;
     let base_url = mailchimp_base_url(&integration)?;
     let response = provider_json_request(
         &state.super_agent_service.http_client,
@@ -882,7 +883,7 @@ async fn mailchimp_list_campaigns(
 }
 
 async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "resend", args)?;
+    let integration = resolve_org_integration(state, org_id, "resend", args).await?;
     let base_url = app_provider_base_url(AppProviderKind::Resend)
         .expect("resend provider contract must declare a base url");
     let response = provider_json_request(
@@ -918,7 +919,7 @@ async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> 
 }
 
 async fn resend_send_email(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
-    let integration = resolve_org_integration(state, org_id, "resend", args)?;
+    let integration = resolve_org_integration(state, org_id, "resend", args).await?;
     let from = required_string(args, &["from"])?;
     let to = required_string_list(args, &["to"])?;
     let subject = required_string(args, &["subject"])?;
@@ -969,7 +970,7 @@ async fn resend_send_email(state: &AppState, org_id: &OrgId, args: &Value) -> Ap
     }))
 }
 
-fn resolve_org_integration(
+async fn resolve_org_integration(
     state: &AppState,
     org_id: &OrgId,
     provider: &str,
@@ -1020,12 +1021,61 @@ fn resolve_org_integration(
             })?
     };
 
-    let secret = state
-        .org_service
-        .get_integration_secret(&integration.integration_id)
-        .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| ApiError::bad_request("selected integration is missing a stored secret"))?;
+    let secret = if let Some(client) = &state.integrations_client {
+        match client
+            .get_integration_secret(org_id, &integration.integration_id)
+            .await
+        {
+            Ok(secret) => {
+                if let Some(secret) = secret.filter(|value| !value.trim().is_empty()) {
+                    secret
+                } else {
+                    warn!(
+                        %org_id,
+                        integration_id = %integration.integration_id,
+                        provider = %integration.provider,
+                        "canonical aura-integrations secret missing or empty; falling back to compatibility-only local shadow for org tool dispatch"
+                    );
+                    state
+                        .org_service
+                        .get_integration_secret(&integration.integration_id)
+                        .map_err(|e| {
+                            ApiError::internal(format!("loading integration secret: {e}"))
+                        })?
+                        .filter(|value| !value.trim().is_empty())
+                        .ok_or_else(|| {
+                            ApiError::bad_request("selected integration is missing a stored secret")
+                        })?
+                }
+            }
+            Err(error) => {
+                warn!(
+                    %org_id,
+                    integration_id = %integration.integration_id,
+                    provider = %integration.provider,
+                    error = %error,
+                    "failed to load canonical aura-integrations secret; falling back to compatibility-only local shadow for org tool dispatch"
+                );
+                state
+                    .org_service
+                    .get_integration_secret(&integration.integration_id)
+                    .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
+                    .filter(|value| !value.trim().is_empty())
+                    .ok_or_else(|| {
+                        ApiError::bad_request("selected integration is missing a stored secret")
+                    })?
+            }
+        }
+    } else {
+        state
+            .org_service
+            .get_integration_secret(&integration.integration_id)
+            .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                ApiError::bad_request("selected integration is missing a stored secret")
+            })?
+    };
 
     Ok(ResolvedOrgIntegration {
         metadata: integration,

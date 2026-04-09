@@ -1,22 +1,21 @@
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::OnceLock;
 
 use aura_os_integrations::{
     app_provider_contract_by_tool, app_provider_contracts, app_provider_runtime_auth,
     control_plane_api_base_url as shared_control_plane_api_base_url,
-    installed_workspace_app_tools as build_installed_workspace_app_tools,
     installed_tool_runtime_execution_for_provider,
+    installed_workspace_app_tools as build_installed_workspace_app_tools,
     installed_workspace_integrations as build_installed_workspace_integrations,
     org_integration_tool_manifest_entries,
 };
 use serde::Deserialize;
 use serde_json::Value;
+use tracing::warn;
 
 use aura_os_core::{Agent, OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_link::{
-    InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration,
-};
+use aura_os_link::{InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration};
 
 use crate::state::AppState;
 
@@ -263,16 +262,32 @@ async fn load_integration_secret(
     integration: &OrgIntegration,
 ) -> Option<String> {
     if let Some(client) = &state.integrations_client {
-        if let Ok(secret) = client
+        match client
             .get_integration_secret(org_id, &integration.integration_id)
             .await
         {
-            if let Some(secret) = secret.filter(|value| !value.trim().is_empty()) {
-                return Some(secret);
+            Ok(secret) => {
+                if let Some(secret) = secret.filter(|value| !value.trim().is_empty()) {
+                    return Some(secret);
+                }
+                warn!(
+                    %org_id,
+                    integration_id = %integration.integration_id,
+                    provider = %integration.provider,
+                    "canonical aura-integrations secret missing or empty; falling back to compatibility-only local shadow"
+                );
             }
+            Err(error) => warn!(
+                %org_id,
+                integration_id = %integration.integration_id,
+                provider = %integration.provider,
+                error = %error,
+                "failed to load canonical aura-integrations secret; falling back to compatibility-only local shadow"
+            ),
         }
     }
-    state.org_service
+    state
+        .org_service
         .get_integration_secret(&integration.integration_id)
         .ok()
         .flatten()
@@ -293,9 +308,17 @@ pub(crate) fn installed_workspace_integrations_for_org(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+
     use aura_os_core::{OrgId, OrgIntegrationKind};
+    use aura_os_integrations::IntegrationsClient;
     use aura_os_link::ToolAuth;
     use aura_os_orgs::IntegrationSecretUpdate;
+    use axum::extract::Path;
+    use axum::routing::get;
+    use axum::Json;
+    use axum::Router;
+    use tokio::net::TcpListener;
 
     #[tokio::test]
     async fn installed_workspace_app_tools_include_saved_provider_tools() {
@@ -401,5 +424,86 @@ mod tests {
 
         assert!(ids.contains(&"brave_search"));
         assert!(ids.contains(&"mcp_server"));
+    }
+
+    async fn start_mock_integrations_server(secret: Option<&'static str>) -> String {
+        let app = Router::new().route(
+            "/internal/orgs/:org_id/integrations/:integration_id/secret",
+            get(
+                move |Path((_org_id, _integration_id)): Path<(String, String)>| async move {
+                    Json(serde_json::json!({ "secret": secret }))
+                },
+            ),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        format!("http://{address}")
+    }
+
+    #[tokio::test]
+    async fn canonical_secret_source_wins_over_local_shadow() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let db_path = db_dir.path().join("settings.db");
+        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let org_id = OrgId::new();
+
+        let integration = state
+            .org_service
+            .upsert_integration(
+                &org_id,
+                None,
+                "Brave Search".to_string(),
+                "brave_search".to_string(),
+                OrgIntegrationKind::WorkspaceIntegration,
+                None,
+                None,
+                Some(true),
+                IntegrationSecretUpdate::Set("local-shadow-secret".to_string()),
+            )
+            .expect("save brave integration");
+
+        let base_url = start_mock_integrations_server(Some("canonical-remote-secret")).await;
+        state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+            &base_url,
+            "internal-token",
+        )));
+
+        let secret = load_integration_secret(&state, &org_id, &integration).await;
+        assert_eq!(secret, Some("canonical-remote-secret".to_string()));
+    }
+
+    #[tokio::test]
+    async fn canonical_secret_falls_back_to_local_shadow_when_missing() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let db_path = db_dir.path().join("settings.db");
+        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let org_id = OrgId::new();
+
+        let integration = state
+            .org_service
+            .upsert_integration(
+                &org_id,
+                None,
+                "Brave Search".to_string(),
+                "brave_search".to_string(),
+                OrgIntegrationKind::WorkspaceIntegration,
+                None,
+                None,
+                Some(true),
+                IntegrationSecretUpdate::Set("local-shadow-secret".to_string()),
+            )
+            .expect("save brave integration");
+
+        let base_url = start_mock_integrations_server(None).await;
+        state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+            &base_url,
+            "internal-token",
+        )));
+
+        let secret = load_integration_secret(&state, &org_id, &integration).await;
+        assert_eq!(secret, Some("local-shadow-secret".to_string()));
     }
 }

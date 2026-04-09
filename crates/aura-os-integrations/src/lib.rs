@@ -552,6 +552,26 @@ mod tests {
     }
 
     #[test]
+    fn trusted_method_catalog_matches_manifest_entries() {
+        let manifest_entries = org_integration_tool_manifest_entries()
+            .iter()
+            .filter_map(|entry| {
+                let provider = entry.provider.as_deref()?;
+                is_trusted_integration_provider(provider).then_some((entry.name.as_str(), provider))
+            })
+            .collect::<HashSet<_>>();
+        let trusted_methods = trusted_integration_methods()
+            .iter()
+            .map(|method| (method.name.as_str(), method.provider.as_str()))
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            manifest_entries, trusted_methods,
+            "trusted integration methods drifted from the shared manifest"
+        );
+    }
+
+    #[test]
     fn trusted_workspace_tools_include_runtime_metadata() {
         let org_id = OrgId::new();
         let integrations = vec![
