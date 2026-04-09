@@ -17,8 +17,8 @@ use aura_os_core::{
 };
 use aura_os_integrations::{
     app_provider_contracts, app_provider_runtime_auth,
-    installed_workspace_app_tools as build_installed_workspace_app_tools,
     installed_tool_runtime_execution_for_provider,
+    installed_workspace_app_tools as build_installed_workspace_app_tools,
     installed_workspace_integrations as build_installed_workspace_integrations,
 };
 use aura_os_link::{
@@ -31,9 +31,7 @@ use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
 
 use aura_os_core::{AgentId, ProcessNodeConnection};
-use aura_os_storage::{
-    StorageProcess, StorageProcessNode, StorageProcessNodeConnection,
-};
+use aura_os_storage::{StorageProcess, StorageProcessNode, StorageProcessNodeConnection};
 
 use crate::error::ProcessError;
 use crate::process_store::ProcessStore;
@@ -80,9 +78,15 @@ pub(crate) fn conv_process(sp: StorageProcess) -> aura_os_core::Process {
         enabled: sp.enabled.unwrap_or(true),
         folder_id: parse_id_opt(&sp.folder_id),
         schedule: sp.schedule,
-        tags: sp.tags.as_ref()
+        tags: sp
+            .tags
+            .as_ref()
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|i| i.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|i| i.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default(),
         last_run_at: parse_dt_opt(&sp.last_run_at),
         next_run_at: parse_dt_opt(&sp.next_run_at),
@@ -95,7 +99,11 @@ fn conv_node(sn: StorageProcessNode) -> ProcessNode {
     ProcessNode {
         node_id: parse_id(&sn.id),
         process_id: parse_id(sn.process_id.as_deref().unwrap_or_default()),
-        node_type: sn.node_type.as_deref().and_then(parse_enum).unwrap_or(ProcessNodeType::Action),
+        node_type: sn
+            .node_type
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessNodeType::Action),
         label: sn.label.unwrap_or_default(),
         agent_id: parse_id_opt::<AgentId>(&sn.agent_id),
         prompt: sn.prompt.unwrap_or_default(),
@@ -124,9 +132,12 @@ async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create
         let req = aura_os_storage::CreateProcessRunRequest {
             id: Some(run.run_id.to_string()),
             process_id: run.process_id.to_string(),
-            trigger: Some(serde_json::to_value(run.trigger)
-                .ok().and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| "manual".to_string())),
+            trigger: Some(
+                serde_json::to_value(run.trigger)
+                    .ok()
+                    .and_then(|v| v.as_str().map(String::from))
+                    .unwrap_or_else(|| "manual".to_string()),
+            ),
             parent_run_id: run.parent_run_id.map(|id| id.to_string()),
             input_override: run.input_override.clone(),
         };
@@ -135,9 +146,12 @@ async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create
         }
     } else {
         let req = aura_os_storage::UpdateProcessRunRequest {
-            status: Some(serde_json::to_value(run.status)
-                .ok().and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_default()),
+            status: Some(
+                serde_json::to_value(run.status)
+                    .ok()
+                    .and_then(|v| v.as_str().map(String::from))
+                    .unwrap_or_default(),
+            ),
             error: run.error.as_ref().map(|e| Some(e.clone())),
             completed_at: run.completed_at.map(|dt| Some(dt.to_rfc3339())),
             total_input_tokens: run.total_input_tokens.map(|v| v as i64),
@@ -145,7 +159,10 @@ async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create
             cost_usd: run.cost_usd,
             output: run.output.as_ref().map(|o| Some(o.clone())),
         };
-        if let Err(e) = client.update_process_run_internal(&run.run_id.to_string(), &req).await {
+        if let Err(e) = client
+            .update_process_run_internal(&run.run_id.to_string(), &req)
+            .await
+        {
             warn!(run_id = %run.run_id, error = %e, "Failed to sync run update to storage");
         }
     }
@@ -159,9 +176,12 @@ async fn sync_event_to_storage(client: &StorageClient, event: &ProcessEvent, is_
             run_id: event.run_id.to_string(),
             node_id: event.node_id.to_string(),
             process_id: event.process_id.to_string(),
-            status: Some(serde_json::to_value(event.status)
-                .ok().and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_default()),
+            status: Some(
+                serde_json::to_value(event.status)
+                    .ok()
+                    .and_then(|v| v.as_str().map(String::from))
+                    .unwrap_or_default(),
+            ),
             input_snapshot: Some(event.input_snapshot.clone()),
             output: Some(event.output.clone()),
         };
@@ -170,19 +190,26 @@ async fn sync_event_to_storage(client: &StorageClient, event: &ProcessEvent, is_
         }
     } else {
         let req = aura_os_storage::UpdateProcessEventRequest {
-            status: Some(serde_json::to_value(event.status)
-                .ok().and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_default()),
+            status: Some(
+                serde_json::to_value(event.status)
+                    .ok()
+                    .and_then(|v| v.as_str().map(String::from))
+                    .unwrap_or_default(),
+            ),
             output: Some(event.output.clone()),
             completed_at: event.completed_at.map(|dt| Some(dt.to_rfc3339())),
             input_tokens: event.input_tokens.map(|v| v as i64),
             output_tokens: event.output_tokens.map(|v| v as i64),
             model: event.model.clone(),
-            content_blocks: event.content_blocks.as_ref().map(|blocks| {
-                serde_json::Value::Array(blocks.clone())
-            }),
+            content_blocks: event
+                .content_blocks
+                .as_ref()
+                .map(|blocks| serde_json::Value::Array(blocks.clone())),
         };
-        if let Err(e) = client.update_process_event_internal(&event.event_id.to_string(), &req).await {
+        if let Err(e) = client
+            .update_process_event_internal(&event.event_id.to_string(), &req)
+            .await
+        {
             warn!(event_id = %event.event_id, error = %e, "Failed to sync event update to storage");
         }
     }
@@ -196,7 +223,8 @@ async fn sync_artifact_to_storage(client: &StorageClient, artifact: &ProcessArti
         run_id: artifact.run_id.to_string(),
         node_id: artifact.node_id.to_string(),
         artifact_type: serde_json::to_value(artifact.artifact_type)
-            .ok().and_then(|v| v.as_str().map(String::from))
+            .ok()
+            .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_else(|| "custom".to_string()),
         name: artifact.name.clone(),
         file_path: artifact.file_path.clone(),
@@ -206,6 +234,14 @@ async fn sync_artifact_to_storage(client: &StorageClient, artifact: &ProcessArti
     if let Err(e) = client.create_process_artifact_internal(&req).await {
         warn!(artifact_id = %artifact.artifact_id, error = %e, "Failed to sync artifact to storage");
     }
+}
+
+fn internal_process_sync_client(
+    storage_client: Option<&Arc<StorageClient>>,
+) -> Option<&StorageClient> {
+    storage_client
+        .map(Arc::as_ref)
+        .filter(|client| client.has_internal_token())
 }
 
 /// Scan a workspace directory for output files written by the automaton.
@@ -415,7 +451,7 @@ impl ProcessExecutor {
         run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
-        if let Some(client) = &self.storage_client {
+        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
             sync_run_to_storage(client, &run, false).await;
         }
 
@@ -436,14 +472,15 @@ impl ProcessExecutor {
         trigger: ProcessRunTrigger,
     ) -> Result<ProcessRun, ProcessError> {
         // Try storage first (process may only exist there when proxy is configured)
-        let process = if let Some(client) = &self.storage_client {
-            match client.get_process_internal(&process_id.to_string()).await {
-                Ok(sp) => Some(conv_process(sp)),
-                Err(_) => self.store.get_process(process_id)?,
-            }
-        } else {
-            self.store.get_process(process_id)?
-        };
+        let process =
+            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+                match client.get_process_internal(&process_id.to_string()).await {
+                    Ok(sp) => Some(conv_process(sp)),
+                    Err(_) => self.store.get_process(process_id)?,
+                }
+            } else {
+                self.store.get_process(process_id)?
+            };
         let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let existing_runs = self.store.list_runs(process_id)?;
@@ -473,7 +510,7 @@ impl ProcessExecutor {
             input_override: None,
         };
         self.store.save_run(&run)?;
-        if let Some(client) = &self.storage_client {
+        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
             sync_run_to_storage(client, &run, true).await;
         }
 
@@ -527,14 +564,15 @@ impl ProcessExecutor {
         input_override: Option<String>,
         parent_run_id: Option<ProcessRunId>,
     ) -> Result<ProcessRun, ProcessError> {
-        let process = if let Some(client) = &self.storage_client {
-            match client.get_process_internal(&process_id.to_string()).await {
-                Ok(sp) => Some(conv_process(sp)),
-                Err(_) => self.store.get_process(process_id)?,
-            }
-        } else {
-            self.store.get_process(process_id)?
-        };
+        let process =
+            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+                match client.get_process_internal(&process_id.to_string()).await {
+                    Ok(sp) => Some(conv_process(sp)),
+                    Err(_) => self.store.get_process(process_id)?,
+                }
+            } else {
+                self.store.get_process(process_id)?
+            };
         let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let now = Utc::now();
@@ -554,7 +592,7 @@ impl ProcessExecutor {
             input_override: input_override.clone(),
         };
         self.store.save_run(&run)?;
-        if let Some(client) = &self.storage_client {
+        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
             sync_run_to_storage(client, &run, true).await;
         }
 
@@ -706,24 +744,32 @@ fn execute_run<'a>(
     org_service: &'a OrgService,
 ) -> Pin<Box<dyn Future<Output = Result<(), ProcessError>> + Send + 'a>> {
     Box::pin(async move {
+        let internal_storage_client =
+            internal_process_sync_client(executor.storage_client.as_ref());
         let mut current_run = run.clone();
         current_run.status = ProcessRunStatus::Running;
         store.save_run(&current_run)?;
-        if let Some(client) = &executor.storage_client {
+        if let Some(client) = internal_storage_client {
             sync_run_to_storage(client, &current_run, false).await;
         }
 
         // Read nodes/connections from storage if available, else local
-        let nodes = if let Some(client) = &executor.storage_client {
-            match client.list_process_nodes_internal(&run.process_id.to_string()).await {
+        let nodes = if let Some(client) = internal_storage_client {
+            match client
+                .list_process_nodes_internal(&run.process_id.to_string())
+                .await
+            {
                 Ok(sn) => sn.into_iter().map(conv_node).collect(),
                 Err(_) => store.list_nodes(&run.process_id)?,
             }
         } else {
             store.list_nodes(&run.process_id)?
         };
-        let connections = if let Some(client) = &executor.storage_client {
-            match client.list_process_connections_internal(&run.process_id.to_string()).await {
+        let connections = if let Some(client) = internal_storage_client {
+            match client
+                .list_process_connections_internal(&run.process_id.to_string())
+                .await
+            {
                 Ok(sc) => sc.into_iter().map(conv_connection).collect(),
                 Err(_) => store.list_connections(&run.process_id)?,
             }
@@ -754,8 +800,11 @@ fn execute_run<'a>(
         let workspace_path = workspace_dir.to_string_lossy().to_string();
 
         // ── create spec + tasks ────────────────────────────────────────────
-        let process = if let Some(client) = &executor.storage_client {
-            match client.get_process_internal(&run.process_id.to_string()).await {
+        let process = if let Some(client) = internal_storage_client {
+            match client
+                .get_process_internal(&run.process_id.to_string())
+                .await
+            {
                 Ok(sp) => conv_process(sp),
                 Err(_) => store
                     .get_process(&run.process_id)?
@@ -1103,17 +1152,23 @@ fn execute_run<'a>(
                     current_run.cost_usd =
                         Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
                     store.save_run(&current_run)?;
-                    if let Some(client) = &executor.storage_client {
+                    if let Some(client) = internal_storage_client {
                         sync_run_to_storage(client, &current_run, false).await;
                     }
 
                     // Batch-sync events and artifacts to storage
-                    if let Some(client) = &executor.storage_client {
-                        if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
-                            for ev in &events { sync_event_to_storage(client, ev, true).await; }
+                    if let Some(client) = internal_storage_client {
+                        if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id)
+                        {
+                            for ev in &events {
+                                sync_event_to_storage(client, ev, true).await;
+                            }
                         }
-                        if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
-                            for art in &arts { sync_artifact_to_storage(client, art).await; }
+                        if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id)
+                        {
+                            for art in &arts {
+                                sync_artifact_to_storage(client, art).await;
+                            }
                         }
                     }
 
@@ -1157,14 +1212,18 @@ fn execute_run<'a>(
         current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
         current_run.output = run_output;
         store.save_run(&current_run)?;
-        if let Some(client) = &executor.storage_client {
+        if let Some(client) = internal_storage_client {
             sync_run_to_storage(client, &current_run, false).await;
             // Batch-sync events and artifacts to storage
             if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
-                for ev in &events { sync_event_to_storage(client, ev, true).await; }
+                for ev in &events {
+                    sync_event_to_storage(client, ev, true).await;
+                }
             }
             if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
-                for art in &arts { sync_artifact_to_storage(client, art).await; }
+                for art in &arts {
+                    sync_artifact_to_storage(client, art).await;
+                }
             }
         }
 
@@ -1252,7 +1311,10 @@ fn installed_capabilities_for_agent(
             .filter(|integration| {
                 integration.enabled
                     && integration.has_secret
-                    && matches!(integration.kind, aura_os_core::OrgIntegrationKind::WorkspaceIntegration)
+                    && matches!(
+                        integration.kind,
+                        aura_os_core::OrgIntegrationKind::WorkspaceIntegration
+                    )
             })
             .filter_map(|integration| {
                 let secret = org_service
@@ -2673,4 +2735,23 @@ fn broadcast_node_status(
         }
     }
     let _ = broadcast.send(payload);
+}
+
+#[cfg(test)]
+mod tests {
+    use aura_os_storage::StorageClient;
+
+    use super::internal_process_sync_client;
+
+    #[test]
+    fn internal_process_sync_client_requires_internal_token() {
+        let public_client = StorageClient::with_base_url("http://localhost:8080");
+        assert!(internal_process_sync_client(Some(&std::sync::Arc::new(public_client))).is_none());
+
+        let internal_client =
+            StorageClient::with_base_url_and_token("http://localhost:8080", "internal-token");
+        assert!(
+            internal_process_sync_client(Some(&std::sync::Arc::new(internal_client))).is_some()
+        );
+    }
 }
