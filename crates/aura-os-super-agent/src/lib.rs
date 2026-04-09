@@ -146,6 +146,7 @@ impl SuperAgentService {
         let process_sched = Arc::new(aura_os_process::ProcessScheduler::new(
             self.process_store.clone(),
             self.process_executor.clone(),
+            self.storage_client.clone(),
         ));
         process_sched.spawn();
         info!("Process scheduler spawned");

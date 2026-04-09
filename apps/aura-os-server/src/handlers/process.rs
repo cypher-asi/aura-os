@@ -1,17 +1,223 @@
 use axum::extract::{Path, State};
 use axum::Json;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
 use aura_os_core::{
-    Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
-    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
-    ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTrigger, ProjectId,
+    AgentId, OrgId, Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder,
+    ProcessFolderId, ProcessId, ProcessNode, ProcessNodeConnection,
+    ProcessNodeConnectionId, ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId,
+    ProcessRunTrigger, ProjectId,
 };
-use chrono::Utc;
+use aura_os_storage::{
+    StorageProcess, StorageProcessArtifact, StorageProcessEvent, StorageProcessFolder,
+    StorageProcessNode, StorageProcessNodeConnection, StorageProcessRun,
+};
 
-use crate::error::{ApiError, ApiResult};
+use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt, AuthSession};
+
+// ---------------------------------------------------------------------------
+// Org ID resolution for proxy path
+// ---------------------------------------------------------------------------
+
+/// Resolve the user's org IDs from aura-network.
+async fn resolve_org_ids(state: &AppState, jwt: &str) -> Vec<String> {
+    if let Some(ref client) = state.network_client {
+        if let Ok(orgs) = client.list_orgs(jwt).await {
+            let ids: Vec<String> = orgs.iter().map(|o| o.id.clone()).collect();
+            if !ids.is_empty() {
+                return ids;
+            }
+        }
+    }
+    vec![OrgId::nil().to_string()]
+}
+
+/// Resolve org_id from a project's org membership. Falls back to first user org.
+fn resolve_org_for_project(state: &AppState, project_id: &str, fallback_org_ids: &[String]) -> String {
+    if let Ok(pid) = project_id.parse::<ProjectId>() {
+        if let Ok(project) = state.project_service.get_project(&pid) {
+            let oid = project.org_id.to_string();
+            if oid != OrgId::nil().to_string() {
+                return oid;
+            }
+        }
+    }
+    fallback_org_ids.first().cloned().unwrap_or_default()
+}
+
+// ---------------------------------------------------------------------------
+// StorageX → local entity conversions
+// ---------------------------------------------------------------------------
+
+fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn parse_dt_opt(s: &Option<String>) -> Option<DateTime<Utc>> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+}
+
+fn parse_id<T: std::str::FromStr + Default>(s: &str) -> T {
+    s.parse().unwrap_or_default()
+}
+
+fn parse_id_opt<T: std::str::FromStr>(s: &Option<String>) -> Option<T> {
+    s.as_deref().and_then(|v| v.parse().ok())
+}
+
+fn parse_enum<T: serde::de::DeserializeOwned>(s: &str) -> Option<T> {
+    serde_json::from_value(serde_json::Value::String(s.to_string())).ok()
+}
+
+fn storage_tags_to_vec(v: &Option<serde_json::Value>) -> Vec<String> {
+    v.as_ref()
+        .and_then(|val| val.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|item| item.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn conv_process(sp: StorageProcess) -> Process {
+    Process {
+        process_id: parse_id(&sp.id),
+        org_id: parse_id(sp.org_id.as_deref().unwrap_or("00000000-0000-0000-0000-000000000000")),
+        user_id: sp.created_by.unwrap_or_default(),
+        project_id: parse_id_opt(&sp.project_id),
+        name: sp.name.unwrap_or_default(),
+        description: sp.description.unwrap_or_default(),
+        enabled: sp.enabled.unwrap_or(true),
+        folder_id: parse_id_opt(&sp.folder_id),
+        schedule: sp.schedule,
+        tags: storage_tags_to_vec(&sp.tags),
+        last_run_at: parse_dt_opt(&sp.last_run_at),
+        next_run_at: parse_dt_opt(&sp.next_run_at),
+        created_at: parse_dt(&sp.created_at),
+        updated_at: parse_dt(&sp.updated_at),
+    }
+}
+
+fn conv_node(sn: StorageProcessNode) -> ProcessNode {
+    ProcessNode {
+        node_id: parse_id(&sn.id),
+        process_id: parse_id(sn.process_id.as_deref().unwrap_or_default()),
+        node_type: sn
+            .node_type
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessNodeType::Action),
+        label: sn.label.unwrap_or_default(),
+        agent_id: parse_id_opt::<AgentId>(&sn.agent_id),
+        prompt: sn.prompt.unwrap_or_default(),
+        config: sn.config.unwrap_or(serde_json::json!({})),
+        position_x: sn.position_x.unwrap_or(0.0),
+        position_y: sn.position_y.unwrap_or(0.0),
+        created_at: parse_dt(&sn.created_at),
+        updated_at: parse_dt(&sn.updated_at),
+    }
+}
+
+fn conv_connection(sc: StorageProcessNodeConnection) -> ProcessNodeConnection {
+    ProcessNodeConnection {
+        connection_id: parse_id(&sc.id),
+        process_id: parse_id(sc.process_id.as_deref().unwrap_or_default()),
+        source_node_id: parse_id(sc.source_node_id.as_deref().unwrap_or_default()),
+        source_handle: sc.source_handle,
+        target_node_id: parse_id(sc.target_node_id.as_deref().unwrap_or_default()),
+        target_handle: sc.target_handle,
+    }
+}
+
+fn conv_run(sr: StorageProcessRun) -> ProcessRun {
+    use aura_os_core::ProcessRunStatus;
+    ProcessRun {
+        run_id: parse_id(&sr.id),
+        process_id: parse_id(sr.process_id.as_deref().unwrap_or_default()),
+        status: sr
+            .status
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessRunStatus::Pending),
+        trigger: sr
+            .trigger
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessRunTrigger::Manual),
+        error: sr.error,
+        started_at: parse_dt(&sr.started_at),
+        completed_at: parse_dt_opt(&sr.completed_at),
+        total_input_tokens: sr.total_input_tokens.map(|v| v as u64),
+        total_output_tokens: sr.total_output_tokens.map(|v| v as u64),
+        cost_usd: sr.cost_usd,
+        output: sr.output,
+        parent_run_id: parse_id_opt(&sr.parent_run_id),
+        input_override: sr.input_override,
+    }
+}
+
+fn conv_event(se: StorageProcessEvent) -> ProcessEvent {
+    use aura_os_core::ProcessEventStatus;
+    ProcessEvent {
+        event_id: parse_id(&se.id),
+        run_id: parse_id(se.run_id.as_deref().unwrap_or_default()),
+        node_id: parse_id(se.node_id.as_deref().unwrap_or_default()),
+        process_id: parse_id(se.process_id.as_deref().unwrap_or_default()),
+        status: se
+            .status
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessEventStatus::Pending),
+        input_snapshot: se.input_snapshot.unwrap_or_default(),
+        output: se.output.unwrap_or_default(),
+        started_at: parse_dt(&se.started_at),
+        completed_at: parse_dt_opt(&se.completed_at),
+        input_tokens: se.input_tokens.map(|v| v as u64),
+        output_tokens: se.output_tokens.map(|v| v as u64),
+        model: se.model,
+        content_blocks: se.content_blocks.and_then(|v| v.as_array().cloned()),
+    }
+}
+
+fn conv_artifact(sa: StorageProcessArtifact) -> ProcessArtifact {
+    use aura_os_core::ArtifactType;
+    ProcessArtifact {
+        artifact_id: parse_id(&sa.id),
+        process_id: parse_id(sa.process_id.as_deref().unwrap_or_default()),
+        run_id: parse_id(sa.run_id.as_deref().unwrap_or_default()),
+        node_id: parse_id(sa.node_id.as_deref().unwrap_or_default()),
+        artifact_type: sa
+            .artifact_type
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ArtifactType::Custom),
+        name: sa.name.unwrap_or_default(),
+        file_path: sa.file_path.unwrap_or_default(),
+        size_bytes: sa.size_bytes.unwrap_or(0) as u64,
+        metadata: sa.metadata.unwrap_or(serde_json::json!({})),
+        created_at: parse_dt(&sa.created_at),
+    }
+}
+
+fn conv_folder(sf: StorageProcessFolder) -> ProcessFolder {
+    ProcessFolder {
+        folder_id: parse_id(&sf.id),
+        org_id: parse_id(sf.org_id.as_deref().unwrap_or_default()),
+        user_id: sf.created_by.unwrap_or_default(),
+        name: sf.name.unwrap_or_default(),
+        created_at: parse_dt(&sf.created_at),
+        updated_at: parse_dt(&sf.updated_at),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Request / response types
@@ -93,10 +299,44 @@ pub(crate) struct DeleteResponse {
 
 pub(crate) async fn create_process(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(session): AuthSession,
     Json(req): Json<CreateProcessRequest>,
 ) -> ApiResult<Json<Process>> {
+    if let Some(client) = &state.storage_client {
+        let org_ids = resolve_org_ids(&state, &jwt).await;
+        let org_id = resolve_org_for_project(&state, &req.project_id, &org_ids);
+        let storage_req = aura_os_storage::CreateProcessRequest {
+            org_id,
+            name: req.name.clone(),
+            project_id: Some(req.project_id.clone()),
+            folder_id: req.folder_id.clone(),
+            description: req.description.clone(),
+            enabled: Some(true),
+            schedule: req.schedule.clone(),
+            tags: Some(req.tags.clone()),
+        };
+        let sp = client
+            .create_process(&jwt, &storage_req)
+            .await
+            .map_err(map_storage_error)?;
+        let process_id = sp.id.clone();
+        // Auto-create ignition node (matching local behavior)
+        let node_req = aura_os_storage::CreateProcessNodeRequest {
+            node_type: "ignition".to_string(),
+            label: Some("Ignition".to_string()),
+            agent_id: None,
+            prompt: None,
+            config: None,
+            position_x: Some(250.0),
+            position_y: Some(50.0),
+        };
+        let _ = client
+            .create_process_node(&process_id, &jwt, &node_req)
+            .await;
+        return Ok(Json(conv_process(sp)));
+    }
+
     let user_id = session
         .network_user_id
         .map(|id| id.to_string())
@@ -155,9 +395,20 @@ pub(crate) async fn create_process(
 
 pub(crate) async fn list_processes(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
 ) -> ApiResult<Json<Vec<Process>>> {
+    if let Some(client) = &state.storage_client {
+        let org_ids = resolve_org_ids(&state, &jwt).await;
+        let mut all = Vec::new();
+        for oid in &org_ids {
+            if let Ok(list) = client.list_processes(oid, &jwt).await {
+                all.extend(list.into_iter().map(conv_process));
+            }
+        }
+        return Ok(Json(all));
+    }
+
     let processes = state
         .super_agent_service
         .process_store
@@ -168,10 +419,15 @@ pub(crate) async fn list_processes(
 
 pub(crate) async fn get_process(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Process>> {
+    if let Some(client) = &state.storage_client {
+        let sp = client.get_process(&id, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_process(sp)));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -188,11 +444,26 @@ pub(crate) async fn get_process(
 
 pub(crate) async fn update_process(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
     Json(req): Json<UpdateProcessRequest>,
 ) -> ApiResult<Json<Process>> {
+    if let Some(client) = &state.storage_client {
+        let storage_req = aura_os_storage::UpdateProcessRequest {
+            name: req.name.clone(),
+            description: req.description.clone(),
+            project_id: req.project_id.clone(),
+            folder_id: req.folder_id.clone(),
+            enabled: req.enabled,
+            schedule: req.schedule.clone().map(Some),
+            tags: req.tags.clone(),
+            ..Default::default()
+        };
+        let sp = client.update_process(&id, &jwt, &storage_req).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_process(sp)));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -228,10 +499,15 @@ pub(crate) async fn update_process(
 
 pub(crate) async fn delete_process(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<DeleteResponse>> {
+    if let Some(client) = &state.storage_client {
+        client.delete_process(&id, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(DeleteResponse { deleted: true }));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -263,6 +539,7 @@ pub(crate) async fn trigger_process(
         .super_agent_service
         .process_executor
         .trigger(&process_id, ProcessRunTrigger::Manual)
+        .await
         .map_err(|e| {
             if matches!(e, aura_os_process::ProcessError::RunAlreadyActive) {
                 ApiError::conflict(e.to_string())
@@ -280,10 +557,15 @@ pub(crate) async fn trigger_process(
 
 pub(crate) async fn list_nodes(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Vec<ProcessNode>>> {
+    if let Some(client) = &state.storage_client {
+        let nodes = client.list_process_nodes(&id, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(nodes.into_iter().map(conv_node).collect()));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -299,11 +581,28 @@ pub(crate) async fn list_nodes(
 
 pub(crate) async fn create_node(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
     Json(req): Json<CreateNodeRequest>,
 ) -> ApiResult<Json<ProcessNode>> {
+    if let Some(client) = &state.storage_client {
+        let storage_req = aura_os_storage::CreateProcessNodeRequest {
+            node_type: serde_json::to_value(req.node_type)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "action".to_string()),
+            label: Some(req.label.clone()),
+            agent_id: req.agent_id.clone(),
+            prompt: Some(req.prompt.clone()),
+            config: Some(if req.config.is_null() { serde_json::json!({}) } else { req.config.clone() }),
+            position_x: Some(req.position_x),
+            position_y: Some(req.position_y),
+        };
+        let node = client.create_process_node(&id, &jwt, &storage_req).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_node(node)));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -334,11 +633,24 @@ pub(crate) async fn create_node(
 
 pub(crate) async fn update_node(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path((id, node_id_str)): Path<(String, String)>,
     Json(req): Json<UpdateNodeRequest>,
 ) -> ApiResult<Json<ProcessNode>> {
+    if let Some(client) = &state.storage_client {
+        let storage_req = aura_os_storage::UpdateProcessNodeRequest {
+            label: req.label.clone(),
+            agent_id: req.agent_id.clone().map(|a| if a.is_empty() { None } else { Some(a) }),
+            prompt: req.prompt.clone(),
+            config: req.config.clone(),
+            position_x: req.position_x,
+            position_y: req.position_y,
+        };
+        let node = client.update_process_node(&id, &node_id_str, &jwt, &storage_req).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_node(node)));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -374,10 +686,15 @@ pub(crate) async fn update_node(
 
 pub(crate) async fn delete_node(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path((id, node_id_str)): Path<(String, String)>,
 ) -> ApiResult<Json<DeleteResponse>> {
+    if let Some(client) = &state.storage_client {
+        client.delete_process_node(&id, &node_id_str, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(DeleteResponse { deleted: true }));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -400,10 +717,15 @@ pub(crate) async fn delete_node(
 
 pub(crate) async fn list_connections(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Vec<ProcessNodeConnection>>> {
+    if let Some(client) = &state.storage_client {
+        let conns = client.list_process_connections(&id, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(conns.into_iter().map(conv_connection).collect()));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -425,11 +747,22 @@ pub(crate) async fn list_connections(
 
 pub(crate) async fn create_connection(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
     Json(req): Json<CreateConnectionRequest>,
 ) -> ApiResult<Json<ProcessNodeConnection>> {
+    if let Some(client) = &state.storage_client {
+        let storage_req = aura_os_storage::CreateProcessConnectionRequest {
+            source_node_id: req.source_node_id.clone(),
+            source_handle: req.source_handle.clone(),
+            target_node_id: req.target_node_id.clone(),
+            target_handle: req.target_handle.clone(),
+        };
+        let conn = client.create_process_connection(&id, &jwt, &storage_req).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_connection(conn)));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -464,10 +797,15 @@ pub(crate) async fn create_connection(
 
 pub(crate) async fn delete_connection(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path((id, conn_id_str)): Path<(String, String)>,
 ) -> ApiResult<Json<DeleteResponse>> {
+    if let Some(client) = &state.storage_client {
+        client.delete_process_connection(&id, &conn_id_str, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(DeleteResponse { deleted: true }));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -490,10 +828,15 @@ pub(crate) async fn delete_connection(
 
 pub(crate) async fn list_runs(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<Vec<ProcessRun>>> {
+    if let Some(client) = &state.storage_client {
+        let runs = client.list_process_runs(&id, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(runs.into_iter().map(conv_run).collect()));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -509,10 +852,15 @@ pub(crate) async fn list_runs(
 
 pub(crate) async fn get_run(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path((id, run_id_str)): Path<(String, String)>,
 ) -> ApiResult<Json<ProcessRun>> {
+    if let Some(client) = &state.storage_client {
+        let run = client.get_process_run(&id, &run_id_str, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_run(run)));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -547,6 +895,7 @@ pub(crate) async fn cancel_run(
         .super_agent_service
         .process_executor
         .cancel_run(&process_id, &run_id)
+        .await
         .map_err(|e| {
             if matches!(e, aura_os_process::ProcessError::RunNotActive) {
                 ApiError::conflict(e.to_string())
@@ -564,10 +913,15 @@ pub(crate) async fn cancel_run(
 
 pub(crate) async fn list_run_events(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path((id, run_id_str)): Path<(String, String)>,
 ) -> ApiResult<Json<Vec<ProcessEvent>>> {
+    if let Some(client) = &state.storage_client {
+        let events = client.list_process_run_events(&id, &run_id_str, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(events.into_iter().map(conv_event).collect()));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -590,9 +944,20 @@ pub(crate) async fn list_run_events(
 
 pub(crate) async fn list_folders(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
 ) -> ApiResult<Json<Vec<ProcessFolder>>> {
+    if let Some(client) = &state.storage_client {
+        let org_ids = resolve_org_ids(&state, &jwt).await;
+        let mut all = Vec::new();
+        for oid in &org_ids {
+            if let Ok(list) = client.list_process_folders(oid, &jwt).await {
+                all.extend(list.into_iter().map(conv_folder));
+            }
+        }
+        return Ok(Json(all));
+    }
+
     let folders = state
         .super_agent_service
         .process_store
@@ -603,10 +968,20 @@ pub(crate) async fn list_folders(
 
 pub(crate) async fn create_folder(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(session): AuthSession,
     Json(req): Json<CreateFolderRequest>,
 ) -> ApiResult<Json<ProcessFolder>> {
+    if let Some(client) = &state.storage_client {
+        let org_ids = resolve_org_ids(&state, &jwt).await;
+        let storage_req = aura_os_storage::CreateProcessFolderRequest {
+            org_id: org_ids.first().cloned().unwrap_or_default(),
+            name: req.name.clone(),
+        };
+        let folder = client.create_process_folder(&jwt, &storage_req).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_folder(folder)));
+    }
+
     let user_id = session
         .network_user_id
         .map(|id| id.to_string())
@@ -634,11 +1009,19 @@ pub(crate) async fn create_folder(
 
 pub(crate) async fn update_folder(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
     Json(req): Json<UpdateFolderRequest>,
 ) -> ApiResult<Json<ProcessFolder>> {
+    if let Some(client) = &state.storage_client {
+        let storage_req = aura_os_storage::UpdateProcessFolderRequest {
+            name: req.name.clone(),
+        };
+        let folder = client.update_process_folder(&id, &jwt, &storage_req).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_folder(folder)));
+    }
+
     let folder_id: ProcessFolderId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid folder ID"))?;
@@ -668,10 +1051,15 @@ pub(crate) async fn update_folder(
 
 pub(crate) async fn list_run_artifacts(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path((id, run_id_str)): Path<(String, String)>,
 ) -> ApiResult<Json<Vec<ProcessArtifact>>> {
+    if let Some(client) = &state.storage_client {
+        let artifacts = client.list_process_run_artifacts(&id, &run_id_str, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(artifacts.into_iter().map(conv_artifact).collect()));
+    }
+
     let process_id: ProcessId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
@@ -690,10 +1078,15 @@ pub(crate) async fn list_run_artifacts(
 
 pub(crate) async fn get_artifact(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(artifact_id_str): Path<String>,
 ) -> ApiResult<Json<ProcessArtifact>> {
+    if let Some(client) = &state.storage_client {
+        let artifact = client.get_process_artifact(&artifact_id_str, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(conv_artifact(artifact)));
+    }
+
     let artifact_id: ProcessArtifactId = artifact_id_str
         .parse()
         .map_err(|_| ApiError::bad_request("invalid artifact ID"))?;
@@ -756,10 +1149,32 @@ pub(crate) async fn get_artifact_path(
 
 pub(crate) async fn delete_folder(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<DeleteResponse>> {
+    if let Some(client) = &state.storage_client {
+        // Unassign processes from this folder before deleting
+        let org_ids = resolve_org_ids(&state, &jwt).await;
+        let mut processes = Vec::new();
+        for oid in &org_ids {
+            if let Ok(list) = client.list_processes(oid, &jwt).await {
+                processes.extend(list);
+            }
+        }
+        for p in &processes {
+            if p.folder_id.as_deref() == Some(id.as_str()) {
+                let update = aura_os_storage::UpdateProcessRequest {
+                    folder_id: Some(None),
+                    ..Default::default()
+                };
+                let _ = client.update_process(&p.id, &jwt, &update).await;
+            }
+        }
+        client.delete_process_folder(&id, &jwt).await.map_err(map_storage_error)?;
+        return Ok(Json(DeleteResponse { deleted: true }));
+    }
+
     let folder_id: ProcessFolderId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid folder ID"))?;

@@ -30,10 +30,183 @@ use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
 
+use aura_os_core::{AgentId, ProcessNodeConnection};
+use aura_os_storage::{
+    StorageProcess, StorageProcessNode, StorageProcessNodeConnection,
+};
+
 use crate::error::ProcessError;
 use crate::process_store::ProcessStore;
 
 const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 600; // 10 minutes
+
+// ---------------------------------------------------------------------------
+// Storage → local type conversions (for executor reads from storage)
+// ---------------------------------------------------------------------------
+
+fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn parse_dt_opt(s: &Option<String>) -> Option<DateTime<Utc>> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+}
+
+fn parse_id<T: std::str::FromStr + Default>(s: &str) -> T {
+    s.parse().unwrap_or_default()
+}
+
+fn parse_id_opt<T: std::str::FromStr>(s: &Option<String>) -> Option<T> {
+    s.as_deref().and_then(|v| v.parse().ok())
+}
+
+fn parse_enum<T: serde::de::DeserializeOwned>(s: &str) -> Option<T> {
+    serde_json::from_value(serde_json::Value::String(s.to_string())).ok()
+}
+
+pub(crate) fn conv_process(sp: StorageProcess) -> aura_os_core::Process {
+    aura_os_core::Process {
+        process_id: parse_id(&sp.id),
+        org_id: parse_id(sp.org_id.as_deref().unwrap_or_default()),
+        user_id: sp.created_by.unwrap_or_default(),
+        project_id: parse_id_opt(&sp.project_id),
+        name: sp.name.unwrap_or_default(),
+        description: sp.description.unwrap_or_default(),
+        enabled: sp.enabled.unwrap_or(true),
+        folder_id: parse_id_opt(&sp.folder_id),
+        schedule: sp.schedule,
+        tags: sp.tags.as_ref()
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|i| i.as_str().map(String::from)).collect())
+            .unwrap_or_default(),
+        last_run_at: parse_dt_opt(&sp.last_run_at),
+        next_run_at: parse_dt_opt(&sp.next_run_at),
+        created_at: parse_dt(&sp.created_at),
+        updated_at: parse_dt(&sp.updated_at),
+    }
+}
+
+fn conv_node(sn: StorageProcessNode) -> ProcessNode {
+    ProcessNode {
+        node_id: parse_id(&sn.id),
+        process_id: parse_id(sn.process_id.as_deref().unwrap_or_default()),
+        node_type: sn.node_type.as_deref().and_then(parse_enum).unwrap_or(ProcessNodeType::Action),
+        label: sn.label.unwrap_or_default(),
+        agent_id: parse_id_opt::<AgentId>(&sn.agent_id),
+        prompt: sn.prompt.unwrap_or_default(),
+        config: sn.config.unwrap_or(serde_json::json!({})),
+        position_x: sn.position_x.unwrap_or(0.0),
+        position_y: sn.position_y.unwrap_or(0.0),
+        created_at: parse_dt(&sn.created_at),
+        updated_at: parse_dt(&sn.updated_at),
+    }
+}
+
+fn conv_connection(sc: StorageProcessNodeConnection) -> ProcessNodeConnection {
+    ProcessNodeConnection {
+        connection_id: parse_id(&sc.id),
+        process_id: parse_id(sc.process_id.as_deref().unwrap_or_default()),
+        source_node_id: parse_id(sc.source_node_id.as_deref().unwrap_or_default()),
+        source_handle: sc.source_handle,
+        target_node_id: parse_id(sc.target_node_id.as_deref().unwrap_or_default()),
+        target_handle: sc.target_handle,
+    }
+}
+
+/// Attempt to sync a run to aura-storage. Failures are logged but not fatal.
+async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create: bool) {
+    if is_create {
+        let req = aura_os_storage::CreateProcessRunRequest {
+            id: Some(run.run_id.to_string()),
+            process_id: run.process_id.to_string(),
+            trigger: Some(serde_json::to_value(run.trigger)
+                .ok().and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "manual".to_string())),
+            parent_run_id: run.parent_run_id.map(|id| id.to_string()),
+            input_override: run.input_override.clone(),
+        };
+        if let Err(e) = client.create_process_run_internal(&req).await {
+            warn!(run_id = %run.run_id, error = %e, "Failed to sync run create to storage");
+        }
+    } else {
+        let req = aura_os_storage::UpdateProcessRunRequest {
+            status: Some(serde_json::to_value(run.status)
+                .ok().and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_default()),
+            error: run.error.as_ref().map(|e| Some(e.clone())),
+            completed_at: run.completed_at.map(|dt| Some(dt.to_rfc3339())),
+            total_input_tokens: run.total_input_tokens.map(|v| v as i64),
+            total_output_tokens: run.total_output_tokens.map(|v| v as i64),
+            cost_usd: run.cost_usd,
+            output: run.output.as_ref().map(|o| Some(o.clone())),
+        };
+        if let Err(e) = client.update_process_run_internal(&run.run_id.to_string(), &req).await {
+            warn!(run_id = %run.run_id, error = %e, "Failed to sync run update to storage");
+        }
+    }
+}
+
+/// Attempt to sync an event to aura-storage. Failures are logged but not fatal.
+async fn sync_event_to_storage(client: &StorageClient, event: &ProcessEvent, is_create: bool) {
+    if is_create {
+        let req = aura_os_storage::CreateProcessEventRequest {
+            id: Some(event.event_id.to_string()),
+            run_id: event.run_id.to_string(),
+            node_id: event.node_id.to_string(),
+            process_id: event.process_id.to_string(),
+            status: Some(serde_json::to_value(event.status)
+                .ok().and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_default()),
+            input_snapshot: Some(event.input_snapshot.clone()),
+            output: Some(event.output.clone()),
+        };
+        if let Err(e) = client.create_process_event_internal(&req).await {
+            warn!(event_id = %event.event_id, error = %e, "Failed to sync event create to storage");
+        }
+    } else {
+        let req = aura_os_storage::UpdateProcessEventRequest {
+            status: Some(serde_json::to_value(event.status)
+                .ok().and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_default()),
+            output: Some(event.output.clone()),
+            completed_at: event.completed_at.map(|dt| Some(dt.to_rfc3339())),
+            input_tokens: event.input_tokens.map(|v| v as i64),
+            output_tokens: event.output_tokens.map(|v| v as i64),
+            model: event.model.clone(),
+            content_blocks: event.content_blocks.as_ref().map(|blocks| {
+                serde_json::Value::Array(blocks.clone())
+            }),
+        };
+        if let Err(e) = client.update_process_event_internal(&event.event_id.to_string(), &req).await {
+            warn!(event_id = %event.event_id, error = %e, "Failed to sync event update to storage");
+        }
+    }
+}
+
+/// Attempt to sync an artifact to aura-storage. Failures are logged but not fatal.
+async fn sync_artifact_to_storage(client: &StorageClient, artifact: &ProcessArtifact) {
+    let req = aura_os_storage::CreateProcessArtifactRequest {
+        id: Some(artifact.artifact_id.to_string()),
+        process_id: artifact.process_id.to_string(),
+        run_id: artifact.run_id.to_string(),
+        node_id: artifact.node_id.to_string(),
+        artifact_type: serde_json::to_value(artifact.artifact_type)
+            .ok().and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_else(|| "custom".to_string()),
+        name: artifact.name.clone(),
+        file_path: artifact.file_path.clone(),
+        size_bytes: Some(artifact.size_bytes as i64),
+        metadata: Some(artifact.metadata.clone()),
+    };
+    if let Err(e) = client.create_process_artifact_internal(&req).await {
+        warn!(artifact_id = %artifact.artifact_id, error = %e, "Failed to sync artifact to storage");
+    }
+}
 
 /// Scan a workspace directory for output files written by the automaton.
 ///
@@ -220,7 +393,7 @@ impl ProcessExecutor {
         }
     }
 
-    pub fn cancel_run(
+    pub async fn cancel_run(
         &self,
         process_id: &ProcessId,
         run_id: &ProcessRunId,
@@ -242,6 +415,9 @@ impl ProcessExecutor {
         run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
+        if let Some(client) = &self.storage_client {
+            sync_run_to_storage(client, &run, false).await;
+        }
 
         let _ = self.event_broadcast.send(serde_json::json!({
             "type": "process_run_completed",
@@ -254,15 +430,21 @@ impl ProcessExecutor {
         Ok(())
     }
 
-    pub fn trigger(
+    pub async fn trigger(
         &self,
         process_id: &ProcessId,
         trigger: ProcessRunTrigger,
     ) -> Result<ProcessRun, ProcessError> {
-        let process = self
-            .store
-            .get_process(process_id)?
-            .ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
+        // Try storage first (process may only exist there when proxy is configured)
+        let process = if let Some(client) = &self.storage_client {
+            match client.get_process_internal(&process_id.to_string()).await {
+                Ok(sp) => Some(conv_process(sp)),
+                Err(_) => self.store.get_process(process_id)?,
+            }
+        } else {
+            self.store.get_process(process_id)?
+        };
+        let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let existing_runs = self.store.list_runs(process_id)?;
         if existing_runs.iter().any(|r| {
@@ -291,6 +473,9 @@ impl ProcessExecutor {
             input_override: None,
         };
         self.store.save_run(&run)?;
+        if let Some(client) = &self.storage_client {
+            sync_run_to_storage(client, &run, true).await;
+        }
 
         let _ = self.event_broadcast.send(serde_json::json!({
             "type": "process_run_started",
@@ -342,10 +527,15 @@ impl ProcessExecutor {
         input_override: Option<String>,
         parent_run_id: Option<ProcessRunId>,
     ) -> Result<ProcessRun, ProcessError> {
-        let process = self
-            .store
-            .get_process(process_id)?
-            .ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
+        let process = if let Some(client) = &self.storage_client {
+            match client.get_process_internal(&process_id.to_string()).await {
+                Ok(sp) => Some(conv_process(sp)),
+                Err(_) => self.store.get_process(process_id)?,
+            }
+        } else {
+            self.store.get_process(process_id)?
+        };
+        let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let now = Utc::now();
         let run = ProcessRun {
@@ -364,6 +554,9 @@ impl ProcessExecutor {
             input_override: input_override.clone(),
         };
         self.store.save_run(&run)?;
+        if let Some(client) = &self.storage_client {
+            sync_run_to_storage(client, &run, true).await;
+        }
 
         let _ = self.event_broadcast.send(serde_json::json!({
             "type": "process_run_started",
@@ -516,9 +709,27 @@ fn execute_run<'a>(
         let mut current_run = run.clone();
         current_run.status = ProcessRunStatus::Running;
         store.save_run(&current_run)?;
+        if let Some(client) = &executor.storage_client {
+            sync_run_to_storage(client, &current_run, false).await;
+        }
 
-        let nodes = store.list_nodes(&run.process_id)?;
-        let connections = store.list_connections(&run.process_id)?;
+        // Read nodes/connections from storage if available, else local
+        let nodes = if let Some(client) = &executor.storage_client {
+            match client.list_process_nodes_internal(&run.process_id.to_string()).await {
+                Ok(sn) => sn.into_iter().map(conv_node).collect(),
+                Err(_) => store.list_nodes(&run.process_id)?,
+            }
+        } else {
+            store.list_nodes(&run.process_id)?
+        };
+        let connections = if let Some(client) = &executor.storage_client {
+            match client.list_process_connections_internal(&run.process_id.to_string()).await {
+                Ok(sc) => sc.into_iter().map(conv_connection).collect(),
+                Err(_) => store.list_connections(&run.process_id)?,
+            }
+        } else {
+            store.list_connections(&run.process_id)?
+        };
 
         let sorted = topological_sort(&nodes, &connections)?;
         let reachable = reachable_from_ignition(&nodes, &connections);
@@ -543,9 +754,18 @@ fn execute_run<'a>(
         let workspace_path = workspace_dir.to_string_lossy().to_string();
 
         // ── create spec + tasks ────────────────────────────────────────────
-        let process = store
-            .get_process(&run.process_id)?
-            .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?;
+        let process = if let Some(client) = &executor.storage_client {
+            match client.get_process_internal(&run.process_id.to_string()).await {
+                Ok(sp) => conv_process(sp),
+                Err(_) => store
+                    .get_process(&run.process_id)?
+                    .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?,
+            }
+        } else {
+            store
+                .get_process(&run.process_id)?
+                .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?
+        };
         let project_id = process
             .project_id
             .ok_or_else(|| ProcessError::Execution("Process has no project_id".into()))?;
@@ -883,6 +1103,19 @@ fn execute_run<'a>(
                     current_run.cost_usd =
                         Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
                     store.save_run(&current_run)?;
+                    if let Some(client) = &executor.storage_client {
+                        sync_run_to_storage(client, &current_run, false).await;
+                    }
+
+                    // Batch-sync events and artifacts to storage
+                    if let Some(client) = &executor.storage_client {
+                        if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
+                            for ev in &events { sync_event_to_storage(client, ev, true).await; }
+                        }
+                        if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
+                            for art in &arts { sync_artifact_to_storage(client, art).await; }
+                        }
+                    }
 
                     let _ = broadcast.send(serde_json::json!({
                         "type": "process_run_failed",
@@ -924,6 +1157,16 @@ fn execute_run<'a>(
         current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
         current_run.output = run_output;
         store.save_run(&current_run)?;
+        if let Some(client) = &executor.storage_client {
+            sync_run_to_storage(client, &current_run, false).await;
+            // Batch-sync events and artifacts to storage
+            if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
+                for ev in &events { sync_event_to_storage(client, ev, true).await; }
+            }
+            if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
+                for art in &arts { sync_artifact_to_storage(client, art).await; }
+            }
+        }
 
         let _ = broadcast.send(serde_json::json!({
             "type": "process_run_completed",

@@ -1,5 +1,6 @@
 mod events;
 mod logs;
+mod processes;
 mod project_agents;
 mod sessions;
 mod specs;
@@ -37,6 +38,7 @@ pub(crate) fn validate_url_id(id: &str, label: &str) -> Result<(), StorageError>
 pub struct StorageClient {
     pub(crate) http: Client,
     pub(crate) base_url: String,
+    pub(crate) internal_token: Option<String>,
 }
 
 impl StorageClient {
@@ -48,11 +50,15 @@ impl StorageClient {
             .filter(|s| !s.is_empty())?;
 
         let base_url = base_url.trim_end_matches('/').to_string();
-        info!(%base_url, "aura-storage client configured");
+        let internal_token = env::var("AURA_STORAGE_INTERNAL_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty());
+        info!(%base_url, has_internal_token = internal_token.is_some(), "aura-storage client configured");
 
         Some(Self {
             http: Self::build_http_client(),
             base_url,
+            internal_token,
         })
     }
 
@@ -61,6 +67,16 @@ impl StorageClient {
         Self {
             http: Self::build_http_client(),
             base_url: base_url.trim_end_matches('/').to_string(),
+            internal_token: None,
+        }
+    }
+
+    /// Create a client with base URL and internal token (for executor/scheduler).
+    pub fn with_base_url_and_token(base_url: &str, internal_token: &str) -> Self {
+        Self {
+            http: Self::build_http_client(),
+            base_url: base_url.trim_end_matches('/').to_string(),
+            internal_token: Some(internal_token.to_string()),
         }
     }
 
@@ -119,6 +135,16 @@ impl StorageClient {
         self.handle_response(resp).await
     }
 
+    pub(crate) async fn put_authed<T: serde::de::DeserializeOwned, B: serde::Serialize>(
+        &self,
+        url: &str,
+        jwt: &str,
+        body: &B,
+    ) -> Result<T, StorageError> {
+        let resp = self.http.put(url).bearer_auth(jwt).json(body).send().await?;
+        self.handle_response(resp).await
+    }
+
     pub(crate) async fn put_authed_no_response<B: serde::Serialize>(
         &self,
         url: &str,
@@ -154,6 +180,62 @@ impl StorageClient {
             });
         }
         Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal HTTP helpers (X-Internal-Token auth)
+    // -----------------------------------------------------------------------
+
+    pub(crate) fn internal_token(&self) -> Result<&str, StorageError> {
+        self.internal_token
+            .as_deref()
+            .ok_or_else(|| StorageError::Validation("AURA_STORAGE_INTERNAL_TOKEN not configured".into()))
+    }
+
+    pub(crate) async fn get_internal<T: serde::de::DeserializeOwned>(
+        &self,
+        url: &str,
+    ) -> Result<T, StorageError> {
+        let token = self.internal_token()?;
+        let resp = self
+            .http
+            .get(url)
+            .header("x-internal-token", token)
+            .send()
+            .await?;
+        self.handle_response(resp).await
+    }
+
+    pub(crate) async fn post_internal<T: serde::de::DeserializeOwned, B: serde::Serialize>(
+        &self,
+        url: &str,
+        body: &B,
+    ) -> Result<T, StorageError> {
+        let token = self.internal_token()?;
+        let resp = self
+            .http
+            .post(url)
+            .header("x-internal-token", token)
+            .json(body)
+            .send()
+            .await?;
+        self.handle_response(resp).await
+    }
+
+    pub(crate) async fn put_internal<T: serde::de::DeserializeOwned, B: serde::Serialize>(
+        &self,
+        url: &str,
+        body: &B,
+    ) -> Result<T, StorageError> {
+        let token = self.internal_token()?;
+        let resp = self
+            .http
+            .put(url)
+            .header("x-internal-token", token)
+            .json(body)
+            .send()
+            .await?;
+        self.handle_response(resp).await
     }
 
     pub(crate) async fn handle_response<T: serde::de::DeserializeOwned>(

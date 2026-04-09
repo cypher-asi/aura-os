@@ -14,4 +14,11 @@ pub use types::{
     StorageProjectAgent, StorageSession, StorageSessionEvent, StorageSpec, StorageTask,
     StorageTaskFileChangeSummary, TransitionTaskRequest, UpdateProjectAgentRequest,
     UpdateSessionRequest, UpdateTaskRequest,
+    // Process types
+    CreateProcessArtifactRequest, CreateProcessConnectionRequest, CreateProcessEventRequest,
+    CreateProcessFolderRequest, CreateProcessNodeRequest, CreateProcessRequest,
+    CreateProcessRunRequest, StorageProcess, StorageProcessArtifact, StorageProcessEvent,
+    StorageProcessFolder, StorageProcessNode, StorageProcessNodeConnection, StorageProcessRun,
+    UpdateProcessEventRequest, UpdateProcessFolderRequest, UpdateProcessNodeRequest,
+    UpdateProcessRequest, UpdateProcessRunRequest,
 };
