@@ -17,7 +17,7 @@ use aura_os_storage::{
 };
 
 use crate::error::{map_network_error, map_storage_error, ApiError, ApiResult};
-use crate::handlers::permissions::require_process_edit_permission;
+use crate::handlers::permissions::{require_org_role, require_process_edit_permission};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 // ---------------------------------------------------------------------------
@@ -1245,8 +1245,10 @@ pub(crate) async fn create_folder(
 ) -> ApiResult<Json<ProcessFolder>> {
     if let Some(client) = remote_process_storage_client(&state) {
         let org_ids = resolve_org_ids(&state, &jwt).await?;
+        let org_id = resolve_remote_folder_org_id(req.org_id.as_deref(), &org_ids)?;
+        require_org_role(&state, &org_id, &jwt, &session, "admin").await?;
         let storage_req = aura_os_storage::CreateProcessFolderRequest {
-            org_id: resolve_remote_folder_org_id(req.org_id.as_deref(), &org_ids)?,
+            org_id,
             name: req.name.clone(),
         };
         let folder = client
@@ -1255,7 +1257,7 @@ pub(crate) async fn create_folder(
             .map_err(map_storage_error)?;
         return Ok(Json(conv_folder(folder)));
     }
-
+    // Local-only mode: no network client for role verification
     let user_id = session
         .network_user_id
         .map(|id| id.to_string())
@@ -1284,11 +1286,14 @@ pub(crate) async fn create_folder(
 pub(crate) async fn update_folder(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    AuthSession(_session): AuthSession,
+    AuthSession(session): AuthSession,
     Path(id): Path<String>,
     Json(req): Json<UpdateFolderRequest>,
 ) -> ApiResult<Json<ProcessFolder>> {
     if let Some(client) = remote_process_storage_client(&state) {
+        let org_ids = resolve_org_ids(&state, &jwt).await?;
+        let org_id = select_remote_process_org_id(None, &org_ids)?;
+        require_org_role(&state, &org_id, &jwt, &session, "admin").await?;
         let storage_req = aura_os_storage::UpdateProcessFolderRequest {
             name: req.name.clone(),
         };
@@ -1298,7 +1303,7 @@ pub(crate) async fn update_folder(
             .map_err(map_storage_error)?;
         return Ok(Json(conv_folder(folder)));
     }
-
+    // Local-only mode: no network client for role verification
     let folder_id: ProcessFolderId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid folder ID"))?;
@@ -1437,12 +1442,14 @@ pub(crate) async fn get_artifact_path(
 pub(crate) async fn delete_folder(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    AuthSession(_session): AuthSession,
+    AuthSession(session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<DeleteResponse>> {
     if let Some(client) = remote_process_storage_client(&state) {
-        // Unassign processes from this folder before deleting
         let org_ids = resolve_org_ids(&state, &jwt).await?;
+        let org_id = select_remote_process_org_id(None, &org_ids)?;
+        require_org_role(&state, &org_id, &jwt, &session, "admin").await?;
+        // Unassign processes from this folder before deleting
         let processes = list_remote_processes_for_orgs(client, &org_ids, &jwt).await?;
         for p in &processes {
             if p.folder_id.as_deref() == Some(id.as_str()) {
@@ -1459,7 +1466,7 @@ pub(crate) async fn delete_folder(
             .map_err(map_storage_error)?;
         return Ok(Json(DeleteResponse { deleted: true }));
     }
-
+    // Local-only mode: no network client for role verification
     let folder_id: ProcessFolderId = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid folder ID"))?;
