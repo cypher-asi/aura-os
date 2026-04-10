@@ -14,12 +14,12 @@ vi.stubGlobal("indexedDB", {
     const req: Record<string, unknown> = { result: null, error: null };
     const db = {
       createObjectStore: vi.fn(),
-      transaction: (store: string, mode: string) => {
+      transaction: (_store: string, _mode: string) => {
         const tx: Record<string, unknown> = {
           oncomplete: null as (() => void) | null,
           onerror: null as (() => void) | null,
           objectStore: () => ({
-            get: (key: string) => {
+            get: (_key: string) => {
               const getReq: Record<string, unknown> = {
                 result: mockIdbState.current,
                 onsuccess: null,
@@ -28,7 +28,7 @@ vi.stubGlobal("indexedDB", {
               setTimeout(() => (getReq.onsuccess as (() => void))?.(), 0);
               return getReq;
             },
-            put: (val: unknown, key: string) => {
+            put: (val: unknown, _key: string) => {
               mockIdbState.current = val as Record<string, unknown>;
               setTimeout(() => (tx.oncomplete as (() => void))?.(), 0);
               return {};

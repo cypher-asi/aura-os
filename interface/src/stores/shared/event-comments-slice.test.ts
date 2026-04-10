@@ -16,7 +16,6 @@ import {
   networkCommentToFeedComment,
   type EventCommentsState,
   type EventCommentsSlice,
-  type FeedComment,
 } from "./event-comments-slice";
 import { api } from "../../api/client";
 

@@ -1,7 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
 import { useCheckoutPolling } from "./use-checkout-polling";
-import { useEventStore } from "../stores/event-store/index";
-import { EventType } from "../types/aura-events";
 
 describe("useCheckoutPolling", () => {
   beforeEach(() => {
@@ -11,35 +9,6 @@ describe("useCheckoutPolling", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-
-  function emitBalanceEvent(cents: number) {
-    const subs = (useEventStore.getState() as any);
-    const event = {
-      event_id: crypto.randomUUID(),
-      session_id: "",
-      user_id: "",
-      agent_id: "",
-      sender: "agent" as const,
-      project_id: "",
-      org_id: "",
-      type: EventType.CreditBalanceUpdated,
-      content: {
-        balance_cents: cents,
-        balance_formatted: `$${(cents / 100).toFixed(2)}`,
-      },
-      created_at: new Date().toISOString(),
-    };
-    // Subscribe imperatively, then fire via the store's subscribe mechanism
-    // The hook subscribes internally, so we just need to trigger the callback
-    // by using the store's internal subscriber map.
-    // We'll trigger by calling subscribe and immediately invoking:
-    const unsub = subs.subscribe(EventType.CreditBalanceUpdated, () => {});
-    unsub();
-    // Instead, emit through the internal mechanism directly:
-    // We need to simulate the event store dispatching CreditBalanceUpdated.
-    // The simplest way is to get all subscribers and call them.
-    return event;
-  }
 
   it("starts with idle status", () => {
     const { result } = renderHook(() => useCheckoutPolling("org-1"));

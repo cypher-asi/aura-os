@@ -143,7 +143,7 @@ function tryDecodeBase64(value: string): string {
   if (!value || value.length < 4 || !BASE64_RE.test(value)) return value;
   try {
     const decoded = atob(value);
-    if (/[\x00-\x08\x0E-\x1F]/.test(decoded)) return value;
+    if (/[\u0000-\u0008\u000E-\u001F]/.test(decoded)) return value;
     return decoded;
   } catch {
     return value;

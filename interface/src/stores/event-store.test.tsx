@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useEventStore, getTaskOutput, useTaskOutput, connectEventSocket } from "./event-store";
+import { act } from "@testing-library/react";
+import { useEventStore, getTaskOutput, connectEventSocket } from "./event-store";
 
 const { capture } = vi.hoisted(() => {
   const capture = { onMessage: null as ((data: string) => void) | null };

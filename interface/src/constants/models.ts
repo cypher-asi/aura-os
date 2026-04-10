@@ -104,14 +104,18 @@ export function loadPersistedModel(
     const models = availableModelsForAdapter(adapterType);
     const stored = localStorage.getItem(storageKey(adapterType));
     if (stored && models.some((m) => m.id === stored)) return stored;
-  } catch {}
+  } catch {
+    // localStorage may be unavailable
+  }
   return defaultModelForAdapter(adapterType, explicitDefault);
 }
 
 export function persistModel(modelId: string, adapterType?: string): void {
   try {
     localStorage.setItem(storageKey(adapterType), modelId);
-  } catch {}
+  } catch {
+    // localStorage may be unavailable
+  }
 }
 
 /** Chat model options formatted for <Select> dropdowns across the app. */
