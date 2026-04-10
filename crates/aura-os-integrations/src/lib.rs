@@ -162,7 +162,7 @@ pub fn app_provider_contracts() -> &'static [AppProviderContract] {
         },
         AppProviderContract {
             kind: AppProviderKind::Apify,
-            trusted: false,
+            trusted: true,
             request: AppProviderRequestContract {
                 env_base_url_key: Some("AURA_APIFY_API_BASE_URL"),
                 default_base_url: Some("https://api.apify.com/v2"),
@@ -596,6 +596,13 @@ mod tests {
                 true,
                 true,
             ),
+            test_integration(
+                "Apify",
+                "apify",
+                OrgIntegrationKind::WorkspaceIntegration,
+                true,
+                true,
+            ),
         ];
 
         let tools = installed_workspace_app_tools(&org_id, &integrations, "bearer-token");
@@ -611,6 +618,10 @@ mod tests {
             .iter()
             .find(|tool| tool.name == "buffer_create_update")
             .expect("buffer tool");
+        let apify = tools
+            .iter()
+            .find(|tool| tool.name == "apify_run_actor")
+            .expect("apify tool");
 
         assert!(
             slack
@@ -629,6 +640,12 @@ mod tests {
                 .metadata
                 .contains_key(TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY),
             "trusted buffer tool should carry runtime metadata",
+        );
+        assert!(
+            apify
+                .metadata
+                .contains_key(TRUSTED_INTEGRATION_RUNTIME_METADATA_KEY),
+            "trusted apify tool should carry runtime metadata",
         );
     }
 

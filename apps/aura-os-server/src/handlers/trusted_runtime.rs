@@ -1,10 +1,10 @@
+use aura_os_integrations::trusted_methods::TrustedIntegrationArgSource;
 use aura_os_integrations::{
     app_provider_authenticated_url, app_provider_base_url, app_provider_headers, AppProviderKind,
     TrustedIntegrationArgBinding, TrustedIntegrationArgValueType, TrustedIntegrationHttpMethod,
     TrustedIntegrationResultField, TrustedIntegrationResultTransform,
     TrustedIntegrationRuntimeSpec, TrustedIntegrationSuccessGuard,
 };
-use aura_os_integrations::trusted_methods::TrustedIntegrationArgSource;
 use reqwest::header::{HeaderMap, ACCEPT};
 use serde_json::{json, Value};
 
@@ -227,9 +227,18 @@ fn build_object_from_bindings(
         return Ok(None);
     }
 
+    if bindings.len() == 1 && bindings[0].target == "$" {
+        return resolve_binding_value(args, provider_config, &bindings[0]);
+    }
+
     let mut body = json!({});
     let mut inserted = false;
     for binding in bindings {
+        if binding.target == "$" {
+            return Err(ApiError::internal(
+                "trusted integration metadata cannot mix root body bindings with object bindings",
+            ));
+        }
         if let Some(value) = resolve_binding_value(args, provider_config, binding)? {
             insert_json_path(&mut body, &binding.target, value)?;
             inserted = true;

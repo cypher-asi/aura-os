@@ -370,6 +370,89 @@ pub fn trusted_integration_methods() -> &'static [TrustedIntegrationMethodDefini
                 },
             },
             TrustedIntegrationMethodDefinition {
+                name: "apify_list_actors".to_string(),
+                provider: "apify".to_string(),
+                description: "List Apify Actors available through a saved org integration."
+                    .to_string(),
+                prompt_signature: "apify_list_actors(limit?, integration_id?)".to_string(),
+                input_schema: json!({
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "integration_id": { "type": "string" },
+                        "limit": { "type": "integer", "description": "Optional max actors to return." }
+                    }
+                }),
+                runtime: TrustedIntegrationRuntimeSpec::RestJson {
+                    method: TrustedIntegrationHttpMethod::Get,
+                    path: "/acts".to_string(),
+                    query: vec![
+                        static_binding("my", "1"),
+                        arg_binding(
+                            &["limit"],
+                            "limit",
+                            TrustedIntegrationArgValueType::PositiveNumber,
+                            false,
+                            Some(json!(20)),
+                        ),
+                    ],
+                    body: vec![],
+                    success_guard: TrustedIntegrationSuccessGuard::None,
+                    result: TrustedIntegrationResultTransform::ProjectArray {
+                        key: "actors".to_string(),
+                        pointer: Some("/data/items".to_string()),
+                        fields: vec![
+                            result_field("id", "/id"),
+                            result_field("name", "/name"),
+                            result_field("username", "/username"),
+                        ],
+                        extras: vec![],
+                    },
+                },
+            },
+            TrustedIntegrationMethodDefinition {
+                name: "apify_run_actor".to_string(),
+                provider: "apify".to_string(),
+                description: "Start an Apify Actor run through a saved org integration."
+                    .to_string(),
+                prompt_signature:
+                    "apify_run_actor(actor_id, input?, integration_id?)".to_string(),
+                input_schema: json!({
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "integration_id": { "type": "string" },
+                        "actor_id": { "type": "string", "description": "Apify Actor id or username/name pair." },
+                        "input": { "description": "Optional JSON input for the actor run." }
+                    },
+                    "required": ["actor_id"]
+                }),
+                runtime: TrustedIntegrationRuntimeSpec::RestJson {
+                    method: TrustedIntegrationHttpMethod::Post,
+                    path: "/acts/{actor_id}/runs".to_string(),
+                    query: vec![],
+                    body: vec![
+                        arg_binding(
+                            &["input"],
+                            "$",
+                            TrustedIntegrationArgValueType::Json,
+                            false,
+                            Some(json!({})),
+                        ),
+                    ],
+                    success_guard: TrustedIntegrationSuccessGuard::None,
+                    result: TrustedIntegrationResultTransform::ProjectObject {
+                        key: "run".to_string(),
+                        pointer: Some("/data".to_string()),
+                        fields: vec![
+                            result_field("id", "/id"),
+                            result_field("status", "/status"),
+                            result_field("act_id", "/actId"),
+                        ],
+                    },
+                },
+            },
+            TrustedIntegrationMethodDefinition {
                 name: "slack_list_channels".to_string(),
                 provider: "slack".to_string(),
                 description: "List Slack channels available through a saved org integration."
