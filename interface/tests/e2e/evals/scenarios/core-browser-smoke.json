@@ -132,7 +132,10 @@
         "label": "open_stats",
         "navigate": "/projects/proj-1/stats",
         "expect": {
-          "visibleTexts": ["Stats", "Completion", "Tokens"]
+          "visibleTexts": ["Completion", "Tokens"],
+          "visibleRoles": [
+            { "role": "button", "name": "Stats", "exact": true }
+          ]
         }
       }
     ]
