@@ -85,6 +85,7 @@ export interface FeedEventDto {
   push_id?: string | null;
   commit_ids?: string[] | null;
   created_at: string | null;
+  comment_count?: number;
   author_name?: string | null;
   author_avatar?: string | null;
 }

@@ -111,6 +111,7 @@ export interface FeedEvent {
   summary?: string;
   eventType: string;
   profileId: string;
+  commentCount: number;
 }
 
 export interface FeedSelectedProfile {
@@ -156,6 +157,7 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
     summary,
     eventType: net.event_type,
     profileId: net.profile_id,
+    commentCount: net.comment_count ?? 0,
   };
 }
 
