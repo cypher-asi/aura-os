@@ -14,6 +14,15 @@ def required_env!(name)
   value
 end
 
+def required_envs!(*names)
+  missing = names.select { |name| ENV[name].to_s.empty? }
+  return if missing.empty?
+
+  UI.user_error!(
+    "Missing required environment variables:\n- #{missing.join("\n- ")}"
+  )
+end
+
 def package_name
   ENV["ANDROID_PACKAGE_NAME"].to_s.empty? ? "tech.zero.aura" : ENV["ANDROID_PACKAGE_NAME"]
 end
@@ -47,12 +56,14 @@ def play_json_key_data
 end
 
 def ensure_signing!
-  %w[
+  required_envs!(
+    *%w[
     ANDROID_KEYSTORE_PATH
     ANDROID_KEYSTORE_PASSWORD
     ANDROID_KEY_ALIAS
     ANDROID_KEY_PASSWORD
-  ].each { |name| required_env!(name) }
+    ]
+  )
 end
 
 def build_release_bundle
@@ -87,6 +98,11 @@ def upload_bundle(track:, release_status:)
     skip_upload_images: true,
     skip_upload_screenshots: true
   )
+end
+
+def ensure_play_store_release_requirements!
+  ensure_signing!
+  required_env!("ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64")
 end
 
 private_lane :sync_android_web_assets do
@@ -125,6 +141,7 @@ platform :android do
 
   desc "Build and upload an internal testing build to Google Play"
   lane :beta do
+    ensure_play_store_release_requirements!
     upload_bundle(
       track: ENV["ANDROID_PLAY_TRACK"].to_s.empty? ? "internal" : ENV["ANDROID_PLAY_TRACK"],
       release_status: "completed"
@@ -133,10 +150,17 @@ platform :android do
 
   desc "Build and upload a release candidate to Google Play"
   lane :release do
+    ensure_play_store_release_requirements!
     upload_bundle(
       track: ENV["ANDROID_PLAY_TRACK"].to_s.empty? ? "production" : ENV["ANDROID_PLAY_TRACK"],
       # Default to draft so a release lane run doesn't immediately roll out.
       release_status: ENV["ANDROID_PLAY_RELEASE_STATUS"].to_s.empty? ? "draft" : ENV["ANDROID_PLAY_RELEASE_STATUS"]
     )
+  end
+
+  desc "Validate Android Play release configuration without uploading"
+  lane :preflight do
+    ensure_play_store_release_requirements!
+    UI.success("Android Play release configuration looks complete.")
   end
 end

@@ -68,12 +68,22 @@ if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Library/Android/sdk" ]; then
   export ANDROID_HOME="$HOME/Library/Android/sdk"
 fi
 
+if [ -z "${ANDROID_SDK_ROOT:-}" ] && [ -n "${ANDROID_HOME:-}" ]; then
+  export ANDROID_SDK_ROOT="$ANDROID_HOME"
+fi
+
 if [ -n "${JAVA_HOME:-}" ]; then
   export PATH="$JAVA_HOME/bin:$PATH"
 fi
 
 if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME/platform-tools" ]; then
   export PATH="$ANDROID_HOME/platform-tools:$PATH"
+fi
+
+if [ -n "${ANDROID_HOME:-}" ]; then
+  LOCAL_PROPERTIES="$ROOT_DIR/android/local.properties"
+  SDK_DIR_ESCAPED="$(printf '%s\n' "$ANDROID_HOME" | sed 's/\\/\\\\/g; s/:/\\:/g')"
+  printf 'sdk.dir=%s\n' "$SDK_DIR_ESCAPED" > "$LOCAL_PROPERTIES"
 fi
 
 # Native mobile builds must target a real Aura host instead of the embedded localhost webview origin.
