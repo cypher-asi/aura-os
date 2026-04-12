@@ -1,16 +1,6 @@
 import { render, screen } from "../../test/render";
 
 vi.mock("@cypher-asi/zui", () => ({
-  GroupCollapsible: ({
-    children,
-    label,
-  }: {
-    children?: React.ReactNode;
-    label: string;
-    defaultOpen?: boolean;
-    className?: string;
-  }) => <section data-testid={`group-${label}`}>{children}</section>,
-  Panel: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Badge: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
@@ -76,10 +66,6 @@ vi.mock("../TaskFeed", () => ({
   TaskFeed: () => <div>Task feed</div>,
 }));
 
-vi.mock("../LogPanel", () => ({
-  LogPanel: () => <div>Log panel</div>,
-}));
-
 vi.mock("./ProjectWorkView.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
@@ -104,14 +90,14 @@ describe("ProjectWorkView", () => {
     expect(screen.queryByTestId("group-Stats")).not.toBeInTheDocument();
   });
 
-  it("keeps the mobile work flow focused on execution, specs, and tasks", () => {
+  it("keeps the mobile work flow focused on execution and specs", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
 
     render(<ProjectWorkView />);
 
-    expect(screen.getByTestId("group-Execution details")).toBeInTheDocument();
-    expect(screen.getByTestId("group-Specs")).toBeInTheDocument();
-    expect(screen.getByTestId("group-Tasks")).toBeInTheDocument();
-    expect(screen.queryByTestId("group-Stats")).not.toBeInTheDocument();
+    expect(screen.getByText("Recent activity")).toBeInTheDocument();
+    expect(screen.getByText("Specs")).toBeInTheDocument();
+    expect(screen.queryByText("Log panel")).not.toBeInTheDocument();
+    expect(screen.getByText("Task feed")).toBeInTheDocument();
   });
 });

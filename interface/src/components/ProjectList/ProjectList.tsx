@@ -10,8 +10,9 @@ import {
   getMobileProjectDestination,
   projectRootPath,
   projectAgentRoute,
-  projectFilesRoute,
+  projectProcessRoute,
   projectStatsRoute,
+  projectTasksRoute,
   projectWorkRoute,
 } from "../../utils/mobileNavigation";
 import { getLastAgent } from "../../utils/storage";
@@ -73,7 +74,7 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
   useEffect(() => {
     if (!projectId || agentInstanceId || isMobileLayout) return;
     const path = location.pathname;
-    if (path.endsWith("/execution") || path.endsWith("/work") || path.endsWith("/files") || path.endsWith("/stats") || path.endsWith("/agent") || path !== `/projects/${projectId}`) return;
+    if (path.endsWith("/execution") || path.endsWith("/work") || path.endsWith("/stats") || path.endsWith("/agent") || path !== `/projects/${projectId}`) return;
     if (projectId in agentsByProject) {
       const agents = agentsByProject[projectId];
       if (agents && agents.length > 0) {
@@ -199,14 +200,15 @@ export function ProjectList() {
     const id = getLastSelectedId(ids);
     if (!id) return;
     const mobileDestination = getMobileProjectDestination(location.pathname);
-    const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/files") || location.pathname.endsWith("/stats");
+    const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/stats");
 
     if (projectMap.has(id)) {
       if (id !== projectId) closePreview();
       if (isMobileLayout) {
         if (id === projectId && isNested) { navigate(projectRootPath(id)); return; }
-        if (mobileDestination === "tasks") { navigate(projectWorkRoute(id)); return; }
-        if (mobileDestination === "files") { navigate(projectFilesRoute(id)); return; }
+        if (mobileDestination === "tasks") { navigate(projectTasksRoute(id)); return; }
+        if (mobileDestination === "execution") { navigate(projectWorkRoute(id)); return; }
+        if (mobileDestination === "process") { navigate(projectProcessRoute(id)); return; }
         if (mobileDestination === "stats") { navigate(projectStatsRoute(id)); return; }
         navigate(projectAgentRoute(id)); return;
       }
@@ -230,7 +232,7 @@ export function ProjectList() {
   }, [projectMap, agentMeta, agentsByProject, agentInstanceId, isMobileLayout, location.pathname, navigate, projectId, closePreview]);
 
   const handleExpand = useCallback((nodeId: string, expanded: boolean) => {
-    const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/files") || location.pathname.endsWith("/stats");
+    const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/stats");
     if (!expanded && nodeId === projectId && isNested) {
       closePreview();
       if (isMobileLayout) navigate(`/projects/${nodeId}`);

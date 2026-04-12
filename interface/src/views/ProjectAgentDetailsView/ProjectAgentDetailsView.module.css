@@ -1,0 +1,233 @@
+.root {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.agentIdentity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.agentIdentityCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sectionLabel {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.group,
+.subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-bg-surface) 98%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cardHeaderCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  touch-action: manipulation;
+}
+
+.settingsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 10px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 66%, transparent);
+}
+
+.metaRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.metaLabel {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.metaValue {
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.availableSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 62px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 66%, transparent);
+}
+
+.settingRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.settingIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-bg));
+  flex-shrink: 0;
+}
+
+.settingCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.skillName {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.skillMeta {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.inlineActionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.inlineActionButton:disabled {
+  opacity: 0.6;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px dashed color-mix(in srgb, var(--color-border) 84%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
+}
+
+@media (max-width: 640px) {
+  .root {
+    gap: var(--space-5);
+    padding: var(--space-4);
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+
+  .group,
+  .subsection,
+  .emptyState {
+    padding: 18px;
+  }
+
+  .agentIdentity {
+    align-items: flex-start;
+  }
+
+  .cardHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metaRow {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .metaValue {
+    grid-column: 1 / -1;
+    padding-left: 24px;
+    text-align: left;
+    word-break: break-word;
+  }
+
+  .sectionToggle {
+    width: 100%;
+    justify-content: center;
+  }
+}

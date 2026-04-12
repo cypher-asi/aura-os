@@ -1,33 +1,46 @@
-import { GroupCollapsible, Panel, Badge, Text } from "@cypher-asi/zui";
+import { Badge, Text } from "@cypher-asi/zui";
 import { useEventStore } from "../../stores/event-store/index";
 import { useLoopControl } from "../../hooks/use-loop-control";
-import { AgentStatusBar } from "../AgentStatusBar";
 import { LoopControls } from "../LoopControls";
 import { ExecutionView } from "../ExecutionView";
 import { TaskFeed } from "../TaskFeed";
-import { LogPanel } from "../LogPanel";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
-import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useMobileSpecs } from "./useMobileSpecs";
-import { useMobileTasks } from "./useMobileTasks";
 import styles from "./ProjectWorkView.module.css";
 
 function ExecutionSummary({ projectId }: { projectId: string }) {
   const connected = useEventStore((s) => s.connected);
+  const activeAgent = useProjectsListStore((s) => (s.agentsByProject[projectId] ?? [])[0] ?? null);
   const { loopRunning, loopPaused, error, handleStart, handlePause, handleStop } =
     useLoopControl(projectId);
+  const loopStatus = loopRunning ? (loopPaused ? "Paused" : "Running") : "Idle";
 
   return (
-    <Panel variant="solid" border="solid" className={styles.executionSummary}>
+    <div className={styles.executionSummary}>
       {!connected && (
-        <Badge variant="error" className={styles.executionBadge}>
-          Live updates unavailable
-        </Badge>
+        <Text variant="muted" size="sm" className={styles.executionNotice}>
+          Live updates are reconnecting. You can still start or resume work.
+        </Text>
       )}
 
-      <AgentStatusBar projectId={projectId} />
+      <div className={styles.executionSummaryTop}>
+        <div className={styles.executionAgentBlock}>
+          <span className={styles.executionMetaLabel}>Active agent</span>
+          <span className={styles.executionAgentName}>{activeAgent?.name ?? "No agent connected yet"}</span>
+          <span className={styles.executionAgentMeta}>
+            {activeAgent?.role?.trim() || "Remote Aura agent"}
+          </span>
+        </div>
+        <div className={styles.executionStateStack}>
+          <Badge variant={connected ? "running" : "stopped"} className={styles.executionBadge}>
+            {connected ? "Connected" : "Offline"}
+          </Badge>
+          <span className={styles.executionStateText}>Loop {loopStatus}</span>
+        </div>
+      </div>
 
       <div className={styles.executionControls}>
         <LoopControls
@@ -45,7 +58,7 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
           {error}
         </Text>
       )}
-    </Panel>
+    </div>
   );
 }
 
@@ -74,50 +87,6 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
   );
 }
 
-function MobileTasksList({ projectId }: { projectId: string }) {
-  const ctx = useProjectActions();
-  const viewTask = useSidekickStore((s) => s.viewTask);
-  const { tasks, tasksBySpec, liveTaskIds, loopActive } = useMobileTasks(projectId);
-
-  if (tasks.length === 0) {
-    return <Text variant="muted" size="sm">No tasks yet</Text>;
-  }
-
-  return (
-    <div className={styles.itemList}>
-      {tasks.map((task) => {
-        const displayStatus =
-          task.status === "in_progress" &&
-          !liveTaskIds.has(task.task_id) &&
-          (!loopActive || liveTaskIds.size > 0)
-            ? "ready"
-            : task.status;
-        return (
-          <button
-            key={task.task_id}
-            type="button"
-            className={styles.itemButton}
-            aria-label={`Open task ${task.title}`}
-            onClick={() => viewTask(task)}
-          >
-            <span className={styles.itemButtonMeta}>
-              <TaskStatusIcon status={displayStatus} />
-            </span>
-            <span className={styles.itemButtonContent}>
-              <span className={styles.itemTitle}>{task.title}</span>
-              {tasksBySpec.get(task.spec_id)?.length ? (
-                <span className={styles.itemSubtitle}>
-                  {ctx?.initialSpecs.find((spec) => spec.spec_id === task.spec_id)?.title ?? "Task"}
-                </span>
-              ) : null}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function ProjectWorkView() {
   const ctx = useProjectActions();
   const { isMobileLayout } = useAuraCapabilities();
@@ -131,33 +100,34 @@ export function ProjectWorkView() {
     <div className={styles.root}>
       <section className={styles.section}>
         <div className={styles.sectionLabel}>Execution</div>
-        <ExecutionSummary projectId={projectId} />
+        <div className={styles.sectionCard}>
+          <ExecutionSummary projectId={projectId} />
+        </div>
       </section>
 
-      <GroupCollapsible label="Execution details" defaultOpen={false} className={styles.section}>
-        <div className={`${styles.sectionBody} ${styles.executionBody}`}>
+      <section className={styles.section}>
+        <div className={styles.sectionLabel}>Recent activity</div>
+        <div className={`${styles.sectionCard} ${styles.sectionBody} ${styles.executionBody}`}>
+          <Text size="sm" variant="muted" className={styles.sectionHint}>
+            Follow the current remote-agent loop without desktop-style consoles.
+          </Text>
           <div className={styles.executionPanels}>
             <div className={styles.executionPanel}>
               <TaskFeed projectId={projectId} />
             </div>
-            <div className={styles.executionPanel}>
-              <LogPanel />
-            </div>
           </div>
         </div>
-      </GroupCollapsible>
+      </section>
 
-      <GroupCollapsible label="Specs" defaultOpen className={styles.section}>
-        <div className={styles.sectionBody}>
+      <section className={styles.section}>
+        <div className={styles.sectionLabel}>Specs</div>
+        <div className={`${styles.sectionCard} ${styles.sectionBody}`}>
+          <Text size="sm" variant="muted" className={styles.sectionHint}>
+            Review the latest planning outputs and jump into details when you need them.
+          </Text>
           <MobileSpecsList projectId={projectId} />
         </div>
-      </GroupCollapsible>
-
-      <GroupCollapsible label="Tasks" defaultOpen className={styles.section}>
-        <div className={styles.sectionBody}>
-          <MobileTasksList projectId={projectId} />
-        </div>
-      </GroupCollapsible>
+      </section>
     </div>
   );
 }

@@ -7,14 +7,22 @@ import {
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { projectWorkRoute, projectStatsRoute } from "../../utils/mobileNavigation";
+import { projectWorkRoute, projectStatsRoute, projectTasksRoute, projectProcessRoute } from "../../utils/mobileNavigation";
 import { resolveProjectAgentPath } from "./mobile-shell-utils";
 import type { MobileShellState } from "./useMobileShellState";
 import styles from "./MobileShell.module.css";
 
 function resolveGlobalProjectPath(state: MobileShellState) {
   if (state.mobileDestination === "tasks" && state.mobileTargetProjectId) {
+    return projectTasksRoute(state.mobileTargetProjectId);
+  }
+
+  if (state.mobileDestination === "execution" && state.mobileTargetProjectId) {
     return projectWorkRoute(state.mobileTargetProjectId);
+  }
+
+  if (state.mobileDestination === "process" && state.mobileTargetProjectId) {
+    return projectProcessRoute(state.mobileTargetProjectId);
   }
 
   if (state.mobileDestination === "stats" && state.mobileTargetProjectId) {
@@ -35,13 +43,16 @@ function resolveGlobalAgentsPath() {
 export function AppSwitcherContent({ state }: { state: MobileShellState }) {
   const navigate = useNavigate();
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
+  const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
   const activeAppId = state.activeApp.id;
+  const projectLauncherLabel = state.mobileTargetProject ? "Return to project" : "Projects";
+  const projectLauncherDescription = state.mobileTargetProject?.name ?? "Open your projects";
 
   const items = [
     {
       id: "projects",
-      label: "Projects",
-      description: state.mobileTargetProject?.name ?? "Return to your current project",
+      label: projectLauncherLabel,
+      description: projectLauncherDescription,
       icon: FolderOpen,
       path: resolveGlobalProjectPath(state),
     },
@@ -66,6 +77,13 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
       icon: CircleUserRound,
       path: "/profile",
     },
+    {
+      id: "account",
+      label: "Account settings",
+      description: "Team, host, and app settings",
+      icon: Settings,
+      onSelect: () => setAccountOpen(true),
+    },
   ] as const;
 
   return (
@@ -84,7 +102,13 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
                 className={`${styles.mobileAppSwitcherButton} ${isSelected ? styles.mobileAppSwitcherButtonActive : ""}`}
                 aria-pressed={isSelected}
                 aria-label={item.label}
-                onClick={() => openAfterDrawerClose(() => navigate(item.path))}
+                onClick={() => openAfterDrawerClose(() => {
+                  if ("path" in item) {
+                    navigate(item.path);
+                    return;
+                  }
+                  item.onSelect();
+                })}
               >
                 <span className={styles.mobileAppSwitcherIcon}>
                   <item.icon size={18} />

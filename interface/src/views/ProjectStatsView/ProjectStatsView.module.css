@@ -5,7 +5,7 @@
   min-height: 0;
   flex: 1;
   padding: var(--space-3);
-  padding-bottom: calc(var(--space-6) + 148px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--space-6) + 96px + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
 }

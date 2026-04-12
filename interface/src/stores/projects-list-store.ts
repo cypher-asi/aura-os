@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Agent, AgentInstance, Project } from "../types";
 import { api } from "../api/client";
 import { useOrgStore } from "./org-store";
+import { useAuthStore } from "./auth-store";
 
 const NEW_PROJECT_MODAL_STORAGE_KEY = "aura:new-project-modal-open";
 
@@ -170,6 +171,30 @@ useOrgStore.subscribe((state) => {
   _prevOrgId = orgId;
   useProjectsListStore.setState({ agentsByProject: {}, loadingAgentsByProject: {} });
   _knownProjectIds = new Set();
+  useProjectsListStore.getState().refreshProjects();
+});
+
+// Also refresh projects when authentication changes. This keeps project loading
+// alive in environments where org metadata is unavailable but /api/projects
+// still returns the user's accessible projects.
+let _prevProjectsUserId: string | null = null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.user_id ?? null;
+  if (userId === _prevProjectsUserId) return;
+  _prevProjectsUserId = userId;
+
+  if (!userId) {
+    _prevOrgId = null;
+    _knownProjectIds = new Set();
+    useProjectsListStore.setState({
+      projects: [],
+      loadingProjects: false,
+      agentsByProject: {},
+      loadingAgentsByProject: {},
+    });
+    return;
+  }
+
   useProjectsListStore.getState().refreshProjects();
 });
 
