@@ -806,6 +806,10 @@ test("mobile account sheet exposes team, host, and app settings", async ({ page 
   await page.goto("/projects");
 
   await openAccountSheet(page);
+  await expect(page.getByRole("region", { name: "Organization" })).toBeVisible();
+  const orgList = page.getByRole("list", { name: "Organizations" });
+  await expect(orgList).toBeVisible();
+  await expect(orgList.getByRole("listitem").filter({ hasText: "Test Org" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Host settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();

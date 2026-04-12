@@ -343,7 +343,7 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
   });
 });
 
-test("capture mobile work, process, agent settings, and account sheet", async ({ page, browserName }, testInfo) => {
+test("capture mobile work, process, and agent settings", async ({ page, browserName }, testInfo) => {
   mkdirSync("test-artifacts/review-shots", { recursive: true });
 
   await mockMobileVisualApp(page);
@@ -429,9 +429,18 @@ test("capture mobile work, process, agent settings, and account sheet", async ({
     fullPage: true,
   });
 
-  await page.goto("/projects/proj-1/tasks");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/tasks$/);
+});
+
+test("capture mobile account sheet", async ({ page, browserName }, testInfo) => {
+  mkdirSync("test-artifacts/review-shots", { recursive: true });
+
+  await mockMobileVisualApp(page);
+  const projectName = testInfo.project.name.replace(/\s+/g, "-");
+
+  await page.goto("/projects");
+  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
   await openAccountSheet(page);
+  await expect(page.getByRole("region", { name: "Organization" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Host settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();

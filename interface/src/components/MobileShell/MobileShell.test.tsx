@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
@@ -37,6 +37,12 @@ const demoProject = {
   description: "Test project",
 };
 
+const orgFixtures = [
+  { org_id: "org-1", name: "Alpha Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
+  { org_id: "org-2", name: "Beta Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
+] as const;
+const switchOrg = vi.fn();
+
 vi.mock("../../stores/app-store", () => ({
   useAppStore: (sel: (s: { activeApp: typeof mockActiveApp }) => unknown) =>
     sel({ activeApp: mockActiveApp }),
@@ -65,6 +71,19 @@ vi.mock("../../stores/ui-modal-store", () => ({
   useUIModalStore: () => ({
     openOrgSettings: vi.fn(),
     openSettings: vi.fn(),
+    openHostSettings: vi.fn(),
+  }),
+}));
+
+vi.mock("../../stores/org-store", () => ({
+  useOrgStore: (selector: (state: {
+    orgs: typeof orgFixtures;
+    activeOrg: typeof orgFixtures[number];
+    switchOrg: typeof switchOrg;
+  }) => unknown) => selector({
+    orgs: orgFixtures,
+    activeOrg: orgFixtures[0],
+    switchOrg,
   }),
 }));
 
@@ -76,6 +95,9 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
     isPhoneLayout: true,
     isMobileLayout: true,
+    features: {
+      hostRetargeting: true,
+    },
   }),
 }));
 
@@ -295,6 +317,20 @@ describe("MobileShell", () => {
 
     await user.click(screen.getByRole("button", { name: "Open account" }));
     expect(drawers.setAccountOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("shows organizations in the mobile account sheet and switches orgs", async () => {
+    const user = userEvent.setup();
+    drawers.accountOpen = true;
+    renderMobile();
+
+    const orgList = screen.getByRole("list", { name: "Organizations" });
+    expect(orgList).toBeInTheDocument();
+    expect(within(orgList).getByText("Alpha Team")).toBeInTheDocument();
+    expect(within(orgList).getByText("Beta Team")).toBeInTheDocument();
+
+    await user.click(within(orgList).getByText("Beta Team"));
+    expect(switchOrg).toHaveBeenCalledWith("org-2");
   });
 
   it("renders update banner", () => {

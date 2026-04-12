@@ -229,6 +229,7 @@ function handleGitPushed(event: AuraEvent, set: FeedSetter): void {
     summary: c.summary,
     eventType: "push",
     profileId: "",
+    commentCount: 0,
   };
   if (_seenIds.has(feedEvent.id)) return;
   _seenIds.add(feedEvent.id);

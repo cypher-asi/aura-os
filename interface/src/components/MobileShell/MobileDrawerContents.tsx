@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import {
-  CircleUserRound, Settings, Building2, Server,
+  CircleUserRound, Settings, Building2, Check,
+  ChevronRight, Server,
   FolderOpen, Bot, GitCommitVertical,
 } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useOrgStore } from "../../stores/org-store";
 import { projectWorkRoute, projectStatsRoute, projectTasksRoute, projectProcessRoute } from "../../utils/mobileNavigation";
 import { resolveProjectAgentPath } from "./mobile-shell-utils";
 import type { MobileShellState } from "./useMobileShellState";
@@ -132,9 +134,52 @@ export function AccountSheetContent() {
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
   const openSettings = useUIModalStore((s) => s.openSettings);
   const openHostSettings = useUIModalStore((s) => s.openHostSettings);
+  const orgs = useOrgStore((s) => s.orgs);
+  const activeOrg = useOrgStore((s) => s.activeOrg);
+  const switchOrg = useOrgStore((s) => s.switchOrg);
+
   return (
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerBody}>
+        <section className={styles.mobileDrawerSectionBlock} aria-labelledby="mobile-team-switcher-title">
+          <div className={styles.mobileDrawerSectionHeaderRow}>
+            <div className={styles.mobileDrawerSectionEyebrow}>
+              <Building2 size={15} />
+              <span id="mobile-team-switcher-title">Organization</span>
+            </div>
+            <span className={styles.mobileDrawerSectionMeta}>
+              {activeOrg?.name ?? "No team selected"}
+            </span>
+          </div>
+          <div className={styles.mobileDrawerSectionDescription}>
+            Feed, leaderboard, projects, and integrations follow the active organization.
+          </div>
+          <div className={styles.mobileOrgList} role="list" aria-label="Organizations">
+            {orgs.map((org) => {
+              const isActive = org.org_id === activeOrg?.org_id;
+              return (
+                <button
+                  key={org.org_id}
+                  type="button"
+                  role="listitem"
+                  className={`${styles.mobileOrgButton} ${isActive ? styles.mobileOrgButtonActive : ""}`}
+                  aria-pressed={isActive}
+                  onClick={() => openAfterDrawerClose(() => switchOrg(org.org_id))}
+                >
+                  <span className={styles.mobileOrgButtonText}>
+                    <span className={styles.mobileOrgButtonName}>{org.name}</span>
+                    <span className={styles.mobileOrgButtonMeta}>
+                      {isActive ? "Current organization" : "Switch to this organization"}
+                    </span>
+                  </span>
+                  <span className={styles.mobileOrgButtonIcon}>
+                    {isActive ? <Check size={16} /> : <ChevronRight size={16} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
         <div className={styles.mobileDrawerActions}>
           <Button variant="ghost" size="sm" icon={<Building2 size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openOrgSettings)}>Team settings</Button>
           {features.hostRetargeting ? (
