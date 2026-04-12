@@ -97,6 +97,8 @@ async function mockAuthenticatedMobileApp(
   page: import("@playwright/test").Page,
   options: {
     orgsUnavailable?: boolean;
+    orgs?: Record<string, unknown>[];
+    projectsByOrgId?: Record<string, Record<string, unknown>[]>;
     withAgentInstance?: boolean;
     projects?: Record<string, unknown>[];
     agentInstances?: Record<string, unknown>[];
@@ -165,6 +167,8 @@ async function mockAuthenticatedMobileApp(
     processes: options.processes ?? processes,
     processRuns: options.processRuns ?? processRuns,
     orgsUnavailable: options.orgsUnavailable,
+    orgs: options.orgs,
+    projectsByOrgId: options.projectsByOrgId,
     projects: options.projects,
   });
 }
@@ -433,11 +437,79 @@ test("mobile project agent tab reflects the routed agent instance", async ({ pag
   await expect(page.getByText("Start chatting with Research Bot.")).toBeVisible();
 });
 
+test("mobile project agent tab can switch between attached project agents", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page, {
+    agentInstances: [
+      {
+        agent_instance_id: "agent-inst-1",
+        project_id: "proj-1",
+        agent_id: "agent-1",
+        name: "Builder Bot",
+        role: "Engineer",
+        personality: "Helpful",
+        system_prompt: "Build features carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "remote",
+        environment: "cloud",
+        auth_source: "aura_managed",
+        adapter_type: "aura_harness",
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+      {
+        agent_instance_id: "agent-inst-2",
+        project_id: "proj-1",
+        agent_id: "agent-2",
+        name: "Research Bot",
+        role: "Analyst",
+        personality: "Curious",
+        system_prompt: "Research carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "remote",
+        environment: "cloud",
+        auth_source: "aura_managed",
+        adapter_type: "aura_harness",
+        status: "working",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
+  });
+
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
+
+  await expect(page.getByRole("button", { name: "Switch active project agent from Builder Bot" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Skills" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Switch active project agent from Builder Bot" }).click();
+  await expect(page.getByText("Choose who you want to talk to in this project")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Builder Bot, current agent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Switch to Research Bot" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Switch to Research Bot" }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-2$/);
+  await expect(page.getByText("Start chatting with Research Bot.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Switch active project agent from Research Bot" })).toBeVisible();
+});
+
 test("mobile global app switcher opens feed and profile", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/projects");
 
   await openAppSwitcher(page);
+  await expect(page.getByRole("button", { name: "Organization" })).toBeVisible();
+  await expect(page.getByText("Test Org")).toBeVisible();
   await expect(page.getByRole("button", { name: "Return to project" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Agent library" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Feed" })).toBeVisible();
@@ -707,8 +779,8 @@ test("mobile drawer scales across current, recent, and other projects", async ({
   await page.goto("/projects/proj-1/work");
   await openProjectDrawer(page, "Project Atlas");
 
-  await expect(page.getByText("Recent projects", { exact: true })).toBeVisible();
-  await expect(page.getByText("Other projects", { exact: true })).toBeVisible();
+  await expect(page.getByText("Current project", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Projects", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Design System" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Docs Refresh" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Orbit QA" })).toBeVisible();
@@ -815,6 +887,107 @@ test("mobile account sheet exposes team, host, and app settings", async ({ page 
   await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Profile" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Leaderboard" })).toHaveCount(0);
+});
+
+test("mobile org switching recovers from a stale project route", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page, {
+    orgs: [
+      {
+        org_id: "org-1",
+        name: "Test Org",
+        owner_user_id: "user-1",
+        billing: null,
+        github: null,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+      {
+        org_id: "org-2",
+        name: "Second Org",
+        owner_user_id: "user-1",
+        billing: null,
+        github: null,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
+    projectsByOrgId: {
+      "org-1": [
+        {
+          project_id: "proj-1",
+          org_id: "org-1",
+          name: "Project Atlas",
+          description: "Parity test project",
+          current_status: "active",
+          created_at: "2026-03-17T01:00:00.000Z",
+          updated_at: "2026-03-17T01:00:00.000Z",
+        },
+      ],
+      "org-2": [
+        {
+          project_id: "proj-2",
+          org_id: "org-2",
+          name: "Kripto",
+          description: "Recovery target",
+          current_status: "active",
+          created_at: "2026-03-17T01:00:00.000Z",
+          updated_at: "2026-03-17T02:00:00.000Z",
+        },
+      ],
+    },
+    agentInstances: [
+      {
+        agent_instance_id: "agent-inst-1",
+        project_id: "proj-1",
+        agent_id: "agent-1",
+        name: "Builder Bot",
+        role: "Engineer",
+        personality: "Helpful",
+        system_prompt: "Build features carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "local",
+        workspace_path: "/tmp/demo-project",
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+      {
+        agent_instance_id: "agent-inst-2",
+        project_id: "proj-2",
+        agent_id: "agent-2",
+        name: "Kripto Bot",
+        role: "Analyst",
+        personality: "Focused",
+        system_prompt: "Work carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "local",
+        workspace_path: "/tmp/kripto",
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
+  });
+  await page.goto("/projects/proj-1/work");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/work$/);
+
+  await openAppSwitcher(page);
+  await page.getByRole("button", { name: "Organization" }).click();
+  const orgList = page.getByRole("list", { name: "Organizations" });
+  await orgList.getByRole("listitem").filter({ hasText: "Second Org" }).click();
+
+  await expect(page).toHaveURL(/\/projects\/proj-2\/agents\/agent-inst-2$/);
+  await expect(page.getByText("Start chatting with Kripto Bot.")).toBeVisible();
 });
 
 test("mobile team settings shows an unavailable state when org loading fails", async ({ page }) => {

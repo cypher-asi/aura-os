@@ -61,6 +61,7 @@ export function ProjectNavigationDrawerContent() {
   const location = useLocation();
   const closePreview = useSidekickStore((s) => s.closePreview);
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
+  const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
   const recentProjects = useMemo(() => getRecentProjects(projects), [projects]);
@@ -105,7 +106,7 @@ export function ProjectNavigationDrawerContent() {
 
       navigate(resolveProjectAgentPath(projectId));
     });
-  }, [agentsByProject, currentProjectId, mobileDestination, navigate, openAfterDrawerClose, closePreview]);
+  }, [currentProjectId, mobileDestination, navigate, openAfterDrawerClose, closePreview]);
 
   const currentProject = currentProjectId
     ? projects.find((project) => project.project_id === currentProjectId) ?? null
@@ -119,18 +120,30 @@ export function ProjectNavigationDrawerContent() {
     ?? null;
   const activeQuery = query.trim();
   const recentProjectIds = new Set(recentProjects.map((project) => project.project_id));
-  const recentRows = filteredProjects.filter((project) =>
-    project.project_id !== currentProjectId && recentProjectIds.has(project.project_id),
-  );
-  const remainingRows = filteredProjects.filter((project) =>
-    project.project_id !== currentProjectId && !recentProjectIds.has(project.project_id),
-  );
-  const hasCurrentProject = Boolean(currentProjectId);
-  const recentSectionTitle = hasCurrentProject || remainingRows.length > 0 ? "Recent projects" : "Projects";
-  const remainingSectionTitle = recentRows.length > 0 ? "Other projects" : "Projects";
+  const projectRows = filteredProjects
+    .filter((project) => project.project_id !== currentProjectId)
+    .sort((left, right) => {
+      const leftIsRecent = recentProjectIds.has(left.project_id);
+      const rightIsRecent = recentProjectIds.has(right.project_id);
+      if (leftIsRecent !== rightIsRecent) {
+        return leftIsRecent ? -1 : 1;
+      }
+      return left.name.localeCompare(right.name);
+    });
   return (
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerSearch}>
+        <div className={styles.mobileDrawerHeaderBar}>
+          <div className={styles.mobileDrawerHeaderTitle}>Project navigation</div>
+          <button
+            type="button"
+            className={styles.mobileDrawerDoneButton}
+            aria-label="Close project navigation"
+            onClick={() => setNavOpen(false)}
+          >
+            Done
+          </button>
+        </div>
         <PanelSearch
           placeholder="Search Projects..."
           value={query}
@@ -143,7 +156,7 @@ export function ProjectNavigationDrawerContent() {
           {currentProject && (!activeQuery || filteredProjects.some((project) => project.project_id === currentProject.project_id)) ? (
             <section className={styles.mobileDrawerSection}>
               <div className={styles.mobileDrawerSectionHeader}>
-                <span className={styles.mobileDrawerSectionTitle}>Current workspace</span>
+                <span className={styles.mobileDrawerSectionTitle}>Current project</span>
               </div>
               <section
                 className={`${styles.mobileProjectDrawerCard} ${styles.mobileProjectDrawerCardActive} ${styles.mobileWorkspaceHero}`}
@@ -205,33 +218,14 @@ export function ProjectNavigationDrawerContent() {
             </section>
           ) : (
             <>
-              {recentRows.length > 0 ? (
+              {projectRows.length > 0 ? (
                 <section className={styles.mobileDrawerSection}>
                   <div className={styles.mobileDrawerSectionHeader}>
-                    <span className={styles.mobileDrawerSectionTitle}>{recentSectionTitle}</span>
-                    <span className={styles.mobileDrawerSectionCount}>{recentRows.length}</span>
+                    <span className={styles.mobileDrawerSectionTitle}>Projects</span>
+                    <span className={styles.mobileDrawerSectionCount}>{projectRows.length}</span>
                   </div>
                   <div className={styles.mobileProjectDrawerStack}>
-                    {recentRows.map((project) => (
-                      <ProjectRow
-                        key={project.project_id}
-                        project={project}
-                        isActive={project.project_id === currentProjectId}
-                        onOpen={openProjectLanding}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {remainingRows.length > 0 ? (
-                <section className={styles.mobileDrawerSection}>
-                  <div className={styles.mobileDrawerSectionHeader}>
-                    <span className={styles.mobileDrawerSectionTitle}>{remainingSectionTitle}</span>
-                    <span className={styles.mobileDrawerSectionCount}>{remainingRows.length}</span>
-                  </div>
-                  <div className={styles.mobileProjectDrawerStack}>
-                    {remainingRows.map((project) => (
+                    {projectRows.map((project) => (
                       <ProjectRow
                         key={project.project_id}
                         project={project}

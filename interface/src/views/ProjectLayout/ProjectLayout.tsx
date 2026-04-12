@@ -1,15 +1,41 @@
+import { useEffect, useRef } from "react";
 import { Loader2, FolderGit2, SearchX } from "lucide-react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { EmptyState } from "../../components/EmptyState";
 import { PageEmptyState, Button } from "@cypher-asi/zui";
 import { useDelayedLoading } from "../../hooks/use-delayed-loading";
+import { useOrgStore } from "../../stores/org-store";
 import { useProjectLayoutData } from "./useProjectLayoutData";
 
 export function ProjectLayout() {
+  const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { displayProject, loading, projects } = useProjectLayoutData();
+  const activeOrgId = useOrgStore((s) => s.activeOrg?.org_id ?? null);
   const showSpinner = useDelayedLoading(loading && !displayProject);
+  const previousOrgIdRef = useRef<string | null>(activeOrgId);
+  const pendingOrgRecoveryRef = useRef(false);
+
+  useEffect(() => {
+    if (previousOrgIdRef.current !== activeOrgId) {
+      previousOrgIdRef.current = activeOrgId;
+      pendingOrgRecoveryRef.current = true;
+    }
+  }, [activeOrgId]);
+
+  useEffect(() => {
+    if (!pendingOrgRecoveryRef.current || loading) {
+      return;
+    }
+
+    pendingOrgRecoveryRef.current = false;
+
+    const hasProjectInActiveOrg = projectId ? projects.some((project) => project.project_id === projectId) : false;
+    if (!hasProjectInActiveOrg) {
+      navigate("/projects", { replace: true });
+    }
+  }, [loading, navigate, projectId, projects]);
 
   if (showSpinner) {
     return (

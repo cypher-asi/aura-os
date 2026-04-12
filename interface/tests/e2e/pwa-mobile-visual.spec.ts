@@ -164,6 +164,26 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
         created_at: "2026-03-17T01:00:00.000Z",
         updated_at: "2026-03-17T01:00:00.000Z",
       },
+      {
+        agent_instance_id: "agent-inst-2",
+        project_id: "proj-1",
+        agent_id: "agent-2",
+        name: "Research Bot",
+        role: "Analyst",
+        personality: "Curious",
+        system_prompt: "Research carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "remote",
+        workspace_path: "/home/aura/project-atlas",
+        status: "working",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
     ],
     processes,
     processRuns,
@@ -399,6 +419,15 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
     fullPage: true,
   });
 
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
+  await expect(page.getByRole("button", { name: "Switch active project agent from Builder Bot" })).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: "Switch active project agent from Builder Bot" }).click();
+  await expect(page.getByText("Choose who you want to talk to in this project")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-switcher-mobile-ia.png`,
+    fullPage: true,
+  });
+
   await page.goto("/projects");
   await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "Add or create project agent" }).click();
@@ -429,6 +458,22 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
     fullPage: true,
   });
 
+});
+
+test("capture mobile project agent switcher", async ({ page, browserName }, testInfo) => {
+  mkdirSync("test-artifacts/review-shots", { recursive: true });
+
+  await mockMobileVisualApp(page);
+  const projectName = testInfo.project.name.replace(/\s+/g, "-");
+
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
+  await expect(page.getByRole("button", { name: "Switch active project agent from Builder Bot" })).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: "Switch active project agent from Builder Bot" }).click();
+  await expect(page.getByText("Choose who you want to talk to in this project")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-switcher-mobile-ia.png`,
+    fullPage: true,
+  });
 });
 
 test("capture mobile account sheet", async ({ page, browserName }, testInfo) => {

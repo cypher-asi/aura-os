@@ -1,4 +1,4 @@
-import { MessageSquare, AlertCircle, ChevronRight } from "lucide-react";
+import { MessageSquare, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
@@ -39,6 +39,9 @@ export interface ChatPanelProps {
   mobileHeaderAction?: React.ReactNode;
   onMobileHeaderSummaryClick?: () => void;
   mobileHeaderSummaryTo?: string;
+  mobileHeaderSummaryHint?: string;
+  mobileHeaderSummaryLabel?: string;
+  mobileHeaderSummaryKind?: "details" | "switch";
 }
 
 export function ChatPanel({
@@ -51,7 +54,6 @@ export function ChatPanel({
   defaultModel,
   templateAgentId,
   agentId,
-  isLoading: _isLoading,
   historyResolved = true,
   errorMessage,
   emptyMessage,
@@ -62,6 +64,9 @@ export function ChatPanel({
   mobileHeaderAction,
   onMobileHeaderSummaryClick,
   mobileHeaderSummaryTo,
+  mobileHeaderSummaryHint,
+  mobileHeaderSummaryLabel,
+  mobileHeaderSummaryKind = "details",
 }: ChatPanelProps) {
   const s = useChatPanelState({
     streamKey,
@@ -97,16 +102,17 @@ export function ChatPanel({
                 <Link
                   to={mobileHeaderSummaryTo}
                   className={styles.projectAgentSummaryButton}
-                  aria-label={`Open details for ${agentName}`}
+                  aria-label={mobileHeaderSummaryLabel ?? `Open details for ${agentName}`}
                 >
                   <div className={styles.projectAgentSummaryCopy}>
                     <span className={styles.projectAgentName}>{agentName}</span>
                     <span className={styles.projectAgentSummaryHint}>
-                      {machineType === "remote" ? "Open skills and runtime" : "Open agent settings"}
+                      {mobileHeaderSummaryHint
+                        ?? (machineType === "remote" ? "Open skills and runtime" : "Open agent settings")}
                     </span>
                   </div>
                   <span className={styles.projectAgentSummaryChevron} aria-hidden="true">
-                    <ChevronRight size={16} />
+                    {mobileHeaderSummaryKind === "switch" ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </span>
                 </Link>
               ) : (
@@ -114,16 +120,17 @@ export function ChatPanel({
                   type="button"
                   className={styles.projectAgentSummaryButton}
                   onClick={onMobileHeaderSummaryClick}
-                  aria-label={`Open details for ${agentName}`}
+                  aria-label={mobileHeaderSummaryLabel ?? `Open details for ${agentName}`}
                 >
                   <div className={styles.projectAgentSummaryCopy}>
                     <span className={styles.projectAgentName}>{agentName}</span>
                     <span className={styles.projectAgentSummaryHint}>
-                      {machineType === "remote" ? "Open skills and runtime" : "Open agent settings"}
+                      {mobileHeaderSummaryHint
+                        ?? (machineType === "remote" ? "Open skills and runtime" : "Open agent settings")}
                     </span>
                   </div>
                   <span className={styles.projectAgentSummaryChevron} aria-hidden="true">
-                    <ChevronRight size={16} />
+                    {mobileHeaderSummaryKind === "switch" ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </span>
                 </button>
               )

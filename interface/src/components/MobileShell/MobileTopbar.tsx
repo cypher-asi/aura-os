@@ -8,6 +8,7 @@ import styles from "./MobileShell.module.css";
 
 export function MobileTopbar({ state }: { state: MobileShellState }) {
   const navigate = useNavigate();
+  const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const setAppOpen = useMobileDrawerStore((s) => s.setAppOpen);
   const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
@@ -67,8 +68,12 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
             <button
               type="button"
               className={styles.mobileProjectTitleButton}
-              onClick={() => setNavOpen(true)}
-              aria-label={state.currentProject ? `Open project navigation for ${state.currentProject.name}` : "Open project navigation"}
+              onClick={() => setNavOpen(!navOpen)}
+              aria-label={
+                state.currentProject
+                  ? `${navOpen ? "Close" : "Open"} project navigation for ${state.currentProject.name}`
+                  : `${navOpen ? "Close" : "Open"} project navigation`
+              }
             >
               <span className={styles.mobileTopbarTitleText}>{state.currentProject?.name ?? "Project"}</span>
               <ChevronDown size={16} />

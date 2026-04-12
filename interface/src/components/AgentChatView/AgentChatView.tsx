@@ -1,17 +1,22 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { X } from "lucide-react";
+import { Check, CircleUserRound, Sparkles, X } from "lucide-react";
+import { Button, Drawer, Text } from "@cypher-asi/zui";
 import { api } from "../../api/client";
 import { useChatStreamAdapter } from "../../hooks/use-chat-stream-adapter";
 import { useChatHistorySync } from "../../hooks/use-chat-history-sync";
 import { useDelayedLoading } from "../../hooks/use-delayed-loading";
 import { useAgentChatMeta } from "../../hooks/use-agent-chat-meta";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import { ChatPanel } from "../ChatPanel";
 import { projectChatHistoryKey, agentHistoryKey } from "../../stores/chat-history-store";
 import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import { projectAgentDetailsRoute } from "../../utils/mobileNavigation";
+import { projectAgentChatRoute, projectAgentCreateRoute, projectAgentDetailsRoute } from "../../utils/mobileNavigation";
+import { useProjectAgentState } from "../ChatView/useProjectAgentState";
+import { Avatar } from "../Avatar";
+import styles from "./AgentChatView.module.css";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 
@@ -42,10 +47,17 @@ export function AgentChatView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const sessionId = searchParams.get("session");
+  const { isMobileLayout } = useAuraCapabilities();
+  const [agentSwitcherOpen, setAgentSwitcherOpen] = useState(false);
 
   const mode: ChatMode = projectId && agentInstanceId ? "project" : "agent";
   const entityId = mode === "project" ? agentInstanceId : agentId;
   const isSessionView = !!(sessionId && mode === "project");
+  const {
+    projectAgents,
+    selectedProjectAgent,
+  } = useProjectAgentState({ projectId, agentInstanceId });
+  const showProjectAgentSwitcher = mode === "project" && isMobileLayout && projectAgents.length > 1;
 
   // ── Derive project list for the dropdown ─────────────────────────────
   const allProjects = useProjectsListStore((s) => s.projects);
@@ -169,6 +181,14 @@ export function AgentChatView() {
   );
 
   const deferredLoading = useDelayedLoading(isLoading);
+  const detailsLabel = selectedProjectAgent?.machine_type === "remote" ? "Skills" : "Settings";
+
+  const handleSwitchProjectAgent = useCallback((nextAgentInstanceId: string) => {
+    if (!projectId) return;
+    setAgentSwitcherOpen(false);
+    if (nextAgentInstanceId === agentInstanceId) return;
+    navigate(projectAgentChatRoute(projectId, nextAgentInstanceId));
+  }, [agentInstanceId, navigate, projectId]);
 
   // ── Render ──────────────────────────────────────────────────────────
   if (!entityId) return null;
@@ -231,15 +251,124 @@ export function AgentChatView() {
         onProjectChange={mode === "agent" ? handleProjectChange : undefined}
         onMobileHeaderSummaryClick={
           mode === "project" && projectId && agentInstanceId
-            ? () => navigate(projectAgentDetailsRoute(projectId, agentInstanceId))
+            ? showProjectAgentSwitcher
+              ? () => setAgentSwitcherOpen(true)
+              : undefined
             : undefined
         }
-        mobileHeaderSummaryTo={
-          mode === "project" && projectId && agentInstanceId
-            ? projectAgentDetailsRoute(projectId, agentInstanceId)
+        mobileHeaderSummaryHint={
+          mode === "project"
+            ? showProjectAgentSwitcher
+              ? `Switch active agent · ${projectAgents.length} in project`
+              : "Current project agent"
             : undefined
+        }
+        mobileHeaderSummaryLabel={
+          mode === "project"
+            ? showProjectAgentSwitcher
+              ? `Switch active project agent from ${agentName ?? "this agent"}`
+              : undefined
+            : undefined
+        }
+        mobileHeaderSummaryKind={showProjectAgentSwitcher ? "switch" : "details"}
+        mobileHeaderAction={
+          mode === "project" && projectId && agentInstanceId ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(projectAgentDetailsRoute(projectId, agentInstanceId))}
+              className={styles.projectAgentDetailsButton}
+            >
+              {detailsLabel}
+            </Button>
+          ) : undefined
         }
       />
+      {mode === "project" && projectId && isMobileLayout ? (
+        <Drawer
+          side="bottom"
+          isOpen={agentSwitcherOpen}
+          onClose={() => setAgentSwitcherOpen(false)}
+          title="Switch Agent"
+          className={styles.mobileAgentSwitcher}
+          showMinimizedBar={false}
+          defaultSize={500}
+          maxSize={700}
+        >
+          <div className={styles.mobileAgentSwitcherBody}>
+            <div className={styles.mobileAgentSwitcherHeader}>
+              <Text size="sm" weight="medium">Choose who you want to talk to in this project</Text>
+              <Text size="sm" variant="muted">Skills and runtime stay in the agent details screen.</Text>
+            </div>
+            <div className={styles.mobileAgentSwitcherList}>
+              {projectAgents.map((projectAgent) => {
+                const isCurrent = projectAgent.agent_instance_id === agentInstanceId;
+                return (
+                  <button
+                    key={projectAgent.agent_instance_id}
+                    type="button"
+                    className={`${styles.mobileAgentSwitcherRow} ${isCurrent ? styles.mobileAgentSwitcherRowCurrent : ""}`}
+                    aria-pressed={isCurrent}
+                    aria-label={isCurrent ? `${projectAgent.name}, current agent` : `Switch to ${projectAgent.name}`}
+                    onClick={() => handleSwitchProjectAgent(projectAgent.agent_instance_id)}
+                  >
+                    <span className={styles.mobileAgentSwitcherIdentity}>
+                      <Avatar
+                        avatarUrl={projectAgent.icon ?? undefined}
+                        name={projectAgent.name}
+                        type="agent"
+                        size={40}
+                      />
+                      <span className={styles.mobileAgentSwitcherCopy}>
+                        <span className={styles.mobileAgentSwitcherName}>{projectAgent.name}</span>
+                        <span className={styles.mobileAgentSwitcherMeta}>
+                          {projectAgent.role?.trim()
+                            ? projectAgent.role
+                            : projectAgent.machine_type === "remote"
+                              ? "Remote project agent"
+                              : "Local project agent"}
+                        </span>
+                      </span>
+                    </span>
+                    <span className={styles.mobileAgentSwitcherStatus}>
+                      {isCurrent ? (
+                        <>
+                          <Check size={14} aria-hidden="true" />
+                          <span>Current</span>
+                        </>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className={styles.mobileAgentSwitcherFooter}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<CircleUserRound size={16} />}
+                onClick={() => {
+                  setAgentSwitcherOpen(false);
+                  navigate(projectAgentDetailsRoute(projectId, agentInstanceId!));
+                }}
+              >
+                Open current agent
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Sparkles size={16} />}
+                onClick={() => {
+                  setAgentSwitcherOpen(false);
+                  navigate(projectAgentCreateRoute(projectId));
+                }}
+              >
+                Add remote agent
+              </Button>
+            </div>
+          </div>
+        </Drawer>
+      ) : null}
     </>
   );
 }

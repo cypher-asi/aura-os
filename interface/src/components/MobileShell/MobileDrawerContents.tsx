@@ -46,11 +46,19 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
   const navigate = useNavigate();
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
   const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
+  const activeOrg = useOrgStore((s) => s.activeOrg);
   const activeAppId = state.activeApp.id;
   const projectLauncherLabel = state.mobileTargetProject ? "Return to project" : "Projects";
   const projectLauncherDescription = state.mobileTargetProject?.name ?? "Open your projects";
 
   const items = [
+    {
+      id: "organization",
+      label: "Organization",
+      description: activeOrg?.name ?? "Choose active organization",
+      icon: Building2,
+      onSelect: () => setAccountOpen(true),
+    },
     {
       id: "projects",
       label: projectLauncherLabel,

@@ -195,9 +195,10 @@ vi.mock("../../apps/agents/MobileAgentDetailsView", () => ({
   MobileAgentDetailsView: () => <div data-testid="mobile-agent-details-view" />,
 }));
 const mockSidekickState = { closePreview: vi.fn() };
+type SidekickState = typeof mockSidekickState;
 vi.mock("../../stores/sidekick-store", () => ({
   useSidekickStore: Object.assign(
-    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    vi.fn((selector?: (s: SidekickState) => unknown) => selector ? selector(mockSidekickState) : mockSidekickState),
     { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
   ),
 }));
@@ -262,6 +263,15 @@ describe("MobileShell", () => {
   it("keeps the project title trigger in the top bar on the agent route", () => {
     renderMobile("/projects/proj-1/agents/agent-inst-1");
     expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
+  });
+
+  it("lets the project title button close the project drawer", async () => {
+    const user = userEvent.setup();
+    drawers.navOpen = true;
+    renderMobile("/projects/proj-1/work");
+
+    await user.click(screen.getByRole("button", { name: "Close project navigation for Demo Project" }));
+    expect(drawers.setNavOpen).toHaveBeenCalledWith(false);
   });
 
   it("renders the global navigation trigger on global routes", () => {
@@ -357,14 +367,24 @@ describe("MobileShell", () => {
     drawers.navOpen = true;
     renderMobile("/projects/proj-1/work");
 
-    expect(screen.getByText("Current workspace")).toBeInTheDocument();
+    expect(screen.getByText("Current project")).toBeInTheDocument();
     expect(screen.getByText("Agent & skills")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /open details for project agent/i })).toBeInTheDocument();
+    expect(screen.queryByText("Recent projects")).not.toBeInTheDocument();
+    expect(screen.queryByText("Other projects")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Agent" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tasks" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Execution" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Process" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Stats" })).not.toBeInTheDocument();
+  });
+
+  it("shows organization entry in the app switcher", () => {
+    drawers.appOpen = true;
+    renderMobile("/projects/proj-1/agent");
+
+    expect(screen.getByRole("button", { name: "Organization" })).toBeInTheDocument();
+    expect(screen.getByText("Alpha Team")).toBeInTheDocument();
   });
 
   it("shows overlay backdrop when drawer is open", () => {
@@ -380,5 +400,14 @@ describe("MobileShell", () => {
 
     await user.click(screen.getByRole("button", { name: "Close drawer" }));
     expect(drawers.closeDrawers).toHaveBeenCalledOnce();
+  });
+
+  it("shows an explicit close button inside the project drawer", async () => {
+    drawers.navOpen = true;
+    const user = userEvent.setup();
+    renderMobile("/projects/proj-1/work");
+
+    await user.click(screen.getByRole("button", { name: "Close project navigation" }));
+    expect(drawers.setNavOpen).toHaveBeenCalledWith(false);
   });
 });
