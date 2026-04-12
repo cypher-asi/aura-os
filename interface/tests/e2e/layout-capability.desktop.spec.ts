@@ -62,6 +62,17 @@ test("desktop browser agents route keeps desktop layout without mobile switcher"
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
 });
 
+test("desktop browser tasks route keeps the desktop kanban layout", async ({ page }) => {
+  await mockAuthenticatedApp(page);
+
+  await page.goto("/tasks/proj-1/agents/agent-inst-1");
+
+  await expect(page.getByText("Backlog")).toBeVisible();
+  await expect(page.getByText("Ready")).toBeVisible();
+  await expect(page.getByText("Patch auth flow")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
+});
+
 test("desktop browser feed keeps desktop filter rail without mobile chip bar", async ({ page }) => {
   await mockAuthenticatedApp(page);
 

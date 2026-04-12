@@ -5,9 +5,14 @@ interface MockAuthenticatedAppOptions {
   projects?: Record<string, unknown>[];
   agentInstances?: Record<string, unknown>[];
   agents?: Record<string, unknown>[];
+  skillCatalog?: Record<string, unknown>[];
+  agentSkillInstallations?: Record<string, Record<string, unknown>[]>;
+  remoteAgentStates?: Record<string, Record<string, unknown>>;
   integrations?: Record<string, unknown>[];
   tasks?: Record<string, unknown>[];
   specs?: Record<string, unknown>[];
+  processes?: Record<string, unknown>[];
+  processRuns?: Record<string, Record<string, unknown>[]>;
   orgsUnavailable?: boolean;
 }
 
@@ -217,6 +222,70 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     ];
 
     const integrations = options.integrations ?? [];
+    const skillCatalog = options.skillCatalog ?? [
+      {
+        name: "github",
+        description: "Review and manage GitHub work",
+        source: "catalog",
+        model_invocable: false,
+        user_invocable: true,
+        frontmatter: {},
+      },
+      {
+        name: "slack",
+        description: "Coordinate updates with Slack",
+        source: "workspace",
+        model_invocable: false,
+        user_invocable: true,
+        frontmatter: {},
+      },
+      {
+        name: "playwright",
+        description: "Run UI checks from the browser automation toolchain",
+        source: "catalog",
+        model_invocable: false,
+        user_invocable: true,
+        frontmatter: {},
+      },
+    ];
+    const agentSkillInstallations = new Map(
+      Object.entries(options.agentSkillInstallations ?? {}).map(([agentId, installations]) => [
+        agentId,
+        installations.map((installation) => ({ ...installation })),
+      ]),
+    );
+    const remoteAgentStates = options.remoteAgentStates ?? {};
+    const processes = options.processes ?? [
+      {
+        process_id: "proc-1",
+        org_id: "org-1",
+        user_id: "user-1",
+        project_id: "proj-1",
+        name: "Nightly QA",
+        description: "Run nightly checks",
+        enabled: true,
+        folder_id: null,
+        schedule: "Nightly",
+        tags: [],
+        last_run_at: "2026-03-17T01:00:00.000Z",
+        next_run_at: "2026-03-18T01:00:00.000Z",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ];
+    const processRuns = options.processRuns ?? {
+      "proc-1": [
+        {
+          run_id: "run-1",
+          process_id: "proc-1",
+          status: "running",
+          trigger: "manual",
+          error: null,
+          started_at: "2026-03-17T01:00:00.000Z",
+          completed_at: null,
+        },
+      ],
+    };
 
     const agents = options.agents ?? [
       {
@@ -435,6 +504,12 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       return json({ ok: false, error: "Preview unavailable" });
     }
     if (pathname === "/api/agents") return json(agents);
+    if (pathname === "/api/processes") return json(processes);
+    if (pathname === "/api/harness/skills") return json(skillCatalog);
+    const matchingProcessRuns = processes.find((process) => pathname === `/api/processes/${process.process_id}/runs`);
+    if (matchingProcessRuns) {
+      return json(processRuns[matchingProcessRuns.process_id as string] ?? []);
+    }
     if (pathname === "/api/feed") return json(mockFeedEvents);
     if (pathname.startsWith("/api/feed?")) return json(mockFeedEvents);
     if (pathname === "/api/follows") return json([]);
@@ -466,6 +541,54 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
 
     const matchingAgentMessages = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/messages`);
     if (matchingAgentMessages) return json([]);
+
+    const matchingRemoteAgentState = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/remote_agent/state`);
+    if (matchingRemoteAgentState) {
+      return json(
+        remoteAgentStates[matchingRemoteAgentState.agent_id as string] ?? {
+          state: "running",
+          uptime_seconds: 4523,
+          active_sessions: 2,
+          endpoint: "ssh://builder-bot.remote",
+          runtime_version: "2026.4.0",
+          agent_id: matchingRemoteAgentState.agent_id,
+        },
+      );
+    }
+
+    const matchingAgentSkills = agents.find((agent) => pathname === `/api/harness/agents/${agent.agent_id}/skills`);
+    if (matchingAgentSkills) {
+      if (method === "POST") {
+        const body = JSON.parse(route.request().postData() || "{}");
+        const nextInstallation = {
+          agent_id: matchingAgentSkills.agent_id,
+          skill_name: typeof body.name === "string" ? body.name : "unknown-skill",
+          source_url: typeof body.source_url === "string" ? body.source_url : null,
+          installed_at: "2026-03-17T03:00:00.000Z",
+          version: null,
+          approved_paths: Array.isArray(body.approved_paths) ? body.approved_paths : [],
+          approved_commands: Array.isArray(body.approved_commands) ? body.approved_commands : [],
+        };
+        const currentInstallations = agentSkillInstallations.get(matchingAgentSkills.agent_id as string) ?? [];
+        agentSkillInstallations.set(matchingAgentSkills.agent_id as string, [
+          ...currentInstallations.filter((installation) => installation.skill_name !== nextInstallation.skill_name),
+          nextInstallation,
+        ]);
+        return json(nextInstallation);
+      }
+      return json(
+        agentSkillInstallations.get(matchingAgentSkills.agent_id as string) ?? [],
+      );
+    }
+
+    const uninstallMatch = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/skills\/([^/]+)$/);
+    if (uninstallMatch && method === "DELETE") {
+      const [, agentId, skillName] = uninstallMatch;
+      agentSkillInstallations.set(agentId, (agentSkillInstallations.get(agentId) ?? []).filter(
+        (installation) => installation.skill_name !== decodeURIComponent(skillName),
+      ));
+      return json({ ok: true });
+    }
 
     return route.fulfill({
       status: 404,

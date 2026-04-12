@@ -122,7 +122,7 @@
           "clickRole": { "role": "button", "name": "Open project navigation", "exact": false }
         },
         "expect": {
-          "visibleTexts": ["Current project"],
+          "visibleTexts": ["Current workspace"],
           "visibleRoles": [
             { "role": "treeitem", "name": "Demo Project" }
           ]

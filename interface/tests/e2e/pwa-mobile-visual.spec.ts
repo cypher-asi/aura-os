@@ -61,6 +61,39 @@ const specs = [
   },
 ];
 
+const processes = [
+  {
+    process_id: "proc-1",
+    org_id: "org-1",
+    user_id: "user-1",
+    project_id: "proj-1",
+    name: "Nightly QA",
+    description: "Run nightly checks",
+    enabled: true,
+    folder_id: null,
+    schedule: "Nightly",
+    tags: [],
+    last_run_at: "2026-03-17T01:00:00.000Z",
+    next_run_at: "2026-03-18T01:00:00.000Z",
+    created_at: "2026-03-17T01:00:00.000Z",
+    updated_at: "2026-03-17T01:00:00.000Z",
+  },
+];
+
+const processRuns = {
+  "proc-1": [
+    {
+      run_id: "run-1",
+      process_id: "proc-1",
+      status: "running",
+      trigger: "manual",
+      error: null,
+      started_at: "2026-03-17T01:00:00.000Z",
+      completed_at: null,
+    },
+  ],
+};
+
 async function mockMobileVisualApp(page: import("@playwright/test").Page) {
   await mockAuthenticatedApp(page, {
     project: {
@@ -132,20 +165,127 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
         updated_at: "2026-03-17T01:00:00.000Z",
       },
     ],
+    processes,
+    processRuns,
     tasks,
     specs,
+    agents: [
+      {
+        agent_id: "agent-1",
+        user_id: "user-1",
+        name: "Builder Bot",
+        role: "Engineer",
+        personality: "Helpful",
+        system_prompt: "Build features carefully.",
+        skills: ["github", "slack"],
+        icon: null,
+        machine_type: "remote",
+        environment: "cloud",
+        auth_source: "api_key",
+        adapter_type: "codex_cli",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+      {
+        agent_id: "agent-2",
+        user_id: "user-1",
+        name: "Research Bot",
+        role: "Analyst",
+        personality: "Curious",
+        system_prompt: "Research carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "remote",
+        environment: "cloud",
+        auth_source: "aura_managed",
+        adapter_type: "aura_harness",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
+    agentSkillInstallations: {
+      "agent-1": [
+        {
+          agent_id: "agent-1",
+          skill_name: "github",
+          source_url: "https://example.com/skills/github",
+          installed_at: "2026-03-17T01:00:00.000Z",
+          version: "1.0.0",
+          approved_paths: [],
+          approved_commands: [],
+        },
+        {
+          agent_id: "agent-1",
+          skill_name: "slack",
+          source_url: null,
+          installed_at: "2026-03-17T01:00:00.000Z",
+          version: null,
+          approved_paths: [],
+          approved_commands: [],
+        },
+      ],
+    },
+    remoteAgentStates: {
+      "agent-1": {
+        agent_id: "agent-1",
+        state: "running",
+        uptime_seconds: 4523,
+        active_sessions: 2,
+        endpoint: "ssh://builder-bot.remote",
+        runtime_version: "2026.4.0",
+      },
+    },
+    integrations: [
+      {
+        integration_id: "int-1",
+        org_id: "org-1",
+        kind: "workspace_connection",
+        provider: "anthropic",
+        name: "Primary Anthropic",
+        has_secret: true,
+        enabled: true,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
   });
 }
 
+async function openAccountSheet(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Open apps" }).click();
+  const accountSettingsButton = page.getByRole("button", { name: "Account settings" });
+  await accountSettingsButton.scrollIntoViewIfNeeded();
+  await accountSettingsButton.click();
+}
+
 test("capture mobile login screen", async ({ page, browserName }, testInfo) => {
-  mkdirSync("test-artifacts", { recursive: true });
+  mkdirSync("test-artifacts/review-shots", { recursive: true });
 
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "AURA" })).toBeVisible();
 
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
-  const path = `test-artifacts/${projectName}-${browserName}-login.png`;
-  await page.screenshot({ path, fullPage: true });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-login-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: /Host .*?(online|auth required|unreachable|error|checking)/i }).click();
+  await expect(page.getByRole("heading", { name: "Host Connection" })).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-login-host-settings-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "AURA" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Forgot password?" }).click();
+  await expect(page.getByText("Reset Password")).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-login-reset-password-mobile-ia.png`,
+    fullPage: true,
+  });
 });
 
 test("capture mobile root and project drawer", async ({ page, browserName }, testInfo) => {
@@ -171,7 +311,7 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
 
   await page.getByRole("button", { name: "Close drawer" }).dispatchEvent("click");
   await page.getByRole("button", { name: "Open apps" }).click();
-  await expect(page.getByRole("button", { name: "Projects" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Return to project" })).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-global-switcher-mobile-ia.png`,
     fullPage: true,
@@ -180,6 +320,7 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
   await page.getByRole("button", { name: "Agent library" }).click();
   await expect(page).toHaveURL(/\/agents$/);
   await expect(page.getByText("Builder Bot")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Create Remote Agent" })).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-agent-library-root-mobile-ia.png`,
     fullPage: true,
@@ -187,14 +328,22 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
 
   await page.getByRole("button", { name: /Builder Bot/i }).click();
   await expect(page).toHaveURL(/\/agents\/agent-1$/);
-  await expect(page.getByText("System Prompt")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Remote Runtime")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Installed Skills")).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-agent-library-details-mobile-ia.png`,
     fullPage: true,
   });
+
+  await page.goto("/projects/proj-1/agents/create");
+  await expect(page.getByLabel("Name")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-agent-create-mobile-ia.png`,
+    fullPage: true,
+  });
 });
 
-test("capture mobile work, files, and account sheet", async ({ page, browserName }, testInfo) => {
+test("capture mobile work, process, agent settings, and account sheet", async ({ page, browserName }, testInfo) => {
   mkdirSync("test-artifacts/review-shots", { recursive: true });
 
   await mockMobileVisualApp(page);
@@ -204,6 +353,24 @@ test("capture mobile work, files, and account sheet", async ({ page, browserName
   await expect(page.getByRole("main").getByText("Execution", { exact: true })).toBeVisible({ timeout: 15000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-work-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Tasks" }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/tasks$/);
+  await expect(page.getByText("What needs attention")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-tasks-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  const processTab = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Process" });
+  await expect(processTab).toBeVisible({ timeout: 10000 });
+  await processTab.click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/process$/);
+  await expect(page.getByText("Project automations")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-process-mobile-ia.png`,
     fullPage: true,
   });
 
@@ -223,21 +390,48 @@ test("capture mobile work, files, and account sheet", async ({ page, browserName
     fullPage: true,
   });
 
-  await page.goto("/projects/proj-1/files");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
-  await expect(page.getByText("Files stay on the remote agent")).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("Agent workspace", { exact: true })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("button", { name: "Open Agent" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("button", { name: "Open Execution" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("button", { name: "Open Stats" })).toBeVisible({ timeout: 10000 });
+  await page.goto("/projects/proj-1/agents/agent-inst-1/details");
+  await expect(page.getByText(/Agent Settings/i)).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("github", { exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Add skills" })).toBeVisible({ timeout: 10000 });
   await page.screenshot({
-    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-files-mobile-ia.png`,
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-details-mobile-ia.png`,
     fullPage: true,
   });
 
-  await page.goto("/projects/proj-1/agents/agent-inst-1");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-  await page.getByRole("button", { name: "Open account" }).click();
+  await page.goto("/projects");
+  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: "Add or create project agent" }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/create$/);
+  await expect(page.getByText("New remote agent")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-create-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await expect(page.getByRole("button", { name: "More agent options" })).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-create-form-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "More agent options" }).click();
+  await expect(page.getByText("More Agent Options")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-options-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Use existing remote agent" }).click();
+  await expect(page.getByText("Available remote agents")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-attach-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.goto("/projects/proj-1/tasks");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/tasks$/);
+  await openAccountSheet(page);
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Host settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
@@ -265,6 +459,55 @@ test("capture mobile profile and comments sheet", async ({ page, browserName }, 
   await expect(page.getByRole("textbox", { name: "Comment" })).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-profile-comments-mobile-ia.png`,
+    fullPage: true,
+  });
+});
+
+test("capture mobile feed and project empty state", async ({ page, browserName }, testInfo) => {
+  mkdirSync("test-artifacts/review-shots", { recursive: true });
+
+  await mockMobileVisualApp(page);
+  const projectName = testInfo.project.name.replace(/\s+/g, "-");
+
+  await page.goto("/feed");
+  await expect(page.getByRole("button", { name: "My Agents" })).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-feed-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await mockAuthenticatedApp(page, {
+    project: {
+      project_id: "proj-1",
+      org_id: "org-1",
+      name: "Project Atlas",
+      description: "Parity test project",
+      current_status: "active",
+      created_at: "2026-03-17T01:00:00.000Z",
+      updated_at: "2026-03-17T01:00:00.000Z",
+    },
+    projects: [
+      {
+        project_id: "proj-1",
+        org_id: "org-1",
+        name: "Project Atlas",
+        description: "Parity test project",
+        current_status: "active",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T02:00:00.000Z",
+      },
+    ],
+    agentInstances: [],
+    tasks,
+    specs,
+  });
+
+  await page.goto("/projects");
+  await expect(page.getByText("No agent is assigned yet.")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Open Execution" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Open Stats" })).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-empty-state-mobile-ia.png`,
     fullPage: true,
   });
 });
