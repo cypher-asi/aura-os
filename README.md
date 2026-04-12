@@ -377,6 +377,7 @@ For the current release-build plan and workflow map, see:
 
 - [Release Build Strategy](docs/release-build-strategy.md)
 - [Release Workflows](docs/release-workflows.md)
+- [Mobile Store Compliance Audit](docs/mobile-store-compliance-audit.md)
 
 ### Optional services
 
