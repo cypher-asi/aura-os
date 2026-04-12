@@ -12,6 +12,7 @@ import { useAppUIStore } from "../../stores/app-ui-store";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import { ConnectionDot } from "../ConnectionDot/ConnectionDot";
 import { Avatar } from "../Avatar";
+import { AppNavRail } from "../AppNavRail";
 import { useFavoriteAgents, useAgentStore } from "../../apps/agents/stores";
 import { useAvatarState } from "../../hooks/use-avatar-state";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
@@ -168,6 +169,7 @@ export function BottomTaskbar() {
             }
           }}
         />
+        <AppNavRail layout="taskbar" />
       </div>
 
       <div className={styles.center}>

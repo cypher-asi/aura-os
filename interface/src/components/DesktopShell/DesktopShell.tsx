@@ -3,7 +3,6 @@ import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { PanelRight, Server } from "lucide-react";
 import { Lane } from "../Lane";
-import { AppNavRail } from "../AppNavRail";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { OrgSelector } from "../OrgSelector";
 import { ErrorBoundary } from "../ErrorBoundary";
@@ -188,9 +187,6 @@ export function DesktopShell() {
         <div className={styles.desktopContent}>
           <div ref={leftPanelRef} className={styles.desktopSidebar}>
             <div className={styles.desktopSidebarBody}>
-              <div className={styles.navRailWrapper}>
-                <AppNavRail />
-              </div>
               <Lane
                 resizable
                 resizePosition="right"

@@ -99,13 +99,27 @@
 
 .bar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 4px;
   width: 100%;
 }
 
+.taskbar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 .barGroup {
   display: contents;
+}
+
+.taskbarGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 .navBarBtn {
@@ -120,4 +134,8 @@
 
 .navBarBtn.navBtnSelected {
   background: var(--color-bg-hover);
+}
+
+.taskbarBtn {
+  flex-shrink: 0;
 }

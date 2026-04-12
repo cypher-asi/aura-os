@@ -54,7 +54,7 @@ function NavRailButton({ icon, label, selected, className, ...props }: NavRailBu
 }
 
 interface AppNavRailProps {
-  layout?: "rail" | "bar";
+  layout?: "rail" | "bar" | "taskbar";
 }
 
 export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
@@ -62,7 +62,9 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
   const activeApp = useAppStore((s) => s.activeApp);
   const navigate = useNavigate();
   const primaryApps = apps.filter((app) => app.id !== "desktop");
+  const isRail = layout === "rail";
   const isBar = layout === "bar";
+  const isTaskbar = layout === "taskbar";
 
   const handleAppClick = useCallback(
     (app: { id: string; basePath: string }) => navigate(resolveAppPath(app)),
@@ -70,8 +72,11 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
   );
 
   return (
-    <nav className={isBar ? styles.bar : styles.rail} aria-label="Primary navigation">
-      {!isBar ? (
+    <nav
+      className={isRail ? styles.rail : isBar ? styles.bar : styles.taskbar}
+      aria-label="Primary navigation"
+    >
+      {isRail ? (
         <>
           <div className={styles.spacer} />
           <div className={styles.floatingGroupMiddle}>
@@ -93,24 +98,22 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
           <div className={styles.spacer} />
         </>
       ) : (
-        <>
-          <div className={styles.barGroup}>
-            {primaryApps.map((app) => (
-              <NavRailButton
-                key={app.id}
-                icon={<app.icon size={17} />}
-                label={app.label}
-                selected={activeApp.id === app.id}
-                title={app.label}
-                aria-label={app.label}
-                className={styles.navBarBtn}
-                onClick={() => handleAppClick(app)}
-                onMouseEnter={app.onPrefetch}
-                onFocus={app.onPrefetch}
-              />
-            ))}
-          </div>
-        </>
+        <div className={isBar ? styles.barGroup : styles.taskbarGroup}>
+          {primaryApps.map((app) => (
+            <NavRailButton
+              key={app.id}
+              icon={<app.icon size={isBar ? 17 : 18} />}
+              label={isBar ? app.label : undefined}
+              selected={activeApp.id === app.id}
+              title={app.label}
+              aria-label={app.label}
+              className={isBar ? styles.navBarBtn : isTaskbar ? styles.taskbarBtn : undefined}
+              onClick={() => handleAppClick(app)}
+              onMouseEnter={app.onPrefetch}
+              onFocus={app.onPrefetch}
+            />
+          ))}
+        </div>
       )}
     </nav>
   );
