@@ -51,6 +51,7 @@ pub(crate) struct FeedEventResponse {
     pub commit_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
+    pub comment_count: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -79,6 +80,7 @@ impl FeedEventResponse {
             push_id: e.push_id,
             commit_ids: e.commit_ids,
             created_at: e.created_at,
+            comment_count: e.comment_count,
         }
     }
 }
