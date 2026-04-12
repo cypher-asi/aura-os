@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Input, Textarea, Text } from "@cypher-asi/zui";
 import { ImagePlus, X, Monitor, Cloud } from "lucide-react";
 import type { OrgIntegration } from "../../types";
@@ -82,6 +83,7 @@ export interface AgentEditorFormProps {
   setIntegrationId: (v: string) => void;
   defaultModel: string;
   setDefaultModel: (v: string) => void;
+  simplifyForMobileCreate: boolean;
   availableIntegrations: OrgIntegration[];
   nameError: string;
   setNameError: (v: string) => void;
@@ -116,6 +118,7 @@ export function AgentEditorForm({
   setIntegrationId,
   defaultModel,
   setDefaultModel,
+  simplifyForMobileCreate,
   availableIntegrations,
   nameError,
   setNameError,
@@ -126,6 +129,7 @@ export function AgentEditorForm({
   handleAvatarClick,
   handleAvatarRemove,
 }: AgentEditorFormProps) {
+  const [mobileCreateMode, setMobileCreateMode] = useState<"default" | "integration">("default");
   const integrationChoices = filterRuntimeCompatibleIntegrations(
     adapterType,
     availableIntegrations,
@@ -150,6 +154,47 @@ export function AgentEditorForm({
     authSource === "aura_managed" &&
     !integrationId &&
     !defaultModel.trim();
+
+  useEffect(() => {
+    if (!simplifyForMobileCreate) {
+      if (mobileCreateMode !== "default") {
+        setMobileCreateMode("default");
+      }
+      return;
+    }
+
+    if (integrationChoices.length === 0) {
+      if (mobileCreateMode !== "default") {
+        setMobileCreateMode("default");
+      }
+      if (authSource !== "aura_managed") {
+        setAuthSource("aura_managed");
+      }
+      return;
+    }
+
+    if (mobileCreateMode === "integration") {
+      if (authSource !== "org_integration") {
+        setAuthSource("org_integration");
+      }
+      if (!selectedIntegration) {
+        setIntegrationId(integrationChoices[0]?.integration_id ?? "");
+      }
+      return;
+    }
+
+    if (authSource !== "aura_managed") {
+      setAuthSource("aura_managed");
+    }
+  }, [
+    authSource,
+    integrationChoices,
+    mobileCreateMode,
+    selectedIntegration,
+    setAuthSource,
+    setIntegrationId,
+    simplifyForMobileCreate,
+  ]);
 
   return (
     <div className={styles.form}>
@@ -193,6 +238,7 @@ export function AgentEditorForm({
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Name *</label>
           <Input
+            aria-label="Name"
             ref={nameRef}
             value={name}
             onChange={(e) => {
@@ -207,6 +253,7 @@ export function AgentEditorForm({
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Role</label>
           <Input
+            aria-label="Role"
             value={isSuperAgent ? "SuperAgent" : role}
             onChange={(e) => setRole(e.target.value)}
             placeholder="e.g. Senior Developer"
@@ -220,8 +267,74 @@ export function AgentEditorForm({
         </div>
       </FormSection>
 
-      <FormSection title="Setup">
-        {!showAdvancedRuntime ? (
+      <FormSection title={simplifyForMobileCreate ? "Remote Setup" : "Setup"}>
+        {simplifyForMobileCreate ? (
+          <div className={styles.setupSummary}>
+            <Text size="sm" weight="medium">
+              {mobileCreateMode === "integration" ? "Organization Connection" : "Aura Remote Agent"}
+            </Text>
+            <Text variant="muted" size="sm">
+              {mobileCreateMode === "integration"
+                ? "Use a shared provider connection from your organization for this remote Aura agent."
+                : "Mobile creates a remote Aura agent you can monitor, chat with, and manage from your phone."}
+            </Text>
+
+            <div className={styles.summaryList}>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Agent Type</Text>
+                <Text size="sm">Aura</Text>
+              </div>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Runs On</Text>
+                <Text size="sm">Remote Cloud</Text>
+              </div>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Credentials</Text>
+                <Text size="sm">
+                  {mobileCreateMode === "default"
+                    ? "Managed by Aura"
+                    : selectedIntegration
+                      ? getIntegrationLabel(selectedIntegration.provider)
+                      : "Choose a connection"}
+                </Text>
+              </div>
+            </div>
+
+            {mobileCreateMode === "integration" ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.inlineAction}
+                  onClick={() => setMobileCreateMode("default")}
+                >
+                  Back to Aura-managed setup
+                </button>
+
+                <IntegrationPicker
+                  integrationChoices={integrationChoices}
+                  integrationId={integrationId}
+                  setIntegrationId={setIntegrationId}
+                />
+              </>
+            ) : (
+              <>
+                {integrationChoices.length > 0 ? (
+                  <button
+                    type="button"
+                    className={styles.inlineAction}
+                    onClick={() => setMobileCreateMode("integration")}
+                  >
+                    Use organization connection instead
+                  </button>
+                ) : null}
+
+                <Text variant="muted" size="xs" className={styles.mobileCreateHint}>
+                  Use desktop if you need local or custom runtime configuration.
+                </Text>
+              </>
+            )}
+          </div>
+        ) : !showAdvancedRuntime ? (
           <div className={styles.setupSummary}>
             <div className={styles.fieldGroup}>
               <label className={styles.label}>Runs On</label>
@@ -288,13 +401,13 @@ export function AgentEditorForm({
               setAuthSource={setAuthSource}
             />
 
-            {showsIntegrationPicker && (
+            {showsIntegrationPicker ? (
               <IntegrationPicker
                 integrationChoices={integrationChoices}
                 integrationId={integrationId}
                 setIntegrationId={setIntegrationId}
               />
-            )}
+            ) : null}
 
             {!showsIntegrationPicker &&
               adapterType !== "aura_harness" &&
@@ -332,6 +445,7 @@ export function AgentEditorForm({
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Personality</label>
           <Textarea
+            aria-label="Personality"
             value={personality}
             onChange={(e) => setPersonality(e.target.value)}
             placeholder="e.g. Thorough, opinionated, loves clean code"
@@ -342,6 +456,7 @@ export function AgentEditorForm({
         <div className={styles.fieldGroup}>
           <label className={styles.label}>System Prompt</label>
           <Textarea
+            aria-label="System Prompt"
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             placeholder="Instructions for this agent (agents.md content)..."
@@ -508,11 +623,13 @@ function AuthFields({
   return (
     <div className={styles.fieldGroup}>
       <label className={styles.label}>Credentials</label>
-      <div className={styles.choiceGrid}>
+      <div className={styles.choiceGrid} role="radiogroup" aria-label="Credentials">
         {adapterType === "aura_harness" ? (
           <>
             <button
               type="button"
+              role="radio"
+              aria-checked={authSource === "aura_managed"}
               className={`${styles.choiceCard} ${authSource === "aura_managed" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("aura_managed")}
             >
@@ -525,6 +642,8 @@ function AuthFields({
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={authSource === "org_integration"}
               className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("org_integration")}
             >
@@ -538,6 +657,8 @@ function AuthFields({
           <>
             <button
               type="button"
+              role="radio"
+              aria-checked={authSource === "local_cli_auth"}
               className={`${styles.choiceCard} ${authSource === "local_cli_auth" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("local_cli_auth")}
             >
@@ -550,6 +671,8 @@ function AuthFields({
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={authSource === "org_integration"}
               className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("org_integration")}
             >

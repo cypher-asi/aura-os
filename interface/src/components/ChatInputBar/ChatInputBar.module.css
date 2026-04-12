@@ -194,6 +194,17 @@
   margin-right: auto;
 }
 
+.environmentWrap,
+.orbitWrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.infoDivider {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
 .infoText {
   color: var(--color-text-secondary);
   font-size: 11px;
@@ -526,4 +537,38 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .inputWrapper {
+    right: 0;
+    padding: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  }
+
+  .inputContainer {
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+    padding: 0 2px;
+  }
+
+  .inputRow {
+    min-height: 44px;
+    padding: 4px 6px;
+  }
+
+  .attachButton,
+  .sendButton {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 0;
+    border-radius: 999px;
+  }
+
+  .textarea {
+    padding: 8px 10px;
+  }
+
+  .inputInfoBar {
+    display: none;
+  }
 }

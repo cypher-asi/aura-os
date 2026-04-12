@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ButtonPlus, Menu, Modal, Button } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Loader2, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
@@ -65,13 +65,21 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const isMobileLibrary = mode === "mobile-library";
   const loading = status === "loading" || status === "idle";
   const { query: searchQuery, setAction } = useSidebarSearch();
+  const location = useLocation();
   const navigate = useNavigate();
   const { agentId } = useParams();
   const [showEditor, setShowEditor] = useState(false);
+  const shouldOpenMobileCreate = isMobileLibrary && new URLSearchParams(location.search).get("create") === "1";
 
   useEffect(() => {
     fetchAgents();
   }, [fetchAgents]);
+
+  useEffect(() => {
+    if (shouldOpenMobileCreate) {
+      setShowEditor(true);
+    }
+  }, [shouldOpenMobileCreate]);
 
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
@@ -130,6 +138,13 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     },
     [fetchAgents, navigate],
   );
+
+  const handleEditorClose = useCallback(() => {
+    setShowEditor(false);
+    if (shouldOpenMobileCreate) {
+      navigate("/agents", { replace: true });
+    }
+  }, [navigate, shouldOpenMobileCreate]);
 
   const handleAgentRowClick = useCallback((selectedAgentId: string) => {
     navigate(`/agents/${selectedAgentId}`);
@@ -333,8 +348,10 @@ export function AgentList({ mode = "default" }: AgentListProps) {
 
       <AgentEditorModal
         isOpen={showEditor}
-        onClose={() => setShowEditor(false)}
+        onClose={handleEditorClose}
         onSaved={handleAgentSaved}
+        titleOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
+        submitLabelOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
       />
     </div>
   );

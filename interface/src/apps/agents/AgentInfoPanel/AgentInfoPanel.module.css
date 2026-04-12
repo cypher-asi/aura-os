@@ -293,6 +293,145 @@
   flex-shrink: 0;
 }
 
+.mobileSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.mobileStatusCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+}
+
+.mobileStatusHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mobileStatusIcon,
+.mobileStatusRowIcon {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.mobileStatusGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobileStatusRow {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mobileStatusLabel {
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mobileStatusValue {
+  justify-self: end;
+  min-width: 0;
+  text-align: right;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs, 11px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileStatusMessage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.mobileStatusWarning {
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 30%, var(--color-border));
+}
+
+.mobileSkillList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobileSkillButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+  color: inherit;
+  text-align: left;
+}
+
+.mobileSkillButton:hover {
+  border-color: var(--color-accent);
+}
+
+.mobileSkillButtonMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.mobileSkillIcon {
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+.mobileSkillText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobileSkillName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileSkillMeta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.mobileSkillAction {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
 
 /* ── Project bindings ── */
 

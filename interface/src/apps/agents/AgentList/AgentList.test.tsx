@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   useParams: vi.fn(),
+  useLocation: vi.fn(),
   useAgents: vi.fn(),
   useSelectedAgent: vi.fn(),
   useSortedAgents: vi.fn(),
@@ -30,7 +31,7 @@ vi.mock("@cypher-asi/zui", () => ({
   ButtonPlus: (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>+</button>,
   Menu: () => null,
   Modal: ({ children, isOpen }: { children?: ReactNode; isOpen: boolean }) => (isOpen ? <div>{children}</div> : null),
-  Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => <button onClick={onClick}>{children}</button>,
+  Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -39,6 +40,7 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useNavigate: () => mocks.navigate,
     useParams: () => mocks.useParams(),
+    useLocation: () => mocks.useLocation(),
   };
 });
 
@@ -47,7 +49,7 @@ vi.mock("../../../components/EmptyState", () => ({
 }));
 
 vi.mock("../../../components/AgentEditorModal", () => ({
-  AgentEditorModal: () => null,
+  AgentEditorModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Create Agent Modal</div> : null),
 }));
 
 vi.mock("../AgentConversationRow", () => ({
@@ -141,6 +143,10 @@ describe("AgentList", () => {
       query: "",
       setAction: vi.fn(),
     });
+    mocks.useLocation.mockReturnValue({
+      pathname: "/agents",
+      search: "",
+    });
   });
 
   it("navigates to the agent route in mobile-library mode", async () => {
@@ -161,5 +167,17 @@ describe("AgentList", () => {
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");
+  });
+
+  it("opens the shared editor from the mobile create query", () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useLocation.mockReturnValue({
+      pathname: "/agents",
+      search: "?create=1",
+    });
+
+    render(<AgentList mode="mobile-library" />);
+
+    expect(screen.getByText("Create Agent Modal")).toBeVisible();
   });
 });

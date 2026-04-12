@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import { api } from "../../api/client";
 import { useChatStreamAdapter } from "../../hooks/use-chat-stream-adapter";
@@ -11,6 +11,7 @@ import { ChatPanel } from "../ChatPanel";
 import { projectChatHistoryKey, agentHistoryKey } from "../../stores/chat-history-store";
 import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
 import { useProjectsListStore } from "../../stores/projects-list-store";
+import { projectAgentDetailsRoute } from "../../utils/mobileNavigation";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 
@@ -39,6 +40,7 @@ export function AgentChatView() {
     agentId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const sessionId = searchParams.get("session");
 
   const mode: ChatMode = projectId && agentInstanceId ? "project" : "agent";
@@ -227,6 +229,16 @@ export function AgentChatView() {
         projects={mode === "agent" ? agentProjects : currentProject}
         selectedProjectId={mode === "agent" ? effectiveProjectId : projectId}
         onProjectChange={mode === "agent" ? handleProjectChange : undefined}
+        onMobileHeaderSummaryClick={
+          mode === "project" && projectId && agentInstanceId
+            ? () => navigate(projectAgentDetailsRoute(projectId, agentInstanceId))
+            : undefined
+        }
+        mobileHeaderSummaryTo={
+          mode === "project" && projectId && agentInstanceId
+            ? projectAgentDetailsRoute(projectId, agentInstanceId)
+            : undefined
+        }
       />
     </>
   );

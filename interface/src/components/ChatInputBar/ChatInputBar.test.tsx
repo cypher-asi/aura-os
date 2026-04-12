@@ -71,7 +71,7 @@ describe("ChatInputBar", () => {
     const textarea = screen.getByPlaceholderText("Add a follow-up");
     await user.click(textarea);
     await user.keyboard("{Enter}");
-    expect(onSend).toHaveBeenCalledWith("Test message");
+    expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined, undefined);
   });
 
   it("does not call onSend on Shift+Enter", async () => {
@@ -101,7 +101,7 @@ describe("ChatInputBar", () => {
     render(<ChatInputBar {...makeProps({ input: "click test", onSend })} />);
 
     await user.click(screen.getByRole("button", { name: "Send" }));
-    expect(onSend).toHaveBeenCalledWith("click test");
+    expect(onSend).toHaveBeenCalledWith("click test", undefined, undefined, undefined);
   });
 
   it("shows stop button when streaming", () => {

@@ -225,7 +225,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const {
     activeTab, showEditor, showDeleteConfirm,
     closeEditor, closeDeleteConfirm, requestEdit, requestDelete,
-    previewItem, canGoBack, goBackPreview, closePreview,
+    previewItem, canGoBack, goBackPreview, closePreview, viewSkill,
   } = useAgentSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
@@ -239,6 +239,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
       canGoBack: s.canGoBack,
       goBackPreview: s.goBackPreview,
       closePreview: s.closePreview,
+      viewSkill: s.viewSkill,
     })),
   );
   const [projectBindings, setProjectBindings] = useState<ProjectBinding[]>([]);
@@ -274,6 +275,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           <ProfileTab
             agent={a}
             isOwnAgent={isOwnAgent}
+            isMobileStandalone={isMobileStandalone}
             runtimeTesting={rt.runtimeTesting}
             runtimeTestMessage={rt.runtimeTestMessage}
             runtimeTestDetails={rt.runtimeTestDetails}
@@ -281,6 +283,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
             onRuntimeTest={rt.handleRuntimeTest}
             runtimeResultRef={rt.runtimeResultRef}
             runtimeReadiness={runtimeReadiness}
+            onViewSkill={viewSkill}
           />
         )}
 

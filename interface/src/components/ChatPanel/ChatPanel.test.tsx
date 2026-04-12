@@ -95,6 +95,25 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Remote agent chat")).toBeInTheDocument();
   });
 
+  it("makes the agent summary actionable on mobile when details are available", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    const onDetails = vi.fn();
+
+    render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        onMobileHeaderSummaryClick={onDetails}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Open details for Coca" })).toBeInTheDocument();
+    expect(screen.getByText("Open skills and runtime")).toBeInTheDocument();
+  });
+
   it("does not show the inline agent header on desktop", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 

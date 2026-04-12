@@ -5,6 +5,7 @@ import { AgentSelectorModal } from "./AgentSelectorModal";
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseAgentSelectorData = vi.fn();
+const mockUseProjectsListStore = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
   Modal: ({
@@ -18,6 +19,15 @@ vi.mock("@cypher-asi/zui", () => ({
     footer?: React.ReactNode;
     children?: React.ReactNode;
   }) => (isOpen ? <div><h1>{title}</h1>{children}{footer}</div> : null),
+  Drawer: ({
+    isOpen,
+    title,
+    children,
+  }: {
+    isOpen: boolean;
+    title: string;
+    children?: React.ReactNode;
+  }) => (isOpen ? <div><h1>{title}</h1>{children}</div> : null),
   Button: ({
     children,
     ...props
@@ -32,6 +42,11 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 
 vi.mock("./useAgentSelectorData", () => ({
   useAgentSelectorData: (...args: unknown[]) => mockUseAgentSelectorData(...args),
+}));
+
+vi.mock("../../stores/projects-list-store", () => ({
+  useProjectsListStore: (selector: (state: { agentsByProject: Record<string, Array<{ agent_id: string }>> }) => unknown) =>
+    selector(mockUseProjectsListStore()),
 }));
 
 vi.mock("../EmptyState", () => ({
@@ -70,6 +85,7 @@ describe("AgentSelectorModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseProjectsListStore.mockReturnValue({ agentsByProject: {} });
     mockUseAgentSelectorData.mockReturnValue({
       agents: [makeAgent("Local Agent", "local"), makeAgent("Remote Agent", "remote")],
       loading: false,
@@ -112,5 +128,26 @@ describe("AgentSelectorModal", () => {
     expect(screen.queryByText("Local Agent")).not.toBeInTheDocument();
     expect(screen.getAllByText("Remote Agent").length).toBeGreaterThan(0);
     expect(screen.getByText("Add Remote Agent to Project")).toBeInTheDocument();
+  });
+
+  it("hides agents that are already attached to the project", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    mockUseProjectsListStore.mockReturnValue({
+      agentsByProject: {
+        "project-1": [{ agent_id: "remote-agent" }],
+      },
+    });
+
+    render(
+      <AgentSelectorModal
+        isOpen
+        projectId="project-1"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Remote Agent")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create agent" })).toBeInTheDocument();
   });
 });

@@ -62,7 +62,8 @@ describe("SkillsTab", () => {
     mockListSkills.mockReturnValue(new Promise(() => {}));
     mockListAgentSkills.mockReturnValue(new Promise(() => {}));
     render(<SkillsTab agent={baseAgent} />);
-    expect(screen.getByText(/loading/i)).toBeDefined();
+    expect(screen.getByText("Installed")).toBeDefined();
+    expect(screen.getByTitle("Create skill")).toBeDefined();
   });
 
   it("renders installed and available skills correctly", async () => {

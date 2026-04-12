@@ -238,9 +238,18 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         </div>
       </div>
       <div className={styles.inputInfoBar}>
-        {machineType && <><AgentEnvironment machineType={machineType} agentId={templateAgentId ?? agentId} /><span className={styles.infoText} style={{ marginRight: 2 }}>·</span></>}
-        <OrbitStatusIndicator project={selectedProject} />
-        {selectedProject && <span className={styles.infoText} style={{ marginRight: 2 }}>·</span>}
+        {machineType ? (
+          <>
+            <span className={styles.environmentWrap}>
+              <AgentEnvironment machineType={machineType} agentId={templateAgentId ?? agentId} />
+            </span>
+            <span className={styles.infoDivider} aria-hidden="true">·</span>
+          </>
+        ) : null}
+        <span className={styles.orbitWrap}>
+          <OrbitStatusIndicator project={selectedProject} />
+        </span>
+        {selectedProject ? <span className={styles.infoDivider} aria-hidden="true">·</span> : null}
         <button
           type="button"
           className={styles.commandsTrigger}

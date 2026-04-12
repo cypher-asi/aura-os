@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import userEvent from "@testing-library/user-event";
 import { render, screen } from "@testing-library/react";
 import { AgentEditorForm, type AgentEditorFormProps } from "./AgentEditorForm";
 
@@ -36,6 +37,7 @@ function makeProps(overrides: Partial<AgentEditorFormProps> = {}): AgentEditorFo
     setIntegrationId: vi.fn(),
     defaultModel: "",
     setDefaultModel: vi.fn(),
+    simplifyForMobileCreate: false,
     availableIntegrations: [],
     nameError: "",
     setNameError: vi.fn(),
@@ -58,6 +60,60 @@ describe("AgentEditorForm", () => {
     expect(screen.getByRole("button", { name: "Change runtime or credentials" })).toBeInTheDocument();
     expect(screen.queryByText("Default Model")).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
+  });
+
+  it("keeps mobile create focused on the remote Aura preset", () => {
+    render(
+      <AgentEditorForm
+        {...makeProps({
+          environment: "swarm_microvm",
+          simplifyForMobileCreate: true,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Remote Setup")).toBeInTheDocument();
+    expect(screen.getByText("Aura Remote Agent")).toBeInTheDocument();
+    expect(screen.getByText("Remote Cloud")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Change runtime or credentials" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
+  });
+
+  it("keeps org integration as a secondary mobile create path", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AgentEditorForm
+        {...makeProps({
+          environment: "swarm_microvm",
+          simplifyForMobileCreate: true,
+          availableIntegrations: [
+            {
+              integration_id: "int-1",
+              org_id: "org-1",
+              name: "Primary Anthropic",
+              provider: "anthropic",
+              kind: "workspace_connection",
+              has_secret: true,
+              enabled: true,
+              created_at: "2026-03-17T01:00:00.000Z",
+              updated_at: "2026-03-17T01:00:00.000Z",
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getAllByText("Managed by Aura")).not.toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Use organization connection instead" })).toBeInTheDocument();
+    expect(screen.queryByText("Anthropic API")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Use organization connection instead" }));
+
+    expect(screen.getByText("Organization Connection")).toBeInTheDocument();
+    expect(screen.getByText("Primary Anthropic")).toBeInTheDocument();
+    expect(screen.getByText("Anthropic")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to Aura-managed setup" })).toBeInTheDocument();
   });
 
   it("shows runtime and credential controls for non-default setups", () => {
