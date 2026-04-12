@@ -31,6 +31,10 @@ def bundle_id
   ENV["IOS_BUNDLE_ID"].to_s.empty? ? "tech.zero.aura" : ENV["IOS_BUNDLE_ID"]
 end
 
+def local_ios_default_host
+  ENV["VITE_IOS_DEFAULT_HOST"].to_s.empty? ? "http://127.0.0.1:3100" : ENV["VITE_IOS_DEFAULT_HOST"]
+end
+
 def match_branch
   ENV["IOS_MATCH_GIT_BRANCH"].to_s.empty? ? "main" : ENV["IOS_MATCH_GIT_BRANCH"]
 end
@@ -114,6 +118,7 @@ end
 platform :ios do
   desc "Build a local simulator app bundle that can be installed with simctl"
   lane :local_simulator do
+    ENV["VITE_IOS_DEFAULT_HOST"] = local_ios_default_host
     sync_ios_web_assets
 
     simulator_id = ENV["IOS_SIMULATOR_ID"].to_s.empty? ? booted_simulator_id : ENV["IOS_SIMULATOR_ID"]
@@ -129,7 +134,10 @@ platform :ios do
       "-derivedDataPath #{derived_data.shellescape} build"
     )
 
-    UI.success("Local simulator app ready at #{app_path}")
+    sh("xcrun simctl install #{simulator_id.shellescape} #{app_path.shellescape}")
+    sh("xcrun simctl launch #{simulator_id.shellescape} #{bundle_id.shellescape}")
+
+    UI.success("Local simulator app installed and launched from #{app_path}")
     app_path
   end
 
