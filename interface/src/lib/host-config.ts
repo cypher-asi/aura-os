@@ -58,7 +58,9 @@ export function getNativeDefaultHostOrigin(): string | null {
 export function getTargetHostOrigin(): string | null {
   // Keep precedence explicit so native shells can have a build-time default
   // without overriding a user-selected host in Settings.
-  return getConfiguredHostOrigin() ?? getNativeDefaultHostOrigin();
+  // VITE_API_URL is the lowest priority — a user-configured host or native
+  // default always wins.
+  return getConfiguredHostOrigin() ?? getNativeDefaultHostOrigin() ?? normalizeHostOrigin(import.meta.env.VITE_API_URL);
 }
 
 export function getResolvedHostOrigin(): string {
