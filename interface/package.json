@@ -31,7 +31,7 @@
     "test:mcp-smoke": "node ./scripts/test-dynamic-mcp-sidecar.mjs",
     "test:evals:report": "node ./scripts/summarize-evals.mjs",
     "test:evals:compare": "node ./scripts/compare-evals.mjs",
-    "codegen:protocol": "cd ../../aura-harness && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && cp crates/aura-protocol/bindings/*.ts ../aura-app/frontend/src/types/harness-protocol.ts"
+    "codegen:protocol": "cd .. && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && cp crates/aura-protocol/bindings/*.ts interface/src/types/harness-protocol.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
