@@ -18,8 +18,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use tokio::sync::RwLock;
 use tracing::{error, info, warn};
+use std::sync::RwLock;
 
 const CHECK_INTERVAL: Duration = Duration::from_secs(30 * 60);
 const CHECK_TIMEOUT: Duration = Duration::from_secs(30);
@@ -211,7 +211,7 @@ fn updater_config(channel: UpdateChannel) -> Result<PackagerUpdaterConfig, Strin
 }
 
 fn set_status(status: &Arc<RwLock<UpdateStatus>>, next: UpdateStatus) {
-    *status.blocking_write() = next;
+    *status.write().expect("updater status lock poisoned") = next;
 }
 
 fn build_updater(channel: UpdateChannel) -> Result<cargo_packager_updater::Updater, String> {
@@ -351,7 +351,7 @@ fn download_and_install_update(
 
 /// Install the latest available update after explicit user approval.
 pub(crate) fn install_and_restart(state: UpdateState) -> Result<(), String> {
-    let channel = *state.channel.blocking_read();
+    let channel = *state.channel.read().expect("updater channel lock poisoned");
     let status = Arc::clone(&state.status);
     match download_and_install_update(channel, status) {
         Ok(Some(_)) => Ok(()),
@@ -375,7 +375,7 @@ pub(crate) fn start_install(state: UpdateState) -> Result<(), String> {
     }
 
     {
-        let status = state.status.blocking_read();
+        let status = state.status.read().expect("updater status lock poisoned");
         if matches!(
             &*status,
             UpdateStatus::Downloading { .. } | UpdateStatus::Installing { .. }
@@ -411,7 +411,7 @@ pub(crate) fn spawn_update_loop(state: UpdateState) {
         tokio::time::sleep(INITIAL_CHECK_DELAY).await;
 
         loop {
-            let channel = *state.channel.read().await;
+            let channel = *state.channel.read().expect("updater channel lock poisoned");
             let status = Arc::clone(&state.status);
             match tokio::task::spawn_blocking(move || check_for_available_update(channel, status))
                 .await
@@ -420,13 +420,13 @@ pub(crate) fn spawn_update_loop(state: UpdateState) {
                 Ok(Ok(None)) => {}
                 Ok(Err(e)) => {
                     error!(error = %e, "update check failed");
-                    *state.status.write().await = UpdateStatus::Failed {
+                    *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
                         error: e.to_string(),
                     };
                 }
                 Err(e) => {
                     error!(error = %e, "update task panicked");
-                    *state.status.write().await = UpdateStatus::Failed {
+                    *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
                         error: format!("update task failed: {e}"),
                     };
                 }
@@ -444,7 +444,7 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
     }
 
     tokio::spawn(async move {
-        let channel = *state.channel.read().await;
+        let channel = *state.channel.read().expect("updater channel lock poisoned");
         let status = Arc::clone(&state.status);
         match tokio::task::spawn_blocking(move || check_for_available_update(channel, status)).await
         {
@@ -452,13 +452,13 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
             Ok(Ok(None)) => {}
             Ok(Err(e)) => {
                 warn!(error = %e, "recheck failed");
-                *state.status.write().await = UpdateStatus::Failed {
+                *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
                     error: e.to_string(),
                 };
             }
             Err(e) => {
                 warn!(error = %e, "recheck task failed");
-                *state.status.write().await = UpdateStatus::Failed {
+                *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
                     error: format!("update task failed: {e}"),
                 };
             }
