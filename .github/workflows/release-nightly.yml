@@ -146,6 +146,14 @@ jobs:
                 mv "${bundle}.sig" "${renamed}.sig"
               fi
             done
+            if ! ls dist/*.app.tar.gz >/dev/null 2>&1; then
+              for app_bundle in dist/*.app; do
+                [ -e "$app_bundle" ] || continue
+                archive_path="dist/aura-os-desktop_${{ steps.version.outputs.version }}_${{ matrix.arch }}.app.tar.gz"
+                COPYFILE_DISABLE=1 tar -czf "$archive_path" -C dist "$(basename "$app_bundle")"
+                break
+              done
+            fi
           fi
           ls -la dist/
           echo "dir=dist" >> "$GITHUB_OUTPUT"
