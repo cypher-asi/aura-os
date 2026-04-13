@@ -74,7 +74,9 @@ function SpecsOverviewPreview({ specs }: { specs: Spec[] }) {
                 className={styles.fileOpItem}
               >
                 <Item.Icon><FileText size={14} /></Item.Icon>
-                <Item.Label title={spec.title}>{spec.title}</Item.Label>
+                <Item.Label>
+                  <span title={spec.title}>{spec.title}</span>
+                </Item.Label>
               </Item>
           ))}
         </div>

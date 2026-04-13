@@ -5,7 +5,6 @@ import { useProfileStatusStore } from "../../stores/profile-status-store";
 import {
   getMobileProjectDestination,
   projectAgentRoute,
-  projectFilesRoute,
   projectProcessRoute,
   projectRootPath,
   projectStatsRoute,
@@ -193,10 +192,6 @@ function useProjectSelectionHandler(
       }
       if (mobileDestination === "process") {
         navigate(projectProcessRoute(nodeId));
-        return;
-      }
-      if (mobileDestination === "files") {
-        navigate(projectFilesRoute(nodeId));
         return;
       }
       if (mobileDestination === "stats") {

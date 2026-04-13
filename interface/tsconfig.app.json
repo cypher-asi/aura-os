@@ -15,11 +15,12 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "preserveSymlinks": true,
     "jsx": "react-jsx",
 
     "paths": {
-      "@cypher-asi/zui": ["./src/zui.d.ts"],
-      "@cypher-asi/zui/styles": ["./src/zui.d.ts"]
+      "@cypher-asi/zui": ["./node_modules/@cypher-asi/zui/src/index.ts"],
+      "@cypher-asi/zui/styles": ["./node_modules/@cypher-asi/zui/src/styles/index.css"]
     },
 
     /* Linting */

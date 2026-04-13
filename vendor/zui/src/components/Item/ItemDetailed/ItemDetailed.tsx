@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, type JSX, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
 import type { ItemDetailedProps } from '../types';
 import styles from './ItemDetailed.module.css';
@@ -40,7 +40,7 @@ export function ItemDetailed({
   }, [disabled, onClick]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if ((e.key === 'Enter' || e.key === ' ') && !disabled && onClick) {
         e.preventDefault();
         onClick();

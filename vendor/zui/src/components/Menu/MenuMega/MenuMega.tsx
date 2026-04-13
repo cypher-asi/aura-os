@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo } from 'react';
+import { type ReactNode, type JSX, type KeyboardEvent, useCallback, useMemo } from 'react';
 import clsx from 'clsx';
 import type { MenuBackground, MenuRounded, MenuBorder } from '../Menu';
 import type { ItemDetailedProps } from '../../Item';
@@ -115,7 +115,7 @@ function MenuMegaItemComponent({
   }, [item.disabled, item.id, onSelect]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if ((e.key === 'Enter' || e.key === ' ') && !item.disabled && onSelect) {
         e.preventDefault();
         onSelect(item.id);

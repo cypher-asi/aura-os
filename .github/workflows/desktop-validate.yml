@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare zui sibling workspace
+      - name: Prepare harness sibling workspace
         uses: ./.github/actions/setup-zui-sibling
         with:
           repository-owner: ${{ github.repository_owner }}

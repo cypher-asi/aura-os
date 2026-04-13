@@ -61,11 +61,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare zui sibling workspace
-        uses: ./.github/actions/setup-zui-sibling
-        with:
-          repository-owner: ${{ github.repository_owner }}
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -140,11 +135,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Prepare zui sibling workspace
-        uses: ./.github/actions/setup-zui-sibling
-        with:
-          repository-owner: ${{ github.repository_owner }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
