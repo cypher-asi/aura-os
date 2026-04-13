@@ -84,7 +84,6 @@
 .messageArea {
   height: 100%;
   overflow-y: auto;
-  overflow-anchor: none;
   scrollbar-width: none;
   padding: var(--space-3) calc(var(--space-3) * 2);
   padding-bottom: 140px;
@@ -94,6 +93,14 @@
   flex-direction: column;
   opacity: 1;
   transition: opacity 0.3s ease;
+}
+
+.messageAreaFollowing {
+  overflow-anchor: none;
+}
+
+.messageAreaReading {
+  overflow-anchor: auto;
 }
 
 .messageArea::-webkit-scrollbar {

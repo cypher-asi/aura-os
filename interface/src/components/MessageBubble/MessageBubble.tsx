@@ -1,7 +1,12 @@
 import { memo, useMemo } from "react";
 import { FileText } from "lucide-react";
 import type { ArtifactRef, DisplaySessionEvent } from "../../types/stream";
-import { stripEmojis, normalizeMidSentenceBreaks, flattenListIndentation } from "../../utils/text-normalize";
+import {
+  stripEmojis,
+  normalizeMidSentenceBreaks,
+  flattenListIndentation,
+  normalizeLooseStrongEmphasis,
+} from "../../utils/text-normalize";
 import { langFromPath } from "../../ide/lang";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
 import styles from "./MessageBubble.module.css";
@@ -77,7 +82,13 @@ export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Pr
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
 
   const normalizedContent = useMemo(
-    () => (hasContent ? flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(message.content))) : ""),
+    () => (
+      hasContent
+        ? normalizeLooseStrongEmphasis(
+            flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(message.content))),
+          )
+        : ""
+    ),
     [hasContent, message.content],
   );
 

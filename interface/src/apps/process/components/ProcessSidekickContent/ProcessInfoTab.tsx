@@ -4,6 +4,9 @@ import { useProcessStore } from "../../stores/process-store";
 import { EmptyState } from "../../../../components/EmptyState";
 import previewStyles from "../../../../components/Preview/Preview.module.css";
 
+const SUCCESS_COLOR = "var(--color-success, #4aeaa8)";
+const SUCCESS_BACKGROUND = "color-mix(in srgb, var(--color-success, #4aeaa8) 15%, transparent)";
+
 export function ProcessInfoTab() {
   const { processId } = useParams<{ processId: string }>();
   const processes = useProcessStore((s) => s.processes);
@@ -28,8 +31,8 @@ export function ProcessInfoTab() {
                 fontSize: 11,
                 padding: "2px 8px",
                 borderRadius: 0,
-                background: process.enabled ? "rgba(16,185,129,0.15)" : "rgba(107,114,128,0.15)",
-                color: process.enabled ? "#10b981" : "#6b7280",
+                background: process.enabled ? SUCCESS_BACKGROUND : "rgba(107,114,128,0.15)",
+                color: process.enabled ? SUCCESS_COLOR : "#6b7280",
                 fontWeight: 600,
               }}
             >

@@ -1,6 +1,11 @@
 import { memo, useMemo } from "react";
 import type { TimelineItem, ToolCallEntry } from "../../types/stream";
-import { stripEmojis, normalizeMidSentenceBreaks, flattenListIndentation } from "../../utils/text-normalize";
+import {
+  stripEmojis,
+  normalizeMidSentenceBreaks,
+  flattenListIndentation,
+  normalizeLooseStrongEmphasis,
+} from "../../utils/text-normalize";
 import { ThinkingRow } from "../ThinkingRow";
 import { ToolCallBlock } from "../ToolRow";
 import { SegmentedContent } from "../SegmentedContent";
@@ -75,7 +80,9 @@ const TimelineText = memo(function TimelineText({
 }) {
   const normalized = useMemo(
     () =>
-      flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(content))),
+      normalizeLooseStrongEmphasis(
+        flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(content))),
+      ),
     [content],
   );
 

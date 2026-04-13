@@ -106,7 +106,7 @@ export function ChatPanel({
       <div className={styles.chatArea}>
         <div className={styles.messageAreaShell}>
           <div
-            className={`${styles.messageArea}${s.isReady ? "" : ` ${styles.messageAreaHidden}`}`}
+            className={`${styles.messageArea}${s.isReady ? "" : ` ${styles.messageAreaHidden}`}${s.isAutoFollowing ? ` ${styles.messageAreaFollowing}` : ` ${styles.messageAreaReading}`}`}
             ref={s.messageAreaRef}
             onScroll={s.handleScroll}
           >

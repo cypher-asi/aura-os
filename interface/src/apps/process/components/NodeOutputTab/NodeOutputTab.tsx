@@ -22,6 +22,8 @@ interface NodeOutputTabProps {
 
 const POLL_INTERVAL = 4000;
 const EMPTY_RUNS: ProcessRun[] = [];
+const SUCCESS_COLOR = "var(--color-success, #4aeaa8)";
+const SUCCESS_BACKGROUND = "color-mix(in srgb, var(--color-success, #4aeaa8) 15%, transparent)";
 
 export function NodeOutputTab({ node }: NodeOutputTabProps) {
   const { processId } = useParams<{ processId: string }>();
@@ -162,7 +164,7 @@ function NodeEventDetails({
 }) {
   const statusColor =
     nodeEvent.status === "completed"
-      ? { bg: "rgba(16,185,129,0.15)", fg: "#10b981" }
+      ? { bg: SUCCESS_BACKGROUND, fg: SUCCESS_COLOR }
       : nodeEvent.status === "failed"
         ? { bg: "rgba(239,68,68,0.15)", fg: "#ef4444" }
         : nodeEvent.status === "skipped"

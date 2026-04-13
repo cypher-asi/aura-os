@@ -81,6 +81,7 @@ export function useScrollAnchor(
   scrollToTop: (target: HTMLElement) => void;
   holdPosition: () => void;
   isReady: boolean;
+  isAutoFollowing: boolean;
 } {
   const { resetKey, contentReady } = options;
 
@@ -92,10 +93,18 @@ export function useScrollAnchor(
   const lastScrollTopRef = useRef(0);
 
   const [isReady, setIsReady] = useState(false);
+  const [isAutoFollowing, setIsAutoFollowing] = useState(true);
   const isReadyRef = useRef(false);
 
   const contentReadyRef = useRef(contentReady);
   useLayoutEffect(() => { contentReadyRef.current = contentReady; }, [contentReady]);
+
+  const syncFollowState = useCallback(() => {
+    const next = phaseRef.current !== "active"
+      ? true
+      : pinnedRef.current && !holdScrollRef.current;
+    setIsAutoFollowing((prev) => (prev === next ? prev : next));
+  }, []);
 
   /** Scroll sentinel to the bottom of the visible area (above input overlay). */
   const scrollSentinelToEnd = useCallback(() => {
@@ -115,6 +124,7 @@ export function useScrollAnchor(
     holdScrollRef.current = false;
     setIsReady(false);
     isReadyRef.current = false;
+    syncFollowState();
 
     const el = ref.current;
     if (!el) return;
@@ -134,6 +144,7 @@ export function useScrollAnchor(
       phaseRef.current = "active";
       setIsReady(true);
       isReadyRef.current = true;
+      syncFollowState();
     };
 
     const poll = () => {
@@ -177,7 +188,7 @@ export function useScrollAnchor(
       cancelAnimationFrame(raf);
       clearTimeout(timeout);
     };
-  }, [ref, resetKey, scrollSentinelToEnd]);
+  }, [ref, resetKey, scrollSentinelToEnd, syncFollowState]);
 
   // Post-reveal correction
   useLayoutEffect(() => {
@@ -199,21 +210,35 @@ export function useScrollAnchor(
 
     const onContentChange = () => {
       if (phaseRef.current !== "active") return;
+      const oldSH = prevScrollHeightRef.current;
       const newSH = el.scrollHeight;
-      if (newSH === prevScrollHeightRef.current) return;
+      if (newSH === oldSH) return;
+      const delta = newSH - oldSH;
+      const activeElement = document.activeElement;
+      const userInteractingWithContent =
+        activeElement instanceof HTMLElement &&
+        activeElement !== el &&
+        el.contains(activeElement);
+
+      if (userInteractingWithContent) {
+        pinnedRef.current = false;
+        holdScrollRef.current = false;
+        syncFollowState();
+      }
 
       if (holdScrollRef.current) {
         const sentinel = sentinelRef.current;
         if (sentinel && isSentinelBelowViewport(sentinel, el)) {
           holdScrollRef.current = false;
           pinnedRef.current = true;
+          syncFollowState();
           guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
         }
         syncHeight();
         return;
       }
 
-      if (pinnedRef.current) {
+      if (pinnedRef.current && delta !== 0) {
         const sentinel = sentinelRef.current;
         if (sentinel) {
           guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
@@ -233,13 +258,6 @@ export function useScrollAnchor(
         onContentChange();
       });
     };
-
-    const mutationObs = new MutationObserver(queueContentChange);
-    mutationObs.observe(el, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
 
     let lastWidth = el.clientWidth;
     const containerObs = new ResizeObserver(() => {
@@ -269,6 +287,39 @@ export function useScrollAnchor(
     });
     containerObs.observe(el);
 
+    const contentObs =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(queueContentChange);
+    const observedChildren = new Set<Element>();
+    const syncObservedChildren = () => {
+      if (!contentObs) return;
+      const children = new Set(Array.from(el.children));
+      for (const child of observedChildren) {
+        if (!children.has(child)) {
+          contentObs.unobserve(child);
+          observedChildren.delete(child);
+        }
+      }
+      for (const child of children) {
+        if (!observedChildren.has(child)) {
+          observedChildren.add(child);
+          contentObs.observe(child);
+        }
+      }
+    };
+
+    const mutationObs = new MutationObserver(() => {
+      syncObservedChildren();
+      queueContentChange();
+    });
+    mutationObs.observe(el, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    syncObservedChildren();
+
     syncHeight();
 
     return () => {
@@ -277,8 +328,9 @@ export function useScrollAnchor(
       }
       mutationObs.disconnect();
       containerObs.disconnect();
+      contentObs?.disconnect();
     };
-  }, [ref, sentinelRef, resetKey]);
+  }, [ref, sentinelRef, resetKey, syncFollowState]);
 
   // ── Scroll handler ──────────────────────────────────────────────────
 
@@ -296,6 +348,7 @@ export function useScrollAnchor(
       if (!atBottom && delta <= -USER_SCROLL_ESCAPE_PX) {
         phaseRef.current = "active";
         pinnedRef.current = false;
+        syncFollowState();
         if (!isReadyRef.current) {
           setIsReady(true);
           isReadyRef.current = true;
@@ -307,25 +360,35 @@ export function useScrollAnchor(
 
     if (holdScrollRef.current) {
       holdScrollRef.current = false;
+      syncFollowState();
     }
 
     // "At bottom" means sentinel is within the visible area
     if (sentinel) {
-      pinnedRef.current = !isSentinelBelowViewport(sentinel, el);
+      const nextPinned = !isSentinelBelowViewport(sentinel, el);
+      if (pinnedRef.current !== nextPinned) {
+        pinnedRef.current = nextPinned;
+        syncFollowState();
+      }
     } else {
-      pinnedRef.current =
+      const nextPinned =
         el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
+      if (pinnedRef.current !== nextPinned) {
+        pinnedRef.current = nextPinned;
+        syncFollowState();
+      }
     }
     lastScrollTopRef.current = el.scrollTop;
-  }, [ref, sentinelRef]);
+  }, [ref, sentinelRef, syncFollowState]);
 
   // ── Imperative methods ─────────────────────────────────────────────
 
   const scrollToBottom = useCallback(() => {
     pinnedRef.current = true;
     holdScrollRef.current = false;
+    syncFollowState();
     scrollSentinelToEnd();
-  }, [scrollSentinelToEnd]);
+  }, [scrollSentinelToEnd, syncFollowState]);
 
   const scrollToBottomIfPinned = useCallback(() => {
     if (!pinnedRef.current) return;
@@ -345,7 +408,16 @@ export function useScrollAnchor(
   const holdPosition = useCallback(() => {
     holdScrollRef.current = true;
     pinnedRef.current = false;
-  }, []);
+    syncFollowState();
+  }, [syncFollowState]);
 
-  return { handleScroll, scrollToBottom, scrollToBottomIfPinned, scrollToTop, holdPosition, isReady };
+  return {
+    handleScroll,
+    scrollToBottom,
+    scrollToBottomIfPinned,
+    scrollToTop,
+    holdPosition,
+    isReady,
+    isAutoFollowing,
+  };
 }

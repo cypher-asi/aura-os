@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { ButtonPlus } from "@cypher-asi/zui";
 import type { useProjectListData } from "../../../../components/ProjectList/useProjectListData";
+import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import { useAppUIStore } from "../../../../stores/app-ui-store";
 
 function useTasksSidebarAction(openNewProjectModal: () => void): void {
@@ -9,7 +9,7 @@ function useTasksSidebarAction(openNewProjectModal: () => void): void {
   useEffect(() => {
     setAction(
       "tasks",
-      <ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />,
+      <ProjectsPlusButton onClick={openNewProjectModal} title="New Project" />,
     );
     return () => setAction("tasks", null);
   }, [openNewProjectModal, setAction]);

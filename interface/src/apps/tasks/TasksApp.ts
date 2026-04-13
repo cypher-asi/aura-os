@@ -21,5 +21,5 @@ export const TasksApp: AuraApp = {
   PreviewPanel: PreviewContent,
   PreviewHeader: PreviewHeader,
   Provider: TasksProvider,
-  searchPlaceholder: "Search Tasks...",
+  searchPlaceholder: "Search",
 };

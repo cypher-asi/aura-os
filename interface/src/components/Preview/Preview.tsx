@@ -112,6 +112,15 @@ function previewTitle(item: PreviewItem): string {
   }
 }
 
+function isUserInteractingWithPreview(el: HTMLElement): boolean {
+  const activeElement = document.activeElement;
+  return (
+    activeElement instanceof HTMLElement &&
+    activeElement !== el &&
+    el.contains(activeElement)
+  );
+}
+
 function useDisplayItem() {
   return useSidekickStore((s) => s.previewItem);
 }
@@ -164,6 +173,7 @@ export function PreviewContent() {
   const displayItem = useDisplayItem();
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const autoScrollRef = useRef(true);
+  const prevScrollHeightRef = useRef(0);
 
   const resetKey = displayItem
     ? displayItem.kind === "task" ? displayItem.task.task_id
@@ -178,18 +188,51 @@ export function PreviewContent() {
 
   useEffect(() => {
     autoScrollRef.current = shouldAutoScroll;
+    prevScrollHeightRef.current = 0;
   }, [resetKey, shouldAutoScroll]);
 
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
 
-    const scrollIfNeeded = () => {
-      if (autoScrollRef.current) {
-        requestAnimationFrame(() => {
-          el.scrollTop = el.scrollHeight;
-        });
+    if (!shouldAutoScroll) {
+      el.scrollTop = 0;
+      prevScrollHeightRef.current = el.scrollHeight;
+      return;
+    }
+
+    let contentChangeRaf = 0;
+
+    const scrollToBottom = () => {
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+      });
+    };
+
+    const syncHeight = () => {
+      prevScrollHeightRef.current = el.scrollHeight;
+    };
+
+    const onContentChange = () => {
+      const oldSH = prevScrollHeightRef.current;
+      const newSH = el.scrollHeight;
+      if (newSH === oldSH) return;
+
+      if (isUserInteractingWithPreview(el)) {
+        autoScrollRef.current = false;
+      } else if (autoScrollRef.current && newSH > oldSH) {
+        scrollToBottom();
       }
+
+      syncHeight();
+    };
+
+    const queueContentChange = () => {
+      if (contentChangeRaf !== 0) return;
+      contentChangeRaf = requestAnimationFrame(() => {
+        contentChangeRaf = 0;
+        onContentChange();
+      });
     };
 
     const onScroll = () => {
@@ -199,17 +242,44 @@ export function PreviewContent() {
 
     el.addEventListener("scroll", onScroll, { passive: true });
 
-    const observer = new MutationObserver(scrollIfNeeded);
+    const contentObs =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(queueContentChange);
+    const observedChildren = new Set<Element>();
+    const syncObservedChildren = () => {
+      if (!contentObs) return;
+      const children = new Set(Array.from(el.children));
+      for (const child of observedChildren) {
+        if (!children.has(child)) {
+          contentObs.unobserve(child);
+          observedChildren.delete(child);
+        }
+      }
+      for (const child of children) {
+        if (!observedChildren.has(child)) {
+          observedChildren.add(child);
+          contentObs.observe(child);
+        }
+      }
+    };
+
+    const observer = new MutationObserver(() => {
+      syncObservedChildren();
+      queueContentChange();
+    });
     observer.observe(el, { childList: true, subtree: true, characterData: true });
 
-    if (shouldAutoScroll) {
-      scrollIfNeeded();
-    } else {
-      el.scrollTop = 0;
-    }
+    syncObservedChildren();
+    scrollToBottom();
+    syncHeight();
 
     return () => {
+      if (contentChangeRaf !== 0) {
+        cancelAnimationFrame(contentChangeRaf);
+      }
       observer.disconnect();
+      contentObs?.disconnect();
       el.removeEventListener("scroll", onScroll);
     };
   }, [resetKey, shouldAutoScroll]);

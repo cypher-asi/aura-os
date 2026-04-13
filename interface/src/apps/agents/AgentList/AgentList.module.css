@@ -1,7 +1,85 @@
+.sidebarRoot {
+  --left-menu-fade-height: 72px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.sidebarRoot::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--left-menu-fade-height);
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--color-bg, #111) 42%, transparent) 38%,
+    color-mix(in srgb, var(--color-bg, #111) 92%, black) 100%
+  );
+}
+
+.sidebarScrollArea {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 0 calc(var(--left-menu-fade-height) - 16px);
+  scrollbar-width: none;
+}
+
+.sidebarScrollArea::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebarEntries {
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollTrack {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.scrollThumb {
+  position: absolute;
+  right: 0;
+  width: 4px;
+  min-height: 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.scrollThumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.scrollThumbVisible {
+  opacity: 1;
+}
+
 .list {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 

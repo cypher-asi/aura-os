@@ -14,5 +14,5 @@ export const ProfileApp: AuraApp = {
   MainPanel: ProfileMainPanel,
   SidekickPanel: ProfileSidekickPanel,
   SidekickTaskbar: ProfileSidekickHeader,
-  searchPlaceholder: "Filter Projects...",
+  searchPlaceholder: "Search",
 };

@@ -20,5 +20,5 @@ export const ProjectsApp: AuraApp = {
   SidekickTaskbar: SidekickTaskbar,
   PreviewPanel: PreviewContent,
   PreviewHeader: PreviewHeader,
-  searchPlaceholder: "Search Projects...",
+  searchPlaceholder: "Search",
 };

@@ -39,6 +39,42 @@ export function splitByCodeFences(text: string): { content: string; isCode: bool
   return segments;
 }
 
+function splitByInlineCode(text: string): { content: string; isCode: boolean }[] {
+  const segments: { content: string; isCode: boolean }[] = [];
+  let cursor = 0;
+  let i = 0;
+
+  while (i < text.length) {
+    if (text[i] !== "`") {
+      i++;
+      continue;
+    }
+
+    let tickEnd = i + 1;
+    while (tickEnd < text.length && text[tickEnd] === "`") tickEnd++;
+    const delimiter = text.slice(i, tickEnd);
+    const close = text.indexOf(delimiter, tickEnd);
+
+    if (close === -1) {
+      i = tickEnd;
+      continue;
+    }
+
+    if (i > cursor) {
+      segments.push({ content: text.slice(cursor, i), isCode: false });
+    }
+    segments.push({ content: text.slice(i, close + delimiter.length), isCode: true });
+    cursor = close + delimiter.length;
+    i = cursor;
+  }
+
+  if (cursor < text.length) {
+    segments.push({ content: text.slice(cursor), isCode: false });
+  }
+
+  return segments;
+}
+
 export function stripEmojis(text: string): string {
   return splitByCodeFences(text)
     .map((seg) =>
@@ -93,5 +129,31 @@ export function flattenListIndentation(text: string): string {
         ? seg.content
         : seg.content.replace(/^[ \t]+([-*+]|\d+[.)]) /gm, "$1 "),
     )
+    .join("");
+}
+
+const LOOSE_STRONG_EMPHASIS_RE = /(\*\*|__)([ \t]+)([^\n]*?\S)([ \t]*)(\1)/g;
+
+/**
+ * Repair common malformed strong emphasis from model output like
+ * `** Overview**` or `__ title __` so markdown renders as intended.
+ * Leaves fenced and inline code untouched.
+ */
+export function normalizeLooseStrongEmphasis(text: string): string {
+  return splitByCodeFences(text)
+    .map((seg) => {
+      if (seg.isCode) return seg.content;
+      return splitByInlineCode(seg.content)
+        .map((inlineSeg) =>
+          inlineSeg.isCode
+            ? inlineSeg.content
+            : inlineSeg.content.replace(
+                LOOSE_STRONG_EMPHASIS_RE,
+                (_match, marker: string, _leadingWs: string, content: string, _trailingWs: string, closing: string) =>
+                  `${marker}${content.trim()}${closing}`,
+              ),
+        )
+        .join("");
+    })
     .join("");
 }

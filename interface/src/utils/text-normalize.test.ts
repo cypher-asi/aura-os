@@ -3,6 +3,7 @@ import {
   stripEmojis,
   normalizeMidSentenceBreaks,
   flattenListIndentation,
+  normalizeLooseStrongEmphasis,
 } from "./text-normalize";
 
 describe("splitByCodeFences", () => {
@@ -165,5 +166,22 @@ describe("flattenListIndentation", () => {
   it("handles tabs before markers", () => {
     const text = "- first\n\t- second";
     expect(flattenListIndentation(text)).toBe("- first\n- second");
+  });
+});
+
+describe("normalizeLooseStrongEmphasis", () => {
+  it("repairs malformed strong markdown spacing", () => {
+    const text = "- ** Overview**\n- __ New Project __";
+    expect(normalizeLooseStrongEmphasis(text)).toBe("- **Overview**\n- __New Project__");
+  });
+
+  it("preserves fenced code blocks", () => {
+    const text = "Before\n```md\n** Overview**\n```\nAfter";
+    expect(normalizeLooseStrongEmphasis(text)).toBe(text);
+  });
+
+  it("preserves inline code spans", () => {
+    const text = "Use `** Overview**` literally";
+    expect(normalizeLooseStrongEmphasis(text)).toBe(text);
   });
 });

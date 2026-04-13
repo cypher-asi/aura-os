@@ -71,7 +71,7 @@ function SidebarSearchInput() {
 
   return (
     <PanelSearch
-      placeholder={activeApp.searchPlaceholder ?? ""}
+      placeholder={activeApp.searchPlaceholder ?? "Search"}
       value={query}
       onChange={setQuery}
       action={action}

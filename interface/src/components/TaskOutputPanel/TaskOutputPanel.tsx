@@ -23,6 +23,117 @@ let activeTaskTrackingRefs = 0;
 let activeTaskTrackingProjectId: string | undefined;
 let activeTaskTrackingUnsubs: Array<() => void> | null = null;
 
+function isUserInteractingWithPane(el: HTMLElement): boolean {
+  const activeElement = document.activeElement;
+  return (
+    activeElement instanceof HTMLElement &&
+    activeElement !== el &&
+    el.contains(activeElement)
+  );
+}
+
+function useStickyBottomContent(resetKey?: unknown) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const prevScrollHeightRef = useRef(0);
+
+  const scrollToBottom = () => {
+    const bottom = bottomRef.current;
+    if (bottom && typeof bottom.scrollIntoView === "function") {
+      bottom.scrollIntoView({ block: "end" });
+      return;
+    }
+    const el = contentRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  };
+
+  const handleContentScroll = () => {
+    const el = contentRef.current;
+    if (!el) return;
+    stickToBottom.current =
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+  };
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    let contentChangeRaf = 0;
+
+    const syncHeight = () => {
+      prevScrollHeightRef.current = el.scrollHeight;
+    };
+
+    const onContentChange = () => {
+      const oldSH = prevScrollHeightRef.current;
+      const newSH = el.scrollHeight;
+      if (newSH === oldSH) return;
+
+      if (isUserInteractingWithPane(el)) {
+        stickToBottom.current = false;
+      } else if (stickToBottom.current && newSH > oldSH) {
+        scrollToBottom();
+      }
+
+      syncHeight();
+    };
+
+    const queueContentChange = () => {
+      if (contentChangeRaf !== 0) return;
+      contentChangeRaf = requestAnimationFrame(() => {
+        contentChangeRaf = 0;
+        onContentChange();
+      });
+    };
+
+    const contentObs =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(queueContentChange);
+    const observedChildren = new Set<Element>();
+    const syncObservedChildren = () => {
+      if (!contentObs) return;
+      const children = new Set(Array.from(el.children));
+      for (const child of observedChildren) {
+        if (!children.has(child)) {
+          contentObs.unobserve(child);
+          observedChildren.delete(child);
+        }
+      }
+      for (const child of children) {
+        if (!observedChildren.has(child)) {
+          observedChildren.add(child);
+          contentObs.observe(child);
+        }
+      }
+    };
+
+    stickToBottom.current = true;
+    scrollToBottom();
+    syncObservedChildren();
+    syncHeight();
+
+    const observer = new MutationObserver(() => {
+      syncObservedChildren();
+      queueContentChange();
+    });
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+
+    return () => {
+      if (contentChangeRaf !== 0) {
+        cancelAnimationFrame(contentChangeRaf);
+      }
+      observer.disconnect();
+      contentObs?.disconnect();
+    };
+  }, [resetKey]);
+
+  return { contentRef, bottomRef, handleContentScroll };
+}
+
 function createTaskTrackingSubscriptions(
   subscribe: ReturnType<typeof useEventStore.getState>["subscribe"],
   projectId: string | undefined,
@@ -232,37 +343,12 @@ function TerminalInstanceTabs() {
 
 export function RunSidekickPane() {
   const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const stickToBottom = useRef(true);
+  const stickyBottom = useStickyBottomContent("run-sidekick");
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
   const projectTasks = useTasksForProject(projectId, agentInstanceId);
   const hasCompleted = projectTasks.some((t) => t.status !== "active");
-
-  const handleContentScroll = () => {
-    const el = contentRef.current;
-    if (!el) return;
-    stickToBottom.current =
-      el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
-  };
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-
-    stickToBottom.current = true;
-    el.scrollTop = el.scrollHeight;
-
-    const observer = new MutationObserver(() => {
-      if (stickToBottom.current) {
-        bottomRef.current?.scrollIntoView({ block: "end" });
-      }
-    });
-    observer.observe(el, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <div className={styles.sidekickPane}>
@@ -283,7 +369,11 @@ export function RunSidekickPane() {
         </div>
       </div>
       <div className={styles.contentShell}>
-        <div className={styles.content} ref={contentRef} onScroll={handleContentScroll}>
+        <div
+          className={styles.content}
+          ref={stickyBottom.contentRef}
+          onScroll={stickyBottom.handleContentScroll}
+        >
           {projectTasks.length === 0 ? (
             <div className={styles.emptyState}>
               <Text size="sm" className={styles.emptyText}>No tasks</Text>
@@ -307,9 +397,9 @@ export function RunSidekickPane() {
               ),
             )
           )}
-          <div ref={bottomRef} />
+          <div ref={stickyBottom.bottomRef} />
         </div>
-        <OverlayScrollbar scrollRef={contentRef} />
+        <OverlayScrollbar scrollRef={stickyBottom.contentRef} />
       </div>
     </div>
   );
@@ -336,9 +426,7 @@ export function TaskOutputPanel() {
   );
   const setActiveTab = useTaskOutputPanelStore((s) => s.setActiveTab);
   const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const stickToBottom = useRef(true);
+  const stickyBottom = useStickyBottomContent(activeTab);
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
@@ -347,29 +435,6 @@ export function TaskOutputPanel() {
 
   const hasActiveTasks = projectTasks.some((t) => t.status === "active");
   const hasCompleted = projectTasks.some((t) => t.status !== "active");
-
-  const handleContentScroll = () => {
-    const el = contentRef.current;
-    if (!el) return;
-    stickToBottom.current =
-      el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
-  };
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-
-    stickToBottom.current = true;
-    el.scrollTop = el.scrollHeight;
-
-    const observer = new MutationObserver(() => {
-      if (stickToBottom.current) {
-        bottomRef.current?.scrollIntoView({ block: "end" });
-      }
-    });
-    observer.observe(el, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [activeTab]);
 
   return (
     <div
@@ -400,7 +465,11 @@ export function TaskOutputPanel() {
 
       {activeTab === "run" && (
         <div className={styles.contentShell}>
-          <div className={styles.content} ref={contentRef} onScroll={handleContentScroll}>
+          <div
+            className={styles.content}
+            ref={stickyBottom.contentRef}
+            onScroll={stickyBottom.handleContentScroll}
+          >
             {projectTasks.length === 0 ? (
               <div className={styles.emptyState}>
                 <Text size="sm" className={styles.emptyText}>No tasks</Text>
@@ -424,9 +493,9 @@ export function TaskOutputPanel() {
                 ),
               )
             )}
-            <div ref={bottomRef} />
+            <div ref={stickyBottom.bottomRef} />
           </div>
-          <OverlayScrollbar scrollRef={contentRef} />
+          <OverlayScrollbar scrollRef={stickyBottom.contentRef} />
         </div>
       )}
 

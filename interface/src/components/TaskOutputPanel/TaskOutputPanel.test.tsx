@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const clearCompleted = vi.fn();
@@ -116,6 +116,31 @@ vi.mock("./TaskOutputPanel.module.css", () => ({
 
 import { RunSidekickPane, TerminalSidekickPane } from "./TaskOutputPanel";
 
+function installImmediateRaf() {
+  const originalRaf = globalThis.requestAnimationFrame;
+  const originalCaf = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+    callback(performance.now());
+    return 1;
+  }) as typeof requestAnimationFrame;
+  globalThis.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame;
+  return () => {
+    globalThis.requestAnimationFrame = originalRaf;
+    globalThis.cancelAnimationFrame = originalCaf;
+  };
+}
+
+function setScrollMetrics(
+  el: HTMLElement,
+  metrics: { scrollHeight: number; scrollTop: number; clientHeight: number },
+) {
+  Object.defineProperties(el, {
+    scrollHeight: { value: metrics.scrollHeight, writable: true, configurable: true },
+    scrollTop: { value: metrics.scrollTop, writable: true, configurable: true },
+    clientHeight: { value: metrics.clientHeight, writable: true, configurable: true },
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockTasks = [
@@ -160,6 +185,77 @@ describe("RunSidekickPane", () => {
 
     await user.click(screen.getByRole("button", { name: "Clear completed task output" }));
     expect(clearCompleted).toHaveBeenCalled();
+  });
+
+  it("keeps following content growth while pinned", async () => {
+    const restoreRaf = installImmediateRaf();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      const { container } = render(<RunSidekickPane />);
+      const content = container.querySelector(".content");
+      expect(content).toBeInstanceOf(HTMLDivElement);
+      setScrollMetrics(content as HTMLDivElement, {
+        scrollHeight: 600,
+        scrollTop: 600,
+        clientHeight: 200,
+      });
+      scrollIntoView.mockClear();
+
+      (content as HTMLDivElement).appendChild(document.createElement("div"));
+      (content as any).scrollHeight = 900;
+
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+        configurable: true,
+        value: originalScrollIntoView,
+      });
+      restoreRaf();
+    }
+  });
+
+  it("does not force-scroll on collapse while interacting inside the pane", async () => {
+    const restoreRaf = installImmediateRaf();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      const { container } = render(<RunSidekickPane />);
+      const content = container.querySelector(".content") as HTMLDivElement | null;
+      expect(content).toBeInstanceOf(HTMLDivElement);
+      setScrollMetrics(content as HTMLDivElement, {
+        scrollHeight: 700,
+        scrollTop: 700,
+        clientHeight: 200,
+      });
+
+      const toggle = document.createElement("button");
+      content?.appendChild(toggle);
+      toggle.focus();
+      scrollIntoView.mockClear();
+
+      (content as any).scrollHeight = 400;
+      content?.appendChild(document.createElement("div"));
+
+      await Promise.resolve();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+        configurable: true,
+        value: originalScrollIntoView,
+      });
+      restoreRaf();
+    }
   });
 });
 

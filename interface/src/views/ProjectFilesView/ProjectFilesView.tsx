@@ -119,7 +119,7 @@ function ProjectFilesContent({
       </div>
       <div className={styles.searchHeader}>
         <PanelSearch
-          placeholder="Search files..."
+          placeholder="Search"
           value={searchQuery}
           onChange={setSearchQuery}
         />

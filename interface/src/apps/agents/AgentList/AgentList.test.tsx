@@ -33,6 +33,10 @@ vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => <button onClick={onClick}>{children}</button>,
 }));
 
+vi.mock("../../../components/ProjectsPlusButton", () => ({
+  ProjectsPlusButton: (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>+</button>,
+}));
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {

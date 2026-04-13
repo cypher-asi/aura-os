@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockNavigate = vi.fn();
-const reorderTaskbarApps = vi.fn();
+const saveTaskbarAppOrder = vi.fn();
 
 function MockIcon({ size = 16 }: { size?: number }) {
   return <svg data-testid={`icon-${size}`} />;
@@ -22,7 +22,7 @@ const state = {
   apps: mockApps,
   activeApp: mockApps[1],
   taskbarAppOrder: ["agents", "projects", "tasks", "process", "feed"],
-  reorderTaskbarApps,
+  saveTaskbarAppOrder,
 };
 
 const navigationMemory = {
@@ -151,31 +151,66 @@ describe("AppNavRail", () => {
     render(<AppNavRail layout="taskbar" allowReorder excludeIds={["profile"]} />);
 
     const tasksButton = screen.getByRole("button", { name: "Tasks" });
-    const agentsButton = screen.getByRole("button", { name: "Agents" });
-    const elementFromPoint = vi.fn(() => agentsButton);
-    Object.defineProperty(document, "elementFromPoint", {
-      configurable: true,
-      value: elementFromPoint,
+    const buttons = [
+      screen.getByRole("button", { name: "Agents" }),
+      screen.getByRole("button", { name: "Projects" }),
+      tasksButton,
+      screen.getByRole("button", { name: "Process" }),
+      screen.getByRole("button", { name: "Feed" }),
+    ];
+    const rects = [
+      { left: 0, width: 28 },
+      { left: 32, width: 28 },
+      { left: 64, width: 28 },
+      { left: 96, width: 28 },
+      { left: 128, width: 28 },
+    ];
+
+    buttons.forEach((button, index) => {
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => ({
+          x: rects[index].left,
+          y: 0,
+          top: 0,
+          left: rects[index].left,
+          right: rects[index].left + rects[index].width,
+          bottom: 28,
+          width: rects[index].width,
+          height: 28,
+          toJSON: () => undefined,
+        }),
+      });
     });
 
     fireEvent.pointerDown(tasksButton, {
       button: 0,
       pointerId: 1,
-      clientX: 10,
+      clientX: 78,
       clientY: 10,
     });
     fireEvent.pointerMove(window, {
       pointerId: 1,
-      clientX: 30,
-      clientY: 10,
-    });
-    fireEvent.pointerUp(window, {
-      pointerId: 1,
-      clientX: 30,
-      clientY: 10,
+      clientX: 150,
+      clientY: 44,
     });
 
-    expect(reorderTaskbarApps).toHaveBeenCalledWith("tasks", "agents");
+    expect(document.querySelector(".taskbarDragOverlay")).toHaveStyle({ top: "0px" });
+    expect(saveTaskbarAppOrder).not.toHaveBeenCalled();
+
+    fireEvent.pointerUp(window, {
+      pointerId: 1,
+      clientX: 150,
+      clientY: 44,
+    });
+
+    expect(saveTaskbarAppOrder).toHaveBeenCalledWith([
+      "agents",
+      "projects",
+      "process",
+      "feed",
+      "tasks",
+    ]);
   });
 
   it("reuses remembered destinations when taskbar apps are clicked", async () => {

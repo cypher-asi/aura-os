@@ -18,5 +18,5 @@ export const ProcessApp: AuraApp = {
   SidekickPanel: ProcessSidekickContent,
   SidekickTaskbar: ProcessSidekickTaskbar,
   Provider: ProcessProvider,
-  searchPlaceholder: "Search Processes...",
+  searchPlaceholder: "Search",
 };

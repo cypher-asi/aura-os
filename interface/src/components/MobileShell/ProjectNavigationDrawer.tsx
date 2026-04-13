@@ -112,7 +112,7 @@ export function ProjectNavigationDrawerContent() {
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerSearch}>
         <PanelSearch
-          placeholder="Search Projects..."
+          placeholder="Search"
           value={query}
           onChange={setQuery}
           action={<ProjectsPlusButton onClick={() => openAfterDrawerClose(openNewProjectModal)} title="New Project" />}

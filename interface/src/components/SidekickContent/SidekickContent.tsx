@@ -28,11 +28,11 @@ import styles from "../Sidekick/Sidekick.module.css";
 import overlayStyles from "../PreviewOverlay/PreviewOverlay.module.css";
 
 const SEARCH_PLACEHOLDERS: Record<string, string> = {
-  specs: "Search Specs...",
-  tasks: "Search Tasks...",
-  sessions: "Search Sessions...",
-  files: "Search Files...",
-  log: "Search Log...",
+  specs: "Search",
+  tasks: "Search",
+  sessions: "Search",
+  files: "Search",
+  log: "Search",
 };
 
 export function SidekickContent() {

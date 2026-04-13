@@ -1,11 +1,12 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
-import { ButtonPlus, Menu, Modal, Button } from "@cypher-asi/zui";
+import { Menu, Modal, Button } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Loader2, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
+import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton";
 import { AgentConversationRow } from "../AgentConversationRow";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import {
@@ -22,6 +23,7 @@ import {
 } from "../stores";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
+import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
 
 import type { Agent } from "../../../types";
 import styles from "./AgentList.module.css";
@@ -60,7 +62,7 @@ interface CtxMenuState {
 }
 
 interface AgentListProps {
-  mode?: "default" | "mobile-library";
+  mode?: "default" | "responsive-controls" | "mobile-library";
 }
 
 function AgentConversationRowWithHistory({
@@ -101,6 +103,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const { agents, status, fetchAgents } = useAgents();
   const { setSelectedAgent } = useSelectedAgent();
   const isMobileLibrary = mode === "mobile-library";
+  const isDesktopSidebar = mode === "default";
   const loading = status === "loading" || status === "idle";
   const { query: searchQuery, setAction } = useSidebarSearch("agents");
   const navigate = useNavigate();
@@ -116,11 +119,13 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { thumbStyle, visible, onThumbPointerDown } = useOverlayScrollbar(scrollRef);
 
   useEffect(() => {
     setAction(
       "agents",
-      <ButtonPlus onClick={() => setShowEditor(true)} size="sm" title="New Agent" />,
+      <ProjectsPlusButton onClick={() => setShowEditor(true)} title="New Agent" />,
     );
     return () => setAction("agents", null);
   }, [setAction]);
@@ -291,23 +296,42 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
   }
 
+  const entries = filteredAgents.map((agent) => (
+    <AgentConversationRowWithHistory
+      key={agent.agent_id}
+      agent={agent}
+      isMobileLibrary={isMobileLibrary}
+      isSelected={agent.agent_id === agentId}
+      onClick={() => handleAgentRowClick(agent.agent_id)}
+      onContextMenu={handleContextMenu}
+      onMouseEnter={() => handleHoverPrefetch(agent.agent_id)}
+    />
+  ));
+
   return (
-    <div className={styles.list}>
-      <div onContextMenu={handleContextMenu}>
-        {filteredAgents.map((agent) => {
-          return (
-            <AgentConversationRowWithHistory
-              key={agent.agent_id}
-              agent={agent}
-              isMobileLibrary={isMobileLibrary}
-              isSelected={agent.agent_id === agentId}
-              onClick={() => handleAgentRowClick(agent.agent_id)}
-              onContextMenu={handleContextMenu}
-              onMouseEnter={() => handleHoverPrefetch(agent.agent_id)}
+    <>
+      {isDesktopSidebar ? (
+        <div className={styles.sidebarRoot}>
+          <div
+            ref={scrollRef}
+            className={styles.sidebarScrollArea}
+            onContextMenu={handleContextMenu}
+          >
+            <div className={styles.sidebarEntries}>{entries}</div>
+          </div>
+          <div className={styles.scrollTrack}>
+            <div
+              className={`${styles.scrollThumb} ${visible ? styles.scrollThumbVisible : ""}`}
+              style={thumbStyle}
+              onPointerDown={onThumbPointerDown}
             />
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.list} onContextMenu={handleContextMenu}>
+          {entries}
+        </div>
+      )}
 
       {ctxMenu &&
         createPortal(
@@ -373,6 +397,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         onClose={() => setShowEditor(false)}
         onSaved={handleAgentSaved}
       />
-    </div>
+    </>
   );
 }

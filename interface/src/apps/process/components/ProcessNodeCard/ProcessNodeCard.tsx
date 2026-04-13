@@ -7,6 +7,12 @@ import type { ProcessNodeType } from "../../../../types/enums";
 import { useAgentStore } from "../../../agents/stores";
 import { Avatar } from "../../../../components/Avatar";
 
+const SUCCESS_COLOR = "var(--color-success, #4aeaa8)";
+
+function tint(color: string, amount: number) {
+  return `color-mix(in srgb, ${color} ${amount}%, transparent)`;
+}
+
 const NODE_ICONS: Record<ProcessNodeType, React.ReactNode> = {
   ignition: <Zap size={14} />,
   action: <Play size={14} />,
@@ -21,10 +27,10 @@ const NODE_ICONS: Record<ProcessNodeType, React.ReactNode> = {
 };
 
 const NODE_COLORS: Record<ProcessNodeType, string> = {
-  ignition: "#10b981",
+  ignition: SUCCESS_COLOR,
   action: "#3b82f6",
   condition: "#8b5cf6",
-  artifact: "#10b981",
+  artifact: SUCCESS_COLOR,
   delay: "#6b7280",
   merge: "#ec4899",
   prompt: "#0ea5e9",
@@ -91,15 +97,15 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
   );
 
   const statusColor = data.runStatus === "running" ? "#3b82f6"
-    : data.runStatus === "completed" ? "#10b981"
+    : data.runStatus === "completed" ? SUCCESS_COLOR
     : data.runStatus === "failed" ? "#ef4444"
     : data.runStatus === "skipped" ? "#6b7280"
     : undefined;
 
   const borderColor = statusColor ?? (selected ? color : "var(--color-border)");
   const shadow = statusColor
-    ? `0 0 0 1px ${statusColor}40, 0 0 8px ${statusColor}30`
-    : selected ? `0 0 0 1px ${color}40` : "0 2px 8px rgba(0,0,0,0.2)";
+    ? `0 0 0 1px ${tint(statusColor, 25)}, 0 0 8px ${tint(statusColor, 18)}`
+    : selected ? `0 0 0 1px ${tint(color, 25)}` : "0 2px 8px rgba(0,0,0,0.2)";
 
   return (
     <div
@@ -146,7 +152,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
         <div
           style={{
             width: 20, height: 20,
-            background: `${color}20`, color,
+            background: tint(color, 12), color,
             borderRadius: 4,
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
@@ -169,7 +175,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
           )}
         </div>
         {data.isPinned && (
-          <Pin size={12} style={{ color: "#f59e0b", flexShrink: 0 }} />
+          <Pin size={12} style={{ color: "#fff", flexShrink: 0 }} />
         )}
         {agent && (
           <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={20} />

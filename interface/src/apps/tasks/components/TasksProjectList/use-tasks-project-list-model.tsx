@@ -79,16 +79,8 @@ function useTaskNavigationHandlers(
 ): {
   handleChildSelection: (nodeId: string) => void;
   handleProjectExpand: (nodeId: string, expanded: boolean) => void;
-  handleProjectSelection: (nodeId: string) => void;
 } {
   const navigate = useNavigate();
-
-  const handleProjectSelection = useCallback((nodeId: string) => {
-    if (nodeId !== data.projectId) {
-      data.sidekick.closePreview();
-    }
-    navigate(`/tasks/${nodeId}`);
-  }, [data, navigate]);
 
   const handleChildSelection = useCallback((nodeId: string) => {
     const meta = data.agentMeta.get(nodeId);
@@ -111,42 +103,38 @@ function useTaskNavigationHandlers(
     }
   }, [data, setGroupExpanded]);
 
-  return { handleChildSelection, handleProjectExpand, handleProjectSelection };
+  return { handleChildSelection, handleProjectExpand };
 }
 
 function useTaskLeftMenuEntries(
-  data: ReturnType<typeof useProjectListData>,
   explorerData: ExplorerNode[],
   expandedIds: string[],
-  handleProjectSelection: (nodeId: string) => void,
+  searchActive: boolean,
+  selectedNodeId: string | null,
   handleProjectExpand: (nodeId: string, expanded: boolean) => void,
   handleChildSelection: (nodeId: string) => void,
 ): ReturnType<typeof buildLeftMenuEntries> {
   const expandedIdSet = useMemo(() => new Set(expandedIds), [expandedIds]);
-  const searchActive = data.searchQuery.trim().length > 0;
 
   const entries = useMemo(
     () =>
       buildLeftMenuEntries(explorerData, {
         expandedIds: expandedIdSet,
-        selectedNodeId: data.agentInstanceId ?? null,
+        selectedNodeId,
         searchActive,
-        groupToggleMode: "secondary",
         groupTestIdPrefix: "project",
         itemTestIdPrefix: "node",
-        onGroupActivate: handleProjectSelection,
-        onGroupToggle: (nodeId) =>
+        onGroupActivate: (nodeId) =>
           handleProjectExpand(nodeId, !expandedIdSet.has(nodeId)),
         onItemSelect: handleChildSelection,
       }),
     [
-      data.agentInstanceId,
       expandedIdSet,
       explorerData,
       handleChildSelection,
       handleProjectExpand,
-      handleProjectSelection,
       searchActive,
+      selectedNodeId,
     ],
   );
 
@@ -173,16 +161,16 @@ export function useTasksProjectListModel(
   );
   const { expandedIds, setGroupExpanded } =
     useLeftMenuExpandedGroups(defaultExpandedIds);
+  const searchActive = data.searchQuery.trim().length > 0;
   const {
     handleChildSelection,
     handleProjectExpand,
-    handleProjectSelection,
   } = useTaskNavigationHandlers(data, setGroupExpanded);
   const entries = useTaskLeftMenuEntries(
-    data,
     explorerData,
     expandedIds,
-    handleProjectSelection,
+    searchActive,
+    data.agentInstanceId ?? null,
     handleProjectExpand,
     handleChildSelection,
   );

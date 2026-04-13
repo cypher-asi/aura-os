@@ -178,11 +178,32 @@ describe("useScrollAnchor", () => {
     return { el, ref, ...hook };
   }
 
+  function triggerMutation(observer: MockMutationObserver = latestMO()) {
+    act(() => {
+      observer.trigger();
+      flushRafs();
+    });
+  }
+
+  function triggerContainerResize(round = 0) {
+    act(() => {
+      containerRO(round).trigger();
+      flushRafs();
+    });
+  }
+
+  function triggerContentResize(round = 0) {
+    act(() => {
+      contentRO(round).trigger();
+      flushRafs();
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // API & lifecycle
   // ---------------------------------------------------------------------------
 
-  it("returns handleScroll, scrollToBottom, scrollToBottomIfPinned, and isReady", () => {
+  it("returns handleScroll, scrollToBottom, scrollToBottomIfPinned, isReady, and isAutoFollowing", () => {
     const ref = { current: makeEl() };
     const { result } = renderHook(() =>
       useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS),
@@ -191,6 +212,7 @@ describe("useScrollAnchor", () => {
     expect(typeof result.current.scrollToBottom).toBe("function");
     expect(typeof result.current.scrollToBottomIfPinned).toBe("function");
     expect(typeof result.current.isReady).toBe("boolean");
+    expect(typeof result.current.isAutoFollowing).toBe("boolean");
   });
 
   it("sets up MutationObserver and ResizeObservers on mount", () => {
@@ -282,7 +304,7 @@ describe("useScrollAnchor", () => {
     // Small upward adjustment during settling on a fresh resetKey should
     // not break pinning after settling.
     (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1200);
   });
 
@@ -308,8 +330,7 @@ describe("useScrollAnchor", () => {
 
     // Subsequent mutations should NOT auto-scroll
     (el as any).scrollHeight = 1400;
-    act(() => latestMO().trigger());
-    act(() => flushRafs());
+    triggerMutation();
     expect(el.scrollTop).toBe(100);
   });
 
@@ -349,7 +370,7 @@ describe("useScrollAnchor", () => {
 
     // Verify auto-scroll is off
     (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(100);
 
     // scrollToBottom should re-enable
@@ -358,7 +379,7 @@ describe("useScrollAnchor", () => {
 
     // Subsequent mutations should auto-scroll again
     (el as any).scrollHeight = 1500;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1500);
   });
 
@@ -369,20 +390,23 @@ describe("useScrollAnchor", () => {
   it("scrolls to bottom on mutation when pinned", () => {
     const { el } = renderSettled();
     (el as any).scrollHeight = 1400;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1400);
   });
 
-  it("scrolls synchronously in observer callback (no RAF delay)", () => {
+  it("batches mutation-driven remeasure work through RAF before scrolling", () => {
     const { el } = renderSettled();
     const rafsBefore = nextRafId;
 
     (el as any).scrollHeight = 1400;
     act(() => latestMO().trigger());
 
-    // Scroll already applied — only RAF is the guard-clearing one
+    expect(el.scrollTop).toBe(1000);
+    expect(nextRafId - rafsBefore).toBe(1); // content-change RAF
+
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1400);
-    expect(nextRafId - rafsBefore).toBe(1); // just the guard RAF
+    expect(nextRafId - rafsBefore).toBe(2); // content-change RAF + guard RAF
   });
 
   it("does NOT scroll on mutation when user has scrolled up", () => {
@@ -392,7 +416,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1400;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(100);
   });
 
@@ -409,8 +433,47 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1400;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1400);
+  });
+
+  it("tracks whether auto-follow is active", () => {
+    const { el, result } = renderSettled();
+
+    expect(result.current.isAutoFollowing).toBe(true);
+
+    (el as any).scrollTop = 100;
+    act(() => result.current.handleScroll());
+    expect(result.current.isAutoFollowing).toBe(false);
+
+    act(() => result.current.scrollToBottom());
+    expect(result.current.isAutoFollowing).toBe(true);
+  });
+
+  it("unpins auto-follow for user-driven collapse reflow", () => {
+    const el = makeEl();
+    const button = document.createElement("button");
+    el.appendChild(button);
+    document.body.appendChild(el);
+    const ref = { current: el };
+    const { result, unmount } = renderHook(
+      (p: Required<HookOptions>) => useScrollAnchor(ref, NULL_SENTINEL, p),
+      { initialProps: DEFAULT_OPTIONS },
+    );
+    act(() => flushRafs());
+    act(() => flushRafs());
+
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    (el as any).scrollHeight = 800;
+    triggerContentResize();
+
+    expect(el.scrollTop).toBe(1000);
+    expect(result.current.isAutoFollowing).toBe(false);
+
+    unmount();
+    el.remove();
   });
 
   // ---------------------------------------------------------------------------
@@ -425,7 +488,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1200);
   });
 
@@ -437,7 +500,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(559);
   });
 
@@ -458,7 +521,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     // Auto-scroll should still be active
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1500);
   });
 
@@ -473,7 +536,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(100);
   });
 
@@ -485,11 +548,11 @@ describe("useScrollAnchor", () => {
     const { el } = renderSettled();
 
     (el as any).scrollHeight = 1100;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1100);
 
     (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1200);
   });
 
@@ -502,7 +565,7 @@ describe("useScrollAnchor", () => {
 
     (el as any).clientWidth = 500;
     (el as any).scrollHeight = 1400;
-    act(() => containerRO().trigger());
+    triggerContainerResize();
     expect(el.scrollTop).toBe(1400);
   });
 
@@ -516,7 +579,7 @@ describe("useScrollAnchor", () => {
     // Width changes causing content reflow
     (el as any).clientWidth = 500;
     (el as any).scrollHeight = 2000;
-    act(() => containerRO().trigger());
+    triggerContainerResize();
 
     // 300 * (2000 / 1000) = 600
     expect(el.scrollTop).toBe(600);
@@ -527,7 +590,7 @@ describe("useScrollAnchor", () => {
 
     const scrollTopBefore = el.scrollTop;
     (el as any).scrollHeight = 1500;
-    act(() => containerRO().trigger());
+    triggerContainerResize();
     expect(el.scrollTop).toBe(scrollTopBefore);
   });
 
@@ -547,7 +610,7 @@ describe("useScrollAnchor", () => {
     act(() => flushRafs());
 
     (el as any).scrollHeight = 1800;
-    act(() => contentRO().trigger());
+    triggerContentResize();
     expect(el.scrollTop).toBe(1800);
   });
 
@@ -567,7 +630,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1800;
-    act(() => contentRO().trigger());
+    triggerContentResize();
     expect(el.scrollTop).toBe(100);
   });
 
@@ -594,7 +657,7 @@ describe("useScrollAnchor", () => {
     const { el } = renderSettled();
     // Simulate height drop (e.g. StreamingBubble unmounts)
     (el as any).scrollHeight = 800;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(800);
   });
 
@@ -605,7 +668,7 @@ describe("useScrollAnchor", () => {
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 800;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(100);
   });
 
@@ -614,12 +677,12 @@ describe("useScrollAnchor", () => {
 
     // Height drops (StreamingBubble unmounts)
     (el as any).scrollHeight = 700;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(700);
 
     // Height jumps back up (virtualiser measures actual row)
     (el as any).scrollHeight = 1400;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1400);
   });
 
@@ -655,7 +718,7 @@ describe("useScrollAnchor", () => {
 
     // Subsequent mutations should NOT auto-scroll
     (el as any).scrollHeight = 1500;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(100);
   });
 
@@ -701,7 +764,7 @@ describe("useScrollAnchor", () => {
 
     // Subsequent mutations should auto-scroll
     (el as any).scrollHeight = 1300;
-    act(() => latestMO().trigger());
+    triggerMutation();
     expect(el.scrollTop).toBe(1300);
   });
 
@@ -717,7 +780,7 @@ describe("useScrollAnchor", () => {
 
     // Trigger old MutationObserver — scrolls synchronously
     (el as any).scrollHeight = 1500;
-    act(() => MockMutationObserver.instances[0].trigger());
+    triggerMutation(MockMutationObserver.instances[0]);
     expect(el.scrollTop).toBe(1500);
 
     // Switch conversations — settling re-scrolls to new content

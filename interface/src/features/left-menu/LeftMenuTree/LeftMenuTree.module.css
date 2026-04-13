@@ -134,6 +134,11 @@
 
 .projectMainButtonSelected {
   color: #ffffff;
+  opacity: 1;
+}
+
+.projectMainButtonSelected .projectLabel {
+  color: #ffffff;
 }
 
 .projectLabel {
@@ -216,7 +221,7 @@
   align-items: center;
   gap: 8px;
   min-height: var(--control-height-sm, 28px);
-  padding: 0 16px 0 32px;
+  padding: 0 16px;
   color: rgba(255, 255, 255, 0.55);
 }
 
@@ -248,7 +253,7 @@
   gap: 12px;
   width: 100%;
   min-height: var(--control-height-sm, 28px);
-  padding: 0 16px 0 32px;
+  padding: 0 16px;
   border: none;
   border-radius: 0;
   background: transparent;

@@ -98,4 +98,20 @@ describe("DesktopWindowLayer", () => {
     expect(screen.getByTestId("agent-window-a1")).toHaveAttribute("data-focused", "true");
     expect(screen.getByTestId("agent-window-a2")).toHaveAttribute("data-focused", "false");
   });
+
+  it("keeps DOM order stable when focus changes", () => {
+    seedWindows();
+    const { container } = render(<DesktopWindowLayer />);
+    const getOrder = () =>
+      Array.from(container.children).map((node) => node.getAttribute("data-testid"));
+
+    expect(getOrder()).toEqual(["agent-window-a1", "agent-window-a2"]);
+
+    act(() => {
+      useDesktopWindowStore.getState().focusWindow("a1");
+    });
+
+    expect(getOrder()).toEqual(["agent-window-a1", "agent-window-a2"]);
+    expect(screen.getByTestId("agent-window-a1")).toHaveAttribute("data-focused", "true");
+  });
 });

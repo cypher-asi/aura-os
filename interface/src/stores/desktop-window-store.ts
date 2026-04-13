@@ -96,9 +96,9 @@ export function selectIsWindowOpen(agentId: string) {
 }
 
 export function selectOrderedWindowIds(state: DesktopWindowState): string[] {
-  return Object.values(state.windows)
-    .sort((a, b) => a.zIndex - b.zIndex)
-    .map((win) => win.agentId);
+  // Keep DOM order stable and let each window's zIndex control stacking.
+  // Reordering the DOM on focus causes the translucent chat window contents to flash.
+  return Object.keys(state.windows);
 }
 
 export function selectTopWindowId(state: DesktopWindowState): string | null {
@@ -147,9 +147,11 @@ export const useDesktopWindowStore = create<DesktopWindowState>()(
 
     closeWindow: (agentId) => {
       set((s) => {
-        const { [agentId]: _, ...rest } = s.windows;
-        persistWindows(rest);
-        return { windows: rest };
+        if (!s.windows[agentId]) return s;
+        const next = { ...s.windows };
+        delete next[agentId];
+        persistWindows(next);
+        return { windows: next };
       });
     },
 

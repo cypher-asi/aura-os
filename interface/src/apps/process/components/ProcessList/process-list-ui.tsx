@@ -4,8 +4,8 @@ import {
   useState,
   type RefObject,
 } from "react";
-import { ButtonPlus } from "@cypher-asi/zui";
 import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
+import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import type { CtxMenuState, DeleteProjectTarget, RenameTargetExt } from "./process-list-types";
 
 function useDismissOnOutsideClick(
@@ -94,12 +94,11 @@ export function useProcessSidebarAction(
   useEffect(() => {
     setAction(
       "process",
-      <ButtonPlus
+      <ProjectsPlusButton
         onClick={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
           setAddMenuAnchor({ x: rect.left, y: rect.bottom + 4 });
         }}
-        size="sm"
         title="New Process"
       />,
     );

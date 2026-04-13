@@ -61,9 +61,9 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
       style={{
         width: "100%",
         height: "100%",
-        border: selected ? "1px solid rgba(14, 165, 233, 0.6)" : "1px solid rgba(148, 163, 184, 0.5)",
-        background: "rgba(14, 165, 233, 0.08)",
-        boxShadow: selected ? "0 0 6px rgba(14, 165, 233, 0.25)" : "none",
+        border: selected ? "1px solid rgba(255, 255, 255, 0.8)" : "1px solid rgba(255, 255, 255, 0.45)",
+        background: "rgba(255, 255, 255, 0.04)",
+        boxShadow: selected ? "0 0 6px rgba(255, 255, 255, 0.16)" : "none",
         pointerEvents: "all",
         position: "relative",
       }}
@@ -89,7 +89,7 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
           top: 8,
           padding: "4px 8px",
           background: "rgba(10, 15, 25, 0.72)",
-          border: "1px solid rgba(148, 163, 184, 0.4)",
+          border: "none",
           color: "var(--color-text, #e5e7eb)",
           maxWidth: "calc(100% - 16px)",
         }}

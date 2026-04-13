@@ -1,8 +1,9 @@
+import type { MouseEventHandler } from "react";
 import { Plus } from "lucide-react";
 import styles from "./ProjectsPlusButton.module.css";
 
 export interface ProjectsPlusButtonProps {
-  onClick: () => void;
+  onClick: MouseEventHandler<HTMLButtonElement>;
   title: string;
   disabled?: boolean;
   className?: string;

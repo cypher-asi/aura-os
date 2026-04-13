@@ -151,8 +151,12 @@
   color: var(--color-text-secondary);
   border-radius: var(--radius-md);
   opacity: 0.6;
-  transition: color var(--transition-fast), opacity var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    opacity var(--transition-fast),
+    transform 140ms ease;
   touch-action: none;
+  user-select: none;
 }
 
 .taskbarBtn:not(:disabled)[aria-pressed="true"],
@@ -165,4 +169,13 @@
 .taskbarBtn:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+}
+
+.taskbarDragOverlay {
+  position: fixed;
+  z-index: 2000;
+  pointer-events: none;
+  opacity: 1;
+  color: #ffffff;
+  transition: none;
 }

@@ -85,6 +85,7 @@ export function useChatPanelState({
     scrollToTop,
     holdPosition,
     isReady,
+    isAutoFollowing,
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
     contentReady: true,
@@ -291,6 +292,7 @@ export function useChatPanelState({
     isMobileLayout,
     handleScroll,
     isReady,
+    isAutoFollowing,
     isStreaming,
     queue,
     messages,

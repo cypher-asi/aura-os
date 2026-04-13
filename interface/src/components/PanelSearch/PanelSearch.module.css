@@ -17,6 +17,7 @@
 
 .root input::placeholder {
   color: var(--color-text-muted) !important;
+  font-size: 12px !important;
   line-height: 1 !important;
 }
 

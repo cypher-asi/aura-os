@@ -11,8 +11,11 @@ import { useElapsedTime, formatDuration, EMPTY_RUNS, EMPTY_NODES } from "./proce
 import { ProcessEventOutput } from "../ProcessEventOutput";
 import { prettyPrintIfJson } from "../NodeOutputTab/node-output-utils";
 
+const SUCCESS_COLOR = "var(--color-success, #4aeaa8)";
+const SUCCESS_BACKGROUND = "color-mix(in srgb, var(--color-success, #4aeaa8) 15%, transparent)";
+
 const EVENT_STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
-  completed: { bg: "rgba(16,185,129,0.15)", fg: "#10b981" },
+  completed: { bg: SUCCESS_BACKGROUND, fg: SUCCESS_COLOR },
   failed: { bg: "rgba(239,68,68,0.15)", fg: "#ef4444" },
   skipped: { bg: "rgba(107,114,128,0.15)", fg: "#6b7280" },
   running: { bg: "rgba(59,130,246,0.15)", fg: "#3b82f6" },

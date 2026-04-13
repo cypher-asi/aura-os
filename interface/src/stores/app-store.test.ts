@@ -63,6 +63,13 @@ describe("app-store", () => {
       expect(ordered.map((app) => app.id)).toEqual(["feed", "agents", "projects"]);
     });
 
+    it("normalizes and persists a provided taskbar order", () => {
+      useAppStore.getState().saveTaskbarAppOrder(["feed", "agents", "feed", "unknown"]);
+
+      expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects"]);
+      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects"]);
+    });
+
     it("persists reordered taskbar apps", () => {
       useAppStore.getState().reorderTaskbarApps("feed", "agents");
 

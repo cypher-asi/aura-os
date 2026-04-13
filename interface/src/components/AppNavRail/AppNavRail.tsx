@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent, type ReactNode, type ButtonHTMLAttributes } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type ButtonHTMLAttributes,
+} from "react";
+import { createPortal, flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import type { AuraApp } from "../../apps/types";
@@ -83,12 +94,97 @@ export function TaskbarIconButton({
 }
 
 type AppNavItem = Pick<AuraApp, "id" | "label" | "basePath" | "icon" | "onPrefetch">;
+type TaskbarButtonRect = {
+  id: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  centerX: number;
+};
+
+type TaskbarDragState = {
+  activeId: string;
+  activeVisibleIndex: number;
+  buttonRects: TaskbarButtonRect[];
+  overlayRect: { left: number; top: number; width: number; height: number };
+  pointerDeltaX: number;
+  targetVisibleIndex: number;
+  visibleIds: string[];
+};
+
+function getTargetVisibleIndex(
+  buttonRects: TaskbarButtonRect[],
+  activeId: string,
+  draggedCenterX: number,
+): number {
+  return buttonRects.reduce((count, rect) => {
+    if (rect.id === activeId) return count;
+    return count + (draggedCenterX > rect.centerX ? 1 : 0);
+  }, 0);
+}
+
+function moveVisibleTaskbarAppOrder(
+  fullOrder: string[],
+  visibleIds: string[],
+  activeId: string,
+  targetVisibleIndex: number,
+): string[] {
+  const withoutActive = fullOrder.filter((id) => id !== activeId);
+  const visibleWithoutActive = visibleIds.filter((id) => id !== activeId);
+  const beforeId = visibleWithoutActive[targetVisibleIndex] ?? null;
+
+  if (!beforeId) return [...withoutActive, activeId];
+
+  const insertIndex = withoutActive.indexOf(beforeId);
+  if (insertIndex === -1) return fullOrder;
+
+  return [
+    ...withoutActive.slice(0, insertIndex),
+    activeId,
+    ...withoutActive.slice(insertIndex),
+  ];
+}
+
+function getTaskbarDragButtonStyle(appId: string, dragState: TaskbarDragState | null): CSSProperties | undefined {
+  if (!dragState) return undefined;
+
+  const currentIndex = dragState.buttonRects.findIndex((rect) => rect.id === appId);
+  if (currentIndex === -1) return undefined;
+
+  if (appId === dragState.activeId) {
+    return { opacity: 0, pointerEvents: "none" };
+  }
+
+  if (
+    dragState.targetVisibleIndex > dragState.activeVisibleIndex &&
+    currentIndex > dragState.activeVisibleIndex &&
+    currentIndex <= dragState.targetVisibleIndex
+  ) {
+    const currentRect = dragState.buttonRects[currentIndex];
+    const previousRect = dragState.buttonRects[currentIndex - 1];
+    return { transform: `translateX(${previousRect.left - currentRect.left}px)` };
+  }
+
+  if (
+    dragState.targetVisibleIndex < dragState.activeVisibleIndex &&
+    currentIndex >= dragState.targetVisibleIndex &&
+    currentIndex < dragState.activeVisibleIndex
+  ) {
+    const currentRect = dragState.buttonRects[currentIndex];
+    const nextRect = dragState.buttonRects[currentIndex + 1];
+    return { transform: `translateX(${nextRect.left - currentRect.left}px)` };
+  }
+
+  return undefined;
+}
 
 interface SortableTaskbarAppButtonProps {
   app: AppNavItem;
   selected: boolean;
   onClick: () => void;
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, appId: string) => void;
+  style?: CSSProperties;
 }
 
 function SortableTaskbarAppButton({
@@ -96,6 +192,7 @@ function SortableTaskbarAppButton({
   selected,
   onClick,
   onPointerDown,
+  style,
 }: SortableTaskbarAppButtonProps) {
   return (
     <button
@@ -105,6 +202,7 @@ function SortableTaskbarAppButton({
       data-taskbar-app-id={app.id}
       title={app.label}
       aria-label={app.label}
+      style={style}
       onClick={onClick}
       onPointerDown={(event) => onPointerDown(event, app.id)}
       onMouseEnter={app.onPrefetch}
@@ -133,7 +231,7 @@ export function AppNavRail({
   const apps = useAppStore((s) => s.apps);
   const activeApp = useAppStore((s) => s.activeApp);
   const taskbarAppOrder = useAppStore((s) => s.taskbarAppOrder);
-  const reorderTaskbarApps = useAppStore((s) => s.reorderTaskbarApps);
+  const saveTaskbarAppOrder = useAppStore((s) => s.saveTaskbarAppOrder);
   const navigate = useNavigate();
   const includeSet = includeIds ? new Set(includeIds) : null;
   const excludeSet = new Set(excludeIds);
@@ -149,6 +247,8 @@ export function AppNavRail({
   });
   const isRail = layout === "rail";
   const isBar = layout === "bar";
+  const [dragState, setDragState] = useState<TaskbarDragState | null>(null);
+  const [suppressTaskbarTransitions, setSuppressTaskbarTransitions] = useState(false);
   const handleAppClick = useCallback(
     (app: { id: string; basePath: string }) => navigate(resolveAppPath(app)),
     [navigate],
@@ -156,13 +256,23 @@ export function AppNavRail({
   const canReorder = layout === "taskbar" && allowReorder && primaryApps.length > 1;
   const suppressClickRef = useRef<string | null>(null);
   const dragCleanupRef = useRef<(() => void) | null>(null);
+  const transitionResetFrameRef = useRef<number | null>(null);
 
   useEffect(
     () => () => {
+      if (transitionResetFrameRef.current !== null) {
+        cancelAnimationFrame(transitionResetFrameRef.current);
+      }
       dragCleanupRef.current?.();
     },
     [],
   );
+  useEffect(() => {
+    if (!canReorder && dragState) {
+      dragCleanupRef.current?.();
+      setDragState(null);
+    }
+  }, [canReorder, dragState]);
   const handleTaskbarAppClick = useCallback(
     (app: { id: string; basePath: string }) => {
       if (suppressClickRef.current === app.id) {
@@ -174,29 +284,62 @@ export function AppNavRail({
     },
     [handleAppClick],
   );
+  const suppressDropTransition = useCallback(() => {
+    if (transitionResetFrameRef.current !== null) {
+      cancelAnimationFrame(transitionResetFrameRef.current);
+    }
+    setSuppressTaskbarTransitions(true);
+    transitionResetFrameRef.current = requestAnimationFrame(() => {
+      transitionResetFrameRef.current = requestAnimationFrame(() => {
+        setSuppressTaskbarTransitions(false);
+        transitionResetFrameRef.current = null;
+      });
+    });
+  }, []);
   const handleTaskbarPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, appId: string) => {
       if (!canReorder || event.button !== 0) return;
 
       suppressClickRef.current = null;
       dragCleanupRef.current?.();
+      setDragState(null);
 
       const target = event.currentTarget;
       const pointerId = event.pointerId;
       const startX = event.clientX;
-      const startY = event.clientY;
+      const group = target.parentElement;
+      const buttons = group
+        ? Array.from(group.querySelectorAll<HTMLButtonElement>("[data-taskbar-app-id]"))
+        : [];
+      const buttonRects = buttons
+        .map((button) => {
+          const rect = button.getBoundingClientRect();
+          const id = button.dataset.taskbarAppId;
+          if (!id) return null;
+          return {
+            id,
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            centerX: rect.left + rect.width / 2,
+          } satisfies TaskbarButtonRect;
+        })
+        .filter((rect): rect is TaskbarButtonRect => rect !== null);
+      const activeVisibleIndex = buttonRects.findIndex((rect) => rect.id === appId);
+      const activeRect = buttonRects[activeVisibleIndex];
       let dragging = false;
-      let lastOverId: string | null = null;
+      let latestTargetVisibleIndex = activeVisibleIndex;
+      let pointerCaptured = false;
 
-      if (typeof target.setPointerCapture === "function") {
-        target.setPointerCapture(pointerId);
-      }
+      if (!activeRect || activeVisibleIndex === -1) return;
 
       const cleanup = () => {
         window.removeEventListener("pointermove", handlePointerMove);
         window.removeEventListener("pointerup", handlePointerEnd);
         window.removeEventListener("pointercancel", handlePointerEnd);
         if (
+          pointerCaptured &&
           typeof target.releasePointerCapture === "function" &&
           typeof target.hasPointerCapture === "function" &&
           target.hasPointerCapture(pointerId)
@@ -209,32 +352,62 @@ export function AppNavRail({
       const handlePointerMove = (moveEvent: PointerEvent) => {
         if (moveEvent.pointerId !== pointerId) return;
 
+        const pointerDeltaX = moveEvent.clientX - startX;
+
         if (!dragging) {
-          const distance = Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY);
-          if (distance < 6) return;
+          if (Math.abs(pointerDeltaX) < 6) return;
           dragging = true;
+          if (typeof target.setPointerCapture === "function") {
+            target.setPointerCapture(pointerId);
+            pointerCaptured = true;
+          }
         }
 
         moveEvent.preventDefault();
-
-        const overElement = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-        const overButton =
-          overElement instanceof HTMLElement
-            ? overElement.closest<HTMLElement>("[data-taskbar-app-id]")
-            : null;
-        const overId = overButton?.dataset.taskbarAppId;
-
-        if (!overId || overId === appId || overId === lastOverId) return;
-
-        lastOverId = overId;
-        reorderTaskbarApps(appId, overId);
+        latestTargetVisibleIndex = getTargetVisibleIndex(
+          buttonRects,
+          appId,
+          activeRect.centerX + pointerDeltaX,
+        );
+        setDragState({
+          activeId: appId,
+          activeVisibleIndex,
+          buttonRects,
+          overlayRect: {
+            left: activeRect.left,
+            top: activeRect.top,
+            width: activeRect.width,
+            height: activeRect.height,
+          },
+          pointerDeltaX,
+          targetVisibleIndex: latestTargetVisibleIndex,
+          visibleIds: buttonRects.map((rect) => rect.id),
+        });
       };
 
       const handlePointerEnd = (endEvent: PointerEvent) => {
         if (endEvent.pointerId !== pointerId) return;
 
         cleanup();
-        if (dragging) suppressClickRef.current = appId;
+        if (dragging) {
+          const nextOrder = moveVisibleTaskbarAppOrder(
+            taskbarAppOrder,
+            buttonRects.map((rect) => rect.id),
+            appId,
+            latestTargetVisibleIndex,
+          );
+          suppressClickRef.current = appId;
+          flushSync(() => {
+            suppressDropTransition();
+            if (nextOrder.join("|") !== taskbarAppOrder.join("|")) {
+              saveTaskbarAppOrder(nextOrder);
+            }
+            setDragState(null);
+          });
+          return;
+        }
+
+        setDragState(null);
       };
 
       dragCleanupRef.current = cleanup;
@@ -242,8 +415,22 @@ export function AppNavRail({
       window.addEventListener("pointerup", handlePointerEnd);
       window.addEventListener("pointercancel", handlePointerEnd);
     },
-    [canReorder, reorderTaskbarApps],
+    [canReorder, saveTaskbarAppOrder, suppressDropTransition, taskbarAppOrder],
   );
+  const primaryAppsById = useMemo<Map<string, AppNavItem>>(
+    () => new Map(primaryApps.map((app) => [app.id, app])),
+    [primaryApps],
+  );
+  const renderTaskbarApps = useMemo<AppNavItem[]>(() => {
+    if (!dragState) return primaryApps;
+
+    const nextApps: AppNavItem[] = [];
+    for (const id of dragState.visibleIds) {
+      const app = primaryAppsById.get(id);
+      if (app) nextApps.push(app);
+    }
+    return nextApps;
+  }, [dragState, primaryApps, primaryAppsById]);
 
   return (
     <nav
@@ -290,13 +477,17 @@ export function AppNavRail({
         </div>
       ) : canReorder ? (
         <div className={styles.taskbarGroup}>
-          {primaryApps.map((app) => (
+          {renderTaskbarApps.map((app) => (
             <SortableTaskbarAppButton
               key={app.id}
               app={app}
               selected={activeApp.id === app.id}
               onClick={() => handleTaskbarAppClick(app)}
               onPointerDown={handleTaskbarPointerDown}
+              style={{
+                ...getTaskbarDragButtonStyle(app.id, dragState),
+                ...(suppressTaskbarTransitions ? { transition: "none" } : null),
+              }}
             />
           ))}
         </div>
@@ -316,6 +507,30 @@ export function AppNavRail({
           ))}
         </div>
       )}
+      {dragState && primaryAppsById.get(dragState.activeId) && typeof document !== "undefined"
+        ? createPortal(
+            <button
+              type="button"
+              className={`${styles.taskbarBtn} ${styles.taskbarDragOverlay}`}
+              data-selected={activeApp.id === dragState.activeId}
+              title={primaryAppsById.get(dragState.activeId)?.label}
+              aria-label={primaryAppsById.get(dragState.activeId)?.label}
+              style={{
+                left: dragState.overlayRect.left + dragState.pointerDeltaX,
+                top: dragState.overlayRect.top,
+                width: dragState.overlayRect.width,
+                height: dragState.overlayRect.height,
+              }}
+            >
+              {(() => {
+                const activeDragApp = primaryAppsById.get(dragState.activeId);
+                if (!activeDragApp) return null;
+                return <activeDragApp.icon size={TASKBAR_ICON_SIZE} />;
+              })()}
+            </button>,
+            document.body,
+          )
+        : null}
     </nav>
   );
 }

@@ -10,7 +10,7 @@ interface PanelSearchProps {
   action?: ReactNode;
 }
 
-export function PanelSearch({ placeholder = "", value, onChange, action }: PanelSearchProps) {
+export function PanelSearch({ placeholder = "Search", value, onChange, action }: PanelSearchProps) {
   return (
     <div className={styles.root}>
       <Search size={14} className={styles.icon} />

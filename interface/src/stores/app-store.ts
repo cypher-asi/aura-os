@@ -7,6 +7,7 @@ interface AppState {
   apps: AuraApp[];
   activeApp: AuraApp;
   taskbarAppOrder: string[];
+  saveTaskbarAppOrder: (nextOrder: string[]) => void;
   reorderTaskbarApps: (activeId: string, overId: string) => void;
 }
 
@@ -54,6 +55,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   apps: registeredApps,
   activeApp: getInitialActiveApp(),
   taskbarAppOrder: getInitialTaskbarAppOrder(),
+  saveTaskbarAppOrder: (nextOrder: string[]) => {
+    const normalizedOrder = normalizeTaskbarAppOrder(get().apps, nextOrder);
+    setTaskbarAppOrder(normalizedOrder);
+    set({ taskbarAppOrder: normalizedOrder });
+  },
   reorderTaskbarApps: (activeId: string, overId: string) => {
     if (activeId === overId) return;
 
@@ -65,8 +71,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     if (fromIndex === -1 || toIndex === -1) return;
 
     const nextOrder = moveItem(currentOrder, fromIndex, toIndex);
-    setTaskbarAppOrder(nextOrder);
-    set({ taskbarAppOrder: nextOrder });
+    state.saveTaskbarAppOrder(nextOrder);
   },
 }));
 
