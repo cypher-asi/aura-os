@@ -25,44 +25,33 @@ fn build_http_client() -> Client {
 /// HTTP client for the aura-integrations microservice.
 ///
 /// Public CRUD methods forward the user's JWT as `Authorization: Bearer`.
-/// Internal methods (secret retrieval) use `X-Internal-Token`.
+/// Internal methods use `X-Internal-Token` only when that token is configured.
 #[derive(Clone)]
 pub struct IntegrationsClient {
     http: Client,
     base_url: String,
-    internal_token: String,
+    internal_token: Option<String>,
 }
 
 impl IntegrationsClient {
     /// Create from env vars.
     ///
-    /// `aura-integrations` is the canonical integration backend when both
-    /// `AURA_INTEGRATIONS_URL` and `AURA_INTEGRATIONS_INTERNAL_TOKEN` are set.
-    /// Otherwise Aura OS remains in compatibility-only local fallback mode.
+    /// `AURA_INTEGRATIONS_URL` enables the canonical hosted integrations backend.
+    /// `AURA_INTEGRATIONS_INTERNAL_TOKEN` is optional and only used for legacy
+    /// service-to-service paths that still call the internal API.
     pub fn from_env() -> Option<Self> {
         let base_url = env::var("AURA_INTEGRATIONS_URL")
             .ok()
-            .filter(|s| !s.is_empty());
+            .filter(|s| !s.is_empty())?;
         let internal_token = env::var("AURA_INTEGRATIONS_INTERNAL_TOKEN")
             .ok()
             .filter(|s| !s.is_empty());
 
-        let (base_url, internal_token) = match (base_url, internal_token) {
-            (Some(base_url), Some(internal_token)) => (base_url, internal_token),
-            (Some(_), None) => {
-                warn!(
-                    "AURA_INTEGRATIONS_URL is set without AURA_INTEGRATIONS_INTERNAL_TOKEN; using compatibility-only local integration storage"
-                );
-                return None;
-            }
-            (None, Some(_)) => {
-                warn!(
-                    "AURA_INTEGRATIONS_INTERNAL_TOKEN is set without AURA_INTEGRATIONS_URL; using compatibility-only local integration storage"
-                );
-                return None;
-            }
-            (None, None) => return None,
-        };
+        if internal_token.is_none() {
+            warn!(
+                "AURA_INTEGRATIONS_URL is set without AURA_INTEGRATIONS_INTERNAL_TOKEN; using JWT-backed public integrations routes only"
+            );
+        }
 
         let base_url = base_url.trim_end_matches('/').to_string();
         info!(%base_url, "aura-integrations client configured");
@@ -79,7 +68,7 @@ impl IntegrationsClient {
         Self {
             http: build_http_client(),
             base_url: base_url.trim_end_matches('/').to_string(),
-            internal_token: internal_token.to_string(),
+            internal_token: Some(internal_token.to_string()),
         }
     }
 
@@ -147,6 +136,33 @@ impl IntegrationsClient {
             self.base_url, org_id, integration_id
         );
         self.delete_authed(&url, jwt).await
+    }
+
+    pub async fn get_integration(
+        &self,
+        org_id: &OrgId,
+        integration_id: &str,
+        jwt: &str,
+    ) -> Result<OrgIntegration, IntegrationsError> {
+        let url = format!(
+            "{}/api/orgs/{}/integrations/{}",
+            self.base_url, org_id, integration_id
+        );
+        self.get_authed(&url, jwt).await
+    }
+
+    pub async fn get_integration_secret_authed(
+        &self,
+        org_id: &OrgId,
+        integration_id: &str,
+        jwt: &str,
+    ) -> Result<Option<String>, IntegrationsError> {
+        let url = format!(
+            "{}/api/orgs/{}/integrations/{}/secret",
+            self.base_url, org_id, integration_id
+        );
+        let resp: Value = self.get_authed(&url, jwt).await?;
+        Ok(resp.get("secret").and_then(Value::as_str).map(String::from))
     }
 
     // ── Internal API (X-Internal-Token) ──
@@ -299,6 +315,9 @@ impl IntegrationsClient {
         &self,
         url: &str,
     ) -> Result<T, IntegrationsError> {
+        let Some(internal_token) = self.internal_token.as_deref() else {
+            return Err(IntegrationsError::NotConfigured);
+        };
         let mut last_err = None;
         for attempt in 0..=TRANSIENT_RETRY_COUNT {
             if attempt > 0 {
@@ -307,7 +326,7 @@ impl IntegrationsClient {
             let resp = self
                 .http
                 .get(url)
-                .header("x-internal-token", &self.internal_token)
+                .header("x-internal-token", internal_token)
                 .send()
                 .await?;
             match self.handle_response(resp).await {

@@ -17,7 +17,7 @@ use super::projects_helpers::resolve_agent_instance_workspace_path;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
 use crate::persistence;
 use crate::state::{
@@ -1297,8 +1297,12 @@ pub(crate) async fn start_loop(
     };
     let installed_integrations = match project.as_ref() {
         Some(project) => {
-            let integrations =
-                installed_workspace_integrations_for_org(&state, &project.org_id).await;
+            let integrations = installed_workspace_integrations_for_org_with_token(
+                &state,
+                &project.org_id,
+                jwt.as_deref().unwrap_or_default(),
+            )
+            .await;
             (!integrations.is_empty()).then_some(integrations)
         }
         None => None,
@@ -1810,8 +1814,12 @@ pub(crate) async fn run_single_task(
     };
     let installed_integrations = match project.as_ref() {
         Some(project) => {
-            let integrations =
-                installed_workspace_integrations_for_org(&state, &project.org_id).await;
+            let integrations = installed_workspace_integrations_for_org_with_token(
+                &state,
+                &project.org_id,
+                jwt.as_deref().unwrap_or_default(),
+            )
+            .await;
             (!integrations.is_empty()).then_some(integrations)
         }
         None => None,

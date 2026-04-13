@@ -28,7 +28,7 @@ use aura_os_storage::StorageClient;
 use crate::dto::{ChatAttachmentDto, SendChatRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
@@ -1346,7 +1346,7 @@ pub(crate) async fn send_agent_event_stream(
         None
     };
 
-    let integration = resolve_integration(&state, &agent).await?;
+    let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
     let installed_tools = if let Some(org_id) = agent.org_id.as_ref() {
         let tools = installed_workspace_app_tools(&state, org_id, &jwt).await;
@@ -1355,7 +1355,8 @@ pub(crate) async fn send_agent_event_stream(
         None
     };
     let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
-        let integrations = installed_workspace_integrations_for_org(&state, org_id).await;
+        let integrations =
+            installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
         (!integrations.is_empty()).then_some(integrations)
     } else {
         None
@@ -1459,6 +1460,7 @@ pub(crate) async fn send_event_stream(
         instance.org_id,
         &instance.auth_source,
         instance.integration_id.as_deref(),
+        &jwt,
     )
     .await?;
     let model = body
@@ -1484,7 +1486,8 @@ pub(crate) async fn send_event_stream(
         None
     };
     let installed_integrations = if let Some(org_id) = instance.org_id.as_ref() {
-        let integrations = installed_workspace_integrations_for_org(&state, org_id).await;
+        let integrations =
+            installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
         (!integrations.is_empty()).then_some(integrations)
     } else {
         None
