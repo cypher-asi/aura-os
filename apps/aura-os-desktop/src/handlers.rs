@@ -124,11 +124,13 @@ pub(crate) async fn get_update_status(
     }))
 }
 
-pub(crate) async fn post_update_install() -> Json<serde_json::Value> {
-    match crate::updater::install_and_restart() {
+pub(crate) async fn post_update_install(
+    AxumState(state): AxumState<UpdateState>,
+) -> Json<serde_json::Value> {
+    match crate::updater::start_install(state) {
         Ok(()) => Json(serde_json::json!({ "ok": true })),
         Err(e) => {
-            warn!(error = %e, "install_and_restart failed");
+            warn!(error = %e, "start_install failed");
             Json(serde_json::json!({ "ok": false, "error": e }))
         }
     }
@@ -149,7 +151,17 @@ pub(crate) async fn post_update_channel(
         *ch = req.channel;
         old
     };
+    if let Err(error) = state.persist_channel(req.channel) {
+        let mut ch = state.channel.write().await;
+        *ch = old;
+        warn!(error = %error, channel = %req.channel, "failed to persist update channel");
+        return Json(serde_json::json!({
+            "ok": false,
+            "error": error,
+            "channel": old,
+        }));
+    }
     info!(from = %old, to = %req.channel, "update channel changed");
-    crate::updater::trigger_recheck(state);
+    crate::updater::trigger_recheck(state.clone());
     Json(serde_json::json!({ "ok": true, "channel": req.channel }))
 }

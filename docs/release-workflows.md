@@ -138,6 +138,30 @@ The release system answers a different question:
 - installer-level smoke verification for packaged desktop artifacts
 - clearer release dashboards or consolidated summaries across desktop and mobile
 
+## Local Update Smoke
+
+There is now a dedicated local script for exercising the packaged macOS updater
+path with a real signed `.app.tar.gz` bundle and the same per-channel manifest
+shape that `gh-pages` publishes:
+
+- [desktop-local-auto-update-smoke.mjs](/Users/shahrozkhan/Documents/zero/aura-os-desktop-release-flow/infra/scripts/release/desktop-local-auto-update-smoke.mjs)
+
+It is intended for validating the "can the packaged desktop app discover,
+download, and install the published update bundle?" question that the lighter CI
+smoke does not fully answer.
+
+Expected inputs:
+
+- an installed `.app` bundle for the older desktop version
+- a signed newer `.app.tar.gz` updater bundle
+- the matching `.sig` file for that updater bundle
+- the expected target version
+
+The script spins up a local manifest server, launches the packaged app with a
+local updater base URL override, triggers an immediate re-check through the
+desktop API, and waits for the bundle version on disk to change to the target
+version.
+
 ## Mobile Release Reporting
 
 Android and iOS workflows now emit lightweight release summaries and upload any
@@ -167,7 +191,10 @@ The desktop runtime now treats update checks as a background concern:
 
 - startup does not block on the update endpoint
 - the app polls for updates after launch on a background task
-- when a verified update is found, Aura downloads and installs it automatically
+- when a verified update is found, Aura marks it as available and waits for the
+  user to approve installation
+- the selected update channel is persisted locally so stable/nightly does not
+  reset on restart
 - the update manifests therefore need to point at updater-compatible payloads
   such as `.app.tar.gz`, `.AppImage`, and NSIS installers rather than only the
   user-facing installer formats
