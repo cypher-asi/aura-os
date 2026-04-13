@@ -29,6 +29,7 @@ use aura_os_store::RocksStore;
 use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
+use tracing::warn;
 
 use crate::error::ApiError;
 
@@ -84,6 +85,27 @@ pub struct CachedSession {
 
 /// Thread-safe in-memory cache keyed by JWT string.
 pub type ValidationCache = Arc<DashMap<String, CachedSession>>;
+
+pub(crate) fn persist_zero_auth_session(store: &RocksStore, session: &ZeroAuthSession) {
+    match serde_json::to_vec(session) {
+        Ok(bytes) => {
+            if let Err(error) = store.put_setting("zero_auth_session", &bytes) {
+                warn!(%error, "failed to persist zero auth session");
+            }
+        }
+        Err(error) => {
+            warn!(%error, "failed to serialize zero auth session");
+        }
+    }
+}
+
+pub(crate) fn clear_zero_auth_session(store: &RocksStore) {
+    if let Err(error) = store.delete_setting("zero_auth_session") {
+        if !matches!(error, aura_os_store::StoreError::NotFound(_)) {
+            warn!(%error, "failed to clear zero auth session");
+        }
+    }
+}
 
 /// Maximum age before a cached entry is considered expired and eligible for eviction.
 const CACHE_ENTRY_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(10 * 60);

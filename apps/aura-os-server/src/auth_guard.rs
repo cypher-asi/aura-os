@@ -11,7 +11,7 @@ use aura_os_auth::AuthError;
 use aura_os_core::ZeroAuthSession;
 
 use crate::error::ApiError;
-use crate::state::{AppState, AuthJwt, AuthSession, CachedSession};
+use crate::state::{persist_zero_auth_session, AppState, AuthJwt, AuthSession, CachedSession};
 
 const AUTH_REFRESH_TTL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 
@@ -138,6 +138,7 @@ pub(crate) async fn require_verified_session(
     let token = extract_request_token(&req)
         .ok_or_else(|| ApiError::unauthorized("missing authorization token"))?;
     let session = resolve_session_from_jwt(&state, &token).await?;
+    persist_zero_auth_session(&state.store, &session);
 
     enforce_zero_pro(&state, &session)?;
 
@@ -155,6 +156,7 @@ mod tests {
     use std::sync::Arc;
     use std::sync::OnceLock;
     use std::time::Instant;
+    use tower::ServiceExt;
 
     fn test_runtime() -> &'static tokio::runtime::Runtime {
         static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
@@ -294,6 +296,46 @@ mod tests {
         let cache = make_cache();
         let state = mock_app_state_with_cache(cache);
         assert!(get_cached_session(&state, "nonexistent").is_none());
+    }
+
+    #[tokio::test]
+    async fn require_verified_session_persists_session_for_store_backed_services() {
+        let cache = make_cache();
+        let state = mock_app_state_with_cache(cache);
+        let mut session = make_session(true, Utc::now());
+        session.access_token = "persist-jwt".into();
+        state.validation_cache.insert(
+            "persist-jwt".into(),
+            CachedSession {
+                session,
+                validated_at: Instant::now(),
+            },
+        );
+
+        let app = axum::Router::new()
+            .route(
+                "/probe",
+                axum::routing::get(|| async { StatusCode::NO_CONTENT }),
+            )
+            .layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                require_verified_session,
+            ))
+            .with_state(state.clone());
+
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/probe")
+                    .header("Authorization", "Bearer persist-jwt")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert_eq!(state.store.get_jwt().as_deref(), Some("persist-jwt"));
     }
 
     // --- Pro enforcement tests ---
