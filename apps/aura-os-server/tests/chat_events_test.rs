@@ -4,11 +4,11 @@ use axum::http::StatusCode;
 use tower::ServiceExt;
 
 use aura_os_core::*;
+use aura_os_projects::CreateProjectInput;
 use aura_os_storage::{
     CreateProjectAgentRequest, CreateSessionEventRequest, CreateSessionRequest, StorageClient,
     StorageSessionEvent,
 };
-use aura_os_projects::CreateProjectInput;
 
 use common::*;
 
@@ -398,7 +398,11 @@ async fn standalone_agent_events_support_recent_window() {
         &format!("/api/agents/{agent_id}/events?limit=2&offset=1"),
         None,
     );
-    let resp = app.clone().oneshot(req).await.expect("request should succeed");
+    let resp = app
+        .clone()
+        .oneshot(req)
+        .await
+        .expect("request should succeed");
 
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;

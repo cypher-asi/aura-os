@@ -4,5 +4,5 @@ mod cost;
 mod payload;
 mod run;
 
-pub use run::ProcessExecutor;
 pub(crate) use run::conv_process;
+pub use run::ProcessExecutor;

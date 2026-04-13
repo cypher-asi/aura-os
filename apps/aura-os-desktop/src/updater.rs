@@ -121,22 +121,38 @@ fn load_persisted_channel(settings_path: &Path) -> Result<UpdateChannel, String>
     if !settings_path.exists() {
         return Ok(UpdateChannel::Stable);
     }
-    let bytes = fs::read(settings_path)
-        .map_err(|e| format!("failed to read updater settings {}: {e}", settings_path.display()))?;
-    let settings: PersistedUpdaterSettings = serde_json::from_slice(&bytes)
-        .map_err(|e| format!("failed to parse updater settings {}: {e}", settings_path.display()))?;
+    let bytes = fs::read(settings_path).map_err(|e| {
+        format!(
+            "failed to read updater settings {}: {e}",
+            settings_path.display()
+        )
+    })?;
+    let settings: PersistedUpdaterSettings = serde_json::from_slice(&bytes).map_err(|e| {
+        format!(
+            "failed to parse updater settings {}: {e}",
+            settings_path.display()
+        )
+    })?;
     Ok(settings.channel)
 }
 
 fn persist_channel(settings_path: &Path, channel: UpdateChannel) -> Result<(), String> {
     if let Some(parent) = settings_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("failed to create updater settings directory {}: {e}", parent.display()))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            format!(
+                "failed to create updater settings directory {}: {e}",
+                parent.display()
+            )
+        })?;
     }
     let payload = serde_json::to_vec_pretty(&PersistedUpdaterSettings { channel })
         .map_err(|e| format!("failed to encode updater settings: {e}"))?;
-    fs::write(settings_path, payload)
-        .map_err(|e| format!("failed to write updater settings {}: {e}", settings_path.display()))
+    fs::write(settings_path, payload).map_err(|e| {
+        format!(
+            "failed to write updater settings {}: {e}",
+            settings_path.display()
+        )
+    })
 }
 
 pub(crate) fn update_base_url() -> String {
