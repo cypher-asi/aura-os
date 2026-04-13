@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-os-integrations = { path = "../aura-os-integrations" }
-aura-os-store = { path = "../aura-os-store" }
 aura-os-link = { path = "../aura-os-link" }
 aura-os-agents = { path = "../aura-os-agents" }
 aura-os-orgs = { path = "../aura-os-orgs" }

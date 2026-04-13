@@ -1,114 +1,124 @@
-use std::collections::HashSet;
-use std::path::Path;
-use std::sync::Arc;
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 
-use rocksdb::{ColumnFamilyDescriptor, DBWithThreadMode, MultiThreaded, Options, WriteBatch};
+use aura_os_core::ZeroAuthSession;
 use serde::de::DeserializeOwned;
 
 use crate::batch::BatchOp;
 use crate::error::{StoreError, StoreResult};
 
-/// Local persistence backs settings and orchestration state.
+/// Column families used by the store.
 pub(crate) const CF_NAMES: &[&str] = &["settings", "super_agent_orchestrations"];
 
-pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;
+type CfMap = BTreeMap<String, Vec<u8>>;
 
 pub struct RocksStore {
-    pub(crate) db: Arc<RocksDB>,
+    data: RwLock<BTreeMap<String, CfMap>>,
+    pub(crate) session_cache: RwLock<Option<ZeroAuthSession>>,
+    dir: PathBuf,
 }
 
 impl RocksStore {
     pub fn open(path: &Path) -> StoreResult<Self> {
-        let mut opts = Options::default();
-        opts.create_if_missing(true);
-        opts.create_missing_column_families(true);
+        fs::create_dir_all(path)?;
 
-        let desired: HashSet<&str> = CF_NAMES.iter().copied().collect();
-
-        // Discover CFs already on disk so we can open them (RocksDB requires it)
-        // and then drop any that are no longer in our schema.
-        let on_disk: Vec<String> = RocksDB::list_cf(&opts, path).unwrap_or_default();
-        let stale: Vec<String> = on_disk
-            .iter()
-            .filter(|name| name.as_str() != "default" && !desired.contains(name.as_str()))
-            .cloned()
-            .collect();
-
-        let mut all_names: HashSet<&str> = desired;
-        for name in &on_disk {
-            all_names.insert(name.as_str());
+        let mut data = BTreeMap::new();
+        for &cf in CF_NAMES {
+            let loaded = Self::load_cf(path, cf)?;
+            data.insert(cf.to_string(), loaded);
         }
 
-        let cf_descriptors: Vec<ColumnFamilyDescriptor> = all_names
+        Ok(Self {
+            data: RwLock::new(data),
+            session_cache: RwLock::new(None),
+            dir: path.to_path_buf(),
+        })
+    }
+
+    fn cf_path(dir: &Path, cf_name: &str) -> PathBuf {
+        dir.join(format!("{cf_name}.json"))
+    }
+
+    fn load_cf(dir: &Path, cf_name: &str) -> StoreResult<CfMap> {
+        let path = Self::cf_path(dir, cf_name);
+        if !path.exists() {
+            return Ok(BTreeMap::new());
+        }
+        let raw = fs::read_to_string(&path)?;
+        let encoded: BTreeMap<String, String> = serde_json::from_str(&raw)?;
+        let mut map = BTreeMap::new();
+        for (k, v) in encoded {
+            use base64::Engine;
+            match base64::engine::general_purpose::STANDARD.decode(&v) {
+                Ok(bytes) => {
+                    map.insert(k, bytes);
+                }
+                Err(e) => {
+                    tracing::warn!(key = %k, error = %e, "Skipping entry with invalid base64");
+                }
+            }
+        }
+        Ok(map)
+    }
+
+    fn persist_cf(dir: &Path, cf_name: &str, map: &CfMap) -> StoreResult<()> {
+        use base64::Engine;
+        let encoded: BTreeMap<&str, String> = map
             .iter()
-            .filter(|name| **name != "default")
-            .map(|name| {
-                let mut cf_opts = Options::default();
-                cf_opts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(36));
-                ColumnFamilyDescriptor::new(*name, cf_opts)
+            .map(|(k, v)| {
+                (
+                    k.as_str(),
+                    base64::engine::general_purpose::STANDARD.encode(v),
+                )
             })
             .collect();
-
-        let db = RocksDB::open_cf_descriptors(&opts, path, cf_descriptors)?;
-
-        for name in &stale {
-            tracing::info!(cf = %name, "dropping stale column family");
-            db.drop_cf(name)?;
-        }
-
-        Ok(Self { db: Arc::new(db) })
-    }
-
-    pub(crate) fn cf_handle(&self, name: &str) -> StoreResult<Arc<rocksdb::BoundColumnFamily<'_>>> {
-        self.db
-            .cf_handle(name)
-            .ok_or_else(|| StoreError::NotFound(format!("column family '{name}'")))
-    }
-
-    #[allow(dead_code)] // kept for potential future settings scan
-    pub(crate) fn scan_cf<T: DeserializeOwned>(
-        &self,
-        cf: &impl rocksdb::AsColumnFamilyRef,
-        prefix: Option<&str>,
-    ) -> StoreResult<Vec<T>> {
-        let iter = match prefix {
-            Some(p) => self.db.prefix_iterator_cf(cf, p.as_bytes()),
-            None => {
-                let mut opts = rocksdb::ReadOptions::default();
-                opts.set_total_order_seek(true);
-                self.db
-                    .iterator_cf_opt(cf, opts, rocksdb::IteratorMode::Start)
-            }
-        };
-
-        let mut results = Vec::new();
-        for item in iter {
-            let (key, value) = item?;
-            if let Some(p) = prefix {
-                if !key.starts_with(p.as_bytes()) {
-                    break;
-                }
-            }
-            match serde_json::from_slice(&value) {
-                Ok(v) => results.push(v),
-                Err(e) => {
-                    let key_str = String::from_utf8_lossy(&key);
-                    tracing::warn!(key = %key_str, error = %e, "Skipping unreadable entry");
-                }
-            }
-        }
-        Ok(results)
-    }
-
-    pub fn put_cf_bytes(&self, cf_name: &str, key: &[u8], value: &[u8]) -> StoreResult<()> {
-        let cf = self.cf_handle(cf_name)?;
-        self.db.put_cf(&cf, key, value)?;
+        let json = serde_json::to_string_pretty(&encoded)?;
+        let path = Self::cf_path(dir, cf_name);
+        let tmp = path.with_extension("json.tmp");
+        fs::write(&tmp, json.as_bytes())?;
+        fs::rename(&tmp, &path)?;
         Ok(())
     }
 
+    pub(crate) fn with_cf<F, R>(&self, cf_name: &str, f: F) -> StoreResult<R>
+    where
+        F: FnOnce(&CfMap) -> StoreResult<R>,
+    {
+        let guard = self.data.read().expect("store lock poisoned");
+        let cf = guard
+            .get(cf_name)
+            .ok_or_else(|| StoreError::NotFound(format!("column family '{cf_name}'")))?;
+        f(cf)
+    }
+
+    pub(crate) fn with_cf_mut<F, R>(&self, cf_name: &str, f: F) -> StoreResult<R>
+    where
+        F: FnOnce(&mut CfMap) -> StoreResult<R>,
+    {
+        let mut guard = self.data.write().expect("store lock poisoned");
+        let cf = guard
+            .get_mut(cf_name)
+            .ok_or_else(|| StoreError::NotFound(format!("column family '{cf_name}'")))?;
+        let result = f(cf)?;
+        Self::persist_cf(&self.dir, cf_name, cf)?;
+        Ok(result)
+    }
+
+    pub fn put_cf_bytes(&self, cf_name: &str, key: &[u8], value: &[u8]) -> StoreResult<()> {
+        let key_str = String::from_utf8(key.to_vec())
+            .map_err(|e| StoreError::KeyEncoding(e.to_string()))?;
+        self.with_cf_mut(cf_name, |cf| {
+            cf.insert(key_str, value.to_vec());
+            Ok(())
+        })
+    }
+
     pub fn get_cf_bytes(&self, cf_name: &str, key: &[u8]) -> StoreResult<Option<Vec<u8>>> {
-        let cf = self.cf_handle(cf_name)?;
-        Ok(self.db.get_cf(&cf, key)?)
+        let key_str = String::from_utf8(key.to_vec())
+            .map_err(|e| StoreError::KeyEncoding(e.to_string()))?;
+        self.with_cf(cf_name, |cf| Ok(cf.get(&key_str).cloned()))
     }
 
     pub fn scan_cf_prefix<T: DeserializeOwned>(
@@ -116,55 +126,61 @@ impl RocksStore {
         cf_name: &str,
         prefix: &str,
     ) -> StoreResult<Vec<T>> {
-        let cf = self.cf_handle(cf_name)?;
-        let iter = self.db.prefix_iterator_cf(&cf, prefix.as_bytes());
-        let mut results = Vec::new();
-        for item in iter {
-            let (key, value) = item?;
-            if !key.starts_with(prefix.as_bytes()) {
-                break;
-            }
-            match serde_json::from_slice::<T>(&value) {
-                Ok(v) => results.push(v),
-                Err(e) => {
-                    let key_str = String::from_utf8_lossy(&key);
-                    tracing::warn!(key = %key_str, error = %e, "Skipping unreadable entry in prefix scan");
+        self.with_cf(cf_name, |cf| {
+            let mut results = Vec::new();
+            for (key, value) in cf.range(prefix.to_string()..) {
+                if !key.starts_with(prefix) {
+                    break;
+                }
+                match serde_json::from_slice::<T>(value) {
+                    Ok(v) => results.push(v),
+                    Err(e) => {
+                        tracing::warn!(key = %key, error = %e, "Skipping unreadable entry in prefix scan");
+                    }
                 }
             }
-        }
-        Ok(results)
+            Ok(results)
+        })
     }
 
     pub fn scan_cf_all<T: DeserializeOwned>(&self, cf_name: &str) -> StoreResult<Vec<T>> {
-        let cf = self.cf_handle(cf_name)?;
-        let mut opts = rocksdb::ReadOptions::default();
-        opts.set_total_order_seek(true);
-        let iter = self
-            .db
-            .iterator_cf_opt(&cf, opts, rocksdb::IteratorMode::Start);
-        let mut results = Vec::new();
-        for item in iter {
-            let (_key, value) = item?;
-            if let Ok(val) = serde_json::from_slice::<T>(&value) {
-                results.push(val);
+        self.with_cf(cf_name, |cf| {
+            let mut results = Vec::new();
+            for (_key, value) in cf.iter() {
+                if let Ok(val) = serde_json::from_slice::<T>(value) {
+                    results.push(val);
+                }
             }
-        }
-        Ok(results)
+            Ok(results)
+        })
     }
 
     pub fn write_batch(&self, ops: Vec<BatchOp>) -> StoreResult<()> {
-        let mut batch = WriteBatch::default();
+        let mut guard = self.data.write().expect("store lock poisoned");
+        let mut touched_cfs = std::collections::HashSet::new();
         for op in ops {
             match op {
                 BatchOp::Put { cf, key, value } => {
-                    batch.put_cf(&self.cf_handle(&cf)?, key.as_bytes(), &value);
+                    let map = guard
+                        .get_mut(&cf)
+                        .ok_or_else(|| StoreError::NotFound(format!("column family '{cf}'")))?;
+                    map.insert(key, value);
+                    touched_cfs.insert(cf);
                 }
                 BatchOp::Delete { cf, key } => {
-                    batch.delete_cf(&self.cf_handle(&cf)?, key.as_bytes());
+                    let map = guard
+                        .get_mut(&cf)
+                        .ok_or_else(|| StoreError::NotFound(format!("column family '{cf}'")))?;
+                    map.remove(&key);
+                    touched_cfs.insert(cf);
                 }
             }
         }
-        self.db.write(batch)?;
+        for cf_name in touched_cfs {
+            if let Some(cf) = guard.get(&cf_name) {
+                Self::persist_cf(&self.dir, &cf_name, cf)?;
+            }
+        }
         Ok(())
     }
 }

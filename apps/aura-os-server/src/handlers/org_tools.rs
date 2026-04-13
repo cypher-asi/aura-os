@@ -1403,28 +1403,15 @@ async fn resolve_mcp_server_integration(
 
     let secret = if let Some(client) = &state.integrations_client {
         match client.get_integration_secret(org_id, integration_id).await {
-            Ok(secret) => secret
-                .filter(|value| !value.trim().is_empty())
-                .or_else(|| {
-                    state
-                        .org_service
-                        .get_integration_secret(integration_id)
-                        .ok()
-                        .flatten()
-                        .filter(|value| !value.trim().is_empty())
-                }),
+            Ok(secret) => secret.filter(|value| !value.trim().is_empty()),
             Err(error) => {
                 warn!(
                     %org_id,
                     integration_id,
                     error = %error,
-                    "failed to load canonical aura-integrations MCP secret; falling back to compatibility-only local shadow"
+                    "failed to load canonical aura-integrations MCP secret"
                 );
-                state
-                    .org_service
-                    .get_integration_secret(integration_id)
-                    .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?
-                    .filter(|value| !value.trim().is_empty())
+                None
             }
         }
     } else {

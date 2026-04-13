@@ -51,7 +51,7 @@
 
 | Component | Status |
 |---|---|
-| **aura-code** — Desktop IDE (Rust/Axum + React, RocksDB). Internal LLM loop being swapped for aura-runtime. | Exists, being refactored |
+| **aura-code** — Desktop IDE (Rust/Axum + React, browser IndexedDB + lightweight local store). Internal LLM loop being swapped for aura-runtime. | Exists, being refactored |
 | **aura-runtime** — Agent execution engine (append-only record, tools, pluggable LLMs, policy kernel) | Exists |
 | **aura-swarm** — Cloud agent platform (Firecracker microVMs on K8s) | Exists, being wired in |
 | **zero-payments-server** — Credits + billing (Fastify/PostgreSQL/Stripe) | Production |
@@ -134,7 +134,7 @@ For **aura-swarm** (cloud agents): the key is injected as an env var into the mi
 | Project agents | aura-storage | Project-scoped agent assignments |
 | Repos, branches, commits, PRs | orbit | Git hosting, code review, GitHub mirror |
 
-### What Stays Local (lives in aura-code RocksDB)
+### What Stays Local
 
 | Data | Why |
 |---|---|
@@ -284,7 +284,7 @@ Execution:  aura-storage (specs, tasks, sessions, messages, project agents, logs
 Code:       orbit (repos, branches, commits, PRs, git clone/push)
 LLM:        aura-router (all LLM requests proxied) [when built]
 Billing:    zero-payments-server (credit balance, purchases)
-Local:      RocksDB (terminal, filesystem, settings)
+Local:      Browser IndexedDB + lightweight local runtime state
 ```
 
 **Web / Mobile (future clients)**

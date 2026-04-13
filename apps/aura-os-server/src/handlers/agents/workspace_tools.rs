@@ -553,7 +553,7 @@ async fn load_integration_secret(
                     %org_id,
                     integration_id = %integration.integration_id,
                     provider = %integration.provider,
-                    "canonical aura-integrations secret missing or empty; falling back to compatibility-only local shadow"
+                    "canonical aura-integrations secret missing or empty"
                 );
             }
             Err(error) => warn!(
@@ -561,9 +561,10 @@ async fn load_integration_secret(
                 integration_id = %integration.integration_id,
                 provider = %integration.provider,
                 error = %error,
-                "failed to load canonical aura-integrations secret; falling back to compatibility-only local shadow"
+                "failed to load canonical aura-integrations secret"
             ),
         }
+        return None;
     }
     state
         .org_service

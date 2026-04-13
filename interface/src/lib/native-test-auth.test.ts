@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getStoredSession = vi.fn();
+const hydrateStoredAuth = vi.fn();
 const setStoredAuth = vi.fn();
 const resolveApiUrl = vi.fn((path: string) => `http://127.0.0.1:3100${path}`);
 const isNativeRuntime = vi.fn();
 
 vi.mock("./auth-token", () => ({
   getStoredSession,
+  hydrateStoredAuth,
   setStoredAuth,
 }));
 
@@ -25,6 +27,8 @@ describe("bootstrapNativeTestAuth", () => {
     vi.stubEnv("VITE_NATIVE_TEST_ACCESS_TOKEN", "");
     vi.stubGlobal("fetch", vi.fn());
     getStoredSession.mockReset();
+    hydrateStoredAuth.mockReset();
+    hydrateStoredAuth.mockResolvedValue(null);
     setStoredAuth.mockReset();
     resolveApiUrl.mockClear();
     isNativeRuntime.mockReset();

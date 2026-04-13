@@ -16,7 +16,7 @@ Status fields use Rust enums with `serde(rename_all = "snake_case")` so the JSON
 
 ### Entity Structs
 
-Plain data containers with public fields, `Serialize + Deserialize`, and no methods beyond construction helpers. They map 1:1 to what gets stored in RocksDB and what gets sent over the HTTP API.
+Plain data containers with public fields, `Serialize + Deserialize`, and no methods beyond construction helpers. They map 1:1 to what gets stored in the current local/browser persistence layers and what gets sent over the HTTP API.
 
 ### Timestamps
 

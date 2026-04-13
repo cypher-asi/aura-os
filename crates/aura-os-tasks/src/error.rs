@@ -1,11 +1,8 @@
 use aura_os_core::TaskStatus;
 use aura_os_storage::StorageError;
-use aura_os_store::StoreError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TaskError {
-    #[error("store error: {0}")]
-    Store(#[from] StoreError),
     #[error("storage error: {0}")]
     Storage(#[from] StorageError),
     #[error("illegal transition from {current:?} to {target:?}")]

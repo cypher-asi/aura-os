@@ -46,6 +46,7 @@ const sessionWithZeroProError: AuthSession = {
 
 import { useAuthStore } from "./auth-store";
 import { ApiClientError } from "../api/client";
+import { clearStoredAuth } from "../lib/auth-token";
 
 function expectedUser(session: AuthSession): ZeroUser {
   return {
@@ -61,10 +62,11 @@ function expectedUser(session: AuthSession): ZeroUser {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   useAuthStore.setState({ user: null, isLoading: true });
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
+  await clearStoredAuth();
   vi.clearAllMocks();
 });
 

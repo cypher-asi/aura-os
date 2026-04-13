@@ -1,5 +1,5 @@
 # One-shot migration: link "Competitive Intel" process to "Competition" project.
-# Reads the JWT from the local RocksDB store, then calls the REST API.
+# Reads the JWT from the local Aura store, then calls the REST API.
 #
 # Usage: .\scripts\migrate-process-to-project.ps1
 #

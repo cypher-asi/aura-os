@@ -151,7 +151,7 @@ pub(crate) async fn require_verified_session(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aura_os_core::ZeroAuthSession;
+    use aura_os_core::{JwtProvider, ZeroAuthSession};
     use chrono::Utc;
     use std::sync::Arc;
     use std::sync::OnceLock;

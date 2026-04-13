@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
-aura-os-store = { path = "../aura-os-store" }
 aura-os-storage = { path = "../aura-os-storage" }
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
@@ -13,6 +12,7 @@ thiserror = "1"
 serde_json = "1"
 
 [dev-dependencies]
+aura-os-store = { path = "../aura-os-store" }
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
