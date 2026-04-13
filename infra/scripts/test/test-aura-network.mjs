@@ -317,9 +317,9 @@ async function run() {
     return { detail: `type=${res.json.profileType}` };
   });
 
-  await test("GET /api/profiles/:id/activity", async () => {
+  await test("GET /api/profiles/:id/posts", async () => {
     if (!state.myProfile?.id) return { skip: "no profile id" };
-    const res = await request("GET", `/api/profiles/${state.myProfile.id}/activity`);
+    const res = await request("GET", `/api/profiles/${state.myProfile.id}/posts`);
     assertStatus(res, 200);
     assert(Array.isArray(res.json), "Expected array of activity events");
     return { detail: `${res.json.length} events` };
@@ -620,9 +620,9 @@ async function run() {
     });
   }
 
-  state.comment = await test("POST /api/activity/:eventId/comments (add)", async () => {
+  state.comment = await test("POST /api/posts/:eventId/comments (add)", async () => {
     if (!state.activityEvent?.id) return { skip: "no activity event" };
-    const res = await request("POST", `/api/activity/${state.activityEvent.id}/comments`, {
+    const res = await request("POST", `/api/posts/${state.activityEvent.id}/comments`, {
       body: { content: `Integration test comment ${Date.now()}` },
     });
     assertStatus(res, 200, 201);
@@ -630,9 +630,9 @@ async function run() {
     return { value: res.json, detail: `commentId=${res.json.id}` };
   });
 
-  await test("GET /api/activity/:eventId/comments (list)", async () => {
+  await test("GET /api/posts/:eventId/comments (list)", async () => {
     if (!state.activityEvent?.id) return { skip: "no activity event" };
-    const res = await request("GET", `/api/activity/${state.activityEvent.id}/comments`);
+    const res = await request("GET", `/api/posts/${state.activityEvent.id}/comments`);
     assertStatus(res, 200);
     assert(Array.isArray(res.json), "Expected array");
     return { detail: `${res.json.length} comments` };
