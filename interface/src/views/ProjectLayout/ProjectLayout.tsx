@@ -11,7 +11,7 @@ import { useProjectLayoutData } from "./useProjectLayoutData";
 export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { displayProject, loading, projects } = useProjectLayoutData();
+  const { displayProject, loading, loadingProjects, projects } = useProjectLayoutData();
   const activeOrgId = useOrgStore((s) => s.activeOrg?.org_id ?? null);
   const showSpinner = useDelayedLoading(loading && !displayProject);
   const previousOrgIdRef = useRef<string | null>(activeOrgId);
@@ -25,7 +25,7 @@ export function ProjectLayout() {
   }, [activeOrgId]);
 
   useEffect(() => {
-    if (!pendingOrgRecoveryRef.current || loading) {
+    if (!pendingOrgRecoveryRef.current || loading || loadingProjects || !activeOrgId) {
       return;
     }
 
@@ -35,7 +35,7 @@ export function ProjectLayout() {
     if (!hasProjectInActiveOrg) {
       navigate("/projects", { replace: true });
     }
-  }, [loading, navigate, projectId, projects]);
+  }, [activeOrgId, loading, loadingProjects, navigate, projectId, projects]);
 
   if (showSpinner) {
     return (
