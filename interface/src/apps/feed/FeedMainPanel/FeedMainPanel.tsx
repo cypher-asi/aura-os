@@ -5,7 +5,7 @@ import { CommitGrid } from "../../../components/CommitGrid";
 import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
-import { FEED_FILTERS } from "../feedFilters";
+import { FEED_FILTERS } from "../FeedFilters";
 import { LeaderboardContent } from "../LeaderboardContent";
 import { useFeed, useFeedStore } from "../../../stores/feed-store";
 import styles from "./FeedMainPanel.module.css";

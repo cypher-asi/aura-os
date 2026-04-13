@@ -20,6 +20,7 @@ pub(crate) fn role_level(role: &str) -> u8 {
 /// Resolve the user's network-facing ID from the session.
 /// Prefers `network_user_id` (set after sync to aura-network) and falls back
 /// to `user_id` (zOS ID) if the user has not been synced yet.
+#[allow(dead_code)]
 fn resolve_user_id(session: &ZeroAuthSession) -> String {
     session
         .network_user_id

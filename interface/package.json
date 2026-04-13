@@ -57,6 +57,10 @@
     "remark-gfm": "^4.0.1",
     "zustand": "^5.0.12"
   },
+  "overrides": {
+    "@types/react": "$@types/react",
+    "@types/react-dom": "$@types/react-dom"
+  },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
     "@eslint/js": "^9.39.4",

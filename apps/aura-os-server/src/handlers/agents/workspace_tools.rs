@@ -573,6 +573,7 @@ async fn load_integration_secret(
         .filter(|value| !value.trim().is_empty())
 }
 
+#[allow(dead_code)]
 pub(crate) async fn installed_workspace_integrations_for_org(
     state: &AppState,
     org_id: &OrgId,

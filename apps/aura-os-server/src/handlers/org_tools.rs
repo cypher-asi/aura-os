@@ -549,16 +549,19 @@ async fn notion_create_page(state: &AppState, org_id: &OrgId, args: &Value) -> A
     }))
 }
 
+#[allow(dead_code)]
 async fn brave_search_web(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "brave_search", args).await?;
     brave_search(state, &integration, args, "web").await
 }
 
+#[allow(dead_code)]
 async fn brave_search_news(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "brave_search", args).await?;
     brave_search(state, &integration, args, "news").await
 }
 
+#[allow(dead_code)]
 async fn brave_search(
     state: &AppState,
     integration: &ResolvedOrgIntegration,
@@ -735,6 +738,7 @@ async fn freepik_improve_prompt(
     }))
 }
 
+#[allow(dead_code)]
 async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "buffer", args).await?;
     let url = app_provider_authenticated_url(
@@ -769,6 +773,7 @@ async fn buffer_list_profiles(state: &AppState, org_id: &OrgId, args: &Value) ->
     Ok(json!({ "profiles": profiles }))
 }
 
+#[allow(dead_code)]
 async fn buffer_create_update(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "buffer", args).await?;
     let profile_id = required_string(args, &["profile_id", "profileId"])?;
@@ -1020,6 +1025,7 @@ async fn mailchimp_list_campaigns(
     Ok(json!({ "campaigns": campaigns }))
 }
 
+#[allow(dead_code)]
 async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "resend", args).await?;
     let base_url = app_provider_base_url(AppProviderKind::Resend)
@@ -1056,6 +1062,7 @@ async fn resend_list_domains(state: &AppState, org_id: &OrgId, args: &Value) -> 
     }))
 }
 
+#[allow(dead_code)]
 async fn resend_send_email(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "resend", args).await?;
     let from = required_string(args, &["from"])?;
@@ -1477,6 +1484,7 @@ async fn provider_json_request(
         .map_err(|e| ApiError::bad_gateway(format!("provider returned invalid JSON: {e}")))
 }
 
+#[allow(dead_code)]
 async fn provider_form_request(
     client: &reqwest::Client,
     method: reqwest::Method,
@@ -1566,11 +1574,13 @@ fn optional_string(args: &Value, keys: &[&str]) -> Option<String> {
     })
 }
 
+#[allow(dead_code)]
 fn required_string_list(args: &Value, keys: &[&str]) -> ApiResult<Vec<String>> {
     optional_string_list(args, keys)
         .ok_or_else(|| ApiError::bad_request(format!("missing required field `{}`", keys[0])))
 }
 
+#[allow(dead_code)]
 fn optional_string_list(args: &Value, keys: &[&str]) -> Option<Vec<String>> {
     keys.iter().find_map(|key| {
         let value = args.get(*key)?;
