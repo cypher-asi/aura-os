@@ -26,6 +26,16 @@ env:
 
 jobs:
   build:
+    env:
+      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
+      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
+      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
+      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
+      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
+      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
+      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+      REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
+      AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
     strategy:
       fail-fast: false
       matrix:
@@ -89,6 +99,9 @@ jobs:
 
       - name: Install cargo-packager
         run: cargo install cargo-packager --locked
+
+      - name: Prepare bundled aura-node sidecar
+        run: node infra/scripts/release/prepare-desktop-sidecar.mjs
 
       - name: Build interface
         working-directory: interface
@@ -341,7 +354,7 @@ jobs:
 
           generate_manifest() {
             local target=$1 arch=$2 filename=$3 format=$4
-            local sig_file="all-artifacts/${filename}.sig"
+            local sig_file="../all-artifacts/${filename}.sig"
             local signature='""'
             if [ -f "$sig_file" ]; then
               signature=$(jq -Rs . < "$sig_file")

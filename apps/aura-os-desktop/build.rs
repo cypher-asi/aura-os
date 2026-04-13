@@ -5,6 +5,16 @@ use std::process::Command;
 use std::time::Duration;
 
 const DEFAULT_FRONTEND_DEV_URL: &str = "http://127.0.0.1:5173";
+const DEFAULT_AURA_NETWORK_URL: &str = "https://aura-network.onrender.com";
+const DEFAULT_AURA_STORAGE_URL: &str = "https://aura-storage.onrender.com";
+const DEFAULT_AURA_INTEGRATIONS_URL: &str = "https://aura-integrations.onrender.com";
+const DEFAULT_AURA_ROUTER_URL: &str = "https://aura-router.onrender.com";
+const DEFAULT_Z_BILLING_URL: &str = "https://z-billing.onrender.com";
+const DEFAULT_ORBIT_BASE_URL: &str = "https://orbit-sfvu.onrender.com";
+const DEFAULT_SWARM_BASE_URL: &str =
+    "http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com";
+const DEFAULT_REQUIRE_ZERO_PRO: &str = "true";
+const DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN: &str = "true";
 
 fn npm() -> Command {
     if cfg!(target_os = "windows") {
@@ -46,6 +56,12 @@ fn should_try_frontend_dev_server() -> bool {
         .map(|value| value == "debug")
         .unwrap_or(false)
         && !env_flag_enabled("AURA_DESKTOP_DISABLE_FRONTEND_DEV_SERVER")
+}
+
+fn emit_runtime_default(runtime_name: &str, compile_name: &str, fallback: &str) {
+    let value = std::env::var(runtime_name).unwrap_or_else(|_| fallback.to_string());
+    println!("cargo:rustc-env={compile_name}={value}");
+    println!("cargo:rerun-if-env-changed={runtime_name}");
 }
 
 fn probe_vite_dev_server(base_url: &str) -> bool {
@@ -197,6 +213,51 @@ fn main() {
         .unwrap_or_else(|_| "https://n3o.github.io/aura-app".into());
     println!("cargo:rustc-env=AURA_UPDATE_BASE_URL={update_base_url}");
     println!("cargo:rerun-if-env-changed=AURA_UPDATE_BASE_URL");
+    emit_runtime_default(
+        "AURA_NETWORK_URL",
+        "AURA_DESKTOP_DEFAULT_AURA_NETWORK_URL",
+        DEFAULT_AURA_NETWORK_URL,
+    );
+    emit_runtime_default(
+        "AURA_STORAGE_URL",
+        "AURA_DESKTOP_DEFAULT_AURA_STORAGE_URL",
+        DEFAULT_AURA_STORAGE_URL,
+    );
+    emit_runtime_default(
+        "AURA_INTEGRATIONS_URL",
+        "AURA_DESKTOP_DEFAULT_AURA_INTEGRATIONS_URL",
+        DEFAULT_AURA_INTEGRATIONS_URL,
+    );
+    emit_runtime_default(
+        "AURA_ROUTER_URL",
+        "AURA_DESKTOP_DEFAULT_AURA_ROUTER_URL",
+        DEFAULT_AURA_ROUTER_URL,
+    );
+    emit_runtime_default(
+        "Z_BILLING_URL",
+        "AURA_DESKTOP_DEFAULT_Z_BILLING_URL",
+        DEFAULT_Z_BILLING_URL,
+    );
+    emit_runtime_default(
+        "ORBIT_BASE_URL",
+        "AURA_DESKTOP_DEFAULT_ORBIT_BASE_URL",
+        DEFAULT_ORBIT_BASE_URL,
+    );
+    emit_runtime_default(
+        "SWARM_BASE_URL",
+        "AURA_DESKTOP_DEFAULT_SWARM_BASE_URL",
+        DEFAULT_SWARM_BASE_URL,
+    );
+    emit_runtime_default(
+        "REQUIRE_ZERO_PRO",
+        "AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO",
+        DEFAULT_REQUIRE_ZERO_PRO,
+    );
+    emit_runtime_default(
+        "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
+        "AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
+        DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN,
+    );
     println!("cargo:rerun-if-env-changed=AURA_DESKTOP_USE_PREBUILT_FRONTEND");
     println!("cargo:rerun-if-env-changed=AURA_DESKTOP_FRONTEND_DEV_URL");
     println!("cargo:rerun-if-env-changed=AURA_DESKTOP_DISABLE_FRONTEND_DEV_SERVER");

@@ -124,6 +124,22 @@ pub(crate) async fn get_update_status(
     }))
 }
 
+pub(crate) async fn get_runtime_config() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "aura_network_url": std::env::var("AURA_NETWORK_URL").ok(),
+        "aura_storage_url": std::env::var("AURA_STORAGE_URL").ok(),
+        "aura_integrations_url": std::env::var("AURA_INTEGRATIONS_URL").ok(),
+        "aura_router_url": std::env::var("AURA_ROUTER_URL").ok(),
+        "z_billing_url": std::env::var("Z_BILLING_URL").ok(),
+        "orbit_base_url": std::env::var("ORBIT_BASE_URL").ok(),
+        "swarm_base_url": std::env::var("SWARM_BASE_URL").ok(),
+        "local_harness_url": std::env::var("LOCAL_HARNESS_URL").ok(),
+        "harness_binary": std::env::var("AURA_HARNESS_BIN").ok(),
+        "require_zero_pro": std::env::var("REQUIRE_ZERO_PRO").ok(),
+        "disable_local_harness_autospawn": std::env::var("AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN").ok(),
+    }))
+}
+
 pub(crate) async fn post_update_install(
     AxumState(state): AxumState<UpdateState>,
 ) -> Json<serde_json::Value> {
