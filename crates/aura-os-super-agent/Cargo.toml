@@ -18,7 +18,6 @@ aura-os-link = { path = "../aura-os-link" }
 aura-os-process = { path = "../aura-os-process" }
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-cron = "0.13"
 futures-util = "0.3"
 reqwest = { version = "0.11", features = ["json", "stream"] }
 serde = { version = "1", features = ["derive"] }

@@ -8,14 +8,10 @@ use serde::de::DeserializeOwned;
 use crate::batch::BatchOp;
 use crate::error::{StoreError, StoreResult};
 
-/// Only settings CF is persisted; projects, orgs, agents, messages are remote-only.
+/// Local persistence backs settings, orchestration state, and process execution state.
 pub(crate) const CF_NAMES: &[&str] = &[
     "settings",
     "super_agent_orchestrations",
-    "cron_jobs",
-    "cron_job_runs",
-    "cron_artifacts",
-    "cron_tags",
     "processes",
     "process_folders",
     "process_nodes",

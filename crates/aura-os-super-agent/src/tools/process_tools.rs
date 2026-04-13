@@ -42,7 +42,7 @@ impl SuperAgentTool for CreateProcessTool {
                 "name": { "type": "string", "description": "Name of the process" },
                 "description": { "type": "string", "description": "Description of what the process does" },
                 "project_id": { "type": "string", "description": "Project ID to associate this process with. If omitted, uses the first available project." },
-                "schedule": { "type": "string", "description": "Optional cron expression for scheduled triggering" }
+                "schedule": { "type": "string", "description": "Optional schedule expression for scheduled triggering (cron syntax)" }
             },
             "required": ["name"]
         })

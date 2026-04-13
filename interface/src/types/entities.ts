@@ -6,8 +6,6 @@ import type {
   SessionStatus,
   OrchestrationStatus,
   StepStatus,
-  CronJobRunStatus,
-  CronJobTrigger,
   ArtifactType,
   ProcessNodeType,
   ProcessRunStatus,
@@ -382,69 +380,6 @@ export interface ApiError {
   error: string;
   code: string;
   details: string | null;
-}
-
-export interface ArtifactRef {
-  source_cron_job_id: string;
-  artifact_type?: ArtifactType;
-  use_latest: boolean;
-  specific_run_id?: string;
-}
-
-export interface CronTag {
-  tag_id: string;
-  org_id: string;
-  name: string;
-  created_at: string;
-}
-
-export interface CronJob {
-  cron_job_id: string;
-  org_id: string;
-  user_id: string;
-  name: string;
-  description: string;
-  schedule: string;
-  prompt: string;
-  enabled: boolean;
-  agent_id: string | null;
-  tags: string[];
-  input_artifact_refs: ArtifactRef[];
-  max_retries: number;
-  timeout_seconds: number;
-  last_run_at: string | null;
-  next_run_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CronJobRun {
-  run_id: string;
-  cron_job_id: string;
-  status: CronJobRunStatus;
-  trigger: CronJobTrigger;
-  prompt_snapshot: string;
-  response_text: string;
-  output_artifact_ids: string[];
-  tasks_created: string[];
-  error: string | null;
-  input_tokens: number;
-  output_tokens: number;
-  started_at: string;
-  completed_at: string | null;
-}
-
-export interface CronArtifact {
-  artifact_id: string;
-  cron_job_id: string;
-  run_id: string;
-  org_id: string;
-  artifact_type: ArtifactType;
-  name: string;
-  content: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  expires_at: string | null;
 }
 
 // ---------------------------------------------------------------------------

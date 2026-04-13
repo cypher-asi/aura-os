@@ -591,7 +591,6 @@ dependencies = [
  "aura-os-store",
  "aura-os-tasks",
  "chrono",
- "cron",
  "futures-util",
  "reqwest 0.11.27",
  "serde",

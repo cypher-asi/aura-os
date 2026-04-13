@@ -66,6 +66,13 @@ pub fn classify_intent(message: &str) -> Vec<ToolDomain> {
     if contains_any(
         &lower,
         &[
+            "process",
+            "workflow",
+            "node",
+            "ignition",
+            "pipeline",
+            "automate",
+            "trigger",
             "cron",
             "schedule",
             "scheduled",
@@ -76,14 +83,6 @@ pub fn classify_intent(message: &str) -> Vec<ToolDomain> {
             "daily",
             "weekly",
             "periodic",
-        ],
-    ) {
-        domains.push(ToolDomain::Cron);
-    }
-    if contains_any(
-        &lower,
-        &[
-            "process", "workflow", "node", "ignition", "pipeline", "automate", "trigger",
         ],
     ) {
         domains.push(ToolDomain::Process);
@@ -116,7 +115,6 @@ const LOADABLE_DOMAINS: &[&str] = &[
     "social",
     "system",
     "generation",
-    "cron",
     "process",
 ];
 
@@ -170,7 +168,7 @@ impl SuperAgentTool for LoadDomainToolsTool {
         if domains.is_empty() {
             return Ok(ToolResult {
                 content: json!({
-                    "error": "No valid domains specified. Available: spec, task, org, billing, social, system, generation"
+                    "error": "No valid domains specified. Available: spec, task, org, billing, social, system, generation, process"
                 }),
                 is_error: true,
             });
@@ -183,5 +181,33 @@ impl SuperAgentTool for LoadDomainToolsTool {
             }),
             is_error: false,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use aura_os_core::ToolDomain;
+
+    use super::{classify_intent, LoadDomainToolsTool};
+    use crate::tools::SuperAgentTool;
+
+    #[test]
+    fn schedule_language_loads_process_domain() {
+        let domains = classify_intent("Create a recurring daily process schedule");
+        assert!(domains.contains(&ToolDomain::Process));
+    }
+
+    #[test]
+    fn load_domain_tools_schema_excludes_legacy_cron_domain() {
+        let tool = LoadDomainToolsTool;
+        let schema = tool.parameters_schema();
+        let domains = schema["properties"]["domains"]["items"]["enum"]
+            .as_array()
+            .expect("domain enum should exist");
+
+        assert!(domains
+            .iter()
+            .any(|value| value.as_str() == Some("process")));
+        assert!(!domains.iter().any(|value| value.as_str() == Some("cron")));
     }
 }
