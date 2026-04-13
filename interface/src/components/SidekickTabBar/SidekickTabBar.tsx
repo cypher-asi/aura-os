@@ -10,12 +10,14 @@ export interface TabItem {
   id: string;
   icon: ReactNode;
   title: string;
+  kind?: "tab" | "action";
 }
 
 interface SidekickTabBarProps {
   tabs: readonly TabItem[];
   activeTab: string;
   onTabChange: (id: string) => void;
+  onInlineAction?: (id: string) => void;
   /** Extra items appended to the overflow menu (e.g. Edit, Delete). */
   actions?: MenuItem[];
   /** Called when an action item is selected (receives the action id). */
@@ -28,6 +30,7 @@ export function SidekickTabBar({
   tabs,
   activeTab,
   onTabChange,
+  onInlineAction,
   actions,
   onAction,
   alwaysShowMore = false,
@@ -86,7 +89,19 @@ export function SidekickTabBar({
     };
   }, [enteringIds]);
 
-  const actionIds = useMemo(() => new Set(actions?.map((a) => "id" in a ? a.id : undefined).filter(Boolean)), [actions]);
+  const menuActionIds = useMemo(
+    () =>
+      new Set(
+        actions
+          ?.map((a) => ("id" in a ? a.id : undefined))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    [actions],
+  );
+  const inlineActionIds = useMemo(
+    () => new Set(tabs.filter((tab) => tab.kind === "action").map((tab) => tab.id)),
+    [tabs],
+  );
 
   const menuItems = useMemo<MenuItem[]>(() => {
     const overflow: MenuItem[] = overflowItems.map(({ id, icon, title }) => ({
@@ -110,26 +125,32 @@ export function SidekickTabBar({
 
   useClickOutside([moreBtnRef, moreMenuRef], () => setMoreOpen(false), moreOpen);
 
-  const activeInOverflow = overflowItems.some((t) => t.id === activeTab);
+  const activeInOverflow = overflowItems.some((t) => t.kind !== "action" && t.id === activeTab);
 
   return (
     <div ref={containerRef} className={styles.sidekickTaskbar}>
       <div className={styles.sidekickTabBar}>
-        {visibleItems.map(({ id, icon, title }) => (
-          <Button
-            key={id}
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={icon}
-            title={title}
-            aria-label={title}
-            onClick={() => onTabChange(id)}
-            aria-pressed={activeTab === id}
-            selected={activeTab === id}
-            style={enteringIds.has(id) ? { opacity: 0 } : undefined}
-          />
-        ))}
+        {visibleItems.map(({ id, icon, title, kind }) => {
+          const isInlineAction = kind === "action";
+          return (
+            <Button
+              key={id}
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={icon}
+              title={title}
+              aria-label={title}
+              onClick={() => {
+                if (isInlineAction) onInlineAction?.(id);
+                else onTabChange(id);
+              }}
+              aria-pressed={isInlineAction ? undefined : activeTab === id}
+              selected={!isInlineAction && activeTab === id}
+              style={enteringIds.has(id) ? { opacity: 0 } : undefined}
+            />
+          );
+        })}
         {exitingTabs.map(({ id, icon }) => (
           <span key={`exit-${id}`} className={styles.tabExit}>
             <Button variant="ghost" size="sm" iconOnly icon={icon} aria-hidden />
@@ -144,8 +165,8 @@ export function SidekickTabBar({
             iconOnly
             icon={<MoreHorizontal size={16} />}
             onClick={() => setMoreOpen((v) => !v)}
-            title="More"
-            aria-label="More"
+            title="More actions"
+            aria-label="More actions"
             selected={activeInOverflow}
           />
           {moreOpen &&
@@ -166,7 +187,8 @@ export function SidekickTabBar({
                   value={activeInOverflow ? activeTab : undefined}
                   onChange={(id) => {
                     setMoreOpen(false);
-                    if (actionIds.has(id)) onAction?.(id);
+                    if (menuActionIds.has(id)) onAction?.(id);
+                    else if (inlineActionIds.has(id)) onInlineAction?.(id);
                     else onTabChange(id);
                   }}
                   background="solid"

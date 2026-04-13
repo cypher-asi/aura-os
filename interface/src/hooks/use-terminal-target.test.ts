@@ -1,4 +1,6 @@
+import { createElement } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 const mockGetAgentInstance = vi.fn();
 const mockListAgentInstances = vi.fn();
@@ -11,15 +13,25 @@ vi.mock("../api/client", () => ({
 }));
 
 import { useTerminalTarget } from "./use-terminal-target";
+import { queryClient } from "../lib/query-client";
+
+function createWrapper() {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
 
 describe("useTerminalTarget", () => {
   beforeEach(() => {
     mockGetAgentInstance.mockReset();
     mockListAgentInstances.mockReset();
+    queryClient.clear();
   });
 
   it("returns ready with undefined values when no projectId or agentId", () => {
-    const { result } = renderHook(() => useTerminalTarget({}));
+    const { result } = renderHook(() => useTerminalTarget({}), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.status).toBe("ready");
     expect(result.current.remoteAgentId).toBeUndefined();
@@ -39,6 +51,7 @@ describe("useTerminalTarget", () => {
         projectId: "proj-1",
         agentInstanceId: "inst-1",
       }),
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => {
@@ -59,6 +72,7 @@ describe("useTerminalTarget", () => {
         projectId: "proj-1",
         agentInstanceId: "inst-1",
       }),
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => {
@@ -80,6 +94,7 @@ describe("useTerminalTarget", () => {
         projectId: "proj-1",
         agentInstanceId: "inst-1",
       }),
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => {
@@ -97,9 +112,9 @@ describe("useTerminalTarget", () => {
       { agent_id: "agent-remote", machine_type: "remote", workspace_path: "/remote" },
     ]);
 
-    const { result } = renderHook(() =>
-      useTerminalTarget({ projectId: "proj-1" }),
-    );
+    const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.status).toBe("ready");
@@ -115,9 +130,9 @@ describe("useTerminalTarget", () => {
       { agent_id: "agent-local", machine_type: "local", workspace_path: "/local/project" },
     ]);
 
-    const { result } = renderHook(() =>
-      useTerminalTarget({ projectId: "proj-1" }),
-    );
+    const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.status).toBe("ready");
@@ -130,9 +145,9 @@ describe("useTerminalTarget", () => {
   it("sets error when listAgentInstances fails", async () => {
     mockListAgentInstances.mockRejectedValue(new Error("error"));
 
-    const { result } = renderHook(() =>
-      useTerminalTarget({ projectId: "proj-1" }),
-    );
+    const { result } = renderHook(() => useTerminalTarget({ projectId: "proj-1" }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.status).toBe("error");
@@ -146,6 +161,7 @@ describe("useTerminalTarget", () => {
         selectedAgent: { agent_id: "agent-1", machine_type: "remote" },
         agentsStatus: "ready",
       }),
+      { wrapper: createWrapper() },
     );
 
     expect(result.current.status).toBe("ready");
@@ -159,6 +175,7 @@ describe("useTerminalTarget", () => {
         selectedAgent: { agent_id: "agent-1", machine_type: "local" },
         agentsStatus: "ready",
       }),
+      { wrapper: createWrapper() },
     );
 
     expect(result.current.status).toBe("ready");

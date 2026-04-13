@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import type { UseTerminalReturn } from "../../hooks/use-terminal";
+import { OverlayScrollbar } from "../OverlayScrollbar";
 import styles from "./XTerminal.module.css";
 
 interface XTerminalProps {
@@ -53,8 +54,10 @@ function getTheme() {
 
 export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const [viewportReady, setViewportReady] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -75,6 +78,8 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
     xterm.loadAddon(fitAddon);
     xterm.loadAddon(webLinksAddon);
     xterm.open(container);
+    viewportRef.current = container.querySelector(".xterm-viewport") as HTMLDivElement | null;
+    setViewportReady(Boolean(viewportRef.current));
 
     xtermRef.current = xterm;
     fitRef.current = fitAddon;
@@ -107,6 +112,7 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
       outputUnsub();
       resizeObserver.disconnect();
       xterm.dispose();
+      viewportRef.current = null;
       xtermRef.current = null;
       fitRef.current = null;
     };
@@ -132,9 +138,13 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
 
   return (
     <div
-      ref={containerRef}
       className={styles.container}
       style={{ display: visible ? "block" : "none" }}
-    />
+    >
+      <div ref={containerRef} className={styles.surface} />
+      {viewportReady && (
+        <OverlayScrollbar scrollRef={viewportRef} trackClassName={styles.overlayTrack} />
+      )}
+    </div>
   );
 }

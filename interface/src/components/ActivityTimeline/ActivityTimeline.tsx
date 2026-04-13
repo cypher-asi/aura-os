@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { TimelineItem, ToolCallEntry } from "../../types/stream";
 import { stripEmojis, normalizeMidSentenceBreaks, flattenListIndentation } from "../../utils/text-normalize";
 import { ThinkingRow } from "../ThinkingRow";
 import { ToolCallBlock } from "../ToolRow";
 import { SegmentedContent } from "../SegmentedContent";
+import { LargeTextBlock, isLargeText } from "../MessageBubble/LargeTextBlock";
 import styles from "./ActivityTimeline.module.css";
 
 interface ActivityTimelineProps {
@@ -55,13 +56,32 @@ export function ActivityTimeline({
           );
         }
 
-        const normalized = flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(item.content)));
         return (
           <div key={item.id}>
-            <SegmentedContent content={normalized} isStreaming={isStreaming} />
+            <TimelineText content={item.content} isStreaming={isStreaming} />
           </div>
         );
       })}
     </div>
   );
 }
+
+const TimelineText = memo(function TimelineText({
+  content,
+  isStreaming,
+}: {
+  content: string;
+  isStreaming: boolean;
+}) {
+  const normalized = useMemo(
+    () =>
+      flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(content))),
+    [content],
+  );
+
+  if (!isStreaming && isLargeText(normalized)) {
+    return <LargeTextBlock text={normalized} />;
+  }
+
+  return <SegmentedContent content={normalized} isStreaming={isStreaming} />;
+});

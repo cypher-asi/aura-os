@@ -4,7 +4,7 @@ import { useAppUIStore } from "./app-ui-store";
 beforeEach(() => {
   useAppUIStore.setState({
     visitedAppIds: new Set<string>(),
-    sidebarQuery: "",
+    sidebarQueries: {},
     sidebarActions: {},
   });
 });
@@ -15,8 +15,8 @@ describe("app-ui-store", () => {
       expect(useAppUIStore.getState().visitedAppIds.size).toBe(0);
     });
 
-    it("has an empty sidebarQuery", () => {
-      expect(useAppUIStore.getState().sidebarQuery).toBe("");
+    it("has no sidebarQueries", () => {
+      expect(useAppUIStore.getState().sidebarQueries).toEqual({});
     });
 
     it("has no sidebarActions", () => {
@@ -51,15 +51,25 @@ describe("app-ui-store", () => {
   });
 
   describe("setSidebarQuery", () => {
-    it("updates the sidebarQuery", () => {
-      useAppUIStore.getState().setSidebarQuery("hello");
-      expect(useAppUIStore.getState().sidebarQuery).toBe("hello");
+    it("updates the query for one app without touching others", () => {
+      useAppUIStore.getState().setSidebarQuery("projects", "hello");
+      useAppUIStore.getState().setSidebarQuery("tasks", "backlog");
+
+      expect(useAppUIStore.getState().sidebarQueries).toEqual({
+        projects: "hello",
+        tasks: "backlog",
+      });
     });
 
-    it("can clear the sidebarQuery", () => {
-      useAppUIStore.getState().setSidebarQuery("test");
-      useAppUIStore.getState().setSidebarQuery("");
-      expect(useAppUIStore.getState().sidebarQuery).toBe("");
+    it("can clear a single app query without removing others", () => {
+      useAppUIStore.getState().setSidebarQuery("projects", "test");
+      useAppUIStore.getState().setSidebarQuery("tasks", "running");
+      useAppUIStore.getState().setSidebarQuery("projects", "");
+
+      expect(useAppUIStore.getState().sidebarQueries).toEqual({
+        projects: "",
+        tasks: "running",
+      });
     });
   });
 

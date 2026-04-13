@@ -13,6 +13,7 @@ export const TasksApp: AuraApp = {
   icon: Check,
   basePath: "/tasks",
   LeftPanel: TasksProjectList,
+  DesktopLeftMenuPane: TasksProjectList,
   MainPanel: TasksMainPanel,
   ResponsiveControls: TasksProjectList,
   SidekickPanel: SidekickContent,

@@ -1,4 +1,11 @@
-import { LAST_AGENT_KEY, LAST_APP_KEY, LAST_PROJECT_KEY } from "../constants";
+import {
+  COLLAPSED_PROJECTS_KEY,
+  LAST_AGENT_KEY,
+  LAST_APP_KEY,
+  LAST_PROJECT_KEY,
+  TASKBAR_APP_ORDER_KEY,
+  TASKBAR_APPS_COLLAPSED_KEY,
+} from "../constants";
 
 type LastAgentMap = Record<string, string>;
 
@@ -45,6 +52,71 @@ export function getLastProject(): string | null {
 
 export function setLastProject(projectId: string): void {
   localStorage.setItem(LAST_PROJECT_KEY, projectId);
+}
+
+export function getCollapsedProjects(): string[] {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_PROJECTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    // ignore malformed data
+  }
+  return [];
+}
+
+export function setCollapsedProjects(ids: string[]): void {
+  if (ids.length === 0) {
+    localStorage.removeItem(COLLAPSED_PROJECTS_KEY);
+  } else {
+    localStorage.setItem(COLLAPSED_PROJECTS_KEY, JSON.stringify(ids));
+  }
+}
+
+export function getTaskbarAppsCollapsed(): boolean {
+  try {
+    const raw = localStorage.getItem(TASKBAR_APPS_COLLAPSED_KEY);
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+  } catch {
+    // ignore storage failures
+  }
+  return true;
+}
+
+export function setTaskbarAppsCollapsed(collapsed: boolean): void {
+  try {
+    localStorage.setItem(TASKBAR_APPS_COLLAPSED_KEY, String(collapsed));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function getTaskbarAppOrder(): string[] {
+  try {
+    const raw = localStorage.getItem(TASKBAR_APP_ORDER_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === "string");
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return [];
+}
+
+export function setTaskbarAppOrder(ids: string[]): void {
+  try {
+    if (ids.length === 0) {
+      localStorage.removeItem(TASKBAR_APP_ORDER_KEY);
+      return;
+    }
+    localStorage.setItem(TASKBAR_APP_ORDER_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore storage failures
+  }
 }
 
 export function clearLastAgentIf(match: { projectId?: string; agentInstanceId?: string }): void {

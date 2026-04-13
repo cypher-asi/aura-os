@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { PanelSearch } from "../PanelSearch";
 import { PreviewContent, PreviewHeader } from "../Preview";
+import { OverlayScrollbar } from "../OverlayScrollbar";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectActions } from "../../stores/project-action-store";
@@ -15,6 +16,11 @@ import { StatsDashboard } from "../../views/StatsDashboard";
 import { SessionList } from "../../views/SessionList";
 import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
+import {
+  RunSidekickPane,
+  TerminalSidekickPane,
+  useActiveTaskTracking,
+} from "../TaskOutputPanel";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { InfoPanel } from "./InfoPanel";
@@ -39,16 +45,19 @@ export function SidekickContent() {
     })),
   );
   const ctx = useProjectActions();
+  const projectId = ctx?.project.project_id;
+  useActiveTaskTracking(projectId);
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();
-  const { projectId, agentInstanceId } = useParams<{
+  const { projectId: routeProjectId, agentInstanceId } = useParams<{
     projectId: string;
     agentInstanceId: string;
   }>();
   const { remoteAgentId, remoteWorkspacePath, workspacePath } =
-    useTerminalTarget({ projectId, agentInstanceId });
+    useTerminalTarget({ projectId: routeProjectId, agentInstanceId });
   const navigate = useNavigate();
   const [fileRefreshKey, setFileRefreshKey] = useState(0);
+  const tabContentRef = useRef<HTMLDivElement>(null);
 
   const handleRemoteFileSelect = useCallback(
     (filePath: string) => {
@@ -94,7 +103,7 @@ export function SidekickContent() {
     );
   }
 
-  const searchable = activeTab !== "stats";
+  const searchable = activeTab !== "stats" && activeTab !== "run" && activeTab !== "terminal";
 
   const filesContent = canBrowseFiles ? (
     <FileExplorer
@@ -107,14 +116,24 @@ export function SidekickContent() {
   ) : (
     <EmptyState>{filesEmptyMessage}</EmptyState>
   );
-
-  const tabContent: Record<string, React.ReactNode> = {
-    specs: <SpecList searchQuery={searchQuery} />,
-    tasks: <TaskList searchQuery={searchQuery} />,
-    stats: <StatsDashboard />,
-    sessions: <SessionList searchQuery={searchQuery} />,
-    files: filesContent,
-  };
+  const activeContent =
+    activeTab === "terminal" ? (
+      <TerminalSidekickPane />
+    ) : activeTab === "run" ? (
+      <RunSidekickPane />
+    ) : activeTab === "specs" ? (
+      <SpecList searchQuery={searchQuery} />
+    ) : activeTab === "tasks" ? (
+      <TaskList searchQuery={searchQuery} />
+    ) : activeTab === "stats" ? (
+      <StatsDashboard />
+    ) : activeTab === "sessions" ? (
+      <SessionList searchQuery={searchQuery} />
+    ) : activeTab === "files" ? (
+      filesContent
+    ) : activeTab === "log" ? (
+      <SidekickLog searchQuery={searchQuery} />
+    ) : null;
 
   return (
     <div className={styles.sidekickBody}>
@@ -150,15 +169,22 @@ export function SidekickContent() {
         />
       )}
       <div className={styles.sidekickContent}>
-        {activeTab !== "log" && (
-          <div className={styles.tabContent}>{tabContent[activeTab]}</div>
+        {(activeTab === "run" || activeTab === "terminal") && activeContent}
+        {activeTab !== "log" && activeTab !== "run" && activeTab !== "terminal" && (
+          <div className={styles.tabContentShell}>
+            <div ref={tabContentRef} className={styles.tabContent}>
+              {activeContent}
+            </div>
+            <OverlayScrollbar scrollRef={tabContentRef} />
+          </div>
         )}
-        <div
-          className={styles.tabContent}
-          style={activeTab === "log" ? undefined : { display: "none" }}
-        >
-          <SidekickLog searchQuery={searchQuery} />
-        </div>
+        {activeTab === "log" && (
+          <div className={styles.tabContentShell}>
+            <div className={styles.tabContent}>
+              {activeContent}
+            </div>
+          </div>
+        )}
       </div>
       {previewItem && <LaneOverlay />}
     </div>

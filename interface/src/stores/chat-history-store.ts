@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { buildDisplayEvents } from "../utils/build-display-messages";
+import { queryClient } from "../lib/query-client";
+import {
+  CHAT_HISTORY_STALE_TIME_MS,
+  chatHistoryQueryKeys,
+  chatHistoryQueryOptions,
+} from "../queries/chat-history-queries";
 import type { SessionEvent } from "../types";
 import type { DisplaySessionEvent } from "../types/stream";
 
@@ -30,7 +35,6 @@ type ChatHistoryState = {
 
 const HISTORY_TTL_MS = 30_000;
 const ERROR_TTL_MS = 10_000;
-const inflightPromises = new Map<string, Promise<void>>();
 
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
   entries: {},
@@ -56,9 +60,6 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       return;
     }
 
-    const existing = inflightPromises.get(key);
-    if (existing) return existing;
-
     if (!entry || entry.status !== "ready") {
       set((s) => ({
         entries: {
@@ -74,14 +75,22 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       }));
     }
 
-    const promise = fetchFn()
-      .then((raw) => {
-        const events = buildDisplayEvents(raw);
-        const lastMessageAt = raw.length > 0 ? raw[raw.length - 1].created_at : null;
+    const promise = queryClient
+      .fetchQuery({
+        ...chatHistoryQueryOptions(key, fetchFn),
+        staleTime: opts?.force ? 0 : CHAT_HISTORY_STALE_TIME_MS,
+      })
+      .then((data) => {
         set((s) => ({
           entries: {
             ...s.entries,
-            [key]: { events, status: "ready", fetchedAt: Date.now(), error: null, lastMessageAt },
+            [key]: {
+              events: data.events,
+              status: "ready",
+              fetchedAt: Date.now(),
+              error: null,
+              lastMessageAt: data.lastMessageAt,
+            },
           },
         }));
       })
@@ -99,22 +108,22 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
             },
           },
         }));
-      })
-      .finally(() => {
-        inflightPromises.delete(key);
       });
 
-    inflightPromises.set(key, promise);
     return promise;
   },
 
   prefetchHistory: (key, fetchFn): void => {
-    get().fetchHistory(key, fetchFn).catch((err) => {
+    queryClient.prefetchQuery(chatHistoryQueryOptions(key, fetchFn)).catch((err) => {
       console.warn("[chat-history] prefetch failed for", key, err);
     });
   },
 
   invalidateHistory: (key): void => {
+    void queryClient.invalidateQueries({
+      queryKey: chatHistoryQueryKeys.history(key),
+      exact: true,
+    });
     set((s) => {
       const entry = s.entries[key];
       if (!entry) return s;

@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { agentTemplatesApi, agentInstancesApi, sessionsApi } from "./agents";
+import {
+  agentTemplatesApi,
+  agentInstancesApi,
+  sessionsApi,
+  STANDALONE_AGENT_HISTORY_LIMIT,
+} from "./agents";
 import { ApiClientError } from "./core";
 
 function createStorageMock() {
@@ -109,6 +114,21 @@ describe("agentTemplatesApi", () => {
     const result = await agentTemplatesApi.listEvents("a1" as string);
     expect(result).toEqual(events);
     expect(fetchMock).toHaveBeenCalledWith("/api/agents/a1/events", expect.any(Object));
+  });
+
+  it("listEvents sends pagination params when requested", async () => {
+    const fetchMock = mockFetch(200, []);
+    globalThis.fetch = fetchMock;
+
+    await agentTemplatesApi.listEvents("a1" as string, {
+      limit: STANDALONE_AGENT_HISTORY_LIMIT,
+      offset: 40,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/agents/a1/events?limit=${STANDALONE_AGENT_HISTORY_LIMIT}&offset=40`,
+      expect.any(Object),
+    );
   });
 
   it("propagates ApiClientError on failure", async () => {

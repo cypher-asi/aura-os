@@ -27,13 +27,13 @@ function writePreviousPath(path: string): void {
 
 type AppUIState = {
   visitedAppIds: Set<string>;
-  sidebarQuery: string;
+  sidebarQueries: Record<string, string>;
   sidebarActions: Record<string, ReactNode>;
   sidekickCollapsed: boolean;
   previousPath: string | null;
 
   markAppVisited: (appId: string) => void;
-  setSidebarQuery: (query: string) => void;
+  setSidebarQuery: (appId: string, query: string) => void;
   setSidebarAction: (appId: string, node: ReactNode | null) => void;
   toggleSidekick: () => void;
   setPreviousPath: (path: string) => void;
@@ -41,7 +41,7 @@ type AppUIState = {
 
 export const useAppUIStore = create<AppUIState>()((set) => ({
   visitedAppIds: new Set<string>(),
-  sidebarQuery: "",
+  sidebarQueries: {},
   sidebarActions: {},
   sidekickCollapsed: false,
   previousPath: readPreviousPath(),
@@ -55,8 +55,13 @@ export const useAppUIStore = create<AppUIState>()((set) => ({
     });
   },
 
-  setSidebarQuery: (query): void => {
-    set({ sidebarQuery: query });
+  setSidebarQuery: (appId, query): void => {
+    set((s) => ({
+      sidebarQueries: {
+        ...s.sidebarQueries,
+        [appId]: query,
+      },
+    }));
   },
 
   toggleSidekick: (): void => {

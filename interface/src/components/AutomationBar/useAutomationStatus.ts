@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useEventStore } from "../../stores/event-store/index";
-import { useSidekickStore } from "../../stores/sidekick-store";
 import type { ProjectId } from "../../types";
 import { EventType } from "../../types/aura-events";
 
@@ -27,7 +26,6 @@ interface AutomationStatusData {
 export function useAutomationStatus(projectId: ProjectId): AutomationStatusData {
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
-  const setActiveTab = useSidekickStore((s) => s.setActiveTab);
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
@@ -104,7 +102,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
 
   const handleStart = useCallback(async () => {
     try {
-      setStarting(true); setActiveTab("tasks");
+      setStarting(true);
       const res = await api.startLoop(projectId, agentInstanceId);
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
       setPaused(false); setStarting(false);
@@ -113,7 +111,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Failed to start loop", err);
     }
-  }, [projectId, agentInstanceId, setActiveTab]);
+  }, [projectId, agentInstanceId]);
 
   const handlePause = useCallback(async () => {
     try { await api.pauseLoop(projectId); } catch (err) { console.error("Failed to pause loop", err); }

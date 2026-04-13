@@ -27,12 +27,20 @@ const ANSI_RED = "\x1b[31m";
 const ANSI_YELLOW = "\x1b[33m";
 const ANSI_RESET = "\x1b[0m";
 const ANSI_BOLD = "\x1b[1m";
+const REMOTE_TERMINAL_CONNECTION_ERROR =
+  "Could not connect to the remote swarm virtual machine terminal.";
 
 function emitError(
   listeners: Set<(data: string) => void>,
   message: string,
+  title = "Error:",
 ) {
-  const text = `\r\n${ANSI_RED}${ANSI_BOLD}Error:${ANSI_RESET}${ANSI_RED} ${message}${ANSI_RESET}\r\n`;
+  const text = `\r\n${ANSI_RED}${ANSI_BOLD}${title}${ANSI_RESET}${ANSI_RED} ${message}${ANSI_RESET}\r\n`;
+  listeners.forEach((cb) => cb(text));
+}
+
+function emitRemoteConnectionError(listeners: Set<(data: string) => void>) {
+  const text = `\r\n${ANSI_RED}${ANSI_BOLD}ERROR:${ANSI_RESET}${ANSI_RED} ${REMOTE_TERMINAL_CONNECTION_ERROR}${ANSI_RESET}\r\n`;
   listeners.forEach((cb) => cb(text));
 }
 
@@ -71,10 +79,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
         if (cancelled) return;
         setConnected(false);
         if (!receivedData && isRemote) {
-          emitError(
-            outputListeners.current,
-            `Could not connect to the remote agent VM terminal.\r\n\r\n${ANSI_YELLOW}       Make sure the agent is running and the swarm gateway is reachable.${ANSI_RESET}`,
-          );
+          emitRemoteConnectionError(outputListeners.current);
         }
       };
 
@@ -138,14 +143,11 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
         }
       } catch (err) {
         if (cancelled) return;
-        const detail =
-          err instanceof Error ? err.message : "unknown error";
         if (remote) {
-          emitError(
-            outputListeners.current,
-            `Could not connect to the remote agent VM terminal.\r\n${ANSI_YELLOW}       ${detail}${ANSI_RESET}\r\n\r\n       Make sure the agent is running and the swarm gateway is reachable.`,
-          );
+          emitRemoteConnectionError(outputListeners.current);
         } else {
+          const detail =
+            err instanceof Error ? err.message : "unknown error";
           emitError(
             outputListeners.current,
             `Could not spawn local terminal.\r\n${ANSI_YELLOW}       ${detail}${ANSI_RESET}`,

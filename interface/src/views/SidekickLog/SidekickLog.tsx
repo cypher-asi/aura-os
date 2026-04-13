@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Text } from "@cypher-asi/zui";
 import { Check } from "lucide-react";
+import { OverlayScrollbar } from "../../components/OverlayScrollbar";
 import { useLogStream, EVENT_LABELS } from "../../hooks/use-log-stream";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { useSidekickStore } from "../../stores/sidekick-store";
@@ -170,28 +171,31 @@ export function SidekickLog({ searchQuery }: { searchQuery: string }) {
   return (
     <div className={styles.logWrap}>
       <LogFilterBar active={activeFilters} onToggle={toggleFilter} onToggleAll={toggleAll} />
-      <div
-        ref={contentRef}
-        className={styles.logContent}
-        onScroll={handleScroll}
-      >
-        {filtered.length === 0 ? (
-          <div className={styles.logEmpty}>
-            <Text variant="muted" size="sm" className={styles.logEmptyText}>
-              {entries.length === 0
-                ? "Listening — events will appear when automation runs or specs are generated."
-                : "No events match the current filters."}
-            </Text>
-          </div>
-        ) : (
-          filtered.map((entry, i) => (
-            <LogRow
-              key={i}
-              entry={entry}
-              onSelect={() => pushPreview({ kind: "log", entry })}
-            />
-          ))
-        )}
+      <div className={styles.logContentShell}>
+        <div
+          ref={contentRef}
+          className={styles.logContent}
+          onScroll={handleScroll}
+        >
+          {filtered.length === 0 ? (
+            <div className={styles.logEmpty}>
+              <Text variant="muted" size="sm" className={styles.logEmptyText}>
+                {entries.length === 0
+                  ? "Listening — events will appear when automation runs or specs are generated."
+                  : "No events match the current filters."}
+              </Text>
+            </div>
+          ) : (
+            filtered.map((entry, i) => (
+              <LogRow
+                key={i}
+                entry={entry}
+                onSelect={() => pushPreview({ kind: "log", entry })}
+              />
+            ))
+          )}
+        </div>
+        <OverlayScrollbar scrollRef={contentRef} />
       </div>
     </div>
   );

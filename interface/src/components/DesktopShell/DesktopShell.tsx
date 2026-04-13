@@ -1,27 +1,47 @@
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef } from "react";
 import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { PanelRight, Server } from "lucide-react";
-import { Lane } from "../Lane";
+import { Lane, type LaneResizeControls } from "../Lane";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { OrgSelector } from "../OrgSelector";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { HostSettingsModal } from "../HostSettingsModal";
 import { UpdateBanner } from "../UpdateBanner";
 import { PanelSearch } from "../PanelSearch";
-import { TaskOutputPanel } from "../TaskOutputPanel";
+import { DesktopWindowLayer } from "../AgentWindow";
 import { WindowControls } from "../WindowControls";
 import { useAppStore } from "../../stores/app-store";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
+import { apps } from "../../apps/registry";
 
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useDesktopBackgroundStore } from "../../stores/desktop-background-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { apps } from "../../apps/registry";
 import { windowCommand } from "../../lib/windowCommand";
+import { LeftMenu } from "../../features/left-menu";
+import {
+  DEFAULT_SIDEKICK_WIDTH,
+  PROJECTS_SIDEKICK_STORAGE_KEY,
+  SHARED_SIDEKICK_STORAGE_KEY,
+  SIDEKICK_MAX_WIDTH,
+  SIDEKICK_MIN_WIDTH,
+  getProjectsSidekickTargetWidth,
+} from "./desktop-shell-sidekick";
 import styles from "./DesktopShell.module.css";
+
+const sharedDesktopLeftMenuPanes = apps
+  .filter((app) => Boolean(app.DesktopLeftMenuPane))
+  .map((app) => ({
+    appId: app.id,
+    Pane: app.DesktopLeftMenuPane!,
+  }));
+
+function usesSharedDesktopLeftMenu(appId: string): boolean {
+  return sharedDesktopLeftMenuPanes.some((pane) => pane.appId === appId);
+}
 
 function blurActiveElement() {
   const active = document.activeElement;
@@ -59,47 +79,42 @@ function SidebarSearchInput() {
   );
 }
 
-function SidekickLane() {
+function SidekickLane({
+  resizeControlsRef,
+}: {
+  resizeControlsRef?: { current: LaneResizeControls | null };
+}) {
   const activeApp = useAppStore((s) => s.activeApp);
-  const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
   const { SidekickTaskbar } = activeApp;
+  const sidekickStorageKey =
+    activeApp.id === "projects" ? PROJECTS_SIDEKICK_STORAGE_KEY : SHARED_SIDEKICK_STORAGE_KEY;
 
 
-  const hasAnySidekick = apps.some(
-    (app) => app.SidekickPanel && (visitedAppIds.has(app.id) || app.id === activeApp.id),
-  );
+  const hasAnySidekick = Boolean(activeApp.SidekickPanel);
   if (!hasAnySidekick) return null;
 
   return (
     <Lane
+      key={sidekickStorageKey}
       resizable
       resizePosition="left"
-      defaultWidth={320}
-      minWidth={200}
-      maxWidth={1200}
-      storageKey="aura-sidekick-v2"
+      defaultWidth={DEFAULT_SIDEKICK_WIDTH}
+      minWidth={SIDEKICK_MIN_WIDTH}
+      maxWidth={SIDEKICK_MAX_WIDTH}
+      storageKey={sidekickStorageKey}
       collapsible
       collapsed={sidekickCollapsed}
+      resizeControlsRef={resizeControlsRef}
       header={SidekickTaskbar && <SidekickTaskbar />}
       className={styles.laneLeftBorder}
     >
-      <div className={styles.sidekickContentWrapper}>
-        <div className={styles.sidekickPanels}>
-          {apps.map((app) => {
-            if (!app.SidekickPanel) return null;
-            if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
-            return (
-              <div
-                key={app.id}
-                className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
-              >
-                <app.SidekickPanel />
-              </div>
-            );
-          })}
-        </div>
-        <TaskOutputPanel />
+      <div className={styles.sidekickPanels}>
+        {activeApp.SidekickPanel && (
+          <div className={styles.panelActive}>
+            <activeApp.SidekickPanel />
+          </div>
+        )}
       </div>
     </Lane>
   );
@@ -120,6 +135,9 @@ export function DesktopShell() {
   );
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
+  const mainPanelRef = useRef<HTMLDivElement>(null);
+  const sidekickResizeControlsRef = useRef<LaneResizeControls | null>(null);
+  const previousActiveAppIdRef = useRef<string | null>(null);
   const { MainPanel } = activeApp;
   const ActiveProvider = activeApp.Provider ?? Fragment;
   const isDesktop = activeApp.id === "desktop";
@@ -146,6 +164,35 @@ export function DesktopShell() {
       if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    const previousActiveAppId = previousActiveAppIdRef.current;
+    previousActiveAppIdRef.current = activeApp.id;
+
+    if (activeApp.id !== "projects" || previousActiveAppId === "projects") return;
+
+    const syncProjectsSidekickWidth = () => {
+      const mainPanelHost = mainPanelRef.current;
+      const sidekickResizeControls = sidekickResizeControlsRef.current;
+      if (!mainPanelHost || !sidekickResizeControls) return false;
+
+      const mainWidth = Math.round(mainPanelHost.getBoundingClientRect().width);
+      if (mainWidth <= 0) return false;
+
+      const currentSidekickWidth = sidekickCollapsed ? 0 : sidekickResizeControls.getSize();
+      sidekickResizeControls.setSize(
+        getProjectsSidekickTargetWidth(mainWidth, currentSidekickWidth),
+      );
+      return true;
+    };
+
+    if (syncProjectsSidekickWidth()) return;
+
+    const rafId = requestAnimationFrame(() => {
+      syncProjectsSidekickWidth();
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [activeApp.id, sidekickCollapsed]);
 
   return (
     <>
@@ -195,33 +242,41 @@ export function DesktopShell() {
                 storageKey="aura-sidebar"
                 collapsible
                 collapsed={isDesktop}
+                animateCollapse={false}
                 header={<SidebarSearchInput />}
               >
-                {apps.map((app) => {
-                  if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
-                  return (
-                    <div
-                      key={app.id}
-                      className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
-                    >
-                      <app.LeftPanel />
-                    </div>
-                  );
-                })}
+                {usesSharedDesktopLeftMenu(activeApp.id) ? (
+                  <LeftMenu
+                    activeAppId={activeApp.id}
+                    panes={sharedDesktopLeftMenuPanes}
+                    visitedAppIds={visitedAppIds}
+                  />
+                ) : (
+                  <div className={styles.panelActive}>
+                    <activeApp.LeftPanel />
+                  </div>
+                )}
               </Lane>
             </div>
           </div>
 
           <ActiveProvider>
-            <ErrorBoundary name="main">
-              <MainPanel>{routeContent}</MainPanel>
-            </ErrorBoundary>
+            <div ref={mainPanelRef} className={styles.mainPanelHost}>
+              <ErrorBoundary name="main">
+                <MainPanel>{routeContent}</MainPanel>
+              </ErrorBoundary>
+            </div>
             {!isDesktop && (
               <ErrorBoundary name="sidekick">
-                <SidekickLane />
+                <SidekickLane resizeControlsRef={sidekickResizeControlsRef} />
               </ErrorBoundary>
             )}
           </ActiveProvider>
+          <ErrorBoundary name="windows">
+            <div className={styles.windowLayerHost} data-window-layer-host="true">
+              <DesktopWindowLayer />
+            </div>
+          </ErrorBoundary>
         </div>
         <BottomTaskbar />
       </div>

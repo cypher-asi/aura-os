@@ -90,6 +90,22 @@ npm run dev
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api` and `/ws` to `http://localhost:3100`, so the backend must be running.
 
+### Run desktop app (live dev)
+
+From the repo root:
+
+```bash
+./scripts/dev/run-desktop-dev.sh
+```
+
+On Windows PowerShell:
+
+```powershell
+./scripts/dev/run-desktop-dev.ps1
+```
+
+This starts Vite first, waits for `@vite/client`, then launches `aura-os-desktop` against the live frontend URL so CSS and TypeScript edits update in the native shell without rebuilding. Plain debug runs now also try to start and attach a local Vite server automatically, but this script is still the clearest way to keep the desktop shell and frontend pinned to the same dev URL.
+
 ### Run mobile web
 
 For all mobile browser testing, use the shared mobile dev runner from the repo root:
@@ -358,16 +374,16 @@ Still needed before a real Google Play submission:
 - App access / review instructions if login is required
 - A live production Aura backend/API that Play reviewers can reach
 
-### Run desktop app
+### Run desktop app with a built interface
 
-Build the interface once, then run the desktop shell (it embeds the server and interface):
+Build the interface once, then run the desktop shell with the static bundle:
 
 ```bash
 cd interface && npm run build && cd ..
 cargo run -p aura-os-desktop
 ```
 
-Run from the repo root so `.env` is loaded. The desktop app bundles the server and interface into a single native window via WebView.
+Run from the repo root so `.env` is loaded. The desktop app bundles the server and interface into a single native window via WebView. In debug builds it will also try to boot a local Vite server when the repo's `interface` sources are available, while the dev scripts remain the most explicit option for pinned ports and shared dev sessions.
 
 ### Release automation docs
 

@@ -78,6 +78,23 @@ pub(crate) fn default_cwd() -> String {
         .unwrap_or_else(|| ".".into())
 }
 
+#[cfg(windows)]
+fn is_powershell_shell(shell: &str) -> bool {
+    let file_name = std::path::Path::new(shell)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(shell);
+
+    file_name.eq_ignore_ascii_case("powershell.exe") || file_name.eq_ignore_ascii_case("pwsh.exe")
+}
+
+fn configure_shell_command(cmd: &mut CommandBuilder, shell: &str) {
+    #[cfg(windows)]
+    if is_powershell_shell(shell) {
+        cmd.arg("-NoLogo");
+    }
+}
+
 struct PtyComponents {
     child: Box<dyn portable_pty::Child + Send + Sync>,
     master: Box<dyn MasterPty + Send>,
@@ -103,6 +120,7 @@ fn open_pty_session(
         .map_err(|e| format!("Failed to open PTY: {e}"))?;
 
     let mut cmd = CommandBuilder::new(shell);
+    configure_shell_command(&mut cmd, shell);
     cmd.cwd(working_dir);
     cmd.env("TERM", "xterm-256color");
     let child = pair
@@ -281,6 +299,17 @@ mod tests {
     fn test_default_cwd_returns_nonempty() {
         let cwd = default_cwd();
         assert!(!cwd.is_empty(), "default_cwd() must not be empty");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_is_powershell_shell_detects_common_names() {
+        assert!(is_powershell_shell("powershell.exe"));
+        assert!(is_powershell_shell("pwsh.exe"));
+        assert!(is_powershell_shell(
+            r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+        ));
+        assert!(!is_powershell_shell("cmd.exe"));
     }
 
     #[test]

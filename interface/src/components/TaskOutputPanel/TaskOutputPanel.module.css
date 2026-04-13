@@ -13,6 +13,7 @@
 }
 
 .panelCollapsed .content,
+.panelCollapsed .contentShell,
 .panelCollapsed .terminalContent {
   display: none;
 }
@@ -50,6 +51,23 @@
   user-select: none;
   position: relative;
   z-index: 1;
+}
+
+.sidekickPane {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidekickPaneHeader {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  min-height: 36px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
 }
 
 .headerLeft {
@@ -207,9 +225,14 @@
 
 /* ── Content area ── */
 
-.content {
+.contentShell {
+  position: relative;
   flex: 1;
   min-height: 0;
+}
+
+.content {
+  height: 100%;
   overflow-y: auto;
   scrollbar-width: none;
 }

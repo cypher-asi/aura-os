@@ -18,6 +18,7 @@ function ExternalLink(props: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
 const MD_COMPONENTS = { a: ExternalLink };
 
 const HEADING_RE = /^#{1,3}\s+(.+)/m;
+const PREVIEW_CHAR_LIMIT = 900;
 
 export function isLargeText(text: string): boolean {
   if (text.length > CHAR_THRESHOLD) return true;
@@ -36,9 +37,18 @@ function extractTitle(text: string): string {
   return firstLine || "Document";
 }
 
+function buildPreview(text: string): string {
+  const collapsed = text.slice(0, PREVIEW_CHAR_LIMIT).trimEnd();
+  if (collapsed.length >= text.length) {
+    return collapsed;
+  }
+  return `${collapsed}\n\n...`;
+}
+
 export function LargeTextBlock({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
   const title = useMemo(() => extractTitle(text), [text]);
+  const preview = useMemo(() => buildPreview(text), [text]);
 
   return (
     <div className={styles.card}>
@@ -51,9 +61,17 @@ export function LargeTextBlock({ text }: { text: string }) {
       <div
         className={`${styles.contentArea} ${expanded ? styles.expanded : styles.collapsed}`}
       >
-        <ReactMarkdown remarkPlugins={MD_REMARK} rehypePlugins={MD_REHYPE} components={MD_COMPONENTS}>
-          {text}
-        </ReactMarkdown>
+        {expanded ? (
+          <ReactMarkdown
+            remarkPlugins={MD_REMARK}
+            rehypePlugins={MD_REHYPE}
+            components={MD_COMPONENTS}
+          >
+            {text}
+          </ReactMarkdown>
+        ) : (
+          <pre className={styles.previewText}>{preview}</pre>
+        )}
         {!expanded && <div className={styles.fade} />}
       </div>
 

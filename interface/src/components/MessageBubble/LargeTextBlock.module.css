@@ -95,6 +95,14 @@
   height: 12px;
 }
 
+.previewText {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-secondary, #ccc);
+  font: inherit;
+}
+
 .collapsed {
   max-height: 180px;
 }

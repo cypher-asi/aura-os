@@ -4,7 +4,7 @@ import { AgentMainPanel } from "./AgentMainPanel";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSidekickTaskbar } from "./AgentSidekickTaskbar";
 import { useAgentStore, LAST_AGENT_ID_KEY } from "./stores";
-import { api } from "../../api/client";
+import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../api/client";
 import { useChatHistoryStore, agentHistoryKey } from "../../stores/chat-history-store";
 import type { AuraApp } from "../types";
 
@@ -25,7 +25,10 @@ export const AgentsApp: AuraApp = {
     if (lastId) {
       useChatHistoryStore.getState().prefetchHistory(
         agentHistoryKey(lastId),
-        () => api.agents.listEvents(lastId),
+        () =>
+          api.agents.listEvents(lastId, {
+            limit: STANDALONE_AGENT_HISTORY_LIMIT,
+          }),
       );
     }
   },

@@ -17,9 +17,12 @@ interface ChatHistorySyncOptions {
   onSwitch?: () => void;
   /** Called when no entity ID is present — clears local state. */
   onClear?: () => void;
+  /** When false, callers render directly from cached history instead of copying it into the stream store. */
+  hydrateToStream?: boolean;
 }
 
 interface ChatHistorySyncResult {
+  historyMessages: DisplaySessionEvent[];
   historyResolved: boolean;
   isLoading: boolean;
   historyError: string | null;
@@ -39,12 +42,17 @@ export function useChatHistorySync({
   invalidateBeforeFetch,
   onSwitch,
   onClear,
+  hydrateToStream = true,
 }: ChatHistorySyncOptions): ChatHistorySyncResult {
   const {
     events: historyMessages,
     status: historyStatus,
     error: historyError,
   } = useChatHistory(historyKey);
+  const historyLastMessageAt = useChatHistoryStore((s) => {
+    if (!historyKey) return null;
+    return s.entries[historyKey]?.lastMessageAt ?? null;
+  });
 
   const isStreaming = useIsStreaming(streamKey);
 
@@ -86,6 +94,7 @@ export function useChatHistorySync({
   //    skip — avoids a full re-render blink after streaming ends and the
   //    background re-fetch returns equivalent data.
   useEffect(() => {
+    if (!hydrateToStream) return;
     if (historyStatus !== "ready" || !historyKey) return;
     const histEntry = useChatHistoryStore.getState().entries[historyKey];
     const sEntry = getStreamEntry(streamKey);
@@ -93,7 +102,40 @@ export function useChatHistorySync({
     if (histEntry && histEntry.fetchedAt === 0 && streamCount > 0) return;
     if (streamCount > 0 && streamCount >= historyMessages.length) return;
     resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
-  }, [historyMessages, historyStatus, historyKey, streamKey]);
+  }, [historyMessages, historyStatus, historyKey, hydrateToStream, streamKey]);
+
+  const prevHistoryLastMessageAtRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (hydrateToStream || historyStatus !== "ready" || !historyKey) {
+      prevHistoryLastMessageAtRef.current = historyLastMessageAt;
+      return;
+    }
+
+    const previousLastMessageAt = prevHistoryLastMessageAtRef.current;
+    prevHistoryLastMessageAtRef.current = historyLastMessageAt;
+
+    if (
+      previousLastMessageAt == null ||
+      previousLastMessageAt === historyLastMessageAt ||
+      isStreaming
+    ) {
+      return;
+    }
+
+    const streamEntry = getStreamEntry(streamKey);
+    if ((streamEntry?.events.length ?? 0) === 0) {
+      return;
+    }
+
+    resetEventsRef.current([], { allowWhileStreaming: true });
+  }, [
+    historyKey,
+    historyLastMessageAt,
+    historyStatus,
+    hydrateToStream,
+    isStreaming,
+    streamKey,
+  ]);
 
   // After invalidateHistory the entry keeps status "ready" with fetchedAt=0
   // while the background re-fetch is in flight. Treat this as unresolved so
@@ -112,18 +154,13 @@ export function useChatHistorySync({
 
   const wrapSend = useCallback(
     <T extends (...args: any[]) => any>(send: T): T => {
-      const wrapped = ((...args: any[]) => {
-        if (historyKey) {
-          useChatHistoryStore.getState().invalidateHistory(historyKey);
-        }
-        return send(...args);
-      }) as unknown as T;
-      return wrapped;
+      return ((...args: any[]) => send(...args)) as unknown as T;
     },
-    [historyKey],
+    [],
   );
 
   return {
+    historyMessages,
     historyResolved,
     isLoading: rawLoading || isFetchStale,
     historyError: historyError ?? null,

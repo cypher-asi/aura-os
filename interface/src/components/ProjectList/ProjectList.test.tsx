@@ -155,6 +155,7 @@ function renderList(path = "/projects") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   mockProjectsList.projects = [];
   mockProjectsList.loadingProjects = false;
   mockProjectsList.agentsByProject = {};
@@ -171,7 +172,7 @@ describe("ProjectList", () => {
     mockProjectsList.projects = [];
     renderList();
     expect(
-      screen.getByText(/Open an existing project from this team/),
+      screen.getByText(/Open an existing project or create a linked one from the desktop app\./),
     ).toBeInTheDocument();
   });
 
@@ -200,6 +201,13 @@ describe("ProjectList", () => {
     renderList();
     expect(screen.getByText("Agent Alpha")).toBeInTheDocument();
     expect(screen.getByText("Agent Beta")).toBeInTheDocument();
+  });
+
+  it("shows an empty placeholder when a project's agents are loaded but empty", () => {
+    mockProjectsList.projects = [makeProject()];
+    mockProjectsList.agentsByProject = { p1: [] };
+    renderList();
+    expect(screen.getByText("No agents yet")).toBeInTheDocument();
   });
 
   it("shows loading placeholder when agents not yet loaded", () => {

@@ -5,8 +5,10 @@ use tower::ServiceExt;
 
 use aura_os_core::*;
 use aura_os_storage::{
-    CreateSessionEventRequest, CreateSessionRequest, StorageClient, StorageSessionEvent,
+    CreateProjectAgentRequest, CreateSessionEventRequest, CreateSessionRequest, StorageClient,
+    StorageSessionEvent,
 };
+use aura_os_projects::CreateProjectInput;
 
 use common::*;
 
@@ -315,6 +317,95 @@ async fn events_endpoint_returns_session_event_shape() {
     );
     assert!(first.get("role").is_some(), "should have role field");
     assert!(first.get("content").is_some(), "should have content field");
+}
+
+#[tokio::test]
+async fn standalone_agent_events_support_recent_window() {
+    let (app, state, storage, _db) = build_test_app_with_storage().await;
+    let jwt = "test-token";
+
+    let project = state
+        .project_service
+        .create_project(CreateProjectInput {
+            org_id: OrgId::new(),
+            name: "Agent History".into(),
+            description: "Project for agent history tests".into(),
+            build_command: None,
+            test_command: None,
+        })
+        .expect("create local project");
+
+    let agent_id = AgentId::new();
+    let project_agent = storage
+        .create_project_agent(
+            &project.project_id.to_string(),
+            jwt,
+            &CreateProjectAgentRequest {
+                agent_id: agent_id.to_string(),
+                name: "Logos".into(),
+                org_id: None,
+                role: Some("Researcher".into()),
+                personality: Some("Detailed".into()),
+                system_prompt: Some("Investigate everything".into()),
+                skills: Some(vec![]),
+                icon: None,
+                harness: None,
+            },
+        )
+        .await
+        .expect("create project agent");
+
+    let session = storage
+        .create_session(
+            &project_agent.id,
+            jwt,
+            &CreateSessionRequest {
+                project_id: project.project_id.to_string(),
+                org_id: None,
+                model: None,
+                status: None,
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .expect("create session");
+
+    for idx in 0..5 {
+        storage
+            .create_event(
+                &session.id,
+                jwt,
+                &CreateSessionEventRequest {
+                    event_type: "assistant_message_end".into(),
+                    sender: Some("agent".into()),
+                    project_id: Some(project.project_id.to_string()),
+                    agent_id: Some(project_agent.id.clone()),
+                    org_id: None,
+                    user_id: None,
+                    content: Some(serde_json::json!({
+                        "text": format!("Event {idx}"),
+                    })),
+                    session_id: Some(session.id.clone()),
+                },
+            )
+            .await
+            .expect("create history event");
+    }
+
+    let req = json_request(
+        "GET",
+        &format!("/api/agents/{agent_id}/events?limit=2&offset=1"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.expect("request should succeed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    let arr = body.as_array().expect("response should be an array");
+    assert_eq!(arr.len(), 2, "recent window should contain 2 events");
+    assert_eq!(arr[0]["content"], "Event 2");
+    assert_eq!(arr[1]["content"], "Event 3");
 }
 
 // ---------------------------------------------------------------------------

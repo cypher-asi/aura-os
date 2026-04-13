@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockNavigate = vi.fn();
+const reorderTaskbarApps = vi.fn();
 
 function MockIcon({ size = 16 }: { size?: number }) {
   return <svg data-testid={`icon-${size}`} />;
@@ -20,6 +21,8 @@ const mockApps = [
 const state = {
   apps: mockApps,
   activeApp: mockApps[1],
+  taskbarAppOrder: ["agents", "projects", "tasks", "process", "feed"],
+  reorderTaskbarApps,
 };
 
 const navigationMemory = {
@@ -32,8 +35,37 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
+vi.mock("@cypher-asi/zui", () => ({
+  Button: ({
+    children,
+    icon,
+    iconOnly: _iconOnly,
+    variant: _variant,
+    size: _size,
+    selected: _selected,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    icon?: React.ReactNode;
+    iconOnly?: boolean;
+    variant?: string;
+    size?: string;
+    selected?: boolean;
+  }) => <button {...props}>{icon}{children}</button>,
+}));
+
 vi.mock("../../stores/app-store", () => ({
   useAppStore: (selector: (s: typeof state) => unknown) => selector(state),
+  getOrderedTaskbarApps: (apps: typeof mockApps, taskbarAppOrder: string[]) => {
+    const rank = new Map(taskbarAppOrder.map((id, index) => [id, index]));
+    return [...apps].sort((a, b) => {
+      const aRank = rank.get(a.id);
+      const bRank = rank.get(b.id);
+      if (aRank == null && bRank == null) return 0;
+      if (aRank == null) return 1;
+      if (bRank == null) return -1;
+      return aRank - bRank;
+    });
+  },
 }));
 
 vi.mock("../../apps/agents/stores", () => ({
@@ -58,6 +90,7 @@ import { AppNavRail } from "./AppNavRail";
 beforeEach(() => {
   vi.clearAllMocks();
   state.activeApp = mockApps[1];
+  state.taskbarAppOrder = ["agents", "projects", "tasks", "process", "feed"];
   navigationMemory.lastSelectedAgentId = null;
   navigationMemory.lastProject = null;
   navigationMemory.lastAgent = null;
@@ -82,7 +115,67 @@ describe("AppNavRail", () => {
 
     render(<AppNavRail layout="taskbar" />);
 
-    expect(screen.getByRole("button", { name: "Feed" }).className).toContain("navBtnSelected");
+    expect(screen.getByRole("button", { name: "Feed" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("renders taskbar apps in the saved order while keeping profile pinned", () => {
+    state.taskbarAppOrder = ["tasks", "agents", "projects", "process", "feed"];
+
+    render(<AppNavRail layout="taskbar" />);
+
+    const labels = within(screen.getByRole("navigation", { name: "Primary navigation" }))
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label"));
+
+    expect(labels).toEqual(["Tasks", "Agents", "Projects", "Process", "Feed", "Profile"]);
+  });
+
+  it("supports splitting taskbar apps into separate clusters", () => {
+    render(
+      <>
+        <AppNavRail layout="taskbar" excludeIds={["profile"]} ariaLabel="Taskbar apps" />
+        <AppNavRail layout="taskbar" includeIds={["profile"]} ariaLabel="Profile shortcut" />
+      </>,
+    );
+
+    const taskbarApps = within(screen.getByRole("navigation", { name: "Taskbar apps" }));
+    const profileShortcut = within(screen.getByRole("navigation", { name: "Profile shortcut" }));
+
+    expect(taskbarApps.getByRole("button", { name: "Agents" })).toBeInTheDocument();
+    expect(taskbarApps.queryByRole("button", { name: "Profile" })).not.toBeInTheDocument();
+    expect(profileShortcut.getByRole("button", { name: "Profile" })).toBeInTheDocument();
+    expect(profileShortcut.queryByRole("button", { name: "Agents" })).not.toBeInTheDocument();
+  });
+
+  it("forwards drag reorder events for the reorderable taskbar strip", () => {
+    render(<AppNavRail layout="taskbar" allowReorder excludeIds={["profile"]} />);
+
+    const tasksButton = screen.getByRole("button", { name: "Tasks" });
+    const agentsButton = screen.getByRole("button", { name: "Agents" });
+    const elementFromPoint = vi.fn(() => agentsButton);
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: elementFromPoint,
+    });
+
+    fireEvent.pointerDown(tasksButton, {
+      button: 0,
+      pointerId: 1,
+      clientX: 10,
+      clientY: 10,
+    });
+    fireEvent.pointerMove(window, {
+      pointerId: 1,
+      clientX: 30,
+      clientY: 10,
+    });
+    fireEvent.pointerUp(window, {
+      pointerId: 1,
+      clientX: 30,
+      clientY: 10,
+    });
+
+    expect(reorderTaskbarApps).toHaveBeenCalledWith("tasks", "agents");
   });
 
   it("reuses remembered destinations when taskbar apps are clicked", async () => {

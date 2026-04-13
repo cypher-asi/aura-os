@@ -8,7 +8,11 @@ import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { AgentConversationRow } from "../AgentConversationRow";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
-import { api, ApiClientError } from "../../../api/client";
+import {
+  api,
+  ApiClientError,
+  STANDALONE_AGENT_HISTORY_LIMIT,
+} from "../../../api/client";
 import {
   useAgents,
   useSelectedAgent,
@@ -59,12 +63,46 @@ interface AgentListProps {
   mode?: "default" | "mobile-library";
 }
 
+function AgentConversationRowWithHistory({
+  agent,
+  isMobileLibrary,
+  isSelected,
+  onClick,
+  onContextMenu,
+  onMouseEnter,
+}: {
+  agent: Agent;
+  isMobileLibrary: boolean;
+  isSelected: boolean;
+  onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onMouseEnter: () => void;
+}) {
+  const lastMessage = useChatHistoryStore((state) => {
+    if (isMobileLibrary) return undefined;
+    const messages = state.entries[agentHistoryKey(agent.agent_id)]?.events;
+    return messages?.length ? messages[messages.length - 1] : undefined;
+  });
+
+  return (
+    <AgentConversationRow
+      agent={agent}
+      lastMessage={lastMessage}
+      showMetadataOnly={isMobileLibrary}
+      isSelected={isSelected}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      onMouseEnter={onMouseEnter}
+    />
+  );
+}
+
 export function AgentList({ mode = "default" }: AgentListProps) {
   const { agents, status, fetchAgents } = useAgents();
   const { setSelectedAgent } = useSelectedAgent();
   const isMobileLibrary = mode === "mobile-library";
   const loading = status === "loading" || status === "idle";
-  const { query: searchQuery, setAction } = useSidebarSearch();
+  const { query: searchQuery, setAction } = useSidebarSearch("agents");
   const navigate = useNavigate();
   const { agentId } = useParams();
   const [showEditor, setShowEditor] = useState(false);
@@ -94,7 +132,10 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     if (lastId && !agentId) {
       useChatHistoryStore.getState().prefetchHistory(
         agentHistoryKey(lastId),
-        () => api.agents.listEvents(lastId),
+        () =>
+          api.agents.listEvents(lastId, {
+            limit: STANDALONE_AGENT_HISTORY_LIMIT,
+          }),
       );
     }
   }, [status, agentId, isMobileLibrary]);
@@ -135,13 +176,14 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     navigate(`/agents/${selectedAgentId}`);
   }, [navigate]);
 
-  const handleHoverPrefetch = useCallback((e: React.MouseEvent) => {
+  const handleHoverPrefetch = useCallback((selectedAgentId: string) => {
     if (isMobileLibrary) return;
-    const target = (e.target as HTMLElement).closest("button[id]");
-    if (!target) return;
     useChatHistoryStore.getState().prefetchHistory(
-      agentHistoryKey(target.id),
-      () => api.agents.listEvents(target.id),
+      agentHistoryKey(selectedAgentId),
+      () =>
+        api.agents.listEvents(selectedAgentId, {
+          limit: STANDALONE_AGENT_HISTORY_LIMIT,
+        }),
     );
   }, [isMobileLibrary]);
 
@@ -211,7 +253,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const sortedAgents = useSortedAgents();
   const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
-  const entries = useChatHistoryStore((s) => s.entries);
 
   useEffect(() => {
     if (agents.length === 0) return;
@@ -252,21 +293,17 @@ export function AgentList({ mode = "default" }: AgentListProps) {
 
   return (
     <div className={styles.list}>
-      <div onContextMenu={handleContextMenu} onMouseOver={handleHoverPrefetch}>
+      <div onContextMenu={handleContextMenu}>
         {filteredAgents.map((agent) => {
-          const entry = isMobileLibrary ? undefined : entries[agentHistoryKey(agent.agent_id)];
-          const msgs = entry?.events;
-          const lastMessage = msgs?.length ? msgs[msgs.length - 1] : undefined;
           return (
-            <AgentConversationRow
+            <AgentConversationRowWithHistory
               key={agent.agent_id}
               agent={agent}
-              lastMessage={lastMessage}
-              showMetadataOnly={isMobileLibrary}
+              isMobileLibrary={isMobileLibrary}
               isSelected={agent.agent_id === agentId}
               onClick={() => handleAgentRowClick(agent.agent_id)}
               onContextMenu={handleContextMenu}
-              onMouseOver={handleHoverPrefetch}
+              onMouseEnter={() => handleHoverPrefetch(agent.agent_id)}
             />
           );
         })}

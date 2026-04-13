@@ -152,7 +152,11 @@ export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Pr
                   <ToolCallsList entries={message.toolCalls} />
                 )}
                 {hasContent && (
-                  <SegmentedContent content={normalizedContent} />
+                  isLargeText(normalizedContent) ? (
+                    <LargeTextBlock text={normalizedContent} />
+                  ) : (
+                    <SegmentedContent content={normalizedContent} />
+                  )
                 )}
               </div>
             )}

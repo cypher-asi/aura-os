@@ -7,6 +7,7 @@ const DEFAULT_WIDTH = 420;
 const DEFAULT_HEIGHT = 520;
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 240;
+const WINDOW_LAYER_HOST_SELECTOR = "[data-window-layer-host='true']";
 
 export { MIN_WIDTH, MIN_HEIGHT };
 
@@ -21,7 +22,7 @@ export interface WindowState {
   maximized: boolean;
 }
 
-interface DesktopWindowState {
+export interface DesktopWindowState {
   windows: Record<string, WindowState>;
   nextZ: number;
 
@@ -69,12 +70,49 @@ function computeMaxZ(windows: Record<string, WindowState>): number {
   return max;
 }
 
+function getWindowLayerHeight(): number | null {
+  if (typeof document === "undefined") return null;
+  const host = document.querySelector<HTMLElement>(WINDOW_LAYER_HOST_SELECTOR);
+  if (!host) return null;
+  const height = Math.round(host.getBoundingClientRect().height);
+  return height > 0 ? height : null;
+}
+
 function cascadePosition(windows: Record<string, WindowState>): { x: number; y: number } {
   const count = Object.keys(windows).length;
+  const hostHeight = getWindowLayerHeight();
   return {
     x: 60 + (count % 10) * CASCADE_OFFSET,
-    y: 40 + (count % 10) * CASCADE_OFFSET,
+    y: hostHeight === null ? 40 : Math.max(0, hostHeight - DEFAULT_HEIGHT),
   };
+}
+
+export function selectWindowById(agentId: string) {
+  return (state: DesktopWindowState): WindowState | undefined => state.windows[agentId];
+}
+
+export function selectIsWindowOpen(agentId: string) {
+  return (state: DesktopWindowState): boolean => !!state.windows[agentId];
+}
+
+export function selectOrderedWindowIds(state: DesktopWindowState): string[] {
+  return Object.values(state.windows)
+    .sort((a, b) => a.zIndex - b.zIndex)
+    .map((win) => win.agentId);
+}
+
+export function selectTopWindowId(state: DesktopWindowState): string | null {
+  let topWindowId: string | null = null;
+  let topZ = -Infinity;
+
+  for (const win of Object.values(state.windows)) {
+    if (win.zIndex > topZ) {
+      topZ = win.zIndex;
+      topWindowId = win.agentId;
+    }
+  }
+
+  return topWindowId;
 }
 
 const initial = loadWindows();

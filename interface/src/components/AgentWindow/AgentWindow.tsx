@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef } from "react";
 import { Minus, Square, X } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useDesktopWindowStore, MIN_WIDTH, MIN_HEIGHT } from "../../stores/desktop-window-store";
 import type { WindowState } from "../../stores/desktop-window-store";
 import { useAgentChatWindow } from "../../hooks/use-agent-chat-window";
@@ -19,16 +20,15 @@ type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 const AgentChatWindowPanel = memo(function AgentChatWindowPanel({ agentId }: { agentId: string }) {
   const chatProps = useAgentChatWindow(agentId);
 
-  if (!chatProps.ready) return null;
-
   return (
     <ChatPanel
-      key={agentId}
       streamKey={chatProps.streamKey}
       onSend={chatProps.onSend}
       onStop={chatProps.onStop}
       agentName={chatProps.agentName}
       machineType={chatProps.machineType}
+      adapterType={chatProps.adapterType}
+      defaultModel={chatProps.defaultModel}
       templateAgentId={chatProps.templateAgentId}
       agentId={chatProps.agentId}
       isLoading={chatProps.isLoading}
@@ -53,7 +53,15 @@ export const AgentWindow = memo(function AgentWindow({ win, isFocused }: AgentWi
   const moveWindow = useDesktopWindowStore((s) => s.moveWindow);
   const setWindowRect = useDesktopWindowStore((s) => s.setWindowRect);
 
-  const agent = useAgentStore((s) => s.agents.find((a) => a.agent_id === agentId));
+  const agent = useAgentStore(
+    useShallow((state) => {
+      const match = state.agents.find((candidate) => candidate.agent_id === agentId);
+      return {
+        icon: match?.icon ?? null,
+        name: match?.name ?? "Agent",
+      };
+    }),
+  );
   const { status, isLocal } = useAvatarState(agentId);
   const titleBarRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; winX: number; winY: number } | null>(null);
@@ -259,14 +267,14 @@ export const AgentWindow = memo(function AgentWindow({ win, isFocused }: AgentWi
       >
         <div className={styles.titleInfo}>
           <Avatar
-            avatarUrl={agent?.icon ?? undefined}
-            name={agent?.name}
+            avatarUrl={agent.icon ?? undefined}
+            name={agent.name}
             type="agent"
             size={18}
             status={status}
             isLocal={isLocal}
           />
-          <span className={styles.titleName}>{agent?.name ?? "Agent"}</span>
+          <span className={styles.titleName}>{agent.name}</span>
         </div>
         <div className={styles.titleControls}>
           <button

@@ -6,6 +6,13 @@ type ApiRequestOptions = {
   signal?: AbortSignal;
 };
 
+export const STANDALONE_AGENT_HISTORY_LIMIT = 80;
+
+interface AgentEventsRequestOptions extends ApiRequestOptions {
+  limit?: number;
+  offset?: number;
+}
+
 export const agentTemplatesApi = {
   list: () => apiFetch<Agent[]>("/api/agents"),
   create: (data: {
@@ -46,8 +53,19 @@ export const agentTemplatesApi = {
     apiFetch<{ project_agent_id: string; project_id: string; project_name: string }[]>(`/api/agents/${agentId}/projects`),
   removeProjectBinding: (agentId: AgentId, projectAgentId: string) =>
     apiFetch<void>(`/api/agents/${agentId}/projects/${projectAgentId}`, { method: "DELETE" }),
-  listEvents: (agentId: AgentId, options?: ApiRequestOptions) =>
-    apiFetch<SessionEvent[]>(`/api/agents/${agentId}/events`, { signal: options?.signal }),
+  listEvents: (agentId: AgentId, options?: AgentEventsRequestOptions) => {
+    const params = new URLSearchParams();
+    if (options?.limit != null) {
+      params.set("limit", String(options.limit));
+    }
+    if (options?.offset != null) {
+      params.set("offset", String(options.offset));
+    }
+    const query = params.size > 0 ? `?${params.toString()}` : "";
+    return apiFetch<SessionEvent[]>(`/api/agents/${agentId}/events${query}`, {
+      signal: options?.signal,
+    });
+  },
   sendEventStream: sendAgentEventStream,
   testRuntime: (agentId: AgentId) =>
     apiFetch<AgentRuntimeTestResult>(`/api/agents/${agentId}/runtime/test`, { method: "POST" }),

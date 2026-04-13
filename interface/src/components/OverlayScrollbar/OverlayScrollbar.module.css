@@ -1,0 +1,30 @@
+.scrollTrack {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.scrollThumb {
+  position: absolute;
+  right: 0;
+  width: 4px;
+  min-height: 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.scrollThumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.scrollThumbVisible {
+  opacity: 1;
+}

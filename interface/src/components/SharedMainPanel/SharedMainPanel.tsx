@@ -6,19 +6,14 @@ import { useTerminalTarget } from "../../hooks/use-terminal-target";
 
 export function SharedMainPanel({ children }: { children?: ReactNode }) {
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
-  const setCwd = useTerminalPanelStore((s) => s.setCwd);
-  const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
+  const setTerminalTarget = useTerminalPanelStore((s) => s.setTerminalTarget);
 
   const { remoteAgentId, workspacePath, status } = useTerminalTarget({ projectId, agentInstanceId });
 
   useEffect(() => {
-    setCwd(workspacePath);
-  }, [setCwd, workspacePath]);
-
-  useEffect(() => {
     if (status !== "ready") return;
-    setRemoteAgentId(remoteAgentId);
-  }, [remoteAgentId, status, setRemoteAgentId]);
+    setTerminalTarget({ cwd: workspacePath, remoteAgentId });
+  }, [remoteAgentId, setTerminalTarget, status, workspacePath]);
 
   return (
     <ResponsiveMainLane>

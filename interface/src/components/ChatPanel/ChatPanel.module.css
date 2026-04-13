@@ -75,11 +75,17 @@
   overflow: clip visible;
 }
 
-.messageArea {
+.messageAreaShell {
+  position: relative;
   flex: 1;
-  overflow-y: scroll;
+  min-height: 0;
+}
+
+.messageArea {
+  height: 100%;
+  overflow-y: auto;
   overflow-anchor: none;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   padding: var(--space-3) calc(var(--space-3) * 2);
   padding-bottom: 140px;
   scroll-padding-top: 24px;
@@ -88,6 +94,10 @@
   flex-direction: column;
   opacity: 1;
   transition: opacity 0.3s ease;
+}
+
+.messageArea::-webkit-scrollbar {
+  display: none;
 }
 
 .messageAreaHidden {
@@ -117,6 +127,24 @@
   gap: var(--space-3);
   color: var(--color-text-muted);
   text-align: center;
+}
+
+.loadingState {
+  gap: var(--space-2);
+}
+
+.loadingIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Queue section — sits above the input area */

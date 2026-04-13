@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
+import { OverlayScrollbar } from "../../components/OverlayScrollbar";
 import { StatusBadge } from "../../components/StatusBadge";
 import { formatTokens } from "../../utils/format";
 import { EmptyState } from "../../components/EmptyState";
@@ -25,6 +26,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
   const { sessions, loading, selectedId, setSelectedId } = useSessionListData();
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const summarizingRef = useRef<Set<string>>(new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     for (const session of sessions) {
@@ -76,55 +78,58 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
   }
 
   return (
-    <div className={styles.sessionListWrap}>
-      {filtered.map((session) => {
-        const totalTokens = session.total_input_tokens + session.total_output_tokens;
-        const number = sessions.length - sessions.indexOf(session);
-        const summary = summaries[session.session_id];
-        const isSelected = selectedId === session.session_id;
+    <div className={styles.sessionListShell}>
+      <div ref={scrollRef} className={styles.sessionListWrap}>
+        {filtered.map((session) => {
+          const totalTokens = session.total_input_tokens + session.total_output_tokens;
+          const number = sessions.length - sessions.indexOf(session);
+          const summary = summaries[session.session_id];
+          const isSelected = selectedId === session.session_id;
 
-        return (
-          <div
-            key={session.session_id}
-            className={`${styles.sessionCard} ${isSelected ? styles.sessionCardSelected : ""}`}
-            onClick={() => {
-              setSelectedId(session.session_id);
-              navigate(
-                `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
-              );
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
+          return (
+            <div
+              key={session.session_id}
+              className={`${styles.sessionCard} ${isSelected ? styles.sessionCardSelected : ""}`}
+              onClick={() => {
                 setSelectedId(session.session_id);
                 navigate(
                   `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
                 );
-              }
-            }}
-          >
-            <div className={styles.sessionCardHeader}>
-              <StatusBadge status={session.status} />
-              <span className={styles.sessionNumber}>S{number}</span>
-              <span className={styles.sessionMeta}>
-                <span className={styles.sessionDuration}>
-                  {formatDuration(session.started_at, session.ended_at)}
-                </span>
-                {totalTokens > 0 && (
-                  <span className={styles.sessionCost}>
-                    {formatTokens(totalTokens)}
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setSelectedId(session.session_id);
+                  navigate(
+                    `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
+                  );
+                }
+              }}
+            >
+              <div className={styles.sessionCardHeader}>
+                <StatusBadge status={session.status} />
+                <span className={styles.sessionNumber}>S{number}</span>
+                <span className={styles.sessionMeta}>
+                  <span className={styles.sessionDuration}>
+                    {formatDuration(session.started_at, session.ended_at)}
                   </span>
-                )}
-              </span>
+                  {totalTokens > 0 && (
+                    <span className={styles.sessionCost}>
+                      {formatTokens(totalTokens)}
+                    </span>
+                  )}
+                </span>
+              </div>
+              {summary && <div className={styles.sessionSummary}>{summary}</div>}
+              {!summary && session.status !== "active" && summarizingRef.current.has(session.session_id) && (
+                <div className={styles.sessionSummaryPlaceholder}>Generating summary...</div>
+              )}
             </div>
-            {summary && <div className={styles.sessionSummary}>{summary}</div>}
-            {!summary && session.status !== "active" && summarizingRef.current.has(session.session_id) && (
-              <div className={styles.sessionSummaryPlaceholder}>Generating summary...</div>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      <OverlayScrollbar scrollRef={scrollRef} />
     </div>
   );
 }

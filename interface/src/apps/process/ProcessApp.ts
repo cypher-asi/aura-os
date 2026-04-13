@@ -12,6 +12,7 @@ export const ProcessApp: AuraApp = {
   icon: Cpu,
   basePath: "/process",
   LeftPanel: ProcessList,
+  DesktopLeftMenuPane: ProcessList,
   MainPanel: ProcessMainPanel,
   ResponsiveControls: ProcessList,
   SidekickPanel: ProcessSidekickContent,

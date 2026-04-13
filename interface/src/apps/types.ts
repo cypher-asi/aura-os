@@ -7,6 +7,8 @@ export interface AuraApp {
   icon: LucideIcon;
   basePath: string;
   LeftPanel: ComponentType;
+  /** Optional persistent desktop left menu pane used by the shared shell host. */
+  DesktopLeftMenuPane?: ComponentType;
   MainPanel: ComponentType<{ children?: ReactNode }>;
   ResponsiveControls?: ComponentType;
   SidekickPanel?: ComponentType;

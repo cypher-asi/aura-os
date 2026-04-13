@@ -1,0 +1,343 @@
+.root {
+  --projects-nav-fade-height: 72px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.root::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--projects-nav-fade-height);
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--color-bg, #111) 42%, transparent) 38%,
+    color-mix(in srgb, var(--color-bg, #111) 92%, black) 100%
+  );
+}
+
+.explorerWrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 8px;
+  scrollbar-width: none;
+}
+
+.explorerWrap::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollTrack {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.scrollThumb {
+  position: absolute;
+  right: 0;
+  width: 4px;
+  min-height: 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.scrollThumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.scrollThumbVisible {
+  opacity: 1;
+}
+
+.projectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 8px;
+  padding-bottom: calc(var(--projects-nav-fade-height) - 16px);
+}
+
+.virtualListContainer {
+  position: relative;
+  width: 100%;
+}
+
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.projectGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.projectHeader {
+  position: relative;
+  --projects-plus-button-size: 20px;
+  min-height: var(--control-height-sm, 28px);
+  padding-left: 16px;
+  padding-right: calc(16px + var(--projects-plus-button-size));
+}
+
+.projectMainButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-height-sm, 28px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.projectMainButton:focus-visible {
+  outline: none;
+}
+
+.projectLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: color-mix(in srgb, #ffffff 72%, transparent);
+}
+
+.projectChevronWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  color: rgba(255, 255, 255, 0.75);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.projectChevron {
+  transition: transform 0.15s ease;
+}
+
+.projectChevronExpanded {
+  transform: rotate(90deg);
+}
+
+.projectHeader:hover .projectChevronWrap {
+  opacity: 1;
+  color: var(--color-text-secondary);
+}
+
+.projectActions {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--projects-plus-button-size);
+  min-width: var(--projects-plus-button-size);
+  transform: translateY(-50%);
+}
+
+.projectSuffix {
+  display: inline-flex;
+  align-items: center;
+}
+
+.newChatWrap {
+  display: inline-flex;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.projectHeader:hover .newChatWrap {
+  opacity: 1;
+}
+
+.newChatWrap button svg {
+  width: 10px;
+  height: 10px;
+}
+
+.childrenList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.emptyAgentsState {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-height-sm, 28px);
+  padding: 0 16px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.emptyAgentsDash {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-width: 18px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.emptyAgentsLabel {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: inherit;
+  min-width: 0;
+}
+
+.agentRow {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--control-height-sm, 28px);
+  padding: 0 16px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.94);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agentRow:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.agentRow:focus-visible {
+  outline: none;
+}
+
+.agentRowSelected,
+.agentRowSelected:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.agentRowDisabled,
+.agentRowDisabled:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: default;
+}
+
+.agentIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.agentLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: inherit;
+}
+
+.agentSuffix {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sessionIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.automationSpinner {
+  animation: spin 1s linear infinite;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.streamingDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}

@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { api } from "../api/client";
+import { useQuery } from "@tanstack/react-query";
+import { useShallow } from "zustand/react/shallow";
 import { useAgentStore, useSelectedAgent } from "../apps/agents/stores";
+import { projectAgentInstanceQueryOptions } from "../queries/project-queries";
+import type { Agent } from "../types";
 
 type ChatMode = "project" | "agent";
 
@@ -12,6 +14,14 @@ export interface AgentChatMeta {
   defaultModel: string | null | undefined;
 }
 
+const EMPTY_AGENT_CHAT_META: AgentChatMeta = {
+  agentName: undefined,
+  machineType: undefined,
+  templateAgentId: undefined,
+  adapterType: undefined,
+  defaultModel: undefined,
+};
+
 interface UseAgentChatMetaParams {
   projectId?: string;
   agentInstanceId?: string;
@@ -20,6 +30,27 @@ interface UseAgentChatMetaParams {
 
 function normalizeMachineType(mt: string | undefined): "local" | "remote" {
   return mt === "remote" ? "remote" : "local";
+}
+
+function buildAgentChatMeta(agent: Agent | null | undefined): AgentChatMeta {
+  if (!agent) return EMPTY_AGENT_CHAT_META;
+  return {
+    agentName: agent.name,
+    machineType: normalizeMachineType(agent.machine_type),
+    templateAgentId: agent.agent_id,
+    adapterType: agent.adapter_type,
+    defaultModel: agent.default_model,
+  };
+}
+
+export function useStandaloneAgentMeta(agentId: string | undefined): AgentChatMeta {
+  return useAgentStore(
+    useShallow((state) => {
+      if (!agentId) return EMPTY_AGENT_CHAT_META;
+      const agent = state.agents.find((candidate) => candidate.agent_id === agentId);
+      return buildAgentChatMeta(agent ?? null);
+    }),
+  );
 }
 
 /**
@@ -34,63 +65,25 @@ export function useAgentChatMeta(
   params: UseAgentChatMetaParams,
 ): AgentChatMeta {
   const { selectedAgent } = useSelectedAgent();
-  const routeAgent = useAgentStore((s) =>
-    params.agentId ? s.agents.find((agent) => agent.agent_id === params.agentId) ?? null : null,
-  );
-
-  const [projectMeta, setProjectMeta] = useState<{
-    name: string;
-    machineType: "local" | "remote";
-    templateAgentId: string;
-    adapterType: string;
-    defaultModel: string | null | undefined;
-  } | null>(null);
-
-  const loadIdRef = useRef(0);
-
-  useEffect(() => {
-    if (mode !== "project" || !params.projectId || !params.agentInstanceId) return;
-    const loadId = ++loadIdRef.current;
-    const controller = new AbortController();
-    api
-      .getAgentInstance(params.projectId, params.agentInstanceId, {
-        signal: controller.signal,
-      })
-      .then((inst) => {
-        if (loadId !== loadIdRef.current) return;
-        setProjectMeta({
-          name: inst.name,
-          machineType: normalizeMachineType(inst.machine_type),
-          templateAgentId: inst.agent_id,
-          adapterType: inst.adapter_type,
-          defaultModel: inst.default_model,
-        });
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-      });
-    return () => {
-      controller.abort();
-    };
-  }, [mode, params.projectId, params.agentInstanceId]);
+  const routeAgentMeta = useStandaloneAgentMeta(params.agentId);
+  const projectMetaQuery = useQuery({
+    ...(mode === "project" && params.projectId && params.agentInstanceId
+      ? projectAgentInstanceQueryOptions(params.projectId, params.agentInstanceId)
+      : projectAgentInstanceQueryOptions("", "")),
+    enabled: mode === "project" && Boolean(params.projectId && params.agentInstanceId),
+  });
 
   if (mode === "project") {
     return {
-      agentName: projectMeta?.name,
-      machineType: projectMeta?.machineType,
-      templateAgentId: projectMeta?.templateAgentId,
-      adapterType: projectMeta?.adapterType,
-      defaultModel: projectMeta?.defaultModel,
+      agentName: projectMetaQuery.data?.name,
+      machineType: projectMetaQuery.data
+        ? normalizeMachineType(projectMetaQuery.data.machine_type)
+        : undefined,
+      templateAgentId: projectMetaQuery.data?.agent_id,
+      adapterType: projectMetaQuery.data?.adapter_type,
+      defaultModel: projectMetaQuery.data?.default_model,
     };
   }
 
-  const resolvedAgent = routeAgent ?? selectedAgent;
-
-  return {
-    agentName: resolvedAgent?.name,
-    machineType: resolvedAgent ? normalizeMachineType(resolvedAgent.machine_type) : undefined,
-    templateAgentId: resolvedAgent?.agent_id,
-    adapterType: resolvedAgent?.adapter_type,
-    defaultModel: resolvedAgent?.default_model,
-  };
+  return routeAgentMeta.agentName ? routeAgentMeta : buildAgentChatMeta(selectedAgent);
 }

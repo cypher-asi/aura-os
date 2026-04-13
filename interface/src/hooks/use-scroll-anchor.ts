@@ -191,6 +191,7 @@ export function useScrollAnchor(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    let contentChangeRaf = 0;
 
     const syncHeight = () => {
       prevScrollHeightRef.current = el.scrollHeight;
@@ -225,7 +226,15 @@ export function useScrollAnchor(
       syncHeight();
     };
 
-    const mutationObs = new MutationObserver(onContentChange);
+    const queueContentChange = () => {
+      if (contentChangeRaf !== 0) return;
+      contentChangeRaf = requestAnimationFrame(() => {
+        contentChangeRaf = 0;
+        onContentChange();
+      });
+    };
+
+    const mutationObs = new MutationObserver(queueContentChange);
     mutationObs.observe(el, {
       childList: true,
       subtree: true,
@@ -260,16 +269,13 @@ export function useScrollAnchor(
     });
     containerObs.observe(el);
 
-    const contentObs = new ResizeObserver(onContentChange);
-    for (const child of Array.from(el.children)) {
-      contentObs.observe(child);
-    }
-
     syncHeight();
 
     return () => {
+      if (contentChangeRaf !== 0) {
+        cancelAnimationFrame(contentChangeRaf);
+      }
       mutationObs.disconnect();
-      contentObs.disconnect();
       containerObs.disconnect();
     };
   }, [ref, sentinelRef, resetKey]);

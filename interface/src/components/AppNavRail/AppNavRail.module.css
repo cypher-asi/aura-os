@@ -118,7 +118,7 @@
 .taskbarGroup {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -137,5 +137,32 @@
 }
 
 .taskbarBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: var(--taskbar-item-size, 28px);
+  height: var(--taskbar-item-size, 28px);
+  min-width: var(--taskbar-item-size, 28px);
+  min-height: var(--taskbar-item-size, 28px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  opacity: 0.6;
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+  touch-action: none;
+}
+
+.taskbarBtn:not(:disabled)[aria-pressed="true"],
+.taskbarBtn:not(:disabled)[data-selected="true"],
+.taskbarBtn:not(:disabled):hover {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.taskbarBtn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
 import { useIsStreaming, useStreamEvents } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -6,6 +6,7 @@ import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
 import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queue-store";
 import type { QueuedMessage } from "../../stores/message-queue-store";
 import type { ChatAttachment } from "../../api/streams";
+import type { DisplaySessionEvent } from "../../types/stream";
 import type { SlashCommand } from "../../constants/commands";
 import { isGenerationCommand } from "../../constants/commands";
 import type { GenerationMode } from "../../constants/models";
@@ -25,9 +26,28 @@ export interface UseChatPanelStateOptions {
   ) => void;
   adapterType?: string;
   defaultModel?: string | null;
-  historyResolved?: boolean;
   scrollResetKey?: unknown;
+  historyMessages?: DisplaySessionEvent[];
   selectedProjectId?: string;
+}
+
+function combineHistoryAndStreamMessages(
+  historyMessages: DisplaySessionEvent[] | undefined,
+  streamMessages: DisplaySessionEvent[],
+): DisplaySessionEvent[] {
+  if (!historyMessages || historyMessages.length === 0) {
+    return streamMessages;
+  }
+  if (streamMessages.length === 0) {
+    return historyMessages;
+  }
+
+  const historyIds = new Set(historyMessages.map((message) => message.id));
+  const liveOnlyMessages = streamMessages.filter((message) => !historyIds.has(message.id));
+  if (liveOnlyMessages.length === 0) {
+    return historyMessages;
+  }
+  return [...historyMessages, ...liveOnlyMessages];
 }
 
 export function useChatPanelState({
@@ -35,8 +55,8 @@ export function useChatPanelState({
   onSend,
   adapterType,
   defaultModel,
-  historyResolved = true,
   scrollResetKey,
+  historyMessages,
   selectedProjectId,
 }: UseChatPanelStateOptions) {
   const [input, setInput] = useState("");
@@ -67,7 +87,7 @@ export function useChatPanelState({
     isReady,
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
-    contentReady: historyResolved,
+    contentReady: true,
   });
 
   const scrollToBottom = useCallback(() => {
@@ -77,7 +97,11 @@ export function useChatPanelState({
 
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
-  const messages = useStreamEvents(streamKey);
+  const streamMessages = useStreamEvents(streamKey);
+  const messages = useMemo(
+    () => combineHistoryAndStreamMessages(historyMessages, streamMessages),
+    [historyMessages, streamMessages],
+  );
   const prevMessageCountRef = useRef(messages.length);
   const pendingScrollToTopRef = useRef(false);
 

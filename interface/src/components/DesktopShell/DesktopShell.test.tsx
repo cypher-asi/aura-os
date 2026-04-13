@@ -1,7 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { useDesktopWindowStore } from "../../stores/desktop-window-store";
+import { DesktopShell } from "../DesktopShell";
+import {
+  PROJECTS_SIDEKICK_STORAGE_KEY,
+  SHARED_SIDEKICK_STORAGE_KEY,
+  getProjectsSidekickTargetWidth,
+} from "./desktop-shell-sidekick";
 
-const mockActiveApp = {
+const mockProjectsApp = {
   id: "projects",
   label: "Projects",
   basePath: "/projects",
@@ -14,6 +21,55 @@ const mockActiveApp = {
   PreviewHeader: () => <div data-testid="preview-header" />,
 };
 
+const mockTasksApp = {
+  id: "tasks",
+  label: "Tasks",
+  basePath: "/tasks",
+  LeftPanel: () => <div data-testid="left-panel" />,
+  MainPanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="main-panel">{children}</div>,
+  SidekickPanel: () => <div data-testid="sidekick-panel" />,
+  SidekickTaskbar: () => <div data-testid="sidekick-taskbar" />,
+  SidekickHeader: () => <div data-testid="sidekick-header" />,
+  PreviewPanel: () => <div data-testid="preview-panel" />,
+  PreviewHeader: () => <div data-testid="preview-header" />,
+};
+
+const mockProcessApp = {
+  id: "process",
+  label: "Processes",
+  basePath: "/process",
+  LeftPanel: () => <div data-testid="left-panel" />,
+  MainPanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="main-panel">{children}</div>,
+  SidekickPanel: () => <div data-testid="sidekick-panel" />,
+  SidekickTaskbar: () => <div data-testid="sidekick-taskbar" />,
+  SidekickHeader: () => <div data-testid="sidekick-header" />,
+  PreviewPanel: () => <div data-testid="preview-panel" />,
+  PreviewHeader: () => <div data-testid="preview-header" />,
+};
+
+const mockDesktopApp = {
+  id: "desktop",
+  label: "Desktop",
+  basePath: "/desktop",
+  LeftPanel: () => <div data-testid="left-panel" />,
+  MainPanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="main-panel">{children}</div>,
+  SidekickTaskbar: () => <div data-testid="sidekick-taskbar" />,
+  SidekickHeader: () => <div data-testid="sidekick-header" />,
+  PreviewPanel: () => <div data-testid="preview-panel" />,
+  PreviewHeader: () => <div data-testid="preview-header" />,
+};
+
+let currentActiveApp = mockProjectsApp;
+let currentVisitedAppIds = new Set(["projects"]);
+let currentSidekickCollapsed = false;
+const toggleSidekick = vi.fn();
+const laneRenderSpy = vi.fn();
+const setSidekickSize = vi.fn((size: number) => {
+  currentSidekickWidth = size;
+});
+let currentSidekickWidth = 320;
+let mainPanelHostWidth = 640;
+
 vi.mock("@cypher-asi/zui", () => ({
   Topbar: ({ title, actions, icon }: { title?: React.ReactNode; actions?: React.ReactNode; icon?: React.ReactNode }) => (
     <header data-testid="topbar">{icon}{title}{actions}</header>
@@ -21,11 +77,8 @@ vi.mock("@cypher-asi/zui", () => ({
   Button: ({
     children,
     icon,
-    iconOnly: _iconOnly,
-    variant: _variant,
-    size: _size,
     ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon?: React.ReactNode; iconOnly?: boolean; variant?: string; size?: string }) => (
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon?: React.ReactNode }) => (
     <button {...props}>{icon}{children}</button>
   ),
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
@@ -34,13 +87,19 @@ vi.mock("@cypher-asi/zui", () => ({
 }));
 
 vi.mock("../../stores/app-store", () => ({
-  useAppStore: (sel: (s: { activeApp: typeof mockActiveApp }) => unknown) =>
-    sel({ activeApp: mockActiveApp }),
+  useAppStore: (sel: (s: { activeApp: typeof mockProjectsApp }) => unknown) =>
+    sel({ activeApp: currentActiveApp }),
 }));
 
 vi.mock("../../stores/app-ui-store", () => ({
-  useAppUIStore: (sel: (s: { visitedAppIds: Set<string> }) => unknown) =>
-    sel({ visitedAppIds: new Set(["projects"]) }),
+  useAppUIStore: (
+    sel: (s: { visitedAppIds: Set<string>; sidekickCollapsed: boolean; toggleSidekick: typeof toggleSidekick }) => unknown,
+  ) =>
+    sel({
+      visitedAppIds: currentVisitedAppIds,
+      sidekickCollapsed: currentSidekickCollapsed,
+      toggleSidekick,
+    }),
 }));
 
 vi.mock("../../stores/ui-modal-store", () => ({
@@ -74,7 +133,7 @@ vi.mock("../../hooks/use-sidebar-search", () => ({
 const mockSidekickState = { previewItem: null };
 vi.mock("../../stores/sidekick-store", () => ({
   useSidekickStore: Object.assign(
-    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    vi.fn((selector?: (s: typeof mockSidekickState) => unknown) => selector ? selector(mockSidekickState) : mockSidekickState),
     { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
   ),
 }));
@@ -86,22 +145,92 @@ vi.mock("../../apps/registry", () => ({
       label: "Projects",
       basePath: "/projects",
       LeftPanel: () => <div data-testid="left-panel" />,
+      DesktopLeftMenuPane: () => <div data-testid="left-panel" />,
       SidekickPanel: () => <div data-testid="sidekick-panel" />,
     },
+    {
+      id: "tasks",
+      label: "Tasks",
+      basePath: "/tasks",
+      LeftPanel: () => <div data-testid="left-panel" />,
+      DesktopLeftMenuPane: () => <div data-testid="left-panel" />,
+      SidekickPanel: () => <div data-testid="sidekick-panel" />,
+    },
+    {
+      id: "process",
+      label: "Processes",
+      basePath: "/process",
+      LeftPanel: () => <div data-testid="left-panel" />,
+      DesktopLeftMenuPane: () => <div data-testid="left-panel" />,
+      SidekickPanel: () => <div data-testid="sidekick-panel" />,
+    },
+    {
+      id: "desktop",
+      label: "Desktop",
+      basePath: "/desktop",
+      LeftPanel: () => <div data-testid="left-panel" />,
+    },
   ],
+}));
+
+vi.mock("../AgentWindow/AgentWindow", () => ({
+  AgentWindow: ({
+    win,
+    isFocused,
+  }: {
+    win: { agentId: string; x: number; y: number };
+    isFocused: boolean;
+  }) => (
+    <div
+      data-testid="agent-window"
+      data-agent-id={win.agentId}
+      data-x={win.x}
+      data-y={win.y}
+      data-focused={String(isFocused)}
+    />
+  ),
 }));
 
 vi.mock("../BottomTaskbar", () => ({
   BottomTaskbar: () => <div data-testid="bottom-taskbar" />,
 }));
 vi.mock("../Lane", () => ({
-  Lane: ({ children, header, taskbar }: { children?: React.ReactNode; header?: React.ReactNode; taskbar?: React.ReactNode }) => (
-    <div data-testid="lane">
-      {header}
-      {taskbar}
-      {children}
-    </div>
-  ),
+  Lane: ({
+    children,
+    header,
+    taskbar,
+    storageKey,
+    defaultWidth = 240,
+    collapsed = false,
+    animateCollapse = true,
+    resizeControlsRef,
+  }: {
+    children?: React.ReactNode;
+    header?: React.ReactNode;
+    taskbar?: React.ReactNode;
+    storageKey?: string;
+    defaultWidth?: number;
+    collapsed?: boolean;
+    animateCollapse?: boolean;
+    resizeControlsRef?: { current: { getSize: () => number; setSize: (size: number) => void } | null };
+  }) => {
+    laneRenderSpy({ storageKey, defaultWidth, collapsed, animateCollapse });
+    if (storageKey?.includes("sidekick") && resizeControlsRef) {
+      currentSidekickWidth = defaultWidth;
+      resizeControlsRef.current = {
+        getSize: () => currentSidekickWidth,
+        setSize: setSidekickSize,
+      };
+    }
+
+    return (
+      <div data-testid="lane" data-storage-key={storageKey}>
+        {header}
+        {taskbar}
+        {children}
+      </div>
+    );
+  },
 }));
 vi.mock("../ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -115,9 +244,6 @@ vi.mock("../UpdateBanner", () => ({
 }));
 vi.mock("../PanelSearch", () => ({
   PanelSearch: () => <div data-testid="panel-search" />,
-}));
-vi.mock("../TaskOutputPanel", () => ({
-  TaskOutputPanel: () => <div data-testid="task-output-panel" />,
 }));
 vi.mock("../WindowControls", () => ({
   WindowControls: () => <div data-testid="window-controls" />,
@@ -138,17 +264,84 @@ beforeAll(() => {
   } as unknown as typeof ResizeObserver;
 });
 
-import { DesktopShell } from "../DesktopShell";
+beforeAll(() => {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function mockRect() {
+    if (String((this as HTMLElement).className).includes("mainPanelHost")) {
+      return {
+        width: mainPanelHostWidth,
+        height: 0,
+        top: 0,
+        right: mainPanelHostWidth,
+        bottom: 0,
+        left: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    }
 
-function renderShell() {
+    return {
+      width: 0,
+      height: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect;
+  });
+});
+
+afterAll(() => {
+  vi.restoreAllMocks();
+});
+
+beforeEach(() => {
+  localStorage.removeItem("aura:desktopWindows");
+  useDesktopWindowStore.setState({ windows: {}, nextZ: 1 });
+  currentActiveApp = mockProjectsApp;
+  currentVisitedAppIds = new Set(["projects"]);
+  currentSidekickCollapsed = false;
+  currentSidekickWidth = 320;
+  mainPanelHostWidth = 640;
+  toggleSidekick.mockClear();
+  laneRenderSpy.mockClear();
+  setSidekickSize.mockClear();
+});
+
+function renderShell(pathname = "/projects") {
   return render(
-    <MemoryRouter initialEntries={["/projects"]}>
+    <MemoryRouter initialEntries={[pathname]}>
       <DesktopShell />
     </MemoryRouter>,
   );
 }
 
+function getLatestSidekickLaneProps() {
+  const sidekickLaneCalls = laneRenderSpy.mock.calls
+    .map(([props]) => props as { storageKey?: string; defaultWidth?: number; collapsed?: boolean; animateCollapse?: boolean })
+    .filter((props) => props.storageKey?.includes("sidekick"));
+
+  return sidekickLaneCalls.at(-1);
+}
+
+function getLatestSidebarLaneProps() {
+  const sidebarLaneCalls = laneRenderSpy.mock.calls
+    .map(([props]) => props as { storageKey?: string; defaultWidth?: number; collapsed?: boolean; animateCollapse?: boolean })
+    .filter((props) => props.storageKey === "aura-sidebar");
+
+  return sidebarLaneCalls.at(-1);
+}
+
 describe("DesktopShell", () => {
+  it("balances the projects sidekick width and clamps the result", () => {
+    expect(getProjectsSidekickTargetWidth(640, 320)).toBe(480);
+    expect(getProjectsSidekickTargetWidth(150, 0)).toBe(200);
+    expect(getProjectsSidekickTargetWidth(1400, 1200)).toBe(1200);
+  });
+
   it("renders the AURA title link", () => {
     renderShell();
     expect(screen.getByAltText("AURA")).toBeInTheDocument();
@@ -171,7 +364,49 @@ describe("DesktopShell", () => {
 
   it("renders left panel from active app", () => {
     renderShell();
-    expect(screen.getByTestId("left-panel")).toBeInTheDocument();
+    expect(screen.getAllByTestId("left-panel").length).toBeGreaterThan(0);
+  });
+
+  it("mounts only the active app panels", () => {
+    currentActiveApp = mockProjectsApp;
+    currentVisitedAppIds = new Set(["projects"]);
+
+    renderShell();
+
+    expect(screen.getAllByTestId("left-panel")).toHaveLength(1);
+    expect(screen.getAllByTestId("sidekick-panel")).toHaveLength(1);
+  });
+
+  it("keeps shared desktop left menu panes mounted across app switches", () => {
+    currentActiveApp = mockProjectsApp;
+    currentVisitedAppIds = new Set(["projects"]);
+    const view = renderShell("/projects");
+    const projectsPane = screen.getByTestId("desktop-left-menu-pane-projects");
+
+    currentActiveApp = mockTasksApp;
+    currentVisitedAppIds = new Set(["projects", "tasks"]);
+    view.rerender(
+      <MemoryRouter initialEntries={["/tasks"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+    const persistedProjectsPane = screen.getByTestId("desktop-left-menu-pane-projects");
+    const tasksPane = screen.getByTestId("desktop-left-menu-pane-tasks");
+
+    expect(persistedProjectsPane).toBe(projectsPane);
+    expect(tasksPane).toBeInTheDocument();
+
+    currentActiveApp = mockProcessApp;
+    currentVisitedAppIds = new Set(["projects", "tasks", "process"]);
+    view.rerender(
+      <MemoryRouter initialEntries={["/process"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("desktop-left-menu-pane-projects")).toBe(projectsPane);
+    expect(screen.getByTestId("desktop-left-menu-pane-tasks")).toBe(tasksPane);
+    expect(screen.getByTestId("desktop-left-menu-pane-process")).toBeInTheDocument();
   });
 
   it("renders sidebar search input", () => {
@@ -179,8 +414,94 @@ describe("DesktopShell", () => {
     expect(screen.getByTestId("panel-search")).toBeInTheDocument();
   });
 
+  it("does not render the old bottom task output panel in the sidekick lane", () => {
+    renderShell();
+    expect(screen.queryByTestId("task-output-panel")).not.toBeInTheDocument();
+  });
+
   it("does not show host settings button when feature is disabled", () => {
     renderShell();
     expect(screen.queryByRole("button", { name: "Open host settings" })).not.toBeInTheDocument();
+  });
+
+  it("keeps open agent windows mounted across non-desktop and desktop apps", () => {
+    useDesktopWindowStore.setState({
+      windows: {
+        "agent-1": {
+          agentId: "agent-1",
+          x: 120,
+          y: 84,
+          width: 420,
+          height: 520,
+          zIndex: 3,
+          minimized: false,
+          maximized: false,
+        },
+      },
+      nextZ: 4,
+    });
+
+    currentActiveApp = mockTasksApp;
+    const view = renderShell("/tasks");
+    const host = screen.getByTestId("agent-window").parentElement;
+
+    expect(screen.getByTestId("agent-window")).toHaveAttribute("data-agent-id", "agent-1");
+    expect(screen.getByTestId("agent-window")).toHaveAttribute("data-x", "120");
+    expect(screen.getByTestId("agent-window")).toHaveAttribute("data-y", "84");
+    expect(host).toHaveClass("windowLayerHost");
+    expect(host?.parentElement).toHaveClass("desktopContent");
+    expect(host?.closest(".mainPanelHost")).toBeNull();
+
+    currentActiveApp = mockDesktopApp;
+    view.rerender(
+      <MemoryRouter initialEntries={["/desktop"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+    const rerenderedHost = screen.getByTestId("agent-window").parentElement;
+
+    expect(screen.getByTestId("agent-window")).toHaveAttribute("data-x", "120");
+    expect(screen.getByTestId("agent-window")).toHaveAttribute("data-y", "84");
+    expect(screen.getByTestId("agent-window")).toHaveAttribute("data-focused", "true");
+    expect(rerenderedHost?.parentElement).toHaveClass("desktopContent");
+  });
+
+  it("keeps non-project apps on the shared sidekick storage key", () => {
+    currentActiveApp = mockTasksApp;
+
+    renderShell();
+
+    expect(getLatestSidekickLaneProps()?.storageKey).toBe(SHARED_SIDEKICK_STORAGE_KEY);
+    expect(setSidekickSize).not.toHaveBeenCalled();
+  });
+
+  it("syncs the sidekick width when entering projects", () => {
+    currentActiveApp = mockTasksApp;
+    const view = renderShell();
+
+    expect(getLatestSidekickLaneProps()?.storageKey).toBe(SHARED_SIDEKICK_STORAGE_KEY);
+
+    currentActiveApp = mockProjectsApp;
+    mainPanelHostWidth = 640;
+    view.rerender(
+      <MemoryRouter initialEntries={["/projects"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(getLatestSidekickLaneProps()?.storageKey).toBe(PROJECTS_SIDEKICK_STORAGE_KEY);
+    expect(setSidekickSize).toHaveBeenLastCalledWith(480);
+  });
+
+  it("disables left sidebar collapse animation in desktop mode", () => {
+    currentActiveApp = mockDesktopApp;
+
+    renderShell("/desktop");
+
+    expect(getLatestSidebarLaneProps()).toMatchObject({
+      storageKey: "aura-sidebar",
+      collapsed: true,
+      animateCollapse: false,
+    });
   });
 });

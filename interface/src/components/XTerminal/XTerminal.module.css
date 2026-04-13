@@ -1,4 +1,22 @@
 .container {
+  position: relative;
   width: 100%;
   height: 100%;
+}
+
+.surface {
+  width: 100%;
+  height: 100%;
+}
+
+.surface :global(.xterm-viewport) {
+  scrollbar-width: none;
+}
+
+.surface :global(.xterm-viewport::-webkit-scrollbar) {
+  display: none;
+}
+
+.overlayTrack {
+  z-index: 5;
 }

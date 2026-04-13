@@ -31,7 +31,7 @@
 
 .action {
   position: absolute;
-  right: 7.5px;
+  right: var(--space-4, 16px);
   top: 50%;
   transform: translateY(-50%);
   display: flex;

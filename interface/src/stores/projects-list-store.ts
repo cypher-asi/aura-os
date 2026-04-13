@@ -1,19 +1,28 @@
 import { create } from "zustand";
 import type { Agent, AgentInstance, Project } from "../types";
-import { api } from "../api/client";
+import { queryClient } from "../lib/query-client";
+import {
+  dedupeProjects,
+  projectAgentsQueryOptions,
+  projectQueryKeys,
+  projectsQueryOptions,
+} from "../queries/project-queries";
 import { useOrgStore } from "./org-store";
 
 const NEW_PROJECT_MODAL_STORAGE_KEY = "aura:new-project-modal-open";
 
-function dedupeProjects(projects: Project[]) {
-  const seen = new Set<string>();
-  const next: Project[] = [];
-  for (const project of projects) {
-    if (seen.has(project.project_id)) continue;
-    seen.add(project.project_id);
-    next.push(project);
+function getActiveOrgId(): string | undefined {
+  return useOrgStore.getState().activeOrg?.org_id;
+}
+
+function syncProjectsQueryCache(projects: Project[]): void {
+  queryClient.setQueryData(projectQueryKeys.list(getActiveOrgId()), dedupeProjects(projects));
+}
+
+function syncAgentsQueryCache(agentsByProject: Record<string, AgentInstance[]>): void {
+  for (const [projectId, agents] of Object.entries(agentsByProject)) {
+    queryClient.setQueryData(projectQueryKeys.agents(projectId), agents);
   }
-  return next;
 }
 
 interface ProjectsListState {
@@ -50,7 +59,13 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
 
   setProjects: (updater) => {
     set((state) => ({
-      projects: typeof updater === "function" ? updater(state.projects) : updater,
+      projects: (() => {
+        const nextProjects =
+          typeof updater === "function" ? updater(state.projects) : updater;
+        const dedupedProjects = dedupeProjects(nextProjects);
+        syncProjectsQueryCache(dedupedProjects);
+        return dedupedProjects;
+      })(),
     }));
   },
 
@@ -58,10 +73,11 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     const requestId = ++refreshRequestId;
     set({ loadingProjects: true });
     try {
-      const activeOrg = useOrgStore.getState().activeOrg;
-      const nextProjects = await api.listProjects(activeOrg?.org_id);
+      const nextProjects = await queryClient.fetchQuery(
+        projectsQueryOptions(getActiveOrgId()),
+      );
       if (refreshRequestId === requestId) {
-        set({ projects: dedupeProjects(nextProjects) });
+        set({ projects: nextProjects });
       }
     } catch (error) {
       if (refreshRequestId === requestId) {
@@ -75,8 +91,12 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
 
   setAgentsByProject: (updater) => {
     set((state) => ({
-      agentsByProject:
-        typeof updater === "function" ? updater(state.agentsByProject) : updater,
+      agentsByProject: (() => {
+        const nextAgentsByProject =
+          typeof updater === "function" ? updater(state.agentsByProject) : updater;
+        syncAgentsQueryCache(nextAgentsByProject);
+        return nextAgentsByProject;
+      })(),
     }));
   },
 
@@ -89,7 +109,9 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     let result = get().agentsByProject[projectId] ?? [];
 
     try {
-      const nextAgents = await api.listAgentInstances(projectId);
+      const nextAgents = await queryClient.fetchQuery(
+        projectAgentsQueryOptions(projectId),
+      );
       if (agentRefreshRequestIds[projectId] !== requestId) {
         return get().agentsByProject[projectId] ?? result;
       }
@@ -101,10 +123,14 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
       if (agentRefreshRequestIds[projectId] === requestId) {
         console.error("Failed to load project agents", error);
         set((state) => ({
-          agentsByProject:
-            projectId in state.agentsByProject
-              ? state.agentsByProject
-              : { ...state.agentsByProject, [projectId]: [] },
+          agentsByProject: (() => {
+            if (projectId in state.agentsByProject) {
+              return state.agentsByProject;
+            }
+            const nextAgentsByProject = { ...state.agentsByProject, [projectId]: [] };
+            syncAgentsQueryCache(nextAgentsByProject);
+            return nextAgentsByProject;
+          })(),
         }));
       }
       result = get().agentsByProject[projectId] ?? [];
@@ -139,7 +165,11 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
         });
         next[pid] = updated;
       }
-      return changed ? { agentsByProject: next } : {};
+      if (changed) {
+        syncAgentsQueryCache(next);
+        return { agentsByProject: next };
+      }
+      return {};
     });
   },
 
@@ -162,58 +192,97 @@ useProjectsListStore.subscribe((state, prevState) => {
   }
 });
 
+let _batchId = 0;
+let _knownProjectIds = new Set<string>();
+let _agentPrefetchTimer: ReturnType<typeof setTimeout> | null = null;
+let _queuedAgentPrefetchIds: string[] = [];
+const AGENT_PREFETCH_DELAY_MS = 24;
+
+function scheduleAgentPrefetch(batchId: number): void {
+  if (_agentPrefetchTimer != null) return;
+
+  const pump = () => {
+    _agentPrefetchTimer = null;
+    if (_batchId !== batchId) return;
+
+    const nextProjectId = _queuedAgentPrefetchIds.shift();
+    if (!nextProjectId) return;
+
+    useProjectsListStore.setState((state) => ({
+      loadingAgentsByProject: {
+        ...state.loadingAgentsByProject,
+        [nextProjectId]: true,
+      },
+    }));
+
+    queryClient
+      .fetchQuery(projectAgentsQueryOptions(nextProjectId))
+      .catch(() => [] as AgentInstance[])
+      .then((agents) => {
+        if (_batchId !== batchId) return;
+        useProjectsListStore.setState((state) => ({
+          agentsByProject: {
+            ...state.agentsByProject,
+            [nextProjectId]: agents,
+          },
+          loadingAgentsByProject: {
+            ...state.loadingAgentsByProject,
+            [nextProjectId]: false,
+          },
+        }));
+      })
+      .finally(() => {
+        if (_batchId !== batchId) return;
+        if (_queuedAgentPrefetchIds.length === 0) return;
+        _agentPrefetchTimer = setTimeout(pump, AGENT_PREFETCH_DELAY_MS);
+      });
+  };
+
+  _agentPrefetchTimer = setTimeout(pump, AGENT_PREFETCH_DELAY_MS);
+}
+
 // Auto-refresh projects when active org changes
 let _prevOrgId: string | null = null;
 useOrgStore.subscribe((state) => {
   const orgId = state.activeOrg?.org_id ?? null;
   if (orgId === _prevOrgId) return;
   _prevOrgId = orgId;
+  _batchId += 1;
+  if (_agentPrefetchTimer != null) {
+    clearTimeout(_agentPrefetchTimer);
+    _agentPrefetchTimer = null;
+  }
+  _queuedAgentPrefetchIds = [];
+  queryClient.removeQueries({ queryKey: projectQueryKeys.root });
   useProjectsListStore.setState({ agentsByProject: {}, loadingAgentsByProject: {} });
   _knownProjectIds = new Set();
   useProjectsListStore.getState().refreshProjects();
 });
 
-// Batch-load agents for newly fetched projects
-let _batchId = 0;
-let _knownProjectIds = new Set<string>();
+// Incrementally prefetch project agents in the background instead of fanning
+// out requests for every project at once. This keeps navigation snappy while
+// preserving cached agent lookups for later surfaces like standalone agent chat.
+
 useProjectsListStore.subscribe((state) => {
   const currentIds = new Set(state.projects.map((p) => p.project_id));
-  const newIds = [...currentIds].filter(
-    (id) => !_knownProjectIds.has(id) && !(id in state.agentsByProject),
-  );
+  const newIds = state.projects
+    .filter(
+      (project) =>
+        !_knownProjectIds.has(project.project_id) &&
+        !(project.project_id in state.agentsByProject),
+    )
+    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
+    .map((project) => project.project_id);
   _knownProjectIds = currentIds;
   if (newIds.length === 0) return;
 
-  const thisBatch = ++_batchId;
-
-  useProjectsListStore.setState((s) => {
-    const next = { ...s.loadingAgentsByProject };
-    for (const id of newIds) next[id] = true;
-    return { loadingAgentsByProject: next };
-  });
-
-  Promise.all(
-    newIds.map((projectId) =>
-      api
-        .listAgentInstances(projectId)
-        .then((agents) => ({ projectId, agents }))
-        .catch(() => ({ projectId, agents: [] as AgentInstance[] })),
-    ),
-  ).then((results) => {
-    if (_batchId !== thisBatch) return;
-    const batch: Record<string, AgentInstance[]> = {};
-    for (const { projectId, agents } of results) {
-      batch[projectId] = agents;
-    }
-    useProjectsListStore.setState((s) => {
-      const nextLoading = { ...s.loadingAgentsByProject };
-      for (const id of newIds) nextLoading[id] = false;
-      return {
-        agentsByProject: { ...s.agentsByProject, ...batch },
-        loadingAgentsByProject: nextLoading,
-      };
-    });
-  });
+  const batchId = ++_batchId;
+  if (_agentPrefetchTimer != null) {
+    clearTimeout(_agentPrefetchTimer);
+    _agentPrefetchTimer = null;
+  }
+  _queuedAgentPrefetchIds = newIds;
+  scheduleAgentPrefetch(batchId);
 });
 
 // ---------------------------------------------------------------------------

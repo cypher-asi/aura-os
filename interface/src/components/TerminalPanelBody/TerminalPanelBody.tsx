@@ -40,6 +40,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
     registerHook,
     cwd,
     remoteAgentId,
+    targetVersion,
   } = useTerminalPanelStore(
     useShallow((s) => ({
       terminals: s.terminals,
@@ -51,6 +52,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
       registerHook: s.registerHook,
       cwd: s.cwd,
       remoteAgentId: s.remoteAgentId,
+      targetVersion: s.targetVersion,
     })),
   );
 
@@ -62,7 +64,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
             const isActive = t.id === activeId;
             return (
               <TerminalWrapper
-                key={t.id}
+                key={`${t.id}:${targetVersion}`}
                 visible={isActive}
                 focused={isActive}
                 cwd={cwd}
@@ -94,7 +96,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
           const isActive = t.id === activeId;
           return (
             <TerminalWrapper
-              key={t.id}
+              key={`${t.id}:${targetVersion}`}
               visible={isActive}
               focused={isActive && !collapsed && contentReady}
               cwd={cwd}

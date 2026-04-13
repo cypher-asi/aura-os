@@ -19,6 +19,10 @@
   transition: opacity 100ms ease-out;
 }
 
+.noCollapseAnimation .laneInner {
+  transition: none;
+}
+
 /* ── Collapse ── */
 
 .collapsed {

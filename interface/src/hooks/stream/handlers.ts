@@ -192,7 +192,7 @@ export function handleTextDelta(
     refs.raf.current = requestAnimationFrame(() => {
       refs.raf.current = null;
       setters.setStreamingText(refs.streamBuffer.current);
-      setters.setTimeline(refs.timeline.current.map((i) => ({ ...i } as TimelineItem)));
+      setters.setTimeline([...refs.timeline.current]);
     });
   }
 }

@@ -2,18 +2,22 @@ use std::convert::Infallible;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::HeaderValue;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
+use serde::Deserialize;
 use tracing::{error, info, warn};
 
 pub(crate) type SseStream =
     Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
 pub(crate) type SseResponse = ([(&'static str, HeaderValue); 1], Sse<SseStream>);
+
+const DEFAULT_AGENT_HISTORY_WINDOW_LIMIT: usize = 80;
+const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 
 use aura_os_core::{
     Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId,
@@ -844,6 +848,39 @@ impl EventCollectOutcome {
     }
 }
 
+#[derive(Debug, Clone, Copy, Deserialize, Default)]
+pub(crate) struct AgentEventsQuery {
+    pub limit: Option<usize>,
+    #[serde(default)]
+    pub offset: usize,
+}
+
+fn normalize_agent_history_limit(limit: Option<usize>) -> Option<usize> {
+    limit.map(|value| value.min(MAX_AGENT_HISTORY_WINDOW_LIMIT))
+}
+
+fn slice_recent_agent_events(
+    messages: Vec<SessionEvent>,
+    limit: Option<usize>,
+    offset: usize,
+) -> Vec<SessionEvent> {
+    let Some(limit) = normalize_agent_history_limit(limit) else {
+        return messages;
+    };
+    if limit == 0 {
+        return Vec::new();
+    }
+
+    let total = messages.len();
+    if offset >= total {
+        return Vec::new();
+    }
+
+    let end = total.saturating_sub(offset);
+    let start = end.saturating_sub(limit);
+    messages[start..end].to_vec()
+}
+
 struct SessionFetchOutcome {
     sessions: Vec<aura_os_storage::StorageSession>,
     total_agents: usize,
@@ -993,12 +1030,17 @@ pub(crate) async fn list_agent_events(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
+    Query(query): Query<AgentEventsQuery>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let _ = state.require_storage_client()?;
     let messages = aggregate_agent_events_from_storage_result(&state, &agent_id, &jwt)
         .await
         .map_err(map_storage_error)?;
-    Ok(Json(messages))
+    Ok(Json(slice_recent_agent_events(
+        messages,
+        query.limit,
+        query.offset,
+    )))
 }
 
 pub(crate) async fn get_or_create_chat_session(
@@ -1229,7 +1271,9 @@ async fn handle_super_agent_stream(
                 Vec::new()
             } else {
                 info!(%agent_id, stored_events = stored.len(), "super agent: reconstructing conversation from storage (cold start)");
-                session_events_to_super_agent_history(&stored)
+                let bounded =
+                    slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
+                session_events_to_super_agent_history(&bounded)
             }
         }
     };
@@ -1344,7 +1388,9 @@ pub(crate) async fn send_agent_event_stream(
         if stored.is_empty() {
             None
         } else {
-            Some(session_events_to_conversation_history(&stored))
+            let bounded =
+                slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
+            Some(session_events_to_conversation_history(&bounded))
         }
     } else {
         None

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Circle, Image } from "lucide-react";
 import { Menu } from "@cypher-asi/zui";
@@ -6,31 +6,11 @@ import type { MenuItem } from "@cypher-asi/zui";
 import type { ReactNode } from "react";
 import type { AuraApp } from "../../types";
 import { useSelectionMarquee } from "./useSelectionMarquee";
-import { useDesktopWindowStore } from "../../../stores/desktop-window-store";
-import { AgentWindow } from "../../../components/AgentWindow";
 import { BackgroundModal } from "../BackgroundModal";
 import styles from "./DesktopApp.module.css";
 
 function EmptyPanel() {
   return null;
-}
-
-function WindowLayer() {
-  const windows = useDesktopWindowStore((s) => s.windows);
-
-  const sorted = useMemo(() => {
-    return Object.values(windows).sort((a, b) => a.zIndex - b.zIndex);
-  }, [windows]);
-
-  const topZ = sorted.length > 0 ? sorted[sorted.length - 1].zIndex : 0;
-
-  return (
-    <>
-      {sorted.map((win) => (
-        <AgentWindow key={win.agentId} win={win} isFocused={win.zIndex === topZ} />
-      ))}
-    </>
-  );
 }
 
 const contextMenuItems: MenuItem[] = [
@@ -87,7 +67,6 @@ function MainPanel({ children }: { children?: ReactNode }) {
           }}
         />
       )}
-      <WindowLayer />
       {children}
 
       {ctxMenu &&

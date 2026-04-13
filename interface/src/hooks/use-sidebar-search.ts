@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { useAppUIStore } from "../stores/app-ui-store";
 import { useAppStore } from "../stores/app-store";
@@ -10,20 +10,16 @@ type SidebarSearchValue = {
   setAction: (appId: string, node: ReactNode | null) => void;
 };
 
-export function useSidebarSearch(): SidebarSearchValue {
-  const activeApp = useAppStore((s) => s.activeApp);
-  const storeQuery = useAppUIStore((s) => s.sidebarQuery);
+export function useSidebarSearch(appIdOverride?: string): SidebarSearchValue {
+  const activeAppId = useAppStore((s) => s.activeApp.id);
+  const appId = appIdOverride ?? activeAppId;
+  const storeQuery = useAppUIStore((s) => s.sidebarQueries[appId] ?? "");
   const setSidebarQuery = useAppUIStore((s) => s.setSidebarQuery);
-  const action = useAppUIStore((s) => s.sidebarActions[activeApp.id] ?? null);
+  const action = useAppUIStore((s) => s.sidebarActions[appId] ?? null);
   const setAction = useAppUIStore((s) => s.setSidebarAction);
+  const setQuery = useCallback((query: string) => {
+    setSidebarQuery(appId, query);
+  }, [appId, setSidebarQuery]);
 
-  const prevAppRef = useRef(activeApp.id);
-  const appJustSwitched = prevAppRef.current !== activeApp.id;
-
-  useEffect(() => {
-    prevAppRef.current = activeApp.id;
-    setSidebarQuery("");
-  }, [activeApp.id, setSidebarQuery]);
-
-  return { query: appJustSwitched ? "" : storeQuery, setQuery: setSidebarQuery, action, setAction };
+  return { query: storeQuery, setQuery, action, setAction };
 }

@@ -1,1 +1,6 @@
-export { TaskOutputPanel } from "./TaskOutputPanel";
+export {
+  TaskOutputPanel,
+  RunSidekickPane,
+  TerminalSidekickPane,
+  useActiveTaskTracking,
+} from "./TaskOutputPanel";

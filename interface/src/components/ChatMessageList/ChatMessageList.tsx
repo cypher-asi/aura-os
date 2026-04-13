@@ -1,37 +1,54 @@
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
+import type { DisplaySessionEvent } from "../../types/stream";
 
-import {
-  useStreamEvents,
-  useIsStreaming,
-  useStreamingText,
-  useThinkingText,
-  useThinkingDurationMs,
-  useActiveToolCalls,
-  useTimeline,
-  useProgressText,
-} from "../../hooks/stream/hooks";
+import { useStreamStore } from "../../hooks/stream/store";
 
 const MESSAGE_GAP = 12;
 const ESTIMATED_ROW_HEIGHT = 120;
 
 interface ChatMessageListProps {
+  messages: DisplaySessionEvent[];
   streamKey: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyState?: ReactNode;
 }
 
-export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessageListProps) {
-  const messages = useStreamEvents(streamKey);
-  const isStreaming = useIsStreaming(streamKey);
-  const streamingText = useStreamingText(streamKey);
-  const thinkingText = useThinkingText(streamKey);
-  const thinkingDurationMs = useThinkingDurationMs(streamKey);
-  const activeToolCalls = useActiveToolCalls(streamKey);
-  const timeline = useTimeline(streamKey);
-  const progressText = useProgressText(streamKey);
+const EMPTY_TOOL_CALLS: NonNullable<
+  ReturnType<typeof useStreamStore.getState>["entries"][string]
+>["activeToolCalls"] = [];
+const EMPTY_TIMELINE: NonNullable<
+  ReturnType<typeof useStreamStore.getState>["entries"][string]
+>["timeline"] = [];
+
+export function ChatMessageList({
+  messages,
+  streamKey,
+  scrollRef,
+  emptyState,
+}: ChatMessageListProps) {
+  const {
+    isStreaming,
+    streamingText,
+    thinkingText,
+    thinkingDurationMs,
+    activeToolCalls,
+    timeline,
+    progressText,
+  } = useStreamStore(
+    useShallow((state) => ({
+      isStreaming: state.entries[streamKey]?.isStreaming ?? false,
+      streamingText: state.entries[streamKey]?.streamingText ?? "",
+      thinkingText: state.entries[streamKey]?.thinkingText ?? "",
+      thinkingDurationMs: state.entries[streamKey]?.thinkingDurationMs ?? null,
+      activeToolCalls: state.entries[streamKey]?.activeToolCalls ?? EMPTY_TOOL_CALLS,
+      timeline: state.entries[streamKey]?.timeline ?? EMPTY_TIMELINE,
+      progressText: state.entries[streamKey]?.progressText ?? "",
+    })),
+  );
 
   const initialMountRef = useRef(true);
   useEffect(() => {

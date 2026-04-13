@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Project, AgentInstance } from "../types";
+import { queryClient } from "../lib/query-client";
 
 const { mockApi, mockSessionStorage } = vi.hoisted(() => {
   const mockSessionStorage: Record<string, string> = {};
@@ -47,6 +48,7 @@ function makeProject(id: string, updatedAt: string): Project {
 }
 
 beforeEach(() => {
+  queryClient.clear();
   useProjectsListStore.setState({
     projects: [],
     loadingProjects: true,

@@ -22,10 +22,27 @@
 }
 
 .desktopContent {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   overflow: hidden;
+}
+
+.mainPanelHost {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.windowLayerHost {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
 }
 
 .desktopSidebar {
@@ -58,31 +75,12 @@
   display: none;
 }
 
-.sidekickContentWrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
 .sidekickPanels {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  position: relative;
-}
-
-.sidekickPanels::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  background: linear-gradient(to bottom, transparent, var(--color-bg));
-  pointer-events: none;
-  z-index: 1;
 }
 
 .laneLeftBorder {

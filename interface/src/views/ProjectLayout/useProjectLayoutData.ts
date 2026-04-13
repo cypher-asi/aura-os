@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, useCallback, useMemo, type SetStateAction } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import type { Project, Spec, Task } from "../../types";
 import { EventType } from "../../types/aura-events";
+import { useProjectsList } from "../../apps/projects/useProjectsList";
+import { projectLayoutQueryOptions, projectQueryKeys, type ProjectLayoutBundle } from "../../queries/project-queries";
 import { useProjectRegister } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useSidekickStore } from "../../stores/sidekick-store";
-import { compareSpecs } from "../../utils/collections";
 
 interface ProjectLayoutData {
   displayProject: Project | null;
@@ -20,78 +21,71 @@ interface ProjectLayoutData {
 export function useProjectLayoutData(): ProjectLayoutData {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects } = useProjectsList();
+  const queryClient = useQueryClient();
+  const { projects, setProjects } = useProjectsList();
   const cachedProject = useMemo(
     () => projects.find((candidate) => candidate.project_id === projectId) ?? null,
     [projectId, projects],
   );
 
-  const [project, setProjectRaw] = useState<Project | null>(() => cachedProject);
-  const [initialSpecs, setInitialSpecs] = useState<Spec[]>([]);
-  const [initialTasks, setInitialTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(() => cachedProject == null);
   const [message, setMessage] = useState("");
   const { register, unregister } = useProjectRegister();
   const subscribe = useEventStore((s) => s.subscribe);
+  const layoutQuery = useQuery({
+    ...(projectId ? projectLayoutQueryOptions(projectId) : projectLayoutQueryOptions("")),
+    enabled: Boolean(projectId),
+    initialData:
+      projectId && cachedProject
+        ? {
+            project: cachedProject,
+            specs: [] as Spec[],
+            tasks: [] as Task[],
+          }
+        : undefined,
+    initialDataUpdatedAt: 0,
+  });
 
-  const displayProject = useMemo(() => {
-    if (project && project.project_id === projectId) return project;
-    return cachedProject;
-  }, [project, projectId, cachedProject]);
+  const displayProject = layoutQuery.data?.project ?? cachedProject;
+  const initialSpecs = layoutQuery.data?.specs ?? [];
+  const initialTasks = layoutQuery.data?.tasks ?? [];
+  const loading = Boolean(projectId) && layoutQuery.isPending && !displayProject;
 
   const setProjectSafe = useCallback((update: SetStateAction<Project>) => {
-    if (typeof update === "function") {
-      setProjectRaw(prev => prev ? update(prev) : prev);
-    } else {
-      setProjectRaw(update);
-    }
-  }, []);
-
-  const [prevProjectId, setPrevProjectId] = useState(projectId);
-  if (projectId !== prevProjectId) {
-    setPrevProjectId(projectId);
-    setInitialSpecs([]);
-    setInitialTasks([]);
-    if (!cachedProject) setLoading(true);
-    else setLoading(false);
-  }
-
-  const [prevCached, setPrevCached] = useState(cachedProject);
-  if (cachedProject !== prevCached) {
-    setPrevCached(cachedProject);
-    if (cachedProject && !project) {
-      setProjectRaw(cachedProject);
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
     if (!projectId) return;
-    let cancelled = false;
-    Promise.all([
-      api.getProject(projectId),
-      api.listSpecs(projectId).catch(() => [] as Spec[]),
-      api.listTasks(projectId).catch(() => [] as Task[]),
-    ])
-      .then(([proj, specs, tasks]) => {
-        if (cancelled) return;
-        setProjectRaw(proj);
-        setInitialSpecs(specs.sort(compareSpecs));
-        setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [projectId]);
+
+    queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+      projectQueryKeys.layout(projectId),
+      (current) => {
+        const currentProject = current?.project ?? cachedProject;
+        if (!currentProject) return current;
+        const nextProject =
+          typeof update === "function" ? update(currentProject) : update;
+        return {
+          project: nextProject,
+          specs: current?.specs ?? [],
+          tasks: current?.tasks ?? [],
+        };
+      },
+    );
+
+    setProjects((currentProjects) =>
+      currentProjects.map((candidate) => {
+        if (candidate.project_id !== projectId) return candidate;
+        return typeof update === "function" ? update(candidate) : update;
+      }),
+    );
+  }, [cachedProject, projectId, queryClient, setProjects]);
 
   useEffect(() => {
     if (!projectId) return;
     return subscribe(EventType.SpecGenCompleted, (e) => {
       if (e.project_id === projectId) {
-        api.getProject(projectId).then(setProjectRaw).catch(() => {});
+        void queryClient.invalidateQueries({
+          queryKey: projectQueryKeys.layout(projectId),
+        });
       }
     });
-  }, [projectId, setProjectSafe, subscribe]);
+  }, [projectId, queryClient, subscribe]);
 
   const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);
   const prevStreamingIdRef = useRef<string | null>(null);
@@ -100,15 +94,11 @@ export function useProjectLayoutData(): ProjectLayoutData {
     const wasStreaming = prevStreamingIdRef.current != null;
     prevStreamingIdRef.current = streamingId;
     if (wasStreaming && streamingId == null && projectId) {
-      Promise.all([
-        api.listSpecs(projectId).catch(() => [] as Spec[]),
-        api.listTasks(projectId).catch(() => [] as Task[]),
-      ]).then(([specs, tasks]) => {
-        setInitialSpecs(specs.sort(compareSpecs));
-        setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
+      void queryClient.invalidateQueries({
+        queryKey: projectQueryKeys.layout(projectId),
       });
     }
-  }, [streamingId, projectId]);
+  }, [projectId, queryClient, streamingId]);
 
   useEffect(() => {
     if (!displayProject) { unregister(); return; }
@@ -116,6 +106,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
     const handleArchive = async () => {
       try {
         await api.archiveProject(displayProject.project_id);
+        await queryClient.invalidateQueries({ queryKey: projectQueryKeys.root });
         navigate("/projects");
       } catch (err) {
         setMessage(err instanceof Error ? err.message : "Failed to archive");
@@ -133,7 +124,17 @@ export function useProjectLayoutData(): ProjectLayoutData {
     });
 
     return () => unregister();
-  }, [displayProject, initialSpecs, initialTasks, message, navigate, register, setProjectSafe, unregister]);
+  }, [
+    displayProject,
+    initialSpecs,
+    initialTasks,
+    message,
+    navigate,
+    queryClient,
+    register,
+    setProjectSafe,
+    unregister,
+  ]);
 
   return { displayProject, initialSpecs, initialTasks, loading, projects };
 }

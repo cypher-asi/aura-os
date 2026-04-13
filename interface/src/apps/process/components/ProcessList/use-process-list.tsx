@@ -1,477 +1,333 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import {
+  useCallback,
+  useMemo,
+  type KeyboardEventHandler,
+  type MouseEventHandler,
+  type RefObject,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ButtonPlus } from "@cypher-asi/zui";
-import type { ExplorerNode, DropPosition } from "@cypher-asi/zui";
-import { Cpu } from "lucide-react";
-import { useProcessStore, LAST_PROCESS_ID_KEY } from "../../stores/process-store";
+import { useProcessStore } from "../../stores/process-store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
-import { processApi } from "../../../../api/process";
-import { api } from "../../../../api/client";
-import type { Project } from "../../../../types";
-import type { InlineRenameTarget } from "../../../../components/InlineRenameInput";
+import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
+import { filterTree } from "../../../../components/ProjectList/project-list-shared";
+import { buildLeftMenuEntries, useLeftMenuExpandedGroups } from "../../../../features/left-menu";
+import { buildProcessExplorerData } from "./process-list-explorer-node";
+import {
+  useDeleteProjectHandler,
+  useProcessContextMenu,
+  useProcessKeyDown,
+  useProcessMenuActions,
+  useProcessRenameCommit,
+} from "./process-list-handlers";
+import { useProcessListUiState, useProcessSidebarAction } from "./process-list-ui";
+import type { ProcessRecord, ProjectRecord, RenameTargetExt } from "./process-list-types";
 
-import styles from "../../../../components/ProjectList/ProjectList.module.css";
+export type { RenameTargetExt } from "./process-list-types";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
-  if (!q) return nodes;
-  const lower = q.toLowerCase();
-  return nodes.reduce<ExplorerNode[]>((acc, node) => {
-    const labelMatch = node.label.toLowerCase().includes(lower);
-    const filteredChildren = node.children ? filterTree(node.children, q) : [];
-    if (labelMatch) acc.push(node);
-    else if (filteredChildren.length > 0)
-      acc.push({ ...node, children: filteredChildren });
-    return acc;
-  }, []);
-}
-
-function getLastSelectedId(ids: Iterable<string>): string | null {
-  let selectedId: string | null = null;
-  for (const id of ids) selectedId = id;
-  return selectedId;
-}
-
-// ---------------------------------------------------------------------------
-// State hook
-// ---------------------------------------------------------------------------
-
-type CtxMenuState = {
-  x: number;
-  y: number;
-  projectId?: string;
-  processId?: string;
-};
-
-export type RenameTargetExt = InlineRenameTarget & {
-  kind: "process" | "project";
-};
-
-export function useProcessListState() {
-  const processes = useProcessStore((s) => s.processes);
-  const projects = useProjectsListStore((s) => s.projects);
-  const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
-  const loading = useProcessStore((s) => s.loading);
-  const loadingProjects = useProjectsListStore((s) => s.loadingProjects);
-  const updateProcess = useProcessStore((s) => s.updateProcess);
-  const removeProcess = useProcessStore((s) => s.removeProcess);
-  const navigate = useNavigate();
-  const { processId } = useParams<{ processId: string }>();
-  const { query: searchQuery, setAction } = useSidebarSearch();
-
-  const [showProcessForm, setShowProcessForm] = useState(false);
-  const [processFormProjectId, setProcessFormProjectId] = useState<
-    string | null
-  >(null);
-  const [addMenuAnchor, setAddMenuAnchor] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
-  const [renameTarget, setRenameTarget] = useState<RenameTargetExt | null>(
-    null,
-  );
-  const [deleteProjectTarget, setDeleteProjectTarget] =
-    useState<Project | null>(null);
-  const [deleteProjectLoading, setDeleteProjectLoading] = useState(false);
-  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(
-    null,
-  );
-  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
-  const ctxMenuRef = useRef<HTMLDivElement>(null);
-  const addMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close context menu on outside click
-  useEffect(() => {
-    if (!ctxMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        ctxMenuRef.current &&
-        !ctxMenuRef.current.contains(e.target as Node)
-      )
-        setCtxMenu(null);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [ctxMenu]);
-
-  // Close add menu on outside click
-  useEffect(() => {
-    if (!addMenuAnchor) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        addMenuRef.current &&
-        !addMenuRef.current.contains(e.target as Node)
-      )
-        setAddMenuAnchor(null);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [addMenuAnchor]);
-
-  // Sidebar + button
-  useEffect(() => {
-    setAction(
-      "process",
-      <ButtonPlus
-        onClick={(e: React.MouseEvent) => {
-          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          setAddMenuAnchor({ x: rect.left, y: rect.bottom + 4 });
-        }}
-        size="sm"
-        title="New Process"
-      />,
-    );
-    return () => setAction("process", null);
-  }, [setAction]);
-
-  const handleAddMenuAction = useCallback((id: string) => {
-    setAddMenuAnchor(null);
-    if (id === "new-process") {
-      setProcessFormProjectId(null);
-      setShowProcessForm(true);
-    }
-  }, []);
-
+function useProcessMaps(
+  processes: ProcessRecord[],
+  projects: ProjectRecord[],
+): {
+  processMap: Map<string, ProcessRecord>;
+  processesByProject: Record<string, ProcessRecord[]>;
+  projectMap: Map<string, ProjectRecord>;
+} {
   const projectMap = useMemo(
-    () => new Map(projects.map((p) => [p.project_id, p])),
+    () => new Map(projects.map((project) => [project.project_id, project])),
     [projects],
   );
   const processMap = useMemo(
-    () => new Map(processes.map((p) => [p.process_id, p])),
+    () => new Map(processes.map((process) => [process.process_id, process])),
     [processes],
   );
-
   const processesByProject = useMemo(() => {
-    const map: Record<string, typeof processes> = {};
-    for (const p of processes) {
-      const key = p.project_id ?? "__unassigned__";
-      (map[key] ??= []).push(p);
+    const nextMap: Record<string, ProcessRecord[]> = {};
+    for (const process of processes) {
+      const projectId = process.project_id ?? "__unassigned__";
+      (nextMap[projectId] ??= []).push(process);
     }
-    return map;
+    return nextMap;
   }, [processes]);
 
-  const enabledDot = useCallback(
-    (enabled: boolean) => (
-      <span className={styles.sessionIndicator}>
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            display: "inline-block",
-            background: enabled
-              ? "var(--color-success)"
-              : "var(--color-text-muted)",
-          }}
-        />
-      </span>
-    ),
-    [],
-  );
+  return { processMap, processesByProject, projectMap };
+}
 
-  // Build explorer data: projects as parents, processes as children
-  const explorerData: ExplorerNode[] = useMemo(() => {
-    const projectNodes: ExplorerNode[] = projects.map((proj) => {
-      const children: ExplorerNode[] = (
-        processesByProject[proj.project_id] ?? []
-      ).map((p) => ({
-        id: p.process_id,
-        label: p.name,
-        icon: <Cpu size={16} />,
-        suffix: enabledDot(p.enabled),
-        metadata: { type: "process", projectId: proj.project_id },
-      }));
-
-      return {
-        id: proj.project_id,
-        label: proj.name,
-        suffix: (
-          <span className={styles.projectSuffix}>
-            <span
-              onClick={(e) => e.stopPropagation()}
-              className={styles.newChatWrap}
-            >
-              <ButtonPlus
-                onClick={() => {
-                  setProcessFormProjectId(proj.project_id);
-                  setShowProcessForm(true);
-                }}
-                size="sm"
-                title="Add Process"
-              />
-            </span>
-          </span>
-        ),
-        metadata: { type: "project" },
-        children,
-      };
-    });
-
-    const orphans = processesByProject["__unassigned__"] ?? [];
-    const orphanNodes: ExplorerNode[] = orphans.map((p) => ({
-      id: p.process_id,
-      label: p.name,
-      icon: <Cpu size={16} />,
-      suffix: enabledDot(p.enabled),
-      metadata: { type: "process", projectId: null },
-    }));
-
-    return [...projectNodes, ...orphanNodes];
-  }, [projects, processesByProject, enabledDot]);
-
-  const filteredExplorerData = useMemo(
-    () => filterTree(explorerData, searchQuery),
-    [explorerData, searchQuery],
-  );
-  const defaultExpandedIds = useMemo(
-    () =>
-      explorerData
-        .filter((n) => n.children && n.children.length > 0)
-        .map((n) => n.id),
-    [explorerData],
-  );
-  const lastStoredId = useMemo(
-    () => localStorage.getItem(LAST_PROCESS_ID_KEY),
-    [],
-  );
-  const activeId = pendingSelectId ?? processId ?? lastStoredId;
-  const explorerKey = useMemo(
-    () =>
-      projects.map((p) => p.project_id).join() +
-      ":" +
-      processes.length +
-      ":" +
-      (pendingSelectId ?? ""),
-    [projects, processes.length, pendingSelectId],
-  );
-  const defaultSelectedIds = useMemo(
-    () => (activeId ? [activeId] : []),
-    [activeId],
-  );
-
-  const handleSelect = useCallback(
-    (ids: Iterable<string>) => {
-      const id = getLastSelectedId(ids);
-      if (!id) return;
-      if (processMap.has(id)) {
-        navigate(`/process/${id}`);
-      }
-    },
-    [processMap, navigate],
-  );
-
-  const handleDrop = useCallback(
-    async (draggedId: string, targetId: string, _position: DropPosition) => {
-      const draggedProcess = processMap.get(draggedId);
-      if (!draggedProcess) return;
-
-      let newProjectId: string | null;
-      if (projectMap.has(targetId)) {
-        newProjectId = targetId;
-      } else {
-        const targetProcess = processMap.get(targetId);
-        if (!targetProcess) return;
-        newProjectId = targetProcess.project_id ?? null;
-      }
-
-      if (newProjectId === (draggedProcess.project_id ?? null)) return;
-
-      const previous = draggedProcess;
-      updateProcess({ ...draggedProcess, project_id: newProjectId });
-      try {
-        await processApi.updateProcess(draggedProcess.process_id, {
-          project_id: newProjectId,
-        });
-      } catch {
-        updateProcess(previous);
-      }
-    },
-    [processMap, projectMap, updateProcess],
-  );
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      const target = (e.target as HTMLElement).closest("button[id]");
-      if (!target) return;
-      const nodeId = target.id;
-      if (projectMap.has(nodeId)) {
-        e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY, projectId: nodeId });
-      } else if (processMap.has(nodeId)) {
-        e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY, processId: nodeId });
-      }
-    },
-    [projectMap, processMap],
-  );
-
-  const handleCtxMenuAction = useCallback(
-    async (id: string) => {
-      if (!ctxMenu) return;
-
-      if (id === "add-process" && ctxMenu.projectId) {
-        setProcessFormProjectId(ctxMenu.projectId);
-        setShowProcessForm(true);
-      }
-
-      if (id === "rename-project" && ctxMenu.projectId) {
-        const proj = projectMap.get(ctxMenu.projectId);
-        if (!proj) return;
-        setRenameTarget({
-          id: proj.project_id,
-          name: proj.name,
-          kind: "project",
-        });
-      }
-
-      if (id === "delete-project" && ctxMenu.projectId) {
-        const proj = projectMap.get(ctxMenu.projectId);
-        if (proj) setDeleteProjectTarget(proj);
-      }
-
-      if (id === "rename-process" && ctxMenu.processId) {
-        const proc = processMap.get(ctxMenu.processId);
-        if (!proc) return;
-        setRenameTarget({
-          id: proc.process_id,
-          name: proc.name,
-          kind: "process",
-        });
-      }
-
-      if (id === "delete-process" && ctxMenu.processId) {
-        const proc = processMap.get(ctxMenu.processId);
-        if (!proc) return;
-        if (window.confirm(`Delete process "${proc.name}"?`)) {
-          try {
-            await processApi.deleteProcess(proc.process_id);
-            removeProcess(proc.process_id);
-            if (
-              localStorage.getItem(LAST_PROCESS_ID_KEY) === proc.process_id
-            ) {
-              localStorage.removeItem(LAST_PROCESS_ID_KEY);
-            }
-            if (processId === proc.process_id) navigate("/process");
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-
-      setCtxMenu(null);
-    },
-    [
-      ctxMenu,
-      projectMap,
-      processMap,
-      removeProcess,
-      navigate,
-      processId,
-    ],
-  );
-
-  const handleRenameCommit = useCallback(
-    async (newName: string) => {
-      if (!renameTarget) return;
-      try {
-        if (renameTarget.kind === "project") {
-          await api.updateProject(renameTarget.id, { name: newName });
-          await refreshProjects();
-        } else {
-          const updated = await processApi.updateProcess(renameTarget.id, {
-            name: newName,
-          });
-          updateProcess(updated);
-        }
-      } catch {
-        /* ignore */
-      }
-      setRenameTarget(null);
-    },
-    [renameTarget, updateProcess, refreshProjects],
-  );
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key !== "F2") return;
-      const focused = (e.target as HTMLElement).closest("button[id]");
-      if (!focused) return;
-      const proj = projectMap.get(focused.id);
-      if (proj) {
-        e.preventDefault();
-        setRenameTarget({
-          id: proj.project_id,
-          name: proj.name,
-          kind: "project",
-        });
-        return;
-      }
-      const proc = processMap.get(focused.id);
-      if (proc) {
-        e.preventDefault();
-        setRenameTarget({
-          id: proc.process_id,
-          name: proc.name,
-          kind: "process",
-        });
-      }
-    },
-    [projectMap, processMap],
-  );
-
-  const handleDeleteProject = useCallback(async () => {
-    if (!deleteProjectTarget) return;
-    setDeleteProjectLoading(true);
-    setDeleteProjectError(null);
-    try {
-      await api.deleteProject(deleteProjectTarget.project_id);
-      setDeleteProjectTarget(null);
-      await refreshProjects();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to delete project.";
-      setDeleteProjectError(message);
-    } finally {
-      setDeleteProjectLoading(false);
-    }
-  }, [deleteProjectTarget, refreshProjects]);
+function useProcessStoreData(): {
+  loading: boolean;
+  loadingProjects: boolean;
+  processId: string | undefined;
+  processMap: Map<string, ProcessRecord>;
+  processes: ProcessRecord[];
+  processesByProject: Record<string, ProcessRecord[]>;
+  projectMap: Map<string, ProjectRecord>;
+  projects: ProjectRecord[];
+  refreshProjects: () => Promise<unknown>;
+  removeProcess: ReturnType<typeof useProcessStore.getState>["removeProcess"];
+  searchQuery: string;
+  updateProcess: ReturnType<typeof useProcessStore.getState>["updateProcess"];
+} {
+  const processes = useProcessStore((s) => s.processes);
+  const loading = useProcessStore((s) => s.loading);
+  const updateProcess = useProcessStore((s) => s.updateProcess);
+  const removeProcess = useProcessStore((s) => s.removeProcess);
+  const projects = useProjectsListStore((s) => s.projects);
+  const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
+  const loadingProjects = useProjectsListStore((s) => s.loadingProjects);
+  const { processId } = useParams<{ processId: string }>();
+  const { query: searchQuery } = useSidebarSearch("process");
+  const { processMap, processesByProject, projectMap } = useProcessMaps(processes, projects);
 
   return {
+    loading,
+    loadingProjects,
+    processId,
+    processMap,
     processes,
+    processesByProject,
+    projectMap,
     projects,
-    loading: loading || loadingProjects,
-    showProcessForm,
-    setShowProcessForm,
-    processFormProjectId,
-    addMenuAnchor,
-    ctxMenu,
-    ctxMenuRef,
-    addMenuRef,
-    renameTarget,
-    setRenameTarget,
-    deleteProjectTarget,
-    setDeleteProjectTarget,
-    deleteProjectLoading,
-    deleteProjectError,
-    setDeleteProjectError,
-    pendingSelectId,
-    setPendingSelectId,
+    refreshProjects,
+    removeProcess,
+    searchQuery,
+    updateProcess,
+  };
+}
+
+function useProcessExplorerData(
+  explorerStyles: ProjectExplorerNodeStyles,
+  onAddProcess: (projectId: string | null) => void,
+): {
+  data: ReturnType<typeof useProcessStoreData>;
+  filteredExplorerData: ReturnType<typeof buildProcessExplorerData>;
+  isEmptyState: boolean;
+} {
+  const data = useProcessStoreData();
+  const explorerData = useMemo(
+    () =>
+      buildProcessExplorerData({
+        processes: data.processes,
+        projects: data.projects,
+        processesByProject: data.processesByProject,
+        explorerStyles,
+        onAddProcess,
+      }),
+    [
+      data.processes,
+      data.processesByProject,
+      data.projects,
+      explorerStyles,
+      onAddProcess,
+    ],
+  );
+  const filteredExplorerData = useMemo(
+    () => filterTree(explorerData, data.searchQuery),
+    [data.searchQuery, explorerData],
+  );
+
+  return {
+    data,
     filteredExplorerData,
-    defaultExpandedIds,
-    defaultSelectedIds,
-    explorerKey,
-    handleSelect,
-    handleDrop,
-    handleContextMenu,
-    handleCtxMenuAction,
-    handleRenameCommit,
-    handleDeleteProject,
-    handleKeyDown,
-    handleAddMenuAction,
+    isEmptyState:
+      !data.loading &&
+      !data.loadingProjects &&
+      data.processes.length === 0 &&
+      data.projects.length === 0,
+  };
+}
+
+function useProcessEntryList(
+  filteredExplorerData: ReturnType<typeof buildProcessExplorerData>,
+  searchQuery: string,
+  selectedNodeId: string | null,
+  onSelectProcess: (processId: string) => void,
+): ReturnType<typeof buildLeftMenuEntries> {
+  const defaultExpandedIds = useMemo(
+    () =>
+      filteredExplorerData
+        .filter((node) => node.children && node.children.length > 0)
+        .map((node) => node.id),
+    [filteredExplorerData],
+  );
+  const { expandedIds, toggleGroup } = useLeftMenuExpandedGroups(defaultExpandedIds);
+
+  return useMemo(
+    () =>
+      buildLeftMenuEntries(filteredExplorerData, {
+        expandedIds: new Set(expandedIds),
+        selectedNodeId,
+        searchActive: searchQuery.trim().length > 0,
+        groupTestIdPrefix: "project",
+        itemTestIdPrefix: "node",
+        onGroupActivate: toggleGroup,
+        onItemSelect: onSelectProcess,
+      }),
+    [expandedIds, filteredExplorerData, onSelectProcess, searchQuery, selectedNodeId, toggleGroup],
+  );
+}
+
+function useProcessEntries(
+  explorerStyles: ProjectExplorerNodeStyles,
+  onAddProcess: (projectId: string | null) => void,
+  onSelectProcess: (processId: string) => void,
+  pendingSelectId: string | null,
+): {
+  data: ReturnType<typeof useProcessStoreData>;
+  entries: ReturnType<typeof buildLeftMenuEntries>;
+  isEmptyState: boolean;
+} {
+  const explorer = useProcessExplorerData(explorerStyles, onAddProcess);
+  const selectedNodeId = pendingSelectId ?? explorer.data.processId ?? null;
+  const entries = useProcessEntryList(
+    explorer.filteredExplorerData,
+    explorer.data.searchQuery,
+    selectedNodeId,
+    onSelectProcess,
+  );
+
+  return { ...explorer, entries };
+}
+
+function useProcessCoreHandlers(params: {
+  explorer: ReturnType<typeof useProcessEntries>;
+  navigate: ReturnType<typeof useNavigate>;
+  processId: string | undefined;
+  ui: ReturnType<typeof useProcessListUiState>;
+}): {
+  handleContextMenu: MouseEventHandler<HTMLDivElement>;
+  handleDeleteProject: () => Promise<void>;
+  handleKeyDown: KeyboardEventHandler<HTMLDivElement>;
+  handleRenameCommit: (newName: string) => Promise<void>;
+} {
+  return {
+    handleContextMenu: useProcessContextMenu(
+      params.explorer.data.projectMap,
+      params.explorer.data.processMap,
+      params.ui.setCtxMenu,
+    ),
+    handleKeyDown: useProcessKeyDown(
+      params.explorer.data.projectMap,
+      params.explorer.data.processMap,
+      params.ui.setRenameTarget,
+    ),
+    handleRenameCommit: useProcessRenameCommit(
+      params.explorer.data.refreshProjects,
+      params.ui.renameTarget,
+      params.ui.setRenameTarget,
+      params.explorer.data.updateProcess,
+    ),
+    handleDeleteProject: useDeleteProjectHandler(
+      params.ui.deleteProjectTarget,
+      params.explorer.data.refreshProjects,
+      params.ui.setDeleteProjectError,
+      params.ui.setDeleteProjectLoading,
+      params.ui.setDeleteProjectTarget,
+    ),
+  };
+}
+
+function useProcessInteractionHandlers(params: {
+  explorer: ReturnType<typeof useProcessEntries>;
+  navigate: ReturnType<typeof useNavigate>;
+  processId: string | undefined;
+  ui: ReturnType<typeof useProcessListUiState>;
+}): {
+  handleAddMenuAction: (id: string) => void;
+  handleContextMenu: MouseEventHandler<HTMLDivElement>;
+  handleCtxMenuAction: (id: string) => Promise<void>;
+  handleDeleteProject: () => Promise<void>;
+  handleKeyDown: KeyboardEventHandler<HTMLDivElement>;
+  handleRenameCommit: (newName: string) => Promise<void>;
+} {
+  const coreHandlers = useProcessCoreHandlers(params);
+  const menuHandlers = useProcessMenuActions({
+    ctxMenu: params.ui.ctxMenu,
+    navigate: params.navigate,
+    processId: params.processId,
+    processMap: params.explorer.data.processMap,
+    projectMap: params.explorer.data.projectMap,
+    removeProcess: params.explorer.data.removeProcess,
+    setAddMenuAnchor: params.ui.setAddMenuAnchor,
+    setCtxMenu: params.ui.setCtxMenu,
+    setDeleteProjectTarget: params.ui.setDeleteProjectTarget,
+    setProcessFormProjectId: params.ui.setProcessFormProjectId,
+    setRenameTarget: params.ui.setRenameTarget,
+    setShowProcessForm: params.ui.setShowProcessForm,
+  });
+
+  return { ...coreHandlers, ...menuHandlers };
+}
+
+export function useProcessListState(
+  explorerStyles: ProjectExplorerNodeStyles,
+): {
+  addMenuAnchor: { x: number; y: number } | null;
+  addMenuRef: RefObject<HTMLDivElement | null>;
+  ctxMenu: ReturnType<typeof useProcessListUiState>["ctxMenu"];
+  ctxMenuRef: RefObject<HTMLDivElement | null>;
+  deleteProjectError: string | null;
+  deleteProjectLoading: boolean;
+  deleteProjectTarget: ProjectRecord | null;
+  entries: ReturnType<typeof buildLeftMenuEntries>;
+  handleAddMenuAction: (id: string) => void;
+  handleContextMenu: MouseEventHandler<HTMLDivElement>;
+  handleCtxMenuAction: (id: string) => Promise<void>;
+  handleDeleteProject: () => Promise<void>;
+  handleKeyDown: KeyboardEventHandler<HTMLDivElement>;
+  handleRenameCommit: (newName: string) => Promise<void>;
+  isEmptyState: boolean;
+  processFormProjectId: string | null;
+  renameTarget: RenameTargetExt | null;
+  setDeleteProjectError: (value: string | null) => void;
+  setDeleteProjectTarget: (value: ProjectRecord | null) => void;
+  setPendingSelectId: (value: string | null) => void;
+  setRenameTarget: (value: RenameTargetExt | null) => void;
+  setShowProcessForm: (value: boolean) => void;
+  showProcessForm: boolean;
+} {
+  const navigate = useNavigate();
+  const { processId } = useParams<{ processId: string }>();
+  const ui = useProcessListUiState();
+  useProcessSidebarAction(ui.setAddMenuAnchor);
+
+  const handleSelectProcess = useCallback((nextProcessId: string) => {
+    ui.setPendingSelectId(null);
+    navigate(`/process/${nextProcessId}`);
+  }, [navigate, ui.setPendingSelectId]);
+  const explorer = useProcessEntries(
+    explorerStyles,
+    (projectId) => {
+      ui.setProcessFormProjectId(projectId);
+      ui.setShowProcessForm(true);
+    },
+    handleSelectProcess,
+    ui.pendingSelectId,
+  );
+  const handlers = useProcessInteractionHandlers({ explorer, navigate, processId, ui });
+
+  return {
+    addMenuAnchor: ui.addMenuAnchor,
+    addMenuRef: ui.addMenuRef,
+    ctxMenu: ui.ctxMenu,
+    ctxMenuRef: ui.ctxMenuRef,
+    deleteProjectError: ui.deleteProjectError,
+    deleteProjectLoading: ui.deleteProjectLoading,
+    deleteProjectTarget: ui.deleteProjectTarget,
+    entries: explorer.entries,
+    handleAddMenuAction: handlers.handleAddMenuAction,
+    handleContextMenu: handlers.handleContextMenu,
+    handleCtxMenuAction: handlers.handleCtxMenuAction,
+    handleDeleteProject: handlers.handleDeleteProject,
+    handleKeyDown: handlers.handleKeyDown,
+    handleRenameCommit: handlers.handleRenameCommit,
+    isEmptyState: explorer.isEmptyState,
+    processFormProjectId: ui.processFormProjectId,
+    renameTarget: ui.renameTarget,
+    setDeleteProjectError: ui.setDeleteProjectError,
+    setDeleteProjectTarget: ui.setDeleteProjectTarget,
+    setPendingSelectId: ui.setPendingSelectId,
+    setRenameTarget: ui.setRenameTarget,
+    setShowProcessForm: ui.setShowProcessForm,
+    showProcessForm: ui.showProcessForm,
   };
 }

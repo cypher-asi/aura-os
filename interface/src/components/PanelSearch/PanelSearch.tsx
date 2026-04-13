@@ -20,7 +20,7 @@ export function PanelSearch({ placeholder = "", value, onChange, action }: Panel
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={styles.searchInput}
-        style={action ? { paddingRight: "calc(var(--control-height-sm, 28px) + 2px)" } : undefined}
+        style={action ? { paddingRight: "calc(var(--space-4, 16px) + var(--control-height-sm, 28px))" } : undefined}
       />
       {action && <div className={styles.action}>{action}</div>}
     </div>

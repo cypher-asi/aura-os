@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 
@@ -74,7 +75,7 @@ describe("ChatPanel", () => {
     mockUseAuraCapabilities.mockReset();
   });
 
-  function renderPanel() {
+  function renderPanel(overrides: Partial<ComponentProps<typeof ChatPanel>> = {}) {
     return render(
       <ChatPanel
         streamKey="stream-1"
@@ -82,6 +83,7 @@ describe("ChatPanel", () => {
         onStop={vi.fn()}
         agentName="Coca"
         machineType="remote"
+        {...overrides}
       />,
     );
   }
@@ -101,5 +103,32 @@ describe("ChatPanel", () => {
     renderPanel();
 
     expect(screen.queryByText("Remote agent chat")).not.toBeInTheDocument();
+  });
+
+  it("shows a loading state without unmounting the shell", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({ isLoading: true, historyResolved: false });
+
+    expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("chat-loading-state")).toBeInTheDocument();
+    expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
+  });
+
+  it("shows an error state separately from loading and empty states", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({ errorMessage: "History failed", isLoading: true, historyResolved: false });
+
+    expect(screen.getByText("History failed")).toBeInTheDocument();
+    expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
+  });
+
+  it("shows the empty state once history is resolved and not loading", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({ historyResolved: true, isLoading: false });
+
+    expect(screen.getByText("Start chatting with Coca.")).toBeInTheDocument();
   });
 });

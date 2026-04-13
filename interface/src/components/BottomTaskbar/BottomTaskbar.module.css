@@ -1,12 +1,15 @@
 .bar {
+  --taskbar-item-size: 28px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   width: 100%;
   height: var(--control-height-sm);
+  min-height: var(--control-height-sm);
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
   flex-shrink: 0;
+  box-sizing: border-box;
   padding: 0 var(--space-2) 0 0;
   column-gap: var(--space-2);
 }
@@ -29,25 +32,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  justify-self: stretch;
+  justify-self: center;
   min-width: 0;
   max-width: min(60vw, 520px);
-}
-
-.desktopBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-}
-
-.desktopBtn:hover {
-  background-color: transparent !important;
-}
-
-.desktopBtn[class*="selected"],
-.desktopBtn[class*="selected"] svg {
-  color: #ffffff !important;
 }
 
 .favorites {
@@ -64,10 +51,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: var(--taskbar-item-size);
+  height: var(--taskbar-item-size);
+  min-width: var(--taskbar-item-size);
+  min-height: var(--taskbar-item-size);
   padding: 2px;
   border: none;
   border-radius: var(--radius-sm);
   background: none;
+  box-sizing: border-box;
   cursor: pointer;
   transition: background 0.15s ease;
   flex-shrink: 0;
@@ -113,42 +105,21 @@
   flex-shrink: 0;
 }
 
-.creditsButton {
-  display: inline-flex;
+.rightPrimary {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--color-text-secondary);
-  font: inherit;
-  font-size: var(--text-2xs);
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.creditsButton:hover {
-  background: var(--color-surface-hover);
-  color: #ffffff;
-}
-
-.creditsLabel {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.wifiIcon {
-  display: inline-flex;
-  align-items: center;
+  gap: 4px;
 }
 
 .clock {
+  display: inline-flex;
+  align-items: center;
   font-size: var(--text-2xs);
   color: var(--color-text-secondary);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  min-height: var(--taskbar-item-size);
   padding: 0 4px;
+  line-height: 1;
   user-select: none;
 }

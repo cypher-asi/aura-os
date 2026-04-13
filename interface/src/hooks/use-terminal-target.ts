@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../api/client";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { AgentInstance, ProjectId } from "../types";
+import {
+  projectAgentInstanceQueryOptions,
+  projectAgentsQueryOptions,
+} from "../queries/project-queries";
 
 export type TerminalTargetStatus = "loading" | "ready" | "error";
 
@@ -60,18 +64,6 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
   const selectedAgentId = selectedAgent?.agent_id;
   const selectedAgentMachineType = selectedAgent?.machine_type;
 
-  const [state, setState] = useState<TerminalTargetState>({
-    remoteAgentId: undefined,
-    remoteWorkspacePath: undefined,
-    workspacePath: undefined,
-    status: "loading",
-    resolvedKey: "",
-  });
-
-  const key = useMemo(() => {
-    return `${projectId ?? ""}|${agentInstanceId ?? ""}|${agentId ?? ""}`;
-  }, [projectId, agentInstanceId, agentId]);
-
   const syncState = useMemo<TerminalTarget | null>(() => {
     if (!projectId && !agentId) {
       return {
@@ -94,86 +86,95 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
     return null;
   }, [agentId, agentsStatus, projectId, selectedAgentId, selectedAgentMachineType]);
 
-  useEffect(() => {
-    if (syncState) {
-      return;
-    }
+  const agentInstanceQuery = useQuery({
+    ...(projectId && agentInstanceId
+      ? projectAgentInstanceQueryOptions(projectId, agentInstanceId)
+      : projectAgentInstanceQueryOptions("", "")),
+    enabled: Boolean(projectId && agentInstanceId) && !syncState,
+  });
 
-    // Project route with explicit agent instance: always resolve terminal target
-    // from this exact instance so chat + terminal stay on the same remote agent.
-    if (projectId && agentInstanceId) {
-      let cancelled = false;
-      api
-        .getAgentInstance(projectId, agentInstanceId)
-        .then((inst) => {
-          if (cancelled) return;
-          const isRemote = inst.machine_type === "remote";
-          setState({
-            remoteAgentId: isRemote ? inst.agent_id : undefined,
-            remoteWorkspacePath: isRemote ? (inst.workspace_path ?? undefined) : undefined,
-            workspacePath: inst.workspace_path ?? undefined,
-            status: "ready",
-            resolvedKey: key,
-          });
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setState({
-            remoteAgentId: undefined,
-            remoteWorkspacePath: undefined,
-            workspacePath: undefined,
-            status: "error",
-            resolvedKey: key,
-          });
-        });
-
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    // Agents app route: resolve from selected agent once agents are loaded.
-    // Project route without explicit agent instance: best-effort fallback
-    // for non-chat project pages.
-    if (projectId) {
-      let cancelled = false;
-      api
-        .listAgentInstances(projectId)
-        .then((instances) => {
-          if (cancelled) return;
-          const { remoteAgentId, remoteWorkspacePath, workspacePath } =
-            resolveProjectWorkspace(instances);
-          setState({
-            remoteAgentId,
-            remoteWorkspacePath,
-            workspacePath,
-            status: "ready",
-            resolvedKey: key,
-          });
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setState({
-            remoteAgentId: undefined,
-            remoteWorkspacePath: undefined,
-            workspacePath: undefined,
-            status: "error",
-            resolvedKey: key,
-          });
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [agentId, agentInstanceId, key, projectId, syncState]);
+  const projectAgentsQuery = useQuery({
+    ...(projectId ? projectAgentsQueryOptions(projectId) : projectAgentsQueryOptions("")),
+    enabled: Boolean(projectId) && !agentInstanceId && !syncState,
+  });
 
   if (syncState) {
     return syncState;
   }
 
-  if (state.resolvedKey !== key) {
-    return { ...state, status: "loading" };
+  if (projectId && agentInstanceId) {
+    if (agentInstanceQuery.isError) {
+      return {
+        remoteAgentId: undefined,
+        remoteWorkspacePath: undefined,
+        workspacePath: undefined,
+        status: "error",
+      };
+    }
+
+    if (!agentInstanceQuery.data) {
+      return {
+        remoteAgentId: undefined,
+        remoteWorkspacePath: undefined,
+        workspacePath: undefined,
+        status: "loading",
+      };
+    }
+
+    const isRemote = agentInstanceQuery.data.machine_type === "remote";
+    return {
+      remoteAgentId: isRemote ? agentInstanceQuery.data.agent_id : undefined,
+      remoteWorkspacePath: isRemote
+        ? (agentInstanceQuery.data.workspace_path ?? undefined)
+        : undefined,
+      workspacePath: agentInstanceQuery.data.workspace_path ?? undefined,
+      status: "ready",
+    };
   }
 
-  return state;
+  if (projectId) {
+    if (projectAgentsQuery.isError) {
+      return {
+        remoteAgentId: undefined,
+        remoteWorkspacePath: undefined,
+        workspacePath: undefined,
+        status: "error",
+      };
+    }
+
+    if (!projectAgentsQuery.data) {
+      return {
+        remoteAgentId: undefined,
+        remoteWorkspacePath: undefined,
+        workspacePath: undefined,
+        status: "loading",
+      };
+    }
+
+    const resolvedWorkspace = resolveProjectWorkspace(projectAgentsQuery.data);
+    return {
+      remoteAgentId: resolvedWorkspace.remoteAgentId,
+      remoteWorkspacePath: resolvedWorkspace.remoteWorkspacePath,
+      workspacePath: resolvedWorkspace.workspacePath,
+      status: "ready",
+    };
+  }
+
+  if (agentId) {
+    return {
+      remoteAgentId: undefined,
+      remoteWorkspacePath: undefined,
+      workspacePath: undefined,
+      status: agentsStatus === "error" ? "error" : "loading",
+    };
+  }
+
+  const emptyState: TerminalTargetState = {
+    remoteAgentId: undefined,
+    remoteWorkspacePath: undefined,
+    workspacePath: undefined,
+    status: "ready",
+    resolvedKey: "",
+  };
+  return emptyState;
 }

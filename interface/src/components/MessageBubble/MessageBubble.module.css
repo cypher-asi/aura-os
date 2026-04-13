@@ -19,7 +19,7 @@
 .bubble {
   padding: var(--space-2) var(--space-3);
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
   word-wrap: break-word;
 }
@@ -85,7 +85,7 @@
   border: none;
   border-radius: 0;
   padding: var(--space-2) 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
   color: #ffffff;
 }
@@ -102,7 +102,7 @@
 
 /* Markdown inside assistant messages */
 .markdown {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
 }
 .markdown a {

@@ -40,6 +40,7 @@ vi.mock("../api/terminal", () => ({
   spawnTerminal: vi.fn().mockResolvedValue({ id: "term-1", shell: "bash" }),
   killTerminal: vi.fn().mockResolvedValue(undefined),
   terminalWsUrl: vi.fn((id: string) => `ws://test/ws/terminal/${id}`),
+  remoteTerminalWsUrl: vi.fn((id: string) => `ws://test/ws/agents/${id}/terminal`),
 }));
 
 import { spawnTerminal, killTerminal } from "../api/terminal";
@@ -148,6 +149,29 @@ describe("useTerminal", () => {
     expect(result.current.terminalId).toBeNull();
     expect(result.current.connected).toBe(false);
     expect(killTerminal).toHaveBeenCalledWith("term-1");
+  });
+
+  it("emits the remote terminal connection error without indented follow-up text", async () => {
+    const { result } = renderHook(() => useTerminal({ remoteAgentId: "agent-1" }));
+
+    await vi.waitFor(() => expect(result.current.connected).toBe(true));
+
+    const received: string[] = [];
+    act(() => {
+      result.current.onOutput((data) => received.push(data));
+    });
+
+    act(() => {
+      lastWS!.close();
+    });
+
+    expect(received).toHaveLength(1);
+    expect(received[0]).toContain("ERROR:");
+    expect(received[0]).toContain(
+      "Could not connect to the remote swarm virtual machine terminal.",
+    );
+    expect(received[0]).not.toContain("Make sure the agent is running");
+    expect(received[0]).not.toContain("       ");
   });
 
   it("cleans up on unmount", async () => {

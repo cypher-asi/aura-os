@@ -5,7 +5,15 @@ import type { LogEntry } from "../hooks/use-log-stream";
 import { compareSpecs } from "../utils/collections";
 import { createSidekickSlice, type SidekickSliceState } from "./shared/sidekick-slice";
 
-export type SidekickTab = "specs" | "tasks" | "stats" | "sessions" | "log" | "files";
+export type SidekickTab =
+  | "terminal"
+  | "run"
+  | "specs"
+  | "tasks"
+  | "stats"
+  | "sessions"
+  | "log"
+  | "files";
 
 export type PreviewItem =
   | { kind: "spec"; spec: Spec }
@@ -75,7 +83,7 @@ function patchSpecInHistory(
 const titleListeners = new Set<AgentInstanceUpdateListener>();
 
 export const useSidekickStore = create<SidekickState>()((set, get) => ({
-  ...createSidekickSlice<SidekickTab, PreviewItem>("specs", set, get),
+  ...createSidekickSlice<SidekickTab, PreviewItem>("terminal", set, get),
   infoContent: null,
   showInfo: false,
   specs: [],

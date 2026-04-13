@@ -10,7 +10,7 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
   const { agentId } = useParams<{ agentId: string }>();
   const { fetchAgents, status: agentsStatus } = useAgents();
   const { setSelectedAgent, selectedAgent } = useSelectedAgent();
-  const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
+  const setTerminalTarget = useTerminalPanelStore((s) => s.setTerminalTarget);
 
   useEffect(() => {
     fetchAgents().catch(() => {});
@@ -31,8 +31,8 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
 
   useEffect(() => {
     if (status !== "ready") return;
-    setRemoteAgentId(remoteAgentId);
-  }, [remoteAgentId, status, setRemoteAgentId]);
+    setTerminalTarget({ cwd: undefined, remoteAgentId });
+  }, [remoteAgentId, setTerminalTarget, status]);
 
   return (
     <ResponsiveMainLane>

@@ -2,9 +2,29 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useDesktopWindowStore, MIN_WIDTH, MIN_HEIGHT } from "./desktop-window-store";
 
 const STORAGE_KEY = "aura:desktopWindows";
+const DEFAULT_HEIGHT = 520;
+
+function mountWindowLayerHost(height = 700) {
+  const host = document.createElement("div");
+  host.setAttribute("data-window-layer-host", "true");
+  host.getBoundingClientRect = vi.fn(() => ({
+    width: 1200,
+    height,
+    top: 0,
+    right: 1200,
+    bottom: height,
+    left: 0,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  })) as unknown as typeof host.getBoundingClientRect;
+  document.body.appendChild(host);
+  return host;
+}
 
 beforeEach(() => {
   localStorage.removeItem(STORAGE_KEY);
+  document.body.innerHTML = "";
   useDesktopWindowStore.setState({ windows: {}, nextZ: 1 });
   vi.clearAllMocks();
 });
@@ -21,13 +41,15 @@ describe("desktop-window-store", () => {
   });
 
   describe("openWindow", () => {
-    it("adds a new window with default size and cascade position", () => {
+    it("adds a new window with default size and bottom-aligned position", () => {
+      mountWindowLayerHost(700);
       useDesktopWindowStore.getState().openWindow("agent-1");
       const w = useDesktopWindowStore.getState().windows["agent-1"];
       expect(w).toBeDefined();
       expect(w.agentId).toBe("agent-1");
       expect(w.width).toBe(420);
       expect(w.height).toBe(520);
+      expect(w.y).toBe(700 - DEFAULT_HEIGHT);
       expect(w.minimized).toBe(false);
       expect(w.maximized).toBe(false);
     });
@@ -50,13 +72,15 @@ describe("desktop-window-store", () => {
       expect(stored["agent-1"]).toBeDefined();
     });
 
-    it("cascades position for multiple windows", () => {
+    it("keeps new windows bottom-aligned while staggering horizontally", () => {
+      mountWindowLayerHost(760);
       useDesktopWindowStore.getState().openWindow("a1");
       useDesktopWindowStore.getState().openWindow("a2");
       const w1 = useDesktopWindowStore.getState().windows["a1"];
       const w2 = useDesktopWindowStore.getState().windows["a2"];
       expect(w2.x).toBeGreaterThan(w1.x);
-      expect(w2.y).toBeGreaterThan(w1.y);
+      expect(w2.y).toBe(w1.y);
+      expect(w1.y + w1.height).toBe(760);
     });
   });
 

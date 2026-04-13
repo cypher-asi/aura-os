@@ -1,6 +1,19 @@
-import { forwardRef, useRef, useImperativeHandle, type ReactNode, type CSSProperties } from "react";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import { cn, useResize } from "@cypher-asi/zui";
 import styles from "./Lane.module.css";
+
+export interface LaneResizeControls {
+  getSize: () => number;
+  setSize: (size: number) => void;
+}
 
 export interface LaneProps {
   children?: ReactNode;
@@ -29,6 +42,9 @@ export interface LaneProps {
 
   /** Animate width to 0. Content stays in the DOM. */
   collapsed?: boolean;
+  /** When false, collapse/expand snaps instead of tweening width. */
+  animateCollapse?: boolean;
+  resizeControlsRef?: MutableRefObject<LaneResizeControls | null>;
 
   className?: string;
   style?: CSSProperties;
@@ -50,6 +66,8 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
       flex = false,
       collapsible = false,
       collapsed = false,
+      animateCollapse = true,
+      resizeControlsRef,
       className,
       style,
     },
@@ -60,7 +78,7 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
 
     const panelSide = resizePosition === "right" ? "left" : "right";
 
-    const { size: width, isResizing, handleMouseDown } = useResize({
+    const { size: width, isResizing, handleMouseDown, setSize } = useResize({
       side: panelSide,
       minSize: minWidth,
       maxSize: maxWidth,
@@ -72,6 +90,23 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
 
     const openWidth = resizable ? width : defaultWidth;
     const resolvedWidth = collapsed ? 0 : openWidth;
+    const previousCollapsedRef = useRef(collapsed);
+    const isCollapseToggling = previousCollapsedRef.current !== collapsed;
+
+    useLayoutEffect(() => {
+      previousCollapsedRef.current = collapsed;
+    }, [collapsed]);
+
+    useLayoutEffect(() => {
+      if (!resizeControlsRef) return;
+      resizeControlsRef.current = {
+        getSize: () => openWidth,
+        setSize,
+      };
+      return () => {
+        resizeControlsRef.current = null;
+      };
+    }, [openWidth, resizeControlsRef, setSize]);
 
     const laneStyle: CSSProperties = {
       ...style,
@@ -80,7 +115,10 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
         : {
             width: resolvedWidth,
             ...(collapsed && { minWidth: 0 }),
-            transition: isResizing ? "none" : "width 100ms ease-out",
+            transition:
+              isResizing || (!animateCollapse && isCollapseToggling)
+                ? "none"
+                : "width 100ms ease-out",
           }),
     };
 
@@ -94,6 +132,7 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
           flex && styles.laneFlex,
           isResizing && styles.resizing,
           collapsed && styles.collapsed,
+          !animateCollapse && styles.noCollapseAnimation,
           className,
         )}
         style={laneStyle}

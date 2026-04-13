@@ -3,6 +3,7 @@ import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
+import { formatCredits } from "../../utils/format";
 import styles from "./BuyCreditsModal.module.css";
 
 interface Props {
@@ -58,8 +59,19 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
     onOpenBilling?.();
   };
 
+  const footerZCredits = balance !== null
+    ? formatCredits(balance.balance_cents)
+    : balanceDisplay === "..." ? "..." : "---";
+
+  const footerCashCredits = balance !== null ? balance.balance_formatted : balanceDisplay;
+
   const footer = (
     <div className={styles.footer}>
+      <div className={styles.footerCredits}>
+        <span>{footerZCredits}</span>
+        <span className={styles.footerSeparator}>•</span>
+        <span>{footerCashCredits}</span>
+      </div>
       {onOpenBilling && !isNativeApp && (
         <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
           Billing Settings

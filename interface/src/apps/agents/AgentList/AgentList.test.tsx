@@ -51,8 +51,18 @@ vi.mock("../../../components/AgentEditorModal", () => ({
 }));
 
 vi.mock("../AgentConversationRow", () => ({
-  AgentConversationRow: ({ agent, onClick }: { agent: { name: string }; onClick: () => void }) => (
-    <button type="button" onClick={onClick}>{agent.name}</button>
+  AgentConversationRow: ({
+    agent,
+    onClick,
+    onMouseEnter,
+  }: {
+    agent: { name: string };
+    onClick: () => void;
+    onMouseEnter?: () => void;
+  }) => (
+    <button type="button" onClick={onClick} onMouseEnter={onMouseEnter}>
+      {agent.name}
+    </button>
   ),
 }));
 
@@ -69,6 +79,7 @@ vi.mock("../../../stores/profile-status-store", () => ({
 }));
 
 vi.mock("../../../api/client", () => ({
+  STANDALONE_AGENT_HISTORY_LIMIT: 80,
   api: {
     agents: {
       listEvents: vi.fn(async () => []),
@@ -161,5 +172,32 @@ describe("AgentList", () => {
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");
+  });
+
+  it("prefetches a bounded recent history window on hover", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    const user = userEvent.setup();
+    const prefetchHistory = vi.fn();
+    const listEvents = vi.fn(async () => []);
+    mocks.useChatHistoryStore.getState = () => ({
+      prefetchHistory,
+    });
+    const client = await import("../../../api/client");
+    vi.spyOn(client.api.agents, "listEvents").mockImplementation(listEvents);
+
+    render(<AgentList />);
+    await user.hover(screen.getByRole("button", { name: "Builder Bot" }));
+
+    expect(prefetchHistory).toHaveBeenCalledWith(
+      "agent:agent-1",
+      expect.any(Function),
+    );
+
+    const fetchFn = prefetchHistory.mock.calls[0][1] as () => Promise<unknown>;
+    await fetchFn();
+
+    expect(listEvents).toHaveBeenCalledWith("agent-1", {
+      limit: client.STANDALONE_AGENT_HISTORY_LIMIT,
+    });
   });
 });

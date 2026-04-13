@@ -59,7 +59,8 @@ describe("BuyCreditsModal", () => {
 
   it("shows the current balance", () => {
     renderModal();
-    expect(screen.getByText("$10.00")).toBeInTheDocument();
+    expect(screen.getByText("1,000 Z")).toBeInTheDocument();
+    expect(screen.getAllByText("$10.00")).toHaveLength(2);
   });
 
   it("renders preset buttons", () => {

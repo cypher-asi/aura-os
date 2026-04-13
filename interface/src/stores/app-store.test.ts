@@ -1,19 +1,29 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-const { mockApps } = vi.hoisted(() => ({
+const { mockApps, mockSetTaskbarAppOrder } = vi.hoisted(() => ({
   mockApps: [
     { id: "agents", basePath: "/agents", label: "Agents" },
     { id: "projects", basePath: "/projects", label: "Projects" },
     { id: "feed", basePath: "/feed", label: "Feed" },
   ],
+  mockSetTaskbarAppOrder: vi.fn(),
 }));
 
 vi.mock("../apps/registry", () => ({ apps: mockApps }));
+vi.mock("../utils/storage", () => ({
+  getTaskbarAppOrder: () => [],
+  setTaskbarAppOrder: mockSetTaskbarAppOrder,
+}));
 
-import { useAppStore, syncActiveApp } from "./app-store";
+import { getOrderedTaskbarApps, useAppStore, syncActiveApp } from "./app-store";
 
 beforeEach(() => {
-  useAppStore.setState({ apps: mockApps, activeApp: mockApps[0] });
+  mockSetTaskbarAppOrder.mockReset();
+  useAppStore.setState({
+    apps: mockApps,
+    activeApp: mockApps[0],
+    taskbarAppOrder: ["agents", "projects", "feed"],
+  });
 });
 
 describe("app-store", () => {
@@ -44,6 +54,20 @@ describe("app-store", () => {
       useAppStore.setState({ activeApp: mockApps[1] });
       syncActiveApp("/unknown-route");
       expect(useAppStore.getState().activeApp.id).toBe("agents");
+    });
+  });
+
+  describe("taskbar app order", () => {
+    it("sorts apps using the stored taskbar order", () => {
+      const ordered = getOrderedTaskbarApps(mockApps, ["feed", "agents", "projects"]);
+      expect(ordered.map((app) => app.id)).toEqual(["feed", "agents", "projects"]);
+    });
+
+    it("persists reordered taskbar apps", () => {
+      useAppStore.getState().reorderTaskbarApps("feed", "agents");
+
+      expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects"]);
+      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects"]);
     });
   });
 });

@@ -53,13 +53,20 @@ const mockProjectContext = {
   initialTasks: [],
 };
 let projectCtx: typeof mockProjectContext | null = mockProjectContext;
+const addTerminal = vi.fn();
 vi.mock("../../stores/project-action-store", () => ({
   useProjectActions: () => projectCtx,
 }));
 
+vi.mock("../../stores/terminal-panel-store", () => ({
+  useTerminalPanelStore: (selector: (s: { addTerminal: typeof addTerminal }) => unknown) =>
+    selector({ addTerminal }),
+}));
+
+let linkedWorkspace = true;
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
-    features: { linkedWorkspace: false },
+    features: { linkedWorkspace },
   }),
 }));
 
@@ -97,6 +104,11 @@ vi.mock("../PanelSearch", () => ({
 vi.mock("../FileExplorer", () => ({
   FileExplorer: () => <div data-testid="file-explorer" />,
 }));
+vi.mock("../TaskOutputPanel", () => ({
+  RunSidekickPane: () => <div data-testid="run-sidekick-pane" />,
+  TerminalSidekickPane: () => <div data-testid="terminal-sidekick-pane" />,
+  useActiveTaskTracking: vi.fn(),
+}));
 vi.mock("../../views/SpecList", () => ({
   SpecList: () => <div data-testid="spec-list" />,
 }));
@@ -119,11 +131,21 @@ vi.mock("./Sidekick.module.css", () => ({
 
 import { SidekickHeader, SidekickTaskbar, SidekickContent } from "../Sidekick";
 
+beforeAll(() => {
+  global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   projectCtx = mockProjectContext;
   mockSidekick.activeTab = "tasks";
   mockSidekick.showInfo = false;
+  linkedWorkspace = true;
+  addTerminal.mockClear();
 });
 
 describe("SidekickHeader", () => {
@@ -146,28 +168,47 @@ describe("SidekickHeader", () => {
 });
 
 describe("SidekickTaskbar", () => {
-  it("renders tab buttons for all default tabs", () => {
+  it("renders top-bar buttons in the new order", () => {
     render(<SidekickTaskbar />);
-    expect(screen.getByRole("button", { name: "Specs" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tasks" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Log" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stats" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sessions" })).toBeInTheDocument();
+    const labels = screen
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label") ?? button.getAttribute("title"));
+
+    expect(labels.slice(0, 9)).toEqual([
+      "Terminal",
+      "Run",
+      "Specs",
+      "Tasks",
+      "Stats",
+      "Log",
+      "Sessions",
+      "Files",
+      "New terminal",
+    ]);
   });
 
   it("calls setActiveTab when a tab is clicked", async () => {
     const user = userEvent.setup();
     render(<SidekickTaskbar />);
 
-    await user.click(screen.getByRole("button", { name: "Specs" }));
-    expect(mockSidekick.setActiveTab).toHaveBeenCalledWith("specs");
+    await user.click(screen.getByRole("button", { name: "Terminal" }));
+    expect(mockSidekick.setActiveTab).toHaveBeenCalledWith("terminal");
+  });
+
+  it("creates a terminal from the inline plus button", async () => {
+    const user = userEvent.setup();
+    render(<SidekickTaskbar />);
+
+    await user.click(screen.getByRole("button", { name: "New terminal" }));
+    expect(addTerminal).toHaveBeenCalled();
+    expect(mockSidekick.setActiveTab).toHaveBeenCalledWith("terminal");
   });
 
   it("marks active tab as pressed", () => {
-    mockSidekick.activeTab = "tasks";
+    mockSidekick.activeTab = "run";
     render(<SidekickTaskbar />);
-    expect(screen.getByRole("button", { name: "Tasks" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Specs" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Run" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Terminal" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("renders nothing when no project context", () => {
@@ -196,6 +237,12 @@ describe("SidekickContent", () => {
     expect(screen.getByTestId("task-list")).toBeInTheDocument();
   });
 
+  it("does not mount inactive log content", () => {
+    mockSidekick.activeTab = "tasks";
+    render(<SidekickContent />);
+    expect(screen.queryByTestId("sidekick-log")).not.toBeInTheDocument();
+  });
+
   it("renders spec list for specs tab", () => {
     mockSidekick.activeTab = "specs";
     render(<SidekickContent />);
@@ -206,6 +253,18 @@ describe("SidekickContent", () => {
     mockSidekick.activeTab = "stats";
     render(<SidekickContent />);
     expect(screen.getByTestId("stats-dashboard")).toBeInTheDocument();
+  });
+
+  it("renders run pane for run tab", () => {
+    mockSidekick.activeTab = "run";
+    render(<SidekickContent />);
+    expect(screen.getByTestId("run-sidekick-pane")).toBeInTheDocument();
+  });
+
+  it("renders terminal pane for terminal tab", () => {
+    mockSidekick.activeTab = "terminal";
+    render(<SidekickContent />);
+    expect(screen.getByTestId("terminal-sidekick-pane")).toBeInTheDocument();
   });
 
   it("renders session list for sessions tab", () => {
@@ -228,6 +287,12 @@ describe("SidekickContent", () => {
 
   it("hides search on stats tab", () => {
     mockSidekick.activeTab = "stats";
+    render(<SidekickContent />);
+    expect(screen.queryByTestId("panel-search")).not.toBeInTheDocument();
+  });
+
+  it("hides search on run tab", () => {
+    mockSidekick.activeTab = "run";
     render(<SidekickContent />);
     expect(screen.queryByTestId("panel-search")).not.toBeInTheDocument();
   });

@@ -1,12 +1,14 @@
-import { MessageSquare, AlertCircle } from "lucide-react";
+import { MessageSquare, AlertCircle, LoaderCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import { MessageQueue } from "../MessageQueue";
+import { OverlayScrollbar } from "../OverlayScrollbar";
 import { useChatPanelState } from "./useChatPanelState";
 import type { ChatAttachment } from "../../api/streams";
 import type { Project } from "../../types";
 import type { GenerationMode } from "../../constants/models";
+import type { DisplaySessionEvent } from "../../types/stream";
 import styles from "./ChatPanel.module.css";
 
 export interface ChatPanelProps {
@@ -32,6 +34,7 @@ export interface ChatPanelProps {
   errorMessage?: string | null;
   emptyMessage?: string;
   scrollResetKey?: unknown;
+  historyMessages?: DisplaySessionEvent[];
   projects?: Project[];
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
@@ -47,11 +50,12 @@ export function ChatPanel({
   defaultModel,
   templateAgentId,
   agentId,
-  isLoading: _isLoading,
+  isLoading = false,
   historyResolved = true,
   errorMessage,
   emptyMessage,
   scrollResetKey,
+  historyMessages,
   projects,
   selectedProjectId,
   onProjectChange,
@@ -61,8 +65,8 @@ export function ChatPanel({
     onSend,
     adapterType,
     defaultModel,
-    historyResolved,
     scrollResetKey,
+    historyMessages,
     selectedProjectId,
   });
 
@@ -70,6 +74,11 @@ export function ChatPanel({
     <div className={styles.emptyState}>
       <AlertCircle size={40} />
       <Text variant="muted" size="sm">{errorMessage}</Text>
+    </div>
+  ) : isLoading ? (
+    <div className={`${styles.emptyState} ${styles.loadingState}`} data-testid="chat-loading-state">
+      <LoaderCircle size={40} className={styles.loadingIcon} />
+      <Text variant="muted" size="sm">Loading conversation...</Text>
     </div>
   ) : historyResolved ? (
     <div className={styles.emptyState}>
@@ -95,20 +104,24 @@ export function ChatPanel({
         </div>
       ) : null}
       <div className={styles.chatArea}>
-        <div
-          className={`${styles.messageArea}${s.isReady ? "" : ` ${styles.messageAreaHidden}`}`}
-          ref={s.messageAreaRef}
-          onScroll={s.handleScroll}
-        >
-          <div className={styles.messageContent}>
-            <ChatMessageList
-              streamKey={streamKey}
-              scrollRef={s.messageAreaRef}
-              emptyState={emptyState}
-            />
-            <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
-            <div ref={s.spacerRef} style={{ flexShrink: 0 }} />
+        <div className={styles.messageAreaShell}>
+          <div
+            className={`${styles.messageArea}${s.isReady ? "" : ` ${styles.messageAreaHidden}`}`}
+            ref={s.messageAreaRef}
+            onScroll={s.handleScroll}
+          >
+            <div className={styles.messageContent}>
+              <ChatMessageList
+                messages={s.messages}
+                streamKey={streamKey}
+                scrollRef={s.messageAreaRef}
+                emptyState={emptyState}
+              />
+              <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
+              <div ref={s.spacerRef} style={{ flexShrink: 0 }} />
+            </div>
           </div>
+          <OverlayScrollbar scrollRef={s.messageAreaRef} />
         </div>
 
         {s.queue.length > 0 && (

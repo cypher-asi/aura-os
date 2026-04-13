@@ -4,8 +4,8 @@ const mockSendMessage = vi.fn();
 const mockStopStreaming = vi.fn();
 const mockResetEvents = vi.fn();
 
-vi.mock("./use-chat-stream-adapter", () => ({
-  useChatStreamAdapter: vi.fn(() => ({
+vi.mock("./use-agent-chat-stream", () => ({
+  useAgentChatStream: vi.fn(() => ({
     streamKey: "test-stream-key",
     sendMessage: mockSendMessage,
     stopStreaming: mockStopStreaming,
@@ -27,10 +27,12 @@ vi.mock("./use-delayed-loading", () => ({
 }));
 
 vi.mock("./use-agent-chat-meta", () => ({
-  useAgentChatMeta: vi.fn(() => ({
+  useStandaloneAgentMeta: vi.fn(() => ({
     agentName: "Test Agent",
     machineType: "local",
     templateAgentId: "template-1",
+    adapterType: "codex",
+    defaultModel: "gpt-5.4",
   })),
 }));
 
@@ -73,17 +75,17 @@ describe("useAgentChatWindow", () => {
     localStorage.clear();
   });
 
-  it("returns not ready when agentId is undefined", () => {
+  it("returns a stable shell payload when agentId is undefined", () => {
     const { result } = renderHook(() => useAgentChatWindow(undefined));
 
-    expect(result.current.ready).toBe(false);
+    expect(result.current.agentId).toBeUndefined();
     expect(result.current.streamKey).toBe("test-stream-key");
   });
 
-  it("returns ready when agentId is provided", () => {
+  it("returns chat props when agentId is provided", () => {
     const { result } = renderHook(() => useAgentChatWindow("agent-1"));
 
-    expect(result.current.ready).toBe(true);
+    expect(result.current.agentId).toBe("agent-1");
     expect(result.current.streamKey).toBe("test-stream-key");
   });
 
@@ -93,6 +95,8 @@ describe("useAgentChatWindow", () => {
     expect(result.current.agentName).toBe("Test Agent");
     expect(result.current.machineType).toBe("local");
     expect(result.current.templateAgentId).toBe("template-1");
+    expect(result.current.adapterType).toBe("codex");
+    expect(result.current.defaultModel).toBe("gpt-5.4");
     expect(result.current.agentId).toBe("agent-1");
     expect(result.current.emptyMessage).toBe("Send a message");
     expect(result.current.errorMessage).toBeNull();

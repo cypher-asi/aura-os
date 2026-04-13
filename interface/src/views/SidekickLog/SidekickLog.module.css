@@ -5,6 +5,12 @@
   overflow: hidden;
 }
 
+.logContentShell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
 .logHeader {
   display: flex;
   align-items: center;
@@ -158,7 +164,7 @@
 }
 
 .logContent {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;

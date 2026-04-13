@@ -73,10 +73,10 @@
   opacity: 1;
 }
 
-/* Override Item's .item svg (18px) so the + icon matches the search-area + (16px) */
+/* Keep the local plus button icon sized independently from row/avatar icons. */
 .newChatWrap button svg {
-  width: var(--icon-sm, 16px);
-  height: var(--icon-sm, 16px);
+  width: 10px;
+  height: 10px;
 }
 
 .inlineRenameInput {

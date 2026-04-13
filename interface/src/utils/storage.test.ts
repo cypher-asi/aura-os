@@ -1,7 +1,19 @@
-import { getLastAgent, setLastAgent, clearLastAgentIf, getLastProject, setLastProject } from "./storage";
+import {
+  clearLastAgentIf,
+  getLastAgent,
+  getLastProject,
+  getTaskbarAppOrder,
+  getTaskbarAppsCollapsed,
+  setLastAgent,
+  setLastProject,
+  setTaskbarAppOrder,
+  setTaskbarAppsCollapsed,
+} from "./storage";
 
 const LAST_AGENT_KEY = "aura-last-agent";
 const LAST_PROJECT_KEY = "aura-last-project";
+const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";
+const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
 
 describe("storage", () => {
   let store: Record<string, string>;
@@ -136,6 +148,75 @@ describe("storage", () => {
       store[LAST_PROJECT_KEY] = "p1";
       setLastProject("p2");
       expect(localStorage.setItem).toHaveBeenCalledWith(LAST_PROJECT_KEY, "p2");
+    });
+  });
+
+  describe("getTaskbarAppsCollapsed", () => {
+    it("defaults to collapsed when nothing is stored", () => {
+      expect(getTaskbarAppsCollapsed()).toBe(true);
+    });
+
+    it("returns true when the collapsed state is stored", () => {
+      store[TASKBAR_APPS_COLLAPSED_KEY] = "true";
+      expect(getTaskbarAppsCollapsed()).toBe(true);
+    });
+
+    it("returns false when the expanded state is stored", () => {
+      store[TASKBAR_APPS_COLLAPSED_KEY] = "false";
+      expect(getTaskbarAppsCollapsed()).toBe(false);
+    });
+
+    it("falls back to collapsed for malformed values", () => {
+      store[TASKBAR_APPS_COLLAPSED_KEY] = "maybe";
+      expect(getTaskbarAppsCollapsed()).toBe(true);
+    });
+  });
+
+  describe("setTaskbarAppsCollapsed", () => {
+    it("stores the collapsed state", () => {
+      setTaskbarAppsCollapsed(true);
+      expect(localStorage.setItem).toHaveBeenCalledWith(TASKBAR_APPS_COLLAPSED_KEY, "true");
+    });
+
+    it("stores the expanded state", () => {
+      setTaskbarAppsCollapsed(false);
+      expect(localStorage.setItem).toHaveBeenCalledWith(TASKBAR_APPS_COLLAPSED_KEY, "false");
+    });
+  });
+
+  describe("getTaskbarAppOrder", () => {
+    it("defaults to an empty order when nothing is stored", () => {
+      expect(getTaskbarAppOrder()).toEqual([]);
+    });
+
+    it("returns the stored app order", () => {
+      store[TASKBAR_APP_ORDER_KEY] = JSON.stringify(["tasks", "agents"]);
+      expect(getTaskbarAppOrder()).toEqual(["tasks", "agents"]);
+    });
+
+    it("filters out non-string values", () => {
+      store[TASKBAR_APP_ORDER_KEY] = JSON.stringify(["tasks", 5, "agents", null]);
+      expect(getTaskbarAppOrder()).toEqual(["tasks", "agents"]);
+    });
+
+    it("falls back to an empty order for malformed JSON", () => {
+      store[TASKBAR_APP_ORDER_KEY] = "not-json";
+      expect(getTaskbarAppOrder()).toEqual([]);
+    });
+  });
+
+  describe("setTaskbarAppOrder", () => {
+    it("stores the app order", () => {
+      setTaskbarAppOrder(["tasks", "agents"]);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        TASKBAR_APP_ORDER_KEY,
+        JSON.stringify(["tasks", "agents"]),
+      );
+    });
+
+    it("removes the key when the order is empty", () => {
+      setTaskbarAppOrder([]);
+      expect(localStorage.removeItem).toHaveBeenCalledWith(TASKBAR_APP_ORDER_KEY);
     });
   });
 });

@@ -102,8 +102,14 @@
   overflow: hidden;
 }
 
-.tabContent {
+.tabContentShell {
+  position: relative;
   flex: 1;
+  min-height: 0;
+}
+
+.tabContent {
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
@@ -150,9 +156,20 @@
 }
 
 .infoArea {
-  flex: 1;
+  height: 100%;
   overflow-y: auto;
+  scrollbar-width: none;
   padding: var(--space-4);
+}
+
+.infoArea::-webkit-scrollbar {
+  display: none;
+}
+
+.infoAreaShell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
 }
 
 .infoHeader {

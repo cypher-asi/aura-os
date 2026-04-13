@@ -11,6 +11,20 @@ npm run dev
 
 Opens at `http://localhost:5173`. The Vite dev server proxies `/api` and `/ws` to the backend at `http://localhost:3100`.
 
+For the native desktop shell with live frontend updates, start both processes from the repo root:
+
+```bash
+./scripts/dev/run-desktop-dev.sh
+```
+
+On Windows PowerShell:
+
+```powershell
+./scripts/dev/run-desktop-dev.ps1
+```
+
+That flow waits for Vite before launching `aura-os-desktop`, and the desktop runtime will auto-attach to the dev server if it appears after startup. Plain debug runs now also try to boot a local Vite server automatically, while the script keeps the desktop shell and frontend locked to the same dev URL from the start.
+
 ## Production build
 
 ```bash

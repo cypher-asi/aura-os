@@ -14,6 +14,11 @@ export interface TerminalInstance {
   hook: UseTerminalReturn;
 }
 
+export interface TerminalTarget {
+  cwd?: string;
+  remoteAgentId?: string;
+}
+
 function loadPanelState(): { height: number; collapsed: boolean } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -33,6 +38,22 @@ const hookRefs = new Map<string, UseTerminalReturn>();
 let hasBeenExpandedOnce = false;
 let contentReadyTimer: ReturnType<typeof setTimeout> | null = null;
 
+function createTerminalInstance(): TerminalInstance {
+  const num = nextNum++;
+  return {
+    id: `term-${Date.now()}-${num}`,
+    title: `Terminal ${num}`,
+    hook: null!,
+  };
+}
+
+function targetChanged(
+  state: Pick<TerminalPanelState, "cwd" | "remoteAgentId">,
+  target: TerminalTarget,
+): boolean {
+  return state.cwd !== target.cwd || state.remoteAgentId !== target.remoteAgentId;
+}
+
 interface TerminalPanelState {
   terminals: TerminalInstance[];
   activeId: string | null;
@@ -44,7 +65,9 @@ interface TerminalPanelState {
   remoteAgentId?: string;
   /** False until the owning panel has resolved whether this is local or remote. */
   modeReady: boolean;
+  targetVersion: number;
 
+  setTerminalTarget: (target: TerminalTarget) => void;
   setCwd: (cwd: string | undefined) => void;
   setRemoteAgentId: (id: string | undefined) => void;
   addTerminal: () => void;
@@ -66,32 +89,36 @@ export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => 
   cwd: undefined,
   remoteAgentId: undefined,
   modeReady: false,
+  targetVersion: 0,
 
-  setCwd: (cwd) => {
-    set({ cwd });
-  },
-
-  setRemoteAgentId: (id) => {
-    const { remoteAgentId: prev, modeReady } = get();
-    if (modeReady && prev === id) return;
-    for (const [, hook] of hookRefs) {
-      hook.kill();
+  setTerminalTarget: (target) => {
+    const state = get();
+    const needsInitialTerminal = state.terminals.length === 0;
+    if (!needsInitialTerminal && state.modeReady && !targetChanged(state, target)) {
+      return;
     }
-    hookRefs.clear();
-    nextNum = 1;
-    const firstId = `term-${Date.now()}-${nextNum++}`;
+    const terminals = needsInitialTerminal ? [createTerminalInstance()] : state.terminals;
     set({
-      remoteAgentId: id,
+      cwd: target.cwd,
+      remoteAgentId: target.remoteAgentId,
       modeReady: true,
-      terminals: [{ id: firstId, title: "Terminal 1", hook: null! }],
-      activeId: firstId,
+      targetVersion: state.targetVersion + 1,
+      terminals,
+      activeId: state.activeId ?? terminals[0]?.id ?? null,
     });
   },
 
+  setCwd: (cwd) => {
+    get().setTerminalTarget({ cwd, remoteAgentId: get().remoteAgentId });
+  },
+
+  setRemoteAgentId: (id) => {
+    get().setTerminalTarget({ cwd: get().cwd, remoteAgentId: id });
+  },
+
   addTerminal: () => {
-    const num = nextNum++;
-    const key = `term-${Date.now()}-${num}`;
-    const instance: TerminalInstance = { id: key, title: `Terminal ${num}`, hook: null! };
+    const instance = createTerminalInstance();
+    const key = instance.id;
     const { collapsed } = get();
     set((s) => ({
       terminals: [...s.terminals, instance],

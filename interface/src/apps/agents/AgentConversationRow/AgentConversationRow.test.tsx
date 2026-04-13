@@ -41,12 +41,12 @@ describe("AgentConversationRow", () => {
         isSelected={false}
         onClick={() => {}}
         onContextMenu={() => {}}
-        onMouseOver={() => {}}
+        onMouseEnter={() => {}}
       />,
     );
 
     expect(screen.getByText("Rose")).toBeInTheDocument();
-    expect(screen.queryByText("Architect")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Architect")).toHaveLength(1);
     expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
     expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
   });
@@ -60,11 +60,11 @@ describe("AgentConversationRow", () => {
         isSelected={false}
         onClick={() => {}}
         onContextMenu={() => {}}
-        onMouseOver={() => {}}
+        onMouseEnter={() => {}}
       />,
     );
 
-    expect(screen.getByText("Architect")).toBeInTheDocument();
+    expect(screen.getAllByText("Architect")).toHaveLength(2);
     expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
     expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe("AgentConversationRow", () => {
         isSelected={false}
         onClick={() => {}}
         onContextMenu={() => {}}
-        onMouseOver={() => {}}
+        onMouseEnter={() => {}}
       />,
     );
 

@@ -7,6 +7,7 @@ const DEFAULT_HEIGHT = 200;
 const MIN_HEIGHT = 80;
 const MAX_HEIGHT = 500;
 const MAX_PERSISTED_TASKS = 20;
+const PERSIST_DEBOUNCE_MS = 150;
 
 export type PanelTaskStatus = "active" | "completed" | "failed";
 export type OutputPanelTab = "run" | "terminal";
@@ -50,6 +51,19 @@ function savePersistedTasks(tasks: PanelTaskEntry[]) {
     const trimmed = tasks.slice(-MAX_PERSISTED_TASKS);
     localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(trimmed));
   } catch { /* ignore */ }
+}
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function schedulePersist(height: number, collapsed: boolean, tasks: PanelTaskEntry[]) {
+  if (persistTimer != null) {
+    clearTimeout(persistTimer);
+  }
+  persistTimer = setTimeout(() => {
+    savePanelState(height, collapsed);
+    savePersistedTasks(tasks);
+    persistTimer = null;
+  }, PERSIST_DEBOUNCE_MS);
 }
 
 interface TaskOutputPanelState {
@@ -165,9 +179,15 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
   },
 }));
 
-useTaskOutputPanelStore.subscribe((s) => {
-  savePanelState(s.panelHeight, s.collapsed);
-  savePersistedTasks(s.tasks);
+useTaskOutputPanelStore.subscribe((state, prevState) => {
+  if (
+    state.panelHeight === prevState.panelHeight &&
+    state.collapsed === prevState.collapsed &&
+    state.tasks === prevState.tasks
+  ) {
+    return;
+  }
+  schedulePersist(state.panelHeight, state.collapsed, state.tasks);
 });
 
 export function useTasksForProject(projectId: string | undefined, agentInstanceId?: string | undefined) {

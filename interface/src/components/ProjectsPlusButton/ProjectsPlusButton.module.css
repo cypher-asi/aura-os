@@ -1,0 +1,32 @@
+.button {
+  width: var(--projects-plus-button-size, 20px);
+  height: var(--projects-plus-button-size, 20px);
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.84);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.button:hover:not(:disabled),
+.button:focus-visible {
+  background: color-mix(in srgb, #ffffff 12%, transparent);
+  color: #ffffff;
+  outline: none;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.button svg {
+  width: 10px;
+  height: 10px;
+}

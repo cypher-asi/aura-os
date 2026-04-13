@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ButtonPlus, Text } from "@cypher-asi/zui";
+import { Text } from "@cypher-asi/zui";
 import { useShallow } from "zustand/react/shallow";
 import { PanelSearch } from "../PanelSearch";
+import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
@@ -44,7 +45,7 @@ function ProjectRow({
 }
 
 export function ProjectNavigationDrawerContent() {
-  const { query, setQuery } = useSidebarSearch();
+  const { query, setQuery } = useSidebarSearch("projects");
   const { openNewProjectModal, projects } = useProjectsListStore(
     useShallow((state) => ({
       openNewProjectModal: state.openNewProjectModal,
@@ -114,7 +115,7 @@ export function ProjectNavigationDrawerContent() {
           placeholder="Search Projects..."
           value={query}
           onChange={setQuery}
-          action={<ButtonPlus onClick={() => openAfterDrawerClose(openNewProjectModal)} size="sm" title="New Project" />}
+          action={<ProjectsPlusButton onClick={() => openAfterDrawerClose(openNewProjectModal)} title="New Project" />}
         />
       </div>
       <div className={styles.mobileDrawerBody}>

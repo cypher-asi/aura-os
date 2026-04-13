@@ -23,7 +23,7 @@ interface AgentConversationRowProps {
   isSelected: boolean;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onMouseOver: (e: React.MouseEvent) => void;
+  onMouseEnter: () => void;
 }
 
 export function AgentConversationRow({
@@ -33,7 +33,7 @@ export function AgentConversationRow({
   isSelected,
   onClick,
   onContextMenu,
-  onMouseOver,
+  onMouseEnter,
 }: AgentConversationRowProps) {
   const agentRole = stripMarkdown(agent.role ?? "");
   const agentDescription = stripMarkdown(agent.personality ?? "");
@@ -53,7 +53,7 @@ export function AgentConversationRow({
       className={`${styles.row} ${isSelected ? styles.selected : ""}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      onMouseOver={onMouseOver}
+      onMouseEnter={onMouseEnter}
     >
       <Avatar
         avatarUrl={agent.icon ?? undefined}

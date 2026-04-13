@@ -56,7 +56,7 @@ function makeSession(): Session {
 }
 
 const initialState = {
-  activeTab: "specs" as const,
+  activeTab: "terminal" as const,
   previewItem: null,
   previewHistory: [],
   infoContent: null,
@@ -74,8 +74,8 @@ beforeEach(() => {
 
 describe("sidekick-store", () => {
   describe("initial state", () => {
-    it("defaults activeTab to specs", () => {
-      expect(useSidekickStore.getState().activeTab).toBe("specs");
+    it("defaults activeTab to terminal", () => {
+      expect(useSidekickStore.getState().activeTab).toBe("terminal");
     });
 
     it("has no preview", () => {

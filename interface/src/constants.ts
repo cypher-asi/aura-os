@@ -4,3 +4,6 @@ export const LAST_PROJECT_KEY = "aura-last-project";
 export const ACTIVE_ORG_KEY = "aura-active-org";
 export const LAST_APP_KEY = "aura-last-app";
 export const PREVIOUS_PATH_KEY = "aura-previous-path";
+export const COLLAPSED_PROJECTS_KEY = "aura-collapsed-projects";
+export const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
+export const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";

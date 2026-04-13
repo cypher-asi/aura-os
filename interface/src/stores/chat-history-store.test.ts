@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { SessionEvent } from "../types";
 import type { DisplaySessionEvent } from "../types/stream";
+import { queryClient } from "../lib/query-client";
 
 vi.mock("../utils/build-display-messages", () => ({
   buildDisplayEvents: (msgs: SessionEvent[]): DisplaySessionEvent[] =>
@@ -29,6 +30,7 @@ function makeMsg(id: string): SessionEvent {
 }
 
 beforeEach(() => {
+  queryClient.clear();
   useChatHistoryStore.setState({ entries: {} });
 });
 
@@ -94,13 +96,13 @@ describe("chat-history-store", () => {
   });
 
   describe("invalidateHistory", () => {
-    it("removes the entry for the given key", async () => {
+    it("marks the entry stale for the given key", async () => {
       const fetchFn = makeFetchFn([makeMsg("m1")]);
       await useChatHistoryStore.getState().fetchHistory("k6", fetchFn);
       expect(useChatHistoryStore.getState().entries["k6"]).toBeDefined();
 
       useChatHistoryStore.getState().invalidateHistory("k6");
-      expect(useChatHistoryStore.getState().entries["k6"]).toBeUndefined();
+      expect(useChatHistoryStore.getState().entries["k6"]?.fetchedAt).toBe(0);
     });
   });
 

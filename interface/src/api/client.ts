@@ -18,6 +18,7 @@ export type {
   ImportedProjectFile,
   CreateImportedProjectRequest,
 } from "./projects";
+export { STANDALONE_AGENT_HISTORY_LIMIT } from "./agents";
 
 export type { DirEntry } from "./desktop";
 export type { LoopStatusResponse } from "./loop";

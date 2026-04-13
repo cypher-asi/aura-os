@@ -12,36 +12,59 @@ import { useShallow } from "zustand/react/shallow";
 import { useEventStore } from "../../stores/event-store/index";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
+import { OverlayScrollbar } from "../OverlayScrollbar";
 import { EventType } from "../../types/aura-events";
 import { TerminalPanelBody } from "../TerminalPanelBody";
 import { ActiveTaskStream } from "./ActiveTaskStream";
 import { CompletedTaskOutput } from "./CompletedTaskOutput";
 import styles from "./TaskOutputPanel.module.css";
 
-function useActiveTaskTracking() {
-  const subscribe = useEventStore((s) => s.subscribe);
-  const ctx = useProjectActions();
-  const projectId = ctx?.project.project_id;
+let activeTaskTrackingRefs = 0;
+let activeTaskTrackingProjectId: string | undefined;
+let activeTaskTrackingUnsubs: Array<() => void> | null = null;
+
+function createTaskTrackingSubscriptions(
+  subscribe: ReturnType<typeof useEventStore.getState>["subscribe"],
+  projectId: string | undefined,
+) {
   const { addTask, completeTask, failTask, markAllCompleted } = useTaskOutputPanelStore.getState();
+  return [
+    subscribe(EventType.TaskStarted, (e) => {
+      const { task_id, task_title } = e.content;
+      const pid = e.project_id || projectId;
+      if (task_id && pid) addTask(task_id, pid, task_title, e.agent_id || undefined);
+    }),
+    subscribe(EventType.TaskCompleted, (e) => {
+      if (e.content.task_id) completeTask(e.content.task_id);
+    }),
+    subscribe(EventType.TaskFailed, (e) => {
+      if (e.content.task_id) failTask(e.content.task_id);
+    }),
+    subscribe(EventType.LoopStopped, () => markAllCompleted()),
+    subscribe(EventType.LoopFinished, () => markAllCompleted()),
+  ];
+}
+
+export function useActiveTaskTracking(projectId: string | undefined) {
+  const subscribe = useEventStore((s) => s.subscribe);
 
   useEffect(() => {
-    const unsubs = [
-      subscribe(EventType.TaskStarted, (e) => {
-        const { task_id, task_title } = e.content;
-        const pid = e.project_id || projectId;
-        if (task_id && pid) addTask(task_id, pid, task_title, e.agent_id || undefined);
-      }),
-      subscribe(EventType.TaskCompleted, (e) => {
-        if (e.content.task_id) completeTask(e.content.task_id);
-      }),
-      subscribe(EventType.TaskFailed, (e) => {
-        if (e.content.task_id) failTask(e.content.task_id);
-      }),
-      subscribe(EventType.LoopStopped, () => markAllCompleted()),
-      subscribe(EventType.LoopFinished, () => markAllCompleted()),
-    ];
-    return () => unsubs.forEach((u) => u());
-  }, [subscribe, projectId, addTask, completeTask, failTask, markAllCompleted]);
+    activeTaskTrackingRefs += 1;
+
+    if (!activeTaskTrackingUnsubs || activeTaskTrackingProjectId !== projectId) {
+      activeTaskTrackingUnsubs?.forEach((unsubscribe) => unsubscribe());
+      activeTaskTrackingUnsubs = createTaskTrackingSubscriptions(subscribe, projectId);
+      activeTaskTrackingProjectId = projectId;
+    }
+
+    return () => {
+      activeTaskTrackingRefs -= 1;
+      if (activeTaskTrackingRefs > 0) return;
+      activeTaskTrackingUnsubs?.forEach((unsubscribe) => unsubscribe());
+      activeTaskTrackingUnsubs = null;
+      activeTaskTrackingProjectId = undefined;
+    };
+  }, [subscribe, projectId]);
 }
 
 function AutomationControls({ projectId }: { projectId: string }) {
@@ -207,6 +230,100 @@ function TerminalInstanceTabs() {
   );
 }
 
+export function RunSidekickPane() {
+  const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const ctx = useProjectActions();
+  const projectId = ctx?.project.project_id;
+  const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
+  const projectTasks = useTasksForProject(projectId, agentInstanceId);
+  const hasCompleted = projectTasks.some((t) => t.status !== "active");
+
+  const handleContentScroll = () => {
+    const el = contentRef.current;
+    if (!el) return;
+    stickToBottom.current =
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+  };
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    stickToBottom.current = true;
+    el.scrollTop = el.scrollHeight;
+
+    const observer = new MutationObserver(() => {
+      if (stickToBottom.current) {
+        bottomRef.current?.scrollIntoView({ block: "end" });
+      }
+    });
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className={styles.sidekickPane}>
+      <div className={styles.sidekickPaneHeader}>
+        <div className={styles.headerActions}>
+          {projectId && <AutomationControls projectId={projectId} />}
+          {hasCompleted && (
+            <button
+              type="button"
+              className={styles.headerBtn}
+              onClick={clearCompleted}
+              title="Clear completed"
+              aria-label="Clear completed task output"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className={styles.contentShell}>
+        <div className={styles.content} ref={contentRef} onScroll={handleContentScroll}>
+          {projectTasks.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Text size="sm" className={styles.emptyText}>No tasks</Text>
+            </div>
+          ) : (
+            projectTasks.map((entry) =>
+              entry.status === "active" ? (
+                <ActiveTaskStream
+                  key={entry.taskId}
+                  taskId={entry.taskId}
+                  title={entry.title}
+                />
+              ) : (
+                <CompletedTaskOutput
+                  key={entry.taskId}
+                  taskId={entry.taskId}
+                  projectId={entry.projectId}
+                  title={entry.title}
+                  status={entry.status}
+                />
+              ),
+            )
+          )}
+          <div ref={bottomRef} />
+        </div>
+        <OverlayScrollbar scrollRef={contentRef} />
+      </div>
+    </div>
+  );
+}
+
+export function TerminalSidekickPane() {
+  return (
+    <div className={styles.terminalContent}>
+      <TerminalInstanceTabs />
+      <TerminalPanelBody embedded />
+    </div>
+  );
+}
+
 export function TaskOutputPanel() {
   const { panelHeight, collapsed, toggleCollapse, handleMouseDown, activeTab } = useTaskOutputPanelStore(
     useShallow((s) => ({
@@ -226,7 +343,7 @@ export function TaskOutputPanel() {
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
   const projectTasks = useTasksForProject(projectId, agentInstanceId);
-  useActiveTaskTracking();
+  useActiveTaskTracking(projectId);
 
   const hasActiveTasks = projectTasks.some((t) => t.status === "active");
   const hasCompleted = projectTasks.some((t) => t.status !== "active");
@@ -282,31 +399,34 @@ export function TaskOutputPanel() {
       </div>
 
       {activeTab === "run" && (
-        <div className={styles.content} ref={contentRef} onScroll={handleContentScroll}>
-          {projectTasks.length === 0 ? (
-            <div className={styles.emptyState}>
-              <Text size="sm" className={styles.emptyText}>No tasks</Text>
-            </div>
-          ) : (
-            projectTasks.map((entry) =>
-              entry.status === "active" ? (
-                <ActiveTaskStream
-                  key={entry.taskId}
-                  taskId={entry.taskId}
-                  title={entry.title}
-                />
-              ) : (
-                <CompletedTaskOutput
-                  key={entry.taskId}
-                  taskId={entry.taskId}
-                  projectId={entry.projectId}
-                  title={entry.title}
-                  status={entry.status}
-                />
-              ),
-            )
-          )}
-          <div ref={bottomRef} />
+        <div className={styles.contentShell}>
+          <div className={styles.content} ref={contentRef} onScroll={handleContentScroll}>
+            {projectTasks.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Text size="sm" className={styles.emptyText}>No tasks</Text>
+              </div>
+            ) : (
+              projectTasks.map((entry) =>
+                entry.status === "active" ? (
+                  <ActiveTaskStream
+                    key={entry.taskId}
+                    taskId={entry.taskId}
+                    title={entry.title}
+                  />
+                ) : (
+                  <CompletedTaskOutput
+                    key={entry.taskId}
+                    taskId={entry.taskId}
+                    projectId={entry.projectId}
+                    title={entry.title}
+                    status={entry.status}
+                  />
+                ),
+              )
+            )}
+            <div ref={bottomRef} />
+          </div>
+          <OverlayScrollbar scrollRef={contentRef} />
         </div>
       )}
 
