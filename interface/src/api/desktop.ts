@@ -7,6 +7,23 @@ export interface DirEntry {
   children?: DirEntry[];
 }
 
+export type DesktopUpdateChannel = "stable" | "nightly";
+
+export interface DesktopUpdateState {
+  status: string;
+  version?: string;
+  channel?: DesktopUpdateChannel;
+  error?: string;
+}
+
+export interface DesktopUpdateStatusResponse {
+  update: DesktopUpdateState;
+  channel: DesktopUpdateChannel;
+  current_version: string;
+  update_base_url?: string;
+  endpoint_template?: string;
+}
+
 export const desktopApi = {
   getLogEntries: (limit = 1000) =>
     apiFetch<{ timestamp_ms: number; event: import("../types/aura-events").AuraEvent }[]>(
@@ -42,15 +59,15 @@ export const desktopApi = {
       body: JSON.stringify({ path, content }),
     }),
   getUpdateStatus: () =>
-    apiFetch<{ update: { status: string; version?: string; channel?: string; error?: string }; channel: string; current_version: string }>(
+    apiFetch<DesktopUpdateStatusResponse>(
       "/api/update-status",
     ),
   installUpdate: () =>
     apiFetch<{ ok: boolean; error?: string }>("/api/update-install", {
       method: "POST",
     }),
-  setUpdateChannel: (channel: "stable" | "nightly") =>
-    apiFetch<{ ok: boolean; channel: string }>("/api/update-channel", {
+  setUpdateChannel: (channel: DesktopUpdateChannel) =>
+    apiFetch<{ ok: boolean; channel: DesktopUpdateChannel; error?: string }>("/api/update-channel", {
       method: "POST",
       body: JSON.stringify({ channel }),
     }),

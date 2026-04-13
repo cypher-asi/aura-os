@@ -22,10 +22,13 @@ export function SettingsModal({
     loading,
     updateChannel,
     currentVersion,
+    updateState,
+    installPending,
     showUpdater,
     privacyPolicyUrl,
     supportUrl,
     handleChannelChange,
+    handleInstallUpdate,
   } =
     useSettingsData(isOpen);
 
@@ -35,6 +38,26 @@ export function SettingsModal({
   };
 
   const hasExternalSupport = Boolean(privacyPolicyUrl || supportUrl);
+
+  const updateSummary = (() => {
+    if (!updateState) return null;
+    switch (updateState.status) {
+      case "available":
+        return `Aura v${updateState.version} is ready to install when you want to restart.`;
+      case "checking":
+        return "Checking for updates.";
+      case "downloading":
+        return `Downloading Aura v${updateState.version}.`;
+      case "installing":
+        return `Installing Aura v${updateState.version} and restarting.`;
+      case "failed":
+        return updateState.error || "Update failed.";
+      case "up_to_date":
+        return "You're on the latest available build for this channel.";
+      default:
+        return "Aura will check quietly in the background and only install when you approve it.";
+    }
+  })();
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="sm">
@@ -63,10 +86,31 @@ export function SettingsModal({
                   />
                 </div>
 
+                {updateSummary && (
+                  <Text
+                    variant="muted"
+                    size="sm"
+                    className={updateState?.status === "failed" ? styles.dangerText : undefined}
+                  >
+                    {updateSummary}
+                  </Text>
+                )}
+
+                <div className={styles.updateActions}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void handleInstallUpdate()}
+                    disabled={updateState?.status !== "available" || installPending}
+                  >
+                    {installPending ? "Preparing update…" : "Install update"}
+                  </Button>
+                </div>
+
                 <Text variant="muted" size="sm">
                   {updateChannel === "nightly"
                     ? "You'll receive builds from every push to main."
-                    : "You'll only receive tagged releases."}
+                    : "You'll only receive tagged releases."} Updates are offered in-app and only install when you choose.
                 </Text>
               </>
             )}

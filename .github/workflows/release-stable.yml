@@ -110,8 +110,6 @@ jobs:
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
         run: cargo packager --release --packages aura-os-desktop
 
       - name: Collect artifacts
@@ -121,10 +119,12 @@ jobs:
           mkdir -p dist
           cp target/release/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
           cp target/release/*.app.tar.gz dist/ 2>/dev/null || true
+          cp -R target/release/*.app dist/ 2>/dev/null || true
           cp target/release/*-setup*.exe dist/ 2>/dev/null || true
           cp target/release/*.sig dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.app.tar.gz dist/ 2>/dev/null || true
+          cp -R target/release/bundle/*/*.app dist/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.sig dist/ 2>/dev/null || true
           if [ "${{ matrix.target }}" = "macos" ]; then
@@ -139,6 +139,12 @@ jobs:
           fi
           ls -la dist/
           echo "dir=dist" >> "$GITHUB_OUTPUT"
+
+      - name: Sign packaged updater artifacts
+        env:
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+        run: node infra/scripts/release/desktop-sign-artifacts.mjs --dir dist --prune-app-bundles
 
       - name: Generate artifact summary and checksums
         shell: bash
