@@ -52,6 +52,11 @@
   color: var(--color-danger);
 }
 
+.updateActions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .logoutSection {
   display: flex;
   align-items: center;
@@ -92,7 +97,7 @@
     width: 100%;
     justify-content: center;
   }
-
+  .updateActions button,
   .logoutSection button {
     width: 100%;
     justify-content: center;

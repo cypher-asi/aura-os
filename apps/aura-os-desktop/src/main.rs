@@ -19,7 +19,7 @@ use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
 use wry::{WebContext, WebViewBuilder};
 
-use updater::{UpdateChannel, UpdateState};
+use updater::UpdateState;
 
 const PREFERRED_PORT: u16 = 19847;
 const DEFAULT_FRONTEND_BIND_HOST: &str = "127.0.0.1";
@@ -573,7 +573,11 @@ fn spawn_server(
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
         rt.block_on(async move {
-            let update_state = UpdateState::new(UpdateChannel::Stable);
+            let updater_data_dir = db_path
+                .parent()
+                .map(std::path::Path::to_path_buf)
+                .unwrap_or_else(|| db_path.clone());
+            let update_state = UpdateState::load(&updater_data_dir);
 
             let app_state =
                 aura_os_server::build_app_state(&db_path).expect("failed to open database");
@@ -592,7 +596,7 @@ fn spawn_server(
                 )
                 .route(
                     "/api/update-install",
-                    axum_post(handlers::post_update_install),
+                    axum_post(handlers::post_update_install).with_state(update_state.clone()),
                 )
                 .route(
                     "/api/update-channel",

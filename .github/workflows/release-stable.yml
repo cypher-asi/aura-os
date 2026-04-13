@@ -110,8 +110,8 @@ jobs:
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ""
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ""
         run: cargo packager --release --packages aura-os-desktop
 
       - name: Collect artifacts
@@ -121,10 +121,12 @@ jobs:
           mkdir -p dist
           cp target/release/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
           cp target/release/*.app.tar.gz dist/ 2>/dev/null || true
+          cp -R target/release/*.app dist/ 2>/dev/null || true
           cp target/release/*-setup*.exe dist/ 2>/dev/null || true
           cp target/release/*.sig dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.app.tar.gz dist/ 2>/dev/null || true
+          cp -R target/release/bundle/*/*.app dist/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.sig dist/ 2>/dev/null || true
           if [ "${{ matrix.target }}" = "macos" ]; then
@@ -139,6 +141,12 @@ jobs:
           fi
           ls -la dist/
           echo "dir=dist" >> "$GITHUB_OUTPUT"
+
+      - name: Sign packaged updater artifacts
+        env:
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+        run: node infra/scripts/release/desktop-sign-artifacts.mjs --dir dist --prune-app-bundles
 
       - name: Generate artifact summary and checksums
         shell: bash
@@ -204,8 +212,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
+          path: repo
+
+      - uses: actions/checkout@v4
+        with:
           ref: gh-pages
           fetch-depth: 0
+          path: pages
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -233,20 +247,21 @@ jobs:
       - name: Generate update manifests
         shell: bash
         run: |
+          cd repo
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
             local target=$1 arch=$2 filename=$3 format=$4
-            local sig_file="all-artifacts/${filename}.sig"
+            local sig_file="../all-artifacts/${filename}.sig"
             local signature='""'
             if [ -f "$sig_file" ]; then
               signature=$(jq -Rs . < "$sig_file")
             fi
 
-            mkdir -p "stable/${target}"
-            cat > "stable/${target}/${arch}.json" <<MANIFEST
+            mkdir -p "../pages/stable/${target}"
+            cat > "../pages/stable/${target}/${arch}.json" <<MANIFEST
           {
             "version": "${VERSION}",
             "url": "${BASE_URL}/${filename}",
@@ -263,10 +278,11 @@ jobs:
 
       - name: Validate stable update manifests
         run: |
+          cd repo
           node infra/scripts/release/desktop-manifest-validate.mjs \
-            --root-dir . \
+            --root-dir ../pages \
             --channel stable \
-            --output-dir manifest-validation
+            --output-dir ../manifest-validation
 
       - name: Attach stable manifest summary
         shell: bash
@@ -274,6 +290,7 @@ jobs:
 
       - name: Commit and push manifests
         run: |
+          cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add stable/

@@ -1,11 +1,14 @@
     use super::{
-        apply_foreach_max_items, build_foreach_child_input, build_parent_mirrored_process_event,
-        build_workspace_instructions, compact_node_output, emit_parent_progress_update,
-        parse_foreach_json_array, project_foreach_item_value, resolve_action_plan_mode,
-        ActionPlanMode, ChildRunProgress, OutputCompactionMode, ParentProgressMirrorState,
-        ParentStreamMirrorContext,
+        apply_foreach_max_items, authoritative_process_read_error,
+        authoritative_process_storage_error, build_foreach_child_input,
+        build_parent_mirrored_process_event, build_workspace_instructions, compact_node_output,
+        emit_parent_progress_update, parse_foreach_json_array, process_storage_sync_client,
+        project_foreach_item_value, resolve_action_plan_mode, ActionPlanMode, ChildRunProgress,
+        OutputCompactionMode, ParentProgressMirrorState, ParentStreamMirrorContext,
     };
     use crate::process_store::ProcessStore;
+    use aura_os_core::ProcessId;
+    use aura_os_storage::{StorageClient, StorageError};
     use aura_os_store::RocksStore;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -295,4 +298,51 @@
         assert_eq!(evt["total_input_tokens"], 33);
         assert_eq!(evt["total_output_tokens"], 16);
         assert_eq!(evt["cost_usd"], 4.0);
+    }
+
+    #[test]
+    fn process_storage_sync_client_prefers_jwt_and_falls_back_to_internal_token() {
+        let public_client = StorageClient::with_base_url("http://localhost:8080");
+        let public_client = std::sync::Arc::new(public_client);
+        let (client, jwt) = process_storage_sync_client(Some(&public_client), Some("jwt-123"))
+            .expect("jwt-backed client");
+        assert_eq!(client.base_url(), "http://localhost:8080");
+        assert_eq!(jwt, Some("jwt-123"));
+
+        assert!(process_storage_sync_client(Some(&public_client), None).is_none());
+
+        let internal_client =
+            StorageClient::with_base_url_and_token("http://localhost:8080", "internal-token");
+        let internal_client = std::sync::Arc::new(internal_client);
+        assert!(process_storage_sync_client(Some(&internal_client), None).is_some());
+    }
+
+    #[test]
+    fn authoritative_process_read_error_maps_404_to_not_found() {
+        let process_id: ProcessId = "11111111-1111-1111-1111-111111111111"
+            .parse()
+            .expect("process id");
+        let error = StorageError::Server {
+            status: 404,
+            body: "not found".to_string(),
+        };
+
+        let mapped = authoritative_process_read_error(&process_id, &error);
+
+        assert!(matches!(mapped, crate::ProcessError::NotFound(_)));
+    }
+
+    #[test]
+    fn authoritative_process_storage_error_includes_context() {
+        let process_id: ProcessId = "11111111-1111-1111-1111-111111111111"
+            .parse()
+            .expect("process id");
+        let error = StorageError::Validation("boom".to_string());
+
+        let mapped = authoritative_process_storage_error(&process_id, "load process nodes", &error);
+
+        assert_eq!(
+            mapped.to_string(),
+            "Execution error: Failed to load process nodes from authoritative process storage for process 11111111-1111-1111-1111-111111111111: validation error: boom"
+        );
     }

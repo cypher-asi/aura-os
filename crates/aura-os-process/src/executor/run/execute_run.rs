@@ -8,21 +8,34 @@ fn execute_run<'a>(
     rocks_store: &'a RocksStore,
     agent_service: &'a AgentService,
     org_service: &'a OrgService,
+    auth_jwt: Option<&'a str>,
 ) -> Pin<Box<dyn Future<Output = Result<(), ProcessError>> + Send + 'a>> {
     Box::pin(async move {
-        let internal_storage_client =
-            internal_process_sync_client(executor.storage_client.as_ref());
+        let jwt = auth_jwt
+            .map(str::to_string)
+            .or_else(|| rocks_store.get_jwt());
+        let storage_sync_client =
+            process_storage_sync_client(executor.storage_client.as_ref(), jwt.as_deref());
         let mut current_run = run.clone();
         current_run.status = ProcessRunStatus::Running;
         store.save_run(&current_run)?;
-        if let Some(client) = internal_storage_client {
-            sync_run_to_storage(client, &current_run, false).await;
+        if let Some((client, sync_jwt)) = storage_sync_client {
+            sync_run_to_storage(client, sync_jwt, &current_run, false).await;
         }
 
-        let nodes = if let Some(client) = internal_storage_client {
-            client
-                .list_process_nodes_internal(&run.process_id.to_string())
-                .await
+        // When authoritative storage is enabled, fail closed on process graph
+        // reads instead of reviving the local shadow copy.
+        let nodes = if let Some((client, sync_jwt)) = storage_sync_client {
+            let storage_nodes = if let Some(jwt) = sync_jwt {
+                client
+                    .list_process_nodes(&run.process_id.to_string(), jwt)
+                    .await
+            } else {
+                client
+                    .list_process_nodes_internal(&run.process_id.to_string())
+                    .await
+            };
+            storage_nodes
                 .map(|sn| sn.into_iter().map(conv_node).collect())
                 .map_err(|error| {
                     authoritative_process_storage_error(
@@ -34,10 +47,17 @@ fn execute_run<'a>(
         } else {
             store.list_nodes(&run.process_id)?
         };
-        let connections = if let Some(client) = internal_storage_client {
-            client
-                .list_process_connections_internal(&run.process_id.to_string())
-                .await
+        let connections = if let Some((client, sync_jwt)) = storage_sync_client {
+            let storage_connections = if let Some(jwt) = sync_jwt {
+                client
+                    .list_process_connections(&run.process_id.to_string(), jwt)
+                    .await
+            } else {
+                client
+                    .list_process_connections_internal(&run.process_id.to_string())
+                    .await
+            };
+            storage_connections
                 .map(|sc| sc.into_iter().map(conv_connection).collect())
                 .map_err(|error| {
                     authoritative_process_storage_error(
@@ -59,8 +79,6 @@ fn execute_run<'a>(
         let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
             nodes.iter().map(|n| (n.node_id, n)).collect();
 
-        let jwt = rocks_store.get_jwt();
-
         let workspace_dir = data_dir
             .join("process-workspaces")
             .join(run.process_id.to_string())
@@ -73,10 +91,13 @@ fn execute_run<'a>(
         let workspace_path = workspace_dir.to_string_lossy().to_string();
 
         // ── create spec + tasks ────────────────────────────────────────────
-        let process = if let Some(client) = internal_storage_client {
-            client
-                .get_process_internal(&run.process_id.to_string())
-                .await
+        let process = if let Some((client, sync_jwt)) = storage_sync_client {
+            let storage_process = if let Some(jwt) = sync_jwt {
+                client.get_process(&run.process_id.to_string(), jwt).await
+            } else {
+                client.get_process_internal(&run.process_id.to_string()).await
+            };
+            storage_process
                 .map(conv_process)
                 .map_err(|error| authoritative_process_read_error(&run.process_id, &error))?
         } else {
@@ -469,21 +490,21 @@ fn execute_run<'a>(
                     current_run.total_output_tokens = Some(run_output_tokens);
                     current_run.cost_usd = Some(run_cost_usd);
                     store.save_run(&current_run)?;
-                    if let Some(client) = internal_storage_client {
-                        sync_run_to_storage(client, &current_run, false).await;
+                    if let Some((client, sync_jwt)) = storage_sync_client {
+                        sync_run_to_storage(client, sync_jwt, &current_run, false).await;
                     }
 
-                    if let Some(client) = internal_storage_client {
+                    if let Some((client, sync_jwt)) = storage_sync_client {
                         if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id)
                         {
                             for ev in &events {
-                                sync_event_to_storage(client, ev, true).await;
+                                sync_event_to_storage(client, sync_jwt, ev, true).await;
                             }
                         }
                         if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id)
                         {
                             for art in &arts {
-                                sync_artifact_to_storage(client, art).await;
+                                sync_artifact_to_storage(client, sync_jwt, art).await;
                             }
                         }
                     }
@@ -532,16 +553,16 @@ fn execute_run<'a>(
         current_run.cost_usd = Some(run_cost_usd);
         current_run.output = run_output;
         store.save_run(&current_run)?;
-        if let Some(client) = internal_storage_client {
-            sync_run_to_storage(client, &current_run, false).await;
+        if let Some((client, sync_jwt)) = storage_sync_client {
+            sync_run_to_storage(client, sync_jwt, &current_run, false).await;
             if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
                 for ev in &events {
-                    sync_event_to_storage(client, ev, true).await;
+                    sync_event_to_storage(client, sync_jwt, ev, true).await;
                 }
             }
             if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
                 for art in &arts {
-                    sync_artifact_to_storage(client, art).await;
+                    sync_artifact_to_storage(client, sync_jwt, art).await;
                 }
             }
         }

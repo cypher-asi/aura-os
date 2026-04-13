@@ -10,6 +10,7 @@ use serde_json::{json, Value};
 use tracing::warn;
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
+use aura_os_orgs::IntegrationSecretUpdate;
 
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::workspace_tools::{
@@ -31,10 +32,11 @@ pub(crate) struct McpToolQuery {
 
 pub(crate) async fn call_tool(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     Path((org_id, tool_name)): Path<(OrgId, String)>,
     Json(args): Json<Value>,
 ) -> ApiResult<Json<Value>> {
+    hydrate_canonical_integration_shadow(&state, &org_id, &jwt).await;
     let result = if tool_name == "list_org_integrations" {
         list_org_integrations(&state, &org_id, &args).await?
     } else {
@@ -89,11 +91,12 @@ pub(crate) async fn list_tool_catalog(
 
 pub(crate) async fn call_mcp_tool(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     Path((org_id, integration_id)): Path<(OrgId, String)>,
     Query(query): Query<McpToolQuery>,
     Json(args): Json<Value>,
 ) -> ApiResult<Json<Value>> {
+    hydrate_canonical_integration_shadow(&state, &org_id, &jwt).await;
     let integration = resolve_mcp_server_integration(&state, &org_id, &integration_id).await?;
     let result = trusted_mcp::call_tool(
         &integration.metadata,
@@ -104,6 +107,66 @@ pub(crate) async fn call_mcp_tool(
     .await
     .map_err(ApiError::bad_gateway)?;
     Ok(Json(result))
+}
+
+async fn hydrate_canonical_integration_shadow(state: &AppState, org_id: &OrgId, jwt: &str) {
+    let Some(client) = &state.integrations_client else {
+        return;
+    };
+
+    let integrations = match client.list_integrations(org_id, jwt).await {
+        Ok(integrations) => integrations,
+        Err(error) => {
+            warn!(
+                %org_id,
+                error = %error,
+                "failed to hydrate canonical integration metadata before org tool dispatch"
+            );
+            return;
+        }
+    };
+
+    if let Err(error) = state
+        .org_service
+        .sync_integrations_shadow(org_id, &integrations)
+    {
+        warn!(
+            %org_id,
+            error = %error,
+            "failed to sync integration shadow before org tool dispatch"
+        );
+    }
+
+    for integration in integrations
+        .into_iter()
+        .filter(|integration| integration.has_secret)
+    {
+        match client
+            .get_integration_secret_authed(org_id, &integration.integration_id, jwt)
+            .await
+        {
+            Ok(Some(secret)) if !secret.trim().is_empty() => {
+                if let Err(error) = state
+                    .org_service
+                    .sync_integration_shadow(&integration, IntegrationSecretUpdate::Set(secret))
+                {
+                    warn!(
+                        %org_id,
+                        integration_id = %integration.integration_id,
+                        error = %error,
+                        "failed to sync integration secret shadow before org tool dispatch"
+                    );
+                }
+            }
+            Ok(_) => {}
+            Err(error) => warn!(
+                %org_id,
+                integration_id = %integration.integration_id,
+                error = %error,
+                "failed to hydrate canonical integration secret before org tool dispatch"
+            ),
+        }
+    }
 }
 
 async fn dispatch_app_provider_tool(

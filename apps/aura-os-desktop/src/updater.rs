@@ -16,12 +16,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
 use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 const CHECK_INTERVAL: Duration = Duration::from_secs(30 * 60);
 const CHECK_TIMEOUT: Duration = Duration::from_secs(30);
 const INITIAL_CHECK_DELAY: Duration = Duration::from_secs(5);
+const SETTINGS_FILE_NAME: &str = "desktop-updater.json";
 
 // Base64-encoded Minisign public key baked in at compile time through build.rs.
 const UPDATER_PUB_KEY: &str = env!("UPDATER_PUBLIC_KEY");
@@ -63,7 +66,14 @@ impl std::str::FromStr for UpdateChannel {
 #[serde(tag = "status", rename_all = "snake_case")]
 pub(crate) enum UpdateStatus {
     Checking,
-    Downloading,
+    Available {
+        version: String,
+        channel: UpdateChannel,
+    },
+    Downloading {
+        version: String,
+        channel: UpdateChannel,
+    },
     Installing {
         version: String,
         channel: UpdateChannel,
@@ -80,15 +90,53 @@ pub(crate) enum UpdateStatus {
 pub(crate) struct UpdateState {
     pub status: Arc<RwLock<UpdateStatus>>,
     pub channel: Arc<RwLock<UpdateChannel>>,
+    settings_path: Arc<PathBuf>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PersistedUpdaterSettings {
+    channel: UpdateChannel,
 }
 
 impl UpdateState {
-    pub(crate) fn new(channel: UpdateChannel) -> Self {
+    pub(crate) fn load(data_dir: &Path) -> Self {
+        let settings_path = data_dir.join(SETTINGS_FILE_NAME);
+        let channel = load_persisted_channel(&settings_path).unwrap_or_else(|error| {
+            warn!(error = %error, path = %settings_path.display(), "failed to load persisted updater settings");
+            UpdateChannel::Stable
+        });
         Self {
             status: Arc::new(RwLock::new(UpdateStatus::Idle)),
             channel: Arc::new(RwLock::new(channel)),
+            settings_path: Arc::new(settings_path),
         }
     }
+
+    pub(crate) fn persist_channel(&self, channel: UpdateChannel) -> Result<(), String> {
+        persist_channel(self.settings_path.as_ref(), channel)
+    }
+}
+
+fn load_persisted_channel(settings_path: &Path) -> Result<UpdateChannel, String> {
+    if !settings_path.exists() {
+        return Ok(UpdateChannel::Stable);
+    }
+    let bytes = fs::read(settings_path)
+        .map_err(|e| format!("failed to read updater settings {}: {e}", settings_path.display()))?;
+    let settings: PersistedUpdaterSettings = serde_json::from_slice(&bytes)
+        .map_err(|e| format!("failed to parse updater settings {}: {e}", settings_path.display()))?;
+    Ok(settings.channel)
+}
+
+fn persist_channel(settings_path: &Path, channel: UpdateChannel) -> Result<(), String> {
+    if let Some(parent) = settings_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("failed to create updater settings directory {}: {e}", parent.display()))?;
+    }
+    let payload = serde_json::to_vec_pretty(&PersistedUpdaterSettings { channel })
+        .map_err(|e| format!("failed to encode updater settings: {e}"))?;
+    fs::write(settings_path, payload)
+        .map_err(|e| format!("failed to write updater settings {}: {e}", settings_path.display()))
 }
 
 pub(crate) fn update_base_url() -> String {
@@ -156,7 +204,7 @@ fn build_updater(channel: UpdateChannel) -> Result<cargo_packager_updater::Updat
         .map_err(|e| format!("failed to build updater: {e}"))
 }
 
-fn check_and_autoinstall(
+fn check_for_available_update(
     channel: UpdateChannel,
     status: Arc<RwLock<UpdateStatus>>,
 ) -> Result<Option<String>, String> {
@@ -181,25 +229,14 @@ fn check_and_autoinstall(
     };
 
     let version = update.version.clone();
-    info!(new_version = %version, format = %update.format, "update available, downloading");
-    set_status(&status, UpdateStatus::Downloading);
-    let bytes = update
-        .download()
-        .map_err(|e| format!("download failed: {e}"))?;
-
-    info!(new_version = %version, "update downloaded and verified");
+    info!(new_version = %version, format = %update.format, "update available");
     set_status(
         &status,
-        UpdateStatus::Installing {
+        UpdateStatus::Available {
             version: version.clone(),
             channel,
         },
     );
-
-    update
-        .install(bytes)
-        .map_err(|e| format!("update install failed: {e}"))?;
-    restart_after_install(&update)?;
     Ok(Some(version))
 }
 
@@ -250,9 +287,90 @@ fn restart_after_install(update: &Update) -> Result<(), String> {
     }
 }
 
-/// Install a previously-downloaded update and restart the process.
-pub(crate) fn install_and_restart() -> Result<(), String> {
-    Err("updates install automatically after download".into())
+fn download_and_install_update(
+    channel: UpdateChannel,
+    status: Arc<RwLock<UpdateStatus>>,
+) -> Result<Option<String>, String> {
+    let updater = build_updater(channel)?;
+    let Some(update) = updater
+        .check()
+        .map_err(|e| format!("update check failed: {e}"))?
+    else {
+        set_status(&status, UpdateStatus::UpToDate);
+        return Ok(None);
+    };
+
+    let version = update.version.clone();
+    info!(new_version = %version, format = %update.format, "starting user-approved update download");
+    set_status(
+        &status,
+        UpdateStatus::Downloading {
+            version: version.clone(),
+            channel,
+        },
+    );
+    let bytes = update
+        .download()
+        .map_err(|e| format!("download failed: {e}"))?;
+
+    info!(new_version = %version, "update downloaded and verified");
+    set_status(
+        &status,
+        UpdateStatus::Installing {
+            version: version.clone(),
+            channel,
+        },
+    );
+
+    update
+        .install(bytes)
+        .map_err(|e| format!("update install failed: {e}"))?;
+    restart_after_install(&update)?;
+    Ok(Some(version))
+}
+
+/// Install the latest available update after explicit user approval.
+pub(crate) fn install_and_restart(state: UpdateState) -> Result<(), String> {
+    let channel = *state.channel.blocking_read();
+    let status = Arc::clone(&state.status);
+    match download_and_install_update(channel, status) {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => Err("no update available".into()),
+        Err(error) => {
+            set_status(
+                &state.status,
+                UpdateStatus::Failed {
+                    error: error.clone(),
+                },
+            );
+            Err(error)
+        }
+    }
+}
+
+pub(crate) fn start_install(state: UpdateState) -> Result<(), String> {
+    {
+        let status = state.status.blocking_read();
+        if matches!(
+            &*status,
+            UpdateStatus::Downloading { .. } | UpdateStatus::Installing { .. }
+        ) {
+            return Err("update install already in progress".into());
+        }
+    }
+
+    tokio::spawn(async move {
+        match tokio::task::spawn_blocking(move || install_and_restart(state)).await {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => {
+                warn!(error = %error, "background install failed");
+            }
+            Err(error) => {
+                warn!(error = %error, "background install task failed");
+            }
+        }
+    });
+    Ok(())
 }
 
 /// Spawn the background update-check loop. Call once at startup.
@@ -264,9 +382,10 @@ pub(crate) fn spawn_update_loop(state: UpdateState) {
         loop {
             let channel = *state.channel.read().await;
             let status = Arc::clone(&state.status);
-            match tokio::task::spawn_blocking(move || check_and_autoinstall(channel, status)).await
+            match tokio::task::spawn_blocking(move || check_for_available_update(channel, status))
+                .await
             {
-                Ok(Ok(Some(v))) => info!(version = %v, "update installed"),
+                Ok(Ok(Some(v))) => info!(version = %v, "update available for later install"),
                 Ok(Ok(None)) => {}
                 Ok(Err(e)) => {
                     error!(error = %e, "update check failed");
@@ -291,8 +410,9 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
     tokio::spawn(async move {
         let channel = *state.channel.read().await;
         let status = Arc::clone(&state.status);
-        match tokio::task::spawn_blocking(move || check_and_autoinstall(channel, status)).await {
-            Ok(Ok(Some(v))) => info!(version = %v, "update installed after channel switch"),
+        match tokio::task::spawn_blocking(move || check_for_available_update(channel, status)).await
+        {
+            Ok(Ok(Some(v))) => info!(version = %v, "update available after channel switch"),
             Ok(Ok(None)) => {}
             Ok(Err(e)) => {
                 warn!(error = %e, "recheck failed");
@@ -312,8 +432,13 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
 
 #[cfg(test)]
 mod tests {
-    use super::{decode_base64_utf8, endpoint_for_channel_with_base, UpdateChannel};
+    use super::{
+        decode_base64_utf8, endpoint_for_channel_with_base, load_persisted_channel,
+        persist_channel, UpdateChannel,
+    };
     use base64::Engine;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn endpoint_uses_stable_channel_path() {
@@ -344,5 +469,20 @@ mod tests {
         )
         .expect("public key should decode");
         assert_eq!(decoded, public_key);
+    }
+
+    #[test]
+    fn persists_update_channel_to_disk() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!("aura-updater-test-{unique}"));
+        fs::create_dir_all(&temp_dir).expect("create temp dir");
+        let settings_path = temp_dir.join("desktop-updater.json");
+        persist_channel(&settings_path, UpdateChannel::Nightly).expect("persist channel");
+        let restored = load_persisted_channel(&settings_path).expect("load channel");
+        assert_eq!(restored, UpdateChannel::Nightly);
+        fs::remove_dir_all(&temp_dir).expect("remove temp dir");
     }
 }

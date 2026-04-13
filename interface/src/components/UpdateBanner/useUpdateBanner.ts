@@ -1,31 +1,31 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../../api/client";
+import type { DesktopUpdateStatusResponse } from "../../api/desktop";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 
-interface UpdateStatusResponse {
-  update: {
-    status: string;
-    version?: string;
-    channel?: string;
-    error?: string;
-  };
-  channel: string;
-  current_version: string;
-}
-
 interface UpdateBannerData {
-  data: UpdateStatusResponse | null;
+  data: DesktopUpdateStatusResponse | null;
   enabled: boolean;
+  installPending: boolean;
+  dismissAvailableUpdate: () => void;
+  handleInstallUpdate: () => Promise<void>;
 }
 
 const POLL_INTERVAL = 5_000;
 
 export function useUpdateBanner(): UpdateBannerData {
   const { features } = useAuraCapabilities();
-  const [data, setData] = useState<UpdateStatusResponse | null>(null);
+  const [data, setData] = useState<DesktopUpdateStatusResponse | null>(null);
+  const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
+  const [installPending, setInstallPending] = useState(false);
 
   const poll = useCallback(() => {
-    api.getUpdateStatus().then(setData).catch(() => {});
+    api.getUpdateStatus().then((next) => {
+      setData(next);
+      if (next.update.status !== "available") {
+        setInstallPending(false);
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -35,5 +35,46 @@ export function useUpdateBanner(): UpdateBannerData {
     return () => clearInterval(id);
   }, [features.nativeUpdater, poll]);
 
-  return { data, enabled: !!features.nativeUpdater };
+  useEffect(() => {
+    if (data?.update.status !== "available" || data.update.version !== dismissedVersion) {
+      setDismissedVersion((current) => {
+        if (
+          data?.update.status === "available" &&
+          data.update.version &&
+          data.update.version === current
+        ) {
+          return current;
+        }
+        return null;
+      });
+    }
+  }, [data, dismissedVersion]);
+
+  const dismissAvailableUpdate = useCallback(() => {
+    if (data?.update.status === "available" && data.update.version) {
+      setDismissedVersion(data.update.version);
+    }
+  }, [data]);
+
+  const handleInstallUpdate = useCallback(async () => {
+    setInstallPending(true);
+    try {
+      await api.installUpdate();
+      await poll();
+    } catch (error) {
+      console.error(error);
+      setInstallPending(false);
+    }
+  }, [poll]);
+
+  const visibleData =
+    data?.update.status === "available" && data.update.version === dismissedVersion ? null : data;
+
+  return {
+    data: visibleData,
+    enabled: !!features.nativeUpdater,
+    installPending,
+    dismissAvailableUpdate,
+    handleInstallUpdate,
+  };
 }

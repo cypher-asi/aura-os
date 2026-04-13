@@ -222,8 +222,9 @@ pub(crate) async fn installed_workspace_app_tool_catalog(
     org_id: &OrgId,
     bearer_token: &str,
 ) -> InstalledWorkspaceToolCatalog {
-    let integrations = integrations_for_org(state, org_id).await;
-    let runtime_integrations = load_runtime_integrations(state, org_id, &integrations).await;
+    let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
+    let runtime_integrations =
+        load_runtime_integrations(state, org_id, &integrations, Some(bearer_token)).await;
     let mut tools = build_installed_workspace_app_tools(org_id, &integrations, bearer_token);
     for tool in &mut tools {
         annotate_tool_metadata(tool);
@@ -303,7 +304,8 @@ async fn discovered_trusted_mcp_tool_catalog(
 
     let mut discovered = stream::iter(trusted_integrations.into_iter().map(
         |(index, integration)| async move {
-            let secret = load_integration_secret(state, org_id, &integration).await;
+            let secret =
+                load_integration_secret(state, org_id, &integration, Some(bearer_token)).await;
             let discovered = trusted_mcp::discover_tools(&integration, secret.as_deref()).await;
             (index, integration, discovered)
         },
@@ -427,8 +429,21 @@ fn discovered_mcp_tool_endpoint(
 }
 
 pub(crate) async fn integrations_for_org(state: &AppState, org_id: &OrgId) -> Vec<OrgIntegration> {
+    integrations_for_org_with_token(state, org_id, None).await
+}
+
+pub(crate) async fn integrations_for_org_with_token(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: Option<&str>,
+) -> Vec<OrgIntegration> {
     if let Some(client) = &state.integrations_client {
-        match client.list_integrations_internal(org_id).await {
+        let canonical = if let Some(jwt) = bearer_token {
+            client.list_integrations(org_id, jwt).await
+        } else {
+            client.list_integrations_internal(org_id).await
+        };
+        match canonical {
             Ok(integrations) => {
                 if let Err(error) = state
                     .org_service
@@ -460,6 +475,7 @@ async fn load_runtime_integrations(
     state: &AppState,
     org_id: &OrgId,
     integrations: &[OrgIntegration],
+    bearer_token: Option<&str>,
 ) -> HashMap<String, Vec<InstalledToolRuntimeIntegration>> {
     let mut by_provider = HashMap::<String, Vec<InstalledToolRuntimeIntegration>>::new();
     for integration in integrations.iter().filter(|integration| {
@@ -467,7 +483,8 @@ async fn load_runtime_integrations(
             && integration.has_secret
             && matches!(integration.kind, OrgIntegrationKind::WorkspaceIntegration)
     }) {
-        let Some(secret) = load_integration_secret(state, org_id, integration).await else {
+        let Some(secret) = load_integration_secret(state, org_id, integration, bearer_token).await
+        else {
             continue;
         };
         let kind = match app_provider_contract_by_tool_provider(&integration.provider) {
@@ -515,12 +532,19 @@ async fn load_integration_secret(
     state: &AppState,
     org_id: &OrgId,
     integration: &OrgIntegration,
+    bearer_token: Option<&str>,
 ) -> Option<String> {
     if let Some(client) = &state.integrations_client {
-        match client
-            .get_integration_secret(org_id, &integration.integration_id)
-            .await
-        {
+        let canonical = if let Some(jwt) = bearer_token {
+            client
+                .get_integration_secret_authed(org_id, &integration.integration_id, jwt)
+                .await
+        } else {
+            client
+                .get_integration_secret(org_id, &integration.integration_id)
+                .await
+        };
+        match canonical {
             Ok(secret) => {
                 if let Some(secret) = secret.filter(|value| !value.trim().is_empty()) {
                     return Some(secret);
@@ -570,6 +594,28 @@ pub(crate) async fn installed_workspace_integrations_for_org(
     installed
 }
 
+pub(crate) async fn installed_workspace_integrations_for_org_with_token(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: &str,
+) -> Vec<InstalledIntegration> {
+    let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
+    let mut installed = build_installed_workspace_integrations(&integrations);
+    for integration in &mut installed {
+        if integration.kind == "mcp_server" {
+            integration.metadata.insert(
+                TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+                Value::String("mcp".to_string()),
+            );
+            integration.metadata.insert(
+                TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+                Value::String("trusted_mcp".to_string()),
+            );
+        }
+    }
+    installed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -580,6 +626,7 @@ mod tests {
     use aura_os_link::ToolAuth;
     use aura_os_orgs::IntegrationSecretUpdate;
     use axum::extract::Path;
+    use axum::http::{header, HeaderMap, StatusCode};
     use axum::routing::get;
     use axum::Json;
     use axum::Router;
@@ -795,6 +842,74 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
         format!("http://{address}")
     }
 
+    async fn start_mock_public_integrations_server(
+        expected_bearer: &'static str,
+        integrations: Vec<OrgIntegration>,
+        secret: Option<&'static str>,
+    ) -> String {
+        let listed_integrations = integrations.clone();
+        let expected_auth = format!("Bearer {expected_bearer}");
+        let list_expected_auth = expected_auth.clone();
+        let secret_expected_auth = expected_auth.clone();
+        let app = Router::new()
+            .route(
+                "/api/orgs/:org_id/integrations",
+                get(move |Path(_org_id): Path<String>, headers: HeaderMap| {
+                    let integrations = listed_integrations.clone();
+                    let expected_auth = list_expected_auth.clone();
+                    async move {
+                        if headers
+                            .get(header::AUTHORIZATION)
+                            .and_then(|value| value.to_str().ok())
+                            != Some(expected_auth.as_str())
+                        {
+                            return (
+                                StatusCode::UNAUTHORIZED,
+                                Json(serde_json::json!({ "error": "unauthorized" })),
+                            );
+                        }
+                        (
+                            StatusCode::OK,
+                            Json(
+                                serde_json::to_value(integrations).expect("serialize integrations"),
+                            ),
+                        )
+                    }
+                }),
+            )
+            .route(
+                "/api/orgs/:org_id/integrations/:integration_id/secret",
+                get(
+                    move |Path((_org_id, _integration_id)): Path<(String, String)>,
+                          headers: HeaderMap| {
+                        let expected_auth = secret_expected_auth.clone();
+                        async move {
+                            if headers
+                                .get(header::AUTHORIZATION)
+                                .and_then(|value| value.to_str().ok())
+                                != Some(expected_auth.as_str())
+                            {
+                                return (
+                                    StatusCode::UNAUTHORIZED,
+                                    Json(serde_json::json!({ "error": "unauthorized" })),
+                                );
+                            }
+                            (
+                                StatusCode::OK,
+                                Json(serde_json::json!({ "secret": secret })),
+                            )
+                        }
+                    },
+                ),
+            );
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        format!("http://{address}")
+    }
+
     #[tokio::test]
     async fn canonical_secret_source_wins_over_local_shadow() {
         let db_dir = tempfile::tempdir().unwrap();
@@ -824,7 +939,7 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
             "internal-token",
         )));
 
-        let secret = load_integration_secret(&state, &org_id, &integration).await;
+        let secret = load_integration_secret(&state, &org_id, &integration, None).await;
         assert_eq!(secret, Some("canonical-remote-secret".to_string()));
     }
 
@@ -856,8 +971,81 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
             "internal-token",
         )));
 
-        let secret = load_integration_secret(&state, &org_id, &integration).await;
+        let secret = load_integration_secret(&state, &org_id, &integration, None).await;
         assert_eq!(secret, Some("local-shadow-secret".to_string()));
+    }
+
+    #[tokio::test]
+    async fn jwt_backed_integrations_for_org_uses_public_routes() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let db_path = db_dir.path().join("settings.db");
+        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let org_id = OrgId::new();
+        let canonical = OrgIntegration {
+            integration_id: "canonical-brave".to_string(),
+            org_id,
+            name: "Canonical Brave".to_string(),
+            provider: "brave_search".to_string(),
+            kind: OrgIntegrationKind::WorkspaceIntegration,
+            default_model: None,
+            provider_config: None,
+            has_secret: true,
+            enabled: true,
+            secret_last4: Some("1234".to_string()),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        let base_url = start_mock_public_integrations_server(
+            "jwt-123",
+            vec![canonical.clone()],
+            Some("canonical-remote-secret"),
+        )
+        .await;
+        state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+            &base_url,
+            "unused-internal-token",
+        )));
+
+        let integrations = integrations_for_org_with_token(&state, &org_id, Some("jwt-123")).await;
+        assert_eq!(integrations.len(), 1);
+        assert_eq!(integrations[0].integration_id, canonical.integration_id);
+        assert_eq!(integrations[0].provider, "brave_search");
+    }
+
+    #[tokio::test]
+    async fn jwt_backed_secret_load_uses_public_routes() {
+        let db_dir = tempfile::tempdir().unwrap();
+        let db_path = db_dir.path().join("settings.db");
+        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let org_id = OrgId::new();
+        let integration = state
+            .org_service
+            .upsert_integration(
+                &org_id,
+                Some("canonical-brave"),
+                "Brave Search".to_string(),
+                "brave_search".to_string(),
+                OrgIntegrationKind::WorkspaceIntegration,
+                None,
+                None,
+                Some(true),
+                IntegrationSecretUpdate::Set("local-shadow-secret".to_string()),
+            )
+            .expect("save brave integration");
+
+        let base_url = start_mock_public_integrations_server(
+            "jwt-123",
+            vec![integration.clone()],
+            Some("canonical-remote-secret"),
+        )
+        .await;
+        state.integrations_client = Some(Arc::new(IntegrationsClient::with_base_url(
+            &base_url,
+            "unused-internal-token",
+        )));
+
+        let secret = load_integration_secret(&state, &org_id, &integration, Some("jwt-123")).await;
+        assert_eq!(secret, Some("canonical-remote-secret".to_string()));
     }
 
     #[tokio::test]

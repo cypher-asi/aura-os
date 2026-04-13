@@ -65,8 +65,11 @@ impl ProcessExecutor {
         run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
-        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-            sync_run_to_storage(client, &run, false).await;
+        let jwt = self.rocks_store.get_jwt();
+        if let Some((client, sync_jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), jwt.as_deref())
+        {
+            sync_run_to_storage(client, sync_jwt, &run, false).await;
         }
 
         emit_process_event(
@@ -92,18 +95,33 @@ impl ProcessExecutor {
         process_id: &ProcessId,
         trigger: ProcessRunTrigger,
     ) -> Result<ProcessRun, ProcessError> {
-        let process =
-            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-                Some(
-                    client
-                        .get_process_internal(&process_id.to_string())
-                        .await
-                        .map(conv_process)
-                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
-                )
+        self.trigger_with_auth(process_id, trigger, None).await
+    }
+
+    pub async fn trigger_with_auth(
+        &self,
+        process_id: &ProcessId,
+        trigger: ProcessRunTrigger,
+        auth_jwt: Option<&str>,
+    ) -> Result<ProcessRun, ProcessError> {
+        // When authoritative storage is enabled, process definitions must come
+        // from storage to avoid executing a stale local shadow copy.
+        let process = if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+        {
+            let storage_process = if let Some(jwt) = jwt {
+                client.get_process(&process_id.to_string(), jwt).await
             } else {
-                self.store.get_process(process_id)?
+                client.get_process_internal(&process_id.to_string()).await
             };
+            Some(
+                storage_process
+                    .map(conv_process)
+                    .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+            )
+        } else {
+            self.store.get_process(process_id)?
+        };
         let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let existing_runs = self.store.list_runs(process_id)?;
@@ -133,8 +151,10 @@ impl ProcessExecutor {
             input_override: None,
         };
         self.store.save_run(&run)?;
-        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-            sync_run_to_storage(client, &run, true).await;
+        if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+        {
+            sync_run_to_storage(client, jwt, &run, true).await;
         }
 
         emit_process_event(
@@ -155,6 +175,7 @@ impl ProcessExecutor {
 
         let executor = self.clone();
         let run_clone = run.clone();
+        let auth_jwt = auth_jwt.map(str::to_string);
         tokio::spawn(async move {
             if let Err(e) = execute_run(
                 &executor,
@@ -165,6 +186,7 @@ impl ProcessExecutor {
                 &executor.rocks_store,
                 &executor.agent_service,
                 &executor.org_service,
+                auth_jwt.as_deref(),
             )
             .await
             {
@@ -209,18 +231,24 @@ impl ProcessExecutor {
         parent_run_id: Option<ProcessRunId>,
         parent_mirror: Option<ParentStreamMirrorContext>,
     ) -> Result<ProcessRun, ProcessError> {
-        let process =
-            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-                Some(
-                    client
-                        .get_process_internal(&process_id.to_string())
-                        .await
-                        .map(conv_process)
-                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
-                )
+        let auth_jwt = self.rocks_store.get_jwt();
+        let process = if let Some((client, jwt)) = process_storage_sync_client(
+            self.storage_client.as_ref(),
+            auth_jwt.as_deref(),
+        ) {
+            let storage_process = if let Some(jwt) = jwt {
+                client.get_process(&process_id.to_string(), jwt).await
             } else {
-                self.store.get_process(process_id)?
+                client.get_process_internal(&process_id.to_string()).await
             };
+            Some(
+                storage_process
+                    .map(conv_process)
+                    .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+            )
+        } else {
+            self.store.get_process(process_id)?
+        };
         let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let now = Utc::now();
@@ -240,8 +268,11 @@ impl ProcessExecutor {
             input_override: input_override.clone(),
         };
         self.store.save_run(&run)?;
-        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-            sync_run_to_storage(client, &run, true).await;
+        if let Some((client, jwt)) = process_storage_sync_client(
+            self.storage_client.as_ref(),
+            auth_jwt.as_deref(),
+        ) {
+            sync_run_to_storage(client, jwt, &run, true).await;
         }
 
         emit_process_event(
@@ -335,6 +366,7 @@ impl ProcessExecutor {
             &self.rocks_store,
             &self.agent_service,
             &self.org_service,
+            auth_jwt.as_deref(),
         )
         .await;
 

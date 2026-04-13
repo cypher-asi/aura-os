@@ -129,8 +129,8 @@ jobs:
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ""
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ""
         run: cargo packager --release --packages aura-os-desktop
 
       - name: Collect packaged artifacts
@@ -140,10 +140,12 @@ jobs:
           mkdir -p packaged/${{ matrix.target }}
           cp target/release/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp -R target/release/*.app packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp -R target/release/bundle/*/*.app packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
           if [ "${{ matrix.target }}" = "macos-arm64" ] || [ "${{ matrix.target }}" = "macos-x64" ]; then
@@ -161,6 +163,13 @@ jobs:
             done
           fi
           ls -la packaged/${{ matrix.target }}/
+
+      - name: Sign packaged updater artifacts
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        env:
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+        run: node infra/scripts/release/desktop-sign-artifacts.mjs --dir packaged/${{ matrix.target }} --prune-app-bundles
 
       - name: Note when packaging is skipped
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY == ''
