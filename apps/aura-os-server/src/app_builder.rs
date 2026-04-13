@@ -29,10 +29,12 @@ fn spawn_health_checks(
 ) {
     if let Some(ref client) = storage_client {
         if client.has_internal_token() {
-            info!("aura-storage internal token configured; remote process proxy is enabled");
+            info!(
+                "aura-storage internal token configured; remote process proxy and scheduler sync are enabled"
+            );
         } else {
-            warn!(
-                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; remote process proxy is disabled and process execution will stay local"
+            info!(
+                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; JWT-backed remote process proxy remains available, but scheduler/service sync will stay local"
             );
         }
         let health_client = client.clone();

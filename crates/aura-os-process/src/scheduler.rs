@@ -45,6 +45,9 @@ impl ProcessScheduler {
         // When authoritative storage is enabled, fail closed instead of
         // resurrecting a stale local shadow copy of scheduled processes.
         let processes = if let Some(client) = &self.storage_client {
+            if !client.has_internal_token() {
+                return Ok(());
+            }
             client
                 .list_scheduled_processes_internal()
                 .await
