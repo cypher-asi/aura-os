@@ -6,7 +6,6 @@
 #[allow(dead_code)]
 struct ResolvedIntegration {
     metadata: aura_os_core::OrgIntegration,
-    secret: Option<String>,
 }
 
 /// Resolve the agent's org integration, returning the metadata and secret
@@ -33,15 +32,7 @@ fn resolve_agent_integration(
         }
     };
 
-    let secret = match org_service.get_integration_secret(integration_id) {
-        Ok(s) => s,
-        Err(e) => {
-            warn!(%integration_id, error = %e, "Failed to load integration secret for process agent");
-            return None;
-        }
-    };
-
-    Some(ResolvedIntegration { metadata, secret })
+    Some(ResolvedIntegration { metadata })
 }
 
 /// Resolve the effective model using the same cascade as the chat handler:
