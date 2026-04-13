@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
@@ -16,10 +19,11 @@ const AGENT_READY_TIMEOUT: Duration = Duration::from_secs(90);
 #[derive(Debug, Clone)]
 pub struct SwarmHarness {
     base_url: String,
-    /// Fallback auth token (from env). Per-request tokens from
-    /// `SessionConfig.token` take priority when available.
+    /// Optional fallback auth token injected by the caller. Per-request tokens
+    /// from `SessionConfig.token` take priority when available.
     auth_token: Option<String>,
     client: reqwest::Client,
+    session_tokens: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl SwarmHarness {
@@ -34,20 +38,28 @@ impl SwarmHarness {
             base_url,
             auth_token,
             client,
+            session_tokens: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     pub fn from_env() -> Self {
-        let base_url =
-            std::env::var("SWARM_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
-        let auth_token = std::env::var("SWARM_AUTH_TOKEN").ok();
-        Self::new(base_url, auth_token)
+        let base_url = std::env::var("SWARM_BASE_URL").unwrap_or_default();
+        Self::new(base_url, None)
     }
 
-    fn ws_base_url(&self) -> String {
-        self.base_url
+    fn configured_base_url(&self) -> anyhow::Result<&str> {
+        let base_url = self.base_url.trim();
+        if base_url.is_empty() {
+            anyhow::bail!("swarm gateway is not configured (SWARM_BASE_URL)");
+        }
+        Ok(base_url.trim_end_matches('/'))
+    }
+
+    fn ws_base_url(&self) -> anyhow::Result<String> {
+        Ok(self
+            .configured_base_url()?
             .replace("https://", "wss://")
-            .replace("http://", "ws://")
+            .replace("http://", "ws://"))
     }
 
     async fn wait_for_agent_ready(
@@ -56,7 +68,7 @@ impl SwarmHarness {
         token: Option<&str>,
     ) -> anyhow::Result<()> {
         let headers = self.bearer_headers(token);
-        let url = format!("{}/v1/agents/{agent_id}/state", self.base_url);
+        let url = format!("{}/v1/agents/{agent_id}/state", self.configured_base_url()?);
         let deadline = tokio::time::Instant::now() + AGENT_READY_TIMEOUT;
 
         loop {
@@ -129,6 +141,7 @@ struct CreateSessionResponse {
 #[async_trait]
 impl HarnessLink for SwarmHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
+        let base_url = self.configured_base_url()?.to_string();
         let token = config.token.as_deref().or(self.auth_token.as_deref());
         let headers = self.bearer_headers(token);
 
@@ -149,7 +162,7 @@ impl HarnessLink for SwarmHarness {
 
         let agent_response = self
             .client
-            .post(format!("{}/v1/agents", self.base_url))
+            .post(format!("{base_url}/v1/agents"))
             .headers(headers.clone())
             .json(&agent_body)
             .send()
@@ -192,7 +205,7 @@ impl HarnessLink for SwarmHarness {
 
         let session_response = self
             .client
-            .post(format!("{}/v1/agents/{agent_id}/sessions", self.base_url))
+            .post(format!("{base_url}/v1/agents/{agent_id}/sessions"))
             .headers(headers.clone())
             .json(&session_body)
             .send()
@@ -207,6 +220,12 @@ impl HarnessLink for SwarmHarness {
             );
         }
         let session_resp: CreateSessionResponse = serde_json::from_str(&session_body_text)?;
+        if let Some(t) = token {
+            self.session_tokens
+                .lock()
+                .await
+                .insert(session_resp.session_id.clone(), t.to_string());
+        }
 
         info!(
             session_id = %session_resp.session_id,
@@ -217,7 +236,7 @@ impl HarnessLink for SwarmHarness {
         // 4. Open WebSocket with bearer auth on the upgrade request
         let ws_url = format!(
             "{}/{}",
-            self.ws_base_url(),
+            self.ws_base_url()?,
             session_resp.ws_url.trim_start_matches('/')
         );
 
@@ -265,11 +284,17 @@ impl HarnessLink for SwarmHarness {
     }
 
     async fn close_session(&self, session_id: &str) -> anyhow::Result<()> {
-        let token = self.auth_token.as_deref();
-        let headers = self.bearer_headers(token);
+        let base_url = self.configured_base_url()?.to_string();
+        let token = self
+            .session_tokens
+            .lock()
+            .await
+            .remove(session_id)
+            .or_else(|| self.auth_token.clone());
+        let headers = self.bearer_headers(token.as_deref());
 
         self.client
-            .delete(format!("{}/v1/sessions/{session_id}", self.base_url))
+            .delete(format!("{base_url}/v1/sessions/{session_id}"))
             .headers(headers)
             .send()
             .await?
