@@ -17,7 +17,6 @@ export type AuthTab = "signin" | "register";
 
 export const AUTH_TABS = [
   { id: "signin", label: "Sign In" },
-  { id: "register", label: "Create Account" },
 ];
 
 export const HOST_BADGE_VARIANT: Record<
