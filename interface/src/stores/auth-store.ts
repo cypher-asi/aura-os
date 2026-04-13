@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import type { AuthSession, ZeroUser } from "../types";
-import { clearStoredAuth, getStoredSession, setStoredAuth } from "../lib/auth-token";
+import {
+  clearStoredAuth,
+  getStoredSession,
+  hydrateStoredAuth,
+  setStoredAuth,
+} from "../lib/auth-token";
 import { api, ApiClientError } from "../api/client";
 import { connectEventSocket, disconnectEventSocket } from "./event-store";
 
@@ -47,6 +52,8 @@ export const useAuthStore = create<AuthState>()((set) => ({
   zeroProRefreshError: null,
 
   restoreSession: async () => {
+    await hydrateStoredAuth();
+
     // Restore from localStorage first (instant, no network call)
     const cached = getStoredSession();
     if (cached) {
@@ -56,7 +63,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // Validate with server to refresh session
     try {
       const validated = await api.auth.validate();
-      setStoredAuth(validated);
+      await setStoredAuth(validated);
       set({
         user: sessionToUser(validated),
         zeroProRefreshError: getZeroProRefreshError(validated),
@@ -64,7 +71,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       connectEventSocket();
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
-        clearStoredAuth();
+        await clearStoredAuth();
         disconnectEventSocket();
         set({ user: null, zeroProRefreshError: null });
       } else if (cached) {
@@ -81,7 +88,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ isLoading: true, zeroProRefreshError: null });
     try {
       const validated = await api.auth.validate();
-      setStoredAuth(validated);
+      await setStoredAuth(validated);
       set({
         user: sessionToUser(validated),
         zeroProRefreshError: getZeroProRefreshError(validated),
@@ -89,7 +96,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return validated;
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
-        clearStoredAuth();
+        await clearStoredAuth();
         set({ user: null, zeroProRefreshError: null });
         throw err;
       }
@@ -104,7 +111,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   login: async (email: string, password: string) => {
     const session = await api.auth.login(email, password);
-    setStoredAuth(session);
+    await setStoredAuth(session);
     set({
       user: sessionToUser(session),
       zeroProRefreshError: getZeroProRefreshError(session),
@@ -114,7 +121,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   register: async (email: string, password: string, name: string, inviteCode: string) => {
     const session = await api.auth.register(email, password, name, inviteCode);
-    setStoredAuth(session);
+    await setStoredAuth(session);
     set({
       user: sessionToUser(session),
       zeroProRefreshError: getZeroProRefreshError(session),
@@ -124,7 +131,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   logout: async () => {
     await api.auth.logout();
-    clearStoredAuth();
+    await clearStoredAuth();
     disconnectEventSocket();
     set({ user: null, zeroProRefreshError: null });
   },

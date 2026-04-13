@@ -172,7 +172,7 @@ pub(crate) async fn get_profile(
 }
 
 /// Sync user to aura-network: populates `network_user_id` and `profile_id`
-/// on the session and re-persists to RocksDB (for network bridge) and
+/// on the session and refreshes the server-side auth cache plus
 /// the in-memory validation cache. Best-effort — logs warnings on failure
 /// but never errors out.
 pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAuthSession) {

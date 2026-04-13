@@ -18,6 +18,7 @@ export function useUpdateBanner(): UpdateBannerData {
   const [data, setData] = useState<DesktopUpdateStatusResponse | null>(null);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
   const [installPending, setInstallPending] = useState(false);
+  const enabled = !!features.nativeUpdater && data?.supported !== false;
 
   const poll = useCallback(() => {
     api.getUpdateStatus().then((next) => {
@@ -31,9 +32,13 @@ export function useUpdateBanner(): UpdateBannerData {
   useEffect(() => {
     if (!features.nativeUpdater) return;
     poll();
+  }, [features.nativeUpdater, poll]);
+
+  useEffect(() => {
+    if (!enabled) return;
     const id = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(id);
-  }, [features.nativeUpdater, poll]);
+  }, [enabled, poll]);
 
   useEffect(() => {
     if (data?.update.status !== "available" || data.update.version !== dismissedVersion) {
@@ -72,7 +77,7 @@ export function useUpdateBanner(): UpdateBannerData {
 
   return {
     data: visibleData,
-    enabled: !!features.nativeUpdater,
+    enabled,
     installPending,
     dismissAvailableUpdate,
     handleInstallUpdate,

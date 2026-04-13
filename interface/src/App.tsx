@@ -25,6 +25,7 @@ import { ProjectAgentSetupView } from "./views/ProjectAgentSetupView/ProjectAgen
 import { apps } from "./apps/registry";
 import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
+import { hydrateStoredAuth } from "./lib/auth-token";
 
 import "./stores/event-store/index";
 import "./stores/follow-store";
@@ -45,6 +46,7 @@ export default function App() {
 
     void (async () => {
       try {
+        await hydrateStoredAuth();
         await bootstrapNativeTestAuth();
       } catch (error) {
         console.error("Native test auth bootstrap failed", error);

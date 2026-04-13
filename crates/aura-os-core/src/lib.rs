@@ -8,6 +8,12 @@ pub mod settings;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod testutil;
 
+/// Provides access to the current user's JWT for authenticating against
+/// remote services (aura-storage, aura-network, etc.).
+pub trait JwtProvider: Send + Sync {
+    fn get_jwt(&self) -> Option<String>;
+}
+
 // TODO: replace with explicit re-exports
 pub use entities::*;
 pub use enums::{

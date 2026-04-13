@@ -15,7 +15,7 @@ Aura is a desktop application for continuous agentic coding. It reads a project'
 
 The core workflow follows a strict hierarchy: **Project → Spec → Task**. Agents operate within sessions, rotating context automatically when the window fills, so execution can continue indefinitely without manual intervention.
 
-Core state lives in RocksDB on-device. The backend is Rust (Axum), the interface is React + TypeScript served through a native desktop shell (tao + wry), and the LLM provider is the Claude API. Optional remote services (configured via `.env`) include **aura-network** (orgs/project sync), **aura-storage** (execution data), **billing** (credits), and **Orbit** (Git/repo hosting). You can run fully local with only `ANTHROPIC_API_KEY` set.
+Persisted browser-owned state lives client-side in IndexedDB, while the local backend keeps only lightweight JSON/runtime state needed for local execution. The backend is Rust (Axum), the interface is React + TypeScript served through a native desktop shell (tao + wry), and the LLM provider is the Claude API. Optional remote services (configured via `.env`) include **aura-network** (orgs/project sync), **aura-storage** (execution data), **billing** (credits), **aura-integrations** (secret-backed integrations), and **Orbit** (Git/repo hosting).
 
 ---
 
@@ -63,7 +63,7 @@ The server reads `.env` from the current working directory when you run `aura-os
 
 ### Authentication
 
-All protected API endpoints require a JWT via `Authorization: Bearer <token>` header. WebSocket connections use `?token=<jwt>` query parameter. The JWT is obtained from the `/api/auth/login` or `/api/auth/register` response (`access_token` field) and stored client-side in localStorage. The same auth flow works for both the desktop app and web deployment.
+All protected API endpoints require a JWT via `Authorization: Bearer <token>` header. WebSocket connections use `?token=<jwt>` query parameter. The JWT is obtained from the `/api/auth/login` or `/api/auth/register` response (`access_token` field) and persisted client-side in IndexedDB with an in-memory runtime cache for active requests. The same auth flow works for both the desktop app and web deployment.
 
 ### Server URLs (local development)
 
@@ -408,7 +408,7 @@ For the current release-build plan and workflow map, see:
 
 ## Principles
 
-1. **Local-First:** Core project and execution state lives in RocksDB on your machine. Remote services (aura-network, aura-storage, billing, Orbit) are optional; you can run with only an API key and no cloud.
+1. **Local-First:** Browser-owned state persists locally in IndexedDB, and the host backend keeps only lightweight local runtime/compatibility state. Remote services (aura-network, aura-storage, billing, aura-integrations, Orbit) are optional per feature.
 2. **Autonomous:** The dev loop runs continuously. Context rotation happens automatically when sessions fill, so the agent can work through an entire spec without manual intervention.
 3. **Transparent:** Every piece of work traces back through Task → Spec → Project. Execution logs, agent state, and session summaries are all persisted and visible in the UI.
 4. **Extensible:** A modular Rust workspace with clean domain boundaries. Each crate owns a single concern, making it straightforward to add new capabilities or swap components.
@@ -430,13 +430,13 @@ For the current release-build plan and workflow map, see:
 | Crate | Description |
 | --- | --- |
 | **aura-os-core** | Shared entity types, IDs, enums, and settings |
-| **aura-os-store** | RocksDB persistence layer and storage abstractions |
+| **aura-os-store** | Lightweight local store and storage abstractions |
 | **aura-os-auth** | Authentication against external auth APIs, JWT/session types |
 | **aura-os-network** | Network client for remote org/project sync and Orbit integration |
 | **aura-os-storage** | Storage client for remote execution data (tasks, specs, sessions, logs) |
 | **aura-os-billing** | Billing client, credit tiers, and balance management |
 | **aura-os-orgs** | Organization CRUD, members, and integrations |
-| **aura-os-projects** | Project service merging network and local RocksDB state |
+| **aura-os-projects** | Project service merging network data with local compatibility state |
 | **aura-os-agents** | Agent templates, instances, and runtime management |
 | **aura-os-sessions** | Session lifecycle, context usage, and storage integration |
 | **aura-os-tasks** | Task state machine, lifecycle transitions, and locking |
@@ -464,7 +464,7 @@ aura-os/
     aura-os-ide/               # IDE helper lib
   crates/
     aura-os-core/              # Shared types and entity IDs
-    aura-os-store/             # RocksDB backend
+    aura-os-store/             # Local store backend
     aura-os-auth/              # Authentication
     aura-os-network/           # Remote network client + Orbit
     aura-os-storage/           # Remote storage client

@@ -228,14 +228,13 @@ impl OrgService {
         secret_update: IntegrationSecretUpdate,
     ) -> Result<(), OrgError> {
         match secret_update {
-            IntegrationSecretUpdate::Set(secret_value) => {
-                self.store
-                    .put_setting(
-                        &org_integration_secret_key(&integration.integration_id),
-                        secret_value.as_bytes(),
-                    )
-                    .map_err(OrgError::Store)?;
-            }
+            IntegrationSecretUpdate::Set(_) => match self
+                .store
+                .delete_setting(&org_integration_secret_key(&integration.integration_id))
+            {
+                Ok(()) | Err(aura_os_store::StoreError::NotFound(_)) => {}
+                Err(e) => return Err(OrgError::Store(e)),
+            },
             IntegrationSecretUpdate::Clear => match self
                 .store
                 .delete_setting(&org_integration_secret_key(&integration.integration_id))
@@ -266,7 +265,7 @@ impl OrgService {
         integrations: &[OrgIntegration],
     ) -> Result<(), OrgError> {
         for integration in integrations {
-            self.sync_integration_shadow(integration, IntegrationSecretUpdate::Preserve)?;
+            self.sync_integration_shadow(integration, IntegrationSecretUpdate::Clear)?;
         }
         Ok(())
     }
@@ -329,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_integration_shadow_preserves_canonical_metadata_and_secret() {
+    fn sync_integration_shadow_preserves_canonical_metadata_without_secret() {
         let db_dir = tempfile::tempdir().unwrap();
         let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
         let service = OrgService::new(store);
@@ -347,14 +346,11 @@ mod tests {
             service.get_integration(&org_id, "integration-1").unwrap(),
             Some(integration.clone())
         );
-        assert_eq!(
-            service.get_integration_secret("integration-1").unwrap(),
-            Some("secret-value".to_string())
-        );
+        assert_eq!(service.get_integration_secret("integration-1").unwrap(), None);
     }
 
     #[test]
-    fn sync_integrations_shadow_preserves_fallback_entries_and_secrets() {
+    fn sync_integrations_shadow_prunes_local_secrets_for_canonical_entries() {
         let db_dir = tempfile::tempdir().unwrap();
         let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
         let service = OrgService::new(store);
@@ -377,10 +373,7 @@ mod tests {
             service.get_integration(&org_id, "stale").unwrap(),
             Some(stale)
         );
-        assert_eq!(
-            service.get_integration_secret("stale").unwrap(),
-            Some("stale-secret".to_string())
-        );
+        assert_eq!(service.get_integration_secret("stale").unwrap(), None);
         assert_eq!(
             service.get_integration(&org_id, "retained").unwrap(),
             Some(retained)

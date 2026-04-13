@@ -1390,7 +1390,7 @@ async fn disabled_workspace_integrations_are_kept_but_not_exposed_as_active_capa
 // Task/Progress Endpoint Tests
 // ---------------------------------------------------------------------------
 
-// task_list_and_progress test removed -- requires seeding tasks via local RocksDB
+// task_list_and_progress test removed -- requires seeding tasks via legacy local store
 // which was removed in Phase 5e. Will be rewritten with aura-storage mock in Phase 9e.
 
 #[tokio::test]

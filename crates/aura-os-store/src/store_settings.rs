@@ -1,58 +1,75 @@
-use std::sync::Arc;
-
-use aura_os_core::ZeroAuthSession;
+use aura_os_core::{JwtProvider, ZeroAuthSession};
 
 use crate::error::{StoreError, StoreResult};
 use crate::store::RocksStore;
 
+impl JwtProvider for RocksStore {
+    fn get_jwt(&self) -> Option<String> {
+        self.session_cache
+            .read()
+            .expect("store lock poisoned")
+            .as_ref()
+            .map(|session| session.access_token.clone())
+    }
+}
+
 impl RocksStore {
-    pub(crate) fn cf_settings(&self) -> StoreResult<Arc<rocksdb::BoundColumnFamily<'_>>> {
-        self.cf_handle("settings")
+    pub fn cache_zero_auth_session(&self, session: &ZeroAuthSession) {
+        *self.session_cache.write().expect("store lock poisoned") = Some(session.clone());
+    }
+
+    pub fn get_cached_zero_auth_session(&self) -> Option<ZeroAuthSession> {
+        self.session_cache
+            .read()
+            .expect("store lock poisoned")
+            .clone()
+    }
+
+    pub fn clear_zero_auth_session_cache(&self) {
+        *self.session_cache.write().expect("store lock poisoned") = None;
     }
 
     pub fn put_setting(&self, key: &str, value: &[u8]) -> StoreResult<()> {
-        self.db
-            .put_cf(&self.cf_settings()?, key.as_bytes(), value)?;
-        Ok(())
+        if key == "zero_auth_session" {
+            let session: ZeroAuthSession = serde_json::from_slice(value)?;
+            self.cache_zero_auth_session(&session);
+            return Ok(());
+        }
+        self.put_cf_bytes("settings", key.as_bytes(), value)
     }
 
     pub fn get_setting(&self, key: &str) -> StoreResult<Vec<u8>> {
-        let bytes = self
-            .db
-            .get_cf(&self.cf_settings()?, key.as_bytes())?
-            .ok_or_else(|| StoreError::NotFound(format!("settings:{key}")))?;
-        Ok(bytes)
+        if key == "zero_auth_session" {
+            let session = self
+                .get_cached_zero_auth_session()
+                .ok_or_else(|| StoreError::NotFound("settings:zero_auth_session".to_string()))?;
+            return Ok(serde_json::to_vec(&session)?);
+        }
+        self.get_cf_bytes("settings", key.as_bytes())?
+            .ok_or_else(|| StoreError::NotFound(format!("settings:{key}")))
     }
 
     pub fn delete_setting(&self, key: &str) -> StoreResult<()> {
-        self.db.delete_cf(&self.cf_settings()?, key.as_bytes())?;
-        Ok(())
+        if key == "zero_auth_session" {
+            self.clear_zero_auth_session_cache();
+            return Ok(());
+        }
+        self.with_cf_mut("settings", |cf| {
+            cf.remove(key);
+            Ok(())
+        })
     }
 
     pub fn list_settings_with_prefix(&self, prefix: &str) -> StoreResult<Vec<(String, Vec<u8>)>> {
-        let mut opts = rocksdb::ReadOptions::default();
-        opts.set_total_order_seek(true);
-        let iter = self.db.iterator_cf_opt(
-            &self.cf_settings()?,
-            opts,
-            rocksdb::IteratorMode::From(prefix.as_bytes(), rocksdb::Direction::Forward),
-        );
-        let mut values = Vec::new();
-        for item in iter {
-            let (key, value) = item?;
-            if !key.starts_with(prefix.as_bytes()) {
-                break;
+        self.with_cf("settings", |cf| {
+            let mut values = Vec::new();
+            for (key, value) in cf.range(prefix.to_string()..) {
+                if !key.starts_with(prefix) {
+                    break;
+                }
+                values.push((key.clone(), value.clone()));
             }
-            values.push((String::from_utf8_lossy(&key).into_owned(), value.to_vec()));
-        }
-        Ok(values)
-    }
-
-    /// Extract the JWT access token from the stored zOS auth session.
-    /// Returns `None` when no session is stored or it cannot be parsed.
-    pub fn get_jwt(&self) -> Option<String> {
-        let bytes = self.get_setting("zero_auth_session").ok()?;
-        let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
-        Some(session.access_token)
+            Ok(values)
+        })
     }
 }

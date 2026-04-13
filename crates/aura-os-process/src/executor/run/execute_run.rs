@@ -4,7 +4,7 @@ fn execute_run<'a>(
     broadcast: &'a broadcast::Sender<serde_json::Value>,
     run: &'a ProcessRun,
     data_dir: &'a Path,
-    rocks_store: &'a RocksStore,
+    jwt_provider: &'a dyn JwtProvider,
     agent_service: &'a AgentService,
     org_service: &'a OrgService,
     auth_jwt: Option<&'a str>,
@@ -12,7 +12,7 @@ fn execute_run<'a>(
     Box::pin(async move {
         let jwt = auth_jwt
             .map(str::to_string)
-            .or_else(|| rocks_store.get_jwt());
+            .or_else(|| jwt_provider.get_jwt());
         let storage_sync_client =
             process_storage_sync_client(executor.storage_client.as_ref(), jwt.as_deref());
         let storage_sync_client = storage_sync_client.ok_or_else(|| {

@@ -192,6 +192,10 @@ fn updater_public_key() -> Result<String, String> {
     decode_base64_utf8("public key", UPDATER_PUB_KEY)
 }
 
+pub(crate) fn updater_supported() -> bool {
+    updater_public_key().is_ok()
+}
+
 fn updater_config(channel: UpdateChannel) -> Result<PackagerUpdaterConfig, String> {
     let endpoint = endpoint_for_channel(channel)
         .parse()
@@ -365,6 +369,11 @@ pub(crate) fn install_and_restart(state: UpdateState) -> Result<(), String> {
 }
 
 pub(crate) fn start_install(state: UpdateState) -> Result<(), String> {
+    if !updater_supported() {
+        set_status(&state.status, UpdateStatus::Idle);
+        return Err("updater is not configured".into());
+    }
+
     {
         let status = state.status.blocking_read();
         if matches!(
@@ -391,6 +400,12 @@ pub(crate) fn start_install(state: UpdateState) -> Result<(), String> {
 
 /// Spawn the background update-check loop. Call once at startup.
 pub(crate) fn spawn_update_loop(state: UpdateState) {
+    if !updater_supported() {
+        info!("native updater disabled: updater public key is not configured");
+        set_status(&state.status, UpdateStatus::Idle);
+        return;
+    }
+
     tokio::spawn(async move {
         // Small initial delay so the app finishes launching first.
         tokio::time::sleep(INITIAL_CHECK_DELAY).await;
@@ -423,6 +438,11 @@ pub(crate) fn spawn_update_loop(state: UpdateState) {
 
 /// Trigger an immediate re-check (e.g. after the user switches channels).
 pub(crate) fn trigger_recheck(state: UpdateState) {
+    if !updater_supported() {
+        set_status(&state.status, UpdateStatus::Idle);
+        return;
+    }
+
     tokio::spawn(async move {
         let channel = *state.channel.read().await;
         let status = Arc::clone(&state.status);

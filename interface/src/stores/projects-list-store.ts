@@ -7,6 +7,7 @@ import {
   projectQueryKeys,
   projectsQueryOptions,
 } from "../queries/project-queries";
+import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../lib/browser-db";
 import { useOrgStore } from "./org-store";
 import { useAuthStore } from "./auth-store";
 
@@ -44,6 +45,30 @@ interface ProjectsListState {
   patchAgentTemplateFields: (agent: Agent) => void;
   openNewProjectModal: () => void;
   closeNewProjectModal: () => void;
+}
+
+type PersistedProjectsListState = {
+  projects: Project[];
+  agentsByProject: Record<string, AgentInstance[]>;
+};
+
+function projectsStateKey(orgId: string | null): string {
+  return `state:${orgId ?? "all"}`;
+}
+
+async function hydratePersistedProjectsState(orgId: string | null): Promise<void> {
+  const cached = await browserDbGet<PersistedProjectsListState>(
+    BROWSER_DB_STORES.projects,
+    projectsStateKey(orgId),
+  );
+  if (!cached) {
+    return;
+  }
+  useProjectsListStore.setState({
+    projects: cached.projects,
+    agentsByProject: cached.agentsByProject,
+    loadingProjects: false,
+  });
 }
 
 let refreshRequestId = 0;
@@ -257,7 +282,10 @@ useOrgStore.subscribe((state) => {
   queryClient.removeQueries({ queryKey: projectQueryKeys.root });
   useProjectsListStore.setState({ agentsByProject: {}, loadingAgentsByProject: {} });
   _knownProjectIds = new Set();
-  useProjectsListStore.getState().refreshProjects();
+  void (async () => {
+    await hydratePersistedProjectsState(orgId);
+    await useProjectsListStore.getState().refreshProjects();
+  })();
 });
 
 // Incrementally prefetch project agents in the background instead of fanning
@@ -285,7 +313,21 @@ useAuthStore.subscribe((state) => {
     return;
   }
 
-  useProjectsListStore.getState().refreshProjects();
+  void (async () => {
+    await hydratePersistedProjectsState(getActiveOrgId() ?? null);
+    await useProjectsListStore.getState().refreshProjects();
+  })();
+});
+
+useProjectsListStore.subscribe((state) => {
+  void browserDbSet(
+    BROWSER_DB_STORES.projects,
+    projectsStateKey(getActiveOrgId() ?? null),
+    {
+      projects: state.projects,
+      agentsByProject: state.agentsByProject,
+    },
+  );
 });
 
 useProjectsListStore.subscribe((state) => {

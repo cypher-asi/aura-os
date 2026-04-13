@@ -407,10 +407,7 @@ pub(crate) async fn create_integration(
             .map_err(map_integrations_error)?;
         if let Err(error) = state.org_service.sync_integration_shadow(
             &integration,
-            match req.api_key.clone() {
-                Some(secret) => IntegrationSecretUpdate::Set(secret),
-                None => IntegrationSecretUpdate::Preserve,
-            },
+            IntegrationSecretUpdate::Clear,
         ) {
             warn!(
                 integration_id = %integration.integration_id,
@@ -419,6 +416,11 @@ pub(crate) async fn create_integration(
             );
         }
         return Ok((StatusCode::CREATED, Json(integration)));
+    }
+    if req.api_key.is_some() {
+        return Err(ApiError::service_unavailable(
+            "aura-integrations is required for storing integration secrets",
+        ));
     }
     // Local-only mode: no network client for role verification
     validate_org_integration_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
@@ -458,11 +460,7 @@ pub(crate) async fn update_integration(
             .map_err(map_integrations_error)?;
         if let Err(error) = state.org_service.sync_integration_shadow(
             &integration,
-            match req.api_key.clone() {
-                Some(Some(value)) => IntegrationSecretUpdate::Set(value),
-                Some(None) => IntegrationSecretUpdate::Clear,
-                None => IntegrationSecretUpdate::Preserve,
-            },
+            IntegrationSecretUpdate::Clear,
         ) {
             warn!(
                 integration_id = %integration.integration_id,
@@ -471,6 +469,11 @@ pub(crate) async fn update_integration(
             );
         }
         return Ok(Json(integration));
+    }
+    if req.api_key.is_some() {
+        return Err(ApiError::service_unavailable(
+            "aura-integrations is required for storing integration secrets",
+        ));
     }
     // Local-only mode: no network client for role verification
     let existing = state

@@ -1,9 +1,17 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getStoredJwt, getStoredSession, setStoredAuth, clearStoredAuth, authHeaders } from "./auth-token";
+import {
+  authHeaders,
+  clearStoredAuth,
+  getStoredJwt,
+  getStoredSession,
+  hydrateStoredAuth,
+  setStoredAuth,
+} from "./auth-token";
 
-beforeEach(() => {
+beforeEach(async () => {
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
+  await clearStoredAuth();
 });
 
 const mockSession = {
@@ -27,29 +35,29 @@ describe("auth-token", () => {
     expect(getStoredSession()).toBeNull();
   });
 
-  it("setStoredAuth stores jwt and session", () => {
-    setStoredAuth(mockSession);
+  it("setStoredAuth stores jwt and session", async () => {
+    await setStoredAuth(mockSession);
     expect(getStoredJwt()).toBe("my-jwt-token");
     expect(getStoredSession()).toEqual(mockSession);
   });
 
-  it("clearStoredAuth removes both keys", () => {
-    setStoredAuth(mockSession);
-    clearStoredAuth();
+  it("clearStoredAuth removes both keys", async () => {
+    await setStoredAuth(mockSession);
+    await clearStoredAuth();
     expect(getStoredJwt()).toBeNull();
     expect(getStoredSession()).toBeNull();
   });
 
-  it("setStoredAuth with null clears storage", () => {
-    setStoredAuth(mockSession);
-    setStoredAuth(null);
+  it("setStoredAuth with null clears storage", async () => {
+    await setStoredAuth(mockSession);
+    await setStoredAuth(null);
     expect(getStoredJwt()).toBeNull();
     expect(getStoredSession()).toBeNull();
   });
 
-  it("setStoredAuth with missing access_token clears storage", () => {
-    setStoredAuth(mockSession);
-    setStoredAuth({ ...mockSession, access_token: undefined });
+  it("setStoredAuth with missing access_token clears storage", async () => {
+    await setStoredAuth(mockSession);
+    await setStoredAuth({ ...mockSession, access_token: undefined });
     expect(getStoredJwt()).toBeNull();
   });
 
@@ -57,13 +65,22 @@ describe("auth-token", () => {
     expect(authHeaders()).toEqual({});
   });
 
-  it("authHeaders returns Authorization header when jwt stored", () => {
-    setStoredAuth(mockSession);
+  it("authHeaders returns Authorization header when jwt stored", async () => {
+    await setStoredAuth(mockSession);
     expect(authHeaders()).toEqual({ Authorization: "Bearer my-jwt-token" });
   });
 
-  it("getStoredSession returns null for invalid JSON", () => {
+  it("hydrates legacy localStorage auth into the runtime cache", async () => {
+    window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+    window.localStorage.setItem("aura-jwt", mockSession.access_token);
+    await hydrateStoredAuth();
+    expect(getStoredJwt()).toBe("my-jwt-token");
+    expect(getStoredSession()).toEqual(mockSession);
+  });
+
+  it("getStoredSession returns null for invalid JSON", async () => {
     window.localStorage.setItem("aura-session", "not-json");
+    await hydrateStoredAuth();
     expect(getStoredSession()).toBeNull();
   });
 });

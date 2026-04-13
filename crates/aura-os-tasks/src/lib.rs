@@ -11,18 +11,17 @@ use tokio::sync::Mutex;
 
 use aura_os_core::*;
 use aura_os_storage::{StorageClient, StorageTask};
-use aura_os_store::RocksStore;
 
 pub struct TaskService {
-    store: Arc<RocksStore>,
+    jwt_provider: Arc<dyn JwtProvider>,
     storage_client: Option<Arc<StorageClient>>,
     claim_locks: Mutex<HashMap<ProjectId, Arc<Mutex<()>>>>,
 }
 
 impl TaskService {
-    pub fn new(store: Arc<RocksStore>, storage_client: Option<Arc<StorageClient>>) -> Self {
+    pub fn new(jwt_provider: Arc<dyn JwtProvider>, storage_client: Option<Arc<StorageClient>>) -> Self {
         Self {
-            store,
+            jwt_provider,
             storage_client,
             claim_locks: Mutex::new(HashMap::new()),
         }
@@ -37,7 +36,7 @@ impl TaskService {
     }
 
     fn get_jwt(&self) -> Result<String, TaskError> {
-        self.store.get_jwt().ok_or(TaskError::NoActiveSession)
+        self.jwt_provider.get_jwt().ok_or(TaskError::NoActiveSession)
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {

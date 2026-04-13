@@ -1225,21 +1225,13 @@ async fn resolve_org_for_super_agent(state: &AppState, jwt: &str) -> (String, St
 async fn handle_super_agent_stream(
     state: &AppState,
     jwt: &str,
+    auth_session: &aura_os_core::ZeroAuthSession,
     agent: &Agent,
     body: SendChatRequest,
 ) -> ApiResult<SseResponse> {
     let agent_id = agent.agent_id;
     let sas = &state.super_agent_service;
-
-    let session: Option<aura_os_core::ZeroAuthSession> = state
-        .store
-        .get_setting("zero_auth_session")
-        .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok());
-    let user_id = session
-        .as_ref()
-        .map(|s| s.user_id.as_str())
-        .unwrap_or("unknown");
+    let user_id = auth_session.user_id.as_str();
 
     // Resolve org: try network first, then derive from local projects
     let (org_name, org_id) = resolve_org_for_super_agent(state, jwt).await;
@@ -1355,6 +1347,7 @@ async fn handle_super_agent_stream(
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    crate::state::AuthSession(auth_session): crate::state::AuthSession,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
@@ -1370,7 +1363,7 @@ pub(crate) async fn send_agent_event_stream(
 
     if agent.role == "super_agent" || agent.tags.contains(&"super_agent".to_string()) {
         info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
-        return handle_super_agent_stream(&state, &jwt, &agent, body).await;
+        return handle_super_agent_stream(&state, &jwt, &auth_session, &agent, body).await;
     }
 
     if agent.adapter_type != "aura_harness" {

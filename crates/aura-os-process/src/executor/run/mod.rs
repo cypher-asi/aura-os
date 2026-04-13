@@ -35,7 +35,7 @@ use aura_os_storage::{
     StorageClient, StorageError, StorageProcess, StorageProcessNode, StorageProcessNodeConnection,
     StorageProcessRun,
 };
-use aura_os_store::RocksStore;
+use aura_os_core::JwtProvider;
 use aura_os_tasks::TaskService;
 
 use crate::error::ProcessError;

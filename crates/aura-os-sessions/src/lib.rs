@@ -9,7 +9,6 @@ use tracing::warn;
 pub use aura_os_core::parse_dt;
 use aura_os_core::*;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
 
 #[derive(Debug)]
 pub struct CreateSessionParams {
@@ -43,7 +42,7 @@ pub struct RolloverSessionParams {
 }
 
 pub struct SessionService {
-    store: Arc<RocksStore>,
+    jwt_provider: Arc<dyn JwtProvider>,
     storage_client: Option<Arc<StorageClient>>,
     rollover_threshold: f64,
     model_context_window: u64,
@@ -72,9 +71,9 @@ pub fn storage_session_to_session(
 }
 
 impl SessionService {
-    pub fn new(store: Arc<RocksStore>, rollover_threshold: f64, model_context_window: u64) -> Self {
+    pub fn new(jwt_provider: Arc<dyn JwtProvider>, rollover_threshold: f64, model_context_window: u64) -> Self {
         Self {
-            store,
+            jwt_provider,
             storage_client: None,
             rollover_threshold,
             model_context_window,
@@ -87,7 +86,7 @@ impl SessionService {
     }
 
     fn get_jwt(&self) -> Result<String, SessionError> {
-        self.store
+        self.jwt_provider
             .get_jwt()
             .ok_or_else(|| SessionError::Parse("no active session for JWT".into()))
     }

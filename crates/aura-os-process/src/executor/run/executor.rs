@@ -2,7 +2,7 @@
 pub struct ProcessExecutor {
     event_broadcast: broadcast::Sender<serde_json::Value>,
     data_dir: PathBuf,
-    rocks_store: Arc<RocksStore>,
+    jwt_provider: Arc<dyn JwtProvider>,
     agent_service: Arc<AgentService>,
     org_service: Arc<OrgService>,
     automaton_client: Arc<AutomatonClient>,
@@ -19,7 +19,7 @@ impl ProcessExecutor {
     pub fn new(
         event_broadcast: broadcast::Sender<serde_json::Value>,
         data_dir: PathBuf,
-        rocks_store: Arc<RocksStore>,
+        jwt_provider: Arc<dyn JwtProvider>,
         agent_service: Arc<AgentService>,
         org_service: Arc<OrgService>,
         automaton_client: Arc<AutomatonClient>,
@@ -31,7 +31,7 @@ impl ProcessExecutor {
         Self {
             event_broadcast,
             data_dir,
-            rocks_store,
+            jwt_provider,
             agent_service,
             org_service,
             automaton_client,
@@ -103,7 +103,7 @@ impl ProcessExecutor {
     ) -> Result<(), ProcessError> {
         let preferred_jwt = auth_jwt
             .map(str::to_string)
-            .or_else(|| self.rocks_store.get_jwt());
+            .or_else(|| self.jwt_provider.get_jwt());
         let target =
             process_storage_sync_client(self.storage_client.as_ref(), preferred_jwt.as_deref())
                 .ok_or_else(|| {
@@ -246,7 +246,7 @@ impl ProcessExecutor {
                 &executor.event_broadcast,
                 &run_clone,
                 &executor.data_dir,
-                &executor.rocks_store,
+                &*executor.jwt_provider,
                 &executor.agent_service,
                 &executor.org_service,
                 auth_jwt.as_deref(),
@@ -296,7 +296,7 @@ impl ProcessExecutor {
         parent_run_id: Option<ProcessRunId>,
         parent_mirror: Option<ParentStreamMirrorContext>,
     ) -> Result<ProcessRun, ProcessError> {
-        let auth_jwt = self.rocks_store.get_jwt();
+        let auth_jwt = self.jwt_provider.get_jwt();
         let target = process_storage_sync_client(self.storage_client.as_ref(), auth_jwt.as_deref())
             .ok_or_else(|| {
                 ProcessError::Execution("aura-storage is required for process execution".into())
@@ -406,7 +406,7 @@ impl ProcessExecutor {
             &self.event_broadcast,
             &run,
             &self.data_dir,
-            &self.rocks_store,
+            &*self.jwt_provider,
             &self.agent_service,
             &self.org_service,
             auth_jwt.as_deref(),

@@ -45,7 +45,7 @@ Single Web Service that builds both frontend and backend. The backend serves the
 
 1. **Vendored ZUI** — Aura now vendors `@cypher-asi/zui` under `vendor/zui`, and `interface/package.json` resolves it from inside this repo. Render builds no longer need a sibling checkout or a separately published ZUI package.
 
-2. **RocksDB** — The `rocksdb` crate compiles a C++ library at build time. Render's native Rust buildpack should handle this, but if cmake/clang is missing, a Dockerfile would be needed.
+2. **Local storage model** — Aura no longer depends on the old embedded C++ database layer. Browser-owned persistence lives in IndexedDB, while the local backend uses a lightweight JSON/runtime store.
 
 ## Post-Deploy Verification
 
@@ -66,6 +66,6 @@ open https://YOUR-SERVICE.onrender.com
 
 - Port 10000 is Render's default. The server reads `AURA_SERVER_PORT`.
 - Host `0.0.0.0` is required — Render rejects `127.0.0.1` bindings.
-- RocksDB data is ephemeral on Render. Auth uses in-memory validation cache (not RocksDB). Project metadata cache rebuilds on demand.
+- Render instances still have ephemeral local disk. Browser-owned persisted state remains in the browser, server auth uses the in-memory validation cache, and any local backend compatibility state should be treated as rebuildable.
 - The build takes ~2-3 minutes (Node frontend + Rust backend).
 - `LOCAL_HARNESS_URL` should NOT be set on Render unless a harness service is deployed alongside.

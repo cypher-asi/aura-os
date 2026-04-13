@@ -4,6 +4,7 @@ import type { Org, OrgIntegration, OrgMember } from "../types";
 import { api } from "../api/client";
 import { useAuthStore } from "./auth-store";
 import { ACTIVE_ORG_KEY } from "../constants";
+import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../lib/browser-db";
 
 interface OrgState {
   orgs: Org[];
@@ -17,6 +18,35 @@ interface OrgState {
   refreshIntegrations: () => Promise<void>;
   createOrg: (name: string) => Promise<Org>;
   renameOrg: (orgId: string, name: string) => Promise<void>;
+}
+
+type PersistedOrgState = {
+  orgs: Org[];
+  activeOrgId: string | null;
+  members: OrgMember[];
+  integrations: OrgIntegration[];
+};
+
+function orgStateKey(userId: string): string {
+  return `state:${userId}`;
+}
+
+async function hydratePersistedOrgState(userId: string): Promise<void> {
+  const cached = await browserDbGet<PersistedOrgState>(
+    BROWSER_DB_STORES.org,
+    orgStateKey(userId),
+  );
+  if (!cached) {
+    return;
+  }
+  const activeOrg = cached.orgs.find((org) => org.org_id === cached.activeOrgId) ?? cached.orgs[0] ?? null;
+  useOrgStore.setState({
+    orgs: cached.orgs,
+    activeOrg,
+    members: cached.members,
+    integrations: cached.integrations,
+    isLoading: false,
+  });
 }
 
 export const useOrgStore = create<OrgState>()((set, get) => ({
@@ -119,7 +149,10 @@ useAuthStore.subscribe((state) => {
   if (userId === _prevUserId) return;
   _prevUserId = userId;
   if (userId) {
-    useOrgStore.getState().refreshOrgs();
+    void (async () => {
+      await hydratePersistedOrgState(userId);
+      await useOrgStore.getState().refreshOrgs();
+    })();
   } else {
     useOrgStore.setState({ orgs: [], activeOrg: null, members: [], integrations: [], isLoading: false });
   }
@@ -133,6 +166,20 @@ useOrgStore.subscribe((state) => {
   _prevActiveOrgId = orgId;
   state.refreshMembers();
   state.refreshIntegrations();
+});
+
+useOrgStore.subscribe((state) => {
+  const userId = useAuthStore.getState().user?.user_id;
+  if (!userId) {
+    return;
+  }
+  const persisted: PersistedOrgState = {
+    orgs: state.orgs,
+    activeOrgId: state.activeOrg?.org_id ?? null,
+    members: state.members,
+    integrations: state.integrations,
+  };
+  void browserDbSet(BROWSER_DB_STORES.org, orgStateKey(userId), persisted);
 });
 
 /**

@@ -4,6 +4,8 @@ import { api } from "../../../api/client";
 import { buildDisplayEvents } from "../../../utils/build-display-messages";
 import type { Agent } from "../../../types";
 import type { DisplaySessionEvent } from "../../../types/stream";
+import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../lib/browser-db";
+import { useAuthStore } from "../../../stores/auth-store";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
@@ -12,6 +14,14 @@ type HistoryEntry = {
   status: FetchStatus;
   fetchedAt: number;
   error: string | null;
+};
+
+type PersistedAgentState = {
+  agents: Agent[];
+  history: Record<string, HistoryEntry>;
+  selectedAgentId: string | null;
+  pinnedAgentIds: string[];
+  favoriteAgentIds: string[];
 };
 
 const PINNED_KEY = "aura:pinnedAgentIds";
@@ -53,6 +63,27 @@ type AgentState = {
 
 const HISTORY_TTL_MS = 30_000;
 const AGENTS_TTL_MS = 30_000;
+
+function agentStateKey(userId: string): string {
+  return `state:${userId}`;
+}
+
+async function hydratePersistedAgentState(userId: string): Promise<void> {
+  const cached = await browserDbGet<PersistedAgentState>(
+    BROWSER_DB_STORES.agents,
+    agentStateKey(userId),
+  );
+  if (!cached) {
+    return;
+  }
+  useAgentStore.setState({
+    agents: cached.agents,
+    history: cached.history,
+    selectedAgentId: cached.selectedAgentId,
+    pinnedAgentIds: new Set(cached.pinnedAgentIds),
+    favoriteAgentIds: new Set(cached.favoriteAgentIds),
+  });
+}
 
 export const useAgentStore = create<AgentState>()(
   subscribeWithSelector((set, get) => {
@@ -236,3 +267,39 @@ export const useAgentStore = create<AgentState>()(
     };
   }),
 );
+
+let _prevAgentUserId: string | null = null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.user_id ?? null;
+  if (userId === _prevAgentUserId) return;
+  _prevAgentUserId = userId;
+
+  if (!userId) {
+    useAgentStore.setState({
+      agents: [],
+      agentsStatus: "idle",
+      agentsError: null,
+      history: {},
+      selectedAgentId: null,
+      pinnedAgentIds: new Set(),
+      favoriteAgentIds: new Set(),
+    });
+    return;
+  }
+
+  void hydratePersistedAgentState(userId);
+});
+
+useAgentStore.subscribe((state) => {
+  const userId = useAuthStore.getState().user?.user_id;
+  if (!userId) {
+    return;
+  }
+  void browserDbSet(BROWSER_DB_STORES.agents, agentStateKey(userId), {
+    agents: state.agents,
+    history: state.history,
+    selectedAgentId: state.selectedAgentId,
+    pinnedAgentIds: [...state.pinnedAgentIds],
+    favoriteAgentIds: [...state.favoriteAgentIds],
+  });
+});

@@ -1,6 +1,6 @@
 import type { AuthSession } from "../types";
 import { resolveApiUrl } from "./host-config";
-import { getStoredSession, setStoredAuth } from "./auth-token";
+import { getStoredSession, hydrateStoredAuth, setStoredAuth } from "./auth-token";
 import { isNativeRuntime } from "./native-runtime";
 
 const nativeTestAccessToken = import.meta.env.VITE_NATIVE_TEST_ACCESS_TOKEN?.trim() ?? "";
@@ -11,6 +11,7 @@ function shouldBootstrapNativeTestAuth(): boolean {
 
 export async function bootstrapNativeTestAuth(): Promise<boolean> {
   if (!shouldBootstrapNativeTestAuth()) return false;
+  await hydrateStoredAuth();
   if (getStoredSession()?.access_token) return false;
 
   const response = await fetch(resolveApiUrl("/api/auth/import-access-token"), {
@@ -26,6 +27,6 @@ export async function bootstrapNativeTestAuth(): Promise<boolean> {
   }
 
   const session = await response.json() as AuthSession;
-  setStoredAuth(session);
+  await setStoredAuth(session);
   return true;
 }
