@@ -126,8 +126,26 @@ fn conv_connection(sc: StorageProcessNodeConnection) -> ProcessNodeConnection {
     }
 }
 
+/// Prefer a user JWT for desktop-triggered remote process sync and fall back
+/// to the legacy internal token only for service-owned paths.
+fn process_storage_sync_client<'a>(
+    storage_client: Option<&'a Arc<StorageClient>>,
+    jwt: Option<&'a str>,
+) -> Option<(&'a StorageClient, Option<&'a str>)> {
+    let client = storage_client.map(Arc::as_ref)?;
+    if let Some(jwt) = jwt.filter(|token| !token.trim().is_empty()) {
+        return Some((client, Some(jwt)));
+    }
+    client.has_internal_token().then_some((client, None))
+}
+
 /// Attempt to sync a run to aura-storage. Failures are logged but not fatal.
-async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create: bool) {
+async fn sync_run_to_storage(
+    client: &StorageClient,
+    jwt: Option<&str>,
+    run: &ProcessRun,
+    is_create: bool,
+) {
     if is_create {
         let req = aura_os_storage::CreateProcessRunRequest {
             id: Some(run.run_id.to_string()),
@@ -141,7 +159,14 @@ async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create
             parent_run_id: run.parent_run_id.map(|id| id.to_string()),
             input_override: run.input_override.clone(),
         };
-        if let Err(e) = client.create_process_run_internal(&req).await {
+        let result = if let Some(jwt) = jwt {
+            client
+                .create_process_run(&run.process_id.to_string(), jwt, &req)
+                .await
+        } else {
+            client.create_process_run_internal(&req).await
+        };
+        if let Err(e) = result {
             warn!(run_id = %run.run_id, error = %e, "Failed to sync run create to storage");
         }
     } else {
@@ -159,17 +184,33 @@ async fn sync_run_to_storage(client: &StorageClient, run: &ProcessRun, is_create
             cost_usd: run.cost_usd,
             output: run.output.as_ref().map(|o| Some(o.clone())),
         };
-        if let Err(e) = client
-            .update_process_run_internal(&run.run_id.to_string(), &req)
-            .await
-        {
+        let result = if let Some(jwt) = jwt {
+            client
+                .update_process_run(
+                    &run.process_id.to_string(),
+                    &run.run_id.to_string(),
+                    jwt,
+                    &req,
+                )
+                .await
+        } else {
+            client
+                .update_process_run_internal(&run.run_id.to_string(), &req)
+                .await
+        };
+        if let Err(e) = result {
             warn!(run_id = %run.run_id, error = %e, "Failed to sync run update to storage");
         }
     }
 }
 
 /// Attempt to sync an event to aura-storage. Failures are logged but not fatal.
-async fn sync_event_to_storage(client: &StorageClient, event: &ProcessEvent, is_create: bool) {
+async fn sync_event_to_storage(
+    client: &StorageClient,
+    jwt: Option<&str>,
+    event: &ProcessEvent,
+    is_create: bool,
+) {
     if is_create {
         let req = aura_os_storage::CreateProcessEventRequest {
             id: Some(event.event_id.to_string()),
@@ -185,7 +226,19 @@ async fn sync_event_to_storage(client: &StorageClient, event: &ProcessEvent, is_
             input_snapshot: Some(event.input_snapshot.clone()),
             output: Some(event.output.clone()),
         };
-        if let Err(e) = client.create_process_event_internal(&req).await {
+        let result = if let Some(jwt) = jwt {
+            client
+                .create_process_event(
+                    &event.process_id.to_string(),
+                    &event.run_id.to_string(),
+                    jwt,
+                    &req,
+                )
+                .await
+        } else {
+            client.create_process_event_internal(&req).await
+        };
+        if let Err(e) = result {
             warn!(event_id = %event.event_id, error = %e, "Failed to sync event create to storage");
         }
     } else {
@@ -206,17 +259,27 @@ async fn sync_event_to_storage(client: &StorageClient, event: &ProcessEvent, is_
                 .as_ref()
                 .map(|blocks| serde_json::Value::Array(blocks.clone())),
         };
-        if let Err(e) = client
-            .update_process_event_internal(&event.event_id.to_string(), &req)
-            .await
-        {
+        let result = if let Some(jwt) = jwt {
+            client
+                .update_process_event(&event.event_id.to_string(), jwt, &req)
+                .await
+        } else {
+            client
+                .update_process_event_internal(&event.event_id.to_string(), &req)
+                .await
+        };
+        if let Err(e) = result {
             warn!(event_id = %event.event_id, error = %e, "Failed to sync event update to storage");
         }
     }
 }
 
 /// Attempt to sync an artifact to aura-storage. Failures are logged but not fatal.
-async fn sync_artifact_to_storage(client: &StorageClient, artifact: &ProcessArtifact) {
+async fn sync_artifact_to_storage(
+    client: &StorageClient,
+    jwt: Option<&str>,
+    artifact: &ProcessArtifact,
+) {
     let req = aura_os_storage::CreateProcessArtifactRequest {
         id: Some(artifact.artifact_id.to_string()),
         process_id: artifact.process_id.to_string(),
@@ -231,17 +294,21 @@ async fn sync_artifact_to_storage(client: &StorageClient, artifact: &ProcessArti
         size_bytes: Some(artifact.size_bytes as i64),
         metadata: Some(artifact.metadata.clone()),
     };
-    if let Err(e) = client.create_process_artifact_internal(&req).await {
+    let result = if let Some(jwt) = jwt {
+        client
+            .create_process_artifact(
+                &artifact.process_id.to_string(),
+                &artifact.run_id.to_string(),
+                jwt,
+                &req,
+            )
+            .await
+    } else {
+        client.create_process_artifact_internal(&req).await
+    };
+    if let Err(e) = result {
         warn!(artifact_id = %artifact.artifact_id, error = %e, "Failed to sync artifact to storage");
     }
-}
-
-fn internal_process_sync_client(
-    storage_client: Option<&Arc<StorageClient>>,
-) -> Option<&StorageClient> {
-    storage_client
-        .map(Arc::as_ref)
-        .filter(|client| client.has_internal_token())
 }
 
 fn authoritative_process_storage_error(
@@ -468,8 +535,11 @@ impl ProcessExecutor {
         run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
-        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-            sync_run_to_storage(client, &run, false).await;
+        let jwt = self.rocks_store.get_jwt();
+        if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), jwt.as_deref())
+        {
+            sync_run_to_storage(client, jwt, &run, false).await;
         }
 
         let _ = self.event_broadcast.send(serde_json::json!({
@@ -488,20 +558,33 @@ impl ProcessExecutor {
         process_id: &ProcessId,
         trigger: ProcessRunTrigger,
     ) -> Result<ProcessRun, ProcessError> {
+        self.trigger_with_auth(process_id, trigger, None).await
+    }
+
+    pub async fn trigger_with_auth(
+        &self,
+        process_id: &ProcessId,
+        trigger: ProcessRunTrigger,
+        auth_jwt: Option<&str>,
+    ) -> Result<ProcessRun, ProcessError> {
         // When authoritative storage is enabled, process definitions must come
         // from storage to avoid executing a stale local shadow copy.
-        let process =
-            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-                Some(
-                    client
-                        .get_process_internal(&process_id.to_string())
-                        .await
-                        .map(conv_process)
-                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
-                )
+        let process = if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+        {
+            let storage_process = if let Some(jwt) = jwt {
+                client.get_process(&process_id.to_string(), jwt).await
             } else {
-                self.store.get_process(process_id)?
+                client.get_process_internal(&process_id.to_string()).await
             };
+            Some(
+                storage_process
+                    .map(conv_process)
+                    .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+            )
+        } else {
+            self.store.get_process(process_id)?
+        };
         let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let existing_runs = self.store.list_runs(process_id)?;
@@ -531,8 +614,10 @@ impl ProcessExecutor {
             input_override: None,
         };
         self.store.save_run(&run)?;
-        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-            sync_run_to_storage(client, &run, true).await;
+        if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+        {
+            sync_run_to_storage(client, jwt, &run, true).await;
         }
 
         let _ = self.event_broadcast.send(serde_json::json!({
@@ -549,6 +634,7 @@ impl ProcessExecutor {
 
         let executor = self.clone();
         let run_clone = run.clone();
+        let auth_jwt = auth_jwt.map(str::to_string);
         tokio::spawn(async move {
             if let Err(e) = execute_run(
                 &executor,
@@ -559,6 +645,7 @@ impl ProcessExecutor {
                 &executor.rocks_store,
                 &executor.agent_service,
                 &executor.org_service,
+                auth_jwt.as_deref(),
             )
             .await
             {
@@ -585,18 +672,34 @@ impl ProcessExecutor {
         input_override: Option<String>,
         parent_run_id: Option<ProcessRunId>,
     ) -> Result<ProcessRun, ProcessError> {
-        let process =
-            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-                Some(
-                    client
-                        .get_process_internal(&process_id.to_string())
-                        .await
-                        .map(conv_process)
-                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
-                )
+        self.trigger_and_await_with_auth(process_id, trigger, input_override, parent_run_id, None)
+            .await
+    }
+
+    pub async fn trigger_and_await_with_auth(
+        &self,
+        process_id: &ProcessId,
+        trigger: ProcessRunTrigger,
+        input_override: Option<String>,
+        parent_run_id: Option<ProcessRunId>,
+        auth_jwt: Option<&str>,
+    ) -> Result<ProcessRun, ProcessError> {
+        let process = if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+        {
+            let storage_process = if let Some(jwt) = jwt {
+                client.get_process(&process_id.to_string(), jwt).await
             } else {
-                self.store.get_process(process_id)?
+                client.get_process_internal(&process_id.to_string()).await
             };
+            Some(
+                storage_process
+                    .map(conv_process)
+                    .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+            )
+        } else {
+            self.store.get_process(process_id)?
+        };
         let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let now = Utc::now();
@@ -616,8 +719,10 @@ impl ProcessExecutor {
             input_override: input_override.clone(),
         };
         self.store.save_run(&run)?;
-        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
-            sync_run_to_storage(client, &run, true).await;
+        if let Some((client, jwt)) =
+            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+        {
+            sync_run_to_storage(client, jwt, &run, true).await;
         }
 
         let _ = self.event_broadcast.send(serde_json::json!({
@@ -642,6 +747,7 @@ impl ProcessExecutor {
             &self.rocks_store,
             &self.agent_service,
             &self.org_service,
+            auth_jwt,
         )
         .await
         {
@@ -766,23 +872,34 @@ fn execute_run<'a>(
     rocks_store: &'a RocksStore,
     agent_service: &'a AgentService,
     org_service: &'a OrgService,
+    auth_jwt: Option<&'a str>,
 ) -> Pin<Box<dyn Future<Output = Result<(), ProcessError>> + Send + 'a>> {
     Box::pin(async move {
-        let internal_storage_client =
-            internal_process_sync_client(executor.storage_client.as_ref());
+        let jwt = auth_jwt
+            .map(str::to_string)
+            .or_else(|| rocks_store.get_jwt());
+        let storage_sync_client =
+            process_storage_sync_client(executor.storage_client.as_ref(), jwt.as_deref());
         let mut current_run = run.clone();
         current_run.status = ProcessRunStatus::Running;
         store.save_run(&current_run)?;
-        if let Some(client) = internal_storage_client {
-            sync_run_to_storage(client, &current_run, false).await;
+        if let Some((client, jwt)) = storage_sync_client {
+            sync_run_to_storage(client, jwt, &current_run, false).await;
         }
 
         // When authoritative storage is enabled, fail closed on process graph
         // reads instead of reviving the local shadow copy.
-        let nodes = if let Some(client) = internal_storage_client {
-            client
-                .list_process_nodes_internal(&run.process_id.to_string())
-                .await
+        let nodes = if let Some((client, jwt)) = storage_sync_client {
+            let storage_nodes = if let Some(jwt) = jwt {
+                client
+                    .list_process_nodes(&run.process_id.to_string(), jwt)
+                    .await
+            } else {
+                client
+                    .list_process_nodes_internal(&run.process_id.to_string())
+                    .await
+            };
+            storage_nodes
                 .map(|sn| sn.into_iter().map(conv_node).collect())
                 .map_err(|error| {
                     authoritative_process_storage_error(
@@ -794,10 +911,17 @@ fn execute_run<'a>(
         } else {
             store.list_nodes(&run.process_id)?
         };
-        let connections = if let Some(client) = internal_storage_client {
-            client
-                .list_process_connections_internal(&run.process_id.to_string())
-                .await
+        let connections = if let Some((client, jwt)) = storage_sync_client {
+            let storage_connections = if let Some(jwt) = jwt {
+                client
+                    .list_process_connections(&run.process_id.to_string(), jwt)
+                    .await
+            } else {
+                client
+                    .list_process_connections_internal(&run.process_id.to_string())
+                    .await
+            };
+            storage_connections
                 .map(|sc| sc.into_iter().map(conv_connection).collect())
                 .map_err(|error| {
                     authoritative_process_storage_error(
@@ -819,8 +943,6 @@ fn execute_run<'a>(
         let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
             nodes.iter().map(|n| (n.node_id, n)).collect();
 
-        let jwt = rocks_store.get_jwt();
-
         let workspace_dir = data_dir
             .join("process-workspaces")
             .join(run.process_id.to_string())
@@ -833,10 +955,15 @@ fn execute_run<'a>(
         let workspace_path = workspace_dir.to_string_lossy().to_string();
 
         // ── create spec + tasks ────────────────────────────────────────────
-        let process = if let Some(client) = internal_storage_client {
-            client
-                .get_process_internal(&run.process_id.to_string())
-                .await
+        let process = if let Some((client, storage_jwt)) = storage_sync_client {
+            let storage_process = if let Some(jwt) = storage_jwt {
+                client.get_process(&run.process_id.to_string(), jwt).await
+            } else {
+                client
+                    .get_process_internal(&run.process_id.to_string())
+                    .await
+            };
+            storage_process
                 .map(conv_process)
                 .map_err(|error| authoritative_process_read_error(&run.process_id, &error))?
         } else {
@@ -1065,10 +1192,24 @@ fn execute_run<'a>(
                     content_blocks: None,
                 }),
                 ProcessNodeType::SubProcess => {
-                    execute_subprocess(node, &upstream_context, executor, &run.run_id).await
+                    execute_subprocess(
+                        node,
+                        &upstream_context,
+                        executor,
+                        &run.run_id,
+                        jwt.as_deref(),
+                    )
+                    .await
                 }
                 ProcessNodeType::ForEach => {
-                    execute_foreach(node, &upstream_context, executor, &run.run_id).await
+                    execute_foreach(
+                        node,
+                        &upstream_context,
+                        executor,
+                        &run.run_id,
+                        jwt.as_deref(),
+                    )
+                    .await
                 }
                 ProcessNodeType::Merge => {
                     let display = format!(
@@ -1181,22 +1322,22 @@ fn execute_run<'a>(
                     current_run.cost_usd =
                         Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
                     store.save_run(&current_run)?;
-                    if let Some(client) = internal_storage_client {
-                        sync_run_to_storage(client, &current_run, false).await;
+                    if let Some((client, jwt)) = storage_sync_client {
+                        sync_run_to_storage(client, jwt, &current_run, false).await;
                     }
 
                     // Batch-sync events and artifacts to storage
-                    if let Some(client) = internal_storage_client {
+                    if let Some((client, jwt)) = storage_sync_client {
                         if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id)
                         {
                             for ev in &events {
-                                sync_event_to_storage(client, ev, true).await;
+                                sync_event_to_storage(client, jwt, ev, true).await;
                             }
                         }
                         if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id)
                         {
                             for art in &arts {
-                                sync_artifact_to_storage(client, art).await;
+                                sync_artifact_to_storage(client, jwt, art).await;
                             }
                         }
                     }
@@ -1241,17 +1382,17 @@ fn execute_run<'a>(
         current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
         current_run.output = run_output;
         store.save_run(&current_run)?;
-        if let Some(client) = internal_storage_client {
-            sync_run_to_storage(client, &current_run, false).await;
+        if let Some((client, jwt)) = storage_sync_client {
+            sync_run_to_storage(client, jwt, &current_run, false).await;
             // Batch-sync events and artifacts to storage
             if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
                 for ev in &events {
-                    sync_event_to_storage(client, ev, true).await;
+                    sync_event_to_storage(client, jwt, ev, true).await;
                 }
             }
             if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
                 for art in &arts {
-                    sync_artifact_to_storage(client, art).await;
+                    sync_artifact_to_storage(client, jwt, art).await;
                 }
             }
         }
@@ -2264,6 +2405,7 @@ async fn execute_subprocess(
     upstream_context: &str,
     executor: &ProcessExecutor,
     parent_run_id: &ProcessRunId,
+    auth_jwt: Option<&str>,
 ) -> Result<NodeResult, ProcessError> {
     let child_process_id_str = node
         .config
@@ -2299,11 +2441,12 @@ async fn execute_subprocess(
 
     let child_run = tokio::time::timeout(
         Duration::from_secs(timeout_secs),
-        executor.trigger_and_await(
+        executor.trigger_and_await_with_auth(
             &child_process_id,
             ProcessRunTrigger::Manual,
             Some(input),
             Some(*parent_run_id),
+            auth_jwt,
         ),
     )
     .await
@@ -2342,6 +2485,7 @@ async fn execute_foreach(
     upstream_context: &str,
     executor: &ProcessExecutor,
     parent_run_id: &ProcessRunId,
+    auth_jwt: Option<&str>,
 ) -> Result<NodeResult, ProcessError> {
     let child_process_id_str = node
         .config
@@ -2439,6 +2583,7 @@ async fn execute_foreach(
     let executor = executor.clone();
     let parent_run_id = *parent_run_id;
     let prompt_template = node.prompt.clone();
+    let auth_jwt = auth_jwt.map(str::to_string);
 
     let mut handles = Vec::with_capacity(items.len());
 
@@ -2450,6 +2595,7 @@ async fn execute_foreach(
         let item = item.clone();
         let prompt = prompt_template.clone();
         let item_var = item_variable.to_string();
+        let auth_jwt = auth_jwt.clone();
 
         handles.push(tokio::spawn(async move {
             let _permit = sem
@@ -2463,8 +2609,14 @@ async fn execute_foreach(
                 format!("## {item_var} (#{idx})\n\n{item}\n\n## Task\n\n{prompt}")
             };
 
-            exec.trigger_and_await(&cpid, ProcessRunTrigger::Manual, Some(input), Some(prid))
-                .await
+            exec.trigger_and_await_with_auth(
+                &cpid,
+                ProcessRunTrigger::Manual,
+                Some(input),
+                Some(prid),
+                auth_jwt.as_deref(),
+            )
+            .await
         }));
     }
 
@@ -2779,19 +2931,24 @@ mod tests {
 
     use super::{
         authoritative_process_read_error, authoritative_process_storage_error,
-        internal_process_sync_client,
+        process_storage_sync_client,
     };
 
     #[test]
-    fn internal_process_sync_client_requires_internal_token() {
+    fn process_storage_sync_client_prefers_jwt_and_falls_back_to_internal_token() {
         let public_client = StorageClient::with_base_url("http://localhost:8080");
-        assert!(internal_process_sync_client(Some(&std::sync::Arc::new(public_client))).is_none());
+        let public_client = std::sync::Arc::new(public_client);
+        let (client, jwt) = process_storage_sync_client(Some(&public_client), Some("jwt-123"))
+            .expect("jwt-backed client");
+        assert_eq!(client.base_url(), "http://localhost:8080");
+        assert_eq!(jwt, Some("jwt-123"));
+
+        assert!(process_storage_sync_client(Some(&public_client), None).is_none());
 
         let internal_client =
             StorageClient::with_base_url_and_token("http://localhost:8080", "internal-token");
-        assert!(
-            internal_process_sync_client(Some(&std::sync::Arc::new(internal_client))).is_some()
-        );
+        let internal_client = std::sync::Arc::new(internal_client);
+        assert!(process_storage_sync_client(Some(&internal_client), None).is_some());
     }
 
     #[test]

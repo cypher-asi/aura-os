@@ -40,10 +40,7 @@ async fn resolve_org_ids(state: &AppState, jwt: &str) -> ApiResult<Vec<String>> 
 }
 
 fn remote_process_storage_client(state: &AppState) -> Option<&Arc<StorageClient>> {
-    state
-        .storage_client
-        .as_ref()
-        .filter(|client| client.has_internal_token())
+    state.storage_client.as_ref()
 }
 
 fn select_remote_process_org_id(
@@ -598,7 +595,9 @@ pub(crate) async fn update_process(
         .ok_or_else(|| ApiError::not_found("process not found"))?;
 
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can edit this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can edit this process",
+        ));
     }
 
     if let Some(name) = req.name {
@@ -660,7 +659,9 @@ pub(crate) async fn delete_process(
         .ok_or_else(|| ApiError::not_found("process not found"))?;
 
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can delete this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can delete this process",
+        ));
     }
 
     state
@@ -678,7 +679,7 @@ pub(crate) async fn delete_process(
 
 pub(crate) async fn trigger_process(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<ProcessRun>> {
@@ -689,7 +690,7 @@ pub(crate) async fn trigger_process(
     let run = state
         .super_agent_service
         .process_executor
-        .trigger(&process_id, ProcessRunTrigger::Manual)
+        .trigger_with_auth(&process_id, ProcessRunTrigger::Manual, Some(&jwt))
         .await
         .map_err(|e| {
             if matches!(e, aura_os_process::ProcessError::RunAlreadyActive) {
@@ -776,7 +777,9 @@ pub(crate) async fn create_node(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("process not found"))?;
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can edit this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can edit this process",
+        ));
     }
 
     let now = Utc::now();
@@ -846,7 +849,9 @@ pub(crate) async fn update_node(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("process not found"))?;
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can edit this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can edit this process",
+        ));
     }
 
     let node_id: ProcessNodeId = node_id_str
@@ -920,7 +925,9 @@ pub(crate) async fn delete_node(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("process not found"))?;
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can delete from this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can delete from this process",
+        ));
     }
 
     let node_id: ProcessNodeId = node_id_str
@@ -1006,7 +1013,9 @@ pub(crate) async fn create_connection(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("process not found"))?;
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can edit this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can edit this process",
+        ));
     }
 
     let conn = ProcessNodeConnection {
@@ -1069,7 +1078,9 @@ pub(crate) async fn delete_connection(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("process not found"))?;
     if process.user_id != session.user_id {
-        return Err(ApiError::forbidden("only the process creator can delete from this process"));
+        return Err(ApiError::forbidden(
+            "only the process creator can delete from this process",
+        ));
     }
 
     let connection_id: ProcessNodeConnectionId = conn_id_str
@@ -1588,7 +1599,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn remote_process_storage_client_requires_internal_token() {
+    async fn remote_process_storage_client_accepts_public_jwt_clients() {
         let db_dir = tempfile::tempdir().expect("tempdir");
         let db_path = db_dir.path().join("settings.db");
         let mut state = crate::build_app_state(&db_path).expect("build app state");
@@ -1596,7 +1607,7 @@ mod tests {
         state.storage_client = Some(Arc::new(StorageClient::with_base_url(
             "http://localhost:8080",
         )));
-        assert!(remote_process_storage_client(&state).is_none());
+        assert!(remote_process_storage_client(&state).is_some());
 
         state.storage_client = Some(Arc::new(StorageClient::with_base_url_and_token(
             "http://localhost:8080",
