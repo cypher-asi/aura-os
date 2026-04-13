@@ -180,6 +180,48 @@ fn init_logging() {
         .init();
 }
 
+fn set_env_default(name: &str, value: &'static str) {
+    if std::env::var_os(name).is_none() && !value.trim().is_empty() {
+        std::env::set_var(name, value);
+    }
+}
+
+fn apply_desktop_runtime_defaults() {
+    set_env_default(
+        "AURA_NETWORK_URL",
+        env!("AURA_DESKTOP_DEFAULT_AURA_NETWORK_URL"),
+    );
+    set_env_default(
+        "AURA_STORAGE_URL",
+        env!("AURA_DESKTOP_DEFAULT_AURA_STORAGE_URL"),
+    );
+    set_env_default(
+        "AURA_INTEGRATIONS_URL",
+        env!("AURA_DESKTOP_DEFAULT_AURA_INTEGRATIONS_URL"),
+    );
+    set_env_default(
+        "AURA_ROUTER_URL",
+        env!("AURA_DESKTOP_DEFAULT_AURA_ROUTER_URL"),
+    );
+    set_env_default("Z_BILLING_URL", env!("AURA_DESKTOP_DEFAULT_Z_BILLING_URL"));
+    set_env_default(
+        "ORBIT_BASE_URL",
+        env!("AURA_DESKTOP_DEFAULT_ORBIT_BASE_URL"),
+    );
+    set_env_default(
+        "SWARM_BASE_URL",
+        env!("AURA_DESKTOP_DEFAULT_SWARM_BASE_URL"),
+    );
+    set_env_default(
+        "REQUIRE_ZERO_PRO",
+        env!("AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO"),
+    );
+    set_env_default(
+        "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN",
+        env!("AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN"),
+    );
+}
+
 fn init_data_dirs() -> (PathBuf, PathBuf, Option<PathBuf>) {
     let data_dir = default_data_dir();
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
@@ -595,6 +637,10 @@ fn spawn_server(
                     axum_get(handlers::get_update_status).with_state(update_state.clone()),
                 )
                 .route(
+                    "/api/runtime-config",
+                    axum_get(handlers::get_runtime_config),
+                )
+                .route(
                     "/api/update-install",
                     axum_post(handlers::post_update_install).with_state(update_state.clone()),
                 )
@@ -779,6 +825,43 @@ mod tests {
         assert!(should_poll_for_frontend_dev_server(false, Some(&candidate)));
         assert!(!should_poll_for_frontend_dev_server(true, Some(&candidate)));
         assert!(!should_poll_for_frontend_dev_server(false, None));
+    }
+
+    #[test]
+    fn desktop_runtime_defaults_include_hosted_services() {
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_AURA_NETWORK_URL"),
+            "https://aura-network.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_AURA_STORAGE_URL"),
+            "https://aura-storage.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_AURA_INTEGRATIONS_URL"),
+            "https://aura-integrations.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_AURA_ROUTER_URL"),
+            "https://aura-router.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_Z_BILLING_URL"),
+            "https://z-billing.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_ORBIT_BASE_URL"),
+            "https://orbit-sfvu.onrender.com"
+        );
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_SWARM_BASE_URL"),
+            "http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com"
+        );
+        assert_eq!(env!("AURA_DESKTOP_DEFAULT_REQUIRE_ZERO_PRO"), "true");
+        assert_eq!(
+            env!("AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN"),
+            "true"
+        );
     }
 
     #[test]
@@ -1158,6 +1241,7 @@ fn main() {
     }
 
     dotenvy::dotenv().ok();
+    apply_desktop_runtime_defaults();
     aura_os_server::ensure_user_bins_on_path();
     init_logging();
 
