@@ -8,12 +8,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./test/setup.ts'],
-    include: ['../../zui/src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['../src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      include: ['../../zui/src/**/*.{ts,tsx}'],
+      include: ['../src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/**',
         'dist/**',
@@ -33,7 +33,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@cypher-asi/zui': path.resolve(__dirname, '../../zui/src'),
+      '@cypher-asi/zui': path.resolve(__dirname, '../src'),
       '@': path.resolve(__dirname, './src'),
     },
   },

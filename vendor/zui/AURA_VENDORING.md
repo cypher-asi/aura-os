@@ -14,4 +14,4 @@ Aura needs ZUI to build entirely from within this repository. The latest publish
 - `interface/package.json` installs `@cypher-asi/zui` from `../vendor/zui`
 - `interface/package.json` also runs `npm ci --prefix ../vendor/zui --omit=dev` during `postinstall` so the vendored package's runtime dependencies stay local to this repo
 - `interface/vite.config.ts`, `interface/tsconfig.app.json`, and `interface/vitest.config.ts` resolve ZUI directly to vendored source
-- CI no longer checks out or links a sibling `../zui`
+- CI no longer checks out or links an out-of-repo sibling ZUI checkout

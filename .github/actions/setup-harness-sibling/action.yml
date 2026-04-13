@@ -1,9 +1,9 @@
-name: Setup sibling workspace dependencies
-description: Checks out any remaining sibling repos Aura CI still needs now that ZUI is vendored inside this repository.
+name: Setup harness sibling workspace
+description: Checks out the remaining sibling repositories Aura CI still needs now that ZUI is vendored inside this repository.
 
 inputs:
   repository-owner:
-    description: GitHub org or user that owns the zui repo.
+    description: GitHub org or user that owns the aura-harness repo.
     required: true
   include-harness:
     description: Also check out the public aura-harness repo for Rust path dependencies.

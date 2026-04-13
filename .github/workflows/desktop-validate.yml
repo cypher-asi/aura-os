@@ -69,7 +69,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Prepare harness sibling workspace
-        uses: ./.github/actions/setup-zui-sibling
+        uses: ./.github/actions/setup-harness-sibling
         with:
           repository-owner: ${{ github.repository_owner }}
           include-harness: "true"

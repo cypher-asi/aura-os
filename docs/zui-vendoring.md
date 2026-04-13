@@ -4,7 +4,7 @@ Aura vendors `@cypher-asi/zui` directly into this repository under `vendor/zui`.
 
 ## Why
 
-- Builds must stay self-contained and never depend on `../zui` or another checkout outside this repo.
+- Builds must stay self-contained and never depend on an out-of-repo sibling checkout or another external source tree.
 - The frontend toolchain resolves `@cypher-asi/zui` directly to vendored source, so Vite, TypeScript, and Vitest treat ZUI as repo-local code.
 - `interface/package.json` runs a `postinstall` step that installs the vendored ZUI runtime dependencies in place, so the normal `cd interface && npm install` flow remains self-contained.
 - We preserve upstream history with `git subtree`, which makes future updates easier to review and merge.

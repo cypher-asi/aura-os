@@ -199,7 +199,7 @@ function buildRegistry(): ComponentInfo[] {
       id: componentId,
       name: componentName,
       description: getDescription(componentId, componentName, readme),
-      path: path.replace('../../../', '../../zui/'),
+      path: path.replace('../../../', '../'),
       folder: topLevelFolder ?? componentName,
     });
   });
