@@ -24,12 +24,14 @@ export function useSettingsData(isOpen: boolean): SettingsData {
   const [currentVersion, setCurrentVersion] = useState("");
   const [updateState, setUpdateState] = useState<DesktopUpdateState | null>(null);
   const [installPending, setInstallPending] = useState(false);
+  const [showUpdater, setShowUpdater] = useState(false);
 
   const refreshUpdateStatus = useCallback(async () => {
     const status = await api.getUpdateStatus();
     setUpdateChannel(status.channel);
     setCurrentVersion(status.current_version);
     setUpdateState(status.update);
+    setShowUpdater(status.supported !== false);
     if (status.update.status !== "available") {
       setInstallPending(false);
     }
@@ -45,6 +47,7 @@ export function useSettingsData(isOpen: boolean): SettingsData {
       window.requestAnimationFrame(() => {
         setCurrentVersion("");
         setUpdateState(null);
+        setShowUpdater(false);
       });
     }
     Promise.all(requests)
@@ -91,7 +94,7 @@ export function useSettingsData(isOpen: boolean): SettingsData {
     currentVersion,
     updateState,
     installPending,
-    showUpdater: !!features.nativeUpdater,
+    showUpdater: !!features.nativeUpdater && showUpdater,
     privacyPolicyUrl: getPrivacyPolicyUrl(),
     supportUrl: getSupportUrl(),
     handleChannelChange,

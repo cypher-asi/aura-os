@@ -20,6 +20,7 @@ export interface DesktopUpdateStatusResponse {
   update: DesktopUpdateState;
   channel: DesktopUpdateChannel;
   current_version: string;
+  supported?: boolean;
   update_base_url?: string;
   endpoint_template?: string;
 }

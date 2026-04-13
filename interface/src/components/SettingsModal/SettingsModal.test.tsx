@@ -4,22 +4,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockLogout = vi.fn();
 const mockHandleChannelChange = vi.fn();
+const mockHandleInstallUpdate = vi.fn();
 const mockOpen = vi.fn();
+
+function buildSettingsData() {
+  return {
+    loading: false,
+    updateChannel: "stable",
+    currentVersion: "1.2.3",
+    updateState: null,
+    installPending: false,
+    showUpdater: true,
+    privacyPolicyUrl: "https://example.com/privacy",
+    supportUrl: "https://example.com/support",
+    handleChannelChange: mockHandleChannelChange,
+    handleInstallUpdate: mockHandleInstallUpdate,
+  };
+}
+
+let mockSettingsData = buildSettingsData();
 
 vi.mock("../../stores/auth-store", () => ({
   useAuth: () => ({ logout: mockLogout }),
 }));
 
 vi.mock("./useSettingsData", () => ({
-  useSettingsData: () => ({
-    loading: false,
-    updateChannel: "stable",
-    currentVersion: "1.2.3",
-    showUpdater: true,
-    privacyPolicyUrl: "https://example.com/privacy",
-    supportUrl: "https://example.com/support",
-    handleChannelChange: mockHandleChannelChange,
-  }),
+  useSettingsData: () => mockSettingsData,
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -52,6 +62,7 @@ describe("SettingsModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("open", mockOpen);
+    mockSettingsData = buildSettingsData();
   });
 
   it("renders support and privacy links when configured", async () => {
@@ -73,5 +84,17 @@ describe("SettingsModal", () => {
 
     await user.click(screen.getByRole("button", { name: /Logout/i }));
     expect(mockLogout).toHaveBeenCalled();
+  });
+
+  it("hides updates when native updater is unsupported", () => {
+    mockSettingsData = {
+      ...buildSettingsData(),
+      showUpdater: false,
+    };
+
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+
+    expect(screen.queryByText("Updates")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Install update/i })).not.toBeInTheDocument();
   });
 });
