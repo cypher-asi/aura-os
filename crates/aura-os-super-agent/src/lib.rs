@@ -1,8 +1,5 @@
-pub mod cron_store;
 pub mod events;
-pub mod executor;
 pub mod prompt;
-pub mod scheduler;
 pub mod state;
 pub mod stream;
 pub mod tier;
@@ -45,10 +42,6 @@ pub struct SuperAgentService {
     pub router_url: String,
     pub http_client: reqwest::Client,
     pub event_listener: SuperAgentEventListener,
-    pub cron_store: Arc<cron_store::CronStore>,
-    pub cron_executor: Arc<executor::CronJobExecutor>,
-    pub process_store: Arc<aura_os_process::ProcessStore>,
-    pub process_app: Arc<aura_os_process::ProcessApplicationService>,
     pub process_executor: Arc<aura_os_process::ProcessExecutor>,
     project_service: Arc<ProjectService>,
     agent_service: Arc<AgentService>,
@@ -85,18 +78,7 @@ impl SuperAgentService {
         _harness: Arc<dyn HarnessLink>,
         data_dir: std::path::PathBuf,
     ) -> Self {
-        let cron_store = Arc::new(cron_store::CronStore::new(store.clone()));
-        let cron_executor = Arc::new(executor::CronJobExecutor::new(
-            cron_store.clone(),
-            event_broadcast.clone(),
-        ));
-
-        let process_store = Arc::new(aura_os_process::ProcessStore::new(store.clone()));
-        let process_app = Arc::new(aura_os_process::ProcessApplicationService::new(
-            process_store.clone(),
-        ));
         let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
-            process_store.clone(),
             event_broadcast.clone(),
             data_dir,
             store.clone(),
@@ -110,12 +92,7 @@ impl SuperAgentService {
         ));
 
         let mut tool_registry = ToolRegistry::with_tier1_tools();
-        tool_registry.register_cron_tools(cron_store.clone(), cron_executor.clone());
-        tool_registry.register_process_tools(
-            process_store.clone(),
-            process_app.clone(),
-            process_executor.clone(),
-        );
+        tool_registry.register_process_tools(process_executor.clone());
 
         let event_listener = SuperAgentEventListener::new(100);
         event_listener.spawn(event_broadcast.subscribe());
@@ -125,10 +102,6 @@ impl SuperAgentService {
             router_url,
             http_client: reqwest::Client::new(),
             event_listener,
-            cron_store,
-            cron_executor,
-            process_store,
-            process_app,
             process_executor,
             project_service,
             agent_service,
@@ -147,20 +120,17 @@ impl SuperAgentService {
     }
 
     pub fn spawn_scheduler(self: &Arc<Self>) {
-        let sched = Arc::new(scheduler::CronScheduler::new(
-            self.cron_store.clone(),
-            self.cron_executor.clone(),
-        ));
-        sched.spawn();
-        info!("Cron scheduler spawned");
-
+        let Some(storage_client) = self.storage_client.clone() else {
+            info!("Process scheduler disabled: aura-storage is not configured");
+            return;
+        };
+        if !storage_client.has_internal_token() {
+            info!("Process scheduler disabled: AURA_STORAGE_INTERNAL_TOKEN is not configured");
+            return;
+        }
         let process_sched = Arc::new(aura_os_process::ProcessScheduler::new(
-            self.process_store.clone(),
             self.process_executor.clone(),
-            self.storage_client
-                .as_ref()
-                .filter(|client| client.has_internal_token())
-                .cloned(),
+            Some(storage_client),
         ));
         process_sched.spawn();
         info!("Process scheduler spawned");

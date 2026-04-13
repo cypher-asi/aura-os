@@ -1,6 +1,5 @@
 pub mod agent_tools;
 pub mod billing_tools;
-pub mod cron_tools;
 pub mod exec_tools;
 pub mod generation_tools;
 pub mod helpers;
@@ -202,62 +201,12 @@ impl ToolRegistry {
         registry
     }
 
-    pub fn register_cron_tools(
-        &mut self,
-        store: Arc<crate::cron_store::CronStore>,
-        executor: Arc<crate::executor::CronJobExecutor>,
-    ) {
-        self.register(Arc::new(cron_tools::CreateCronJobTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::ListCronJobsTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::UpdateCronJobTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::DeleteCronJobTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::PauseCronJobTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::ResumeCronJobTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::TriggerCronJobTool {
-            store: store.clone(),
-            executor,
-        }));
-        self.register(Arc::new(cron_tools::ListCronRunsTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::GetArtifactTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(cron_tools::ListArtifactsTool { store }));
-    }
-
-    pub fn register_process_tools(
-        &mut self,
-        store: Arc<aura_os_process::ProcessStore>,
-        process_app: Arc<aura_os_process::ProcessApplicationService>,
-        executor: Arc<aura_os_process::ProcessExecutor>,
-    ) {
-        self.register(Arc::new(process_tools::CreateProcessTool {
-            process_app: process_app.clone(),
-        }));
-        self.register(Arc::new(process_tools::ListProcessesTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(process_tools::DeleteProcessTool {
-            store: store.clone(),
-        }));
-        self.register(Arc::new(process_tools::TriggerProcessTool {
-            store: store.clone(),
-            executor,
-        }));
-        self.register(Arc::new(process_tools::ListProcessRunsTool { store }));
+    pub fn register_process_tools(&mut self, executor: Arc<aura_os_process::ProcessExecutor>) {
+        self.register(Arc::new(process_tools::CreateProcessTool));
+        self.register(Arc::new(process_tools::ListProcessesTool));
+        self.register(Arc::new(process_tools::DeleteProcessTool));
+        self.register(Arc::new(process_tools::TriggerProcessTool { executor }));
+        self.register(Arc::new(process_tools::ListProcessRunsTool));
     }
 
     pub fn register(&mut self, tool: Arc<dyn SuperAgentTool>) {

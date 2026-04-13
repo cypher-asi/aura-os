@@ -1,0 +1,83 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebarContent {
+  padding: var(--space-2) 0;
+}
+
+.explorer {
+  margin-top: 0;
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  background: var(--bg-secondary);
+}
+
+.inspectorTitle {
+  color: var(--color-text-secondary);
+}
+
+/* Topbar navigation for mega menu demo */
+.topbarContent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.topbarNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.topbarNavItem {
+  position: relative;
+}
+
+.topbarNavButtonActive {
+  background-color: var(--color-overlay-light);
+}
+
+.chevron {
+  transform: rotate(0deg);
+  transition: transform 150ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.megaMenuDropdown {
+  position: absolute;
+  top: 100%;
+  margin-top: var(--space-2);
+  z-index: var(--z-dropdown, 50);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.3));
+  animation: slideDown 200ms ease-out;
+  transform-origin: top center;
+  transition: left 200ms ease-out, width 200ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

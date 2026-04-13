@@ -281,7 +281,10 @@ mod tests {
         // created_by in storage = "jwt-id", session.user_id = "jwt-id"
         // Even though network_user_id is set and different, creator check should pass
         assert_eq!("jwt-id", session.user_id);
-        assert_ne!(session.user_id, session.network_user_id.unwrap().to_string());
+        assert_ne!(
+            session.user_id,
+            session.network_user_id.unwrap().to_string()
+        );
     }
 
     #[test]

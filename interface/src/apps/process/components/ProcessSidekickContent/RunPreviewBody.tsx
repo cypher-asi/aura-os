@@ -6,7 +6,7 @@ import { StreamingBubble } from "../../../../components/StreamingBubble";
 import { MessageBubble } from "../../../../components/MessageBubble";
 import { useProcessNodeStream } from "../../../../hooks/use-process-node-stream";
 import { useStreamEvents, useStreamingText, useThinkingText, useThinkingDurationMs, useActiveToolCalls, useTimeline, useIsStreaming } from "../../../../hooks/stream/hooks";
-import type { ProcessEvent, ProcessRun, ProcessRunTranscriptEvent } from "../../../../types";
+import type { ProcessEvent, ProcessRun } from "../../../../types";
 import type { DisplaySessionEvent, TimelineItem, ToolCallEntry } from "../../../../types/stream";
 import { EventTimelineItem } from "./EventTimelineItem";
 import { ArtifactCard } from "./ArtifactCard";
@@ -17,47 +17,8 @@ import {
   formatDuration,
   countRunnableProcessNodes,
 } from "./process-sidekick-utils";
-import { buildProcessSidekickCopyText, groupTranscriptByNode, nodeTranscriptToEvents } from "./process-output-utils";
+import { buildProcessSidekickCopyText } from "./process-output-utils";
 import { useRunPolling, useRunNodeTracking } from "./run-preview-hooks";
-
-// ---------------------------------------------------------------------------
-// transcriptToDisplayEvents -- replay persisted transcript into MessageBubble shape
-// ---------------------------------------------------------------------------
-
-function TranscriptReplayOutput({
-  transcript,
-  nodes,
-}: {
-  transcript: ProcessRunTranscriptEvent[];
-  nodes: { node_id: string; label: string }[];
-}) {
-  const groups = useMemo(() => groupTranscriptByNode(transcript, nodes), [transcript, nodes]);
-
-  const displayGroups = useMemo(
-    () => groups.map((g) => ({ ...g, events: nodeTranscriptToEvents(g.entries) })),
-    [groups],
-  );
-
-  const nonEmpty = displayGroups.filter((g) => g.events.length > 0);
-  if (nonEmpty.length === 0) return null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {nonEmpty.map((group) => (
-        <div key={group.nodeId}>
-          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12, color: "var(--color-text-muted)" }}>
-            {group.label}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {group.events.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // CopyAllOutputButton
@@ -66,14 +27,12 @@ function TranscriptReplayOutput({
 function CopyAllOutputButton({
   events,
   nodes,
-  transcript,
   isActive,
   liveNodeLabel,
   liveState,
 }: {
   events: ProcessEvent[];
   nodes: { node_id: string; label: string }[];
-  transcript: ProcessRunTranscriptEvent[];
   isActive: boolean;
   liveNodeLabel?: string | null;
   liveState?: {
@@ -90,7 +49,6 @@ function CopyAllOutputButton({
     const text = buildProcessSidekickCopyText({
       events,
       nodes,
-      transcript,
       isActive,
       liveNodeLabel,
       liveState,
@@ -100,7 +58,7 @@ function CopyAllOutputButton({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
-  }, [events, isActive, liveNodeLabel, liveState, nodes, transcript]);
+  }, [events, isActive, liveNodeLabel, liveState, nodes]);
 
   return (
     <button
@@ -189,7 +147,6 @@ function RunDetailGrid({
   isActive,
   sortedEvents,
   nodes,
-  transcript,
   liveNodeLabel,
   liveState,
   totalTokensFromEvents,
@@ -199,7 +156,6 @@ function RunDetailGrid({
   isActive: boolean;
   sortedEvents: ProcessEvent[];
   nodes: { node_id: string; label: string }[];
-  transcript: ProcessRunTranscriptEvent[];
   liveNodeLabel?: string | null;
   liveState?: {
     events: DisplaySessionEvent[];
@@ -218,7 +174,6 @@ function RunDetailGrid({
         <CopyAllOutputButton
           events={sortedEvents}
           nodes={nodes}
-          transcript={transcript}
           isActive={isActive}
           liveNodeLabel={liveNodeLabel}
           liveState={liveState}
@@ -312,7 +267,6 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     connections,
     artifacts,
     events,
-    transcript,
     loadData,
     refreshRun,
   } = useRunPolling(initialRun);
@@ -389,7 +343,6 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
           isActive={isActive}
           sortedEvents={sortedEvents}
           nodes={nodes}
-          transcript={transcript}
           liveNodeLabel={liveNodeLabel}
           liveState={liveCopyState}
           totalTokensFromEvents={totalTokensFromEvents}
@@ -426,12 +379,6 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
               activeToolCalls={liveActiveToolCalls}
               timeline={liveTimeline}
             />
-          </div>
-        )}
-        {!isActive && transcript.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Run Output</div>
-            <TranscriptReplayOutput transcript={transcript} nodes={nodes} />
           </div>
         )}
         {run.error && (

@@ -1,0 +1,72 @@
+/* Avatar styles */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  font-weight: var(--font-medium);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Border when no image is set */
+.noImage {
+  border: 1px solid var(--color-secondary);
+}
+
+.square {
+  border-radius: var(--radius-sm);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--color-secondary);
+}
+
+/* Size variants */
+.xs {
+  width: 20px;
+  height: 20px;
+  font-size: var(--text-xs);
+}
+
+.sm {
+  width: 24px;
+  height: 24px;
+  font-size: var(--text-xs);
+}
+
+.md {
+  width: 32px;
+  height: 32px;
+  font-size: var(--text-sm);
+}
+
+.lg {
+  width: 48px;
+  height: 48px;
+  font-size: var(--text-base);
+}
+
+.xl {
+  width: 64px;
+  height: 64px;
+  font-size: var(--text-lg);
+}

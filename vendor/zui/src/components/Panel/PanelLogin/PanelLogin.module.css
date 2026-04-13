@@ -1,0 +1,116 @@
+/* PanelLogin container */
+.container {
+  width: 360px;
+  min-height: 480px;
+}
+
+/* Container with padding (when no image) */
+.containerWithPadding {
+  padding: var(--space-6) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Form layout */
+.form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Header section */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.appName {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.description {
+  margin: 0;
+}
+
+/* Inputs section */
+.inputs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Input error animation */
+.inputError {
+  animation: blinkFade 1.5s ease-out;
+}
+
+@keyframes blinkFade {
+  0%, 15%, 30%, 45%, 60% {
+    border-color: var(--color-accent);
+  }
+  7.5%, 22.5%, 37.5%, 52.5% {
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* Footer section */
+.footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-3);
+}
+
+.loginButton {
+  width: 100%;
+}
+
+/* Login providers section */
+.providers {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.providerButton {
+  /* Match input border styling */
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  background-color: rgba(255, 255, 255, 0.01) !important;
+}
+
+.providerButton:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Links section */
+.links {
+  margin-top: var(--space-6);
+  text-align: center;
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}
+
+.link:hover {
+  opacity: 0.8;
+}
+
+.link:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

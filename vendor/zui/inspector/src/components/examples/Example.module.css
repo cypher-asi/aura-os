@@ -1,0 +1,187 @@
+.exampleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 3rem 2rem;
+  align-items: start;
+}
+
+.exampleItem {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.exampleTitle {
+  margin: 0;
+}
+
+.toggleContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.exampleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Drawer example styles */
+.drawerDemoContainer {
+  position: relative;
+  height: 250px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg-secondary);
+  overflow: hidden;
+  display: flex;
+}
+
+.drawerDemoContainerVertical {
+  flex-direction: column;
+}
+
+.drawerDemoContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.drawerDemoText {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+  text-align: center;
+}
+
+.drawerContent {
+  display: block;
+  padding: 8px 12px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm, 13px);
+}
+
+.drawerContentText {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawerExampleRow {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.drawerExampleFlex {
+  flex: 1;
+}
+
+.featureList {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.featureItem {
+  margin-bottom: 0.5rem;
+}
+
+.featureItem:last-child {
+  margin-bottom: 0;
+}
+
+.codeInline {
+  background: var(--color-bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.descriptionText {
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.sectionMarginTop {
+  margin-top: 2rem;
+}
+
+/* Card example styles */
+.cardTitle {
+  margin-bottom: 0.5rem;
+}
+
+.cardDescription {
+  margin-bottom: 1rem;
+}
+
+/* Container example styles */
+.containerDemo {
+  background: var(--color-bg-secondary);
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.containerDemoInner {
+  background: var(--color-bg-tertiary);
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Explorer and general example description */
+.exampleDescription {
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* Section header text */
+.sectionHeaderText {
+  margin-left: 4px;
+}
+
+/* Small badge for CardItem example */
+.smallBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* Variant label for Panel example */
+.variantLabel {
+  font-size: 0.875rem;
+  color: white;
+}

@@ -6,7 +6,6 @@ async fn execute_single_automaton(
     process_id: &ProcessId,
     run_id: &ProcessRunId,
     automaton_client: &AutomatonClient,
-    store: &ProcessStore,
     storage_client: &StorageClient,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
     project_path: &str,
@@ -93,15 +92,9 @@ async fn execute_single_automaton(
     {
         Ok(result) => result,
         Err(e) => {
-            if let Err(finalize_err) = finalize_process_task_session(
-                storage_client,
-                token,
-                &session_id,
-                "failed",
-                0,
-                0,
-            )
-            .await
+            if let Err(finalize_err) =
+                finalize_process_task_session(storage_client, token, &session_id, "failed", 0, 0)
+                    .await
             {
                 warn!(
                     task_id = %task_id,
@@ -110,7 +103,9 @@ async fn execute_single_automaton(
                     "Failed to mark process node session as failed after startup error"
                 );
             }
-            return Err(ProcessError::Execution(format!("Failed to start automaton: {e}")));
+            return Err(ProcessError::Execution(format!(
+                "Failed to start automaton: {e}"
+            )));
         }
     };
 
@@ -136,7 +131,7 @@ async fn execute_single_automaton(
         collect_automaton_events(rx, Duration::from_secs(timeout_secs), |evt, evt_type| {
             if let Some(ref tx) = tx {
                 if is_process_stream_forward_event(evt_type) {
-                    forward_process_event(store, tx, &proj, &tid, &pid, &rid, &nid, evt, None);
+                    forward_process_event(tx, &proj, &tid, &pid, &rid, &nid, evt, None);
                 }
                 if is_process_progress_broadcast_event(evt_type) {
                     let usage = evt.get("usage").unwrap_or(evt);
@@ -146,7 +141,6 @@ async fn execute_single_automaton(
                     node_out = next_out;
                     let cost = estimate_cost_usd(usage_model.as_deref(), node_in, node_out);
                     emit_process_event(
-                        store,
                         tx,
                         serde_json::json!({
                             "type": "process_run_progress",
@@ -264,9 +258,13 @@ async fn execute_single_automaton(
         metadata: serde_json::json!({}),
         created_at: Utc::now(),
     };
-    if let Err(e) = store.save_artifact(&artifact) {
-        warn!(node_id = %node.node_id, error = %e, "Failed to save automaton artifact");
-    }
+    let target =
+        process_storage_sync_target_from_client(storage_client, token).ok_or_else(|| {
+            ProcessError::Execution(
+                "aura-storage is required for process artifact persistence".into(),
+            )
+        })?;
+    sync_artifact_to_storage(&target, &artifact).await?;
 
     if let Err(e) = finalize_process_task_session(
         storage_client,

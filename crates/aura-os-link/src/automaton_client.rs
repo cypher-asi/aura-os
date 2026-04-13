@@ -11,8 +11,8 @@ use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
-use aura_protocol::{InstalledIntegration, InstalledTool};
 use crate::runner::automaton_event_kinds::DONE;
+use aura_protocol::{InstalledIntegration, InstalledTool};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AutomatonStartParams {

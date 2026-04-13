@@ -1,0 +1,71 @@
+/* Text Component Styles */
+
+.text {
+  margin: 0;
+  font-family: var(--font-sans);
+  line-height: var(--leading-normal);
+}
+
+/* Variants */
+.primary {
+  color: var(--color-text-primary);
+}
+
+.secondary {
+  color: var(--color-text-secondary);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+/* Sizes */
+.text.xs2 {
+  font-size: var(--text-2xs);
+}
+
+.text.xs {
+  font-size: var(--text-xs);
+}
+
+.text.sm {
+  font-size: var(--text-sm);
+}
+
+.text.base {
+  font-size: var(--text-base);
+}
+
+.text.lg {
+  font-size: var(--text-lg);
+}
+
+.text.xl {
+  font-size: var(--text-xl);
+}
+
+/* Weight */
+.normal {
+  font-weight: var(--font-normal);
+}
+
+.medium {
+  font-weight: var(--font-medium);
+}
+
+.semibold {
+  font-weight: var(--font-semibold);
+}
+
+/* Alignment */
+.left {
+  text-align: left;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}

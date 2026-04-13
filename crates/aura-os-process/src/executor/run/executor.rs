@@ -1,6 +1,5 @@
 #[derive(Clone)]
 pub struct ProcessExecutor {
-    store: Arc<ProcessStore>,
     event_broadcast: broadcast::Sender<serde_json::Value>,
     data_dir: PathBuf,
     rocks_store: Arc<RocksStore>,
@@ -11,12 +10,13 @@ pub struct ProcessExecutor {
     task_service: Arc<TaskService>,
     router_url: String,
     http_client: reqwest::Client,
+    active_runs: Arc<Mutex<HashMap<ProcessRunId, ProcessRun>>>,
+    active_root_runs: Arc<Mutex<HashMap<ProcessId, ProcessRunId>>>,
 }
 
 impl ProcessExecutor {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        store: Arc<ProcessStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
         data_dir: PathBuf,
         rocks_store: Arc<RocksStore>,
@@ -29,7 +29,6 @@ impl ProcessExecutor {
         http_client: reqwest::Client,
     ) -> Self {
         Self {
-            store,
             event_broadcast,
             data_dir,
             rocks_store,
@@ -40,20 +39,96 @@ impl ProcessExecutor {
             task_service,
             router_url,
             http_client,
+            active_runs: Arc::new(Mutex::new(HashMap::new())),
+            active_root_runs: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    fn remember_run(&self, run: &ProcessRun) {
+        self.active_runs
+            .lock()
+            .expect("active run map poisoned")
+            .insert(run.run_id, run.clone());
+        if run.parent_run_id.is_none() {
+            self.active_root_runs
+                .lock()
+                .expect("active root run map poisoned")
+                .insert(run.process_id, run.run_id);
+        }
+    }
+
+    fn update_active_run(&self, run: &ProcessRun) {
+        self.active_runs
+            .lock()
+            .expect("active run map poisoned")
+            .insert(run.run_id, run.clone());
+    }
+
+    fn forget_run(&self, run: &ProcessRun) {
+        self.active_runs
+            .lock()
+            .expect("active run map poisoned")
+            .remove(&run.run_id);
+        if run.parent_run_id.is_none() {
+            let mut roots = self
+                .active_root_runs
+                .lock()
+                .expect("active root run map poisoned");
+            if roots.get(&run.process_id) == Some(&run.run_id) {
+                roots.remove(&run.process_id);
+            }
+        }
+    }
+
+    fn tracked_run(&self, run_id: &ProcessRunId) -> Option<ProcessRun> {
+        self.active_runs
+            .lock()
+            .expect("active run map poisoned")
+            .get(run_id)
+            .cloned()
+    }
+
+    fn root_run_active_in_memory(&self, process_id: &ProcessId) -> bool {
+        self.active_root_runs
+            .lock()
+            .expect("active root run map poisoned")
+            .contains_key(process_id)
     }
 
     pub async fn cancel_run(
         &self,
         process_id: &ProcessId,
         run_id: &ProcessRunId,
+        auth_jwt: Option<&str>,
     ) -> Result<(), ProcessError> {
-        let mut run = self
-            .store
-            .list_runs(process_id)?
-            .into_iter()
-            .find(|r| r.run_id == *run_id)
-            .ok_or_else(|| ProcessError::RunNotFound(run_id.to_string()))?;
+        let preferred_jwt = auth_jwt
+            .map(str::to_string)
+            .or_else(|| self.rocks_store.get_jwt());
+        let target =
+            process_storage_sync_client(self.storage_client.as_ref(), preferred_jwt.as_deref())
+                .ok_or_else(|| {
+                    ProcessError::Execution(
+                        "aura-storage is required for process execution".to_string(),
+                    )
+                })?;
+        let mut run = if let Some(run) = self.tracked_run(run_id) {
+            run
+        } else if let Some(jwt) = target.1.as_deref() {
+            conv_run(
+                target
+                    .0
+                    .get_process_run(&process_id.to_string(), &run_id.to_string(), jwt)
+                    .await
+                    .map_err(|error| {
+                        ProcessError::Execution(format!(
+                            "Failed to load run {} from aura-storage: {error}",
+                            run_id
+                        ))
+                    })?,
+            )
+        } else {
+            return Err(ProcessError::RunNotFound(run_id.to_string()));
+        };
 
         if !matches!(
             run.status,
@@ -64,16 +139,10 @@ impl ProcessExecutor {
 
         run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
-        self.store.save_run(&run)?;
-        let jwt = self.rocks_store.get_jwt();
-        if let Some((client, sync_jwt)) =
-            process_storage_sync_client(self.storage_client.as_ref(), jwt.as_deref())
-        {
-            sync_run_to_storage(client, sync_jwt, &run, false).await;
-        }
+        sync_run_to_storage(&target, &run, false).await?;
+        self.forget_run(&run);
 
         emit_process_event(
-            &self.store,
             &self.event_broadcast,
             serde_json::json!({
                 "type": "process_run_completed",
@@ -104,34 +173,34 @@ impl ProcessExecutor {
         trigger: ProcessRunTrigger,
         auth_jwt: Option<&str>,
     ) -> Result<ProcessRun, ProcessError> {
-        // When authoritative storage is enabled, process definitions must come
-        // from storage to avoid executing a stale local shadow copy.
-        let process = if let Some((client, jwt)) =
-            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
-        {
-            let storage_process = if let Some(jwt) = jwt {
-                client.get_process(&process_id.to_string(), jwt).await
-            } else {
-                client.get_process_internal(&process_id.to_string()).await
-            };
-            Some(
-                storage_process
-                    .map(conv_process)
-                    .map_err(|error| authoritative_process_read_error(process_id, &error))?,
-            )
-        } else {
-            self.store.get_process(process_id)?
-        };
-        let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
+        let target = process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
+            .ok_or_else(|| {
+                ProcessError::Execution("aura-storage is required for process execution".into())
+            })?;
+        let process = load_process_from_storage(&target, process_id).await?;
 
-        let existing_runs = self.store.list_runs(process_id)?;
-        if existing_runs.iter().any(|r| {
-            matches!(
-                r.status,
-                ProcessRunStatus::Pending | ProcessRunStatus::Running
-            )
-        }) {
+        if self.root_run_active_in_memory(process_id) {
             return Err(ProcessError::RunAlreadyActive);
+        }
+        if let Some(jwt) = target.1.as_deref() {
+            let existing_runs = target
+                .0
+                .list_process_runs(&process_id.to_string(), jwt)
+                .await
+                .map_err(|error| {
+                    ProcessError::Execution(format!(
+                        "Failed to load process runs for {}: {error}",
+                        process_id
+                    ))
+                })?;
+            if existing_runs.into_iter().map(conv_run).any(|run| {
+                matches!(
+                    run.status,
+                    ProcessRunStatus::Pending | ProcessRunStatus::Running
+                )
+            }) {
+                return Err(ProcessError::RunAlreadyActive);
+            }
         }
 
         let now = Utc::now();
@@ -150,15 +219,10 @@ impl ProcessExecutor {
             parent_run_id: None,
             input_override: None,
         };
-        self.store.save_run(&run)?;
-        if let Some((client, jwt)) =
-            process_storage_sync_client(self.storage_client.as_ref(), auth_jwt)
-        {
-            sync_run_to_storage(client, jwt, &run, true).await;
-        }
+        sync_run_to_storage(&target, &run, true).await?;
+        self.remember_run(&run);
 
         emit_process_event(
-            &self.store,
             &self.event_broadcast,
             serde_json::json!({
                 "type": "process_run_started",
@@ -179,7 +243,6 @@ impl ProcessExecutor {
         tokio::spawn(async move {
             if let Err(e) = execute_run(
                 &executor,
-                &executor.store,
                 &executor.event_broadcast,
                 &run_clone,
                 &executor.data_dir,
@@ -192,11 +255,13 @@ impl ProcessExecutor {
             {
                 warn!(run_id = %run_clone.run_id, error = %e, "Process run failed");
                 mark_run_failed_if_active(
-                    &executor.store,
+                    &executor,
                     &executor.event_broadcast,
                     &run_clone,
                     &e.to_string(),
-                );
+                    auth_jwt.as_deref(),
+                )
+                .await;
             }
         });
 
@@ -232,24 +297,11 @@ impl ProcessExecutor {
         parent_mirror: Option<ParentStreamMirrorContext>,
     ) -> Result<ProcessRun, ProcessError> {
         let auth_jwt = self.rocks_store.get_jwt();
-        let process = if let Some((client, jwt)) = process_storage_sync_client(
-            self.storage_client.as_ref(),
-            auth_jwt.as_deref(),
-        ) {
-            let storage_process = if let Some(jwt) = jwt {
-                client.get_process(&process_id.to_string(), jwt).await
-            } else {
-                client.get_process_internal(&process_id.to_string()).await
-            };
-            Some(
-                storage_process
-                    .map(conv_process)
-                    .map_err(|error| authoritative_process_read_error(process_id, &error))?,
-            )
-        } else {
-            self.store.get_process(process_id)?
-        };
-        let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
+        let target = process_storage_sync_client(self.storage_client.as_ref(), auth_jwt.as_deref())
+            .ok_or_else(|| {
+                ProcessError::Execution("aura-storage is required for process execution".into())
+            })?;
+        let process = load_process_from_storage(&target, process_id).await?;
 
         let now = Utc::now();
         let run = ProcessRun {
@@ -267,16 +319,10 @@ impl ProcessExecutor {
             parent_run_id,
             input_override: input_override.clone(),
         };
-        self.store.save_run(&run)?;
-        if let Some((client, jwt)) = process_storage_sync_client(
-            self.storage_client.as_ref(),
-            auth_jwt.as_deref(),
-        ) {
-            sync_run_to_storage(client, jwt, &run, true).await;
-        }
+        sync_run_to_storage(&target, &run, true).await?;
+        self.remember_run(&run);
 
         emit_process_event(
-            &self.store,
             &self.event_broadcast,
             serde_json::json!({
                 "type": "process_run_started",
@@ -293,11 +339,9 @@ impl ProcessExecutor {
         );
 
         let mirror_task = parent_mirror.clone().map(|parent| {
-            let store = self.store.as_ref().clone();
             let tx = self.event_broadcast.clone();
             let child_run_id = run.run_id.to_string();
             send_process_text(
-                &store,
                 &tx,
                 &parent.project_id,
                 &parent.task_id,
@@ -320,7 +364,7 @@ impl ProcessExecutor {
                                 &evt,
                                 evt_type,
                             ) {
-                                emit_process_event(&store, &tx, payload);
+                                emit_process_event(&tx, payload);
                             }
                             if evt_type == "process_run_progress"
                                 && evt.get("run_id").and_then(|v| v.as_str()) == Some(&child_run_id)
@@ -344,7 +388,7 @@ impl ProcessExecutor {
                                     .and_then(|v| v.as_f64())
                                     .unwrap_or(entry.cost_usd);
                                 drop(state);
-                                emit_parent_progress_update(&store, &tx, &parent);
+                                emit_parent_progress_update(&tx, &parent);
                             }
                             if is_child_run_terminal_event(&child_run_id, &evt, evt_type) {
                                 break;
@@ -359,7 +403,6 @@ impl ProcessExecutor {
 
         let run_result = execute_run(
             self,
-            &self.store,
             &self.event_broadcast,
             &run,
             &self.data_dir,
@@ -380,7 +423,6 @@ impl ProcessExecutor {
                 Err(error) => format!("\n--- {} failed: {} ---\n", parent.item_label, error),
             };
             send_process_text(
-                self.store.as_ref(),
                 &self.event_broadcast,
                 &parent.project_id,
                 &parent.task_id,
@@ -391,17 +433,20 @@ impl ProcessExecutor {
             );
         }
 
-        if let Err(e) = run_result {
-            mark_run_failed_if_active(&self.store, &self.event_broadcast, &run, &e.to_string());
-            return Err(e);
-        }
-
-        let completed_run = self
-            .store
-            .list_runs(process_id)?
-            .into_iter()
-            .find(|r| r.run_id == run.run_id)
-            .ok_or_else(|| ProcessError::RunNotFound(run.run_id.to_string()))?;
+        let completed_run = match run_result {
+            Ok(run) => run,
+            Err(e) => {
+                mark_run_failed_if_active(
+                    self,
+                    &self.event_broadcast,
+                    &run,
+                    &e.to_string(),
+                    auth_jwt.as_deref(),
+                )
+                .await;
+                return Err(e);
+            }
+        };
 
         if let Some(parent) = parent_mirror.as_ref() {
             let mut state = parent
@@ -420,7 +465,7 @@ impl ProcessExecutor {
                 .unwrap_or(entry.output_tokens);
             entry.cost_usd = completed_run.cost_usd.unwrap_or(entry.cost_usd);
             drop(state);
-            emit_parent_progress_update(self.store.as_ref(), &self.event_broadcast, parent);
+            emit_parent_progress_update(&self.event_broadcast, parent);
         }
 
         Ok(completed_run)

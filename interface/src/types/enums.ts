@@ -5,9 +5,6 @@ export type SessionStatus = "active" | "completed" | "failed" | "rolled_over";
 export type OrchestrationStatus = "planning" | "executing" | "completed" | "failed";
 export type StepStatus = "pending" | "running" | "done" | "failed" | "skipped";
 export type ToolDomain = "project" | "spec" | "task" | "agent" | "execution" | "org" | "billing" | "social" | "monitoring" | "system" | "generation";
-
-export type CronJobRunStatus = "pending" | "running" | "completed" | "failed";
-export type CronJobTrigger = "scheduled" | "manual";
 export type ArtifactType = "report" | "data" | "media" | "code" | "custom";
 
 export type ProcessNodeType = "ignition" | "action" | "condition" | "artifact" | "delay" | "merge" | "prompt" | "sub_process" | "for_each" | "group";

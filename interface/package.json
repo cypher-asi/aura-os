@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "postinstall": "npm ci --prefix ../vendor/zui --omit=dev",
     "dev": "vite",
     "dev:mobile": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
@@ -36,7 +37,7 @@
     "@capacitor/android": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
-    "@cypher-asi/zui": "file:../../zui",
+    "@cypher-asi/zui": "file:../vendor/zui",
     "@fontsource-variable/inter": "^5.2.8",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@tanstack/react-query": "^5.99.0",

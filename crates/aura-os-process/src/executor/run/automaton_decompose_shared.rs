@@ -1,5 +1,4 @@
 struct DecomposeActionBroadcastCtx<'a> {
-    store: &'a ProcessStore,
     broadcast: Option<&'a broadcast::Sender<serde_json::Value>>,
     proj_str: &'a str,
     task_id: &'a str,
@@ -11,7 +10,6 @@ struct DecomposeActionBroadcastCtx<'a> {
 fn send_decompose_action_text(ctx: &DecomposeActionBroadcastCtx<'_>, message: &str) {
     if let Some(tx) = ctx.broadcast {
         send_process_text(
-            ctx.store,
             tx,
             ctx.proj_str,
             ctx.task_id,
@@ -47,12 +45,10 @@ impl DecomposeActionIdStrings {
 
     fn broadcast_ctx<'a>(
         &'a self,
-        store: &'a ProcessStore,
         broadcast: Option<&'a broadcast::Sender<serde_json::Value>>,
         task_id: &'a str,
     ) -> DecomposeActionBroadcastCtx<'a> {
         DecomposeActionBroadcastCtx {
-            store,
             broadcast,
             proj_str: &self.proj,
             task_id,
@@ -70,7 +66,6 @@ struct SingleAutomatonActionArgs<'a> {
     process_id: &'a ProcessId,
     run_id: &'a ProcessRunId,
     automaton_client: &'a AutomatonClient,
-    store: &'a ProcessStore,
     storage_client: &'a StorageClient,
     broadcast: Option<&'a broadcast::Sender<serde_json::Value>>,
     project_path: &'a str,
@@ -95,7 +90,6 @@ async fn run_single_automaton_action(
         args.process_id,
         args.run_id,
         args.automaton_client,
-        args.store,
         args.storage_client,
         args.broadcast,
         args.project_path,

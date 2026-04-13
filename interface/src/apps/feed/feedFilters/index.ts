@@ -1,1 +1,1 @@
-export * from "./FeedFilters";
+export * from "./feedFilters";

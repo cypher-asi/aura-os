@@ -37,7 +37,7 @@ Core state lives in RocksDB on-device. The backend is Rust (Axum), the interface
 
 - Rust toolchain (1.85.0+)
 - Node.js and npm
-- [ZUI](https://github.com/cypher-asi/zui) cloned as a sibling directory (`../zui`) if you use the ZUI terminal component
+- Vendored [ZUI](https://github.com/cypher-asi/zui) source already included under `vendor/zui`
 
 ### Environment and `.env`
 
@@ -89,6 +89,7 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api` and `/ws` to `http://localhost:3100`, so the backend must be running.
+`npm install` also primes the vendored `vendor/zui` runtime dependencies, so no sibling ZUI checkout is needed.
 
 ### Run desktop app (live dev)
 
@@ -394,6 +395,7 @@ For the current release-build plan and workflow map, see:
 - [Release Build Strategy](docs/release-build-strategy.md)
 - [Release Workflows](docs/release-workflows.md)
 - [Mobile Store Compliance Audit](docs/mobile-store-compliance-audit.md)
+- [ZUI Vendoring](docs/zui-vendoring.md)
 
 ### Optional services
 

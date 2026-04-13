@@ -302,22 +302,6 @@ describe("processApi - Artifacts", () => {
     await processApi.getArtifact("art1");
     expect(fetchMock).toHaveBeenCalledWith("/api/process-artifacts/art1", expect.any(Object));
   });
-
-  it("getArtifactContent fetches text content", async () => {
-    const fetchMock = mockFetch(200, "file contents here");
-    globalThis.fetch = fetchMock;
-    const result = await processApi.getArtifactContent("art1");
-    expect(result).toBe("file contents here");
-    expect(fetchMock).toHaveBeenCalledWith("/api/process-artifacts/art1/content", expect.any(Object));
-  });
-
-  it("getArtifactPath fetches path for an artifact", async () => {
-    const fetchMock = mockFetch(200, { path: "/tmp/artifact.txt" });
-    globalThis.fetch = fetchMock;
-    const result = await processApi.getArtifactPath("art1");
-    expect(result).toEqual({ path: "/tmp/artifact.txt" });
-    expect(fetchMock).toHaveBeenCalledWith("/api/process-artifacts/art1/path", expect.any(Object));
-  });
 });
 
 describe("processApi - Folders", () => {

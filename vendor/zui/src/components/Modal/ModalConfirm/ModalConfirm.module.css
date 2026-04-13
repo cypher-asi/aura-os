@@ -1,0 +1,15 @@
+.message {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.dangerButton {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
+}

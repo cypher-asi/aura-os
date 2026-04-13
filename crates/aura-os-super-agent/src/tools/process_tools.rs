@@ -3,10 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::{OrgId, ProcessId, ProcessRunTrigger, ToolDomain};
-use aura_os_process::{
-    CreateProcessInput, ProcessApplicationService, ProcessExecutor, ProcessStore,
-};
+use aura_os_core::{ProcessId, ProcessRunTrigger, ToolDomain};
+use aura_os_process::ProcessExecutor;
 
 use super::{SuperAgentContext, SuperAgentTool, ToolResult};
 use crate::SuperAgentError;
@@ -15,13 +13,27 @@ fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
     SuperAgentError::ToolError(format!("{action}: {e}"))
 }
 
-// ---------------------------------------------------------------------------
-// CreateProcess
-// ---------------------------------------------------------------------------
-
-pub struct CreateProcessTool {
-    pub process_app: Arc<ProcessApplicationService>,
+fn require_storage_client(
+    ctx: &SuperAgentContext,
+    action: &str,
+) -> Result<Arc<aura_os_storage::StorageClient>, SuperAgentError> {
+    ctx.storage_client
+        .clone()
+        .ok_or_else(|| tool_err(action, "aura-storage is not configured"))
 }
+
+fn default_project_id(ctx: &SuperAgentContext) -> Option<String> {
+    ctx.project_service
+        .list_projects()
+        .ok()
+        .and_then(|projects| {
+            projects
+                .first()
+                .map(|project| project.project_id.to_string())
+        })
+}
+
+pub struct CreateProcessTool;
 
 #[async_trait]
 impl SuperAgentTool for CreateProcessTool {
@@ -42,7 +54,7 @@ impl SuperAgentTool for CreateProcessTool {
                 "name": { "type": "string", "description": "Name of the process" },
                 "description": { "type": "string", "description": "Description of what the process does" },
                 "project_id": { "type": "string", "description": "Project ID to associate this process with. If omitted, uses the first available project." },
-                "schedule": { "type": "string", "description": "Optional cron expression for scheduled triggering" }
+                "schedule": { "type": "string", "description": "Optional schedule expression for scheduled triggering (cron syntax)" }
             },
             "required": ["name"]
         })
@@ -53,63 +65,70 @@ impl SuperAgentTool for CreateProcessTool {
         input: serde_json::Value,
         ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
+        let client = require_storage_client(ctx, "create_process")?;
         let name = input["name"]
             .as_str()
             .ok_or_else(|| tool_err("create_process", "name is required"))?;
         let description = input
             .get("description")
             .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let schedule = input
-            .get("schedule")
-            .and_then(|v| v.as_str())
-            .map(String::from);
-
+            .map(str::to_string);
         let project_id = input
             .get("project_id")
             .and_then(|v| v.as_str())
-            .and_then(|s| s.parse().ok())
-            .or_else(|| {
-                ctx.project_service
-                    .list_projects()
-                    .ok()
-                    .and_then(|ps| ps.first().map(|p| p.project_id))
-            });
+            .map(str::to_string)
+            .or_else(|| default_project_id(ctx));
+        let project_id = project_id.ok_or_else(|| {
+            tool_err(
+                "create_process",
+                "project_id is required when no projects are available",
+            )
+        })?;
+        let schedule = input
+            .get("schedule")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
 
-        let org_id: OrgId = ctx.org_id.parse().unwrap_or_default();
-        let create = CreateProcessInput {
-            org_id,
-            user_id: ctx.user_id.clone(),
+        let storage_req = aura_os_storage::CreateProcessRequest {
+            org_id: ctx.org_id.clone(),
             name: name.to_string(),
-            description: description.to_string(),
-            project_id,
+            project_id: Some(project_id),
             folder_id: None,
+            description,
+            enabled: Some(true),
             schedule,
-            tags: Vec::new(),
+            tags: Some(Vec::new()),
         };
-        let process = self
-            .process_app
-            .create_process_with_default_graph(create)
+        let created = client
+            .create_process(&ctx.jwt, &storage_req)
+            .await
+            .map_err(|e| tool_err("create_process", e))?;
+        let node_req = aura_os_storage::CreateProcessNodeRequest {
+            node_type: "ignition".to_string(),
+            label: Some("Ignition".to_string()),
+            agent_id: None,
+            prompt: None,
+            config: None,
+            position_x: Some(250.0),
+            position_y: Some(50.0),
+        };
+        client
+            .create_process_node(&created.id, &ctx.jwt, &node_req)
+            .await
             .map_err(|e| tool_err("create_process", e))?;
 
         Ok(ToolResult {
             content: json!({
-                "process_id": process.process_id.to_string(),
-                "name": process.name,
-                "status": "created"
+                "process_id": created.id,
+                "name": created.name,
+                "status": "created",
             }),
             is_error: false,
         })
     }
 }
 
-// ---------------------------------------------------------------------------
-// ListProcesses
-// ---------------------------------------------------------------------------
-
-pub struct ListProcessesTool {
-    pub store: Arc<ProcessStore>,
-}
+pub struct ListProcessesTool;
 
 #[async_trait]
 impl SuperAgentTool for ListProcessesTool {
@@ -130,20 +149,21 @@ impl SuperAgentTool for ListProcessesTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        _ctx: &SuperAgentContext,
+        ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
-        let processes = self
-            .store
-            .list_processes()
+        let client = require_storage_client(ctx, "list_processes")?;
+        let processes = client
+            .list_processes(&ctx.org_id, &ctx.jwt)
+            .await
             .map_err(|e| tool_err("list_processes", e))?;
         let items: Vec<serde_json::Value> = processes
             .iter()
             .map(|p| {
                 json!({
-                    "process_id": p.process_id.to_string(),
+                    "process_id": p.id,
                     "name": p.name,
                     "enabled": p.enabled,
-                    "last_run_at": p.last_run_at.map(|t| t.to_rfc3339()),
+                    "last_run_at": p.last_run_at,
                 })
             })
             .collect();
@@ -154,12 +174,7 @@ impl SuperAgentTool for ListProcessesTool {
     }
 }
 
-// ---------------------------------------------------------------------------
-// TriggerProcess
-// ---------------------------------------------------------------------------
-
 pub struct TriggerProcessTool {
-    pub store: Arc<ProcessStore>,
     pub executor: Arc<ProcessExecutor>,
 }
 
@@ -188,7 +203,7 @@ impl SuperAgentTool for TriggerProcessTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        _ctx: &SuperAgentContext,
+        ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
         let id_str = input["process_id"]
             .as_str()
@@ -197,7 +212,7 @@ impl SuperAgentTool for TriggerProcessTool {
 
         let run = self
             .executor
-            .trigger(&process_id, ProcessRunTrigger::Manual)
+            .trigger_with_auth(&process_id, ProcessRunTrigger::Manual, Some(&ctx.jwt))
             .await
             .map_err(|e| tool_err("trigger_process", e))?;
 
@@ -212,13 +227,7 @@ impl SuperAgentTool for TriggerProcessTool {
     }
 }
 
-// ---------------------------------------------------------------------------
-// DeleteProcess
-// ---------------------------------------------------------------------------
-
-pub struct DeleteProcessTool {
-    pub store: Arc<ProcessStore>,
-}
+pub struct DeleteProcessTool;
 
 #[async_trait]
 impl SuperAgentTool for DeleteProcessTool {
@@ -245,15 +254,15 @@ impl SuperAgentTool for DeleteProcessTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        _ctx: &SuperAgentContext,
+        ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
+        let client = require_storage_client(ctx, "delete_process")?;
         let id_str = input["process_id"]
             .as_str()
             .ok_or_else(|| tool_err("delete_process", "process_id is required"))?;
-        let process_id: ProcessId = id_str.parse().map_err(|e| tool_err("delete_process", e))?;
-
-        self.store
-            .delete_process(&process_id)
+        client
+            .delete_process(id_str, &ctx.jwt)
+            .await
             .map_err(|e| tool_err("delete_process", e))?;
 
         Ok(ToolResult {
@@ -263,13 +272,7 @@ impl SuperAgentTool for DeleteProcessTool {
     }
 }
 
-// ---------------------------------------------------------------------------
-// ListProcessRuns
-// ---------------------------------------------------------------------------
-
-pub struct ListProcessRunsTool {
-    pub store: Arc<ProcessStore>,
-}
+pub struct ListProcessRunsTool;
 
 #[async_trait]
 impl SuperAgentTool for ListProcessRunsTool {
@@ -296,29 +299,26 @@ impl SuperAgentTool for ListProcessRunsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        _ctx: &SuperAgentContext,
+        ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
+        let client = require_storage_client(ctx, "list_process_runs")?;
         let id_str = input["process_id"]
             .as_str()
             .ok_or_else(|| tool_err("list_process_runs", "process_id is required"))?;
-        let process_id: ProcessId = id_str
-            .parse()
-            .map_err(|e| tool_err("list_process_runs", e))?;
-
-        let runs = self
-            .store
-            .list_runs(&process_id)
+        let runs = client
+            .list_process_runs(id_str, &ctx.jwt)
+            .await
             .map_err(|e| tool_err("list_process_runs", e))?;
 
         let items: Vec<serde_json::Value> = runs
             .iter()
             .map(|r| {
                 json!({
-                    "run_id": r.run_id.to_string(),
-                    "status": format!("{:?}", r.status),
-                    "trigger": format!("{:?}", r.trigger),
-                    "started_at": r.started_at.to_rfc3339(),
-                    "completed_at": r.completed_at.map(|t| t.to_rfc3339()),
+                    "run_id": r.id,
+                    "status": r.status,
+                    "trigger": r.trigger,
+                    "started_at": r.started_at,
+                    "completed_at": r.completed_at,
                     "error": r.error,
                 })
             })

@@ -11,9 +11,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, cron, dev_loop, feed, files, follows, generation, harness_proxy,
-    leaderboard, log, org_tools, orgs, process, project_stats, projects, remote_files,
-    remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
+    agents, auth, billing, dev_loop, feed, files, follows, generation, harness_proxy, leaderboard,
+    log, org_tools, orgs, process, project_stats, projects, remote_files, remote_terminal, specs,
+    super_agent, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -79,7 +79,6 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(social_routes())
         .merge(system_routes())
         .merge(super_agent_routes())
-        .merge(cron_routes())
         .merge(process_routes())
         .merge(generation_routes())
         .merge(harness_proxy_routes())
@@ -136,9 +135,9 @@ fn protected_auth_routes() -> Router<AppState> {
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
-        // Access code endpoints disabled for launch — Zero Pro is the only entry path.
-        // .route("/api/auth/redeem-access-code", post(auth::redeem_access_code))
-        // .route("/api/auth/access-codes", get(auth::get_access_code))
+    // Access code endpoints disabled for launch — Zero Pro is the only entry path.
+    // .route("/api/auth/redeem-access-code", post(auth::redeem_access_code))
+    // .route("/api/auth/access-codes", get(auth::get_access_code))
 }
 
 fn user_routes() -> Router<AppState> {
@@ -455,35 +454,6 @@ fn super_agent_routes() -> Router<AppState> {
         )
 }
 
-fn cron_routes() -> Router<AppState> {
-    Router::new()
-        .route(
-            "/api/cron-jobs",
-            get(cron::list_cron_jobs).post(cron::create_cron_job),
-        )
-        .route(
-            "/api/cron-jobs/:id",
-            get(cron::get_cron_job)
-                .put(cron::update_cron_job)
-                .delete(cron::delete_cron_job),
-        )
-        .route("/api/cron-jobs/:id/pause", post(cron::pause_cron_job))
-        .route("/api/cron-jobs/:id/resume", post(cron::resume_cron_job))
-        .route("/api/cron-jobs/:id/trigger", post(cron::trigger_cron_job))
-        .route("/api/cron-jobs/:id/runs", get(cron::list_cron_runs))
-        .route("/api/cron-jobs/:id/runs/:run_id", get(cron::get_cron_run))
-        .route(
-            "/api/cron-jobs/:id/artifacts",
-            get(cron::list_cron_artifacts),
-        )
-        .route("/api/artifacts/:id", get(cron::get_artifact))
-        .route(
-            "/api/cron-tags",
-            get(cron::list_cron_tags).post(cron::create_cron_tag),
-        )
-        .route("/api/cron-tags/:tag_id", delete(cron::delete_cron_tag))
-}
-
 fn process_routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -524,22 +494,10 @@ fn process_routes() -> Router<AppState> {
             get(process::list_run_events),
         )
         .route(
-            "/api/processes/:id/runs/:run_id/transcript",
-            get(process::list_run_transcript),
-        )
-        .route(
             "/api/processes/:id/runs/:run_id/artifacts",
             get(process::list_run_artifacts),
         )
         .route("/api/process-artifacts/:id", get(process::get_artifact))
-        .route(
-            "/api/process-artifacts/:id/content",
-            get(process::get_artifact_content),
-        )
-        .route(
-            "/api/process-artifacts/:id/path",
-            get(process::get_artifact_path),
-        )
         .route(
             "/api/process-folders",
             get(process::list_folders).post(process::create_folder),

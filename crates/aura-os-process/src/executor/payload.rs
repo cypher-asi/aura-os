@@ -6,7 +6,6 @@ const MAX_PROCESS_INPUT_SNAPSHOT_CHARS: usize = 16_000;
 const MAX_PROCESS_TEXT_EVENT_CHARS: usize = 4_000;
 const MAX_PROCESS_TOOL_RESULT_CHARS: usize = 8_000;
 const MAX_PROCESS_WRITE_FILE_CONTENT_CHARS: usize = 4_000;
-const MAX_ARTIFACT_CONTEXT_CHARS: usize = 16_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OutputCompactionMode {
@@ -27,10 +26,6 @@ pub(crate) fn truncate_with_marker(input: &str, limit: usize) -> String {
 
 pub(crate) fn summarize_input_snapshot(input: &str) -> String {
     truncate_with_marker(input, MAX_PROCESS_INPUT_SNAPSHOT_CHARS)
-}
-
-pub(crate) fn truncate_for_artifact_context(content: &str) -> String {
-    truncate_with_marker(content, MAX_ARTIFACT_CONTEXT_CHARS)
 }
 
 pub(crate) fn parse_output_compaction_mode(

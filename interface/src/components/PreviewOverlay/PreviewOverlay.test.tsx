@@ -9,6 +9,7 @@ vi.mock("@cypher-asi/zui", () => ({
     </button>
   ),
   Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("./PreviewOverlay.module.css", () => ({

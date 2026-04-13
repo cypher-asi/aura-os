@@ -1,0 +1,254 @@
+/* Item Component - Unified styles for navigation, tree, and menu items */
+
+/* ============================================================================
+   Base Item Styles
+   ============================================================================ */
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  width: 100%;
+  padding: var(--space-2, 8px) var(--space-3, 12px) var(--space-2, 8px) var(--space-3, 12px);
+  min-height: var(--control-height-md, 36px);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-base, 14px);
+  font-family: inherit;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast, 75ms ease-out),
+              color var(--transition-fast, 75ms ease-out);
+  user-select: none;
+  position: relative;
+}
+
+/* Icon sizing within items */
+.item svg {
+  width: var(--icon-md, 18px);
+  height: var(--icon-md, 18px);
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   Interactive States
+   ============================================================================ */
+
+.item:hover:not(:disabled) {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--color-overlay-focus);
+  outline-offset: -2px;
+}
+
+/* Selected/Active state */
+.item.selected {
+  background: var(--color-overlay-medium);
+  color: var(--color-text-primary);
+}
+
+.item.selected:hover:not(:disabled) {
+  background: var(--color-overlay-heavy);
+}
+
+/* Disabled state */
+.item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.item.disabled:hover {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+/* ============================================================================
+   Icon Styles
+   ============================================================================ */
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* Ensure icons inherit the item's color */
+.icon > * {
+  color: currentColor;
+}
+
+/* ============================================================================
+   Label Styles
+   ============================================================================ */
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   Chevron/Toggle Styles
+   ============================================================================ */
+
+.chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast, 75ms ease-out);
+  border-radius: var(--radius-sm, 2px);
+}
+
+/* When chevron is last child (positioned on right side), remove extra padding */
+.chevron:last-child {
+  margin-right: calc(var(--space-3, 12px) * -1);
+}
+
+.chevron:hover {
+  color: var(--color-text-secondary);
+}
+
+.item:hover .chevron {
+  color: var(--color-text-secondary);
+}
+
+.chevronDisabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.chevronIcon {
+  transition: transform var(--transition-fast, 75ms ease-out);
+}
+
+.chevronIconExpanded {
+  transform: rotate(90deg);
+}
+
+/* Spacer for alignment when no chevron present */
+.chevronSpacer {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   Action Slot Styles
+   ============================================================================ */
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: calc(var(--space-3, 12px) * -1);
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast, 75ms ease-out);
+}
+
+.item:hover .action {
+  opacity: 1;
+}
+
+/* ============================================================================
+   Drag and Drop States
+   ============================================================================ */
+
+.item.dragging {
+  opacity: 0.4;
+}
+
+.item.dragOver {
+  background: var(--color-overlay-light);
+}
+
+/* Drop position indicators */
+.dropIndicatorBefore,
+.dropIndicatorAfter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent, #5e9eff);
+  pointer-events: none;
+}
+
+.dropIndicatorBefore {
+  top: -1px;
+}
+
+.dropIndicatorAfter {
+  bottom: -1px;
+}
+
+.dropIndicatorInside {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-accent, #5e9eff);
+  border-radius: 0;
+  pointer-events: none;
+  background: rgba(94, 158, 255, 0.05);
+}
+
+/* ============================================================================
+   Menu Item Variant (accent color on selection)
+   ============================================================================ */
+
+.item.menuVariant.selected {
+  background-color: color-mix(in srgb, var(--color-overlay-light) 50%, transparent);
+  color: var(--color-accent);
+}
+
+.item.menuVariant.selected:hover:not(:disabled) {
+  background-color: var(--color-overlay-medium);
+  color: var(--color-accent);
+}
+
+/* ============================================================================
+   Tree Item Variant (tighter spacing)
+   ============================================================================ */
+
+.item.treeVariant {
+  gap: var(--space-1, 4px);
+  padding: var(--space-1, 4px) var(--space-2, 8px) var(--space-1, 4px) var(--space-2, 8px);
+  min-height: var(--control-height-sm, 32px);
+  font-size: var(--text-sm, 13px);
+  line-height: 1.3;
+}
+
+.item.treeVariant svg {
+  width: var(--icon-sm, 16px);
+  height: var(--icon-sm, 16px);
+}
+
+.item.treeVariant .icon {
+  margin-right: 4px;
+}
+
+/* ============================================================================
+   Nav Item Variant (original NavItem styling)
+   ============================================================================ */
+
+.item.navVariant {
+  padding: var(--space-2, 8px) var(--space-3, 12px) var(--space-2, 8px) var(--space-3, 12px);
+  margin-bottom: var(--space-1, 4px);
+  font-size: var(--text-base, 14px);
+  line-height: 1.5;
+}

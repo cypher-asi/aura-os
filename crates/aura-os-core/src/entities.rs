@@ -3,14 +3,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 use crate::enums::{
-    AgentStatus, ArtifactType, ChatRole, CronJobRunStatus, CronJobTrigger, HarnessMode,
-    ProcessEventStatus, ProcessNodeType, ProcessRunStatus, ProcessRunTrigger, ProjectStatus,
-    SessionStatus, TaskStatus,
+    AgentStatus, ArtifactType, ChatRole, HarnessMode, ProcessEventStatus, ProcessNodeType,
+    ProcessRunStatus, ProcessRunTrigger, ProjectStatus, SessionStatus, TaskStatus,
 };
 use crate::ids::{
-    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessArtifactId,
-    ProcessEventId, ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId,
-    ProcessRunId, ProfileId, ProjectId, SessionEventId, SessionId, SpecId, TaskId, UserId,
+    AgentId, AgentInstanceId, OrgId, ProcessArtifactId, ProcessEventId, ProcessFolderId, ProcessId,
+    ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId, ProjectId, SessionEventId,
+    SessionId, SpecId, TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -529,116 +528,6 @@ pub struct SuperAgentStep {
 }
 
 // ---------------------------------------------------------------------------
-// Cron Tags (org-scoped, reusable labels for cron jobs)
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CronTag {
-    pub tag_id: String,
-    pub org_id: OrgId,
-    pub name: String,
-    pub created_at: DateTime<Utc>,
-}
-
-// ---------------------------------------------------------------------------
-// Cron Jobs
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ArtifactRef {
-    pub source_cron_job_id: CronJobId,
-    #[serde(default)]
-    pub artifact_type: Option<ArtifactType>,
-    #[serde(default = "default_true")]
-    pub use_latest: bool,
-    #[serde(default)]
-    pub specific_run_id: Option<CronJobRunId>,
-}
-
-fn default_true() -> bool {
-    true
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CronJob {
-    pub cron_job_id: CronJobId,
-    pub org_id: OrgId,
-    pub user_id: String,
-    pub name: String,
-    pub description: String,
-    /// Cron expression, e.g. `"0 9 * * *"` for daily at 9 AM.
-    pub schedule: String,
-    /// Natural-language instruction for the CEO to execute.
-    pub prompt: String,
-    pub enabled: bool,
-    #[serde(default)]
-    pub agent_id: Option<AgentId>,
-    #[serde(default)]
-    pub tags: Vec<String>,
-    #[serde(default)]
-    pub input_artifact_refs: Vec<ArtifactRef>,
-    #[serde(default = "default_max_retries")]
-    pub max_retries: u32,
-    #[serde(default = "default_timeout")]
-    pub timeout_seconds: u64,
-    #[serde(default)]
-    pub last_run_at: Option<DateTime<Utc>>,
-    #[serde(default)]
-    pub next_run_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-fn default_max_retries() -> u32 {
-    1
-}
-fn default_timeout() -> u64 {
-    300
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CronJobRun {
-    pub run_id: CronJobRunId,
-    pub cron_job_id: CronJobId,
-    pub status: CronJobRunStatus,
-    pub trigger: CronJobTrigger,
-    /// The fully-resolved prompt sent to the CEO (includes artifact context).
-    #[serde(default)]
-    pub prompt_snapshot: String,
-    #[serde(default)]
-    pub response_text: String,
-    #[serde(default)]
-    pub output_artifact_ids: Vec<ArtifactId>,
-    #[serde(default)]
-    pub tasks_created: Vec<TaskId>,
-    #[serde(default)]
-    pub error: Option<String>,
-    #[serde(default)]
-    pub input_tokens: u64,
-    #[serde(default)]
-    pub output_tokens: u64,
-    pub started_at: DateTime<Utc>,
-    #[serde(default)]
-    pub completed_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Artifact {
-    pub artifact_id: ArtifactId,
-    pub cron_job_id: CronJobId,
-    pub run_id: CronJobRunId,
-    pub org_id: OrgId,
-    pub artifact_type: ArtifactType,
-    pub name: String,
-    pub content: String,
-    #[serde(default)]
-    pub metadata: serde_json::Value,
-    pub created_at: DateTime<Utc>,
-    #[serde(default)]
-    pub expires_at: Option<DateTime<Utc>>,
-}
-
-// ---------------------------------------------------------------------------
 // Process workflow entities
 // ---------------------------------------------------------------------------
 
@@ -665,7 +554,7 @@ pub struct Process {
     pub enabled: bool,
     #[serde(default)]
     pub folder_id: Option<ProcessFolderId>,
-    /// Optional cron expression for scheduled triggering.
+    /// Optional schedule expression for scheduled triggering (cron syntax).
     #[serde(default)]
     pub schedule: Option<String>,
     #[serde(default)]
@@ -763,16 +652,6 @@ pub struct ProcessEvent {
     /// invoke the LLM; `None` for ignition/delay/merge.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_blocks: Option<Vec<serde_json::Value>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ProcessRunTranscriptEvent {
-    pub transcript_id: String,
-    pub process_id: ProcessId,
-    pub run_id: ProcessRunId,
-    pub event_type: String,
-    pub payload: serde_json::Value,
-    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

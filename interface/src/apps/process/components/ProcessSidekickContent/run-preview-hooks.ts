@@ -9,7 +9,6 @@ import type {
   ProcessArtifact,
   ProcessEvent,
   ProcessRun,
-  ProcessRunTranscriptEvent,
 } from "../../../../types";
 import {
   EMPTY_NODES,
@@ -34,7 +33,6 @@ export function useRunPolling(initialRun: ProcessRun) {
   const cachedEvents = useProcessStore((s) => s.events[run.run_id]);
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
   const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
-  const [transcript, setTranscript] = useState<ProcessRunTranscriptEvent[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevConnectedRef = useRef(connected);
@@ -43,18 +41,12 @@ export function useRunPolling(initialRun: ProcessRun) {
 
   const loadData = useCallback(async () => {
     try {
-      const [artList, evtList, transcriptList] = await Promise.all([
+      const [artList, evtList] = await Promise.all([
         processApi.listRunArtifacts(run.process_id, run.run_id),
         processApi.listRunEvents(run.process_id, run.run_id),
-        processApi.listRunTranscript(run.process_id, run.run_id),
       ]);
       setArtifacts(artList);
       setEvents(evtList);
-      setTranscript(
-        [...(transcriptList ?? [])].sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        ),
-      );
       setStoreEvents(run.run_id, evtList);
     } catch (e) {
       console.warn("[run-preview] loadData failed", e);
@@ -138,7 +130,7 @@ export function useRunPolling(initialRun: ProcessRun) {
     prevConnectedRef.current = connected;
   }, [connected, loadData, refreshRun]);
 
-  return { run, isActive, nodes, connections, artifacts, events, transcript, loadData, refreshRun };
+  return { run, isActive, nodes, connections, artifacts, events, loadData, refreshRun };
 }
 
 export function useRunNodeTracking(

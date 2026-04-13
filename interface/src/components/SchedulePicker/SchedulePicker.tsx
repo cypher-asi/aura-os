@@ -329,9 +329,9 @@ export function SchedulePicker({ value, onChange, disabled }: SchedulePickerProp
                       </div>
                     )}
 
-                    {/* Cron preview */}
+                    {/* Schedule expression preview */}
                     <div className={styles.cronPreview}>
-                      <span className={styles.cronLabel}>cron:</span>
+                      <span className={styles.cronLabel}>schedule:</span>
                       <code className={styles.cronValue}>{cronPreview}</code>
                     </div>
                   </div>

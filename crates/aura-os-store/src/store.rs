@@ -8,23 +8,8 @@ use serde::de::DeserializeOwned;
 use crate::batch::BatchOp;
 use crate::error::{StoreError, StoreResult};
 
-/// Only settings CF is persisted; projects, orgs, agents, messages are remote-only.
-pub(crate) const CF_NAMES: &[&str] = &[
-    "settings",
-    "super_agent_orchestrations",
-    "cron_jobs",
-    "cron_job_runs",
-    "cron_artifacts",
-    "cron_tags",
-    "processes",
-    "process_folders",
-    "process_nodes",
-    "process_node_connections",
-    "process_runs",
-    "process_events",
-    "process_run_transcripts",
-    "process_artifacts",
-];
+/// Local persistence backs settings and orchestration state.
+pub(crate) const CF_NAMES: &[&str] = &["settings", "super_agent_orchestrations"];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;
 

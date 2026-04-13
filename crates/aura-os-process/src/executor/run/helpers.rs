@@ -90,7 +90,6 @@ fn is_child_run_terminal_event(
 }
 
 fn emit_parent_progress_update(
-    store: &ProcessStore,
     tx: &broadcast::Sender<serde_json::Value>,
     parent: &ParentStreamMirrorContext,
 ) {
@@ -119,7 +118,6 @@ fn emit_parent_progress_update(
     drop(state);
 
     emit_process_event(
-        store,
         tx,
         serde_json::json!({
             "type": "process_run_progress",
@@ -368,41 +366,12 @@ fn build_workspace_instructions(output_file: &str, input_files: &[(String, Strin
 
 /// Forward a raw automaton event to the app broadcast, stamping it with
 /// process-specific identifiers.  Only forwards streamable event types.
-fn emit_process_event(
-    store: &ProcessStore,
-    tx: &broadcast::Sender<serde_json::Value>,
-    payload: serde_json::Value,
-) {
+fn emit_process_event(tx: &broadcast::Sender<serde_json::Value>, payload: serde_json::Value) {
     let payload = sanitize_process_payload(payload);
-    if let (Some(process_id), Some(run_id), Some(event_type)) = (
-        payload.get("process_id").and_then(|v| v.as_str()),
-        payload.get("run_id").and_then(|v| v.as_str()),
-        payload.get("type").and_then(|v| v.as_str()),
-    ) {
-        if let (Ok(process_id), Ok(run_id)) = (process_id.parse(), run_id.parse()) {
-            let transcript_event = ProcessRunTranscriptEvent {
-                transcript_id: ProcessEventId::new().to_string(),
-                process_id,
-                run_id,
-                event_type: event_type.to_string(),
-                payload: payload.clone(),
-                created_at: Utc::now(),
-            };
-            if let Err(e) = store.save_run_transcript_event(&transcript_event) {
-                warn!(
-                    process_id = %transcript_event.process_id,
-                    run_id = %transcript_event.run_id,
-                    error = %e,
-                    "Failed to persist process run transcript event"
-                );
-            }
-        }
-    }
     let _ = tx.send(payload);
 }
 
 fn forward_process_event(
-    store: &ProcessStore,
     tx: &broadcast::Sender<serde_json::Value>,
     project_id: &str,
     task_id: &str,
@@ -448,12 +417,11 @@ fn forward_process_event(
     if should_skip_streamed_process_event(&v) {
         return;
     }
-    emit_process_event(store, tx, v);
+    emit_process_event(tx, v);
 }
 
 /// Send a progress text message to the app broadcast with process context.
 fn send_process_text(
-    store: &ProcessStore,
     tx: &broadcast::Sender<serde_json::Value>,
     project_id: &str,
     task_id: &str,
@@ -463,7 +431,6 @@ fn send_process_text(
     text: &str,
 ) {
     emit_process_event(
-        store,
         tx,
         serde_json::json!({
             "type": TEXT_DELTA,

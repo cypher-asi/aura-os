@@ -1,0 +1,534 @@
+/* Drawer base styles */
+.drawer {
+  position: relative;
+  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 200ms ease-out, height 200ms ease-out;
+}
+
+.drawerResizing {
+  transition: none;
+}
+
+.drawerMinimized {
+  transition: width 200ms ease-out, height 200ms ease-out;
+}
+
+/* Side-specific borders */
+.drawerLeft {
+  border-right: 1px solid var(--color-border);
+}
+
+.drawerRight {
+  border-left: 1px solid var(--color-border);
+}
+
+.drawerTop {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drawerBottom {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Minimized bar (for horizontal drawers) */
+.minimizedBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: var(--space-2) 0;
+}
+
+.minimizedButton {
+  padding: var(--space-2);
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.minimizedButton:hover {
+  color: var(--color-text-primary);
+}
+
+/* Resize Handle */
+.resizeHandle {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Handle positioning */
+.resizeHandleLeft {
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.resizeHandleRight {
+  right: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.resizeHandleTop {
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.resizeHandleBottom {
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.resizeHandle:hover .resizeHandleLine,
+.resizeHandle:active .resizeHandleLine {
+  opacity: 1;
+  background-color: var(--color-text-primary);
+}
+
+/* Minimize button in resize handle */
+.minimizeButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: var(--space-1);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  z-index: 11;
+  user-select: none;
+}
+
+.resizeHandle:hover .minimizeButton {
+  opacity: 1;
+}
+
+.minimizeButton:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
+}
+
+/* Handle line styles */
+.resizeHandleLine {
+  background-color: var(--color-text-secondary);
+  border-radius: 0;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease;
+}
+
+.resizeHandleLineVertical {
+  width: 2px;
+  height: 48px;
+  max-height: 30%;
+}
+
+.resizeHandleLineHorizontal {
+  width: 48px;
+  max-width: 10%;
+  height: 2px;
+}
+
+/* Inner wrapper for content - fixed size prevents squishing during animation */
+.drawerInner {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+
+.drawerInnerHidden {
+  opacity: 0;
+}
+
+/* Always-visible toggle button */
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--color-text-secondary);
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.toggle:hover {
+  color: var(--color-text-primary);
+}
+
+/* Toggle icon with rotation animation */
+.toggleIcon {
+  transition: transform 200ms ease-out;
+}
+
+.toggleIconRotated {
+  transform: rotate(180deg);
+}
+
+/* Single toggle panel - one element that expands/collapses */
+.togglePanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  background-color: var(--color-bg);
+  transition: width 200ms ease-out;
+  overflow: hidden;
+}
+
+.togglePanelResizing {
+  transition: none;
+}
+
+/* Inner wrapper that maintains fixed width to prevent content squishing */
+.panelInner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* For right-side drawers, anchor to right edge instead of left */
+.panelInnerRight {
+  left: auto;
+  right: 0;
+}
+
+.togglePanelLeft {
+  border-right: 1px solid var(--color-border);
+}
+
+.togglePanelRight {
+  border-left: 1px solid var(--color-border);
+}
+
+.togglePanelTransparent {
+  background-color: transparent;
+}
+
+.togglePanelTransparent.togglePanelLeft {
+  border-right: none;
+}
+
+.togglePanelTransparent.togglePanelRight {
+  border-left: none;
+}
+
+.togglePanelNoBorder.togglePanelLeft {
+  border-right: none;
+}
+
+.togglePanelNoBorder.togglePanelRight {
+  border-left: none;
+}
+
+/* Panel header - full width, contains chevron and title */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 40px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panelHeaderRight {
+  flex-direction: row-reverse;
+}
+
+.panelHeaderNoBorder {
+  border-bottom: none;
+}
+
+/* Chevron button inside header */
+.panelToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  user-select: none;
+}
+
+.panelToggle:hover {
+  color: var(--color-text-primary);
+}
+
+/* Title in panel header */
+.panelTitle {
+  flex: 1;
+  padding-right: var(--space-3);
+  font-size: var(--text-sm, 13px);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panelHeaderRight .panelTitle {
+  padding-right: 0;
+  padding-left: var(--space-3);
+}
+
+.panelTitleHidden {
+  opacity: 0;
+}
+
+.panelTitleClickable {
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.panelTitleClickable:hover {
+  color: var(--color-text-secondary);
+}
+
+/* Content area within toggle panel - fills remaining space */
+.panelContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+
+.panelContentHidden {
+  opacity: 0;
+}
+
+/* Toggle strip - positioned at edge */
+.toggleStrip {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-shrink: 0;
+  background-color: var(--color-bg);
+  padding-top: 8px;
+  z-index: 1;
+}
+
+.toggleStripLeft {
+  width: 32px;
+  height: 100%;
+  border-right: 1px solid var(--color-border);
+}
+
+.toggleStripRight {
+  width: 32px;
+  height: 100%;
+  border-left: 1px solid var(--color-border);
+}
+
+/* Toggle container when drawer is closed (for top/bottom) */
+.toggleContainer {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  background-color: var(--color-bg);
+}
+
+.toggleContainerTop {
+  height: 32px;
+  width: 100%;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 8px;
+}
+
+.toggleContainerBottom {
+  height: 32px;
+  width: 100%;
+  border-top: 1px solid var(--color-border);
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 8px;
+}
+
+/* Drawer header with title and toggle */
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.drawerTitle {
+  flex: 1;
+  font-size: var(--text-sm, 13px);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drawerTitleClickable {
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.drawerTitleClickable:hover {
+  color: var(--color-text-secondary);
+}
+
+/* Drawer content section below header */
+.drawerContent {
+  flex: 1;
+  overflow: auto;
+}
+
+.headerToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.headerToggle:hover {
+  color: var(--color-text-primary);
+}
+
+/* Transparent background variant */
+.drawerTransparent {
+  background-color: transparent;
+}
+
+.drawerTransparent.drawerLeft {
+  border-right: none;
+}
+
+.drawerTransparent.drawerRight {
+  border-left: none;
+}
+
+.drawerTransparent.drawerTop {
+  border-bottom: none;
+}
+
+.drawerTransparent.drawerBottom {
+  border-top: none;
+}
+
+.drawerTransparent .drawerHeader {
+  background-color: transparent;
+  border-bottom: none;
+}
+
+.toggleContainerTransparent,
+.toggleStripTransparent {
+  background-color: transparent;
+}
+
+.toggleStripTransparent.toggleStripLeft {
+  border-right: none;
+}
+
+.toggleStripTransparent.toggleStripRight {
+  border-left: none;
+}
+
+.toggleContainerTransparent.toggleContainerTop {
+  border-bottom: none;
+}
+
+.toggleContainerTransparent.toggleContainerBottom {
+  border-top: none;
+}
+
+/* No border variant */
+.drawerNoBorder.drawerLeft {
+  border-right: none;
+}
+
+.drawerNoBorder.drawerRight {
+  border-left: none;
+}
+
+.drawerNoBorder.drawerTop {
+  border-bottom: none;
+}
+
+.drawerNoBorder.drawerBottom {
+  border-top: none;
+}
+
+.toggleStripNoBorder.toggleStripLeft {
+  border-right: none;
+}
+
+.toggleStripNoBorder.toggleStripRight {
+  border-left: none;
+}
+
+.toggleContainerNoBorder.toggleContainerTop {
+  border-bottom: none;
+}
+
+.toggleContainerNoBorder.toggleContainerBottom {
+  border-top: none;
+}
+
+.drawerNoBorder .drawerHeader {
+  border-bottom: none;
+}

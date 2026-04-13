@@ -43,7 +43,7 @@ Single Web Service that builds both frontend and backend. The backend serves the
 
 ## Prerequisites
 
-1. **ZUI on npm** — `interface/package.json` must reference `@cypher-asi/zui` as an npm package (not `file:../../zui`) for Render builds to work. Update once ZUI 0.1.4 is published.
+1. **Vendored ZUI** — Aura now vendors `@cypher-asi/zui` under `vendor/zui`, and `interface/package.json` resolves it from inside this repo. Render builds no longer need a sibling checkout or a separately published ZUI package.
 
 2. **RocksDB** — The `rocksdb` crate compiles a C++ library at build time. Render's native Rust buildpack should handle this, but if cmake/clang is missing, a Dockerfile would be needed.
 

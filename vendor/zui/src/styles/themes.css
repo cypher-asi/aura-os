@@ -1,0 +1,215 @@
+/* Theme Color Tokens */
+/* Applied via data-theme and data-accent attributes on :root or container element */
+
+/* ============================================================================
+   Dark Theme (Default)
+   ============================================================================ */
+:root,
+[data-theme='dark'] {
+  /* Background colors */
+  --color-bg: #09090b;
+  --color-surface: #0e0e10;
+  --color-elevated: #131316;
+  --color-border: #17171a;
+  --color-border-light: #1f1f23;
+
+  /* Text colors */
+  --color-text-primary: #e6e8eb;
+  --color-text-secondary: #969696;
+  --color-text-muted: #6b7280;
+
+  /* Semantic colors */
+  --color-success: #01f4cb;
+  --color-warning: #f59e0b;
+  --color-error: #f4012a;
+  --color-danger: #f4012a;
+  --color-danger-bg: rgba(244, 1, 42, 0.1);
+  --color-danger-hover: #d9012a;
+  --color-pending: #cb01f4;
+  --color-provisioning: #01a4f4;
+
+  /* Shadows - darker for dark mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
+
+  /* Focus ring color */
+  --color-focus-ring: #ffffff;
+
+  /* Scrollbar colors */
+  --color-scrollbar-thumb: var(--color-border);
+  --color-scrollbar-thumb-hover: var(--color-border-light);
+
+  /* Selection */
+  --color-selection: rgba(255, 255, 255, 0.2);
+
+  /* Interactive overlay colors (for hover, focus states) */
+  --color-overlay-subtle: rgba(255, 255, 255, 0.04);
+  --color-overlay-light: rgba(255, 255, 255, 0.06);
+  --color-overlay-medium: rgba(255, 255, 255, 0.08);
+  --color-overlay-heavy: rgba(255, 255, 255, 0.1);
+  --color-overlay-focus: rgba(255, 255, 255, 0.25);
+
+  /* Inverse/contrast colors */
+  --color-inverse: #ffffff;
+  --color-inverse-muted: rgba(255, 255, 255, 0.8);
+
+  /* Backdrop overlay for modals */
+  --color-backdrop: rgba(0, 0, 0, 0.95);
+  --color-backdrop-light: rgba(0, 0, 0, 0.3);
+  --color-backdrop-medium: rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================================
+   Light Theme
+   ============================================================================ */
+[data-theme='light'] {
+  /* Background colors */
+  --color-bg: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-elevated: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-light: #d1d5db;
+
+  /* Text colors */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+
+  /* Semantic colors - slightly adjusted for light mode visibility */
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-danger: #dc2626;
+  --color-danger-bg: rgba(220, 38, 38, 0.1);
+  --color-danger-hover: #b91c1c;
+  --color-pending: #9333ea;
+  --color-provisioning: #2563eb;
+
+  /* Shadows - lighter for light mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+  /* Focus ring color */
+  --color-focus-ring: #111827;
+
+  /* Scrollbar colors */
+  --color-scrollbar-thumb: var(--color-border);
+  --color-scrollbar-thumb-hover: var(--color-border-light);
+
+  /* Selection */
+  --color-selection: rgba(0, 0, 0, 0.1);
+
+  /* Interactive overlay colors (for hover, focus states) */
+  --color-overlay-subtle: rgba(0, 0, 0, 0.03);
+  --color-overlay-light: rgba(0, 0, 0, 0.05);
+  --color-overlay-medium: rgba(0, 0, 0, 0.07);
+  --color-overlay-heavy: rgba(0, 0, 0, 0.1);
+  --color-overlay-focus: rgba(0, 0, 0, 0.2);
+
+  /* Inverse/contrast colors */
+  --color-inverse: #111827;
+  --color-inverse-muted: rgba(0, 0, 0, 0.8);
+
+  /* Backdrop overlay for modals */
+  --color-backdrop: rgba(0, 0, 0, 0.75);
+  --color-backdrop-light: rgba(0, 0, 0, 0.15);
+  --color-backdrop-medium: rgba(0, 0, 0, 0.25);
+}
+
+/* ============================================================================
+   Accent Color Palettes
+   ============================================================================ */
+
+/* Cyan (Default) - Tech feel */
+:root,
+[data-accent='cyan'] {
+  --color-accent: #01f4cb;
+  --color-accent-hover: #00d4ad;
+  --color-accent-muted: rgba(1, 244, 203, 0.15);
+  --color-accent-contrast: #0a0a0a;
+}
+
+/* Light mode cyan adjustments for better contrast */
+[data-theme='light'][data-accent='cyan'],
+[data-theme='light'] [data-accent='cyan'] {
+  --color-accent: #0d9488;
+  --color-accent-hover: #0f766e;
+  --color-accent-muted: rgba(13, 148, 136, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* Blue - Professional, trust */
+[data-accent='blue'] {
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-accent-muted: rgba(59, 130, 246, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* Purple - Creative, modern */
+[data-accent='purple'] {
+  --color-accent: #a855f7;
+  --color-accent-hover: #9333ea;
+  --color-accent-muted: rgba(168, 85, 247, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* Green - Growth, success */
+[data-accent='green'] {
+  --color-accent: #00e676;
+  --color-accent-hover: #00c853;
+  --color-accent-muted: rgba(0, 230, 118, 0.15);
+  --color-accent-contrast: #0a0a0a;
+}
+
+/* Light mode green adjustments for better contrast */
+[data-theme='light'][data-accent='green'],
+[data-theme='light'] [data-accent='green'] {
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-muted: rgba(5, 150, 105, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* Orange - Energy, attention */
+[data-accent='orange'] {
+  --color-accent: #f97316;
+  --color-accent-hover: #ea580c;
+  --color-accent-muted: rgba(249, 115, 22, 0.15);
+  --color-accent-contrast: #0a0a0a;
+}
+
+/* Light mode orange adjustments for better contrast */
+[data-theme='light'][data-accent='orange'],
+[data-theme='light'] [data-accent='orange'] {
+  --color-accent: #ea580c;
+  --color-accent-hover: #c2410c;
+  --color-accent-muted: rgba(234, 88, 12, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* Rose - Bold, distinctive */
+[data-accent='rose'] {
+  --color-accent: #f43f5e;
+  --color-accent-hover: #e11d48;
+  --color-accent-muted: rgba(244, 63, 94, 0.15);
+  --color-accent-contrast: #ffffff;
+}
+
+/* ============================================================================
+   Legacy Neon Colors (for backward compatibility)
+   ============================================================================ */
+:root,
+[data-theme='dark'] {
+  --color-neon-cyan: #01f4cb;
+  --color-neon-green: #01f4cb;
+  --color-neon-purple: #cb01f4;
+}
+
+[data-theme='light'] {
+  --color-neon-cyan: #0d9488;
+  --color-neon-green: #16a34a;
+  --color-neon-purple: #9333ea;
+}

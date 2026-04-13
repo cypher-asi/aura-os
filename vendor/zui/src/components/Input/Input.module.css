@@ -1,0 +1,120 @@
+/* Input wrapper (when validation icon is present) */
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Input styles */
+.input {
+  width: 100%;
+  min-width: var(--control-width-default);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background-color: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--color-text-primary);
+  min-height: var(--control-height-md);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+/* Add padding for validation icon */
+.inputWrapper .input {
+  padding-right: var(--space-10);
+}
+
+.input:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.input:focus,
+.input:focus-visible {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.02);
+  outline: none;
+}
+
+.sm {
+  padding: var(--space-1-5) var(--space-2);
+  font-size: var(--text-sm);
+  min-height: var(--control-height-sm);
+}
+
+/* Variant: bare — transparent, no border, no shadow */
+.bare,
+.bare:hover,
+.bare:focus,
+.bare:focus-visible {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Variant: underline — transparent with bottom border only */
+.underline {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.underline:hover {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.underline:focus,
+.underline:focus-visible {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Validation icon */
+.validationIcon {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-accent);
+  cursor: help;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
+  z-index: 10;
+}
+
+.validationIcon:hover {
+  opacity: 1;
+}
+
+/* Tooltip on hover using native title attribute */
+.validationIcon svg {
+  display: block;
+}
+
+@media (pointer: coarse), (max-width: 900px) {
+  .input,
+  .sm {
+    font-size: 16px;
+  }
+}

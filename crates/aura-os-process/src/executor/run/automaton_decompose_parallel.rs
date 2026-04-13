@@ -4,7 +4,6 @@ struct ParallelDecomposeRunInput<'a> {
     process_id: &'a ProcessId,
     run_id: &'a ProcessRunId,
     automaton_client: &'a AutomatonClient,
-    store: &'a ProcessStore,
     storage_client: &'a StorageClient,
     spec_id: &'a str,
     broadcast: Option<&'a broadcast::Sender<serde_json::Value>>,
@@ -56,7 +55,6 @@ fn spawn_decomposed_subtask_worker_for_created(
     created_task: &aura_os_storage::StorageTask,
     binding: &ProcessNodeExecutionBinding,
     semaphore: Arc<tokio::sync::Semaphore>,
-    transcript_store: ProcessStore,
     shared_usage_totals: Arc<Mutex<HashMap<String, NodeTokenUsage>>>,
     storage_client_for_subtasks: StorageClient,
     parent_workspace: &Path,
@@ -77,7 +75,6 @@ fn spawn_decomposed_subtask_worker_for_created(
         sub_task_description: sub_task.description.clone(),
         sub_node_prompt: inp.node.prompt.clone(),
         broadcast_tx: inp.broadcast.cloned(),
-        sub_store: transcript_store,
         task_usage_totals: shared_usage_totals,
         sub_model: binding.model.clone(),
         sub_project_agent_id: binding.project_agent_id.clone(),
@@ -96,7 +93,6 @@ async fn create_one_decomposed_subtask_worker(
     jwt: &str,
     binding: &ProcessNodeExecutionBinding,
     semaphore: Arc<tokio::sync::Semaphore>,
-    transcript_store: ProcessStore,
     shared_usage_totals: Arc<Mutex<HashMap<String, NodeTokenUsage>>>,
     storage_client_for_subtasks: StorageClient,
     parent_workspace: &Path,
@@ -136,7 +132,6 @@ async fn create_one_decomposed_subtask_worker(
         &created_task,
         binding,
         semaphore,
-        transcript_store,
         shared_usage_totals,
         storage_client_for_subtasks,
         parent_workspace,
@@ -149,7 +144,6 @@ async fn spawn_all_decomposed_subtask_workers(
     jwt: &str,
     binding: &ProcessNodeExecutionBinding,
     semaphore: Arc<tokio::sync::Semaphore>,
-    transcript_store: ProcessStore,
     shared_usage_totals: Arc<Mutex<HashMap<String, NodeTokenUsage>>>,
     storage_client_for_subtasks: StorageClient,
     parent_workspace: &Path,
@@ -164,7 +158,6 @@ async fn spawn_all_decomposed_subtask_workers(
                 jwt,
                 binding,
                 semaphore.clone(),
-                transcript_store.clone(),
                 shared_usage_totals.clone(),
                 storage_client_for_subtasks.clone(),
                 parent_workspace,
@@ -187,8 +180,9 @@ async fn parallel_decompose_spawn_handles(
         .unwrap_or(3) as usize;
     let max_concurrency = requested_max_concurrency.max(1);
 
-    let jwt =
-        inp.token.ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
+    let jwt = inp
+        .token
+        .ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
     let binding = resolve_or_create_process_node_binding(
         inp.storage_client,
         jwt,
@@ -201,7 +195,6 @@ async fn parallel_decompose_spawn_handles(
     let storage_client_for_subtasks = inp.storage_client.clone();
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
-    let transcript_store = inp.store.clone();
     let shared_usage_totals = Arc::new(Mutex::new(HashMap::<String, NodeTokenUsage>::new()));
     let parent_workspace = PathBuf::from(inp.project_path);
 
@@ -211,7 +204,6 @@ async fn parallel_decompose_spawn_handles(
         jwt,
         &binding,
         semaphore,
-        transcript_store,
         shared_usage_totals,
         storage_client_for_subtasks,
         &parent_workspace,
@@ -244,7 +236,7 @@ async fn run_parallel_decomposed_subtasks(
     join_decomposed_subtask_handles(
         handles,
         &sub_tasks,
-        inp.store,
+        inp.storage_client,
         inp.broadcast,
         inp.bc.proj_str,
         inp.bc.task_id,
@@ -255,6 +247,7 @@ async fn run_parallel_decomposed_subtasks(
         inp.project_path,
         inp.process_id,
         inp.run_id,
+        inp.token,
     )
     .await
 }
