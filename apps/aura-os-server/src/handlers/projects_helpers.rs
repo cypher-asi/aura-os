@@ -14,7 +14,7 @@ use crate::dto::{CreateProjectRequest, ImportedProjectFile};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
 use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
 use crate::state::AppState;
 
@@ -238,7 +238,8 @@ pub(crate) async fn project_tool_session_config(
     let installed_integrations = match state.project_service.get_project(project_id).ok() {
         Some(project) => {
             let integrations =
-                installed_workspace_integrations_for_org(state, &project.org_id).await;
+                installed_workspace_integrations_for_org_with_token(state, &project.org_id, jwt)
+                    .await;
             if integrations.is_empty() {
                 None
             } else {

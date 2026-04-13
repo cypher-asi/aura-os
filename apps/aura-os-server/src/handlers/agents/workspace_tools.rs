@@ -222,8 +222,9 @@ pub(crate) async fn installed_workspace_app_tool_catalog(
     org_id: &OrgId,
     bearer_token: &str,
 ) -> InstalledWorkspaceToolCatalog {
-    let integrations = integrations_for_org(state, org_id).await;
-    let runtime_integrations = load_runtime_integrations(state, org_id, &integrations).await;
+    let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
+    let runtime_integrations =
+        load_runtime_integrations(state, org_id, &integrations, Some(bearer_token)).await;
     let mut tools = build_installed_workspace_app_tools(org_id, &integrations, bearer_token);
     for tool in &mut tools {
         annotate_tool_metadata(tool);
@@ -303,7 +304,8 @@ async fn discovered_trusted_mcp_tool_catalog(
 
     let mut discovered = stream::iter(trusted_integrations.into_iter().map(
         |(index, integration)| async move {
-            let secret = load_integration_secret(state, org_id, &integration).await;
+            let secret =
+                load_integration_secret(state, org_id, &integration, Some(bearer_token)).await;
             let discovered = trusted_mcp::discover_tools(&integration, secret.as_deref()).await;
             (index, integration, discovered)
         },
@@ -427,8 +429,21 @@ fn discovered_mcp_tool_endpoint(
 }
 
 pub(crate) async fn integrations_for_org(state: &AppState, org_id: &OrgId) -> Vec<OrgIntegration> {
+    integrations_for_org_with_token(state, org_id, None).await
+}
+
+pub(crate) async fn integrations_for_org_with_token(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: Option<&str>,
+) -> Vec<OrgIntegration> {
     if let Some(client) = &state.integrations_client {
-        match client.list_integrations_internal(org_id).await {
+        let canonical = if let Some(jwt) = bearer_token {
+            client.list_integrations(org_id, jwt).await
+        } else {
+            client.list_integrations_internal(org_id).await
+        };
+        match canonical {
             Ok(integrations) => {
                 if let Err(error) = state
                     .org_service
@@ -460,6 +475,7 @@ async fn load_runtime_integrations(
     state: &AppState,
     org_id: &OrgId,
     integrations: &[OrgIntegration],
+    bearer_token: Option<&str>,
 ) -> HashMap<String, Vec<InstalledToolRuntimeIntegration>> {
     let mut by_provider = HashMap::<String, Vec<InstalledToolRuntimeIntegration>>::new();
     for integration in integrations.iter().filter(|integration| {
@@ -467,7 +483,8 @@ async fn load_runtime_integrations(
             && integration.has_secret
             && matches!(integration.kind, OrgIntegrationKind::WorkspaceIntegration)
     }) {
-        let Some(secret) = load_integration_secret(state, org_id, integration).await else {
+        let Some(secret) = load_integration_secret(state, org_id, integration, bearer_token).await
+        else {
             continue;
         };
         let kind = match app_provider_contract_by_tool_provider(&integration.provider) {
@@ -515,12 +532,19 @@ async fn load_integration_secret(
     state: &AppState,
     org_id: &OrgId,
     integration: &OrgIntegration,
+    bearer_token: Option<&str>,
 ) -> Option<String> {
     if let Some(client) = &state.integrations_client {
-        match client
-            .get_integration_secret(org_id, &integration.integration_id)
-            .await
-        {
+        let canonical = if let Some(jwt) = bearer_token {
+            client
+                .get_integration_secret_authed(org_id, &integration.integration_id, jwt)
+                .await
+        } else {
+            client
+                .get_integration_secret(org_id, &integration.integration_id)
+                .await
+        };
+        match canonical {
             Ok(secret) => {
                 if let Some(secret) = secret.filter(|value| !value.trim().is_empty()) {
                     return Some(secret);
@@ -554,6 +578,28 @@ pub(crate) async fn installed_workspace_integrations_for_org(
     org_id: &OrgId,
 ) -> Vec<InstalledIntegration> {
     let integrations = integrations_for_org(state, org_id).await;
+    let mut installed = build_installed_workspace_integrations(&integrations);
+    for integration in &mut installed {
+        if integration.kind == "mcp_server" {
+            integration.metadata.insert(
+                TOOL_SOURCE_KIND_METADATA_KEY.to_string(),
+                Value::String("mcp".to_string()),
+            );
+            integration.metadata.insert(
+                TOOL_TRUST_CLASS_METADATA_KEY.to_string(),
+                Value::String("trusted_mcp".to_string()),
+            );
+        }
+    }
+    installed
+}
+
+pub(crate) async fn installed_workspace_integrations_for_org_with_token(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: &str,
+) -> Vec<InstalledIntegration> {
+    let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
     let mut installed = build_installed_workspace_integrations(&integrations);
     for integration in &mut installed {
         if integration.kind == "mcp_server" {
@@ -824,7 +870,7 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
             "internal-token",
         )));
 
-        let secret = load_integration_secret(&state, &org_id, &integration).await;
+        let secret = load_integration_secret(&state, &org_id, &integration, None).await;
         assert_eq!(secret, Some("canonical-remote-secret".to_string()));
     }
 
@@ -856,7 +902,7 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
             "internal-token",
         )));
 
-        let secret = load_integration_secret(&state, &org_id, &integration).await;
+        let secret = load_integration_secret(&state, &org_id, &integration, None).await;
         assert_eq!(secret, Some("local-shadow-secret".to_string()));
     }
 
