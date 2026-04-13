@@ -68,6 +68,14 @@ fn emit_runtime_default(runtime_name: &str, compile_name: &str, fallback: &str) 
     println!("cargo:rerun-if-env-changed={runtime_name}");
 }
 
+fn env_value_or_default(name: &str, fallback: &str) -> String {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| fallback.to_string())
+}
+
 fn probe_vite_dev_server(base_url: &str) -> bool {
     let trimmed = base_url.trim().trim_end_matches('/');
     let (scheme, remainder) = if let Some(rest) = trimmed.strip_prefix("https://") {
@@ -208,13 +216,15 @@ fn main() {
 
     println!("cargo:rustc-env=INTERFACE_DIST_DIR={}", dist_dir.display());
 
-    let pub_key = std::env::var("UPDATER_PUBLIC_KEY")
-        .unwrap_or_else(|_| "NOT_SET__generate_with_cargo_packager_signer_generate".into());
+    let pub_key = env_value_or_default(
+        "UPDATER_PUBLIC_KEY",
+        "NOT_SET__generate_with_cargo_packager_signer_generate",
+    );
     println!("cargo:rustc-env=UPDATER_PUBLIC_KEY={pub_key}");
     println!("cargo:rerun-if-env-changed=UPDATER_PUBLIC_KEY");
 
-    let update_base_url = std::env::var("AURA_UPDATE_BASE_URL")
-        .unwrap_or_else(|_| "https://n3o.github.io/aura-app".into());
+    let update_base_url =
+        env_value_or_default("AURA_UPDATE_BASE_URL", "https://n3o.github.io/aura-app");
     println!("cargo:rustc-env=AURA_UPDATE_BASE_URL={update_base_url}");
     println!("cargo:rerun-if-env-changed=AURA_UPDATE_BASE_URL");
     emit_runtime_default(
