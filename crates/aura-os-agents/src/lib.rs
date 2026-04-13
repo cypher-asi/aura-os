@@ -65,8 +65,8 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
 // ---------------------------------------------------------------------------
 // AgentService – user-level agent templates
 //
-// Authoritative source is aura-network when available. A local RocksDB
-// shadow (prefix "agent:") is maintained so that reads still work when
+// Authoritative source is aura-network when available. A local shadow
+// (prefix "agent:") is maintained so that reads still work when
 // the network is unreachable (local-first).
 // ---------------------------------------------------------------------------
 
@@ -100,7 +100,7 @@ impl AgentService {
 
     // -- local shadow ----------------------------------------------------------
 
-    /// Persist an agent to the local RocksDB shadow store.
+    /// Persist an agent to the local shadow store.
     pub fn save_agent_shadow(&self, agent: &Agent) -> Result<(), AgentError> {
         let payload = serde_json::to_vec(agent).map_err(|e| AgentError::Parse(e.to_string()))?;
         self.store
@@ -163,7 +163,7 @@ impl AgentService {
         Ok(())
     }
 
-    /// Remove an agent from the local RocksDB shadow store.
+    /// Remove an agent from the local shadow store.
     pub fn delete_agent_shadow(&self, agent_id: &AgentId) -> Result<(), AgentError> {
         self.store
             .delete_setting(&Self::agent_key(agent_id))

@@ -268,7 +268,7 @@ impl AuthService {
             .map_err(AuthError::Http)
     }
 
-    /// Validate a JWT token against zOS without reading from or writing to RocksDB.
+    /// Validate a JWT token against zOS without relying on local disk persistence.
     /// Returns a fresh session built from the zOS user info and Pro status.
     /// `network_user_id` and `profile_id` will be `None` — populated later
     /// by `sync_user_to_network` on the server side.
