@@ -51,6 +51,7 @@ describe("ProjectLayout", () => {
       initialSpecs: [],
       initialTasks: [],
       loading: false,
+      loadingProjects: false,
       projects: [{ project_id: "proj-1", name: "Project One" }],
     });
     useOrgStoreMock.mockImplementation((selector: (state: { activeOrg: { org_id: string } | null }) => unknown) =>
@@ -64,6 +65,7 @@ describe("ProjectLayout", () => {
 
   it("redirects back to projects when the active org changes and the current project disappears", async () => {
     let activeOrgId = "org-1";
+    let loadingProjects = false;
     useOrgStoreMock.mockImplementation((selector: (state: { activeOrg: { org_id: string } | null }) => unknown) =>
       selector({ activeOrg: activeOrgId ? { org_id: activeOrgId } : null }),
     );
@@ -73,6 +75,7 @@ describe("ProjectLayout", () => {
       initialSpecs: [],
       initialTasks: [],
       loading: false,
+      loadingProjects,
       projects: activeOrgId === "org-1"
         ? [{ project_id: "proj-1", name: "Project One" }]
         : [{ project_id: "proj-2", name: "Project Two" }],
@@ -82,6 +85,44 @@ describe("ProjectLayout", () => {
     expect(screen.getByText("Project Work")).toBeInTheDocument();
 
     activeOrgId = "org-2";
+    view.rerender(<ProjectLayout />);
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/projects", { replace: true });
+    });
+  });
+
+  it("waits for the org project list to finish refreshing before redirecting away", async () => {
+    let activeOrgId: string | null = "org-1";
+    let loadingProjects = true;
+    let projects: Array<{ project_id: string; name: string }> = [];
+
+    useOrgStoreMock.mockImplementation((selector: (state: { activeOrg: { org_id: string } | null }) => unknown) =>
+      selector({ activeOrg: activeOrgId ? { org_id: activeOrgId } : null }),
+    );
+
+    useProjectLayoutDataMock.mockImplementation(() => ({
+      displayProject: { project_id: "proj-1", name: "Project One" },
+      initialSpecs: [],
+      initialTasks: [],
+      loading: false,
+      loadingProjects,
+      projects,
+    }));
+
+    const view = render(<ProjectLayout />);
+    expect(screen.getByText("Project Work")).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+
+    activeOrgId = "org-2";
+    view.rerender(<ProjectLayout />);
+
+    await waitFor(() => {
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    loadingProjects = false;
+    projects = [{ project_id: "proj-2", name: "Project Two" }];
     view.rerender(<ProjectLayout />);
 
     await waitFor(() => {

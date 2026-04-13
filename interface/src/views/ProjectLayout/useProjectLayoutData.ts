@@ -14,13 +14,14 @@ interface ProjectLayoutData {
   initialSpecs: Spec[];
   initialTasks: Task[];
   loading: boolean;
+  loadingProjects: boolean;
   projects: Project[];
 }
 
 export function useProjectLayoutData(): ProjectLayoutData {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects } = useProjectsList();
+  const { projects, loadingProjects } = useProjectsList();
   const cachedProject = useMemo(
     () => projects.find((candidate) => candidate.project_id === projectId) ?? null,
     [projectId, projects],
@@ -135,5 +136,5 @@ export function useProjectLayoutData(): ProjectLayoutData {
     return () => unregister();
   }, [displayProject, initialSpecs, initialTasks, message, navigate, register, setProjectSafe, unregister]);
 
-  return { displayProject, initialSpecs, initialTasks, loading, projects };
+  return { displayProject, initialSpecs, initialTasks, loading, loadingProjects, projects };
 }
