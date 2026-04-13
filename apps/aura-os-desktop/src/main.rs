@@ -7,7 +7,7 @@ use axum::routing::{get as axum_get, post as axum_post};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener as StdTcpListener, ToSocketAddrs};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,6 +22,7 @@ use wry::{WebContext, WebViewBuilder};
 use updater::UpdateState;
 
 const PREFERRED_PORT: u16 = 19847;
+const PREFERRED_LOCAL_HARNESS_PORT: u16 = 19080;
 const DEFAULT_FRONTEND_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_FRONTEND_PORT: u16 = 5173;
 const HOST_STORAGE_KEY: &str = "aura-host-origin";
@@ -235,6 +236,236 @@ fn init_data_dirs() -> (PathBuf, PathBuf, Option<PathBuf>) {
         None => warn!("no interface dist found; pages will not load"),
     }
     (db_path, webview_data_dir, interface_dir)
+}
+
+fn harness_binary_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "aura-node.exe"
+    } else {
+        "aura-node"
+    }
+}
+
+fn harness_resource_candidates() -> Vec<PathBuf> {
+    let binary_name = harness_binary_name();
+    let mut candidates = vec![
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("resources/sidecar")
+            .join(binary_name),
+        PathBuf::from("apps/aura-os-desktop/resources/sidecar").join(binary_name),
+        PathBuf::from("resources/sidecar").join(binary_name),
+    ];
+
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(exe_dir) = current_exe.parent() {
+            candidates.push(exe_dir.join(binary_name));
+            candidates.push(exe_dir.join("sidecar").join(binary_name));
+            candidates.push(exe_dir.join("resources/sidecar").join(binary_name));
+            if let Some(contents_dir) = exe_dir.parent() {
+                candidates.push(contents_dir.join("Resources/sidecar").join(binary_name));
+                candidates.push(
+                    contents_dir
+                        .join("Resources/resources/sidecar")
+                        .join(binary_name),
+                );
+            }
+        }
+    }
+
+    candidates
+}
+
+fn find_bundled_harness_binary() -> Option<PathBuf> {
+    if let Some(explicit) = env_string("AURA_HARNESS_BIN") {
+        let path = PathBuf::from(explicit);
+        if path.exists() {
+            return Some(path);
+        }
+        warn!(path = %path.display(), "configured AURA_HARNESS_BIN does not exist");
+    }
+
+    harness_resource_candidates()
+        .into_iter()
+        .find(|path| path.is_file())
+}
+
+fn parse_host_port(url: &str) -> Option<(String, u16)> {
+    let uri: axum::http::Uri = url.parse().ok()?;
+    let host = uri.host()?.to_string();
+    let port = uri.port_u16().unwrap_or_else(|| {
+        if uri.scheme_str() == Some("https") {
+            443
+        } else {
+            80
+        }
+    });
+    Some((host, port))
+}
+
+fn is_local_bind_host(host: &str) -> bool {
+    matches!(host, "127.0.0.1" | "localhost" | "::1")
+}
+
+fn probe_http_ok(base_url: &str, path: &str) -> bool {
+    let probe_url = format!(
+        "{}/{}",
+        base_url.trim_end_matches('/'),
+        path.trim_start_matches('/')
+    );
+    let Ok(uri) = probe_url.parse::<axum::http::Uri>() else {
+        return false;
+    };
+    let Some(host) = uri.host() else {
+        return false;
+    };
+    let port = uri.port_u16().unwrap_or_else(|| {
+        if uri.scheme_str() == Some("https") {
+            443
+        } else {
+            80
+        }
+    });
+    let Some(addr) = format!("{host}:{port}")
+        .to_socket_addrs()
+        .ok()
+        .and_then(|mut addrs| addrs.next())
+    else {
+        return false;
+    };
+    let request_path = uri
+        .path_and_query()
+        .map(|value| value.as_str())
+        .unwrap_or("/");
+
+    let Ok(mut stream) = std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(300))
+    else {
+        return false;
+    };
+
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(300)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(300)));
+
+    if write!(
+        stream,
+        "GET {request_path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
+    )
+    .is_err()
+    {
+        return false;
+    }
+
+    let mut buf = [0_u8; 256];
+    let Ok(n) = stream.read(&mut buf) else {
+        return false;
+    };
+    if n == 0 {
+        return false;
+    }
+
+    let response = String::from_utf8_lossy(&buf[..n]);
+    response.starts_with("HTTP/1.1 200") || response.starts_with("HTTP/1.0 200")
+}
+
+fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
+    let explicit_harness_url =
+        env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
+    let harness_binary = find_bundled_harness_binary();
+    let harness_url = explicit_harness_url
+        .clone()
+        .unwrap_or_else(|| format!("http://127.0.0.1:{PREFERRED_LOCAL_HARNESS_PORT}"));
+
+    if let Some(ref configured_url) = explicit_harness_url {
+        if probe_http_ok(configured_url, "/health") {
+            info!(url = %configured_url, "local harness already reachable");
+            return None;
+        }
+    }
+
+    let Some(harness_binary) = harness_binary else {
+        if explicit_harness_url.is_some() {
+            info!(url = %harness_url, "no bundled local harness sidecar found; relying on configured external harness");
+        } else {
+            info!("no bundled local harness sidecar found; local harness support stays disabled");
+        }
+        return None;
+    };
+
+    std::env::set_var("LOCAL_HARNESS_URL", &harness_url);
+    std::env::set_var("AURA_HARNESS_BIN", &harness_binary);
+
+    if probe_http_ok(&harness_url, "/health") {
+        info!(url = %harness_url, binary = %harness_binary.display(), "local harness already reachable");
+        return None;
+    }
+
+    let Some((host, port)) = parse_host_port(&harness_url) else {
+        warn!(url = %harness_url, "invalid LOCAL_HARNESS_URL for sidecar launch");
+        return None;
+    };
+    if !is_local_bind_host(&host) {
+        info!(url = %harness_url, "configured LOCAL_HARNESS_URL is not local; skipping bundled sidecar launch");
+        return None;
+    }
+
+    let listen_addr = format!("{host}:{port}");
+    let harness_data_dir = data_dir.join("harness");
+    if let Err(error) = std::fs::create_dir_all(&harness_data_dir) {
+        warn!(%error, path = %harness_data_dir.display(), "failed to create harness data directory");
+        return None;
+    }
+
+    let mut command = Command::new(&harness_binary);
+    command
+        .env("AURA_LISTEN_ADDR", &listen_addr)
+        .env("AURA_DATA_DIR", &harness_data_dir)
+        .env("ENABLE_FS_TOOLS", "true")
+        .env("ENABLE_CMD_TOOLS", "true")
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
+        command.env("ORBIT_URL", orbit_url);
+    }
+
+    match command.spawn() {
+        Ok(child) => {
+            let pid = child.id();
+            let deadline = std::time::Instant::now() + Duration::from_secs(10);
+            while std::time::Instant::now() < deadline {
+                if probe_http_ok(&harness_url, "/health") {
+                    info!(pid, url = %harness_url, binary = %harness_binary.display(), "started bundled local harness sidecar");
+                    return Some(child);
+                }
+                std::thread::sleep(Duration::from_millis(250));
+            }
+            warn!(pid, url = %harness_url, binary = %harness_binary.display(), "bundled local harness sidecar did not become healthy before timeout");
+            Some(child)
+        }
+        Err(error) => {
+            warn!(%error, binary = %harness_binary.display(), "failed to start bundled local harness sidecar");
+            None
+        }
+    }
+}
+
+fn stop_managed_local_harness(managed_local_harness: &mut Option<Child>) {
+    let Some(mut child) = managed_local_harness.take() else {
+        return;
+    };
+
+    match child.try_wait() {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            if let Err(error) = child.kill() {
+                warn!(%error, pid = child.id(), "failed to stop bundled local harness sidecar");
+            }
+            let _ = child.wait();
+        }
+        Err(error) => {
+            warn!(%error, pid = child.id(), "failed to query bundled local harness sidecar");
+        }
+    }
 }
 
 fn ci_mode_enabled() -> bool {
@@ -705,8 +936,8 @@ fn set_square_corners(_window: &tao::window::Window) {
 mod tests {
     use super::{
         append_query_param, build_frontend_dev_server_candidate, build_frontend_dev_server_config,
-        build_initialization_script, resolve_frontend_target_with_probe,
-        should_poll_for_frontend_dev_server,
+        build_initialization_script, is_local_bind_host, parse_host_port,
+        resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
     };
 
     #[test]
@@ -871,6 +1102,27 @@ mod tests {
         assert!(script.contains("http://127.0.0.1:19847"));
         assert!(script.contains("window.ipc.postMessage('ready')"));
     }
+
+    #[test]
+    fn parse_host_port_extracts_local_harness_bind_target() {
+        assert_eq!(
+            parse_host_port("http://127.0.0.1:19080"),
+            Some(("127.0.0.1".to_string(), 19080))
+        );
+        assert_eq!(
+            parse_host_port("https://localhost"),
+            Some(("localhost".to_string(), 443))
+        );
+    }
+
+    #[test]
+    fn is_local_bind_host_only_accepts_loopback_targets() {
+        assert!(is_local_bind_host("127.0.0.1"));
+        assert!(is_local_bind_host("localhost"));
+        assert!(is_local_bind_host("::1"));
+        assert!(!is_local_bind_host("0.0.0.0"));
+        assert!(!is_local_bind_host("harness.example.com"));
+    }
 }
 
 fn set_black_background(_window: &tao::window::Window) {
@@ -989,6 +1241,7 @@ fn handle_window_command(
     main_window: &tao::window::Window,
     ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
     managed_frontend_dev_server: &mut Option<Child>,
+    managed_local_harness: &mut Option<Child>,
     window_id: WindowId,
     main_window_id: WindowId,
     cmd: WinCmd,
@@ -1000,6 +1253,7 @@ fn handle_window_command(
             WinCmd::Maximize => main_window.set_maximized(!main_window.is_maximized()),
             WinCmd::Close => {
                 stop_managed_frontend_dev_server(managed_frontend_dev_server);
+                stop_managed_local_harness(managed_local_harness);
                 *control_flow = ControlFlow::Exit;
             }
             WinCmd::Drag => {
@@ -1060,6 +1314,7 @@ fn handle_user_event(
     icon_data: &IconData,
     ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
     managed_frontend_dev_server: &mut Option<Child>,
+    managed_local_harness: &mut Option<Child>,
     frontend_url: &mut String,
     using_frontend_dev_server: &mut bool,
     main_window_id: WindowId,
@@ -1073,6 +1328,7 @@ fn handle_user_event(
                 main_window,
                 ide_windows,
                 managed_frontend_dev_server,
+                managed_local_harness,
                 window_id,
                 main_window_id,
                 cmd,
@@ -1138,6 +1394,7 @@ fn run_event_loop(
     main_webview: wry::WebView,
     icon_data: IconData,
     managed_frontend_dev_server: Option<Child>,
+    managed_local_harness: Option<Child>,
     proxy: EventLoopProxy<UserEvent>,
     initial_frontend_url: String,
     initial_using_frontend_dev_server: bool,
@@ -1145,6 +1402,7 @@ fn run_event_loop(
     let main_window_id = window.id();
     let mut ide_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)> = HashMap::new();
     let mut managed_frontend_dev_server = managed_frontend_dev_server;
+    let mut managed_local_harness = managed_local_harness;
     let mut frontend_url = initial_frontend_url;
     let mut using_frontend_dev_server = initial_using_frontend_dev_server;
 
@@ -1158,6 +1416,7 @@ fn run_event_loop(
             } => {
                 if window_id == main_window_id {
                     stop_managed_frontend_dev_server(&mut managed_frontend_dev_server);
+                    stop_managed_local_harness(&mut managed_local_harness);
                     *control_flow = ControlFlow::Exit;
                 } else {
                     ide_windows.remove(&window_id);
@@ -1170,6 +1429,7 @@ fn run_event_loop(
                 &icon_data,
                 &mut ide_windows,
                 &mut managed_frontend_dev_server,
+                &mut managed_local_harness,
                 &mut frontend_url,
                 &mut using_frontend_dev_server,
                 main_window_id,
@@ -1249,6 +1509,7 @@ fn main() {
     let data_dir = db_path.parent().unwrap_or(&db_path);
     install_panic_hook(data_dir);
     install_native_crash_handler(data_dir);
+    let managed_local_harness = maybe_spawn_local_harness_sidecar(data_dir);
     let (std_listener, server_port, url) = bind_listener();
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
@@ -1300,6 +1561,7 @@ fn main() {
         main_webview,
         icon_data,
         managed_frontend_dev_server,
+        managed_local_harness,
         proxy,
         initial_frontend_url,
         frontend_target.using_frontend_dev_server,

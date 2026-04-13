@@ -133,6 +133,8 @@ pub(crate) async fn get_runtime_config() -> Json<serde_json::Value> {
         "z_billing_url": std::env::var("Z_BILLING_URL").ok(),
         "orbit_base_url": std::env::var("ORBIT_BASE_URL").ok(),
         "swarm_base_url": std::env::var("SWARM_BASE_URL").ok(),
+        "local_harness_url": std::env::var("LOCAL_HARNESS_URL").ok(),
+        "harness_binary": std::env::var("AURA_HARNESS_BIN").ok(),
         "require_zero_pro": std::env::var("REQUIRE_ZERO_PRO").ok(),
         "disable_local_harness_autospawn": std::env::var("AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN").ok(),
     }))

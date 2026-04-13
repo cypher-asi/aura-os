@@ -104,6 +104,9 @@ jobs:
         working-directory: interface
         run: npm ci
 
+      - name: Prepare bundled aura-node sidecar
+        run: node infra/scripts/release/prepare-desktop-sidecar.mjs
+
       - name: Build interface
         working-directory: interface
         run: npm run build

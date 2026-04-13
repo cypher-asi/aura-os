@@ -7,7 +7,7 @@ use aura_os_core::ZeroAuthSession;
 use aura_os_network::{NetworkProfile, NetworkUser};
 
 use crate::error::{map_network_error, ApiResult};
-use crate::state::{AppState, AuthJwt};
+use crate::state::{persist_zero_auth_session, AppState, AuthJwt};
 
 // ---------------------------------------------------------------------------
 // Response types (snake_case for local API)
@@ -204,6 +204,7 @@ pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAut
                         validated_at: std::time::Instant::now(),
                     },
                 );
+                persist_zero_auth_session(&state.store, session);
 
                 let local_name = &session.display_name;
                 let remote_name = user.display_name.as_deref().unwrap_or("");

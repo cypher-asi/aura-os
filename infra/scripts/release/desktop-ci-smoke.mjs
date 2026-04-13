@@ -103,6 +103,27 @@ async function waitForReady() {
         throw new Error("desktop update status payload missing endpoint_template");
       }
 
+      const runtimeConfigResponse = await fetch(`${baseUrl}/api/runtime-config`);
+      if (!runtimeConfigResponse.ok) {
+        throw new Error(`/api/runtime-config returned ${runtimeConfigResponse.status}`);
+      }
+      const runtimeConfig = await runtimeConfigResponse.json();
+      if (!runtimeConfig || typeof runtimeConfig !== "object") {
+        throw new Error("desktop runtime config payload missing");
+      }
+      if (typeof runtimeConfig.aura_network_url !== "string" || !runtimeConfig.aura_network_url) {
+        throw new Error("desktop runtime config missing aura_network_url");
+      }
+      if (typeof runtimeConfig.aura_storage_url !== "string" || !runtimeConfig.aura_storage_url) {
+        throw new Error("desktop runtime config missing aura_storage_url");
+      }
+      if (runtimeConfig.harness_binary && runtimeConfig.local_harness_url) {
+        const harness = await fetch(`${String(runtimeConfig.local_harness_url).replace(/\/$/, "")}/health`);
+        if (!harness.ok) {
+          throw new Error(`local harness health returned ${harness.status}`);
+        }
+      }
+
       console.log(JSON.stringify({
         ok: true,
         baseUrl,
@@ -111,6 +132,7 @@ async function waitForReady() {
         channel: payload.channel,
         updateBaseUrl: payload.update_base_url,
         endpointTemplate: payload.endpoint_template,
+        runtimeConfig,
         logs: { stdout: stdoutPath, stderr: stderrPath },
       }, null, 2));
       cleanupAndExit(0);

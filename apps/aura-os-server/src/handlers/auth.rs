@@ -14,7 +14,10 @@ use crate::dto::{
 };
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
-use crate::state::{AppState, AuthJwt, AuthSession, CachedSession};
+use crate::state::{
+    clear_zero_auth_session, persist_zero_auth_session, AppState, AuthJwt, AuthSession,
+    CachedSession,
+};
 
 fn auth_token_import_enabled_from_var(value: Option<&str>) -> bool {
     matches!(value, Some("1" | "true" | "TRUE"))
@@ -61,6 +64,7 @@ pub(crate) async fn login(
         .map_err(map_auth_error)?;
 
     sync_user_to_network(&state, &mut result.session).await;
+    persist_zero_auth_session(&state.store, &result.session);
 
     // Seed the validation cache so the first authenticated request is instant.
     state.validation_cache.insert(
@@ -85,6 +89,7 @@ pub(crate) async fn register(
         .map_err(map_auth_error)?;
 
     sync_user_to_network(&state, &mut result.session).await;
+    persist_zero_auth_session(&state.store, &result.session);
 
     state.validation_cache.insert(
         result.session.access_token.clone(),
@@ -117,12 +122,8 @@ pub(crate) async fn import_access_token(
         .await
         .map_err(map_auth_error)?;
 
-    // Persist to RocksDB for network bridge and desktop session persistence
-    if let Ok(bytes) = serde_json::to_vec(&result.session) {
-        let _ = state.store.put_setting("zero_auth_session", &bytes);
-    }
-
     sync_user_to_network(&state, &mut result.session).await;
+    persist_zero_auth_session(&state.store, &result.session);
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
@@ -230,6 +231,8 @@ pub(crate) async fn validate(
         },
     );
 
+    persist_zero_auth_session(&state.store, &result.session);
+
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
@@ -249,6 +252,8 @@ pub(crate) async fn logout(
     if let Some(ref jwt) = token {
         state.validation_cache.remove(jwt);
     }
+
+    clear_zero_auth_session(&state.store);
 
     state
         .auth_service
