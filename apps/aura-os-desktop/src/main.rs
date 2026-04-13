@@ -157,18 +157,26 @@ fn find_interface_dir() -> Option<PathBuf> {
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()));
 
+    interface_dir_candidates(exe_dir.as_deref())
+        .into_iter()
+        .find(|p| p.join("index.html").exists())
+}
+
+fn interface_dir_candidates(exe_dir: Option<&Path>) -> Vec<PathBuf> {
     let mut candidates = vec![
         PathBuf::from("interface/dist"),
         PathBuf::from("../../interface/dist"),
     ];
-    if let Some(ref dir) = exe_dir {
+    if let Some(dir) = exe_dir {
         candidates.push(dir.join("interface/dist"));
         candidates.push(dir.join("dist"));
+        if let Some(contents_dir) = dir.parent() {
+            candidates.push(contents_dir.join("Resources/dist"));
+            candidates.push(contents_dir.join("Resources/interface/dist"));
+        }
     }
 
     candidates
-        .into_iter()
-        .find(|p| p.join("index.html").exists())
 }
 
 fn init_logging() {
@@ -936,9 +944,10 @@ fn set_square_corners(_window: &tao::window::Window) {
 mod tests {
     use super::{
         append_query_param, build_frontend_dev_server_candidate, build_frontend_dev_server_config,
-        build_initialization_script, is_local_bind_host, parse_host_port,
+        build_initialization_script, interface_dir_candidates, is_local_bind_host, parse_host_port,
         resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
     };
+    use std::path::{Path, PathBuf};
 
     #[test]
     #[cfg(target_os = "windows")]
@@ -1093,6 +1102,19 @@ mod tests {
             env!("AURA_DESKTOP_DEFAULT_DISABLE_LOCAL_HARNESS_AUTOSPAWN"),
             "true"
         );
+    }
+
+    #[test]
+    fn interface_dir_candidates_include_macos_bundle_resources() {
+        let exe_dir = Path::new("/tmp/Aura.app/Contents/MacOS");
+        let candidates = interface_dir_candidates(Some(exe_dir));
+
+        assert!(candidates.contains(&PathBuf::from(
+            "/tmp/Aura.app/Contents/Resources/dist"
+        )));
+        assert!(candidates.contains(&PathBuf::from(
+            "/tmp/Aura.app/Contents/Resources/interface/dist"
+        )));
     }
 
     #[test]
