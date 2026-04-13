@@ -1,0 +1,101 @@
+.projectAgentDetailsButton {
+  min-height: 36px;
+  padding-inline: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 66%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 84%, transparent);
+  color: var(--color-text);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.mobileAgentSwitcher {
+  z-index: 32;
+}
+
+.mobileAgentSwitcherBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 16px calc(26px + env(safe-area-inset-bottom));
+}
+
+.mobileAgentSwitcherHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobileAgentSwitcherList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobileAgentSwitcherRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+
+.mobileAgentSwitcherRowCurrent {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 52%),
+    color-mix(in srgb, var(--color-primary) 4%, var(--color-bg-surface));
+}
+
+.mobileAgentSwitcherIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileAgentSwitcherCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileAgentSwitcherName {
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.mobileAgentSwitcherMeta {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.mobileAgentSwitcherStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 56px;
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.mobileAgentSwitcherFooter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}

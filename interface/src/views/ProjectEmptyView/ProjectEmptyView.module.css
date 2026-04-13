@@ -15,12 +15,14 @@
 }
 
 .uppercaseLabel {
+  font-size: 0.76rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .titleBold {
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .actionGrid {
@@ -31,4 +33,20 @@
 
 .actionButtonStart {
   justify-content: flex-start;
+}
+
+.actionButtonStart :global(button),
+.actionButtonStart {
+  min-height: 48px;
+}
+
+@media (max-width: 640px) {
+  .mobileLayout {
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+
+  .titleBold {
+    font-size: 1.5rem;
+  }
 }

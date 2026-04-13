@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useAgentSidekickStore } from "./agent-sidekick-store";
-import type { AgentPreviewItem } from "./agent-sidekick-store";
 
 const mockSkill = { name: "deploy", description: "Deploy app", source: "workspace" as const, model_invocable: true, user_invocable: true };
 const mockFact = { fact_id: "f1", agent_id: "a1", key: "lang", value: "Rust", confidence: 0.9, source: "extracted", importance: 0.5, access_count: 0, last_accessed: "2024-01-01T00:00:00Z", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" };

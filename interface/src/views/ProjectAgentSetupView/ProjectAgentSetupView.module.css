@@ -1,0 +1,291 @@
+.root {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-bottom: calc(108px + env(safe-area-inset-bottom));
+}
+
+.header,
+.contextSection,
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionLabel {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inlineBackButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.currentAgentList,
+.agentList,
+.formGrid,
+.summaryRows,
+.choiceList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.currentAgentCard,
+.agentCard,
+.choiceCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+}
+
+.currentAgentCard {
+  min-height: 52px;
+}
+
+.agentCard {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.choiceCard {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  min-height: 72px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 7%, transparent), transparent 50%),
+    color-mix(in srgb, var(--color-bg-surface) 98%, transparent);
+}
+
+.choiceCard[aria-checked="true"],
+.choiceCard[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--color-primary) 46%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 48%),
+    color-mix(in srgb, var(--color-primary) 7%, var(--color-bg-surface));
+}
+
+.choiceCard:disabled {
+  opacity: 0.58;
+}
+
+.currentAgentCopy,
+.agentCardCopy,
+.choiceCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.agentName {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.agentMeta {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+}
+
+.agentCardAction {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  flex: 0 0 auto;
+}
+
+.choiceIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg));
+  color: var(--color-text);
+  flex: 0 0 auto;
+}
+
+.choiceTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.choiceMeta {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.inlineNotice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 48%),
+    color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+}
+
+.inlineSetupSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+}
+
+.summaryHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  font-size: 0.9rem;
+}
+
+.summaryRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.summaryRow span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: right;
+}
+
+.createButton {
+  min-height: 52px;
+  width: 100%;
+}
+
+.secondaryRouteButton {
+  width: fit-content;
+  align-self: center;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.secondaryRouteButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.actionFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  position: sticky;
+  bottom: calc(-24px - env(safe-area-inset-bottom));
+  margin-bottom: calc(-24px - env(safe-area-inset-bottom));
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-bg) 4%, transparent) 0%,
+      var(--color-bg) 24px,
+      var(--color-bg) 100%
+    );
+}
+
+.actionMessages {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .root {
+    padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+}

@@ -23,12 +23,25 @@ def required_env!(name)
   value
 end
 
+def required_envs!(*names)
+  missing = names.select { |name| ENV[name].to_s.empty? }
+  return if missing.empty?
+
+  UI.user_error!(
+    "Missing required environment variables:\n- #{missing.join("\n- ")}"
+  )
+end
+
 def build_number
   ENV["IOS_BUILD_NUMBER"] || ENV["GITHUB_RUN_NUMBER"] || Time.now.utc.strftime("%Y%m%d%H%M")
 end
 
 def bundle_id
   ENV["IOS_BUNDLE_ID"].to_s.empty? ? "tech.zero.aura" : ENV["IOS_BUNDLE_ID"]
+end
+
+def local_ios_default_host
+  ENV["VITE_IOS_DEFAULT_HOST"].to_s.empty? ? "http://127.0.0.1:3100" : ENV["VITE_IOS_DEFAULT_HOST"]
 end
 
 def match_branch
@@ -45,6 +58,18 @@ def match_auth_options
   UI.user_error!(
     "Set IOS_MATCH_GIT_PRIVATE_KEY or IOS_MATCH_GIT_BASIC_AUTHORIZATION so fastlane match can fetch signing assets."
   )
+end
+
+def ensure_app_store_release_requirements!
+  required_envs!(
+    *%w[
+      IOS_APP_STORE_CONNECT_KEY_ID
+      IOS_APP_STORE_CONNECT_ISSUER_ID
+      IOS_APP_STORE_CONNECT_KEY_BASE64
+      IOS_MATCH_GIT_URL
+    ]
+  )
+  match_auth_options
 end
 
 def app_store_api_key
@@ -114,6 +139,7 @@ end
 platform :ios do
   desc "Build a local simulator app bundle that can be installed with simctl"
   lane :local_simulator do
+    ENV["VITE_IOS_DEFAULT_HOST"] = local_ios_default_host
     sync_ios_web_assets
 
     simulator_id = ENV["IOS_SIMULATOR_ID"].to_s.empty? ? booted_simulator_id : ENV["IOS_SIMULATOR_ID"]
@@ -129,17 +155,22 @@ platform :ios do
       "-derivedDataPath #{derived_data.shellescape} build"
     )
 
-    UI.success("Local simulator app ready at #{app_path}")
+    sh("xcrun simctl install #{simulator_id.shellescape} #{app_path.shellescape}")
+    sh("xcrun simctl launch #{simulator_id.shellescape} #{bundle_id.shellescape}")
+
+    UI.success("Local simulator app installed and launched from #{app_path}")
     app_path
   end
 
   desc "Create or refresh App Store signing assets in the match repo"
   lane :bootstrap_signing do
+    ensure_app_store_release_requirements!
     sync_signing!(api_key: app_store_api_key, readonly: false)
   end
 
   desc "Build and upload an internal TestFlight build"
   lane :beta do
+    ensure_app_store_release_requirements!
     api_key = app_store_api_key
     sync_signing!(api_key: api_key, readonly: is_ci)
     build_store_archive
@@ -154,6 +185,7 @@ platform :ios do
 
   desc "Build and upload an App Store candidate; optionally submit it for review"
   lane :release do
+    ensure_app_store_release_requirements!
     api_key = app_store_api_key
     sync_signing!(api_key: api_key, readonly: is_ci)
     build_store_archive
@@ -170,5 +202,11 @@ platform :ios do
       skip_metadata: !metadata_present,
       skip_screenshots: !screenshots_present
     )
+  end
+
+  desc "Validate iOS App Store/TestFlight release configuration without uploading"
+  lane :preflight do
+    ensure_app_store_release_requirements!
+    UI.success("iOS App Store release configuration looks complete.")
   end
 end

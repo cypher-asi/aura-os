@@ -44,12 +44,26 @@ export function useMobileShellState() {
   );
 
   const mobileShellMode = getMobileShellMode(location.pathname, currentProjectId, hasResolvedCurrentProject);
-  const isPrimaryProjectDestination = mobileDestination === "agent" || mobileDestination === "tasks" || mobileDestination === "stats";
+  const isProjectAgentManagementRoute =
+    /^\/projects\/[^/]+\/agents\/[^/]+\/details$/.test(location.pathname)
+    || /^\/projects\/[^/]+\/agents\/create$/.test(location.pathname);
+  const isPrimaryProjectDestination =
+    mobileDestination === "agent"
+    || mobileDestination === "execution"
+    || mobileDestination === "tasks"
+    || mobileDestination === "process"
+    || mobileDestination === "stats";
   const showProjectTitle = mobileShellMode === "project" && hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute;
-  const showProjectBack = hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute && location.pathname !== currentProjectRootPath && !isPrimaryProjectDestination;
+  const showProjectBack =
+    hasResolvedCurrentProject
+    && Boolean(currentProjectId)
+    && isProjectRoute
+    && location.pathname !== currentProjectRootPath
+    && (isProjectAgentManagementRoute || !isPrimaryProjectDestination);
   const isStandaloneAgentLibraryRoot = activeApp.id === "agents" && location.pathname === "/agents";
   const isStandaloneAgentDetailRoute = activeApp.id === "agents" && /^\/agents\/[^/]+$/.test(location.pathname);
   const showProjectResponsiveControls = activeApp.id === "agents" && location.pathname.startsWith("/projects/");
+  const isProjectAgentChatRoute = /^\/projects\/[^/]+\/agents\/(?!create$)[^/]+$/.test(location.pathname);
   const showGlobalTitle = mobileShellMode === "global";
   const globalTitle = location.pathname === "/projects" ? "Projects" : activeApp.label;
 
@@ -59,6 +73,7 @@ export function useMobileShellState() {
     mobileTargetProjectId, mobileTargetProject,
     showProjectTitle, showProjectBack, showProjectResponsiveControls,
     isStandaloneAgentLibraryRoot, isStandaloneAgentDetailRoute,
+    isProjectAgentChatRoute, isProjectAgentManagementRoute,
     showGlobalTitle, globalTitle,
   };
 }

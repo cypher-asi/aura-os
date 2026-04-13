@@ -7,29 +7,32 @@ import styles from "./ActivityCard.module.css";
 
 const MAX_VISIBLE_COMMITS = 3;
 
-function CommentPreview({ comments, onClick }: { comments: FeedComment[]; onClick: () => void }) {
-  if (comments.length === 0) return null;
+function CommentPreview({ comments, commentCount, onClick }: { comments: FeedComment[]; commentCount: number; onClick: () => void }) {
+  const count = comments.length || commentCount;
+  if (count === 0) return null;
 
   const uniqueAuthors = [...new Map(comments.map((c) => [c.author.name, c.author])).values()].slice(0, 3);
 
   return (
     <button className={styles.commentPreview} onClick={onClick}>
-      <div className={styles.commentAvatarStack}>
-        {uniqueAuthors.map((author, i) => (
-          <Avatar
-            key={author.name}
-            avatarUrl={author.avatarUrl}
-            name={author.name}
-            type={author.type}
-            size={20}
-            className={styles.commentAvatar}
-            style={{ zIndex: uniqueAuthors.length - i }}
-          />
-        ))}
-      </div>
+      {uniqueAuthors.length > 0 && (
+        <div className={styles.commentAvatarStack}>
+          {uniqueAuthors.map((author, i) => (
+            <Avatar
+              key={author.name}
+              avatarUrl={author.avatarUrl}
+              name={author.name}
+              type={author.type}
+              size={20}
+              className={styles.commentAvatar}
+              style={{ zIndex: uniqueAuthors.length - i }}
+            />
+          ))}
+        </div>
+      )}
       <span className={styles.commentCount}>
         <MessageSquare size={12} />
-        {comments.length} comment{comments.length !== 1 ? "s" : ""}
+        {count} comment{count !== 1 ? "s" : ""}
       </span>
     </button>
   );
@@ -140,7 +143,7 @@ export function ActivityCard({ event, isLast, isSelected, comments, onSelect, on
           {event.postType === "event" && <EventCardBody event={event} />}
         </div>
 
-        <CommentPreview comments={comments} onClick={() => onSelect(event.id)} />
+        <CommentPreview comments={comments} commentCount={event.commentCount} onClick={() => onSelect(event.id)} />
       </div>
     </div>
   );

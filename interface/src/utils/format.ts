@@ -110,11 +110,20 @@ export function summarizeInput(name: string, input: Record<string, unknown>): st
   switch (name) {
     case "read_file":
     case "write_file":
+    case "edit_file":
     case "delete_file":
       return (input.path as string) || "";
     case "list_files": {
       const path = (input.path as string) || "";
       return path === "." ? "" : path;
+    }
+    case "find_files":
+      return (input.pattern as string) || "";
+    case "search_code":
+      return (input.query as string) || "";
+    case "run_command": {
+      const cmd = (input.command as string) || "";
+      return cmd.length > 80 ? cmd.slice(0, 77) + "…" : cmd;
     }
     case "create_spec":
     case "create_task":
@@ -134,7 +143,7 @@ function tryDecodeBase64(value: string): string {
   if (!value || value.length < 4 || !BASE64_RE.test(value)) return value;
   try {
     const decoded = atob(value);
-    if (/[\x00-\x08\x0E-\x1F]/.test(decoded)) return value;
+    if (/[\u0000-\u0008\u000E-\u001F]/.test(decoded)) return value;
     return decoded;
   } catch {
     return value;
@@ -154,6 +163,36 @@ function decodeBase64Fields(obj: unknown): unknown {
     return result;
   }
   return obj;
+}
+
+function firstMeaningfulLine(text: string, max = 80): string {
+  const line = text.split("\n").find((l) => l.trim().length > 0) || text;
+  return line.length > max ? line.slice(0, max - 3) + "..." : line;
+}
+
+/**
+ * Extract a short, human-readable error summary from a tool result string.
+ * Handles the common `{"tool":"...","ok":false,"stderr":"..."}` JSON pattern
+ * by decoding base64 stderr and returning the first meaningful line.
+ */
+export function summarizeError(result: string): string {
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed && typeof parsed === "object") {
+      const stderr = parsed.stderr ?? "";
+      const error = parsed.error ?? parsed.message ?? "";
+      const raw = (typeof stderr === "string" && stderr.length > 0) ? stderr
+        : (typeof error === "string" && error.length > 0) ? error
+        : "";
+      if (raw) return firstMeaningfulLine(tryDecodeBase64(raw));
+      const stdout = parsed.stdout ?? "";
+      if (typeof stdout === "string" && stdout.length > 0) {
+        return firstMeaningfulLine(tryDecodeBase64(stdout));
+      }
+      if (parsed.tool) return `${parsed.tool} failed`;
+    }
+  } catch { /* not JSON */ }
+  return firstMeaningfulLine(tryDecodeBase64(result));
 }
 
 export function formatResult(result: string): string {

@@ -85,6 +85,10 @@ fn zero_pro_refresh_error_message() -> String {
     "Unable to verify ZERO Pro status right now.".to_string()
 }
 
+fn normalize_login_email(email: &str) -> String {
+    email.trim().to_lowercase()
+}
+
 pub struct AuthService {
     http: Client,
 }
@@ -102,10 +106,11 @@ impl AuthService {
 
     pub async fn login(&self, email: &str, password: &str) -> Result<AuthSessionResult, AuthError> {
         debug!("Logging in via zOS-api");
+        let normalized_email = normalize_login_email(email);
         let res = self
             .http
             .post(format!("{ZOS_API_URL}/api/v2/accounts/login"))
-            .json(&serde_json::json!({ "email": email, "password": password }))
+            .json(&serde_json::json!({ "email": normalized_email, "password": password }))
             .send()
             .await
             .map_err(AuthError::Http)?;
@@ -337,4 +342,17 @@ fn build_display_name(profile: &Option<ZosProfileSummary>, primary_zid: &Option<
         }
     }
     "User".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_login_email;
+
+    #[test]
+    fn normalize_login_email_trims_and_lowercases() {
+        assert_eq!(
+            normalize_login_email("  ShahRozAli@Gmail.Com "),
+            "shahrozali@gmail.com"
+        );
+    }
 }

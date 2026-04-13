@@ -23,6 +23,12 @@ vi.mock("./org-store", () => ({
   },
 }));
 
+vi.mock("./auth-store", () => ({
+  useAuthStore: {
+    subscribe: vi.fn(() => vi.fn()),
+  },
+}));
+
 vi.stubGlobal("sessionStorage", {
   getItem: (key: string) => mockSessionStorage[key] ?? null,
   setItem: (key: string, val: string) => { mockSessionStorage[key] = val; },

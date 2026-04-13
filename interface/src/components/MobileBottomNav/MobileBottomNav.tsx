@@ -1,11 +1,13 @@
-import { Brain, CheckSquare, BarChart3 } from "lucide-react";
+import { Brain, CheckSquare, ListTodo, BarChart3, Cpu } from "lucide-react";
 import styles from "../MobileShell/MobileShell.module.css";
 
-export type MobileNavId = "agent" | "tasks" | "stats";
+export type MobileNavId = "agent" | "tasks" | "execution" | "process" | "stats";
 
 const MOBILE_NAV_ITEMS: Array<{ id: MobileNavId; label: string; icon: typeof Brain }> = [
   { id: "agent", label: "Agent", icon: Brain },
-  { id: "tasks", label: "Execution", icon: CheckSquare },
+  { id: "tasks", label: "Tasks", icon: ListTodo },
+  { id: "execution", label: "Execution", icon: CheckSquare },
+  { id: "process", label: "Process", icon: Cpu },
   { id: "stats", label: "Stats", icon: BarChart3 },
 ];
 
@@ -31,7 +33,7 @@ export function MobileBottomNav({
           type="button"
           aria-pressed={activeId === item.id}
         >
-          <item.icon size={18} />
+          <item.icon size={20} />
           <span>{item.label}</span>
         </button>
       ))}

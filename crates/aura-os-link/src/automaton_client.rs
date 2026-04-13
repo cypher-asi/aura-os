@@ -11,6 +11,7 @@ use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
+use aura_protocol::{InstalledIntegration, InstalledTool};
 use crate::runner::automaton_event_kinds::DONE;
 
 #[derive(Debug, Clone, Serialize)]
@@ -28,6 +29,10 @@ pub struct AutomatonStartParams {
     pub git_repo_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub git_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installed_tools: Option<Vec<InstalledTool>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub installed_integrations: Option<Vec<InstalledIntegration>>,
 }
 
 #[derive(Debug, thiserror::Error)]

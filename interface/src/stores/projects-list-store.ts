@@ -8,6 +8,7 @@ import {
   projectsQueryOptions,
 } from "../queries/project-queries";
 import { useOrgStore } from "./org-store";
+import { useAuthStore } from "./auth-store";
 
 const NEW_PROJECT_MODAL_STORAGE_KEY = "aura:new-project-modal-open";
 
@@ -262,6 +263,30 @@ useOrgStore.subscribe((state) => {
 // Incrementally prefetch project agents in the background instead of fanning
 // out requests for every project at once. This keeps navigation snappy while
 // preserving cached agent lookups for later surfaces like standalone agent chat.
+//
+// Also refresh projects when authentication changes. This keeps project loading
+// alive in environments where org metadata is unavailable but /api/projects
+// still returns the user's accessible projects.
+let _prevProjectsUserId: string | null = null;
+useAuthStore.subscribe((state) => {
+  const userId = state.user?.user_id ?? null;
+  if (userId === _prevProjectsUserId) return;
+  _prevProjectsUserId = userId;
+
+  if (!userId) {
+    _prevOrgId = null;
+    _knownProjectIds = new Set();
+    useProjectsListStore.setState({
+      projects: [],
+      loadingProjects: false,
+      agentsByProject: {},
+      loadingAgentsByProject: {},
+    });
+    return;
+  }
+
+  useProjectsListStore.getState().refreshProjects();
+});
 
 useProjectsListStore.subscribe((state) => {
   const currentIds = new Set(state.projects.map((p) => p.project_id));

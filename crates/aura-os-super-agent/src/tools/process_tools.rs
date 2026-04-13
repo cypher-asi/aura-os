@@ -198,6 +198,7 @@ impl SuperAgentTool for TriggerProcessTool {
         let run = self
             .executor
             .trigger(&process_id, ProcessRunTrigger::Manual)
+            .await
             .map_err(|e| tool_err("trigger_process", e))?;
 
         Ok(ToolResult {

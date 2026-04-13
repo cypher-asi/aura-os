@@ -23,6 +23,7 @@ interface Props {
     default_model?: string | null;
     provider_config?: Record<string, unknown> | null;
     api_key?: string | null;
+    enabled?: boolean | null;
   }) => Promise<OrgIntegration | null>;
   onUpdate: (
     integrationId: string,
@@ -33,6 +34,7 @@ interface Props {
       default_model?: string | null;
       provider_config?: Record<string, unknown> | null;
       api_key?: string | null;
+      enabled?: boolean | null;
     },
   ) => Promise<OrgIntegration | null>;
   onDelete: (integrationId: string) => Promise<void>;
@@ -103,6 +105,10 @@ function kindLabel(kind: OrgIntegration["kind"]): string {
   if (kind === "workspace_connection") return "Workspace Connection";
   if (kind === "workspace_integration") return "Workspace Integration";
   return "MCP Server";
+}
+
+function supportsCapabilityToggle(kind: OrgIntegration["kind"]): boolean {
+  return kind === "workspace_integration" || kind === "mcp_server";
 }
 
 function emptyDraft(provider: string): IntegrationDraft {
@@ -310,12 +316,26 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                           <span className={styles.integrationBadge}>
                             {integration.secret_last4 ? `Key ••••${integration.secret_last4}` : "No key"}
                           </span>
+                          {supportsCapabilityToggle(integration.kind) && (
+                            <span className={styles.integrationBadge}>
+                              {integration.enabled ? "Enabled" : "Disabled"}
+                            </span>
+                          )}
                           {secondaryBadge && (
                             <span className={styles.integrationBadge}>{secondaryBadge}</span>
                           )}
                         </div>
                       </div>
                       <div className={styles.integrationSummaryActions}>
+                        {supportsCapabilityToggle(integration.kind) && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => void onUpdate(integration.integration_id, { enabled: !integration.enabled })}
+                            disabled={isBusy}
+                          >
+                            {integration.enabled ? "Disable" : "Enable"}
+                          </Button>
+                        )}
                         <Button
                           variant={isExpanded ? "ghost" : "primary"}
                           onClick={() => setExpandedIntegrationId((current) => (

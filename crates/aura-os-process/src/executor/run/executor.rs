@@ -43,7 +43,7 @@ impl ProcessExecutor {
         }
     }
 
-    pub fn cancel_run(
+    pub async fn cancel_run(
         &self,
         process_id: &ProcessId,
         run_id: &ProcessRunId,
@@ -65,6 +65,9 @@ impl ProcessExecutor {
         run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
+        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+            sync_run_to_storage(client, &run, false).await;
+        }
 
         emit_process_event(
             &self.store,
@@ -84,15 +87,24 @@ impl ProcessExecutor {
         Ok(())
     }
 
-    pub fn trigger(
+    pub async fn trigger(
         &self,
         process_id: &ProcessId,
         trigger: ProcessRunTrigger,
     ) -> Result<ProcessRun, ProcessError> {
-        let process = self
-            .store
-            .get_process(process_id)?
-            .ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
+        let process =
+            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+                Some(
+                    client
+                        .get_process_internal(&process_id.to_string())
+                        .await
+                        .map(conv_process)
+                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+                )
+            } else {
+                self.store.get_process(process_id)?
+            };
+        let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let existing_runs = self.store.list_runs(process_id)?;
         if existing_runs.iter().any(|r| {
@@ -121,6 +133,9 @@ impl ProcessExecutor {
             input_override: None,
         };
         self.store.save_run(&run)?;
+        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+            sync_run_to_storage(client, &run, true).await;
+        }
 
         emit_process_event(
             &self.store,
@@ -194,10 +209,19 @@ impl ProcessExecutor {
         parent_run_id: Option<ProcessRunId>,
         parent_mirror: Option<ParentStreamMirrorContext>,
     ) -> Result<ProcessRun, ProcessError> {
-        let process = self
-            .store
-            .get_process(process_id)?
-            .ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
+        let process =
+            if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+                Some(
+                    client
+                        .get_process_internal(&process_id.to_string())
+                        .await
+                        .map(conv_process)
+                        .map_err(|error| authoritative_process_read_error(process_id, &error))?,
+                )
+            } else {
+                self.store.get_process(process_id)?
+            };
+        let process = process.ok_or_else(|| ProcessError::NotFound(process_id.to_string()))?;
 
         let now = Utc::now();
         let run = ProcessRun {
@@ -216,6 +240,9 @@ impl ProcessExecutor {
             input_override: input_override.clone(),
         };
         self.store.save_run(&run)?;
+        if let Some(client) = internal_process_sync_client(self.storage_client.as_ref()) {
+            sync_run_to_storage(client, &run, true).await;
+        }
 
         emit_process_event(
             &self.store,

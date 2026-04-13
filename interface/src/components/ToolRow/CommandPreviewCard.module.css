@@ -1,0 +1,72 @@
+.card {
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0;
+  overflow: hidden;
+  margin-top: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.prompt {
+  color: var(--color-text-muted, #888);
+  flex-shrink: 0;
+}
+
+.command {
+  color: var(--color-text, #ddd);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.exitCode {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted, #555);
+  flex-shrink: 0;
+}
+
+.exitCodeError {
+  color: #f87171;
+}
+
+.body {
+  max-height: 240px;
+  overflow: auto;
+}
+
+.output {
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.stderrOutput {
+  color: #f87171;
+  border-top: 1px solid rgba(248, 113, 113, 0.15);
+}

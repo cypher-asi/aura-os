@@ -5,31 +5,18 @@
   margin-bottom: 0;
 }
 
-/* ── Summary header: ● Working on N to-dos ── */
+/* ── Summary header ── */
 
 .toolCallsHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
   padding: 4px 0;
   margin-bottom: 2px;
 }
 
-.headerDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-text-muted, #888);
-  flex-shrink: 0;
-}
-
-.headerDotDone {
-  background: #fff;
-}
-
 .headerText {
-  font-size: 13px;
-  color: var(--color-text, #ddd);
+  font-size: 12px;
+  color: var(--color-text-muted, #555);
 }
 
 /* ── Checklist item row ── */
@@ -39,7 +26,7 @@
   border-radius: 0;
   background: none;
   overflow: visible;
-  padding-left: 0;
+  padding-left: 14px;
 }
 
 .toolHeader {
@@ -47,7 +34,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 1px 0;
+  padding: 3px 0;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -62,31 +49,21 @@
   background: transparent;
 }
 
-/* ── Checkbox icon (CSS-drawn) ── */
+/* ── Status dot (replaces checkbox) ── */
 
-.taskCheck {
+.statusDot {
   display: block;
-  width: 13px;
-  height: 13px;
-  border: 1.5px solid var(--color-text-muted, #666);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   flex-shrink: 0;
-  position: relative;
-  box-sizing: border-box;
+  background: var(--color-text-muted, #555);
+  transition: background 0.2s ease;
 }
 
-/* Active: filled inner square */
-.taskActive .taskCheck {
-  border-color: var(--color-text, #ddd);
-}
-
-.taskActive .taskCheck::before {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
+.taskActive .statusDot {
   background: var(--color-text, #ddd);
+  animation: dotPulse 1.5s ease-in-out infinite;
 }
 
 .taskActive .toolName {
@@ -94,13 +71,8 @@
   color: var(--color-text, #fff);
 }
 
-/* Done: green checkmark (Lucide icon), no square border */
-.taskDone .taskCheck {
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-success, #4c9);
+.taskDone .statusDot {
+  background: var(--color-success, #4c9);
 }
 
 .taskDone .toolName {
@@ -111,29 +83,8 @@
   color: var(--color-text-secondary);
 }
 
-/* Error: square with X in red */
-.taskError .taskCheck {
-  border-color: #f87171;
-}
-
-.taskError .taskCheck::before,
-.taskError .taskCheck::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 7px;
-  height: 1.5px;
+.taskError .statusDot {
   background: #f87171;
-  border-radius: 1px;
-}
-
-.taskError .taskCheck::before {
-  transform: rotate(45deg);
-}
-
-.taskError .taskCheck::after {
-  transform: rotate(-45deg);
 }
 
 .taskError .toolName {
@@ -147,7 +98,7 @@
   align-items: center;
   margin-left: auto;
   flex-shrink: 0;
-  opacity: 0.5;
+  opacity: 0.3;
   transition: transform 0.2s ease;
 }
 
@@ -194,9 +145,7 @@
 }
 
 .toolBody {
-  padding: 4px 0 8px 0;
-  margin-left: 0;
-  border-left: none;
+  padding: 6px 0 10px 0;
 }
 
 .section {

@@ -9,7 +9,11 @@ export function isProjectNestedPath(
     pathname.endsWith("/execution") ||
     pathname.endsWith("/work") ||
     pathname.endsWith("/files") ||
-    pathname.endsWith("/stats")
+    pathname.endsWith("/stats") ||
+    pathname.endsWith("/process") ||
+    pathname.endsWith("/tasks") ||
+    pathname.endsWith("/agent") ||
+    /\/agents\/[^/]+(?:\/details)?$/.test(pathname)
   );
 }
 

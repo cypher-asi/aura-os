@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
-import { User, MapPin, Globe, Calendar, Copy, Check } from "lucide-react";
+import { User, MapPin, Globe, Calendar } from "lucide-react";
 import { EntityCard } from "../../../../components/EntityCard";
 import { FollowEditButton } from "../../../../components/FollowEditButton";
 import { ProfileEditorModal } from "../../ProfileEditorModal";
-import { authApi } from "../../../../api/auth";
 import {
   formatJoinedDate,
   formatTokenCount,
@@ -97,8 +95,6 @@ export function ProfileSummaryCard({
         ]}
         footer="CYPHER-ASI // AURA"
       >
-        {summary.isOwnProfile && <AccessCodeBadge />}
-
         <div className={bioClassName}>
           {summary.profile.bio ? (
             <p className={bioTextClassName}>{summary.profile.bio}</p>
@@ -166,40 +162,3 @@ export function ProfileSummaryCard({
   );
 }
 
-function AccessCodeBadge() {
-  const [code, setCode] = useState<{ code: string; maxUses: number; useCount: number } | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    authApi.getAccessCode().then(setCode).catch(() => {});
-  }, []);
-
-  if (!code) return null;
-
-  const remaining = code.maxUses - code.useCount;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className={styles.accessCodeSection}>
-      <div className={styles.accessCodeRow}>
-        <span className={styles.accessCodeLabel}>Access Code:</span>
-        <code className={styles.accessCodeValue}>{code.code}</code>
-        <button
-          type="button"
-          className={styles.accessCodeCopy}
-          onClick={handleCopy}
-        >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-        </button>
-      </div>
-      <span className={styles.accessCodeRemaining}>
-        {remaining} of {code.maxUses} uses remaining
-      </span>
-    </div>
-  );
-}

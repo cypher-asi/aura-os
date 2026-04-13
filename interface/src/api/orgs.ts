@@ -67,6 +67,7 @@ export const orgsApi = {
       default_model?: string | null;
       provider_config?: Record<string, unknown> | null;
       api_key?: string | null;
+      enabled?: boolean | null;
     },
   ) =>
     apiFetch<OrgIntegration>(`/api/orgs/${orgId}/integrations`, {
@@ -83,6 +84,7 @@ export const orgsApi = {
       default_model?: string | null;
       provider_config?: Record<string, unknown> | null;
       api_key?: string | null;
+      enabled?: boolean | null;
     },
   ) =>
     apiFetch<OrgIntegration>(`/api/orgs/${orgId}/integrations/${integrationId}`, {

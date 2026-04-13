@@ -10,12 +10,45 @@ fn execute_run<'a>(
     org_service: &'a OrgService,
 ) -> Pin<Box<dyn Future<Output = Result<(), ProcessError>> + Send + 'a>> {
     Box::pin(async move {
+        let internal_storage_client =
+            internal_process_sync_client(executor.storage_client.as_ref());
         let mut current_run = run.clone();
         current_run.status = ProcessRunStatus::Running;
         store.save_run(&current_run)?;
+        if let Some(client) = internal_storage_client {
+            sync_run_to_storage(client, &current_run, false).await;
+        }
 
-        let nodes = store.list_nodes(&run.process_id)?;
-        let connections = store.list_connections(&run.process_id)?;
+        let nodes = if let Some(client) = internal_storage_client {
+            client
+                .list_process_nodes_internal(&run.process_id.to_string())
+                .await
+                .map(|sn| sn.into_iter().map(conv_node).collect())
+                .map_err(|error| {
+                    authoritative_process_storage_error(
+                        &run.process_id,
+                        "load process nodes",
+                        &error,
+                    )
+                })?
+        } else {
+            store.list_nodes(&run.process_id)?
+        };
+        let connections = if let Some(client) = internal_storage_client {
+            client
+                .list_process_connections_internal(&run.process_id.to_string())
+                .await
+                .map(|sc| sc.into_iter().map(conv_connection).collect())
+                .map_err(|error| {
+                    authoritative_process_storage_error(
+                        &run.process_id,
+                        "load process connections",
+                        &error,
+                    )
+                })?
+        } else {
+            store.list_connections(&run.process_id)?
+        };
 
         let sorted = topological_sort(&nodes, &connections)?;
         let reachable = reachable_from_ignition(&nodes, &connections);
@@ -40,9 +73,17 @@ fn execute_run<'a>(
         let workspace_path = workspace_dir.to_string_lossy().to_string();
 
         // ── create spec + tasks ────────────────────────────────────────────
-        let process = store
-            .get_process(&run.process_id)?
-            .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?;
+        let process = if let Some(client) = internal_storage_client {
+            client
+                .get_process_internal(&run.process_id.to_string())
+                .await
+                .map(conv_process)
+                .map_err(|error| authoritative_process_read_error(&run.process_id, &error))?
+        } else {
+            store
+                .get_process(&run.process_id)?
+                .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?
+        };
         let project_id = process
             .project_id
             .ok_or_else(|| ProcessError::Execution("Process has no project_id".into()))?;
@@ -137,6 +178,14 @@ fn execute_run<'a>(
                         }
                         upstream_context.push_str(&artifact_ctx);
                     }
+                }
+            }
+
+            if let Some(vault_path) = node.config.get("vault_path").and_then(|v| v.as_str()) {
+                if !vault_path.is_empty() {
+                    upstream_context.push_str(&format!(
+                        "\n\n## Obsidian Vault\n\nWrite output to: {vault_path}"
+                    ));
                 }
             }
 
@@ -420,6 +469,24 @@ fn execute_run<'a>(
                     current_run.total_output_tokens = Some(run_output_tokens);
                     current_run.cost_usd = Some(run_cost_usd);
                     store.save_run(&current_run)?;
+                    if let Some(client) = internal_storage_client {
+                        sync_run_to_storage(client, &current_run, false).await;
+                    }
+
+                    if let Some(client) = internal_storage_client {
+                        if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id)
+                        {
+                            for ev in &events {
+                                sync_event_to_storage(client, ev, true).await;
+                            }
+                        }
+                        if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id)
+                        {
+                            for art in &arts {
+                                sync_artifact_to_storage(client, art).await;
+                            }
+                        }
+                    }
 
                     emit_process_event(
                         store,
@@ -465,6 +532,19 @@ fn execute_run<'a>(
         current_run.cost_usd = Some(run_cost_usd);
         current_run.output = run_output;
         store.save_run(&current_run)?;
+        if let Some(client) = internal_storage_client {
+            sync_run_to_storage(client, &current_run, false).await;
+            if let Ok(events) = store.list_events_for_run(&run.process_id, &run.run_id) {
+                for ev in &events {
+                    sync_event_to_storage(client, ev, true).await;
+                }
+            }
+            if let Ok(arts) = store.list_artifacts_for_run(&run.process_id, &run.run_id) {
+                for art in &arts {
+                    sync_artifact_to_storage(client, art).await;
+                }
+            }
+        }
 
         emit_process_event(
             store,

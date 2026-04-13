@@ -1,5 +1,7 @@
 # Agent Runtime And Execution Plan
 
+Canonical architecture note: see [Capabilities And Credentials Architecture](./capabilities-and-credentials-architecture.md).
+
 This document is the current reference for Aura OS adapters, connections, apps, MCP servers, and execution placement.
 
 It is intentionally product-shaped, not infrastructure-shaped:
@@ -52,6 +54,12 @@ Examples:
 - `GitHub`
 - `Slack`
 - `Notion`
+- `Brave Search`
+- `Freepik`
+- `Buffer`
+- `Apify`
+- `Metricool`
+- `Mailchimp`
 
 Apps can contribute tools into Aura OS through a first-class app provider contract.
 

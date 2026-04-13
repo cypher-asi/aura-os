@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../../api/client";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { getPrivacyPolicyUrl, getSupportUrl } from "../../lib/app-links";
 
 interface SettingsData {
   loading: boolean;
   updateChannel: "stable" | "nightly";
   currentVersion: string;
   showUpdater: boolean;
+  privacyPolicyUrl: string | null;
+  supportUrl: string | null;
   handleChannelChange: (ch: "stable" | "nightly") => Promise<void>;
 }
 
@@ -46,6 +49,9 @@ export function useSettingsData(isOpen: boolean): SettingsData {
 
   return {
     loading, updateChannel, currentVersion,
-    showUpdater: !!features.nativeUpdater, handleChannelChange,
+    showUpdater: !!features.nativeUpdater,
+    privacyPolicyUrl: getPrivacyPolicyUrl(),
+    supportUrl: getSupportUrl(),
+    handleChannelChange,
   };
 }

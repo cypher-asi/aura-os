@@ -298,6 +298,7 @@ Local release commands from `interface/ios/`:
 
 ```bash
 bundle install
+bundle exec fastlane ios preflight
 bundle exec fastlane ios beta
 bundle exec fastlane ios release
 ```
@@ -305,7 +306,7 @@ bundle exec fastlane ios release
 GitHub Actions release input:
 
 - Run `iOS Mobile`
-- Choose lane `beta` for TestFlight or `release` for an App Store candidate
+- Choose lane `preflight` to validate secrets/signing config, `beta` for TestFlight, or `release` for an App Store candidate
 - Set `submit_for_review=true` only when metadata, screenshots, and review notes are ready
 
 Required iOS secrets for CI:
@@ -343,6 +344,7 @@ Local release commands from `interface/android/`:
 
 ```bash
 bundle install
+bundle exec fastlane android preflight
 bundle exec fastlane android beta
 bundle exec fastlane android release
 ```
@@ -350,7 +352,7 @@ bundle exec fastlane android release
 GitHub Actions release input:
 
 - Run `Android Mobile`
-- Choose lane `beta` for Play Internal Testing or `release` for a release candidate
+- Choose lane `preflight` to validate secrets/signing config, `beta` for Play Internal Testing, or `release` for a release candidate
 - Choose the Play track (`internal`, `closed`, or `production`)
 - Leave `release_status=draft` until you are ready for a real rollout
 
@@ -391,6 +393,7 @@ For the current release-build plan and workflow map, see:
 
 - [Release Build Strategy](docs/release-build-strategy.md)
 - [Release Workflows](docs/release-workflows.md)
+- [Mobile Store Compliance Audit](docs/mobile-store-compliance-audit.md)
 
 ### Optional services
 

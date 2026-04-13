@@ -1,5 +1,5 @@
 import { Modal, Heading, Button, Spinner, Text } from "@cypher-asi/zui";
-import { LogOut } from "lucide-react";
+import { CircleHelp, LogOut, Shield } from "lucide-react";
 import { useAuth } from "../../stores/auth-store";
 import { Select } from "../Select";
 import { useSettingsData } from "./useSettingsData";
@@ -18,8 +18,23 @@ export function SettingsModal({
   onClose: () => void;
 }) {
   const { logout } = useAuth();
-  const { loading, updateChannel, currentVersion, showUpdater, handleChannelChange } =
+  const {
+    loading,
+    updateChannel,
+    currentVersion,
+    showUpdater,
+    privacyPolicyUrl,
+    supportUrl,
+    handleChannelChange,
+  } =
     useSettingsData(isOpen);
+
+  const openExternal = (url: string | null) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const hasExternalSupport = Boolean(privacyPolicyUrl || supportUrl);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="sm">
@@ -53,6 +68,41 @@ export function SettingsModal({
                     ? "You'll receive builds from every push to main."
                     : "You'll only receive tagged releases."}
                 </Text>
+              </>
+            )}
+
+            {hasExternalSupport && (
+              <>
+                <div className={styles.divider} />
+
+                <Heading level={4}>Support & Privacy</Heading>
+
+                <Text variant="muted" size="sm">
+                  Helpful links for app support, store review, and policy disclosures.
+                </Text>
+
+                <div className={styles.linkActions}>
+                  {privacyPolicyUrl && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Shield size={14} />}
+                      onClick={() => openExternal(privacyPolicyUrl)}
+                    >
+                      Privacy Policy
+                    </Button>
+                  )}
+                  {supportUrl && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<CircleHelp size={14} />}
+                      onClick={() => openExternal(supportUrl)}
+                    >
+                      Support
+                    </Button>
+                  )}
+                </div>
               </>
             )}
 

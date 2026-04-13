@@ -6,8 +6,10 @@ import {
   getMobileProjectDestination,
   projectAgentRoute,
   projectFilesRoute,
+  projectProcessRoute,
   projectRootPath,
   projectStatsRoute,
+  projectTasksRoute,
   projectWorkRoute,
 } from "../../utils/mobileNavigation";
 import { getCollapsedProjects, getLastAgent, setCollapsedProjects } from "../../utils/storage";
@@ -146,14 +148,12 @@ function useSelectedProjectNode(
     if (
       data.isMobileLayout &&
       data.projectId &&
-      (data.location.pathname.endsWith("/execution") ||
-        data.location.pathname.endsWith("/work") ||
-        data.location.pathname.endsWith("/stats"))
+      isProjectNestedPath(data.location.pathname, false)
     ) {
       return executionNodeId(data.projectId);
     }
     return null;
-  }, [data]);
+  }, [data.agentInstanceId, data.isMobileLayout, data.location.pathname, data.projectId]);
 
   const defaultSelectedIds = useMemo(() => {
     if (selectedNodeId) return [selectedNodeId];
@@ -183,8 +183,16 @@ function useProjectSelectionHandler(
         navigate(projectRootPath(nodeId));
         return;
       }
-      if (mobileDestination === "tasks") {
+      if (mobileDestination === "execution") {
         navigate(projectWorkRoute(nodeId));
+        return;
+      }
+      if (mobileDestination === "tasks") {
+        navigate(projectTasksRoute(nodeId));
+        return;
+      }
+      if (mobileDestination === "process") {
+        navigate(projectProcessRoute(nodeId));
         return;
       }
       if (mobileDestination === "files") {

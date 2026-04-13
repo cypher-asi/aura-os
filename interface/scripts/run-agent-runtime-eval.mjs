@@ -27,6 +27,7 @@ const prompt = process.env.AURA_RUNTIME_EVAL_PROMPT?.trim()
 const runChatValidation = process.env.AURA_RUNTIME_EVAL_CHAT === "1"
   || ["codex", "claude_code"].includes(adapterType);
 const chatTimeoutMs = Number.parseInt(process.env.AURA_RUNTIME_EVAL_CHAT_TIMEOUT_MS ?? "45000", 10);
+const useProjectChat = process.env.AURA_RUNTIME_EVAL_PROJECT_CHAT === "1";
 
 function inferProvider() {
   if (adapterType === "claude_code") return "anthropic";
@@ -152,6 +153,26 @@ async function cleanupAgent(agentId) {
   return { detachedBindings, deleted };
 }
 
+function importedProjectFiles(label) {
+  return [
+    {
+      relative_path: "README.md",
+      contents_base64: Buffer.from(`# ${label}\n`).toString("base64"),
+    },
+  ];
+}
+
+async function createProject(orgId) {
+  return apiJson("POST", "/api/projects/import", {
+    org_id: orgId,
+    name: `${adapterType} Runtime Eval Project`,
+    description: `Runtime adapter eval for ${adapterType}.`,
+    files: importedProjectFiles(adapterType),
+    build_command: null,
+    test_command: null,
+  });
+}
+
 async function readSse(response) {
   const decoder = new TextDecoder();
   const reader = response.body?.getReader();
@@ -191,7 +212,7 @@ async function readSse(response) {
   return { text: assembledText.trim(), events };
 }
 
-async function runChat(agentId) {
+async function runChat(agentId, projectId = null) {
   const controller = new AbortController();
   const timer = Number.isFinite(chatTimeoutMs) && chatTimeoutMs > 0
     ? setTimeout(() => controller.abort(), chatTimeoutMs)
@@ -201,7 +222,10 @@ async function runChat(agentId) {
     const response = await fetch(`${apiBaseUrl}/api/agents/${agentId}/events/stream`, {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ content: prompt }),
+      body: JSON.stringify({
+        content: prompt,
+        ...(projectId ? { project_id: projectId } : {}),
+      }),
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -257,11 +281,15 @@ async function main() {
   let org = null;
   let integration = null;
   let agent = null;
+  let project = null;
 
   try {
     await ensureImportedAccessToken();
     org = await resolveEvalOrg();
     integration = await maybeCreateIntegration(org.org_id);
+    if (useProjectChat) {
+      project = await createProject(org.org_id);
+    }
 
     agent = await apiJson("POST", "/api/agents", {
       org_id: org.org_id,
@@ -283,7 +311,7 @@ async function main() {
 
     const runtimeTest = await apiJson("POST", `/api/agents/${agent.agent_id}/runtime/test`);
     const chatRun = runChatValidation
-      ? await runChat(agent.agent_id)
+      ? await runChat(agent.agent_id, project?.project_id ?? null)
       : {
           ok: true,
           skipped: true,
@@ -301,6 +329,7 @@ async function main() {
       org,
       integration,
       agent,
+      project,
       runtimeTest,
       chatRun,
     };
@@ -312,6 +341,9 @@ async function main() {
     if (!keepEntities) {
       payload.cleanup = {
         agent: await cleanupAgent(agent.agent_id),
+        project: project
+          ? await cleanupEntity("DELETE", `/api/projects/${project.project_id}`)
+          : null,
         integration: integration
           ? await cleanupEntity("DELETE", `/api/orgs/${org.org_id}/integrations/${integration.integration_id}`)
           : null,
@@ -332,6 +364,7 @@ async function main() {
       org,
       integration,
       agent,
+      project,
       error: error instanceof Error ? error.message : String(error),
     };
     await fs.mkdir(resultsDir, { recursive: true });

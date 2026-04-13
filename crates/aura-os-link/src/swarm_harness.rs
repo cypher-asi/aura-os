@@ -243,6 +243,7 @@ impl HarnessLink for SwarmHarness {
             temperature: None,
             max_turns: config.max_turns,
             installed_tools: config.installed_tools,
+            installed_integrations: config.installed_integrations,
             workspace: config.workspace,
             project_path: config.project_path,
             token: config.token,

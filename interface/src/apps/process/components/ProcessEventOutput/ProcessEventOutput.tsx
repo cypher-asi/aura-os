@@ -1,11 +1,8 @@
 import { useMemo, useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import type { ProcessEvent } from "../../../../types";
-import { MessageBubble } from "../../../../components/MessageBubble";
-import {
-  prettyPrintIfJson,
-  monoBox,
-} from "../NodeOutputTab/node-output-utils";
+import { LLMOutput } from "../../../../components/LLMOutput";
+import { monoBox, prettyPrintIfJson } from "../NodeOutputTab/node-output-utils";
 import { buildProcessEventDisplay } from "./process-event-display";
 
 interface Props {
@@ -20,15 +17,20 @@ export function ProcessEventOutput({ event }: Props) {
 
   return (
     <>
-      {message && <MessageBubble message={message} />}
+      {message && (
+        <LLMOutput
+          content={message.content}
+          timeline={message.timeline}
+          toolCalls={message.toolCalls}
+          thinkingText={message.thinkingText}
+          thinkingDurationMs={message.thinkingDurationMs}
+          artifactRefs={message.artifactRefs}
+        />
+      )}
       {separateOutput && <FormattedOutput text={separateOutput} />}
     </>
   );
 }
-
-// ---------------------------------------------------------------------------
-// FormattedOutput — scrollable, monospace block for structured data
-// ---------------------------------------------------------------------------
 
 function FormattedOutput({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -74,4 +76,3 @@ function FormattedOutput({ text }: { text: string }) {
     </div>
   );
 }
-

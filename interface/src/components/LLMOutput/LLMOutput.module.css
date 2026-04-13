@@ -1,0 +1,117 @@
+/* LLMOutput — reusable renderer for LLM responses */
+
+.root {
+  font-size: 12px;
+  line-height: 1.65;
+}
+.root a {
+  color: var(--color-accent, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s;
+}
+.root a:hover {
+  opacity: 0.8;
+}
+.root h1 { font-size: 18px; margin: 12px 0 8px; font-weight: 600; }
+.root h2 { font-size: 15px; margin: 10px 0 8px; font-weight: 600; }
+.root h3 { font-size: 13.5px; margin: 8px 0 8px; font-weight: 600; }
+.root :first-child { margin-top: 0; }
+.root p { margin-top: 0; margin-bottom: 12px; }
+.root p:last-child { margin-bottom: 0; }
+.root code {
+  font-family: var(--font-mono);
+  background: #000;
+  padding: 1px 4px;
+  border-radius: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.root pre {
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin-bottom: 10px;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.root pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  display: block;
+  white-space: pre;
+  color: var(--color-text-secondary);
+}
+.root table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.root th, .root td {
+  border: 1px solid var(--color-border);
+  padding: 5px 8px;
+  text-align: left;
+  color: var(--color-text-secondary);
+}
+.root th {
+  background: #000;
+  font-weight: 600;
+}
+.root ul, .root ol {
+  padding-left: 18px;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+}
+.root li { margin-bottom: 2px; color: var(--color-text-secondary); }
+.root hr {
+  border: none;
+  height: 16px;
+}
+.root blockquote {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 10px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+  font-size: 12.5px;
+}
+
+.fallbackStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Artifact refs (created tasks/specs) */
+.artifactRefs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.artifactRef {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.artifactRefIcon {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  min-width: 32px;
+}
+
+.artifactRefTitle {
+  font-size: 13px;
+  color: var(--color-text, #ddd);
+}

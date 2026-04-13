@@ -3,7 +3,7 @@ import {
   agenticToolLabel,
   computeIterationStats,
 } from "./derive-activity";
-import type { ActivityItem, IterationStats } from "./derive-activity";
+import type { IterationStats } from "./derive-activity";
 
 describe("deriveActivity", () => {
   it("returns a thinking item for empty buffer", () => {

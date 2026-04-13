@@ -138,5 +138,241 @@
       },
       "required": ["parent_page_id", "title"]
     }
+  },
+  {
+    "name": "brave_search_web",
+    "provider": "brave_search",
+    "description": "Search the web through a saved Brave Search org integration.",
+    "promptSignature": "brave_search_web(query, count?, freshness?, country?, search_lang?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "query": { "type": "string", "description": "Search query." },
+        "count": { "type": "integer", "description": "Maximum number of results to return." },
+        "freshness": { "type": "string", "description": "Optional freshness filter such as pd, pw, pm, or py." },
+        "country": { "type": "string", "description": "Optional 2-letter country code." },
+        "search_lang": { "type": "string", "description": "Optional search language code." }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "name": "brave_search_news",
+    "provider": "brave_search",
+    "description": "Search recent news through a saved Brave Search org integration.",
+    "promptSignature": "brave_search_news(query, count?, freshness?, country?, search_lang?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "query": { "type": "string", "description": "News search query." },
+        "count": { "type": "integer", "description": "Maximum number of results to return." },
+        "freshness": { "type": "string", "description": "Optional freshness filter such as pd, pw, pm, or py." },
+        "country": { "type": "string", "description": "Optional 2-letter country code." },
+        "search_lang": { "type": "string", "description": "Optional search language code." }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "name": "freepik_list_icons",
+    "provider": "freepik",
+    "description": "Search Freepik icons through a saved org integration.",
+    "promptSignature": "freepik_list_icons(term?, slug?, page?, per_page?, order?, language?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "term": { "type": "string", "description": "Optional icon search term." },
+        "slug": { "type": "string", "description": "Optional icon slug." },
+        "page": { "type": "integer", "description": "Results page number." },
+        "per_page": { "type": "integer", "description": "Results per page." },
+        "order": { "type": "string", "description": "Optional ordering, usually relevance or recent." },
+        "language": { "type": "string", "description": "Optional Accept-Language value, such as en-US." }
+      }
+    }
+  },
+  {
+    "name": "freepik_improve_prompt",
+    "provider": "freepik",
+    "description": "Improve a Freepik image or video prompt through a saved org integration.",
+    "promptSignature": "freepik_improve_prompt(prompt, type?, language?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "prompt": { "type": "string", "description": "Prompt to improve." },
+        "type": { "type": "string", "description": "Generation type: image or video." },
+        "language": { "type": "string", "description": "Optional 2-letter language code." }
+      },
+      "required": ["prompt"]
+    }
+  },
+  {
+    "name": "buffer_list_profiles",
+    "provider": "buffer",
+    "description": "List Buffer profiles available through a saved org integration.",
+    "promptSignature": "buffer_list_profiles(integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "buffer_create_update",
+    "provider": "buffer",
+    "description": "Create a social update in Buffer through a saved org integration.",
+    "promptSignature": "buffer_create_update(profile_id, text, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "profile_id": { "type": "string", "description": "Buffer profile id from buffer_list_profiles." },
+        "text": { "type": "string", "description": "Text to schedule in Buffer." }
+      },
+      "required": ["profile_id", "text"]
+    }
+  },
+  {
+    "name": "apify_list_actors",
+    "provider": "apify",
+    "description": "List available Apify Actors through a saved org integration.",
+    "promptSignature": "apify_list_actors(limit?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "limit": { "type": "integer", "description": "Maximum number of actors to return." }
+      }
+    }
+  },
+  {
+    "name": "apify_run_actor",
+    "provider": "apify",
+    "description": "Start an Apify Actor run through a saved org integration.",
+    "promptSignature": "apify_run_actor(actor_id, input?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "actor_id": { "type": "string", "description": "Actor id or actor slug." },
+        "input": { "type": "object", "description": "Optional Actor input payload." }
+      },
+      "required": ["actor_id"]
+    }
+  },
+  {
+    "name": "metricool_list_brands",
+    "provider": "metricool",
+    "description": "List Metricool brands available through a saved org integration.",
+    "promptSignature": "metricool_list_brands(integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "metricool_list_posts",
+    "provider": "metricool",
+    "description": "List Metricool posts for the configured brand through a saved org integration.",
+    "promptSignature": "metricool_list_posts(start?, end?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "start": { "type": "integer", "description": "Optional start date in YYYYMMDD format." },
+        "end": { "type": "integer", "description": "Optional end date in YYYYMMDD format." }
+      }
+    }
+  },
+  {
+    "name": "mailchimp_list_audiences",
+    "provider": "mailchimp",
+    "description": "List Mailchimp audiences through a saved org integration.",
+    "promptSignature": "mailchimp_list_audiences(integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "mailchimp_list_campaigns",
+    "provider": "mailchimp",
+    "description": "List Mailchimp campaigns through a saved org integration.",
+    "promptSignature": "mailchimp_list_campaigns(integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "resend_list_domains",
+    "provider": "resend",
+    "description": "List Resend sending domains through a saved org integration.",
+    "promptSignature": "resend_list_domains(integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "resend_send_email",
+    "provider": "resend",
+    "description": "Send an email through a saved Resend org integration.",
+    "promptSignature": "resend_send_email(from, to, subject, html?, text?, cc?, bcc?, integration_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integration_id": { "type": "string" },
+        "from": { "type": "string", "description": "Sender email, optionally with a display name like \"Aura <ops@example.com>\"." },
+        "to": {
+          "oneOf": [
+            { "type": "string", "description": "Single recipient email address." },
+            { "type": "array", "items": { "type": "string" }, "description": "List of recipient email addresses." }
+          ]
+        },
+        "subject": { "type": "string", "description": "Email subject." },
+        "html": { "type": "string", "description": "Optional HTML email body." },
+        "text": { "type": "string", "description": "Optional plain text email body." },
+        "cc": {
+          "oneOf": [
+            { "type": "string", "description": "Single cc email address." },
+            { "type": "array", "items": { "type": "string" }, "description": "List of cc email addresses." }
+          ]
+        },
+        "bcc": {
+          "oneOf": [
+            { "type": "string", "description": "Single bcc email address." },
+            { "type": "array", "items": { "type": "string" }, "description": "List of bcc email addresses." }
+          ]
+        }
+      },
+      "required": ["from", "to", "subject"]
+    }
   }
 ]

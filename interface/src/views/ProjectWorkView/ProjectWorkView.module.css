@@ -13,11 +13,25 @@
   min-height: 0;
 }
 
+.sectionCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 14px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 7%, transparent), transparent 52%),
+    color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+}
+
 .sectionLabel {
   padding: 0 var(--space-1);
   color: var(--color-text-secondary);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .sectionBody {
@@ -25,6 +39,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.sectionHint {
+  line-height: 1.45;
 }
 
 .itemList {
@@ -38,7 +56,8 @@
   align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3);
+  min-height: 72px;
+  padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
@@ -48,6 +67,10 @@
 
 .itemButton:hover {
   border-color: var(--color-accent);
+}
+
+.itemButton:active {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg-surface));
 }
 
 .itemButtonMeta {
@@ -66,11 +89,13 @@
 
 .itemTitle {
   font-weight: 600;
+  font-size: 0.98rem;
 }
 
 .itemSubtitle {
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .executionBody {
@@ -102,14 +127,59 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+}
+
+.executionSummaryTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.executionAgentBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.executionMetaLabel {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.executionAgentName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.executionAgentMeta {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+}
+
+.executionStateStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.executionStateText {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
 }
 
 .executionBadge {
   align-self: flex-start;
+}
+
+.executionNotice {
+  line-height: 1.45;
 }
 
 .executionControls {
@@ -120,7 +190,7 @@
 
 .executionSummary :global(.zui-button),
 .executionSummary :global(button) {
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .executionSummary :global([class*="statusRow"]) {

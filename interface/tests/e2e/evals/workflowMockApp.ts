@@ -292,7 +292,7 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
       return json(route, projects);
     }
 
-    const createProject = (imported: boolean) => {
+    const createProject = (_imported: boolean) => {
       const projectId = `proj-${projectCounter++}`;
       const name = typeof body.name === "string" ? body.name : scenario.project.name;
       const project = {

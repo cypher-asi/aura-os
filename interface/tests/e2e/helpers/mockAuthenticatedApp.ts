@@ -3,11 +3,18 @@ import type { Page } from "@playwright/test";
 interface MockAuthenticatedAppOptions {
   project?: Record<string, unknown>;
   projects?: Record<string, unknown>[];
+  orgs?: Record<string, unknown>[];
+  projectsByOrgId?: Record<string, Record<string, unknown>[]>;
   agentInstances?: Record<string, unknown>[];
   agents?: Record<string, unknown>[];
+  skillCatalog?: Record<string, unknown>[];
+  agentSkillInstallations?: Record<string, Record<string, unknown>[]>;
+  remoteAgentStates?: Record<string, Record<string, unknown>>;
   integrations?: Record<string, unknown>[];
   tasks?: Record<string, unknown>[];
   specs?: Record<string, unknown>[];
+  processes?: Record<string, unknown>[];
+  processRuns?: Record<string, Record<string, unknown>[]>;
   orgsUnavailable?: boolean;
 }
 
@@ -153,6 +160,20 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       ...options.project,
     };
     const projects = options.projects ?? [project];
+    const orgs = options.orgs ?? [
+      {
+        org_id: "org-1",
+        name: "Test Org",
+        owner_user_id: "user-1",
+        billing: null,
+        github: null,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ];
+    const allProjects = options.projectsByOrgId
+      ? Object.values(options.projectsByOrgId).flat()
+      : projects;
 
     const defaultAgentInstance = {
       agent_instance_id: "agent-inst-1",
@@ -217,6 +238,70 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     ];
 
     const integrations = options.integrations ?? [];
+    const skillCatalog = options.skillCatalog ?? [
+      {
+        name: "github",
+        description: "Review and manage GitHub work",
+        source: "catalog",
+        model_invocable: false,
+        user_invocable: true,
+        frontmatter: {},
+      },
+      {
+        name: "slack",
+        description: "Coordinate updates with Slack",
+        source: "workspace",
+        model_invocable: false,
+        user_invocable: true,
+        frontmatter: {},
+      },
+      {
+        name: "playwright",
+        description: "Run UI checks from the browser automation toolchain",
+        source: "catalog",
+        model_invocable: false,
+        user_invocable: true,
+        frontmatter: {},
+      },
+    ];
+    const agentSkillInstallations = new Map(
+      Object.entries(options.agentSkillInstallations ?? {}).map(([agentId, installations]) => [
+        agentId,
+        installations.map((installation) => ({ ...installation })),
+      ]),
+    );
+    const remoteAgentStates = options.remoteAgentStates ?? {};
+    const processes = options.processes ?? [
+      {
+        process_id: "proc-1",
+        org_id: "org-1",
+        user_id: "user-1",
+        project_id: "proj-1",
+        name: "Nightly QA",
+        description: "Run nightly checks",
+        enabled: true,
+        folder_id: null,
+        schedule: "Nightly",
+        tags: [],
+        last_run_at: "2026-03-17T01:00:00.000Z",
+        next_run_at: "2026-03-18T01:00:00.000Z",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ];
+    const processRuns = options.processRuns ?? {
+      "proc-1": [
+        {
+          run_id: "run-1",
+          process_id: "proc-1",
+          status: "running",
+          trigger: "manual",
+          error: null,
+          started_at: "2026-03-17T01:00:00.000Z",
+          completed_at: null,
+        },
+      ],
+    };
 
     const agents = options.agents ?? [
       {
@@ -279,28 +364,11 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
           body: JSON.stringify({ error: "aura-network is not configured", code: "service_unavailable", details: null }),
         });
       }
-      return json([
-        {
-          org_id: "org-1",
-          name: "Test Org",
-          owner_user_id: "user-1",
-          billing: null,
-          github: null,
-          created_at: "2026-03-17T01:00:00.000Z",
-          updated_at: "2026-03-17T01:00:00.000Z",
-        },
-      ]);
+      return json(orgs);
     }
-    if (pathname === "/api/orgs/org-1") {
-      return json({
-        org_id: "org-1",
-        name: "Test Org",
-        owner_user_id: "user-1",
-        billing: null,
-        github: null,
-        created_at: "2026-03-17T01:00:00.000Z",
-        updated_at: "2026-03-17T01:00:00.000Z",
-      });
+    const matchingOrg = orgs.find((org) => pathname === `/api/orgs/${org.org_id}`);
+    if (matchingOrg) {
+      return json(matchingOrg);
     }
     if (path === "/api/orgs/org-1/members") {
       return json([
@@ -320,51 +388,57 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (path === "/api/orgs/org-1/integrations/github/app") return json([]);
     if (path === "/api/orgs/org-1/integrations") return json(integrations);
     if (path === "/api/orgs/org-1/credits/transactions") return json({ transactions: [], has_more: false });
-    if (pathname === "/api/projects" && (!url.search || url.search === "?org_id=org-1")) return json(projects);
+    if (pathname === "/api/projects") {
+      const orgId = url.searchParams.get("org_id");
+      if (orgId && options.projectsByOrgId) {
+        return json(options.projectsByOrgId[orgId] ?? []);
+      }
+      return json(projects);
+    }
 
-    const matchingProject = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}`);
+    const matchingProject = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}`);
     if (matchingProject) return json(matchingProject);
 
-    const matchingProjectSpecs = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/specs`);
+    const matchingProjectSpecs = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/specs`);
     if (matchingProjectSpecs) {
       return json(specs.map((spec) => ({ ...spec, project_id: matchingProjectSpecs.project_id })));
     }
 
-    const matchingProjectTasks = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/tasks`);
+    const matchingProjectTasks = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/tasks`);
     if (matchingProjectTasks) {
       return json(tasks.map((task) => ({ ...task, project_id: matchingProjectTasks.project_id })));
     }
 
-    const matchingProjectAgents = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/agents`);
+    const matchingProjectAgents = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/agents`);
     if (matchingProjectAgents) {
-      return json(agentInstances.map((agent) => ({ ...agent, project_id: matchingProjectAgents.project_id })));
+      return json(agentInstances.filter((agent) => agent.project_id === matchingProjectAgents.project_id));
     }
 
     const matchingAgentInstance = agentInstances.find(
-      (instance) => projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}`),
+      (instance) => allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}`),
     );
     if (matchingAgentInstance) return json(matchingAgentInstance);
 
     const matchingAgentInstanceMessages = agentInstances.find(
-      (instance) => projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/messages`),
+      (instance) => allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/messages`),
     );
     if (matchingAgentInstanceMessages) return json([]);
 
     const matchingAgentInstanceEvents = agentInstances.find(
-      (instance) => projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/events`),
+      (instance) => allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/events`),
     );
     if (matchingAgentInstanceEvents) return json([]);
 
     const matchingAgentInstanceSessions = agentInstances.find(
-      (instance) => projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/sessions`),
+      (instance) => allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/agents/${instance.agent_instance_id}/sessions`),
     );
     if (matchingAgentInstanceSessions) return json([]);
 
-    const matchingLoopProject = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/loop/status`);
+    const matchingLoopProject = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/loop/status`);
     if (matchingLoopProject) {
       return json({ running: false, paused: false, project_id: "proj-1", active_agent_instances: [] });
     }
-    const matchingProgressProject = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/progress`);
+    const matchingProgressProject = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/progress`);
     if (matchingProgressProject) {
       return json({
         project_id: matchingProgressProject.project_id,
@@ -388,13 +462,13 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
         total_tests: 0,
       });
     }
-    const matchingProjectStats = projects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/stats`);
+    const matchingProjectStats = allProjects.find((candidate) => pathname === `/api/projects/${candidate.project_id}/stats`);
     if (matchingProjectStats) {
       return json(projectStats);
     }
-    if (projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/start-loop`)) return json({ ok: true });
-    if (projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/pause-loop`)) return json({ ok: true });
-    if (projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/stop-loop`)) return json({ ok: true });
+    if (allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/start-loop`)) return json({ ok: true });
+    if (allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/pause-loop`)) return json({ ok: true });
+    if (allProjects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/stop-loop`)) return json({ ok: true });
     if (pathname === "/api/log-entries") return json([]);
     if (pathname === "/api/list-directory") {
       const workspaceRoot = typeof agentInstances[0]?.workspace_path === "string" && agentInstances[0].workspace_path.length > 0
@@ -435,6 +509,12 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       return json({ ok: false, error: "Preview unavailable" });
     }
     if (pathname === "/api/agents") return json(agents);
+    if (pathname === "/api/processes") return json(processes);
+    if (pathname === "/api/harness/skills") return json(skillCatalog);
+    const matchingProcessRuns = processes.find((process) => pathname === `/api/processes/${process.process_id}/runs`);
+    if (matchingProcessRuns) {
+      return json(processRuns[matchingProcessRuns.process_id as string] ?? []);
+    }
     if (pathname === "/api/feed") return json(mockFeedEvents);
     if (pathname.startsWith("/api/feed?")) return json(mockFeedEvents);
     if (pathname === "/api/follows") return json([]);
@@ -466,6 +546,54 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
 
     const matchingAgentMessages = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/messages`);
     if (matchingAgentMessages) return json([]);
+
+    const matchingRemoteAgentState = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/remote_agent/state`);
+    if (matchingRemoteAgentState) {
+      return json(
+        remoteAgentStates[matchingRemoteAgentState.agent_id as string] ?? {
+          state: "running",
+          uptime_seconds: 4523,
+          active_sessions: 2,
+          endpoint: "ssh://builder-bot.remote",
+          runtime_version: "2026.4.0",
+          agent_id: matchingRemoteAgentState.agent_id,
+        },
+      );
+    }
+
+    const matchingAgentSkills = agents.find((agent) => pathname === `/api/harness/agents/${agent.agent_id}/skills`);
+    if (matchingAgentSkills) {
+      if (method === "POST") {
+        const body = JSON.parse(route.request().postData() || "{}");
+        const nextInstallation = {
+          agent_id: matchingAgentSkills.agent_id,
+          skill_name: typeof body.name === "string" ? body.name : "unknown-skill",
+          source_url: typeof body.source_url === "string" ? body.source_url : null,
+          installed_at: "2026-03-17T03:00:00.000Z",
+          version: null,
+          approved_paths: Array.isArray(body.approved_paths) ? body.approved_paths : [],
+          approved_commands: Array.isArray(body.approved_commands) ? body.approved_commands : [],
+        };
+        const currentInstallations = agentSkillInstallations.get(matchingAgentSkills.agent_id as string) ?? [];
+        agentSkillInstallations.set(matchingAgentSkills.agent_id as string, [
+          ...currentInstallations.filter((installation) => installation.skill_name !== nextInstallation.skill_name),
+          nextInstallation,
+        ]);
+        return json(nextInstallation);
+      }
+      return json(
+        agentSkillInstallations.get(matchingAgentSkills.agent_id as string) ?? [],
+      );
+    }
+
+    const uninstallMatch = pathname.match(/^\/api\/harness\/agents\/([^/]+)\/skills\/([^/]+)$/);
+    if (uninstallMatch && method === "DELETE") {
+      const [, agentId, skillName] = uninstallMatch;
+      agentSkillInstallations.set(agentId, (agentSkillInstallations.get(agentId) ?? []).filter(
+        (installation) => installation.skill_name !== decodeURIComponent(skillName),
+      ));
+      return json({ ok: true });
+    }
 
     return route.fulfill({
       status: 404,

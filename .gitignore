@@ -25,7 +25,7 @@ desktop-smoke-logs
 
 # Evals
 evals/reports/promptfoo-results.json
-evals/local-stack/.runtime
+infra/evals/local-stack/.runtime
 evals/local-stack/stack.env
 
 # Secrets

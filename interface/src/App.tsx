@@ -16,10 +16,15 @@ import { IdeView } from "./views/IdeView";
 import { ProjectAgentRedirectView } from "./views/ProjectAgentRedirectView";
 import { ProjectRootRedirectView } from "./views/ProjectRootRedirectView";
 import { ProjectWorkView } from "./views/ProjectWorkView";
+import { ProjectTasksView } from "./views/ProjectTasksView";
 import { ProjectFilesView } from "./views/ProjectFilesView";
+import { ProjectProcessView } from "./views/ProjectProcessView";
 import { ProjectStatsView } from "./views/ProjectStatsView";
+import { ProjectAgentDetailsView } from "./views/ProjectAgentDetailsView";
+import { ProjectAgentSetupView } from "./views/ProjectAgentSetupView/ProjectAgentSetupView";
 import { apps } from "./apps/registry";
 import { getLastApp } from "./utils/storage";
+import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 
 import "./stores/event-store/index";
 import "./stores/follow-store";
@@ -35,7 +40,25 @@ function LastAppRedirect() {
 
 export default function App() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
-  useEffect(() => { restoreSession(); }, [restoreSession]);
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        await bootstrapNativeTestAuth();
+      } catch (error) {
+        console.error("Native test auth bootstrap failed", error);
+      } finally {
+        if (active) {
+          await restoreSession();
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [restoreSession]);
 
   return (
     <BrowserRouter>
@@ -52,10 +75,15 @@ export default function App() {
             <Route path="projects/:projectId" element={<ProjectLayout />}>
               <Route index element={<ProjectRootRedirectView />} />
               <Route path="agent" element={<ProjectAgentRedirectView />} />
+              <Route path="agents/create" element={<ProjectAgentSetupView mode="create" />} />
+              <Route path="agents/attach" element={<ProjectAgentSetupView mode="existing" />} />
+              <Route path="agents/:agentInstanceId/details" element={<ProjectAgentDetailsView />} />
               <Route path="agents/:agentInstanceId" element={<AgentChatView />} />
               <Route path="execution" element={<ExecutionView />} />
               <Route path="work" element={<ProjectWorkView />} />
+              <Route path="tasks" element={<ProjectTasksView />} />
               <Route path="files" element={<ProjectFilesView />} />
+              <Route path="process" element={<ProjectProcessView />} />
               <Route path="stats" element={<ProjectStatsView />} />
             </Route>
 

@@ -89,6 +89,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         ));
 
     let api_router = Router::new()
+        .route("/health", get(system::health))
         .merge(auth_routes())
         .merge(protected_api_router)
         .layer(cors)
@@ -135,11 +136,9 @@ fn protected_auth_routes() -> Router<AppState> {
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
-        .route(
-            "/api/auth/redeem-access-code",
-            post(auth::redeem_access_code),
-        )
-        .route("/api/auth/access-codes", get(auth::get_access_code))
+        // Access code endpoints disabled for launch — Zero Pro is the only entry path.
+        // .route("/api/auth/redeem-access-code", post(auth::redeem_access_code))
+        // .route("/api/auth/access-codes", get(auth::get_access_code))
 }
 
 fn user_routes() -> Router<AppState> {
@@ -181,6 +180,14 @@ fn org_routes() -> Router<AppState> {
         .route(
             "/api/orgs/:org_id/tool-actions/:tool_name",
             post(org_tools::call_tool),
+        )
+        .route(
+            "/api/orgs/:org_id/tool-actions",
+            get(org_tools::list_tool_catalog),
+        )
+        .route(
+            "/api/orgs/:org_id/tool-actions/mcp/:integration_id",
+            post(org_tools::call_mcp_tool),
         )
         .route("/api/invites/:token/accept", post(orgs::accept_invite))
         .route(

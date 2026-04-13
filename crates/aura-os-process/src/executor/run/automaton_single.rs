@@ -84,6 +84,8 @@ async fn execute_single_automaton(
             task_id: Some(task_id.to_string()),
             git_repo_url: None,
             git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
         },
         2,
     )

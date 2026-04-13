@@ -60,6 +60,8 @@ impl SuperAgentTool for StartDevLoopTool {
             task_id: None,
             git_repo_url: None,
             git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
         };
 
         let result = ctx

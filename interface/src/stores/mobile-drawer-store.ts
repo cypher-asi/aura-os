@@ -7,6 +7,8 @@ function blurActiveElement() {
   }
 }
 
+const DRAWER_CLOSE_DELAY_MS = 180;
+
 interface MobileDrawerState {
   navOpen: boolean;
   appOpen: boolean;
@@ -38,9 +40,11 @@ export const useMobileDrawerStore = create<MobileDrawerState>()((set) => ({
   },
 
   openAfterDrawerClose: (callback) => {
-    const { closeDrawers } = useMobileDrawerStore.getState();
-    closeDrawers();
-    window.setTimeout(callback, 180);
+    blurActiveElement();
+    useMobileDrawerStore.getState().closeDrawers();
+    window.setTimeout(() => {
+      callback();
+    }, DRAWER_CLOSE_DELAY_MS);
   },
 }));
 

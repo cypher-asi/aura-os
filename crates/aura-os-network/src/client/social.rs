@@ -10,6 +10,7 @@ pub struct CreatePostParams<'a> {
     pub summary: Option<&'a str>,
     pub post_type: Option<&'a str>,
     pub metadata: Option<serde_json::Value>,
+    pub profile_id: Option<&'a str>,
     pub project_id: Option<&'a str>,
     pub agent_id: Option<&'a str>,
     pub user_id: Option<&'a str>,
@@ -96,6 +97,9 @@ impl NetworkClient {
         }
         if let Some(ref meta) = params.metadata {
             body["metadata"] = meta.clone();
+        }
+        if let Some(pid) = params.profile_id {
+            body["profileId"] = serde_json::Value::String(pid.to_string());
         }
         if let Some(pid) = params.project_id {
             body["projectId"] = serde_json::Value::String(pid.to_string());

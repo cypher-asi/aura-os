@@ -99,9 +99,6 @@
 }
 
 .panelTabBtn {
-  min-height: 0 !important;
-  padding: 4px 8px !important;
-  font-size: 11px;
   line-height: 1;
 }
 

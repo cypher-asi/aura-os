@@ -159,6 +159,10 @@ fn default_org_integration_kind() -> OrgIntegrationKind {
     OrgIntegrationKind::WorkspaceConnection
 }
 
+fn default_org_integration_enabled() -> bool {
+    true
+}
+
 pub fn effective_auth_source(
     adapter_type: &str,
     auth_source: Option<&str>,
@@ -194,6 +198,8 @@ pub struct OrgIntegration {
     pub provider_config: Option<JsonValue>,
     #[serde(default)]
     pub has_secret: bool,
+    #[serde(default = "default_org_integration_enabled")]
+    pub enabled: bool,
     #[serde(default)]
     pub secret_last4: Option<String>,
     pub created_at: DateTime<Utc>,

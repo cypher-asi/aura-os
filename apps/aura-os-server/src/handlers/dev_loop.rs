@@ -16,6 +16,9 @@ use aura_os_tasks::TaskService;
 use super::projects_helpers::resolve_agent_instance_workspace_path;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::workspace_tools::{
+    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+};
 use crate::persistence;
 use crate::state::{
     ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
@@ -1294,6 +1297,24 @@ pub(crate) async fn start_loop(
     };
 
     let jwt_for_persist = jwt.clone();
+    let installed_tools = match jwt
+        .as_deref()
+        .zip(project.as_ref().map(|project| &project.org_id))
+    {
+        Some((jwt, org_id)) => {
+            let tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            (!tools.is_empty()).then_some(tools)
+        }
+        None => None,
+    };
+    let installed_integrations = match project.as_ref() {
+        Some(project) => {
+            let integrations =
+                installed_workspace_integrations_for_org(&state, &project.org_id).await;
+            (!integrations.is_empty()).then_some(integrations)
+        }
+        None => None,
+    };
     let start_params = AutomatonStartParams {
         project_id: project_id.to_string(),
         auth_token: jwt,
@@ -1302,6 +1323,8 @@ pub(crate) async fn start_loop(
         task_id: None,
         git_repo_url: resolve_git_repo_url(project.as_ref()),
         git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
+        installed_tools,
+        installed_integrations,
     };
 
     let (automaton_id, adopted, event_stream_url) = match automaton_client
@@ -1787,6 +1810,24 @@ pub(crate) async fn run_single_task(
     .await;
 
     let jwt_for_persist = jwt.clone();
+    let installed_tools = match jwt
+        .as_deref()
+        .zip(project.as_ref().map(|project| &project.org_id))
+    {
+        Some((jwt, org_id)) => {
+            let tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            (!tools.is_empty()).then_some(tools)
+        }
+        None => None,
+    };
+    let installed_integrations = match project.as_ref() {
+        Some(project) => {
+            let integrations =
+                installed_workspace_integrations_for_org(&state, &project.org_id).await;
+            (!integrations.is_empty()).then_some(integrations)
+        }
+        None => None,
+    };
     let result = automaton_client
         .start(AutomatonStartParams {
             project_id: project_id.to_string(),
@@ -1796,6 +1837,8 @@ pub(crate) async fn run_single_task(
             task_id: Some(task_id.to_string()),
             git_repo_url: resolve_git_repo_url(project.as_ref()),
             git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
+            installed_tools,
+            installed_integrations,
         })
         .await
         .map_err(|e| match e {

@@ -72,6 +72,23 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
     path: `test-artifacts/review-shots/${projectName}-desktop-project-stats.png`,
     fullPage: true,
   });
+
+  await page.goto("/process");
+  await expect(page.getByRole("treeitem", { name: "Nightly QA" })).toBeVisible();
+  await expect(page.getByPlaceholder("Search Processes...")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Run", exact: true })).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-desktop-process.png`,
+    fullPage: true,
+  });
+
+  await page.goto("/tasks/proj-1/agents/agent-inst-1");
+  await expect(page.getByText("Ready")).toBeVisible();
+  await expect(page.getByText("Patch auth flow")).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-desktop-tasks.png`,
+    fullPage: true,
+  });
 });
 
 test("capture desktop agents, feed, and profile views", async ({ page }, testInfo) => {
@@ -91,6 +108,17 @@ test("capture desktop agents, feed, and profile views", async ({ page }, testInf
   await page.getByRole("button", { name: /Research Bot/i }).click();
   await expect(page).toHaveURL(/\/agents\/agent-2$/);
   await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible();
+
+  await page.getByTitle("New Agent").click();
+  await expect(page.getByRole("heading", { name: "Create Agent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Change runtime or credentials" })).toBeVisible();
+  await page.getByRole("button", { name: "Change runtime or credentials" }).click();
+  await expect(page.getByText("Advanced Setup")).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-desktop-agent-create.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Cancel" }).click();
 
   await page.goto("/feed");
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();

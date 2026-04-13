@@ -5,6 +5,7 @@ const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectsListStore = vi.fn();
 const mockUseTerminalTarget = vi.fn();
 const mockNavigate = vi.fn();
+const mockNavigateComponent = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
@@ -46,6 +47,10 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => ({ projectId: "proj-1" }),
+    Navigate: ({ to }: { to: string }) => {
+      mockNavigateComponent(to);
+      return <div data-testid="navigate" data-to={to} />;
+    },
   };
 });
 
@@ -78,10 +83,8 @@ describe("ProjectFilesView", () => {
 
     render(<ProjectFilesView />);
 
-    expect(screen.getByText("Files stay on the remote agent")).toBeInTheDocument();
-    expect(screen.getByText("Agent workspace")).toBeInTheDocument();
-    expect(screen.getByText("Agent path: p/demo-project")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Agent" })).toBeInTheDocument();
+    expect(screen.getByTestId("navigate")).toHaveAttribute("data-to", "/projects/proj-1/agent");
+    expect(mockNavigateComponent).toHaveBeenCalledWith("/projects/proj-1/agent");
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });
 

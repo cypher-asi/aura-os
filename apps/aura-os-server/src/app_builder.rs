@@ -8,6 +8,7 @@ use tracing::{info, warn};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
+use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 
 use crate::harness_gateway::HarnessHttpGateway;
@@ -26,8 +27,16 @@ use crate::state::AppState;
 fn spawn_health_checks(
     storage_client: &Option<Arc<StorageClient>>,
     network_client: &Option<Arc<NetworkClient>>,
+    integrations_client: &Option<Arc<IntegrationsClient>>,
 ) {
     if let Some(ref client) = storage_client {
+        if client.has_internal_token() {
+            info!("aura-storage internal token configured; remote process proxy is enabled");
+        } else {
+            warn!(
+                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; remote process proxy is disabled and process execution will stay local"
+            );
+        }
         let health_client = client.clone();
         tokio::spawn(async move {
             match health_client.health_check().await {
@@ -59,6 +68,23 @@ fn spawn_health_checks(
         });
     } else {
         info!("aura-network integration disabled (AURA_NETWORK_URL not set)");
+    }
+
+    if let Some(ref client) = integrations_client {
+        let health_client = client.clone();
+        tokio::spawn(async move {
+            match health_client.health_check().await {
+                Ok(()) => info!("aura-integrations is reachable and serving as the canonical integration backend"),
+                Err(e) => tracing::warn!(
+                    error = %e,
+                    "aura-integrations health check failed on startup (will retry on first request)"
+                ),
+            }
+        });
+    } else {
+        info!(
+            "aura-integrations is not configured; Aura OS will use compatibility-only local integration storage"
+        );
     }
 }
 
@@ -402,6 +428,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let store = Arc::new(RocksStore::open(db_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let storage_client = StorageClient::from_env().map(Arc::new);
+    let integrations_client = IntegrationsClient::from_env().map(Arc::new);
     let orbit_client = OrbitClient::from_env().map(Arc::new);
     if orbit_client.is_none() {
         info!("Orbit integration disabled (ORBIT_BASE_URL not set)");
@@ -461,7 +488,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         scheduler.spawn();
     }
 
-    spawn_health_checks(&storage_client, &network_client);
+    spawn_health_checks(&storage_client, &network_client, &integrations_client);
     if let Some(ref client) = network_client {
         super::network_bridge::spawn_network_ws_bridge(
             client.clone(),
@@ -497,6 +524,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,
         storage_client,
+        integrations_client,
         event_broadcast,
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v != "false" && v != "0")

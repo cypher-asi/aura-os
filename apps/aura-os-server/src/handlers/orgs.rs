@@ -4,6 +4,7 @@ use axum::Json;
 use reqwest::Url;
 use serde::Serialize;
 use serde_json::Value;
+use tracing::warn;
 
 use aura_os_core::*;
 use aura_os_network::{NetworkOrg, NetworkOrgInvite, NetworkOrgMember};
@@ -11,7 +12,8 @@ use aura_os_orgs::IntegrationSecretUpdate;
 
 use crate::dto::SetBillingRequest;
 use crate::dto::{CreateOrgIntegrationRequest, UpdateOrgIntegrationRequest};
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{map_integrations_error, map_network_error, ApiError, ApiResult};
+use crate::handlers::permissions::require_org_role;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 // ---------------------------------------------------------------------------
@@ -206,6 +208,68 @@ fn validate_mcp_server_config(
     Ok(())
 }
 
+fn validate_workspace_integration_config(
+    kind: &OrgIntegrationKind,
+    provider: &str,
+    provider_config: Option<&Value>,
+) -> ApiResult<()> {
+    if *kind != OrgIntegrationKind::WorkspaceIntegration {
+        return Ok(());
+    }
+
+    match provider.trim() {
+        "metricool" => {
+            let config = provider_config.and_then(Value::as_object).ok_or_else(|| {
+                ApiError::bad_request(
+                    "Metricool integrations require provider_config with `userId` and `blogId`.",
+                )
+            })?;
+            for key in ["userId", "blogId"] {
+                let value = config.get(key).and_then(Value::as_str).map(str::trim);
+                if value.filter(|value| !value.is_empty()).is_none() {
+                    return Err(ApiError::bad_request(format!(
+                        "Metricool integrations require a non-empty `{key}` config field."
+                    )));
+                }
+            }
+        }
+        "mailchimp" => {
+            if let Some(config) = provider_config {
+                let config = config.as_object().ok_or_else(|| {
+                    ApiError::bad_request(
+                        "Mailchimp provider_config must be a JSON object when provided.",
+                    )
+                })?;
+                if let Some(server_prefix) = config.get("serverPrefix") {
+                    let server_prefix = server_prefix.as_str().map(str::trim).ok_or_else(|| {
+                        ApiError::bad_request(
+                            "Mailchimp `serverPrefix` must be a string when provided.",
+                        )
+                    })?;
+                    if server_prefix.is_empty() {
+                        return Err(ApiError::bad_request(
+                            "Mailchimp `serverPrefix` cannot be empty when provided.",
+                        ));
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn validate_org_integration_config(
+    kind: &OrgIntegrationKind,
+    provider: &str,
+    provider_config: Option<&Value>,
+) -> ApiResult<()> {
+    validate_mcp_server_config(kind, provider, provider_config)?;
+    validate_workspace_integration_config(kind, provider, provider_config)?;
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Org CRUD — network only; billing from settings
 // ---------------------------------------------------------------------------
@@ -300,9 +364,26 @@ pub(crate) async fn update_org(
 
 pub(crate) async fn list_integrations(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<OrgIntegration>>> {
+    if let Some(client) = &state.integrations_client {
+        let integrations = client
+            .list_integrations(&org_id, &jwt)
+            .await
+            .map_err(map_integrations_error)?;
+        if let Err(error) = state
+            .org_service
+            .sync_integrations_shadow(&org_id, &integrations)
+        {
+            warn!(
+                %org_id,
+                error = %error,
+                "failed to sync compatibility-only local integration shadow after canonical list"
+            );
+        }
+        return Ok(Json(integrations));
+    }
     let integrations = state
         .org_service
         .list_integrations(&org_id)
@@ -312,11 +393,35 @@ pub(crate) async fn list_integrations(
 
 pub(crate) async fn create_integration(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(org_id): Path<OrgId>,
     Json(req): Json<CreateOrgIntegrationRequest>,
 ) -> ApiResult<(StatusCode, Json<OrgIntegration>)> {
-    validate_mcp_server_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
+    if let Some(client) = &state.integrations_client {
+        require_org_role(&state, &org_id.to_string(), &jwt, &session, "admin").await?;
+        let body = serde_json::to_value(&req).map_err(|e| ApiError::internal(e.to_string()))?;
+        let integration = client
+            .create_integration(&org_id, &jwt, &body)
+            .await
+            .map_err(map_integrations_error)?;
+        if let Err(error) = state.org_service.sync_integration_shadow(
+            &integration,
+            match req.api_key.clone() {
+                Some(secret) => IntegrationSecretUpdate::Set(secret),
+                None => IntegrationSecretUpdate::Preserve,
+            },
+        ) {
+            warn!(
+                integration_id = %integration.integration_id,
+                error = %error,
+                "failed to sync compatibility-only local integration shadow after canonical create"
+            );
+        }
+        return Ok((StatusCode::CREATED, Json(integration)));
+    }
+    // Local-only mode: no network client for role verification
+    validate_org_integration_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
     let integration = state
         .org_service
         .upsert_integration(
@@ -327,6 +432,7 @@ pub(crate) async fn create_integration(
             req.kind,
             req.default_model,
             req.provider_config,
+            req.enabled,
             match req.api_key {
                 Some(secret) => IntegrationSecretUpdate::Set(secret),
                 None => IntegrationSecretUpdate::Preserve,
@@ -338,10 +444,35 @@ pub(crate) async fn create_integration(
 
 pub(crate) async fn update_integration(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((org_id, integration_id)): Path<(OrgId, String)>,
     Json(req): Json<UpdateOrgIntegrationRequest>,
 ) -> ApiResult<Json<OrgIntegration>> {
+    if let Some(client) = &state.integrations_client {
+        require_org_role(&state, &org_id.to_string(), &jwt, &session, "admin").await?;
+        let body = serde_json::to_value(&req).map_err(|e| ApiError::internal(e.to_string()))?;
+        let integration = client
+            .update_integration(&org_id, &integration_id, &jwt, &body)
+            .await
+            .map_err(map_integrations_error)?;
+        if let Err(error) = state.org_service.sync_integration_shadow(
+            &integration,
+            match req.api_key.clone() {
+                Some(Some(value)) => IntegrationSecretUpdate::Set(value),
+                Some(None) => IntegrationSecretUpdate::Clear,
+                None => IntegrationSecretUpdate::Preserve,
+            },
+        ) {
+            warn!(
+                integration_id = %integration.integration_id,
+                error = %error,
+                "failed to sync compatibility-only local integration shadow after canonical update"
+            );
+        }
+        return Ok(Json(integration));
+    }
+    // Local-only mode: no network client for role verification
     let existing = state
         .org_service
         .get_integration(&org_id, &integration_id)
@@ -356,7 +487,11 @@ pub(crate) async fn update_integration(
         Some(value) => value,
         None => existing.provider_config.clone(),
     };
-    validate_mcp_server_config(&kind, &provider, provider_config.as_ref())?;
+    let enabled = match req.enabled {
+        Some(value) => value,
+        None => Some(existing.enabled),
+    };
+    validate_org_integration_config(&kind, &provider, provider_config.as_ref())?;
     let integration = state
         .org_service
         .upsert_integration(
@@ -370,6 +505,7 @@ pub(crate) async fn update_integration(
                 None => existing.default_model,
             },
             provider_config,
+            enabled,
             match req.api_key {
                 Some(Some(value)) => IntegrationSecretUpdate::Set(value),
                 Some(None) => IntegrationSecretUpdate::Clear,
@@ -382,9 +518,29 @@ pub(crate) async fn update_integration(
 
 pub(crate) async fn delete_integration(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path((org_id, integration_id)): Path<(OrgId, String)>,
 ) -> ApiResult<Json<()>> {
+    if let Some(client) = &state.integrations_client {
+        require_org_role(&state, &org_id.to_string(), &jwt, &session, "admin").await?;
+        client
+            .delete_integration(&org_id, &integration_id, &jwt)
+            .await
+            .map_err(map_integrations_error)?;
+        if let Err(error) = state
+            .org_service
+            .delete_integration(&org_id, &integration_id)
+        {
+            warn!(
+                %integration_id,
+                error = %error,
+                "failed to prune compatibility-only local integration shadow after canonical delete"
+            );
+        }
+        return Ok(Json(()));
+    }
+    // Local-only mode: no network client for role verification
     state
         .org_service
         .delete_integration(&org_id, &integration_id)

@@ -345,7 +345,7 @@ describe("processApi - Folders", () => {
   });
 
   it("createFolder sends POST", async () => {
-    const data = { name: "My Folder" };
+    const data = { name: "My Folder", org_id: "org-1" };
     const fetchMock = mockFetch(200, { id: "f1", name: "My Folder" });
     globalThis.fetch = fetchMock;
     await processApi.createFolder(data);

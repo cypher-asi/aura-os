@@ -8,7 +8,6 @@ import { renderHook, act } from "@testing-library/react";
 import { useChatStream } from "./use-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
 import type { DisplaySessionEvent } from "../types/stream";
-import type { SessionEvent } from "../types";
 
 const mockSetStreamingAgentInstanceId = vi.fn();
 const mockClearGeneratedArtifacts = vi.fn();

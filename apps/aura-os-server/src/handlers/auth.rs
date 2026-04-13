@@ -12,7 +12,7 @@ use crate::dto::{
     AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse, ImportAccessTokenRequest,
     PasswordResetRequest,
 };
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
 use crate::state::{AppState, AuthJwt, AuthSession, CachedSession};
 
@@ -164,46 +164,42 @@ pub(crate) async fn request_password_reset(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// POST /api/auth/redeem-access-code — proxy to aura-network access code redemption.
-pub(crate) async fn redeem_access_code(
-    State(state): State<AppState>,
-    AuthJwt(jwt): AuthJwt,
-    Json(req): Json<serde_json::Value>,
-) -> ApiResult<Json<serde_json::Value>> {
-    let client = state
-        .network_client
-        .as_ref()
-        .ok_or_else(|| ApiError::internal("network service not configured"))?;
-
-    let code = req["code"]
-        .as_str()
-        .ok_or_else(|| ApiError::bad_request("code is required".to_string()))?;
-
-    let result = client
-        .redeem_access_code(&jwt, code)
-        .await
-        .map_err(map_network_error)?;
-
-    Ok(Json(result))
-}
-
-/// GET /api/auth/access-codes — get the current user's access code.
-pub(crate) async fn get_access_code(
-    State(state): State<AppState>,
-    AuthJwt(jwt): AuthJwt,
-) -> ApiResult<Json<serde_json::Value>> {
-    let client = state
-        .network_client
-        .as_ref()
-        .ok_or_else(|| ApiError::internal("network service not configured"))?;
-
-    let code = client
-        .get_access_code(&jwt)
-        .await
-        .map_err(map_network_error)?;
-
-    Ok(Json(code))
-}
+// Access code handlers disabled for launch — Zero Pro is the only entry path.
+// Uncomment when access codes are re-enabled.
+//
+// pub(crate) async fn redeem_access_code(
+//     State(state): State<AppState>,
+//     AuthJwt(jwt): AuthJwt,
+//     Json(req): Json<serde_json::Value>,
+// ) -> ApiResult<Json<serde_json::Value>> {
+//     let client = state
+//         .network_client
+//         .as_ref()
+//         .ok_or_else(|| ApiError::internal("network service not configured"))?;
+//     let code = req["code"]
+//         .as_str()
+//         .ok_or_else(|| ApiError::bad_request("code is required".to_string()))?;
+//     let result = client
+//         .redeem_access_code(&jwt, code)
+//         .await
+//         .map_err(map_network_error)?;
+//     Ok(Json(result))
+// }
+//
+// pub(crate) async fn get_access_code(
+//     State(state): State<AppState>,
+//     AuthJwt(jwt): AuthJwt,
+// ) -> ApiResult<Json<serde_json::Value>> {
+//     let client = state
+//         .network_client
+//         .as_ref()
+//         .ok_or_else(|| ApiError::internal("network service not configured"))?;
+//     let code = client
+//         .get_access_code(&jwt)
+//         .await
+//         .map_err(map_network_error)?;
+//     Ok(Json(code))
+// }
 
 /// GET /api/auth/session — return the current session from the middleware-validated auth.
 pub(crate) async fn get_session(

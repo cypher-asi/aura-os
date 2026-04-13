@@ -3,6 +3,13 @@ use serde::Serialize;
 
 use crate::error::ApiResult;
 
+pub(crate) async fn health() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "ok",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct EnvironmentInfoResponse {
     pub os: String,

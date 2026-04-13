@@ -49,6 +49,7 @@ declare module "@cypher-asi/zui" {
     icon?: ReactNode;
     selected?: boolean;
     selectedBgColor?: string;
+    dimUnselected?: boolean;
     contentStates?: ReactNode[];
     as?: "button" | "span";
   };
@@ -71,8 +72,10 @@ declare module "@cypher-asi/zui" {
 
   // Input
   export type InputSize = "sm" | "md";
+  export type InputVariant = "default" | "bare" | "underline";
   export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
     size?: InputSize;
+    variant?: InputVariant;
     mono?: boolean;
     validationMessage?: string;
   }
@@ -213,7 +216,7 @@ declare module "@cypher-asi/zui" {
     onChange?: (id: string) => void;
     className?: string;
     tabClassName?: string;
-    size?: "sm" | "md";
+    size?: "xs" | "sm" | "md";
   }
   export function Tabs(props: TabsProps): JSX.Element;
 

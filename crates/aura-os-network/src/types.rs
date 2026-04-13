@@ -429,6 +429,8 @@ pub struct NetworkFeedEvent {
     pub commit_ids: Option<Vec<String>>,
     #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
+    #[serde(default, alias = "comment_count")]
+    pub comment_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

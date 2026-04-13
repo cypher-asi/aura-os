@@ -110,6 +110,8 @@ async fn start_decomposed_subtask_automaton_stream(
             task_id: Some(args.sub_task_id.clone()),
             git_repo_url: None,
             git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
         },
         2,
     )

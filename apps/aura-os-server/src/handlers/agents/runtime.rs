@@ -30,7 +30,11 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::{
     setup_agent_chat_persistence, spawn_chat_persist_task, SseResponse, SseStream,
 };
-use crate::handlers::agents::workspace_tools::{active_workspace_tools, workspace_tool};
+use crate::handlers::agents::workspace_tools::{
+    active_workspace_tools, control_plane_api_base_url as workspace_control_plane_api_base_url,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org,
+    shared_workspace_tools, workspace_tool, WorkspaceToolSourceKind,
+};
 use crate::handlers::projects_helpers::resolve_project_workspace_path_for_machine;
 use crate::handlers::sse::harness_event_to_sse;
 use crate::state::{AppState, AuthJwt};
@@ -70,7 +74,7 @@ pub(crate) async fn test_agent_runtime(
         .or_else(|_| state.agent_service.get_agent_local(&agent_id))
         .map_err(|e| ApiError::not_found(format!("agent not found: {e}")))?;
 
-    let integration = resolve_integration(&state, &agent)?;
+    let integration = resolve_integration(&state, &agent).await?;
     let model = effective_model(&agent, integration.as_ref(), None);
 
     let outcome = if agent.adapter_type == "aura_harness" {
@@ -115,18 +119,20 @@ pub(crate) async fn send_external_agent_event_stream(
         return send_external_project_agent_event_stream(state, jwt, agent, body).await;
     }
 
-    let integration = resolve_integration(state, agent)?;
+    let integration = resolve_integration(state, agent).await?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
     let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
     if let Some(ref ctx) = persist_ctx {
         super::chat::persist_user_message(ctx, &body.content, &None);
     }
+    let prompt =
+        build_external_prompt(state, agent, &body.content, body.project_id.as_deref()).await;
 
     let outcome = run_external_adapter_prompt(
         state,
         agent,
         integration.as_ref(),
-        &build_external_prompt(state, agent, &body.content, body.project_id.as_deref()),
+        &prompt,
         model,
         body.project_id.clone(),
     )
@@ -181,15 +187,17 @@ async fn send_external_project_agent_event_stream(
         .project_id
         .clone()
         .ok_or_else(|| ApiError::bad_request("External project chat requires a project id"))?;
-    let integration = resolve_integration(state, agent)?;
+    let integration = resolve_integration(state, agent).await?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
     let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
     if let Some(ref ctx) = persist_ctx {
         super::chat::persist_user_message(ctx, &body.content, &None);
     }
 
-    let prompt = build_external_prompt(state, agent, &body.content, Some(project_id.as_str()));
+    let prompt =
+        build_external_prompt(state, agent, &body.content, Some(project_id.as_str())).await;
     let mcp_config = build_external_project_mcp_config(state, &project_id, jwt, agent).await?;
+    let tool_infos = external_project_tool_infos(state, agent, jwt).await;
     let (events_tx, _) = broadcast::channel::<HarnessOutbound>(256);
     let (sse_tx, sse_rx) = mpsc::unbounded_channel::<Result<Event, Infallible>>();
     let message_id = Uuid::new_v4().to_string();
@@ -207,7 +215,7 @@ async fn send_external_project_agent_event_stream(
             &sse_tx,
             HarnessOutbound::SessionReady(SessionReady {
                 session_id: Uuid::new_v4().to_string(),
-                tools: external_project_tool_infos(&state, &agent),
+                tools: tool_infos.clone(),
                 skills: Vec::new(),
             }),
         );
@@ -308,14 +316,29 @@ fn opencode_default_model(provider: &str) -> Option<&'static str> {
     }
 }
 
-fn external_project_tool_infos(state: &AppState, agent: &Agent) -> Vec<ToolInfo> {
-    active_workspace_tools(state, agent)
-        .into_iter()
+async fn external_project_tool_infos(state: &AppState, agent: &Agent, jwt: &str) -> Vec<ToolInfo> {
+    let mut tools = shared_workspace_tools()
+        .iter()
+        .filter(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative)
         .map(|tool| ToolInfo {
             name: tool.name.clone(),
             description: tool.description.clone(),
         })
-        .collect()
+        .collect::<Vec<_>>();
+
+    if let Some(org_id) = agent.org_id.as_ref() {
+        tools.extend(
+            installed_workspace_app_tools(state, org_id, jwt)
+                .await
+                .into_iter()
+                .map(|tool| ToolInfo {
+                    name: tool.name,
+                    description: tool.description,
+                }),
+        );
+    }
+
+    tools
 }
 
 pub(crate) fn effective_model(
@@ -347,7 +370,7 @@ fn non_empty_string(value: &str) -> Option<String> {
     }
 }
 
-pub(crate) fn resolve_integration(
+pub(crate) async fn resolve_integration(
     state: &AppState,
     agent: &Agent,
 ) -> Result<Option<ResolvedIntegration>, (axum::http::StatusCode, Json<ApiError>)> {
@@ -362,20 +385,11 @@ pub(crate) fn resolve_integration(
     let org_id = agent.org_id.ok_or_else(|| {
         ApiError::bad_request("Agent must belong to an organization before using integrations")
     })?;
-    let metadata = state
-        .org_service
-        .get_integration(&org_id, integration_id)
-        .map_err(|e| ApiError::internal(format!("loading integration: {e}")))?
-        .ok_or_else(|| ApiError::not_found("Selected integration was not found"))?;
-    let secret = state
-        .org_service
-        .get_integration_secret(integration_id)
-        .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?;
 
-    Ok(Some(ResolvedIntegration { metadata, secret }))
+    resolve_integration_inner(state, org_id, integration_id).await
 }
 
-pub(crate) fn resolve_integration_ref(
+pub(crate) async fn resolve_integration_ref(
     state: &AppState,
     org_id: Option<aura_os_core::OrgId>,
     auth_source: &str,
@@ -392,6 +406,27 @@ pub(crate) fn resolve_integration_ref(
     let org_id = org_id.ok_or_else(|| {
         ApiError::bad_request("Agent must belong to an organization before using integrations")
     })?;
+
+    resolve_integration_inner(state, org_id, integration_id).await
+}
+
+async fn resolve_integration_inner(
+    state: &AppState,
+    org_id: aura_os_core::OrgId,
+    integration_id: &str,
+) -> Result<Option<ResolvedIntegration>, (axum::http::StatusCode, Json<ApiError>)> {
+    if let Some(client) = &state.integrations_client {
+        let metadata = client
+            .get_integration_internal(&org_id, integration_id)
+            .await
+            .map_err(|e| ApiError::internal(format!("loading integration: {e}")))?;
+        let secret = client
+            .get_integration_secret(&org_id, integration_id)
+            .await
+            .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?;
+        return Ok(Some(ResolvedIntegration { metadata, secret }));
+    }
+
     let metadata = state
         .org_service
         .get_integration(&org_id, integration_id)
@@ -440,6 +475,18 @@ async fn run_harness_test(
     model: Option<String>,
     integration: Option<&ResolvedIntegration>,
 ) -> ApiResult<RuntimeOutcome> {
+    let installed_tools = if let Some(org_id) = agent.org_id.as_ref() {
+        let tools = installed_workspace_app_tools(state, org_id, jwt).await;
+        (!tools.is_empty()).then_some(tools)
+    } else {
+        None
+    };
+    let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
+        let integrations = installed_workspace_integrations_for_org(state, org_id).await;
+        (!integrations.is_empty()).then_some(integrations)
+    } else {
+        None
+    };
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(agent.agent_id.to_string()),
@@ -447,6 +494,8 @@ async fn run_harness_test(
         model: model.clone(),
         token: Some(jwt.to_string()),
         provider_config: build_harness_provider_config(integration, model.as_deref())?,
+        installed_tools,
+        installed_integrations,
         ..Default::default()
     };
 
@@ -1327,22 +1376,7 @@ async fn resolve_or_create_project_agent_instance_id(
 }
 
 fn control_plane_api_base_url() -> String {
-    let port = std::env::var("AURA_SERVER_PORT")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| "3100".to_string());
-    let host = std::env::var("AURA_SERVER_HOST")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| "127.0.0.1".to_string());
-
-    let normalized_host = match host.as_str() {
-        "0.0.0.0" | "::" => "127.0.0.1".to_string(),
-        other if other.contains(':') && !other.starts_with('[') => format!("[{other}]"),
-        other => other.to_string(),
-    };
-
-    format!("http://{normalized_host}:{port}")
+    workspace_control_plane_api_base_url()
 }
 
 fn mcp_server_secrets_json(state: &AppState, agent: &Agent) -> Option<String> {
@@ -1352,6 +1386,7 @@ fn mcp_server_secrets_json(state: &AppState, agent: &Agent) -> Option<String> {
 
     for integration in integrations {
         if !integration.has_secret
+            || !integration.enabled
             || integration.kind != aura_os_core::OrgIntegrationKind::McpServer
         {
             continue;
@@ -2023,7 +2058,7 @@ fn codex_turn_usage(event: &Value, model: String) -> Option<SessionUsage> {
     })
 }
 
-fn build_external_prompt(
+async fn build_external_prompt(
     state: &AppState,
     agent: &Agent,
     user_content: &str,
@@ -2056,7 +2091,7 @@ fn build_external_prompt(
     }
     if supports_external_project_tools(&agent.adapter_type) && project_id.is_some() {
         prompt.push_str("Aura control-plane tools:\n");
-        for tool in active_workspace_tools(state, agent) {
+        for tool in active_workspace_tools(state, agent).await {
             prompt.push_str("- ");
             prompt.push_str(&tool.prompt_signature);
             prompt.push_str(": ");

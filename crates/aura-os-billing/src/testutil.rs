@@ -115,6 +115,7 @@ pub fn store_zero_auth_session(store: &RocksStore) {
         wallets: vec![],
         access_token: "test-token".into(),
         is_zero_pro: false,
+        is_access_granted: false,
         created_at: chrono::Utc::now(),
         validated_at: chrono::Utc::now(),
     })

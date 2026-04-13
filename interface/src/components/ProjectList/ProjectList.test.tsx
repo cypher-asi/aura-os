@@ -1,23 +1,42 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Project, ProjectId } from "../../types";
+import { useEffect } from "react";
+
+let autoSelectDefaultIds = false;
+const mockNavigate = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
   ButtonPlus: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>+</button>
   ),
-  Explorer: ({ data }: { data: { id: string; label: string; children?: { id: string; label: string }[] }[] }) => (
-    <div data-testid="explorer">
-      {data.map((node) => (
-        <div key={node.id}>
-          <span>{node.label}</span>
-          {node.children?.map((child) => (
-            <span key={child.id}>{child.label}</span>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
+  Explorer: ({
+    data,
+    defaultSelectedIds,
+    onSelect,
+  }: {
+    data: { id: string; label: string; children?: { id: string; label: string }[] }[];
+    defaultSelectedIds?: Iterable<string>;
+    onSelect?: (ids: Iterable<string>) => void;
+  }) => {
+    useEffect(() => {
+      if (!autoSelectDefaultIds || !defaultSelectedIds || !onSelect) return;
+      onSelect(defaultSelectedIds);
+    }, [defaultSelectedIds, onSelect]);
+
+    return (
+      <div data-testid="explorer">
+        {data.map((node) => (
+          <div key={node.id}>
+            <span>{node.label}</span>
+            {node.children?.map((child) => (
+              <span key={child.id}>{child.label}</span>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  },
   Menu: () => <div data-testid="menu" />,
   PageEmptyState: ({ title, description }: { title: string; description: string }) => (
     <div data-testid="page-empty-state">
@@ -38,6 +57,14 @@ vi.mock("../../stores/sidekick-store", () => ({
     { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
   ),
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 const mockActions = {
   ctxMenu: null as unknown,
@@ -156,6 +183,7 @@ function renderList(path = "/projects") {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  autoSelectDefaultIds = false;
   mockProjectsList.projects = [];
   mockProjectsList.loadingProjects = false;
   mockProjectsList.agentsByProject = {};
@@ -234,5 +262,20 @@ describe("ProjectList", () => {
     renderList();
     expect(screen.getByText("Visible")).toBeInTheDocument();
     expect(screen.queryByText(/^\s+$/)).not.toBeInTheDocument();
+  });
+
+  it("does not reroute nested desktop stats paths back to agent chat on initial project selection", async () => {
+    autoSelectDefaultIds = true;
+    mockProjectsList.projects = [makeProject()];
+    mockProjectsList.agentsByProject = {
+      p1: [{ agent_instance_id: "a1", name: "Agent Alpha" }],
+    };
+
+    renderList("/projects/p1/stats");
+
+    await waitFor(() => {
+      expect(mockNavigate).not.toHaveBeenCalledWith("/projects/p1/agents/a1");
+      expect(mockNavigate).not.toHaveBeenCalledWith("/projects/p1/agent");
+    });
   });
 });

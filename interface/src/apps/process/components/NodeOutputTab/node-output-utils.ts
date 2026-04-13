@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { ProcessEventContentBlock } from "../../../../types";
 import type { ToolCallEntry, TimelineItem } from "../../../../types/stream";
 
@@ -7,7 +8,7 @@ interface ContentBlocksToTimelineOptions {
   terminalStatus?: TerminalProcessStatus;
 }
 
-export const monoBox: React.CSSProperties = {
+export const monoBox: CSSProperties = {
   background: "var(--color-bg-input)",
   padding: 8,
   borderRadius: "var(--radius-sm)",

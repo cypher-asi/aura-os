@@ -97,6 +97,47 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Remote agent chat")).toBeInTheDocument();
   });
 
+  it("makes the agent summary actionable on mobile when details are available", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    const onDetails = vi.fn();
+
+    render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        onMobileHeaderSummaryClick={onDetails}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Open details for Coca" })).toBeInTheDocument();
+    expect(screen.getByText("Open skills and runtime")).toBeInTheDocument();
+  });
+
+  it("can present a switch-style summary affordance on mobile", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    const onSwitch = vi.fn();
+
+    render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        onMobileHeaderSummaryClick={onSwitch}
+        mobileHeaderSummaryHint="Switch active agent · 2 in project"
+        mobileHeaderSummaryLabel="Switch active project agent from Coca"
+        mobileHeaderSummaryKind="switch"
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Switch active project agent from Coca" })).toBeInTheDocument();
+    expect(screen.getByText("Switch active agent · 2 in project")).toBeInTheDocument();
+  });
+
   it("does not show the inline agent header on desktop", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 

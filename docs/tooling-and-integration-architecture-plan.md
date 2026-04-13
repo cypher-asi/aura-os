@@ -1,5 +1,7 @@
 # Tooling And Integration Architecture Plan
 
+Canonical architecture note: see [Capabilities And Credentials Architecture](./capabilities-and-credentials-architecture.md).
+
 This document is the working reference for how Aura OS should model:
 - adapters
 - connections
@@ -73,6 +75,8 @@ Adapters are not the system of record for project state.
 
 Connections are saved provider credentials that power adapters.
 
+Their secrets should be persisted through `aura-integrations`, with any local Aura OS storage path treated as compatibility-only during migration.
+
 Examples:
 - `OpenAI`
 - `Anthropic`
@@ -101,6 +105,12 @@ Examples:
 - `Slack`
 - `GitHub`
 - `Notion`
+- `Brave Search`
+- `Freepik`
+- `Buffer`
+- `Apify`
+- `Metricool`
+- `Mailchimp`
 - `Jira`
 - `Confluence`
 - `Figma`
@@ -142,6 +152,8 @@ This is the most important distinction in the model:
 
 Aura OS remains the control plane.
 
+`aura-integrations` remains the credential authority.
+
 Aura OS owns:
 - projects
 - specs
@@ -151,6 +163,9 @@ Aura OS owns:
 - persistence
 - event emission
 - policy and gating
+- integration catalog state
+- installed-tool projection
+- trusted integration brokering
 
 Adapters own:
 - reasoning
@@ -159,8 +174,18 @@ Adapters own:
 - shell and file work
 - runtime-specific execution behavior
 
+The harness owns:
+- runtime authorization
+- generic tool execution from runtime metadata
+- auditability of runtime capability use
+
 External systems own:
 - their own APIs and external side effects
+
+`aura-integrations` owns:
+- credential persistence
+- secret encryption and retrieval
+- canonical integration secret metadata
 
 This gives us a simple rule:
 - if the action is part of Aura's domain, Aura OS should own it directly
@@ -334,11 +359,17 @@ Aura OS should do:
 - decide which tools are active for a workspace, project, or agent
 - pass only the active tools into the session
 - keep project/spec/task/loop state authoritative
+- broker trusted integration access and secret lookup through `aura-integrations` when needed
 
 Adapters should do:
 - consume the active tool list
 - decide which tool to call
 - execute via the tool interface already supplied by Aura OS
+
+The harness should do:
+- authorize the active tool set at runtime
+- execute installed tools generically from runtime metadata
+- remain independent from org secret persistence
 
 For external project-attached adapters, there is one more practical rule:
 - Aura may maintain multiple internal tool source kinds
@@ -594,6 +625,7 @@ The next implementation steps should follow this order:
 
 2. formalize V1 tool sources
 - `aura_native`
+- `app_provider`
 - `mcp`
 
 3. formalize the first-class app provider contract
@@ -606,11 +638,13 @@ The next implementation steps should follow this order:
 4. build the active-tool filtering model
 - registered tools vs active tools
 
-5. keep Aura-native ownership for Aura domain tools
+5. make `aura-integrations` explicitly canonical for persisted secrets and mark local storage as compatibility-only
 
-6. expose external workspace capabilities through MCP first where dynamic discovery is the better fit
+6. keep Aura-native ownership for Aura domain tools
 
-7. design the V2 unified registry once V1 is working well
+7. expose external workspace capabilities through MCP first where dynamic discovery is the better fit
+
+8. design the V2 unified registry once V1 is working well without collapsing trusted app-provider tools and MCP-backed tools into one trust model
 
 ## Non-Goals For V1
 

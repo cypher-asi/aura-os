@@ -19,10 +19,10 @@ use tracing::{info, warn};
 
 use aura_os_agents::AgentService;
 use aura_os_core::{
-    Agent, ArtifactType, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessEventId,
-    ProcessEventStatus, ProcessId, ProcessNode, ProcessNodeId, ProcessNodeType, ProcessRun,
-    ProcessRunId, ProcessRunStatus, ProcessRunTranscriptEvent, ProcessRunTrigger, ProjectId,
-    TaskStatus,
+    Agent, AgentId, ArtifactType, Process, ProcessArtifact, ProcessArtifactId, ProcessEvent,
+    ProcessEventId, ProcessEventStatus, ProcessId, ProcessNode, ProcessNodeConnection,
+    ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunStatus,
+    ProcessRunTranscriptEvent, ProcessRunTrigger, ProjectId, TaskStatus,
 };
 use aura_os_link::automaton_event_kinds::TEXT_DELTA;
 use aura_os_link::{
@@ -31,7 +31,9 @@ use aura_os_link::{
     CollectedOutput, RunCompletion,
 };
 use aura_os_orgs::OrgService;
-use aura_os_storage::StorageClient;
+use aura_os_storage::{
+    StorageClient, StorageError, StorageProcess, StorageProcessNode, StorageProcessNodeConnection,
+};
 use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
 
@@ -46,6 +48,7 @@ use super::payload::{
 };
 
 include!("helpers.rs");
+include!("storage_sync.rs");
 include!("executor.rs");
 include!("graph.rs");
 include!("execute_run.rs");

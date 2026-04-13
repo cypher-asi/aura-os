@@ -15,6 +15,7 @@ interface ProjectLayoutData {
   initialSpecs: Spec[];
   initialTasks: Task[];
   loading: boolean;
+  loadingProjects: boolean;
   projects: Project[];
 }
 
@@ -22,7 +23,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { projects, setProjects } = useProjectsList();
+  const { projects, loadingProjects, setProjects } = useProjectsList();
   const cachedProject = useMemo(
     () => projects.find((candidate) => candidate.project_id === projectId) ?? null,
     [projectId, projects],
@@ -136,5 +137,5 @@ export function useProjectLayoutData(): ProjectLayoutData {
     unregister,
   ]);
 
-  return { displayProject, initialSpecs, initialTasks, loading, projects };
+  return { displayProject, initialSpecs, initialTasks, loading, loadingProjects, projects };
 }

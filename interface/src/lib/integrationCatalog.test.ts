@@ -1,7 +1,9 @@
 import {
+  getIntegrationDefinition,
   getConnectionAuthHint,
   getConnectionAuthLabel,
   getLocalAuthLabel,
+  integrationSections,
 } from "./integrationCatalog";
 
 describe("integrationCatalog auth labels", () => {
@@ -24,5 +26,27 @@ describe("integrationCatalog auth labels", () => {
     expect(getLocalAuthLabel("claude_code")).toBe("Claude Code CLI");
     expect(getLocalAuthLabel("codex")).toBe("Codex CLI");
     expect(getLocalAuthLabel("opencode")).toBe("OpenCode CLI");
+  });
+
+  it("keeps work-app integrations in the Apps section", () => {
+    const apps = integrationSections().find((section) => section.id === "workspace_integration");
+    const appIds = new Set(apps?.providers.map((provider) => provider.id));
+
+    for (const provider of [
+      "github",
+      "linear",
+      "slack",
+      "notion",
+      "brave_search",
+      "freepik",
+      "buffer",
+      "apify",
+      "metricool",
+      "mailchimp",
+      "resend",
+    ]) {
+      expect(getIntegrationDefinition(provider)?.kind).toBe("workspace_integration");
+      expect(appIds.has(provider)).toBe(true);
+    }
   });
 });

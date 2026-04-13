@@ -25,6 +25,7 @@ on:
         default: beta
         type: choice
         options:
+          - preflight
           - beta
           - release
       track:

@@ -1,4 +1,6 @@
-import { MessageSquare, AlertCircle, LoaderCircle } from "lucide-react";
+import type { ReactNode } from "react";
+import { MessageSquare, AlertCircle, LoaderCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
@@ -38,6 +40,12 @@ export interface ChatPanelProps {
   projects?: Project[];
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
+  mobileHeaderAction?: ReactNode;
+  onMobileHeaderSummaryClick?: () => void;
+  mobileHeaderSummaryTo?: string;
+  mobileHeaderSummaryHint?: string;
+  mobileHeaderSummaryLabel?: string;
+  mobileHeaderSummaryKind?: "details" | "switch";
 }
 
 export function ChatPanel({
@@ -59,6 +67,12 @@ export function ChatPanel({
   projects,
   selectedProjectId,
   onProjectChange,
+  mobileHeaderAction,
+  onMobileHeaderSummaryClick,
+  mobileHeaderSummaryTo,
+  mobileHeaderSummaryHint,
+  mobileHeaderSummaryLabel,
+  mobileHeaderSummaryKind = "details",
 }: ChatPanelProps) {
   const s = useChatPanelState({
     streamKey,
@@ -94,12 +108,56 @@ export function ChatPanel({
       {s.isMobileLayout && agentName ? (
         <div className={styles.projectAgentBar}>
           <div className={styles.projectAgentSummary}>
-            <div className={styles.projectAgentSummaryCopy}>
-              <span className={styles.projectAgentName}>{agentName}</span>
-              <span className={styles.projectAgentSummaryHint}>
-                {machineType === "remote" ? "Remote agent chat" : "Local agent chat"}
-              </span>
-            </div>
+            {onMobileHeaderSummaryClick || mobileHeaderSummaryTo ? (
+              mobileHeaderSummaryTo ? (
+                <Link
+                  to={mobileHeaderSummaryTo}
+                  className={styles.projectAgentSummaryButton}
+                  aria-label={mobileHeaderSummaryLabel ?? `Open details for ${agentName}`}
+                >
+                  <div className={styles.projectAgentSummaryCopy}>
+                    <span className={styles.projectAgentName}>{agentName}</span>
+                    <span className={styles.projectAgentSummaryHint}>
+                      {mobileHeaderSummaryHint
+                        ?? (machineType === "remote" ? "Open skills and runtime" : "Open agent settings")}
+                    </span>
+                  </div>
+                  <span className={styles.projectAgentSummaryChevron} aria-hidden="true">
+                    {mobileHeaderSummaryKind === "switch" ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.projectAgentSummaryButton}
+                  onClick={onMobileHeaderSummaryClick}
+                  aria-label={mobileHeaderSummaryLabel ?? `Open details for ${agentName}`}
+                >
+                  <div className={styles.projectAgentSummaryCopy}>
+                    <span className={styles.projectAgentName}>{agentName}</span>
+                    <span className={styles.projectAgentSummaryHint}>
+                      {mobileHeaderSummaryHint
+                        ?? (machineType === "remote" ? "Open skills and runtime" : "Open agent settings")}
+                    </span>
+                  </div>
+                  <span className={styles.projectAgentSummaryChevron} aria-hidden="true">
+                    {mobileHeaderSummaryKind === "switch" ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </span>
+                </button>
+              )
+            ) : (
+              <div className={styles.projectAgentSummaryCopy}>
+                <span className={styles.projectAgentName}>{agentName}</span>
+                <span className={styles.projectAgentSummaryHint}>
+                  {machineType === "remote" ? "Remote agent chat" : "Local agent chat"}
+                </span>
+              </div>
+            )}
+            {mobileHeaderAction ? (
+              <div className={styles.projectAgentAction}>
+                {mobileHeaderAction}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

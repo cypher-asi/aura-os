@@ -4,7 +4,7 @@ set -euo pipefail
 
 stack__script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 stack__local_stack_dir="$(cd "$stack__script_dir/.." && pwd)"
-stack__repo_root="$(cd "$stack__local_stack_dir/../.." && pwd)"
+stack__repo_root="$(cd "$stack__local_stack_dir/../../.." && pwd)"
 stack__workspace_root="$(cd "$stack__repo_root/.." && pwd)"
 
 stack_load_env() {

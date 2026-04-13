@@ -5,6 +5,8 @@ import {
   projectRootPath,
   projectAgentRoute,
   projectAgentChatRoute,
+  projectAgentCreateRoute,
+  projectAgentAttachRoute,
   projectWorkRoute,
   projectFilesRoute,
   projectStatsRoute,
@@ -38,16 +40,16 @@ describe("getMobileProjectDestination", () => {
     expect(getMobileProjectDestination("/feed/activity")).toBe("feed");
   });
 
-  it("returns tasks for /projects/:id/work", () => {
-    expect(getMobileProjectDestination("/projects/p1/work")).toBe("tasks");
+  it("returns execution for /projects/:id/work", () => {
+    expect(getMobileProjectDestination("/projects/p1/work")).toBe("execution");
   });
 
-  it("returns tasks for /projects/:id/execution", () => {
-    expect(getMobileProjectDestination("/projects/p1/execution")).toBe("tasks");
+  it("returns execution for /projects/:id/execution", () => {
+    expect(getMobileProjectDestination("/projects/p1/execution")).toBe("execution");
   });
 
-  it("returns files for /projects/:id/files", () => {
-    expect(getMobileProjectDestination("/projects/p1/files")).toBe("files");
+  it("returns null for /projects/:id/files so mobile can redirect to agent flow", () => {
+    expect(getMobileProjectDestination("/projects/p1/files")).toBeNull();
   });
 
   it("returns stats for /projects/:id/stats", () => {
@@ -60,6 +62,18 @@ describe("getMobileProjectDestination", () => {
 
   it("returns agent for /projects/:id/agents/:agentId", () => {
     expect(getMobileProjectDestination("/projects/p1/agents/a1")).toBe("agent");
+  });
+
+  it("returns null for /projects/:id/agents/create so project back stays available", () => {
+    expect(getMobileProjectDestination("/projects/p1/agents/create")).toBeNull();
+  });
+
+  it("returns null for /projects/:id/agents/attach so project back stays available", () => {
+    expect(getMobileProjectDestination("/projects/p1/agents/attach")).toBeNull();
+  });
+
+  it("keeps agent selected for /projects/:id/agents/:agentId/details", () => {
+    expect(getMobileProjectDestination("/projects/p1/agents/a1/details")).toBe("agent");
   });
 
   it("returns null for /projects/:id with no suffix", () => {
@@ -113,6 +127,14 @@ describe("route helpers", () => {
 
   it("projectAgentChatRoute builds correct path", () => {
     expect(projectAgentChatRoute("p1", "ai-1")).toBe("/projects/p1/agents/ai-1");
+  });
+
+  it("projectAgentCreateRoute builds correct path", () => {
+    expect(projectAgentCreateRoute("p1")).toBe("/projects/p1/agents/create");
+  });
+
+  it("projectAgentAttachRoute builds correct path", () => {
+    expect(projectAgentAttachRoute("p1")).toBe("/projects/p1/agents/attach");
   });
 
   it("projectWorkRoute builds correct path", () => {

@@ -5,8 +5,8 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sidecarPath = path.resolve(currentDir, "./aura-control-plane-mcp.mjs");
@@ -20,23 +20,47 @@ function jsonResponse(res, status, body) {
 
 async function startMockApi() {
   const server = http.createServer((req, res) => {
-    if (req.method === "GET" && req.url === "/api/orgs/org-1/integrations") {
-      return jsonResponse(res, 200, [
-        {
-          integration_id: "mcp-1",
-          name: "GitHub MCP",
-          provider: "mcp_server",
-          kind: "mcp_server",
-          has_secret: true,
-          provider_config: {
-            transport: "stdio",
-            command: process.execPath,
-            args: [fakeServerPath, "${AURA_MCP_PROJECT_WORKSPACE}"],
-            cwd: "${AURA_MCP_PROJECT_WORKSPACE}",
-            secretEnvVar: "TEST_MCP_SECRET",
+    if (req.method === "GET" && req.url === "/api/orgs/org-1/tool-actions") {
+      return jsonResponse(res, 200, {
+        tools: [
+          {
+            name: "mcp_mcp_1__echo_secret",
+            description: "[GitHub MCP] Echo secret",
+            inputSchema: { type: "object", properties: { message: { type: "string" } } },
+            endpoint: "/api/orgs/org-1/tool-actions/mcp/mcp-1?tool_name=echo_secret",
+            sourceKind: "mcp",
+            trustClass: "trusted_mcp",
           },
-        },
-      ]);
+          {
+            name: "mcp_mcp_1__echo_context",
+            description: "[GitHub MCP] Echo context",
+            inputSchema: { type: "object" },
+            endpoint: "/api/orgs/org-1/tool-actions/mcp/mcp-1?tool_name=echo_context",
+            sourceKind: "mcp",
+            trustClass: "trusted_mcp",
+          },
+        ],
+      });
+    }
+
+    if (req.method === "POST" && req.url === "/api/orgs/org-1/tool-actions/mcp/mcp-1?tool_name=echo_secret") {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => {
+        const parsed = JSON.parse(body || "{}");
+        jsonResponse(res, 200, {
+          content: [{ type: "text", text: JSON.stringify({ message: parsed.message, secret: "secret-123" }) }],
+        });
+      });
+      return;
+    }
+
+    if (req.method === "POST" && req.url === "/api/orgs/org-1/tool-actions/mcp/mcp-1?tool_name=echo_context") {
+      return jsonResponse(res, 200, {
+        content: [{ type: "text", text: JSON.stringify({ cwd: workspacePath, argv: [workspacePath] }) }],
+      });
     }
 
     jsonResponse(res, 404, { error: "not_found" });
@@ -69,9 +93,6 @@ async function main() {
         AURA_MCP_JWT: "test-jwt",
         AURA_MCP_ORG_ID: "org-1",
         AURA_MCP_PROJECT_WORKSPACE: workspacePath,
-        AURA_MCP_INTEGRATION_SECRETS_JSON: JSON.stringify({
-          "mcp-1": "secret-123",
-        }),
       },
       stderr: "pipe",
     });

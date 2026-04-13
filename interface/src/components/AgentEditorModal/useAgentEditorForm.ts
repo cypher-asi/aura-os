@@ -35,6 +35,7 @@ interface AgentEditorFormResult {
   setIntegrationId: (v: string) => void;
   defaultModel: string;
   setDefaultModel: (v: string) => void;
+  simplifyForMobileCreate: boolean;
   availableIntegrations: OrgIntegration[];
   saving: boolean;
   error: string;
@@ -89,6 +90,7 @@ export function useAgentEditorForm(
   onSaved: (agent: Agent) => void,
 ): AgentEditorFormResult {
   const { isMobileLayout } = useAuraCapabilities();
+  const simplifyForMobileCreate = isMobileLayout && !agent;
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [personality, setPersonality] = useState("");
@@ -114,6 +116,7 @@ export function useAgentEditorForm(
       integrations: s.integrations,
     })),
   );
+  const refreshIntegrations = useOrgStore((s) => s.refreshIntegrations);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -172,6 +175,13 @@ export function useAgentEditorForm(
     isMobileLayout,
     showAdvancedRuntime,
   ]);
+
+  useEffect(() => {
+    if (!isOpen || !activeOrg?.org_id || integrations.length > 0) {
+      return;
+    }
+    void refreshIntegrations();
+  }, [activeOrg?.org_id, integrations.length, isOpen, refreshIntegrations]);
 
   useEffect(() => {
     const allowedAuthSources = adapterType === "aura_harness"
@@ -296,6 +306,7 @@ export function useAgentEditorForm(
     adapterType, setAdapterType, environment, setEnvironment,
     authSource, setAuthSource, showAdvancedRuntime, setShowAdvancedRuntime,
     integrationId, setIntegrationId, defaultModel, setDefaultModel,
+    simplifyForMobileCreate,
     availableIntegrations: integrations,
     saving, error, nameError, setNameError,
     nameRef, initialFocusRef, fileInputRef,

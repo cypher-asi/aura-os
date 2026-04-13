@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { stripEmojis } from "../../utils/text-normalize";
 import { formatDuration } from "../../utils/format";
-import { ResponseBlock } from "../ResponseBlock";
 import styles from "./ThinkingRow.module.css";
 
 interface ThinkingRowProps {
@@ -16,6 +15,8 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
   useEffect(() => {
     if (isStreaming) {
       setExpanded(true);
+    } else {
+      setExpanded(false);
     }
   }, [isStreaming]);
 
@@ -26,20 +27,21 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
       : "Thought";
 
   return (
-    <ResponseBlock
-      expanded={expanded}
-      onExpandedChange={setExpanded}
-      animate={!isStreaming}
-      className={styles.thinkingBlock}
-      header={
-        <span className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}>
-          {durationLabel}
-        </span>
-      }
-    >
-      <div className={styles.thinkingContent}>
-        {stripEmojis(text)}
-      </div>
-    </ResponseBlock>
+    <div className={`${styles.thinkingWrap}${isStreaming ? ` ${styles.streaming}` : ""}`}>
+      <span
+        className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}
+        onClick={() => setExpanded(!expanded)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setExpanded(!expanded); }}
+      >
+        {durationLabel}
+      </span>
+      {expanded && (
+        <div className={styles.thinkingContent}>
+          {stripEmojis(text)}
+        </div>
+      )}
+    </div>
   );
 }

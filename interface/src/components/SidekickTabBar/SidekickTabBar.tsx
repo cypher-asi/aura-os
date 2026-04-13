@@ -78,9 +78,8 @@ export function SidekickTabBar({
 
   useEffect(() => {
     if (enteringIds.size === 0) return;
-    let id1: number;
     let id2: number;
-    id1 = requestAnimationFrame(() => {
+    const id1 = requestAnimationFrame(() => {
       id2 = requestAnimationFrame(() => setEnteringIds(new Set()));
     });
     return () => {

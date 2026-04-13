@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
-import { TOOL_LABELS, FILE_OPS } from "../../constants/tools";
-import { summarizeInput, formatResult } from "../../utils/format";
+import { TOOL_LABELS, FILE_OPS, COMMAND_OPS } from "../../constants/tools";
+import { summarizeInput, formatResult, summarizeError } from "../../utils/format";
 import { FilePreviewCard } from "../FilePreviewCard";
+import { CommandPreviewCard } from "./CommandPreviewCard";
 import { SpecPreviewCard } from "./SpecPreviewCard";
 import { getSuperAgentCardRenderer } from "./SuperAgentToolCards";
 import { TaskCreatedIndicator } from "./TaskCreatedIndicator";
@@ -72,11 +73,12 @@ export function ToolCallBlock({
   const isSpec = entry.name === "create_spec" || entry.name === "update_spec";
   const isTask = entry.name === "create_task";
   const isFileOp = FILE_OPS.has(entry.name);
-  const autoExpand = isFileOp ? false : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
+  const isCommand = COMMAND_OPS.has(entry.name);
+  const autoExpand = isFileOp || isCommand ? false : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
   const [expanded, setExpanded] = useState(autoExpand);
   const wasPendingRef = useRef(entry.pending);
   const label = TOOL_LABELS[entry.name] || entry.name;
-  const inputSummary = (entry.started && !isTask) ? "" : summarizeInput(entry.name, entry.input);
+  const inputSummary = (entry.started && (isSpec || isTask)) ? "" : summarizeInput(entry.name, entry.input);
 
   useEffect(() => {
     if (wasPendingRef.current && !entry.pending) {
@@ -128,6 +130,15 @@ export function ToolCallBlock({
         </div>
       );
     }
+    if (isCommand) {
+      return (
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+          <div className={toolStyles.toolBody}>
+            <CommandPreviewCard entry={entry} />
+          </div>
+        </div>
+      );
+    }
     if (isSpec) {
       return (
         <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
@@ -163,7 +174,7 @@ export function ToolCallBlock({
         <span className={toolStyles.toolName}>{label}</span>
         {entry.isError && entry.result ? (
           <span className={toolStyles.headerErrorText}>
-            {entry.result.length > 100 ? entry.result.slice(0, 100) + "…" : entry.result}
+            {summarizeError(entry.result)}
           </span>
         ) : showGeneratingHint ? (
           <span className={toolStyles.generatingHint}>Generating…</span>
@@ -211,14 +222,13 @@ export function ToolCallsList({ entries }: { entries: ToolCallEntry[] }) {
   return (
     <div className={toolStyles.toolCallsContainer}>
       <div className={toolStyles.toolCallsHeader}>
-        <span className={`${toolStyles.headerDot} ${allDone ? toolStyles.headerDotDone : ""}`} />
         <span className={toolStyles.headerText}>
           {isBatch ? (
             batchLabel()
           ) : allDone ? (
-            <>Ran <strong>{total}</strong> {total === 1 ? "action" : "actions"}</>
+            <>{total} {total === 1 ? "action" : "actions"} completed</>
           ) : (
-            <><strong>Working</strong> on {total} to-do{total !== 1 ? "s" : ""}</>
+            <>Working on {total} {total === 1 ? "action" : "actions"}...</>
           )}
         </span>
       </div>

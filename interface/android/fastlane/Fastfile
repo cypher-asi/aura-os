@@ -14,8 +14,33 @@ def required_env!(name)
   value
 end
 
+def required_envs!(*names)
+  missing = names.select { |name| ENV[name].to_s.empty? }
+  return if missing.empty?
+
+  UI.user_error!(
+    "Missing required environment variables:\n- #{missing.join("\n- ")}"
+  )
+end
+
 def package_name
   ENV["ANDROID_PACKAGE_NAME"].to_s.empty? ? "tech.zero.aura" : ENV["ANDROID_PACKAGE_NAME"]
+end
+
+def local_android_default_host
+  ENV["VITE_ANDROID_DEFAULT_HOST"].to_s.empty? ? "http://10.0.2.2:3100" : ENV["VITE_ANDROID_DEFAULT_HOST"]
+end
+
+def connected_android_device_serial
+  return ENV["ANDROID_SERIAL"] unless ENV["ANDROID_SERIAL"].to_s.empty?
+
+  devices = `adb devices`.lines.drop(1).map(&:strip)
+  devices.each do |line|
+    serial, state = line.split(/\s+/, 2)
+    return serial if serial && state == "device"
+  end
+
+  nil
 end
 
 def build_number
@@ -31,12 +56,14 @@ def play_json_key_data
 end
 
 def ensure_signing!
-  %w[
+  required_envs!(
+    *%w[
     ANDROID_KEYSTORE_PATH
     ANDROID_KEYSTORE_PASSWORD
     ANDROID_KEY_ALIAS
     ANDROID_KEY_PASSWORD
-  ].each { |name| required_env!(name) }
+    ]
+  )
 end
 
 def build_release_bundle
@@ -73,6 +100,11 @@ def upload_bundle(track:, release_status:)
   )
 end
 
+def ensure_play_store_release_requirements!
+  ensure_signing!
+  required_env!("ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64")
+end
+
 private_lane :sync_android_web_assets do
   # Keep local fastlane runs aligned with CI by rebuilding the bundled web app
   # before Gradle packages the native shell.
@@ -84,6 +116,7 @@ end
 platform :android do
   desc "Build a local debug APK that can be installed on an emulator"
   lane :local_debug do
+    ENV["VITE_ANDROID_DEFAULT_HOST"] = local_android_default_host
     sync_android_web_assets
 
     gradle(
@@ -93,12 +126,22 @@ platform :android do
     )
 
     apk_path = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH] || "./app/build/outputs/apk/debug/app-debug.apk"
-    UI.success("Local debug APK ready at #{apk_path}")
+    serial = connected_android_device_serial
+
+    if serial
+      sh("adb -s #{serial.shellescape} install -r #{apk_path.shellescape}")
+      sh("adb -s #{serial.shellescape} shell monkey -p #{package_name.shellescape} -c android.intent.category.LAUNCHER 1")
+      UI.success("Local debug APK installed and launched on #{serial}")
+    else
+      UI.important("No connected Android device/emulator found; built APK is ready at #{apk_path}")
+    end
+
     apk_path
   end
 
   desc "Build and upload an internal testing build to Google Play"
   lane :beta do
+    ensure_play_store_release_requirements!
     upload_bundle(
       track: ENV["ANDROID_PLAY_TRACK"].to_s.empty? ? "internal" : ENV["ANDROID_PLAY_TRACK"],
       release_status: "completed"
@@ -107,10 +150,17 @@ platform :android do
 
   desc "Build and upload a release candidate to Google Play"
   lane :release do
+    ensure_play_store_release_requirements!
     upload_bundle(
       track: ENV["ANDROID_PLAY_TRACK"].to_s.empty? ? "production" : ENV["ANDROID_PLAY_TRACK"],
       # Default to draft so a release lane run doesn't immediately roll out.
       release_status: ENV["ANDROID_PLAY_RELEASE_STATUS"].to_s.empty? ? "draft" : ENV["ANDROID_PLAY_RELEASE_STATUS"]
     )
+  end
+
+  desc "Validate Android Play release configuration without uploading"
+  lane :preflight do
+    ensure_play_store_release_requirements!
+    UI.success("Android Play release configuration looks complete.")
   end
 end

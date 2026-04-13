@@ -2,13 +2,9 @@ import { Button, Text } from "@cypher-asi/zui";
 import { Bot, CheckSquare, BarChart3, MessageSquare } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectActions } from "../../stores/project-action-store";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
-import { projectAgentRoute, projectStatsRoute, projectWorkRoute } from "../../utils/mobileNavigation";
-import { AgentSelectorModal } from "../../components/AgentSelectorModal";
-import type { AgentInstance } from "../../types";
+import { projectAgentCreateRoute, projectAgentRoute, projectStatsRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import styles from "./ProjectEmptyView.module.css";
 
 interface ProjectEmptyViewProps {
@@ -23,23 +19,6 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
   const navigate = useNavigate();
   const { isMobileLayout } = useAuraCapabilities();
   const ctx = useProjectActions();
-  const { setAgentsByProject } = useProjectsList();
-  const [agentSelectorOpen, setAgentSelectorOpen] = useState(false);
-
-  const handleAgentCreated = (instance: AgentInstance) => {
-    setAgentsByProject((prev) => {
-      const existing = prev[instance.project_id] ?? [];
-      if (existing.some((agent) => agent.agent_instance_id === instance.agent_instance_id)) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [instance.project_id]: [...existing, instance],
-      };
-    });
-    setAgentSelectorOpen(false);
-    navigate(`/projects/${instance.project_id}/agents/${instance.agent_instance_id}`);
-  };
 
   if (isMobileLayout && ctx) {
     const { project } = ctx;
@@ -66,7 +45,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
               <Button
                 variant="primary"
                 icon={<Bot size={16} />}
-                onClick={() => setAgentSelectorOpen(true)}
+                onClick={() => navigate(projectAgentCreateRoute(project.project_id))}
                 className={styles.actionButtonStart}
               >
                 Add Agent
@@ -87,7 +66,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
               onClick={() => navigate(projectWorkRoute(project.project_id))}
               className={styles.actionButtonStart}
             >
-              Open Tasks
+              Open Execution
             </Button>
             <Button
               variant="secondary"
@@ -100,12 +79,6 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
           </div>
         </div>
 
-        <AgentSelectorModal
-          isOpen={agentSelectorOpen}
-          projectId={project.project_id}
-          onClose={() => setAgentSelectorOpen(false)}
-          onCreated={handleAgentCreated}
-        />
       </>
     );
   }

@@ -10,7 +10,7 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { HostSettingsModal } from "../HostSettingsModal";
 import { MobileAgentLibraryView } from "../../apps/agents/MobileAgentLibraryView";
 import { MobileAgentDetailsView } from "../../apps/agents/MobileAgentDetailsView";
-import { projectStatsRoute, projectWorkRoute } from "../../utils/mobileNavigation";
+import { projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import { useMobileShellState } from "./useMobileShellState";
 import { blurActiveElement, resolveProjectAgentPath } from "./mobile-shell-utils";
 import { ProjectNavigationDrawerContent } from "./ProjectNavigationDrawer";
@@ -39,7 +39,9 @@ export function MobileShell() {
   const hostSettingsOpen = useUIModalStore((s) => s.hostSettingsOpen);
   const closeHostSettings = useUIModalStore((s) => s.closeHostSettings);
   const mobileNavActiveId: MobileNavId | null = state.mobileDestination === "agent"
+    || state.mobileDestination === "execution"
     || state.mobileDestination === "tasks"
+    || state.mobileDestination === "process"
     || state.mobileDestination === "stats"
     ? state.mobileDestination
     : null;
@@ -49,7 +51,9 @@ export function MobileShell() {
   const handleMobilePrimaryNavigate = useCallback((id: MobileNavId) => {
     if (!state.mobileTargetProjectId) { navigate("/projects"); return; }
     if (id === "agent") { navigate(resolveProjectAgentPath(state.mobileTargetProjectId)); return; }
-    if (id === "tasks") { navigate(projectWorkRoute(state.mobileTargetProjectId)); return; }
+    if (id === "tasks") { navigate(projectTasksRoute(state.mobileTargetProjectId)); return; }
+    if (id === "execution") { navigate(projectWorkRoute(state.mobileTargetProjectId)); return; }
+    if (id === "process") { navigate(projectProcessRoute(state.mobileTargetProjectId)); return; }
     navigate(projectStatsRoute(state.mobileTargetProjectId));
   }, [state.mobileTargetProjectId, navigate]);
 
@@ -69,7 +73,7 @@ export function MobileShell() {
               <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary></div>
             )}
           </div>
-          {!drawerOpen && state.showProjectTitle && (
+          {!drawerOpen && state.showProjectTitle && !state.isProjectAgentManagementRoute && (
             <div className={styles.mobileBottomNav}>
               <MobileBottomNav activeId={mobileNavActiveId} onNavigate={handleMobilePrimaryNavigate} />
             </div>
@@ -81,7 +85,7 @@ export function MobileShell() {
           {navOpen && <ProjectNavigationDrawerContent />}
         </Drawer>
 
-        <Drawer side={state.isPhoneLayout ? "bottom" : "right"} isOpen={appOpen} onClose={() => { blurActiveElement(); setAppOpen(false); }} title="Navigate" className={state.isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet} showMinimizedBar={false} defaultSize={state.isPhoneLayout ? 420 : 360} maxSize={state.isPhoneLayout ? 520 : 420}>
+        <Drawer side="right" isOpen={appOpen} onClose={() => { blurActiveElement(); setAppOpen(false); }} title="Navigate" className={styles.mobileSideSheet} showMinimizedBar={false} defaultSize={360} maxSize={420}>
           <AppSwitcherContent state={state} />
         </Drawer>
 

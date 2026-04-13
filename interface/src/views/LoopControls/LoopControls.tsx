@@ -36,6 +36,7 @@ export function LoopControls({
           <Button
             variant="filled"
             size="sm"
+            dimUnselected={false}
             icon={<Play size={14} />}
             onClick={onStart}
             className={styles.startButton}
@@ -47,6 +48,7 @@ export function LoopControls({
           <Button
             variant="filled"
             size="sm"
+            dimUnselected={false}
             icon={<Play size={14} />}
             onClick={onStart}
             className={styles.startButton}
@@ -58,6 +60,7 @@ export function LoopControls({
           <Button
             variant="secondary"
             size="sm"
+            dimUnselected={false}
             icon={<Pause size={14} />}
             onClick={onPause}
             className={styles.secondaryButton}
@@ -69,6 +72,7 @@ export function LoopControls({
           <Button
             variant="danger"
             size="sm"
+            dimUnselected={false}
             icon={<Square size={14} />}
             onClick={() => setConfirmOpen(true)}
             className={styles.stopButton}

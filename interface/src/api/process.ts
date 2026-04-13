@@ -56,6 +56,11 @@ export interface CreateConnectionRequest {
   target_handle?: string;
 }
 
+export interface CreateFolderRequest {
+  name: string;
+  org_id?: string;
+}
+
 export const processApi = {
   // Processes
   listProcesses: () => apiFetch<Process[]>("/api/processes"),
@@ -111,7 +116,7 @@ export const processApi = {
 
   // Folders
   listFolders: () => apiFetch<ProcessFolder[]>("/api/process-folders"),
-  createFolder: (data: { name: string }) =>
+  createFolder: (data: CreateFolderRequest) =>
     apiFetch<ProcessFolder>("/api/process-folders", { method: "POST", body: JSON.stringify(data) }),
   updateFolder: (id: string, data: { name?: string }) =>
     apiFetch<ProcessFolder>(`/api/process-folders/${id}`, { method: "PUT", body: JSON.stringify(data) }),

@@ -1,16 +1,23 @@
 import { useNavigate } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
-import { ArrowLeft, ChevronDown, CircleUserRound, Menu } from "lucide-react";
+import { ArrowLeft, ChevronDown, CircleUserRound, Menu, Plus } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
-import { projectRootPath } from "../../utils/mobileNavigation";
+import { projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
 import type { MobileShellState } from "./useMobileShellState";
 import styles from "./MobileShell.module.css";
 
 export function MobileTopbar({ state }: { state: MobileShellState }) {
   const navigate = useNavigate();
+  const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const setAppOpen = useMobileDrawerStore((s) => s.setAppOpen);
   const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
+  const showStandaloneAgentLibraryCreate = state.isStandaloneAgentLibraryRoot;
+  const showAccountAction =
+    !state.isProjectAgentChatRoute
+    && !state.isProjectAgentManagementRoute
+    && !state.isStandaloneAgentLibraryRoot
+    && !state.isStandaloneAgentDetailRoute;
 
   return (
     <Topbar
@@ -22,7 +29,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               variant="ghost"
               size="sm"
               iconOnly
-              icon={<ArrowLeft size={18} />}
+              icon={<ArrowLeft size={20} />}
               aria-label="Back to agent library"
               onClick={() => navigate("/agents")}
             />
@@ -31,7 +38,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               variant="ghost"
               size="sm"
               iconOnly
-              icon={<ArrowLeft size={18} />}
+              icon={<ArrowLeft size={20} />}
               aria-label="Back to project"
               onClick={() => {
                 if (state.currentProjectId) {
@@ -46,22 +53,30 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
               aria-label="Open apps"
               onClick={() => setAppOpen(true)}
             >
-              <Menu size={18} />
+              <Menu size={20} />
             </button>
           )}
         </div>
       }
       title={
         <span className={styles.mobileTopbarTitle}>
-          {state.showProjectTitle ? (
+          {state.showProjectTitle && state.showProjectBack ? (
+            <span className={styles.mobileTopbarTitleButton} aria-label={state.currentProject?.name ?? "Project"}>
+              <span className={styles.mobileTopbarTitleText}>{state.currentProject?.name ?? "Project"}</span>
+            </span>
+          ) : state.showProjectTitle ? (
             <button
               type="button"
               className={styles.mobileProjectTitleButton}
-              onClick={() => setNavOpen(true)}
-              aria-label={state.currentProject ? `Open project navigation for ${state.currentProject.name}` : "Open project navigation"}
+              onClick={() => setNavOpen(!navOpen)}
+              aria-label={
+                state.currentProject
+                  ? `${navOpen ? "Close" : "Open"} project navigation for ${state.currentProject.name}`
+                  : `${navOpen ? "Close" : "Open"} project navigation`
+              }
             >
               <span className={styles.mobileTopbarTitleText}>{state.currentProject?.name ?? "Project"}</span>
-              <ChevronDown size={14} />
+              <ChevronDown size={16} />
             </button>
           ) : state.showGlobalTitle ? (
             <span className={styles.mobileTopbarTitleButton} aria-label={state.globalTitle}>
@@ -76,7 +91,29 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
       }
       actions={
         <div className={styles.mobileTopbarActions}>
-          <Button variant="ghost" size="sm" iconOnly icon={<CircleUserRound size={18} />} aria-label="Open account" onClick={() => setAccountOpen(true)} />
+          {state.isProjectAgentChatRoute && state.currentProjectId ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<Plus size={20} />}
+              aria-label="Add or create project agent"
+              onClick={() => navigate(projectAgentCreateRoute(state.currentProjectId!))}
+            />
+          ) : null}
+          {showStandaloneAgentLibraryCreate ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<Plus size={20} />}
+              aria-label="Create Remote Agent"
+              onClick={() => navigate("/agents?create=1")}
+            />
+          ) : null}
+          {showAccountAction ? (
+            <Button variant="ghost" size="sm" iconOnly icon={<CircleUserRound size={20} />} aria-label="Open account" onClick={() => setAccountOpen(true)} />
+          ) : null}
         </div>
       }
     />

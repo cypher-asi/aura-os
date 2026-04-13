@@ -139,6 +139,34 @@ pub(crate) fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode
     }
 }
 
+/// Map an `IntegrationsError` to an API error response, preserving the upstream HTTP status.
+pub(crate) fn map_integrations_error(
+    e: aura_os_integrations::IntegrationsError,
+) -> (StatusCode, Json<ApiError>) {
+    match &e {
+        aura_os_integrations::IntegrationsError::Server { status, body } => {
+            let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);
+            warn!(
+                upstream_status = status,
+                body_preview = %body.chars().take(200).collect::<String>(),
+                "aura-integrations upstream error"
+            );
+            (
+                code,
+                Json(ApiError {
+                    error: body.clone(),
+                    code: "integrations_error".to_string(),
+                    details: None,
+                }),
+            )
+        }
+        _ => {
+            warn!(error = %e, "aura-integrations request failed");
+            ApiError::bad_gateway(e.to_string())
+        }
+    }
+}
+
 /// Map a `StorageError` to an API error response, preserving the upstream HTTP status.
 pub(crate) fn map_storage_error(e: aura_os_storage::StorageError) -> (StatusCode, Json<ApiError>) {
     match &e {
