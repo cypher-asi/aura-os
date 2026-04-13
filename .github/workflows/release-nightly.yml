@@ -90,16 +90,6 @@ jobs:
       - name: Install cargo-packager
         run: cargo install cargo-packager --locked
 
-      - name: Normalize signing key
-        shell: bash
-        env:
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
-        run: |
-          normalized="$(python infra/scripts/release/normalize-packager-key.py)"
-          if [ -n "$normalized" ]; then
-            echo "CARGO_PACKAGER_SIGN_PRIVATE_KEY=$normalized" >> "$GITHUB_ENV"
-          fi
-
       - name: Build interface
         working-directory: interface
         run: |
@@ -117,8 +107,6 @@ jobs:
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ""
-          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ""
         run: cargo packager --release --packages aura-os-desktop
 
       - name: Collect artifacts
@@ -148,6 +136,16 @@ jobs:
           fi
           ls -la dist/
           echo "dir=dist" >> "$GITHUB_OUTPUT"
+
+      - name: Normalize signing key
+        shell: bash
+        env:
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+        run: |
+          normalized="$(python infra/scripts/release/normalize-packager-key.py)"
+          if [ -n "$normalized" ]; then
+            echo "CARGO_PACKAGER_SIGN_PRIVATE_KEY=$normalized" >> "$GITHUB_ENV"
+          fi
 
       - name: Sign packaged updater artifacts
         env:
