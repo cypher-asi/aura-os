@@ -134,6 +134,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await clearStoredAuth();
     disconnectEventSocket();
     set({ user: null, zeroProRefreshError: null });
+    window.location.href = "/login";
   },
 }));
 
