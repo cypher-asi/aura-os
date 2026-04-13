@@ -1,11 +1,9 @@
 import type {
   ProcessEvent,
-  ProcessRunTranscriptEvent,
 } from "../../../../types";
 import type { DisplaySessionEvent } from "../../../../types/stream";
 import {
   buildProcessSidekickCopyText,
-  nodeTranscriptToEvents,
 } from "./process-output-utils";
 
 function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {
@@ -23,20 +21,6 @@ function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {
   };
 }
 
-function makeTranscriptEntry(
-  eventType: string,
-  payload: Record<string, unknown>,
-): ProcessRunTranscriptEvent {
-  return {
-    transcript_id: `${eventType}-${Math.random()}`,
-    process_id: "proc-1",
-    run_id: "run-1",
-    event_type: eventType,
-    payload,
-    created_at: "2026-04-06T20:00:00.000Z",
-  };
-}
-
 describe("buildProcessSidekickCopyText", () => {
   const nodes = [{ node_id: "node-1", label: "Draft reply" }];
 
@@ -50,53 +34,12 @@ describe("buildProcessSidekickCopyText", () => {
         }),
       ],
       nodes,
-      transcript: [],
       isActive: false,
     });
 
     expect(text).toContain("Draft answer");
     expect(text).toContain('"saved_path": "tmp/output.md"');
     expect(text).toContain('{"prompt":"hello"}');
-  });
-
-  it("includes transcript replay content after the run completes", () => {
-    const transcript = [
-      makeTranscriptEntry("text_delta", {
-        node_id: "node-1",
-        type: "text_delta",
-        text: "Hello from transcript",
-      }),
-      makeTranscriptEntry("tool_use_start", {
-        node_id: "node-1",
-        type: "tool_use_start",
-        id: "tool-1",
-        name: "search_docs",
-      }),
-      makeTranscriptEntry("tool_result", {
-        node_id: "node-1",
-        type: "tool_result",
-        tool_use_id: "tool-1",
-        name: "search_docs",
-        result: "Found the matching doc",
-      }),
-      makeTranscriptEntry("process_node_executed", {
-        node_id: "node-1",
-        type: "process_node_executed",
-        status: "completed",
-      }),
-    ];
-
-    const text = buildProcessSidekickCopyText({
-      events: [],
-      nodes,
-      transcript,
-      isActive: false,
-    });
-
-    expect(text).toContain("# Run Output");
-    expect(text).toContain("Hello from transcript");
-    expect(text).toContain("[tool_call: search_docs]");
-    expect(text).toContain("Found the matching doc");
   });
 
   it("includes current live stream content while the run is active", () => {
@@ -110,7 +53,6 @@ describe("buildProcessSidekickCopyText", () => {
     const text = buildProcessSidekickCopyText({
       events: [],
       nodes,
-      transcript: [],
       isActive: true,
       liveNodeLabel: "Draft reply",
       liveState: {
@@ -125,46 +67,5 @@ describe("buildProcessSidekickCopyText", () => {
     expect(text).toContain("# Live Output: Draft reply");
     expect(text).toContain("Prior streamed chunk");
     expect(text).toContain("Current live chunk");
-  });
-
-  it("finalizes replayed tools that never received a persisted result", () => {
-    const transcript = [
-      makeTranscriptEntry("tool_use_start", {
-        node_id: "node-1",
-        type: "tool_use_start",
-        id: "tool-1",
-        name: "write_file",
-      }),
-      makeTranscriptEntry("tool_call_snapshot", {
-        node_id: "node-1",
-        type: "tool_call_snapshot",
-        id: "tool-1",
-        name: "write_file",
-        input: {
-          path: "notes.txt",
-          content: "hello",
-        },
-      }),
-      makeTranscriptEntry("process_node_executed", {
-        node_id: "node-1",
-        type: "process_node_executed",
-        status: "completed",
-      }),
-    ];
-
-    const [message] = nodeTranscriptToEvents(transcript);
-
-    expect(message?.toolCalls).toHaveLength(1);
-    expect(message?.toolCalls?.[0]).toMatchObject({
-      id: "tool-1",
-      name: "write_file",
-      pending: false,
-      started: false,
-      result: "Completed without a persisted tool result",
-      input: {
-        path: "notes.txt",
-        content: "hello",
-      },
-    });
   });
 });

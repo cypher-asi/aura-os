@@ -1,4 +1,4 @@
-// Storage ↔ core conversions and best-effort sync to aura-storage using a user JWT
+// Storage ↔ core conversions and authoritative storage access using a user JWT
 // when present, otherwise the internal token (see `process_storage_sync_client`).
 // Types come from the parent `run` module (`mod.rs` imports).
 
@@ -59,7 +59,7 @@ pub(crate) fn conv_process(sp: StorageProcess) -> Process {
     }
 }
 
-fn conv_node(sn: StorageProcessNode) -> ProcessNode {
+pub(crate) fn conv_node(sn: StorageProcessNode) -> ProcessNode {
     ProcessNode {
         node_id: parse_id(&sn.id),
         process_id: parse_id(sn.process_id.as_deref().unwrap_or_default()),
@@ -79,7 +79,7 @@ fn conv_node(sn: StorageProcessNode) -> ProcessNode {
     }
 }
 
-fn conv_connection(sc: StorageProcessNodeConnection) -> ProcessNodeConnection {
+pub(crate) fn conv_connection(sc: StorageProcessNodeConnection) -> ProcessNodeConnection {
     ProcessNodeConnection {
         connection_id: parse_id(&sc.id),
         process_id: parse_id(sc.process_id.as_deref().unwrap_or_default()),
@@ -90,26 +90,121 @@ fn conv_connection(sc: StorageProcessNodeConnection) -> ProcessNodeConnection {
     }
 }
 
-/// Prefer a user JWT for desktop-triggered remote process sync and fall back
-/// to the legacy internal token only for service-owned paths.
-pub(crate) fn process_storage_sync_client<'a>(
-    storage_client: Option<&'a Arc<StorageClient>>,
-    jwt: Option<&'a str>,
-) -> Option<(&'a StorageClient, Option<&'a str>)> {
-    let client = storage_client.map(Arc::as_ref)?;
+pub(crate) fn conv_run(sr: StorageProcessRun) -> ProcessRun {
+    ProcessRun {
+        run_id: parse_id(&sr.id),
+        process_id: parse_id(sr.process_id.as_deref().unwrap_or_default()),
+        status: sr
+            .status
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessRunStatus::Pending),
+        trigger: sr
+            .trigger
+            .as_deref()
+            .and_then(parse_enum)
+            .unwrap_or(ProcessRunTrigger::Manual),
+        error: sr.error,
+        started_at: parse_dt(&sr.started_at),
+        completed_at: parse_dt_opt(&sr.completed_at),
+        total_input_tokens: sr.total_input_tokens.map(|v| v as u64),
+        total_output_tokens: sr.total_output_tokens.map(|v| v as u64),
+        cost_usd: sr.cost_usd,
+        output: sr.output,
+        parent_run_id: parse_id_opt(&sr.parent_run_id),
+        input_override: sr.input_override,
+    }
+}
+
+pub(crate) type ProcessStorageSyncTarget = (Arc<StorageClient>, Option<String>);
+
+/// Prefer a user JWT for desktop-triggered remote process access and fall back
+/// to the internal token for service-owned paths.
+pub(crate) fn process_storage_sync_client(
+    storage_client: Option<&Arc<StorageClient>>,
+    jwt: Option<&str>,
+) -> Option<ProcessStorageSyncTarget> {
+    let client = storage_client.cloned()?;
     if let Some(jwt) = jwt.filter(|token| !token.trim().is_empty()) {
-        return Some((client, Some(jwt)));
+        return Some((client, Some(jwt.to_string())));
     }
     client.has_internal_token().then_some((client, None))
 }
 
-/// Attempt to sync a run to aura-storage. Failures are logged but not fatal.
-async fn sync_run_to_storage(
-    client: &StorageClient,
+pub(crate) fn process_storage_sync_target_from_client(
+    storage_client: &StorageClient,
     jwt: Option<&str>,
+) -> Option<ProcessStorageSyncTarget> {
+    let client = Arc::new(storage_client.clone());
+    if let Some(jwt) = jwt.filter(|token| !token.trim().is_empty()) {
+        return Some((client, Some(jwt.to_string())));
+    }
+    client.has_internal_token().then_some((client, None))
+}
+
+pub(crate) async fn load_process_from_storage(
+    target: &ProcessStorageSyncTarget,
+    process_id: &ProcessId,
+) -> Result<Process, ProcessError> {
+    let (client, jwt) = target;
+    let storage_process = if let Some(jwt) = jwt.as_deref() {
+        client.get_process(&process_id.to_string(), jwt).await
+    } else {
+        client.get_process_internal(&process_id.to_string()).await
+    };
+    storage_process
+        .map(conv_process)
+        .map_err(|error| authoritative_process_read_error(process_id, &error))
+}
+
+pub(crate) async fn load_nodes_from_storage(
+    target: &ProcessStorageSyncTarget,
+    process_id: &ProcessId,
+) -> Result<Vec<ProcessNode>, ProcessError> {
+    let (client, jwt) = target;
+    let storage_nodes = if let Some(jwt) = jwt.as_deref() {
+        client
+            .list_process_nodes(&process_id.to_string(), jwt)
+            .await
+    } else {
+        client
+            .list_process_nodes_internal(&process_id.to_string())
+            .await
+    };
+    storage_nodes
+        .map(|nodes| nodes.into_iter().map(conv_node).collect())
+        .map_err(|error| {
+            authoritative_process_storage_error(process_id, "load process nodes", &error)
+        })
+}
+
+pub(crate) async fn load_connections_from_storage(
+    target: &ProcessStorageSyncTarget,
+    process_id: &ProcessId,
+) -> Result<Vec<ProcessNodeConnection>, ProcessError> {
+    let (client, jwt) = target;
+    let storage_connections = if let Some(jwt) = jwt.as_deref() {
+        client
+            .list_process_connections(&process_id.to_string(), jwt)
+            .await
+    } else {
+        client
+            .list_process_connections_internal(&process_id.to_string())
+            .await
+    };
+    storage_connections
+        .map(|connections| connections.into_iter().map(conv_connection).collect())
+        .map_err(|error| {
+            authoritative_process_storage_error(process_id, "load process connections", &error)
+        })
+}
+
+pub(crate) async fn sync_run_to_storage(
+    target: &ProcessStorageSyncTarget,
     run: &ProcessRun,
     is_create: bool,
-) {
+) -> Result<(), ProcessError> {
+    let (client, jwt) = target;
     if is_create {
         let req = aura_os_storage::CreateProcessRunRequest {
             id: Some(run.run_id.to_string()),
@@ -123,15 +218,12 @@ async fn sync_run_to_storage(
             parent_run_id: run.parent_run_id.map(|id| id.to_string()),
             input_override: run.input_override.clone(),
         };
-        let result = if let Some(jwt) = jwt {
+        if let Some(jwt) = jwt.as_deref() {
             client
                 .create_process_run(&run.process_id.to_string(), jwt, &req)
                 .await
         } else {
             client.create_process_run_internal(&req).await
-        };
-        if let Err(e) = result {
-            warn!(run_id = %run.run_id, error = %e, "Failed to sync run create to storage");
         }
     } else {
         let req = aura_os_storage::UpdateProcessRunRequest {
@@ -148,7 +240,7 @@ async fn sync_run_to_storage(
             cost_usd: run.cost_usd,
             output: run.output.as_ref().map(|o| Some(o.clone())),
         };
-        let result = if let Some(jwt) = jwt {
+        if let Some(jwt) = jwt.as_deref() {
             client
                 .update_process_run(
                     &run.process_id.to_string(),
@@ -161,20 +253,23 @@ async fn sync_run_to_storage(
             client
                 .update_process_run_internal(&run.run_id.to_string(), &req)
                 .await
-        };
-        if let Err(e) = result {
-            warn!(run_id = %run.run_id, error = %e, "Failed to sync run update to storage");
         }
     }
+    .map(|_| ())
+    .map_err(|error| {
+        ProcessError::Execution(format!(
+            "Failed to persist run {} to aura-storage: {error}",
+            run.run_id
+        ))
+    })
 }
 
-/// Attempt to sync an event to aura-storage. Failures are logged but not fatal.
-async fn sync_event_to_storage(
-    client: &StorageClient,
-    jwt: Option<&str>,
+pub(crate) async fn sync_event_to_storage(
+    target: &ProcessStorageSyncTarget,
     event: &ProcessEvent,
     is_create: bool,
-) {
+) -> Result<(), ProcessError> {
+    let (client, jwt) = target;
     if is_create {
         let req = aura_os_storage::CreateProcessEventRequest {
             id: Some(event.event_id.to_string()),
@@ -190,7 +285,7 @@ async fn sync_event_to_storage(
             input_snapshot: Some(event.input_snapshot.clone()),
             output: Some(event.output.clone()),
         };
-        let result = if let Some(jwt) = jwt {
+        if let Some(jwt) = jwt.as_deref() {
             client
                 .create_process_event(
                     &event.process_id.to_string(),
@@ -201,9 +296,6 @@ async fn sync_event_to_storage(
                 .await
         } else {
             client.create_process_event_internal(&req).await
-        };
-        if let Err(e) = result {
-            warn!(event_id = %event.event_id, error = %e, "Failed to sync event create to storage");
         }
     } else {
         let req = aura_os_storage::UpdateProcessEventRequest {
@@ -223,7 +315,7 @@ async fn sync_event_to_storage(
                 .as_ref()
                 .map(|blocks| serde_json::Value::Array(blocks.clone())),
         };
-        let result = if let Some(jwt) = jwt {
+        if let Some(jwt) = jwt.as_deref() {
             client
                 .update_process_event(&event.event_id.to_string(), jwt, &req)
                 .await
@@ -231,19 +323,22 @@ async fn sync_event_to_storage(
             client
                 .update_process_event_internal(&event.event_id.to_string(), &req)
                 .await
-        };
-        if let Err(e) = result {
-            warn!(event_id = %event.event_id, error = %e, "Failed to sync event update to storage");
         }
     }
+    .map(|_| ())
+    .map_err(|error| {
+        ProcessError::Execution(format!(
+            "Failed to persist event {} to aura-storage: {error}",
+            event.event_id
+        ))
+    })
 }
 
-/// Attempt to sync an artifact to aura-storage. Failures are logged but not fatal.
-async fn sync_artifact_to_storage(
-    client: &StorageClient,
-    jwt: Option<&str>,
+pub(crate) async fn sync_artifact_to_storage(
+    target: &ProcessStorageSyncTarget,
     artifact: &ProcessArtifact,
-) {
+) -> Result<(), ProcessError> {
+    let (client, jwt) = target;
     let req = aura_os_storage::CreateProcessArtifactRequest {
         id: Some(artifact.artifact_id.to_string()),
         process_id: artifact.process_id.to_string(),
@@ -258,7 +353,7 @@ async fn sync_artifact_to_storage(
         size_bytes: Some(artifact.size_bytes as i64),
         metadata: Some(artifact.metadata.clone()),
     };
-    let result = if let Some(jwt) = jwt {
+    if let Some(jwt) = jwt.as_deref() {
         client
             .create_process_artifact(
                 &artifact.process_id.to_string(),
@@ -269,10 +364,14 @@ async fn sync_artifact_to_storage(
             .await
     } else {
         client.create_process_artifact_internal(&req).await
-    };
-    if let Err(e) = result {
-        warn!(artifact_id = %artifact.artifact_id, error = %e, "Failed to sync artifact to storage");
     }
+    .map(|_| ())
+    .map_err(|error| {
+        ProcessError::Execution(format!(
+            "Failed to persist artifact {} to aura-storage: {error}",
+            artifact.artifact_id
+        ))
+    })
 }
 
 fn authoritative_process_storage_error(

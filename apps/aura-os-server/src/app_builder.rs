@@ -36,7 +36,7 @@ fn spawn_health_checks(
             );
         } else {
             info!(
-                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; JWT-backed remote process proxy remains available, but scheduler/service sync will stay local"
+                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; process CRUD remains available, but scheduled execution requires the internal token"
             );
         }
         let health_client = client.clone();
@@ -297,131 +297,6 @@ pub(crate) fn ensure_local_harness_running() {
     maybe_spawn_local_harness();
 }
 
-/// One-shot migration: link orphan processes (no project_id) to a matching
-/// project by name. Specifically links "Competitive Intel" -> "Competition".
-/// Safe to run every startup; no-ops when all processes already have a project.
-/// Spawned as a background task so it can fetch projects from the network.
-fn migrate_orphan_processes(
-    process_store: &Arc<aura_os_process::ProcessStore>,
-    project_service: &Arc<ProjectService>,
-    network_client: &Option<Arc<NetworkClient>>,
-    store: &Arc<RocksStore>,
-) {
-    let processes = match process_store.list_processes() {
-        Ok(ps) => ps,
-        Err(e) => {
-            warn!(error = %e, "migrate_orphan_processes: failed to list processes");
-            return;
-        }
-    };
-
-    let orphans: Vec<_> = processes
-        .into_iter()
-        .filter(|p| p.project_id.is_none())
-        .collect();
-    if orphans.is_empty() {
-        return;
-    }
-
-    info!(
-        orphan_count = orphans.len(),
-        "migrate_orphan_processes: found orphan processes, spawning migration task"
-    );
-
-    let ps = process_store.clone();
-    let proj_svc = project_service.clone();
-    let net = network_client.clone();
-    let rocks = store.clone();
-
-    tokio::spawn(async move {
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-
-        let mut projects = proj_svc.list_projects().unwrap_or_default();
-
-        if projects.is_empty() {
-            if let Some(ref client) = net {
-                if let Some(jwt) = rocks.get_jwt() {
-                    if let Ok(orgs) = client.list_orgs(&jwt).await {
-                        for org in &orgs {
-                            if let Ok(net_projects) =
-                                client.list_projects_by_org(&org.id, &jwt).await
-                            {
-                                for np in &net_projects {
-                                    if let Ok(pid) = np.id.parse::<aura_os_core::ProjectId>() {
-                                        let local = proj_svc.get_project(&pid).ok();
-                                        let project = aura_os_core::Project {
-                                            project_id: pid,
-                                            org_id: org.id.parse().unwrap_or_default(),
-                                            name: np.name.clone(),
-                                            description: np.description.clone().unwrap_or_default(),
-                                            requirements_doc_path: None,
-                                            current_status: aura_os_core::ProjectStatus::Planning,
-                                            build_command: None,
-                                            test_command: None,
-                                            specs_summary: None,
-                                            specs_title: None,
-                                            created_at: local
-                                                .as_ref()
-                                                .map(|l| l.created_at)
-                                                .unwrap_or_else(chrono::Utc::now),
-                                            updated_at: chrono::Utc::now(),
-                                            git_repo_url: np.git_repo_url.clone(),
-                                            git_branch: np.git_branch.clone(),
-                                            orbit_base_url: None,
-                                            orbit_owner: None,
-                                            orbit_repo: None,
-                                        };
-                                        let _ = proj_svc.save_project_shadow(&project);
-                                        projects.push(project);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if projects.is_empty() {
-            warn!("migrate_orphan_processes: no projects available (local or remote)");
-            return;
-        }
-
-        let name_map: std::collections::HashMap<&str, &aura_os_core::Project> =
-            [("Competitive Intel", "Competition")]
-                .into_iter()
-                .filter_map(|(process_name, project_name)| {
-                    projects
-                        .iter()
-                        .find(|p| p.name == project_name)
-                        .map(|proj| (process_name, proj))
-                })
-                .collect();
-
-        for orphan in &orphans {
-            if let Some(project) = name_map.get(orphan.name.as_str()) {
-                let mut updated = orphan.clone();
-                updated.project_id = Some(project.project_id);
-                updated.updated_at = chrono::Utc::now();
-                match ps.save_process(&updated) {
-                    Ok(()) => info!(
-                        process = %orphan.name,
-                        project = %project.name,
-                        process_id = %orphan.process_id,
-                        project_id = %project.project_id,
-                        "Migrated orphan process to project"
-                    ),
-                    Err(e) => warn!(
-                        process = %orphan.name,
-                        error = %e,
-                        "Failed to migrate orphan process"
-                    ),
-                }
-            }
-        }
-    });
-}
-
 pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let data_dir = db_path
         .parent()
@@ -473,13 +348,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         domain.local_harness.clone(),
         data_dir.clone(),
     ));
-
-    migrate_orphan_processes(
-        &super_agent_service.process_store,
-        &domain.project_service,
-        &network_client,
-        &store,
-    );
 
     // Spawn scheduled process execution.
     super_agent_service.spawn_scheduler();

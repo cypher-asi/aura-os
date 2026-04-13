@@ -14,7 +14,6 @@ struct DecomposedSubtaskWorkerArgs {
     sub_task_description: String,
     sub_node_prompt: String,
     broadcast_tx: Option<broadcast::Sender<serde_json::Value>>,
-    sub_store: ProcessStore,
     task_usage_totals: Arc<Mutex<HashMap<String, NodeTokenUsage>>>,
     sub_model: String,
     sub_project_agent_id: String,
@@ -99,7 +98,10 @@ async fn start_decomposed_subtask_automaton_stream(
     workspace_path: &str,
     session_id: &str,
 ) -> Result<broadcast::Sender<serde_json::Value>, ProcessError> {
-    let authed_ac = args.automaton_client.clone().with_auth(args.sub_token.clone());
+    let authed_ac = args
+        .automaton_client
+        .clone()
+        .with_auth(args.sub_token.clone());
     match start_and_connect(
         &authed_ac,
         AutomatonStartParams {
@@ -157,8 +159,8 @@ async fn connect_decomposed_subtask_automaton(
     )
     .await?;
 
-    let events_tx = start_decomposed_subtask_automaton_stream(args, workspace_path, &session_id)
-        .await?;
+    let events_tx =
+        start_decomposed_subtask_automaton_stream(args, workspace_path, &session_id).await?;
 
     Ok(SubtaskAutomatonConnection {
         session_id,
@@ -184,7 +186,6 @@ fn apply_decomposed_subtask_automaton_event(
     if let Some(ref tx) = args.broadcast_tx {
         if is_process_stream_forward_event(evt_type) {
             forward_process_event(
-                &args.sub_store,
                 tx,
                 &fwd.proj,
                 &fwd.tid,
@@ -201,7 +202,6 @@ fn apply_decomposed_subtask_automaton_event(
                 merge_parallel_usage_totals(&args.task_usage_totals, &fwd.tid, usage);
             let cost = estimate_cost_usd(usage_model.as_deref(), total_in, total_out);
             emit_process_event(
-                &args.sub_store,
                 tx,
                 serde_json::json!({
                     "type": "process_run_progress",
@@ -230,9 +230,13 @@ async fn collect_decomposed_subtask_events(
         title: args.sub_title.clone(),
     };
 
-    collect_automaton_events(rx, Duration::from_secs(args.sub_timeout), |evt, evt_type| {
-        apply_decomposed_subtask_automaton_event(args, evt, evt_type, &fwd);
-    })
+    collect_automaton_events(
+        rx,
+        Duration::from_secs(args.sub_timeout),
+        |evt, evt_type| {
+            apply_decomposed_subtask_automaton_event(args, evt, evt_type, &fwd);
+        },
+    )
     .await
 }
 
@@ -263,12 +267,7 @@ async fn finish_decomposed_subtask_success(
         _ => None,
     };
     let final_output = file_content.unwrap_or(out.output_text);
-    Ok((
-        final_output,
-        out.input_tokens,
-        out.output_tokens,
-        out.model,
-    ))
+    Ok((final_output, out.input_tokens, out.output_tokens, out.model))
 }
 
 async fn finish_decomposed_subtask_failed(

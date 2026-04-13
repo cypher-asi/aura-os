@@ -6,7 +6,6 @@ import { RunPreviewBody } from "./RunPreviewBody";
 const {
   mockListRunArtifacts,
   mockListRunEvents,
-  mockListRunTranscript,
   mockGetRun,
   mockFetchRuns,
   mockSetEvents,
@@ -18,7 +17,6 @@ const {
 } = vi.hoisted(() => {
   const mockListRunArtifacts = vi.fn();
   const mockListRunEvents = vi.fn();
-  const mockListRunTranscript = vi.fn();
   const mockGetRun = vi.fn();
   const mockFetchRuns = vi.fn();
   const mockSetEvents = vi.fn();
@@ -55,7 +53,6 @@ const {
   return {
     mockListRunArtifacts,
     mockListRunEvents,
-    mockListRunTranscript,
     mockGetRun,
     mockFetchRuns,
     mockSetEvents,
@@ -83,7 +80,6 @@ vi.mock("../../../../api/process", () => ({
   processApi: {
     listRunArtifacts: (...args: unknown[]) => mockListRunArtifacts(...args),
     listRunEvents: (...args: unknown[]) => mockListRunEvents(...args),
-    listRunTranscript: (...args: unknown[]) => mockListRunTranscript(...args),
     getRun: (...args: unknown[]) => mockGetRun(...args),
   },
 }));
@@ -132,8 +128,6 @@ vi.mock("./process-sidekick-utils", () => ({
 
 vi.mock("./process-output-utils", () => ({
   buildProcessSidekickCopyText: () => "copied output",
-  groupTranscriptByNode: () => [{ nodeId: "node-1", label: "Draft reply", entries: [{}] }],
-  nodeTranscriptToEvents: () => [{ id: "message-1" }],
 }));
 
 function makeRun(overrides: Partial<ProcessRun> = {}): ProcessRun {
@@ -156,7 +150,6 @@ describe("RunPreviewBody", () => {
   beforeEach(() => {
     mockListRunArtifacts.mockReset();
     mockListRunEvents.mockReset();
-    mockListRunTranscript.mockReset();
     mockGetRun.mockReset();
     mockFetchRuns.mockReset();
     mockSetEvents.mockReset();
@@ -182,24 +175,17 @@ describe("RunPreviewBody", () => {
         completed_at: "2026-04-06T20:00:05.000Z",
       },
     ]);
-    mockListRunTranscript.mockResolvedValue([
-      {
-        created_at: "2026-04-06T20:00:03.000Z",
-      },
-    ]);
   });
 
-  it("renders artifacts above run output for completed runs", async () => {
+  it("renders artifacts for completed runs", async () => {
     render(<RunPreviewBody run={makeRun()} />);
 
     await screen.findByText("Artifacts");
-    await screen.findByText("Run Output");
 
     await waitFor(() => {
       const content = document.body.textContent ?? "";
       expect(content.indexOf("Artifacts")).toBeGreaterThan(-1);
-      expect(content.indexOf("Run Output")).toBeGreaterThan(-1);
-      expect(content.indexOf("Artifacts")).toBeLessThan(content.indexOf("Run Output"));
+      expect(content.indexOf("Run Output")).toBe(-1);
     });
   });
 });

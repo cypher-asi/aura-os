@@ -20,56 +20,18 @@ fn parse_condition_result(output: &str) -> bool {
     normalized == "true"
 }
 
-async fn resolve_artifact_ref(
-    aref: &serde_json::Value,
-    store: &ProcessStore,
-    data_dir: &Path,
-) -> Option<String> {
-    let source_process_id: ProcessId = aref
-        .get("source_process_id")
-        .and_then(|v| v.as_str())
-        .and_then(|s| s.parse().ok())?;
-
-    let artifact_name = aref.get("artifact_name").and_then(|v| v.as_str());
-    let use_latest = aref
-        .get("use_latest")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(true);
-
-    if !use_latest {
-        return None;
-    }
-
-    let artifacts = store.list_artifacts_for_process(&source_process_id).ok()?;
-
-    let matched = if let Some(name) = artifact_name {
-        artifacts.into_iter().rfind(|a| a.name == name)
-    } else {
-        artifacts.into_iter().next_back()
-    };
-
-    let artifact = matched?;
-    let file_path = data_dir.join(&artifact.file_path);
-    tokio::fs::read_to_string(&file_path)
-        .await
-        .ok()
-        .map(|content| truncate_for_artifact_context(&content))
-}
-
 /// If the run is still active (Pending/Running), mark it as Failed with the
 /// given error and broadcast `process_run_failed`. This is a safety net for
 /// early errors in `execute_run` that exit before the per-node error handler.
-fn mark_run_failed_if_active(
-    store: &ProcessStore,
+async fn mark_run_failed_if_active(
+    executor: &ProcessExecutor,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     error: &str,
+    auth_jwt: Option<&str>,
 ) {
-    let current = store
-        .list_runs(&run.process_id)
-        .ok()
-        .and_then(|runs| runs.into_iter().find(|r| r.run_id == run.run_id));
-    let dominated = current.as_ref().is_none_or(|r| {
+    let current = executor.tracked_run(&run.run_id);
+    let dominated = current.as_ref().is_some_and(|r| {
         matches!(
             r.status,
             ProcessRunStatus::Pending | ProcessRunStatus::Running
@@ -83,10 +45,18 @@ fn mark_run_failed_if_active(
     failed_run.status = ProcessRunStatus::Failed;
     failed_run.error = Some(error.to_string());
     failed_run.completed_at = Some(Utc::now());
-    let _ = store.save_run(&failed_run);
+    if let Some(target) = process_storage_sync_client(executor.storage_client.as_ref(), auth_jwt) {
+        if let Err(sync_error) = sync_run_to_storage(&target, &failed_run, false).await {
+            warn!(
+                run_id = %failed_run.run_id,
+                error = %sync_error,
+                "Failed to mark process run as failed in aura-storage"
+            );
+        }
+    }
+    executor.forget_run(&failed_run);
 
     emit_process_event(
-        store,
         broadcast,
         serde_json::json!({
             "type": "process_run_failed",

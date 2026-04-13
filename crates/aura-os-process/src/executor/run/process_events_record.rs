@@ -1,12 +1,12 @@
 /// Create a new "running" event and persist + broadcast it.
-fn start_event(
-    store: &ProcessStore,
+async fn start_event(
+    storage_target: &ProcessStorageSyncTarget,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     node: &ProcessNode,
     input: &str,
     started_at: DateTime<Utc>,
-) -> Option<ProcessEvent> {
+) -> Result<ProcessEvent, ProcessError> {
     let event = ProcessEvent {
         event_id: ProcessEventId::new(),
         run_id: run.run_id,
@@ -23,26 +23,16 @@ fn start_event(
         content_blocks: None,
     };
 
-    if let Err(e) = store.save_event(&event) {
-        warn!(event_id = %event.event_id, error = %e, "Failed to save process event");
-        return None;
-    }
+    sync_event_to_storage(storage_target, &event, true).await?;
 
-    broadcast_node_status(
-        store,
-        broadcast,
-        run,
-        node,
-        ProcessEventStatus::Running,
-        None,
-    );
-    Some(event)
+    broadcast_node_status(broadcast, run, node, ProcessEventStatus::Running, None);
+    Ok(event)
 }
 
 /// Update an existing event to a terminal status (completed / failed / skipped)
 /// and persist + broadcast the change.
-fn complete_event(
-    store: &ProcessStore,
+async fn complete_event(
+    storage_target: &ProcessStorageSyncTarget,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     node: &ProcessNode,
@@ -52,7 +42,7 @@ fn complete_event(
     completed_at: DateTime<Utc>,
     token_usage: Option<&NodeTokenUsage>,
     content_blocks: Option<&[serde_json::Value]>,
-) {
+) -> Result<(), ProcessError> {
     event.status = status;
     event.output = output.to_string();
     event.completed_at = Some(completed_at);
@@ -61,16 +51,15 @@ fn complete_event(
     event.model = token_usage.and_then(|u| u.model.clone());
     event.content_blocks = content_blocks.map(sanitize_content_blocks);
 
-    if let Err(e) = store.update_event(event) {
-        warn!(event_id = %event.event_id, error = %e, "Failed to update process event");
-    }
+    sync_event_to_storage(storage_target, event, false).await?;
 
-    broadcast_node_status(store, broadcast, run, node, status, token_usage);
+    broadcast_node_status(broadcast, run, node, status, token_usage);
+    Ok(())
 }
 
 /// Shortcut for events that need no running phase (skipped nodes, pinned output).
-fn record_terminal_event(
-    store: &ProcessStore,
+async fn record_terminal_event(
+    storage_target: &ProcessStorageSyncTarget,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     node: &ProcessNode,
@@ -79,7 +68,7 @@ fn record_terminal_event(
     output: &str,
     started_at: DateTime<Utc>,
     completed_at: DateTime<Utc>,
-) {
+) -> Result<(), ProcessError> {
     let event = ProcessEvent {
         event_id: ProcessEventId::new(),
         run_id: run.run_id,
@@ -96,15 +85,13 @@ fn record_terminal_event(
         content_blocks: None,
     };
 
-    if let Err(e) = store.save_event(&event) {
-        warn!(event_id = %event.event_id, error = %e, "Failed to save process event");
-    }
+    sync_event_to_storage(storage_target, &event, true).await?;
 
-    broadcast_node_status(store, broadcast, run, node, status, None);
+    broadcast_node_status(broadcast, run, node, status, None);
+    Ok(())
 }
 
 fn broadcast_node_status(
-    store: &ProcessStore,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     node: &ProcessNode,
@@ -126,5 +113,5 @@ fn broadcast_node_status(
             payload["model"] = serde_json::json!(model);
         }
     }
-    emit_process_event(store, broadcast, payload);
+    emit_process_event(broadcast, payload);
 }

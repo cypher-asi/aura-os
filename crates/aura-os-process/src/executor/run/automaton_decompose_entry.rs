@@ -5,7 +5,6 @@ fn parallel_decompose_run_input<'a>(
     process_id: &'a ProcessId,
     run_id: &'a ProcessRunId,
     automaton_client: &'a AutomatonClient,
-    store: &'a ProcessStore,
     storage_client: &'a StorageClient,
     spec_id: &'a str,
     broadcast: Option<&'a broadcast::Sender<serde_json::Value>>,
@@ -25,7 +24,6 @@ fn parallel_decompose_run_input<'a>(
         process_id,
         run_id,
         automaton_client,
-        store,
         storage_client,
         spec_id,
         broadcast,
@@ -64,7 +62,6 @@ async fn finalize_automaton_action_from_subtasks(
         single.process_id,
         single.run_id,
         single.automaton_client,
-        single.store,
         single.storage_client,
         spec_id,
         single.broadcast,
@@ -113,7 +110,6 @@ async fn execute_action_via_automaton(
     process_id: &ProcessId,
     run_id: &ProcessRunId,
     automaton_client: &AutomatonClient,
-    store: &ProcessStore,
     storage_client: &StorageClient,
     spec_id: &str,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
@@ -137,7 +133,6 @@ async fn execute_action_via_automaton(
         process_id,
         run_id,
         automaton_client,
-        store,
         storage_client,
         broadcast,
         project_path,
@@ -157,7 +152,7 @@ async fn execute_action_via_automaton(
     }
 
     let ids = DecomposeActionIdStrings::for_node(project_id, process_id, run_id, node);
-    let bc = ids.broadcast_ctx(store, broadcast, task_id);
+    let bc = ids.broadcast_ctx(broadcast, task_id);
 
     let sub_tasks = plan_automaton_sub_tasks_for_action(
         node,

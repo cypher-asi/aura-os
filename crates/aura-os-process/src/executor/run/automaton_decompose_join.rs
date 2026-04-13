@@ -20,14 +20,12 @@ enum DecomposedSubtaskJoinPiece {
 }
 
 fn send_decomposed_join_text(
-    store: &ProcessStore,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
     ids: &DecomposedJoinBroadcastIds<'_>,
     message: &str,
 ) {
     if let Some(tx) = broadcast {
         send_process_text(
-            store,
             tx,
             ids.proj_str,
             ids.task_id,
@@ -40,7 +38,6 @@ fn send_decomposed_join_text(
 }
 
 fn decomposed_join_failure_piece(
-    store: &ProcessStore,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
     ids: &DecomposedJoinBroadcastIds<'_>,
     idx: usize,
@@ -48,12 +45,7 @@ fn decomposed_join_failure_piece(
     reason: &str,
 ) -> DecomposedSubtaskJoinPiece {
     let msg = format!("Sub-task #{} ({}) {}", idx + 1, task_title, reason);
-    send_decomposed_join_text(
-        store,
-        broadcast,
-        ids,
-        &format!("\n--- {} ---\n", msg),
-    );
+    send_decomposed_join_text(broadcast, ids, &format!("\n--- {} ---\n", msg));
     DecomposedSubtaskJoinPiece::Failure(msg)
 }
 
@@ -62,14 +54,12 @@ async fn await_decomposed_subtask_join(
     idx: usize,
     task_title: &str,
     total_subtasks: usize,
-    store: &ProcessStore,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
     ids: &DecomposedJoinBroadcastIds<'_>,
 ) -> DecomposedSubtaskJoinPiece {
     match handle.await {
         Ok(Ok((output, inp, out, model))) => {
             send_decomposed_join_text(
-                store,
                 broadcast,
                 ids,
                 &format!(
@@ -87,16 +77,10 @@ async fn await_decomposed_subtask_join(
                 model,
             }
         }
-        Ok(Err(e)) => decomposed_join_failure_piece(
-            store,
-            broadcast,
-            ids,
-            idx,
-            task_title,
-            &format!("failed: {e}"),
-        ),
+        Ok(Err(e)) => {
+            decomposed_join_failure_piece(broadcast, ids, idx, task_title, &format!("failed: {e}"))
+        }
         Err(e) => decomposed_join_failure_piece(
-            store,
             broadcast,
             ids,
             idx,
@@ -149,7 +133,8 @@ async fn persist_merged_decomposed_output(
     project_path: &str,
     process_id: &ProcessId,
     run_id: &ProcessRunId,
-    store: &ProcessStore,
+    storage_client: &StorageClient,
+    token: Option<&str>,
 ) {
     let output_file = node
         .config
@@ -177,15 +162,22 @@ async fn persist_merged_decomposed_output(
         metadata: serde_json::json!({}),
         created_at: Utc::now(),
     };
-    if let Err(e) = store.save_artifact(&artifact) {
-        warn!(node_id = %node.node_id, error = %e, "Failed to save merged artifact");
+    let target = process_storage_sync_target_from_client(storage_client, token);
+    if let Some(target) = target {
+        if let Err(e) = sync_artifact_to_storage(&target, &artifact).await {
+            warn!(node_id = %node.node_id, error = %e, "Failed to save merged artifact");
+        }
+    } else {
+        warn!(
+            node_id = %node.node_id,
+            "Skipping merged artifact persistence because no storage auth is available"
+        );
     }
 }
 
 async fn gather_decomposed_join_pieces(
     handles: Vec<DecomposedSubtaskJoinHandle>,
     sub_tasks: &[SubTaskPlan],
-    store: &ProcessStore,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
     ids: &DecomposedJoinBroadcastIds<'_>,
 ) -> Vec<DecomposedSubtaskJoinPiece> {
@@ -194,16 +186,7 @@ async fn gather_decomposed_join_pieces(
     for (idx, handle) in handles.into_iter().enumerate() {
         let task_title = sub_tasks.get(idx).map(|t| t.title.as_str()).unwrap_or("?");
         pieces.push(
-            await_decomposed_subtask_join(
-                handle,
-                idx,
-                task_title,
-                total,
-                store,
-                broadcast,
-                ids,
-            )
-            .await,
+            await_decomposed_subtask_join(handle, idx, task_title, total, broadcast, ids).await,
         );
     }
     pieces
@@ -231,7 +214,7 @@ fn node_result_from_decomposed_join(acc: DecomposedJoinAccum) -> NodeResult {
 async fn join_decomposed_subtask_handles(
     handles: Vec<DecomposedSubtaskJoinHandle>,
     sub_tasks: &[SubTaskPlan],
-    store: &ProcessStore,
+    storage_client: &StorageClient,
     broadcast: Option<&broadcast::Sender<serde_json::Value>>,
     proj_str: &str,
     task_id: &str,
@@ -242,6 +225,7 @@ async fn join_decomposed_subtask_handles(
     project_path: &str,
     process_id: &ProcessId,
     run_id: &ProcessRunId,
+    token: Option<&str>,
 ) -> Result<NodeResult, ProcessError> {
     let ids = DecomposedJoinBroadcastIds {
         proj_str,
@@ -250,8 +234,7 @@ async fn join_decomposed_subtask_handles(
         rid_str,
         nid_str,
     };
-    let pieces =
-        gather_decomposed_join_pieces(handles, sub_tasks, store, broadcast, &ids).await;
+    let pieces = gather_decomposed_join_pieces(handles, sub_tasks, broadcast, &ids).await;
 
     let acc = fold_decomposed_join_pieces(pieces);
 
@@ -271,7 +254,8 @@ async fn join_decomposed_subtask_handles(
         project_path,
         process_id,
         run_id,
-        store,
+        storage_client,
+        token,
     )
     .await;
 
