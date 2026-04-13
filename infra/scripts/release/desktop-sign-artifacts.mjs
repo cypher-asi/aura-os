@@ -90,6 +90,30 @@ function archiveAppBundle(appPath) {
   return archivePath;
 }
 
+function findExistingUpdaterArchive(targetDir, appPath) {
+  const appBaseName = path.basename(appPath, ".app").toLowerCase();
+  const candidates = fs.readdirSync(targetDir)
+    .filter((name) => name.endsWith(".app.tar.gz"))
+    .filter((name) => name.toLowerCase() !== `${path.basename(appPath).toLowerCase()}.tar.gz`)
+    .filter((name) => name.toLowerCase().includes(appBaseName))
+    .sort();
+
+  if (candidates.length === 1) {
+    return path.join(targetDir, candidates[0]);
+  }
+
+  const fallbackCandidates = fs.readdirSync(targetDir)
+    .filter((name) => name.endsWith(".app.tar.gz"))
+    .filter((name) => name.toLowerCase() !== `${path.basename(appPath).toLowerCase()}.tar.gz`)
+    .sort();
+
+  if (fallbackCandidates.length === 1) {
+    return path.join(targetDir, fallbackCandidates[0]);
+  }
+
+  return null;
+}
+
 function main() {
   const { dir, pruneAppBundles } = parseArgs(process.argv.slice(2));
   const targetDir = path.resolve(dir);
@@ -117,7 +141,8 @@ function main() {
   });
 
   for (const appBundle of appBundles) {
-    generatedArchives.push(archiveAppBundle(appBundle));
+    const existingArchive = findExistingUpdaterArchive(targetDir, appBundle);
+    generatedArchives.push(existingArchive ?? archiveAppBundle(appBundle));
   }
 
   const files = fs.readdirSync(targetDir)
