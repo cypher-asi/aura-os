@@ -16,6 +16,7 @@ import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 interface Props {
   integrations: OrgIntegration[];
   busyId: string | null;
+  canManage: boolean;
   onCreate: (data: {
     name: string;
     provider: string;
@@ -122,11 +123,19 @@ function emptyDraft(provider: string): IntegrationDraft {
   };
 }
 
-export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpdate, onDelete }: Props) {
+export function OrgSettingsIntegrations({
+  integrations,
+  busyId,
+  canManage,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: Props) {
   const [drafts, setDrafts] = useState<DraftState>({});
   const [newIntegration, setNewIntegration] = useState<IntegrationDraft | null>(null);
   const [expandedIntegrationId, setExpandedIntegrationId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const mergedDrafts = useMemo(() => {
     const next: DraftState = { ...drafts };
@@ -160,7 +169,9 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
         </div>
         <Button
           variant={isCreating ? "ghost" : "primary"}
+          disabled={!canManage}
           onClick={() => {
+            setErrorMessage(null);
             setIsCreating((current) => !current);
             setNewIntegration(null);
           }}
@@ -168,6 +179,18 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
           {isCreating ? "Close" : "Add Integration"}
         </Button>
       </div>
+
+      {!canManage ? (
+        <Text size="xs" variant="muted">
+          Only team admins and owners can add, edit, or delete integrations.
+        </Text>
+      ) : null}
+
+      {errorMessage ? (
+        <Text size="xs" style={{ color: "var(--color-danger-500)" }}>
+          {errorMessage}
+        </Text>
+      ) : null}
 
       {isCreating && (
         <div className={styles.settingsGroup}>
@@ -265,11 +288,18 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                     variant="primary"
                     onClick={async () => {
                       if (!newIntegration.name.trim()) return;
-                      await onCreate(normalizeDraftPayload(newIntegration));
-                      setNewIntegration(null);
-                      setIsCreating(false);
+                      setErrorMessage(null);
+                      try {
+                        await onCreate(normalizeDraftPayload(newIntegration));
+                        setNewIntegration(null);
+                        setIsCreating(false);
+                      } catch (error) {
+                        setErrorMessage(
+                          error instanceof Error ? error.message : "Failed to create integration",
+                        );
+                      }
                     }}
-                    disabled={busyId === "new"}
+                    disabled={busyId === "new" || !canManage}
                   >
                     {busyId === "new" ? "Saving..." : "Add"}
                   </Button>
@@ -330,8 +360,21 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                         {supportsCapabilityToggle(integration.kind) && (
                           <Button
                             variant="ghost"
-                            onClick={() => void onUpdate(integration.integration_id, { enabled: !integration.enabled })}
-                            disabled={isBusy}
+                            onClick={async () => {
+                              setErrorMessage(null);
+                              try {
+                                await onUpdate(integration.integration_id, {
+                                  enabled: !integration.enabled,
+                                });
+                              } catch (error) {
+                                setErrorMessage(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Failed to update integration",
+                                );
+                              }
+                            }}
+                            disabled={isBusy || !canManage}
                           >
                             {integration.enabled ? "Disable" : "Enable"}
                           </Button>
@@ -341,7 +384,7 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                           onClick={() => setExpandedIntegrationId((current) => (
                             current === integration.integration_id ? null : integration.integration_id
                           ))}
-                          disabled={isBusy}
+                          disabled={isBusy || (!canManage && !isExpanded)}
                         >
                           {isExpanded ? "Close" : "Edit"}
                         </Button>
@@ -433,19 +476,42 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                         <div className={styles.integrationActions}>
                           <Button
                             variant="ghost"
-                            onClick={() => {
+                            onClick={async () => {
                               const confirmed = window.confirm(`Delete "${integration.name}"?`);
                               if (!confirmed) return;
-                              void onDelete(integration.integration_id);
+                              setErrorMessage(null);
+                              try {
+                                await onDelete(integration.integration_id);
+                              } catch (error) {
+                                setErrorMessage(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Failed to delete integration",
+                                );
+                              }
                             }}
-                            disabled={isBusy}
+                            disabled={isBusy || !canManage}
                           >
                             Delete
                           </Button>
                           <Button
                             variant="primary"
-                            onClick={() => onUpdate(integration.integration_id, normalizeDraftPayload(draft))}
-                            disabled={isBusy}
+                            onClick={async () => {
+                              setErrorMessage(null);
+                              try {
+                                await onUpdate(
+                                  integration.integration_id,
+                                  normalizeDraftPayload(draft),
+                                );
+                              } catch (error) {
+                                setErrorMessage(
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Failed to update integration",
+                                );
+                              }
+                            }}
+                            disabled={isBusy || !canManage}
                           >
                             {isBusy ? "Saving..." : "Save"}
                           </Button>

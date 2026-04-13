@@ -44,6 +44,7 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
         <OrgSettingsIntegrations
           integrations={data.integrations}
           busyId={data.integrationBusyId}
+          canManage={data.isAdminOrOwner}
           onCreate={data.createIntegration}
           onUpdate={data.updateIntegration}
           onDelete={data.deleteIntegration}

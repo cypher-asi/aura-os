@@ -23,6 +23,7 @@ describe("OrgSettingsIntegrations", () => {
       <OrgSettingsIntegrations
         integrations={[]}
         busyId={null}
+        canManage
         onCreate={vi.fn().mockResolvedValue(null)}
         onUpdate={vi.fn().mockResolvedValue(null)}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -51,6 +52,7 @@ describe("OrgSettingsIntegrations", () => {
       <OrgSettingsIntegrations
         integrations={[]}
         busyId={null}
+        canManage
         onCreate={onCreate}
         onUpdate={vi.fn().mockResolvedValue(null)}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -80,6 +82,7 @@ describe("OrgSettingsIntegrations", () => {
       <OrgSettingsIntegrations
         integrations={[]}
         busyId={null}
+        canManage
         onCreate={vi.fn().mockResolvedValue(null)}
         onUpdate={vi.fn().mockResolvedValue(null)}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -102,6 +105,7 @@ describe("OrgSettingsIntegrations", () => {
       <OrgSettingsIntegrations
         integrations={[]}
         busyId={null}
+        canManage
         onCreate={vi.fn().mockResolvedValue(null)}
         onUpdate={vi.fn().mockResolvedValue(null)}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -122,6 +126,7 @@ describe("OrgSettingsIntegrations", () => {
       <OrgSettingsIntegrations
         integrations={[]}
         busyId={null}
+        canManage
         onCreate={onCreate}
         onUpdate={vi.fn().mockResolvedValue(null)}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -173,6 +178,7 @@ describe("OrgSettingsIntegrations", () => {
           updated_at: new Date().toISOString(),
         }]}
         busyId={null}
+        canManage
         onCreate={vi.fn().mockResolvedValue(null)}
         onUpdate={vi.fn().mockResolvedValue(null)}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -208,6 +214,7 @@ describe("OrgSettingsIntegrations", () => {
           updated_at: new Date().toISOString(),
         }]}
         busyId={null}
+        canManage
         onCreate={vi.fn().mockResolvedValue(null)}
         onUpdate={onUpdate}
         onDelete={vi.fn().mockResolvedValue(undefined)}
@@ -217,5 +224,21 @@ describe("OrgSettingsIntegrations", () => {
     expect(screen.getByText("Disabled")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Enable" }));
     expect(onUpdate).toHaveBeenCalledWith("int-github", { enabled: true });
+  });
+
+  it("shows integrations as read-only for non-admin members", () => {
+    render(
+      <OrgSettingsIntegrations
+        integrations={[]}
+        busyId={null}
+        canManage={false}
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={vi.fn().mockResolvedValue(null)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText(/Only team admins and owners can add, edit, or delete integrations./i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Integration" })).toBeDisabled();
   });
 });
