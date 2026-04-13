@@ -59,7 +59,11 @@ fn should_try_frontend_dev_server() -> bool {
 }
 
 fn emit_runtime_default(runtime_name: &str, compile_name: &str, fallback: &str) {
-    let value = std::env::var(runtime_name).unwrap_or_else(|_| fallback.to_string());
+    let value = std::env::var(runtime_name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| fallback.to_string());
     println!("cargo:rustc-env={compile_name}={value}");
     println!("cargo:rerun-if-env-changed={runtime_name}");
 }
