@@ -1,0 +1,15 @@
+.container {
+  position: relative;
+  display: inline-flex;
+}
+
+.triggerActive {
+  background: var(--color-hover);
+  opacity: 1;
+}
+
+/* Portal-based menu uses fixed positioning */
+.menuPortal {
+  position: fixed;
+  z-index: var(--z-dropdown);
+}

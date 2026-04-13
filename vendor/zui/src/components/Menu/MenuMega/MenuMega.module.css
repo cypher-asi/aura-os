@@ -1,0 +1,348 @@
+/* MenuMega Component Styles */
+
+/* Main container */
+.megaMenu {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3, 12px);
+  min-width: 200px;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Isolate content from background effects to prevent flickering */
+  isolation: isolate;
+}
+
+/* Background variants */
+.none {
+  background: none;
+}
+
+.solid {
+  background-color: var(--color-bg, #09090b);
+}
+
+.transparent {
+  background-color: transparent;
+}
+
+.glass {
+  background-color: transparent;
+}
+
+/* Glass effect on pseudo-element to prevent text flickering during animations */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(9, 9, 11, 0.15);
+  backdrop-filter: blur(12px);
+  z-index: 0;
+  border-radius: inherit;
+}
+
+/* Border variants */
+.borderSolid {
+  border: 1px solid var(--color-border, #17171a);
+}
+
+/* Future border uses global .border-future class from borders.css */
+
+/* Rounded variants */
+.roundedNone {
+  border-radius: 0;
+}
+
+.roundedSm {
+  border-radius: var(--radius-sm, 4px);
+}
+
+.roundedMd {
+  border-radius: var(--radius-md, 6px);
+}
+
+.roundedLg {
+  border-radius: var(--radius-lg, 8px);
+}
+
+/* Main content wrapper (for flex layout with optional image) */
+.mainContent {
+  position: relative;
+  display: flex;
+  gap: var(--space-4, 16px);
+  flex: 1;
+  /* Ensure content renders above glass background pseudo-element */
+  z-index: 1;
+  /* Promote to own compositing layer to prevent flickering from background effects */
+  transform: translateZ(0);
+}
+
+/* Columns grid layout */
+.columns {
+  display: grid;
+  gap: var(--space-4, 16px);
+  flex: 1;
+}
+
+/* Single column */
+.column {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+/* Column title */
+.columnTitle {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1-5, 6px) var(--space-2, 8px);
+  font-size: var(--text-xs, 12px);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-2, 8px);
+  background-color: rgba(255, 255, 255, 0);
+  border-radius: var(--radius-sm, 4px);
+  width: fit-content;
+  white-space: nowrap;
+  animation: titleBgFadeIn 400ms ease-out 100ms forwards;
+  /* Hardware acceleration to prevent flickering during glass/image load */
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+@keyframes titleBgFadeIn {
+  from {
+    background-color: rgba(255, 255, 255, 0);
+  }
+  to {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Typewriter character animation */
+.typewriterChar {
+  opacity: 0;
+  animation: charReveal 50ms ease-out forwards;
+  /* Hardware acceleration to prevent flickering during glass/image load */
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+@keyframes charReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Stagger column title background animation */
+.column:nth-child(2) .columnTitle {
+  animation-delay: 300ms;
+}
+
+.column:nth-child(3) .columnTitle {
+  animation-delay: 500ms;
+}
+
+/* Column items container */
+.columnItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+}
+
+/* Individual item */
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3, 12px);
+  padding: var(--space-3, 12px);
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color var(--transition-fast, 75ms) ease;
+  opacity: 0;
+  animation: itemFadeIn 300ms ease-out forwards;
+  /* Hardware acceleration to prevent flickering during glass/image load */
+  backface-visibility: hidden;
+}
+
+/* Staggered animation delays for items - cascading effect */
+.item:nth-child(1) { animation-delay: 150ms; }
+.item:nth-child(2) { animation-delay: 300ms; }
+.item:nth-child(3) { animation-delay: 450ms; }
+.item:nth-child(4) { animation-delay: 600ms; }
+.item:nth-child(5) { animation-delay: 750ms; }
+.item:nth-child(6) { animation-delay: 900ms; }
+
+@keyframes itemFadeIn {
+  from {
+    opacity: 0;
+    transform: translate3d(-12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.item:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-overlay-light) 50%, transparent);
+}
+
+.item:focus-visible {
+  outline: none;
+  background-color: var(--color-overlay-medium);
+}
+
+.item.selected {
+  background-color: color-mix(in srgb, var(--color-overlay-light) 50%, transparent);
+}
+
+.item.selected .label {
+  color: var(--color-accent);
+}
+
+.item.selected:hover:not(:disabled) {
+  background-color: var(--color-overlay-medium);
+}
+
+.item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Icon */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--icon-lg, 20px);
+  height: var(--icon-lg, 20px);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-0-5, 2px);
+  opacity: 0;
+  animation: iconRotateIn 400ms ease-out forwards;
+}
+
+/* Stagger icon animations to match item delays */
+.item:nth-child(1) .icon { animation-delay: 150ms; }
+.item:nth-child(2) .icon { animation-delay: 300ms; }
+.item:nth-child(3) .icon { animation-delay: 450ms; }
+.item:nth-child(4) .icon { animation-delay: 600ms; }
+.item:nth-child(5) .icon { animation-delay: 750ms; }
+.item:nth-child(6) .icon { animation-delay: 900ms; }
+
+@keyframes iconRotateIn {
+  from {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.icon svg {
+  width: var(--icon-lg, 20px);
+  height: var(--icon-lg, 20px);
+  stroke-width: 1.5;
+}
+
+.item:hover:not(:disabled) .icon {
+  color: var(--color-text-primary);
+}
+
+.item.selected .icon {
+  color: var(--color-accent);
+}
+
+/* Content wrapper (label + description) */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  min-width: 0;
+  flex: 1;
+}
+
+/* Label */
+.label {
+  font-size: var(--text-sm, 13px);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  transition: color var(--transition-fast, 75ms) ease, text-shadow var(--transition-fast, 75ms) ease;
+}
+
+.item:hover:not(:disabled) .label {
+  color: #fff;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+}
+
+/* Description */
+.description {
+  font-size: var(--text-xs, 12px);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  transition: color var(--transition-fast, 75ms) ease;
+}
+
+.item:hover:not(:disabled) .description {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Image container - vertical placeholder on the right */
+.imageContainer {
+  display: flex;
+  flex-shrink: 0;
+  width: 160px;
+  min-height: 200px;
+  overflow: hidden;
+  background-color: var(--color-bg, #09090b);
+  animation: imageFadeSlideIn 800ms ease-out 200ms backwards;
+  isolation: isolate;
+  backface-visibility: hidden;
+}
+
+.imageElement {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes imageFadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translate3d(40px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Adjust mega menu when it has an image */
+.megaMenu.hasImage {
+  padding-right: 0;
+}
+
+.hasImage .mainContent {
+  padding-right: var(--space-3, 12px);
+}
+
+.hasImage .imageContainer {
+  margin: calc(-1 * var(--space-3, 12px)) 0;
+  margin-right: calc(-1 * var(--space-3, 12px));
+}

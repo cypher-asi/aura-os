@@ -1,0 +1,146 @@
+/* Search wrapper */
+.wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Search icon container */
+.iconWrapper {
+  position: absolute;
+  left: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+
+.wrapper:focus-within .iconWrapper {
+  color: var(--color-text-secondary);
+}
+
+.searchIcon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* Input field */
+.input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + var(--icon-sm) + var(--space-2));
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background-color: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--color-text-primary);
+  min-height: var(--control-height-md);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.input:focus,
+.input:focus-visible {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+  outline: none;
+}
+
+/* Remove default search input styling */
+.input::-webkit-search-cancel-button,
+.input::-webkit-search-decoration,
+.input::-webkit-search-results-button,
+.input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+/* Small size variant */
+.sm .iconWrapper {
+  left: var(--space-2);
+}
+
+.sm .searchIcon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.inputSm {
+  padding: var(--space-1-5) var(--space-2);
+  padding-left: calc(var(--space-2) + var(--icon-xs) + var(--space-2));
+  font-size: var(--text-sm);
+  min-height: var(--control-height-sm);
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
+/* Input with clear button */
+.inputWithClear {
+  padding-right: calc(var(--space-2) + 16px + var(--space-1));
+}
+
+.sm .inputWithClear {
+  padding-right: calc(var(--space-1-5) + 14px + var(--space-1));
+}
+
+/* Clear button */
+.clearButton {
+  position: absolute;
+  right: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.clearButton svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.clearButton:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.clearButton:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.25);
+  outline-offset: -1px;
+}
+
+.sm .clearButton {
+  width: 22px;
+  height: 22px;
+}
+
+.sm .clearButton svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}

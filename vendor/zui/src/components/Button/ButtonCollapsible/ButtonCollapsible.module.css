@@ -1,0 +1,11 @@
+.button {
+  flex-shrink: 0;
+}
+
+.icon {
+  transition: transform var(--transition-fast);
+}
+
+.collapsed .icon {
+  transform: rotate(-90deg);
+}

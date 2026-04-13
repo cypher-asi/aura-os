@@ -1,0 +1,215 @@
+/* Button styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  min-height: var(--control-height-md);
+  min-width: var(--control-width-default);
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Icon sizing within buttons */
+.button svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex-shrink: 0;
+}
+
+/* Stable size mode - uses grid to overlay content */
+.button.stableSize {
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.measurementContainer {
+  grid-column: 1;
+  grid-row: 1;
+  display: contents;
+}
+
+.measurementItem {
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.visibleContent {
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.button:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-focus-ring);
+  outline: none;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Unselected buttons have slightly muted text */
+.button:not(.selected):not(.noDim) {
+  opacity: 0.6;
+}
+
+.button:not(.selected):not(.noDim):hover:not(:disabled) {
+  opacity: 1;
+}
+
+.primary {
+  background-color: var(--color-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-border);
+  border-color: var(--color-border-light);
+}
+
+.secondary {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-elevated);
+  color: var(--color-text-primary);
+}
+
+.ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: transparent;
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--color-text-secondary);
+  background-color: var(--color-elevated);
+}
+
+.danger {
+  background-color: transparent;
+  color: var(--color-error);
+  border-color: rgba(244, 1, 42, 0.3);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: rgba(244, 1, 42, 0.1);
+}
+
+.filled {
+  background-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border-color: transparent;
+}
+
+.filled:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.glass {
+  background-color: var(--color-overlay-light);
+  color: var(--color-text-primary);
+  border-color: transparent;
+}
+
+.glass:hover:not(:disabled) {
+  background-color: var(--color-overlay-heavy);
+  color: var(--color-text-primary);
+}
+
+.transparent {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: transparent;
+}
+
+.transparent:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.sm {
+  padding: var(--space-1-5) var(--space-3);
+  font-size: var(--text-sm);
+  min-height: var(--control-height-sm);
+}
+
+.sm svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.iconOnly {
+  padding: var(--space-2);
+  min-width: var(--control-height-md); /* Override default to keep square */
+  min-height: var(--control-height-md);
+}
+
+.iconOnly.sm {
+  min-width: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+}
+
+/* Rounded variants */
+.roundedNone {
+  border-radius: 0;
+}
+
+.roundedSm {
+  border-radius: var(--radius-sm);
+}
+
+.roundedLg {
+  border-radius: var(--radius-lg);
+}
+
+.roundedFull {
+  border-radius: var(--radius-full);
+}
+
+/* Text case variants */
+.capitalize {
+  text-transform: capitalize;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+/* Selected state - accent text with glow */
+.selected {
+  background-color: transparent;
+  color: var(--color-accent);
+  border-color: transparent;
+  opacity: 1;
+  text-shadow: 0 0 8px var(--color-accent-muted);
+}
+
+.selected:hover:not(:disabled) {
+  background-color: transparent;
+}

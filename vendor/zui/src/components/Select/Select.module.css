@@ -1,0 +1,32 @@
+/* Select styles */
+.select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  min-height: var(--control-height-md);
+  transition: border-color var(--transition-fast);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23A1A6B3' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 18px;
+  padding-right: 36px;
+}
+
+.select:focus,
+.select:focus-visible {
+  border-color: var(--color-focus-ring);
+  outline: none;
+}
+
+.sm {
+  padding: var(--space-1-5) var(--space-2);
+  font-size: var(--text-sm);
+  min-height: var(--control-height-sm);
+  padding-right: 32px;
+}

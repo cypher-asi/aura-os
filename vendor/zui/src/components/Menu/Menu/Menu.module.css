@@ -1,0 +1,192 @@
+/* Menu Component Styles */
+.menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1-5, 6px) 0;
+  min-width: 160px;
+}
+
+/* Menu Item Wrapper - for submenu positioning */
+.menuItemWrapper {
+  position: relative;
+}
+
+/* Variant styles */
+.none {
+  background: none;
+}
+
+.solid {
+  background-color: var(--color-bg, #09090b);
+}
+
+.transparent {
+  background-color: transparent;
+}
+
+.glass {
+  background-color: rgba(9, 9, 11, 0.15);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Border variants */
+.borderSolid {
+  border: 1px solid var(--color-border, #17171a);
+}
+
+/* Future border uses global .border-future class from borders.css */
+
+/* Rounded variants */
+.roundedNone {
+  border-radius: 0;
+}
+
+.roundedSm {
+  border-radius: var(--radius-sm, 4px);
+}
+
+.roundedMd {
+  border-radius: var(--radius-md, 6px);
+}
+
+.roundedLg {
+  border-radius: var(--radius-lg, 8px);
+}
+
+/* Title */
+.title {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2, 8px) 0 var(--space-2, 8px) var(--space-4, 16px);
+  font-size: var(--text-sm, 13px);
+  font-weight: var(--font-medium, 500);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: none;
+}
+
+/* Menu Item - Built on Item primitive */
+/* Using .menu context for higher specificity to override Item base styles */
+.menu .menuItem {
+  padding: var(--space-2, 8px) var(--space-4, 16px) var(--space-2, 8px) var(--space-4, 16px);
+  min-height: var(--control-height-md, 36px);
+  color: var(--color-text-secondary);
+}
+
+/* Icon sizing in menu items */
+.icon svg {
+  width: var(--icon-md, 18px);
+  height: var(--icon-md, 18px);
+  stroke-width: 1.5;
+}
+
+.menu .menuItem:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-overlay-light) 50%, transparent);
+  color: var(--color-text-primary);
+}
+
+.menu .menuItem.selected {
+  background-color: color-mix(in srgb, var(--color-overlay-light) 50%, transparent);
+  color: var(--color-accent);
+}
+
+.menu .menuItem.selected:hover:not(:disabled) {
+  background-color: var(--color-overlay-medium);
+  color: var(--color-accent);
+}
+
+.menu .menuItem.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu .menuItem:focus-visible {
+  outline: none;
+  background-color: var(--color-overlay-medium);
+  color: var(--color-text-primary);
+}
+
+/* Icon */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* Label */
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status - right-aligned content before submenu arrow */
+.status {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: var(--space-3, 12px);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm, 13px);
+}
+
+/* Separator - full bleed divider */
+.separator {
+  margin: var(--space-1-5, 6px) 0;
+  border: none;
+  border-top: 1px solid var(--color-border, #27272a);
+  width: 100%;
+}
+
+/* Submenu arrow - override Item.Action's negative margin to match menu padding */
+.menu .menuItem .submenuArrow {
+  margin-right: calc(var(--space-4, 16px) * -1);
+}
+
+.menu .menuItem:hover .submenuArrow {
+  opacity: 1;
+}
+
+/* Submenu item styling */
+.menu .menuItem.hasSubmenu {
+  cursor: default;
+}
+
+.menu .menuItem.submenuOpen {
+  background-color: color-mix(in srgb, var(--color-overlay-light) 50%, transparent);
+}
+
+/* Submenu container */
+.submenu {
+  position: absolute;
+  /* Offset by menu's top padding so first submenu item aligns with parent item */
+  top: calc(-1 * var(--space-1-5, 6px));
+  left: 100%;
+  z-index: var(--z-dropdown, 50);
+  /* Force GPU compositing layer for proper backdrop-filter inheritance */
+  transform: translateZ(0);
+}
+
+/* Submenu inherits parent styling */
+.submenu > .menu {
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.3));
+}
+
+/* Glass submenus use a slightly more opaque background for readability */
+.submenu > .glass {
+  background-color: rgba(9, 9, 11, 0.55);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Submenu positioned to the left when no space on right */
+.submenuLeft {
+  left: auto;
+  right: 100%;
+}

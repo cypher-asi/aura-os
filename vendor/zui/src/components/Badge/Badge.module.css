@@ -1,0 +1,35 @@
+/* Badge styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+.running {
+  color: var(--color-success);
+}
+.stopped {
+  color: var(--color-text-muted);
+}
+.error {
+  color: var(--color-error);
+}
+.pending {
+  color: var(--color-pending);
+}
+.provisioning {
+  color: var(--color-provisioning);
+}
+
+.pulse .dot {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+}

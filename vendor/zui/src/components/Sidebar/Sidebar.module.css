@@ -1,0 +1,104 @@
+/* Sidebar - Resizable sidebar container with header/content/footer sections */
+.sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.resizable {
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.resizing {
+  transition: none;
+  user-select: none;
+}
+
+/* Resize Handle */
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  z-index: 10;
+  user-select: none;
+  transition: opacity var(--transition-fast);
+  opacity: 0;
+}
+
+.resizeHandleRight {
+  right: 0;
+}
+
+.resizeHandleLeft {
+  left: 0;
+}
+
+.sidebar:hover .resizeHandle,
+.resizeHandle:hover,
+.resizing .resizeHandle {
+  opacity: 1;
+}
+
+.resizeHandleLine {
+  width: 2px;
+  height: 48px;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.resizeHandle:hover .resizeHandleLine,
+.resizing .resizeHandleLine {
+  background: var(--color-accent);
+}
+
+/* Header Section */
+.header {
+  flex-shrink: 0;
+}
+
+/* Content Section */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Footer Section */
+.footer {
+  flex-shrink: 0;
+}
+
+/* Scrollbar styling for content */
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}

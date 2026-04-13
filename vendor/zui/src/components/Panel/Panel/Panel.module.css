@@ -1,0 +1,5 @@
+.panel {
+  /* Base panel styles - most styling is done via inline styles for variant flexibility */
+  /* Isolate content from background effects to prevent flickering and text bleed-through */
+  isolation: isolate;
+}

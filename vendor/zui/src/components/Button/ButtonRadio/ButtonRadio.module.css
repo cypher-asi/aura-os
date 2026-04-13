@@ -1,0 +1,128 @@
+/* Radio Button Component */
+.buttonRadio {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.buttonRadio.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Circle indicator */
+.circle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+/* Small size */
+.sm .circle {
+  width: 18px;
+  height: 18px;
+}
+
+.sm .circle::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+/* Medium size (default) */
+.md .circle {
+  width: 22px;
+  height: 22px;
+}
+
+.md .circle::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+/* Hover state */
+.buttonRadio:hover:not(.disabled) .circle {
+  border-color: var(--color-text-muted);
+}
+
+/* Checked state - default variant */
+.input:checked + .circle {
+  border-color: var(--color-text-primary);
+  background-color: var(--color-surface);
+}
+
+.input:checked + .circle::after {
+  background-color: var(--color-text-primary);
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Accent variant */
+.accent .input:checked + .circle {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+}
+
+.accent .input:checked + .circle::after {
+  background-color: var(--color-accent-contrast);
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Focus ring */
+.input:focus-visible + .circle {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* With label */
+.withLabel {
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  user-select: none;
+}
+
+.sm .label {
+  font-size: var(--text-sm);
+}
+
+.labelLeft {
+  order: -1;
+}
+
+/* Disabled state for label */
+.disabled .label {
+  color: var(--color-text-muted);
+}

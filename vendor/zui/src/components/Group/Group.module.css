@@ -1,0 +1,119 @@
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+  width: 100%;
+  min-height: 34px;
+  user-select: none;
+}
+
+/* Non-interactive header content (for Group) */
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 var(--space-3, 12px);
+  width: 100%;
+  min-height: 34px;
+}
+
+/* Interactive header button (for GroupCollapsible) */
+.headerButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 var(--space-3, 12px);
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+  min-height: 34px;
+}
+
+.headerButton:hover {
+  color: var(--color-text-primary);
+}
+
+.headerButton:hover .label,
+.headerButton:hover .count {
+  color: var(--color-text-primary);
+}
+
+.headerButton:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.labelContainer {
+  flex: 1; /* Allow label container to take available space and push toggle to the right */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  line-height: 1.2; /* Ensure consistent line height for vertical centering */
+  display: flex;
+  align-items: center;
+}
+
+.count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background-color: var(--surface-2);
+  padding: 2px 8px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px; /* Align with child row stats (account for link icon gap) */
+  font-family: var(--font-mono);
+  font-size: var(--text-sm, 13px);
+  font-weight: 500;
+}
+
+.toggle {
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+  margin-left: auto; /* Push toggle to far right */
+  margin-right: 0; /* Full bleed to edge */
+}
+
+.header:hover .toggle,
+.headerButton:hover + .toggle {
+  color: var(--color-text-primary);
+}
+
+/* Content container */
+.content {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s ease-out;
+}
+
+.contentCollapsed {
+  grid-template-rows: 0fr;
+}
+
+.contentInner {
+  overflow: hidden;
+  padding: 0 12px;
+}

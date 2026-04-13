@@ -1,0 +1,30 @@
+/* Page layout styles */
+
+.page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  min-width: 0; /* Prevent content from forcing parent to grow during sidekick animation */
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  padding: var(--space-4);
+}
+
+/* Loading state */
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 128px;
+}
+
+.loadingText {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}

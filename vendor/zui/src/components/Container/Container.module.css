@@ -1,0 +1,12 @@
+.container {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  min-height: 200px;
+}
+
+.fullBleed {
+  padding: 0;
+  min-height: 0;
+}

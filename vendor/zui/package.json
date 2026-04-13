@@ -1,0 +1,60 @@
+{
+  "name": "@cypher-asi/zui",
+  "version": "0.1.4",
+  "description": "ZUI - A modern UI kit made for machines. Official design system for the Cypher ecosystem.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles": "./src/styles/index.css"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "dev:inspector": "npm run dev --workspace=inspector",
+    "dev:docs": "npm run dev --workspace=docs-site",
+    "build:inspector": "npm run build --workspace=inspector",
+    "build:docs": "npm run build --workspace=docs-site",
+    "test": "npm run test --workspace=inspector",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "workspaces": [
+    "inspector",
+    "docs-site"
+  ],
+  "keywords": [
+    "react",
+    "ui",
+    "components",
+    "design-system"
+  ],
+  "author": "Cypher ASI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:cypher-asi/zui.git"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.475.0",
+    "prism-react-renderer": "^2.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript-eslint": "^8.21.0"
+  }
+}

@@ -1,0 +1,193 @@
+/* CardItem - Consistent card pattern for all list items */
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  user-select: none;
+}
+
+.card:hover {
+  background-color: var(--color-surface);
+}
+
+.cardSelected {
+  background-color: var(--color-elevated);
+}
+
+.cardSelected:hover {
+  background-color: var(--color-elevated);
+}
+
+/* Icon badge on the left */
+.iconBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconBadgeText {
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.iconBadgeIcon {
+  color: var(--color-text-secondary);
+}
+
+/* Main info section */
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+  min-width: 0; /* Allow title to shrink during sidekick animation */
+}
+
+.title {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleSans {
+  font-family: var(--font-sans);
+  font-weight: var(--font-medium);
+}
+
+/* Meta row with secondary info */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.metaMono {
+  font-family: var(--font-mono);
+}
+
+/* Secondary slot (e.g., IP address, code snippet) */
+.secondary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  background-color: var(--color-elevated);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+/* Actions section (hidden until hover) */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.card:hover .actions,
+.cardSelected .actions {
+  opacity: 1;
+}
+
+.actionsAlwaysVisible {
+  opacity: 1;
+}
+
+/* Status indicators */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
+.statusValid {
+  color: var(--color-success);
+}
+
+.statusInvalid {
+  color: var(--color-error);
+}
+
+.statusWarning {
+  color: var(--color-warning);
+}
+
+.statusMuted {
+  color: var(--color-text-secondary);
+}
+
+.statusPending {
+  color: var(--color-pending);
+}
+
+.statusProvisioning {
+  color: var(--color-provisioning);
+}
+
+/* Provider/type badges */
+.badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.badge {
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface);
+  padding: 2px var(--space-1-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+/* Type badge (for differentiating item categories) */
+.typeBadge {
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
