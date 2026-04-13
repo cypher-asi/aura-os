@@ -108,21 +108,7 @@ describe("ProjectAgentSetupView", () => {
     });
   });
 
-  it("keeps the primary mobile create screen focused while still exposing the org integration path", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-anthropic",
-        org_id: "org-1",
-        name: "Shared Anthropic",
-        provider: "anthropic",
-        kind: "workspace_connection",
-        has_secret: true,
-        enabled: true,
-        created_at: "2026-03-17T01:00:00.000Z",
-        updated_at: "2026-03-17T01:00:00.000Z",
-      },
-    ];
-
+  it("keeps the mobile create screen focused on Aura swarm", async () => {
     render(
       <Routes>
         <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
@@ -130,27 +116,13 @@ describe("ProjectAgentSetupView", () => {
       { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
     );
 
-    expect(screen.getByText("Create Remote Agent")).toBeInTheDocument();
-    expect(screen.getByText("Managed by Aura")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Use organization connection/i })).toBeInTheDocument();
-    expect(screen.queryByText("Organization integration")).not.toBeInTheDocument();
+    expect(screen.getByText("Create Aura Swarm Agent")).toBeInTheDocument();
+    expect(screen.getByText("Aura-managed billing")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Use organization connection/i })).not.toBeInTheDocument();
   });
 
-  it("submits an org integration backed remote create payload", async () => {
+  it("submits an Aura-managed swarm create payload", async () => {
     const user = userEvent.setup();
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-anthropic",
-        org_id: "org-1",
-        name: "Shared Anthropic",
-        provider: "anthropic",
-        kind: "workspace_connection",
-        has_secret: true,
-        enabled: true,
-        created_at: "2026-03-17T01:00:00.000Z",
-        updated_at: "2026-03-17T01:00:00.000Z",
-      },
-    ];
 
     render(
       <Routes>
@@ -162,9 +134,6 @@ describe("ProjectAgentSetupView", () => {
 
     await user.type(screen.getByLabelText("Name"), "Atlas");
     await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: /Use organization connection/i }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /Shared Anthropic/i })).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: /Shared Anthropic/i }));
     await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
 
     await waitFor(() => {
@@ -175,9 +144,26 @@ describe("ProjectAgentSetupView", () => {
         machine_type: "remote",
         adapter_type: "aura_harness",
         environment: "swarm_microvm",
-        auth_source: "org_integration",
-        integration_id: "int-anthropic",
+        auth_source: "aura_managed",
+        integration_id: null,
       }));
     });
+  });
+
+  it("blocks mobile create when the name contains spaces", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Atlas Scout");
+    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+
+    expect(screen.getByText("Use only letters, numbers, hyphens, or underscores")).toBeInTheDocument();
+    expect(mockCreateAgent).not.toHaveBeenCalled();
   });
 });

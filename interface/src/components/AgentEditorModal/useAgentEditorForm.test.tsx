@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { api } from "../../api/client";
 import type { Agent } from "../../types";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 
@@ -66,6 +67,8 @@ describe("useAgentEditorForm", () => {
     vi.clearAllMocks();
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     mockOrgState.integrations = [];
+    vi.mocked(api.agents.create).mockResolvedValue(makeAgent());
+    vi.mocked(api.agents.update).mockResolvedValue(makeAgent());
   });
 
   it("defaults new desktop agents to local_host aura harness", () => {
@@ -130,7 +133,27 @@ describe("useAgentEditorForm", () => {
     expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
-  it("falls back to a matching org integration when org-backed auth is selected", async () => {
+  it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
+    const { result } = renderHook(() =>
+      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+    );
+
+    act(() => {
+      result.current.setAdapterType("claude_code");
+      result.current.setAuthSource("org_integration");
+      result.current.setIntegrationId("int-anthropic");
+      result.current.setDefaultModel("claude-opus-4-6");
+    });
+
+    await waitFor(() => {
+      expect(result.current.adapterType).toBe("aura_harness");
+      expect(result.current.authSource).toBe("aura_managed");
+      expect(result.current.integrationId).toBe("");
+      expect(result.current.defaultModel).toBe("");
+    });
+  });
+
+  it("preserves a legacy org-backed agent while editing", async () => {
     mockOrgState.integrations = [
       {
         integration_id: "int-anthropic",
@@ -141,201 +164,74 @@ describe("useAgentEditorForm", () => {
     ];
 
     const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+      useAgentEditorForm(
+        true,
+        makeAgent({
+          adapter_type: "aura_harness",
+          environment: "swarm_microvm",
+          auth_source: "org_integration",
+          integration_id: "int-anthropic",
+        }),
+        vi.fn(),
+        vi.fn(),
+      ),
     );
-
-    act(() => {
-      result.current.setAdapterType("claude_code");
-      result.current.setAuthSource("org_integration");
-    });
 
     await waitFor(() => {
       expect(result.current.authSource).toBe("org_integration");
       expect(result.current.integrationId).toBe("int-anthropic");
+      expect(result.current.restrictCreateToAuraRuntimes).toBe(false);
     });
   });
 
-  it("selects Gemini org integrations for the Gemini CLI runtime", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-gemini",
-        provider: "google_gemini",
-        default_model: "gemini-2.5-pro",
-        name: "Gemini Team",
-      },
-    ];
-
+  it("blocks creating a new agent when the name contains spaces", async () => {
+    const onSaved = vi.fn();
     const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+      useAgentEditorForm(true, undefined, vi.fn(), onSaved),
     );
 
     act(() => {
-      result.current.setAdapterType("gemini_cli");
-      result.current.setAuthSource("org_integration");
+      result.current.setName("Atlas Scout");
     });
 
-    await waitFor(() => {
-      expect(result.current.integrationId).toBe("int-gemini");
+    await act(async () => {
+      await result.current.handleSave();
     });
+
+    expect(result.current.nameError).toBe(
+      "Use only letters, numbers, hyphens, or underscores",
+    );
+    expect(api.agents.create).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
-  it("ignores unrelated tool integrations when choosing runtime auth", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-github",
-        provider: "github",
-        default_model: null,
-        name: "GitHub Org",
-      },
-      {
-        integration_id: "int-openai",
-        provider: "openai",
-        default_model: "gpt-5.1",
-        name: "OpenAI Team",
-      },
-    ];
+  it("allows saving a legacy agent with spaces when the name is unchanged", async () => {
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+    const legacyAgent = makeAgent({ name: "Atlas Scout" });
+    vi.mocked(api.agents.update).mockResolvedValue(legacyAgent);
 
     const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+      useAgentEditorForm(true, legacyAgent, onClose, onSaved),
     );
 
     act(() => {
-      result.current.setAdapterType("codex");
-      result.current.setAuthSource("org_integration");
+      result.current.setRole("Senior Builder");
     });
 
-    await waitFor(() => {
-      expect(result.current.authSource).toBe("org_integration");
-      expect(result.current.integrationId).toBe("int-openai");
+    await act(async () => {
+      await result.current.handleSave();
     });
-  });
 
-  it("allows OpenCode to choose among multiple runtime-compatible integrations", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-linear",
-        provider: "linear",
-        default_model: null,
-        name: "Linear Team",
-      },
-      {
-        integration_id: "int-openrouter",
-        provider: "openrouter",
-        default_model: "openrouter/openai/gpt-4.1-mini",
-        name: "OpenRouter Team",
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+    expect(result.current.nameError).toBe("");
+    expect(api.agents.update).toHaveBeenCalledWith(
+      legacyAgent.agent_id,
+      expect.objectContaining({
+        name: "Atlas Scout",
+        role: "Senior Builder",
+      }),
     );
-
-    act(() => {
-      result.current.setAdapterType("opencode");
-      result.current.setAuthSource("org_integration");
-    });
-
-    await waitFor(() => {
-      expect(result.current.integrationId).toBe("int-openrouter");
-    });
-  });
-
-  it("allows OpenCode to use xAI workspace connections", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-xai",
-        provider: "xai",
-        default_model: "xai/grok-4",
-        name: "xAI Team",
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
-    );
-
-    act(() => {
-      result.current.setAdapterType("opencode");
-      result.current.setAuthSource("org_integration");
-    });
-
-    await waitFor(() => {
-      expect(result.current.integrationId).toBe("int-xai");
-    });
-  });
-
-  it("leaves runtime auth unselected when only non-runtime integrations exist", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-linear",
-        provider: "linear",
-        default_model: null,
-        name: "Linear Team",
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
-    );
-
-    act(() => {
-      result.current.setAdapterType("codex");
-      result.current.setAuthSource("org_integration");
-    });
-
-    await waitFor(() => {
-      expect(result.current.authSource).toBe("org_integration");
-      expect(result.current.integrationId).toBe("");
-    });
-  });
-
-  it("allows Aura to switch to an org-backed Anthropic integration", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-aura-anthropic",
-        provider: "anthropic",
-        default_model: "claude-opus-4-6",
-        name: "Aura Anthropic",
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
-    );
-
-    act(() => {
-      result.current.setAuthSource("org_integration");
-    });
-
-    await waitFor(() => {
-      expect(result.current.adapterType).toBe("aura_harness");
-      expect(result.current.authSource).toBe("org_integration");
-      expect(result.current.integrationId).toBe("int-aura-anthropic");
-    });
-  });
-
-  it("keeps Cursor on local CLI auth even when model integrations exist", async () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-openai",
-        provider: "openai",
-        default_model: "gpt-5.1",
-        name: "OpenAI Team",
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
-    );
-
-    act(() => {
-      result.current.setAdapterType("cursor");
-      result.current.setAuthSource("org_integration");
-    });
-
-    await waitFor(() => {
-      expect(result.current.authSource).toBe("local_cli_auth");
-      expect(result.current.integrationId).toBe("");
-    });
+    expect(onSaved).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
   });
 });

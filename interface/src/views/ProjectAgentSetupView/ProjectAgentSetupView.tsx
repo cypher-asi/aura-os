@@ -5,17 +5,16 @@ import { ArrowLeft, Cloud, Sparkles } from "lucide-react";
 import { api } from "../../api/client";
 import { Avatar } from "../../components/Avatar";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { filterRuntimeCompatibleIntegrations, getIntegrationLabel } from "../../lib/integrationCatalog";
+import { getAgentNameValidationMessage } from "../../lib/agentNameValidation";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
-import type { Agent, AgentInstance, OrgIntegration } from "../../types";
-import { projectAgentAttachRoute, projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
+import type { Agent, AgentInstance } from "../../types";
+import { projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
 import styles from "./ProjectAgentSetupView.module.css";
 
 const EMPTY_PROJECT_AGENTS: AgentInstance[] = [];
-const EMPTY_INTEGRATIONS: OrgIntegration[] = [];
 
 function upsertProjectAgent(
   instance: AgentInstance,
@@ -34,7 +33,6 @@ function upsertProjectAgent(
 }
 
 type ProjectAgentSetupViewMode = "create" | "existing";
-type ProjectAgentCreateStep = "default" | "options" | "integration";
 
 export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgentSetupViewMode }) {
   const { projectId } = useParams<{ projectId: string }>();
@@ -43,8 +41,6 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
   const { setAgentsByProject } = useProjectsList();
   const ctx = useProjectActions();
   const activeOrg = useOrgStore((state) => state.activeOrg);
-  const orgIntegrations = useOrgStore((state) => state.integrations);
-  const refreshIntegrations = useOrgStore((state) => state.refreshIntegrations);
   const projects = useProjectsListStore((state) => state.projects);
   const agentsByProject = useProjectsListStore((state) => state.agentsByProject);
   const assignedProjectAgents = useMemo(
@@ -63,72 +59,12 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
   const [attachingId, setAttachingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [integrationId, setIntegrationId] = useState("");
-  const [createStep, setCreateStep] = useState<ProjectAgentCreateStep>("default");
   const [formError, setFormError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const assignedAgentIds = useMemo(
     () => new Set(assignedProjectAgents.map((agent) => agent.agent_id)),
     [assignedProjectAgents],
   );
-  const compatibleIntegrations = useMemo(
-    () => filterRuntimeCompatibleIntegrations("aura_harness", orgIntegrations ?? EMPTY_INTEGRATIONS),
-    [orgIntegrations],
-  );
-  const hasExistingOption = availableAgents.length > 0;
-  const hasIntegrationOption = compatibleIntegrations.length > 0;
-  const selectedIntegration = useMemo(
-    () => compatibleIntegrations.find((integration) => integration.integration_id === integrationId) ?? null,
-    [compatibleIntegrations, integrationId],
-  );
-  const secondaryRouteLabel = useMemo(() => {
-    if (hasExistingOption && hasIntegrationOption) {
-      return "More agent options";
-    }
-    if (hasExistingOption) {
-      return "Use existing remote agent";
-    }
-    if (hasIntegrationOption) {
-      return "Use organization connection";
-    }
-    return null;
-  }, [hasExistingOption, hasIntegrationOption]);
-
-  useEffect(() => {
-    if (mode !== "create") {
-      return;
-    }
-
-    if (compatibleIntegrations.length === 0) {
-      if (createStep === "integration") {
-        setCreateStep("default");
-      }
-      if (integrationId) {
-        setIntegrationId("");
-      }
-      return;
-    }
-
-    if (createStep === "integration" && !selectedIntegration) {
-      setIntegrationId(compatibleIntegrations[0]?.integration_id ?? "");
-    }
-  }, [compatibleIntegrations, createStep, integrationId, mode, selectedIntegration]);
-
-  useEffect(() => {
-    if (mode !== "create" && createStep !== "default") {
-      setCreateStep("default");
-    }
-  }, [createStep, mode]);
-
-  useEffect(() => {
-    if (mode !== "create") {
-      return;
-    }
-    if (!activeOrg?.org_id || orgIntegrations.length > 0) {
-      return;
-    }
-    void refreshIntegrations();
-  }, [activeOrg?.org_id, mode, orgIntegrations.length, refreshIntegrations]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -181,11 +117,11 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
 
   const handleCreate = useCallback(async () => {
     if (!projectId) return;
-    if (!name.trim()) {
-      setFormError("Name is required.");
+    const validationMessage = getAgentNameValidationMessage(name);
+    if (validationMessage) {
+      setFormError(validationMessage);
       return;
     }
-    const selectedAuthSource = createStep === "integration" ? "org_integration" : "aura_managed";
     setCreating(true);
     setFormError(null);
     try {
@@ -199,8 +135,8 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
         machine_type: "remote",
         adapter_type: "aura_harness",
         environment: "swarm_microvm",
-        auth_source: selectedAuthSource,
-        integration_id: selectedAuthSource === "org_integration" ? integrationId : null,
+        auth_source: "aura_managed",
+        integration_id: null,
         default_model: null,
       });
       const instance = await api.createAgentInstance(projectId, created.agent_id);
@@ -208,30 +144,9 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Could not create a remote agent right now.");
     } finally {
-      setCreating(false);
+        setCreating(false);
     }
-  }, [activeOrg?.org_id, createStep, finishAttach, integrationId, name, projectId, role]);
-
-  const handleOpenSecondaryRoute = useCallback(() => {
-    if (!projectId) return;
-
-    if (hasExistingOption && !hasIntegrationOption) {
-      navigate(projectAgentAttachRoute(projectId));
-      return;
-    }
-
-    if (!hasExistingOption && hasIntegrationOption) {
-      setCreateStep("integration");
-      if (!integrationId) {
-        setIntegrationId(compatibleIntegrations[0]?.integration_id ?? "");
-      }
-      setFormError(null);
-      return;
-    }
-
-    setCreateStep("options");
-    setFormError(null);
-  }, [compatibleIntegrations, hasExistingOption, hasIntegrationOption, integrationId, navigate, projectId]);
+  }, [activeOrg?.org_id, finishAttach, name, projectId, role]);
 
   if (!projectId) {
     return null;
@@ -252,38 +167,17 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
         <Text size="lg" weight="medium">
           {mode === "existing"
             ? "Choose Existing Agent"
-            : createStep === "options"
-              ? "More Agent Options"
-            : createStep === "integration"
-              ? "Use Organization Connection"
-              : "Create Remote Agent"}
+            : "Create Aura Swarm Agent"}
         </Text>
         <Text size="sm" variant="muted">
           {mode === "existing"
             ? (currentProject
               ? `Attach another remote Aura agent to ${currentProject.name}.`
               : "Attach another remote Aura agent to this project.")
-            : createStep === "options"
-              ? "Choose another way to connect this project to a remote agent."
-            : createStep === "integration"
-              ? "Create this remote Aura agent with a shared provider connection from your organization."
-              : (currentProject
-                ? `Create a new remote Aura agent for ${currentProject.name}.`
-                : "Create a new remote Aura agent for this project.")}
+            : (currentProject
+              ? `Create a new Aura swarm agent for ${currentProject.name}.`
+              : "Create a new Aura swarm agent for this project.")}
         </Text>
-        {mode === "create" && createStep !== "default" ? (
-          <button
-            type="button"
-            className={styles.inlineBackButton}
-            onClick={() => {
-              setCreateStep(createStep === "integration" ? "options" : "default");
-              setFormError(null);
-            }}
-          >
-            <ArrowLeft size={14} aria-hidden="true" />
-            <span>{createStep === "integration" ? "Back to more options" : "Back to create"}</span>
-          </button>
-        ) : null}
       </header>
 
       {primaryProjectAgent && mode === "existing" ? (
@@ -348,14 +242,10 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <Text size="sm" weight="medium">
-              {createStep === "options" ? "Other ways to add an agent" : "New remote agent"}
+              New Aura swarm agent
             </Text>
             <Text size="xs" variant="muted">
-              {createStep === "options"
-                ? "Choose another remote-first path."
-                : createStep === "integration"
-                ? "Choose the shared connection that should power this agent."
-                : "Create a remote Aura agent for this project."}
+              Create a remote Aura agent that uses Aura-managed credentials and billing.
             </Text>
           </div>
 
@@ -365,51 +255,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
             </div>
           ) : null}
 
-          {createStep === "options" ? (
-            <div className={styles.choiceList}>
-              {availableAgents.length > 0 ? (
-                <button
-                  type="button"
-                  className={styles.choiceCard}
-                  onClick={() => navigate(projectAgentAttachRoute(projectId))}
-                >
-                  <span className={styles.choiceCopy}>
-                    <span className={styles.choiceTitle}>Use existing remote agent</span>
-                    <span className={styles.choiceMeta}>Attach another remote Aura agent that already exists in your library.</span>
-                  </span>
-                </button>
-              ) : null}
-
-              {compatibleIntegrations.length > 0 ? (
-                <button
-                  type="button"
-                  className={styles.choiceCard}
-                  onClick={() => {
-                    setCreateStep("integration");
-                    if (!integrationId) {
-                      setIntegrationId(compatibleIntegrations[0]?.integration_id ?? "");
-                    }
-                    setFormError(null);
-                  }}
-                >
-                  <span className={styles.choiceCopy}>
-                    <span className={styles.choiceTitle}>Use organization connection</span>
-                    <span className={styles.choiceMeta}>Power this remote agent with a shared provider connection from your organization.</span>
-                  </span>
-                </button>
-              ) : null}
-
-              {availableAgents.length === 0 && compatibleIntegrations.length === 0 ? (
-                <div className={styles.inlineNotice}>
-                  <Text size="sm" weight="medium">No extra options available yet</Text>
-                  <Text size="xs" variant="muted">
-                    Use the main remote-create path here, or set up shared connections on desktop first.
-                  </Text>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <>
+          <>
               <div className={styles.formGrid}>
                 <label className={styles.field}>
                   <span className={styles.label}>Name</span>
@@ -441,75 +287,27 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
 
               <div className={styles.inlineSetupSummary}>
                 <Sparkles size={15} aria-hidden="true" />
-                <span>Aura remote agent</span>
+                <span>Aura swarm agent</span>
                 <span aria-hidden="true">·</span>
-                <span><Cloud size={14} aria-hidden="true" /> Remote cloud</span>
+                <span><Cloud size={14} aria-hidden="true" /> Aura Swarm</span>
                 <span aria-hidden="true">·</span>
-                <span>
-                  {createStep === "integration" && selectedIntegration
-                    ? getIntegrationLabel(selectedIntegration.provider)
-                    : "Managed by Aura"}
-                </span>
+                <span>Aura-managed billing</span>
               </div>
-
-              {createStep === "integration" ? (
-            compatibleIntegrations.length > 0 ? (
-              <div className={styles.choiceList} role="list" aria-label="Available organization integrations">
-                {compatibleIntegrations.map((integration) => (
-                  <button
-                    key={integration.integration_id}
-                    type="button"
-                    className={styles.choiceCard}
-                    data-selected={integration.integration_id === integrationId ? "true" : "false"}
-                    onClick={() => {
-                      setIntegrationId(integration.integration_id);
-                      setFormError(null);
-                    }}
-                  >
-                    <span className={styles.choiceCopy}>
-                      <span className={styles.choiceTitle}>{integration.name}</span>
-                      <span className={styles.choiceMeta}>{getIntegrationLabel(integration.provider)}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.inlineNotice}>
-                <Text size="sm" weight="medium">No organization integrations available</Text>
-                <Text size="xs" variant="muted">
-                  Add an Anthropic workspace connection in organization settings on desktop first, then come back here.
-                </Text>
-              </div>
-            )
-              ) : null}
-            </>
-          )}
-
-          {mode === "create" && createStep === "default" && secondaryRouteLabel ? (
-            <button
-              type="button"
-              className={styles.secondaryRouteButton}
-              onClick={handleOpenSecondaryRoute}
-            >
-              {secondaryRouteLabel}
-            </button>
-          ) : null}
+          </>
 
           <div className={styles.actionFooter}>
             <div className={styles.actionMessages}>
               {agentsError ? <Text size="sm" variant="muted">{agentsError}</Text> : null}
               {formError ? <Text size="sm" variant="muted">{formError}</Text> : null}
             </div>
-            {createStep !== "options" ? (
-              <Button
-                variant="primary"
-                onClick={handleCreate}
-                disabled={creating || Boolean(attachingId) || (createStep === "integration" && !integrationId)}
-                className={styles.createButton}
-              >
-                {creating ? "Creating agent…" : "Create & Add Agent"}
-              </Button>
-            ) : null}
+            <Button
+              variant="primary"
+              onClick={handleCreate}
+              disabled={creating || Boolean(attachingId)}
+              className={styles.createButton}
+            >
+              {creating ? "Creating agent…" : "Create & Add Agent"}
+            </Button>
           </div>
         </section>
       ) : null}

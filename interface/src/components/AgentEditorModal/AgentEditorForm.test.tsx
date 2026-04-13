@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import userEvent from "@testing-library/user-event";
 import { render, screen } from "@testing-library/react";
 import { AgentEditorForm, type AgentEditorFormProps } from "./AgentEditorForm";
 
@@ -38,6 +37,7 @@ function makeProps(overrides: Partial<AgentEditorFormProps> = {}): AgentEditorFo
     defaultModel: "",
     setDefaultModel: vi.fn(),
     simplifyForMobileCreate: false,
+    restrictCreateToAuraRuntimes: true,
     availableIntegrations: [],
     nameError: "",
     setNameError: vi.fn(),
@@ -56,8 +56,9 @@ describe("AgentEditorForm", () => {
     render(<AgentEditorForm {...makeProps()} />);
 
     expect(screen.getByText("Setup")).toBeInTheDocument();
-    expect(screen.getByText("Agent Type")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Change runtime or credentials" })).toBeInTheDocument();
+    expect(screen.getByText("Choose where this Aura agent runs")).toBeInTheDocument();
+    expect(screen.getByText("Aura Local")).toBeInTheDocument();
+    expect(screen.getByText("Aura Swarm")).toBeInTheDocument();
     expect(screen.queryByText("Default Model")).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
   });
@@ -73,15 +74,13 @@ describe("AgentEditorForm", () => {
     );
 
     expect(screen.getByText("Remote Setup")).toBeInTheDocument();
-    expect(screen.getByText("Aura Remote Agent")).toBeInTheDocument();
-    expect(screen.getByText("Remote Cloud")).toBeInTheDocument();
+    expect(screen.getAllByText("Aura Swarm")).not.toHaveLength(0);
+    expect(screen.getAllByText("Aura-managed")).not.toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Change runtime or credentials" })).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
   });
 
-  it("keeps org integration as a secondary mobile create path", async () => {
-    const user = userEvent.setup();
-
+  it("does not expose org integration shortcuts during create", async () => {
     render(
       <AgentEditorForm
         {...makeProps({
@@ -104,22 +103,15 @@ describe("AgentEditorForm", () => {
       />,
     );
 
-    expect(screen.getAllByText("Managed by Aura")).not.toHaveLength(0);
-    expect(screen.getByRole("button", { name: "Use organization connection instead" })).toBeInTheDocument();
-    expect(screen.queryByText("Anthropic API")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Use organization connection instead" }));
-
-    expect(screen.getByText("Organization Connection")).toBeInTheDocument();
-    expect(screen.getByText("Primary Anthropic")).toBeInTheDocument();
-    expect(screen.getByText("Anthropic")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Back to Aura-managed setup" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use organization connection instead" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Primary Anthropic")).not.toBeInTheDocument();
   });
 
   it("shows runtime and credential controls for non-default setups", () => {
     render(
       <AgentEditorForm
         {...makeProps({
+          restrictCreateToAuraRuntimes: false,
           adapterType: "codex",
           environment: "local_host",
           authSource: "local_cli_auth",

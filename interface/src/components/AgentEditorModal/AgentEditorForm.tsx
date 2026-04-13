@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Input, Textarea, Text } from "@cypher-asi/zui";
 import { ImagePlus, X, Monitor, Cloud } from "lucide-react";
 import type { OrgIntegration } from "../../types";
@@ -84,6 +84,7 @@ export interface AgentEditorFormProps {
   defaultModel: string;
   setDefaultModel: (v: string) => void;
   simplifyForMobileCreate: boolean;
+  restrictCreateToAuraRuntimes: boolean;
   availableIntegrations: OrgIntegration[];
   nameError: string;
   setNameError: (v: string) => void;
@@ -119,6 +120,7 @@ export function AgentEditorForm({
   defaultModel,
   setDefaultModel,
   simplifyForMobileCreate,
+  restrictCreateToAuraRuntimes,
   availableIntegrations,
   nameError,
   setNameError,
@@ -129,7 +131,6 @@ export function AgentEditorForm({
   handleAvatarClick,
   handleAvatarRemove,
 }: AgentEditorFormProps) {
-  const [mobileCreateMode, setMobileCreateMode] = useState<"default" | "integration">("default");
   const integrationChoices = filterRuntimeCompatibleIntegrations(
     adapterType,
     availableIntegrations,
@@ -156,45 +157,13 @@ export function AgentEditorForm({
     !defaultModel.trim();
 
   useEffect(() => {
-    if (!simplifyForMobileCreate) {
-      if (mobileCreateMode !== "default") {
-        setMobileCreateMode("default");
-      }
+    if (!restrictCreateToAuraRuntimes || !simplifyForMobileCreate) {
       return;
     }
-
-    if (integrationChoices.length === 0) {
-      if (mobileCreateMode !== "default") {
-        setMobileCreateMode("default");
-      }
-      if (authSource !== "aura_managed") {
-        setAuthSource("aura_managed");
-      }
-      return;
-    }
-
-    if (mobileCreateMode === "integration") {
-      if (authSource !== "org_integration") {
-        setAuthSource("org_integration");
-      }
-      if (!selectedIntegration) {
-        setIntegrationId(integrationChoices[0]?.integration_id ?? "");
-      }
-      return;
-    }
-
     if (authSource !== "aura_managed") {
       setAuthSource("aura_managed");
     }
-  }, [
-    authSource,
-    integrationChoices,
-    mobileCreateMode,
-    selectedIntegration,
-    setAuthSource,
-    setIntegrationId,
-    simplifyForMobileCreate,
-  ]);
+  }, [authSource, restrictCreateToAuraRuntimes, setAuthSource, simplifyForMobileCreate]);
 
   return (
     <div className={styles.form}>
@@ -248,6 +217,9 @@ export function AgentEditorForm({
             placeholder="e.g. Atlas"
             validationMessage={nameError}
           />
+          <Text variant="muted" size="sm">
+            Use letters, numbers, hyphens, or underscores.
+          </Text>
         </div>
 
         <div className={styles.fieldGroup}>
@@ -268,15 +240,13 @@ export function AgentEditorForm({
       </FormSection>
 
       <FormSection title={simplifyForMobileCreate ? "Remote Setup" : "Setup"}>
-        {simplifyForMobileCreate ? (
+        {restrictCreateToAuraRuntimes && simplifyForMobileCreate ? (
           <div className={styles.setupSummary}>
             <Text size="sm" weight="medium">
-              {mobileCreateMode === "integration" ? "Organization Connection" : "Aura Remote Agent"}
+              Aura Swarm
             </Text>
             <Text variant="muted" size="sm">
-              {mobileCreateMode === "integration"
-                ? "Use a shared provider connection from your organization for this remote Aura agent."
-                : "Mobile creates a remote Aura agent you can monitor, chat with, and manage from your phone."}
+              Mobile creates a remote Aura agent that uses Aura-managed credentials and billing.
             </Text>
 
             <div className={styles.summaryList}>
@@ -286,53 +256,40 @@ export function AgentEditorForm({
               </div>
               <div className={styles.summaryRow}>
                 <Text size="xs" variant="muted">Runs On</Text>
-                <Text size="sm">Remote Cloud</Text>
+                <Text size="sm">Aura Swarm</Text>
               </div>
               <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Credentials</Text>
-                <Text size="sm">
-                  {mobileCreateMode === "default"
-                    ? "Managed by Aura"
-                    : selectedIntegration
-                      ? getIntegrationLabel(selectedIntegration.provider)
-                      : "Choose a connection"}
-                </Text>
+                <Text size="xs" variant="muted">Billing</Text>
+                <Text size="sm">Aura-managed</Text>
               </div>
             </div>
+          </div>
+        ) : restrictCreateToAuraRuntimes ? (
+          <div className={styles.setupSummary}>
+            <Text size="sm" weight="medium">
+              Choose where this Aura agent runs
+            </Text>
+            <Text variant="muted" size="sm">
+              New agents now use Aura-managed credentials and billing by default.
+            </Text>
 
-            {mobileCreateMode === "integration" ? (
-              <>
-                <button
-                  type="button"
-                  className={styles.inlineAction}
-                  onClick={() => setMobileCreateMode("default")}
-                >
-                  Back to Aura-managed setup
-                </button>
+            <RunsOnFields
+              adapterType="aura_harness"
+              environment={environment}
+              setEnvironment={setEnvironment}
+              auraLabels
+            />
 
-                <IntegrationPicker
-                  integrationChoices={integrationChoices}
-                  integrationId={integrationId}
-                  setIntegrationId={setIntegrationId}
-                />
-              </>
-            ) : (
-              <>
-                {integrationChoices.length > 0 ? (
-                  <button
-                    type="button"
-                    className={styles.inlineAction}
-                    onClick={() => setMobileCreateMode("integration")}
-                  >
-                    Use organization connection instead
-                  </button>
-                ) : null}
-
-                <Text variant="muted" size="xs" className={styles.mobileCreateHint}>
-                  Use desktop if you need local or custom runtime configuration.
-                </Text>
-              </>
-            )}
+            <div className={styles.summaryList}>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Agent Type</Text>
+                <Text size="sm">Aura</Text>
+              </div>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Billing</Text>
+                <Text size="sm">Aura-managed</Text>
+              </div>
+            </div>
           </div>
         ) : !showAdvancedRuntime ? (
           <div className={styles.setupSummary}>
@@ -548,11 +505,13 @@ function RunsOnFields({
   environment,
   setEnvironment,
   compact = false,
+  auraLabels = false,
 }: {
   adapterType: string;
   environment: string;
   setEnvironment: (v: string) => void;
   compact?: boolean;
+  auraLabels?: boolean;
 }) {
   return (
     <div className={styles.fieldGroup}>
@@ -565,11 +524,11 @@ function RunsOnFields({
         >
           <span className={styles.choiceTitle}>
             <Monitor size={14} />
-            This Machine
+            {auraLabels ? "Aura Local" : "This Machine"}
           </span>
           <span className={styles.choiceBody}>
             {compact
-              ? "Local"
+              ? (auraLabels ? "Aura Local" : "Local")
               : "Run on the local host where Aura OS and your local tools are available."}
           </span>
         </button>
@@ -581,12 +540,14 @@ function RunsOnFields({
           >
             <span className={styles.choiceTitle}>
               <Cloud size={14} />
-              Cloud
+              {auraLabels ? "Aura Swarm" : "Cloud"}
             </span>
             <span className={styles.choiceBody}>
               {compact
-                ? "Isolated"
-                : "Use a stronger isolation boundary for Aura-managed execution."}
+                ? (auraLabels ? "Aura Swarm" : "Isolated")
+                : auraLabels
+                  ? "Run on Aura Swarm with Aura-managed billing and credentials."
+                  : "Use a stronger isolation boundary for Aura-managed execution."}
             </span>
           </button>
         ) : null}

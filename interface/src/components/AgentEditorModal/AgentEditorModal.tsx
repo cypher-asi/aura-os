@@ -56,6 +56,7 @@ export function AgentEditorModal({
       defaultModel={form.defaultModel}
       setDefaultModel={form.setDefaultModel}
       simplifyForMobileCreate={form.simplifyForMobileCreate}
+      restrictCreateToAuraRuntimes={form.restrictCreateToAuraRuntimes}
       availableIntegrations={form.availableIntegrations}
       nameError={form.nameError}
       setNameError={form.setNameError}

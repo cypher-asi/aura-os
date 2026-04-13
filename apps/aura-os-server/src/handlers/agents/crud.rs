@@ -17,6 +17,23 @@ use tracing::{info, warn};
 const SWARM_AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const SWARM_AGENT_READY_TIMEOUT: Duration = Duration::from_secs(90);
 
+fn agent_name_has_supported_format(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+}
+
+fn ensure_supported_agent_name(name: &str) -> ApiResult<()> {
+    if agent_name_has_supported_format(name) {
+        Ok(())
+    } else {
+        Err(ApiError::bad_request(
+            "agent name must use only letters, numbers, hyphens, or underscores",
+        ))
+    }
+}
+
 fn normalize_environment(
     adapter_type: &str,
     environment: Option<String>,
@@ -118,6 +135,7 @@ pub(crate) async fn create_agent(
     AuthJwt(jwt): AuthJwt,
     Json(body): Json<CreateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
+    ensure_supported_agent_name(body.name.trim())?;
     let client = state.require_network_client()?;
     let runtime_config = build_runtime_config(
         body.adapter_type.clone(),
@@ -135,7 +153,7 @@ pub(crate) async fn create_agent(
 
     let net_req = aura_os_network::CreateAgentRequest {
         org_id: body.org_id.map(|id| id.to_string()),
-        name: body.name,
+        name: body.name.trim().to_string(),
         role: Some(body.role),
         personality: Some(body.personality),
         system_prompt: Some(body.system_prompt),
@@ -291,9 +309,10 @@ async fn provision_swarm_agent(
     agent_name: &str,
 ) -> ApiResult<ProvisionedSwarmAgent> {
     let url = format!("{}/v1/agents", swarm_base_url);
+    let provision_name = sanitize_swarm_agent_name(agent_name, agent_id);
 
     let body = serde_json::json!({
-        "name": agent_name,
+        "name": provision_name,
         "agent_id": agent_id,
     });
 
@@ -341,6 +360,39 @@ struct ProvisionedSwarmAgent {
     agent_id: String,
     vm_id: String,
     status: String,
+}
+
+fn sanitize_swarm_agent_name(agent_name: &str, agent_id: &str) -> String {
+    let mut sanitized = String::with_capacity(agent_name.len());
+    let mut last_was_separator = false;
+
+    for ch in agent_name.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+            sanitized.push(ch.to_ascii_lowercase());
+            last_was_separator = false;
+        } else if !last_was_separator {
+            sanitized.push('-');
+            last_was_separator = true;
+        }
+    }
+
+    let sanitized = sanitized.trim_matches('-').trim_matches('_').to_string();
+    if !sanitized.is_empty() {
+        return sanitized;
+    }
+
+    let fallback = agent_id
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .take(12)
+        .collect::<String>()
+        .to_ascii_lowercase();
+
+    if fallback.is_empty() {
+        "aura-agent".to_string()
+    } else {
+        format!("aura-agent-{fallback}")
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -476,6 +528,12 @@ pub(crate) async fn update_agent(
         .await
         .or_else(|_| state.agent_service.get_agent_local(&agent_id))
         .map_err(|e| ApiError::not_found(format!("agent not found: {e}")))?;
+    if let Some(name) = body.name.as_ref() {
+        let trimmed = name.trim();
+        if trimmed != existing.name {
+            ensure_supported_agent_name(trimmed)?;
+        }
+    }
     let merged_machine_type = body
         .machine_type
         .clone()
@@ -505,7 +563,7 @@ pub(crate) async fn update_agent(
         _ => None,
     };
     let net_req = aura_os_network::UpdateAgentRequest {
-        name: body.name,
+        name: body.name.map(|value| value.trim().to_string()),
         role: body.role,
         personality: body.personality,
         system_prompt: body.system_prompt,
@@ -587,7 +645,9 @@ pub(crate) async fn delete_agent(
 
 #[cfg(test)]
 mod tests {
-    use super::build_runtime_config;
+    use super::{
+        agent_name_has_supported_format, build_runtime_config, sanitize_swarm_agent_name,
+    };
 
     #[test]
     fn aura_defaults_to_aura_managed() {
@@ -702,6 +762,39 @@ mod tests {
         .expect_err("missing integration should fail");
 
         assert!(format!("{error:?}").contains("requires an attached integration"));
+    }
+
+    #[test]
+    fn swarm_agent_name_is_sanitized_for_gateway() {
+        assert_eq!(
+            sanitize_swarm_agent_name("Aura Swarm Validation", "12345678-1234"),
+            "aura-swarm-validation"
+        );
+        assert_eq!(
+            sanitize_swarm_agent_name("Team's Builder #1", "12345678-1234"),
+            "team-s-builder-1"
+        );
+    }
+
+    #[test]
+    fn swarm_agent_name_falls_back_to_agent_id_when_display_name_is_symbols() {
+        assert_eq!(
+            sanitize_swarm_agent_name("!!!", "ABCDEF12-3456-7890"),
+            "aura-agent-abcdef123456"
+        );
+    }
+
+    #[test]
+    fn agent_name_rule_accepts_ascii_slug_names() {
+        assert!(agent_name_has_supported_format("Aura_Local"));
+        assert!(agent_name_has_supported_format("aura-swarm-01"));
+    }
+
+    #[test]
+    fn agent_name_rule_rejects_spaces_and_symbols() {
+        assert!(!agent_name_has_supported_format("Aura Local"));
+        assert!(!agent_name_has_supported_format("Aura!"));
+        assert!(!agent_name_has_supported_format(""));
     }
 }
 
