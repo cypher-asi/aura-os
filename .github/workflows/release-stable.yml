@@ -93,6 +93,9 @@ jobs:
       - name: Install cargo-packager
         run: cargo install cargo-packager --locked
 
+      - name: Prepare bundled aura-node sidecar
+        run: node infra/scripts/release/prepare-desktop-sidecar.mjs
+
       - name: Build interface
         working-directory: interface
         run: |
