@@ -163,13 +163,19 @@ pub(crate) async fn post_update_channel(
     Json(req): Json<SetChannelRequest>,
 ) -> Json<serde_json::Value> {
     let old = {
-        let mut ch = state.channel.write().expect("updater channel lock poisoned");
+        let mut ch = state
+            .channel
+            .write()
+            .expect("updater channel lock poisoned");
         let old = *ch;
         *ch = req.channel;
         old
     };
     if let Err(error) = state.persist_channel(req.channel) {
-        let mut ch = state.channel.write().expect("updater channel lock poisoned");
+        let mut ch = state
+            .channel
+            .write()
+            .expect("updater channel lock poisoned");
         *ch = old;
         warn!(error = %error, channel = %req.channel, "failed to persist update channel");
         return Json(serde_json::json!({

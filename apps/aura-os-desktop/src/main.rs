@@ -823,13 +823,30 @@ fn bind_listener() -> (StdTcpListener, u16, String) {
         .and_then(|value| value.parse::<u16>().ok())
         .filter(|port| *port > 0);
 
-    let std_listener = if let Some(port) = configured_port {
-        StdTcpListener::bind(format!("127.0.0.1:{port}"))
-            .unwrap_or_else(|_| panic!("failed to bind configured AURA_SERVER_PORT={port}"))
-    } else {
+    let bind_fallback_listener = || {
         StdTcpListener::bind(format!("127.0.0.1:{PREFERRED_PORT}"))
             .or_else(|_| StdTcpListener::bind("127.0.0.1:0"))
             .expect("failed to bind to an available port")
+    };
+
+    let std_listener = if let Some(port) = configured_port {
+        match StdTcpListener::bind(format!("127.0.0.1:{port}")) {
+            Ok(listener) => listener,
+            Err(error) if ci_mode_enabled() => {
+                panic!("failed to bind configured AURA_SERVER_PORT={port}: {error}")
+            }
+            Err(error) => {
+                warn!(
+                    %error,
+                    configured_port = port,
+                    fallback_port = PREFERRED_PORT,
+                    "configured AURA_SERVER_PORT unavailable; falling back to an available port"
+                );
+                bind_fallback_listener()
+            }
+        }
+    } else {
+        bind_fallback_listener()
     };
     std_listener
         .set_nonblocking(true)
@@ -1109,9 +1126,7 @@ mod tests {
         let exe_dir = Path::new("/tmp/Aura.app/Contents/MacOS");
         let candidates = interface_dir_candidates(Some(exe_dir));
 
-        assert!(candidates.contains(&PathBuf::from(
-            "/tmp/Aura.app/Contents/Resources/dist"
-        )));
+        assert!(candidates.contains(&PathBuf::from("/tmp/Aura.app/Contents/Resources/dist")));
         assert!(candidates.contains(&PathBuf::from(
             "/tmp/Aura.app/Contents/Resources/interface/dist"
         )));

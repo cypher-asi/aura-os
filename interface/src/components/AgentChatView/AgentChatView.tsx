@@ -222,7 +222,7 @@ function ProjectAgentChatPanel({
     resetEvents([], { allowWhileStreaming: true });
   }, [resetEvents]);
 
-  const { historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
+  const { historyMessages, historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
     historyKey,
     streamKey,
     fetchFn,
@@ -302,6 +302,7 @@ function ProjectAgentChatPanel({
         errorMessage={historyError ? historyError : null}
         emptyMessage={isSessionView ? "No events in this session" : undefined}
         scrollResetKey={panelKey}
+        historyMessages={historyMessages}
         projects={currentProject}
         selectedProjectId={projectId}
       />

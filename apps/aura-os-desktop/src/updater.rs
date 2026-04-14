@@ -18,8 +18,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use tracing::{error, info, warn};
 use std::sync::RwLock;
+use tracing::{error, info, warn};
 
 const CHECK_INTERVAL: Duration = Duration::from_secs(30 * 60);
 const CHECK_TIMEOUT: Duration = Duration::from_secs(30);
@@ -420,15 +420,17 @@ pub(crate) fn spawn_update_loop(state: UpdateState) {
                 Ok(Ok(None)) => {}
                 Ok(Err(e)) => {
                     error!(error = %e, "update check failed");
-                    *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
-                        error: e.to_string(),
-                    };
+                    *state.status.write().expect("updater status lock poisoned") =
+                        UpdateStatus::Failed {
+                            error: e.to_string(),
+                        };
                 }
                 Err(e) => {
                     error!(error = %e, "update task panicked");
-                    *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
-                        error: format!("update task failed: {e}"),
-                    };
+                    *state.status.write().expect("updater status lock poisoned") =
+                        UpdateStatus::Failed {
+                            error: format!("update task failed: {e}"),
+                        };
                 }
             }
             tokio::time::sleep(CHECK_INTERVAL).await;
@@ -452,15 +454,17 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
             Ok(Ok(None)) => {}
             Ok(Err(e)) => {
                 warn!(error = %e, "recheck failed");
-                *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
-                    error: e.to_string(),
-                };
+                *state.status.write().expect("updater status lock poisoned") =
+                    UpdateStatus::Failed {
+                        error: e.to_string(),
+                    };
             }
             Err(e) => {
                 warn!(error = %e, "recheck task failed");
-                *state.status.write().expect("updater status lock poisoned") = UpdateStatus::Failed {
-                    error: format!("update task failed: {e}"),
-                };
+                *state.status.write().expect("updater status lock poisoned") =
+                    UpdateStatus::Failed {
+                        error: format!("update task failed: {e}"),
+                    };
             }
         }
     });

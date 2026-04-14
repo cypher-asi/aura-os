@@ -48,7 +48,7 @@ export function useProjectListActions() {
 
   useEffect(() => {
     if (!ctxMenu) return;
-    const handleMouseDown = (e: MouseEvent) => {
+    const handleDocumentClick = (e: MouseEvent) => {
       if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
         setCtxMenu(null);
       }
@@ -56,10 +56,10 @@ export function useProjectListActions() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setCtxMenu(null);
     };
-    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("click", handleDocumentClick);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("click", handleDocumentClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [ctxMenu]);
