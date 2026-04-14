@@ -15,11 +15,23 @@ interface InlineRenameInputProps {
 
 const MAX_RETRIES = 10;
 const RETRY_MS = 30;
+const INLINE_RENAME_LABEL_SELECTOR = "[data-inline-rename-label]";
+
+function hasLabelClass(element: Element): element is HTMLElement {
+  return element instanceof HTMLElement
+    && (element.getAttribute("class") ?? "").toLowerCase().includes("label");
+}
 
 function findLabelElement(id: string): { row: HTMLElement; label: HTMLElement } | null {
   const row = document.getElementById(id);
   if (!row) return null;
-  const label = row.querySelector<HTMLElement>("[class*='label']");
+  const anchoredLabel = row.querySelector<HTMLElement>(INLINE_RENAME_LABEL_SELECTOR);
+  if (anchoredLabel) {
+    return { row, label: anchoredLabel };
+  }
+  const label = Array
+    .from(row.querySelectorAll("*"))
+    .find(hasLabelClass);
   if (!label) return null;
   return { row, label };
 }

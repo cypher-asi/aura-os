@@ -76,7 +76,9 @@ function LeftMenuLeafRow({
       onClick={entry.disabled ? undefined : entry.onSelect}
     >
       {entry.icon ? <span className={styles.agentIcon}>{entry.icon}</span> : null}
-      <span className={styles.agentLabel}>{entry.label}</span>
+      <span className={styles.agentLabel} data-inline-rename-label>
+        {entry.label}
+      </span>
       {entry.suffix ? <span className={styles.agentSuffix}>{entry.suffix}</span> : null}
     </button>
   );
@@ -127,7 +129,9 @@ function LeftMenuGroup({ entry }: { entry: LeftMenuGroupEntry }) {
           onClick={entry.onActivate}
           onKeyDown={handleProjectKeyDown}
         >
-          <span className={styles.projectLabel}>{entry.label}</span>
+          <span className={styles.projectLabel} data-inline-rename-label>
+            {entry.label}
+          </span>
           <span
             className={`${styles.projectChevronWrap} ${entry.toggleMode === "secondary" ? styles.projectChevronWrapInteractive : ""}`}
             aria-hidden="true"
