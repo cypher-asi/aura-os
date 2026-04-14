@@ -203,10 +203,10 @@ jobs:
               text=True,
           ).stdout.strip()
 
-          match = re.search(r"CN=([^,]+)", subject)
+          match = re.search(r"CN=((?:\\.|[^,])+)", subject)
           if not match:
               raise SystemExit(f"Unable to derive signing identity from certificate subject: {subject}")
-          signing_identity = match.group(1)
+          signing_identity = re.sub(r"\\(.)", r"\1", match.group(1))
 
           env_path = Path(os.environ["GITHUB_ENV"])
           with env_path.open("a", encoding="utf-8") as fh:
@@ -229,7 +229,12 @@ jobs:
 
           cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
           text = cargo_toml.read_text(encoding="utf-8")
-          identity_line = f'signing-identity = "{os.environ["MACOS_SIGNING_IDENTITY"]}"'
+          escaped_identity = (
+              os.environ["MACOS_SIGNING_IDENTITY"]
+              .replace("\\", "\\\\")
+              .replace('"', '\\"')
+          )
+          identity_line = f'signing-identity = "{escaped_identity}"'
 
           if "signing-identity =" in text:
               text = re.sub(r'^signing-identity = ".*"$', identity_line, text, flags=re.MULTILINE)
@@ -241,6 +246,10 @@ jobs:
 
           cargo_toml.write_text(text, encoding="utf-8")
           PY
+
+      - name: Validate macOS packager manifest
+        if: matrix.target == 'macos'
+        run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
 
       - name: Package installer
         env:
