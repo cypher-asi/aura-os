@@ -8,3 +8,8 @@
 .list [class*="itemContent"] {
   min-height: 28px;
 }
+
+.list button[aria-selected="true"],
+.list button[aria-selected="true"]:hover {
+  background: var(--color-overlay-subtle) !important;
+}

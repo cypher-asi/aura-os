@@ -117,7 +117,7 @@
 
 .feedList button[aria-selected="true"]:hover,
 .taskExplorer button[aria-selected="true"]:hover {
-  background: var(--color-overlay-light);
+  background: var(--color-overlay-subtle);
   color: #ffffff;
 }
 

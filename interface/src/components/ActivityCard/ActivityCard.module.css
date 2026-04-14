@@ -204,11 +204,11 @@
 /* ── Active card ── */
 
 .cardActive {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-bg, #111) 88%, white 12%);
 }
 
 .cardActive:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-bg, #111) 88%, white 12%);
 }
 
 /* ── Comment preview ── */
