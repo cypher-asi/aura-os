@@ -146,6 +146,24 @@ describe("projects-list-store", () => {
 
       expect(useProjectsListStore.getState().loadingProjects).toBe(false);
     });
+
+    it("refetches even when a cached project list is still fresh", async () => {
+      const cachedProject = makeProject("p1", "2025-06-01T00:00:00Z");
+      const renamedProject = {
+        ...cachedProject,
+        name: "Renamed Project",
+        updated_at: "2025-06-02T00:00:00Z",
+      };
+
+      queryClient.setQueryData(["projects", "list", "all"], [cachedProject]);
+      useProjectsListStore.setState({ projects: [cachedProject], loadingProjects: false });
+      mockApi.listProjects.mockResolvedValue([renamedProject]);
+
+      await useProjectsListStore.getState().refreshProjects();
+
+      expect(mockApi.listProjects).toHaveBeenCalledTimes(1);
+      expect(useProjectsListStore.getState().projects).toEqual([renamedProject]);
+    });
   });
 
   describe("setAgentsByProject", () => {

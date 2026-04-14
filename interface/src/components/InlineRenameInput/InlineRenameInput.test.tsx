@@ -34,6 +34,7 @@ describe("InlineRenameInput", () => {
     label.setAttribute("data-inline-rename-label", "");
     label.className = "projectLabel";
     label.textContent = "Sidebar Project";
+    label.style.color = "rgb(255, 255, 255)";
     vi.spyOn(label, "getBoundingClientRect").mockReturnValue(
       makeRect({ left: 24, top: 32, width: 180, height: 20 }),
     );
@@ -57,9 +58,10 @@ describe("InlineRenameInput", () => {
     );
 
     const input = await screen.findByDisplayValue("Sidebar Project");
+    const overlay = input.parentElement as HTMLElement;
 
     await waitFor(() => {
-      expect(input).toHaveStyle({
+      expect(overlay).toHaveStyle({
         visibility: "visible",
         left: "24px",
         top: "32px",
@@ -69,6 +71,7 @@ describe("InlineRenameInput", () => {
     });
 
     expect(label.style.visibility).toBe("hidden");
+    expect(input.style.caretColor).toBe("rgb(255, 255, 255)");
     expect(onCancel).not.toHaveBeenCalled();
 
     unmount();
@@ -110,14 +113,67 @@ describe("InlineRenameInput", () => {
     );
 
     const input = await screen.findByDisplayValue("Platform Engineering");
+    const overlay = input.parentElement as HTMLElement;
 
     await waitFor(() => {
-      expect(input).toHaveStyle({
+      expect(overlay).toHaveStyle({
         left: "24px",
         top: "32px",
         width: "192px",
         fontSize: "11px",
         fontWeight: "400",
+      });
+    });
+
+    unmount();
+  });
+
+  it("does not shrink the inline rename field while editing shorter text", async () => {
+    const row = document.createElement("button");
+    row.id = "project-4";
+
+    const label = document.createElement("span");
+    label.setAttribute("data-inline-rename-label", "");
+    label.className = "projectLabel";
+    label.textContent = "Platform Engineering";
+    vi.spyOn(label, "getBoundingClientRect").mockReturnValue(
+      makeRect({ left: 24, top: 32, width: 96, height: 20 }),
+    );
+
+    row.append(label);
+    document.body.append(row);
+
+    let scrollWidth = 180;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+    vi.spyOn(HTMLInputElement.prototype, "scrollWidth", "get").mockImplementation(() => scrollWidth);
+
+    const { unmount } = render(
+      <InlineRenameInput
+        target={{ id: "project-4", name: "Platform Engineering" }}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const input = await screen.findByDisplayValue("Platform Engineering");
+    const overlay = input.parentElement as HTMLElement;
+
+    await waitFor(() => {
+      expect(overlay).toHaveStyle({ width: "192px" });
+    });
+
+    scrollWidth = 40;
+    fireEvent.change(input, { target: { value: "Plat" } });
+
+    await waitFor(() => {
+      expect(overlay).toHaveStyle({
+        left: "24px",
+        top: "32px",
+        width: "192px",
       });
     });
 

@@ -142,7 +142,7 @@
   pointer-events: auto;
 }
 
-.inlineRenameInput {
+.inlineRenameOverlay {
   position: fixed;
   z-index: 10;
   box-sizing: border-box;
@@ -159,6 +159,38 @@
   appearance: none;
   -webkit-appearance: none;
   white-space: nowrap;
+  caret-color: currentColor;
+}
+
+.inlineRenameMirror {
+  display: block;
+  min-width: 100%;
+  white-space: pre;
+  pointer-events: none;
+  user-select: none;
+}
+
+.inlineRenameInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
   caret-color: currentColor;
 }
 

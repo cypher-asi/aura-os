@@ -101,7 +101,10 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     set({ loadingProjects: true });
     try {
       const nextProjects = await queryClient.fetchQuery(
-        projectsQueryOptions(getActiveOrgId()),
+        {
+          ...projectsQueryOptions(getActiveOrgId()),
+          staleTime: 0,
+        },
       );
       if (refreshRequestId === requestId) {
         set({ projects: nextProjects });
