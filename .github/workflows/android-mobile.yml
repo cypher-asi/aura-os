@@ -130,8 +130,8 @@ jobs:
       ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
       ANDROID_PLAY_TRACK: ${{ inputs.track }}
       ANDROID_VERSION_CODE: ${{ github.run_number }}
-      VITE_ANDROID_DEFAULT_HOST: ${{ secrets.VITE_ANDROID_DEFAULT_HOST }}
-      VITE_NATIVE_DEFAULT_HOST: ${{ secrets.VITE_NATIVE_DEFAULT_HOST }}
+      VITE_ANDROID_DEFAULT_HOST: ${{ vars.VITE_ANDROID_DEFAULT_HOST }}
+      VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
 
     steps:
       - uses: actions/checkout@v4
@@ -170,6 +170,13 @@ jobs:
       - name: Install fastlane gems
         working-directory: interface/android
         run: bundle install --jobs 4 --retry 3
+
+      - name: Resolve Android host defaults
+        shell: bash
+        run: |
+          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://aura-os-t565.onrender.com}"
+          echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
+          echo "VITE_ANDROID_DEFAULT_HOST=${VITE_ANDROID_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
 
       - name: Materialize Android upload keystore
         run: |

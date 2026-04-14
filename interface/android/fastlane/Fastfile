@@ -66,14 +66,32 @@ def ensure_signing!
   )
 end
 
+def prepare_release_versioning!
+  ENV["ANDROID_VERSION_CODE"] = build_number.to_s
+  ENV["ANDROID_VERSION_NAME"] = version_name
+end
+
+def build_release_apk
+  sync_android_web_assets
+  ensure_signing!
+  prepare_release_versioning!
+
+  gradle(
+    task: "assemble",
+    build_type: "Release",
+    project_dir: "."
+  )
+
+  lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH] || "./app/build/outputs/apk/release/app-release.apk"
+end
+
 def build_release_bundle
   sync_android_web_assets
   ensure_signing!
 
   # Feed versioning and signing through env-backed Gradle config so local and CI
   # release builds follow the same path.
-  ENV["ANDROID_VERSION_CODE"] = build_number.to_s
-  ENV["ANDROID_VERSION_NAME"] = version_name
+  prepare_release_versioning!
 
   gradle(
     task: "bundle",
@@ -162,5 +180,12 @@ platform :android do
   lane :preflight do
     ensure_play_store_release_requirements!
     UI.success("Android Play release configuration looks complete.")
+  end
+
+  desc "Build a signed release APK for GitHub distribution without Play upload"
+  lane :github_release do
+    apk_path = build_release_apk
+    UI.success("Android GitHub release APK ready at #{apk_path}")
+    apk_path
   end
 end

@@ -209,4 +209,15 @@ platform :ios do
     ensure_app_store_release_requirements!
     UI.success("iOS App Store release configuration looks complete.")
   end
+
+  desc "Build a signed IPA for GitHub distribution without TestFlight/App Store upload"
+  lane :github_release do
+    ensure_app_store_release_requirements!
+    api_key = app_store_api_key
+    sync_signing!(api_key: api_key, readonly: is_ci)
+    build_store_archive
+    ipa_path = "./build/AURA.ipa"
+    UI.success("iOS GitHub release IPA ready at #{ipa_path}")
+    ipa_path
+  end
 end

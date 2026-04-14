@@ -1,0 +1,260 @@
+name: Release Mobile Nightly
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      publish_live:
+        description: "Publish the GitHub mobile nightly release"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-nightly-release
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
+      VITE_ANDROID_DEFAULT_HOST: ${{ vars.VITE_ANDROID_DEFAULT_HOST }}
+      VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install Android SDK tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      - name: Install interface dependencies
+        working-directory: interface
+        run: npm ci
+
+      - name: Install fastlane gems
+        working-directory: interface/android
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Resolve Android host defaults
+        shell: bash
+        run: |
+          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://aura-os-t565.onrender.com}"
+          echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
+          echo "VITE_ANDROID_DEFAULT_HOST=${VITE_ANDROID_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
+
+      - name: Compute mobile nightly version
+        id: version
+        shell: bash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="mobile-nightly.${SHORT_SHA}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Materialize Android upload keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
+          echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed Android nightly APK
+        working-directory: interface/android
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+          ANDROID_VERSION_NAME: ${{ steps.version.outputs.version }}
+        run: bundle exec fastlane android github_release
+
+      - name: Stage Android release artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp interface/android/app/build/outputs/apk/release/*.apk "dist/aura-mobile_${{ steps.version.outputs.version }}_android.apk"
+
+      - name: Summarize Android release outputs
+        run: |
+          node infra/scripts/release/mobile-release-summary.mjs \
+            --platform android \
+            --mode ship \
+            --output-dir mobile-release-summary \
+            --roots interface/android/app/build/outputs
+
+      - name: Attach Android release summary
+        shell: bash
+        run: cat mobile-release-summary/android-ship-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Android nightly artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-nightly-android
+          if-no-files-found: error
+          path: |
+            dist/**
+            mobile-release-summary/**
+
+  build-ios:
+    runs-on: macos-latest
+    env:
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
+      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
+      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
+      IOS_APP_STORE_CONNECT_TEAM_ID: ${{ secrets.IOS_APP_STORE_CONNECT_TEAM_ID }}
+      IOS_APPLE_ID: ${{ secrets.IOS_APPLE_ID }}
+      IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+      IOS_BUILD_NUMBER: ${{ github.run_number }}
+      IOS_DEVELOPER_TEAM_ID: ${{ secrets.IOS_DEVELOPER_TEAM_ID }}
+      IOS_MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.IOS_MATCH_GIT_BASIC_AUTHORIZATION }}
+      IOS_MATCH_GIT_BRANCH: ${{ secrets.IOS_MATCH_GIT_BRANCH }}
+      IOS_MATCH_GIT_PRIVATE_KEY: ${{ secrets.IOS_MATCH_GIT_PRIVATE_KEY }}
+      IOS_MATCH_GIT_URL: ${{ secrets.IOS_MATCH_GIT_URL }}
+      MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
+      VITE_IOS_DEFAULT_HOST: ${{ vars.VITE_IOS_DEFAULT_HOST }}
+      VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      - name: Install interface dependencies
+        working-directory: interface
+        run: npm ci
+
+      - name: Install fastlane gems
+        working-directory: interface/ios
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Resolve iOS host defaults
+        shell: bash
+        run: |
+          DEFAULT_HOST="${VITE_NATIVE_DEFAULT_HOST:-https://aura-os-t565.onrender.com}"
+          echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
+          echo "VITE_IOS_DEFAULT_HOST=${VITE_IOS_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
+
+      - name: Compute mobile nightly version
+        id: version
+        shell: bash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="mobile-nightly.${SHORT_SHA}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed iOS nightly IPA
+        working-directory: interface/ios
+        run: bundle exec fastlane ios github_release
+
+      - name: Stage iOS release artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp interface/ios/build/AURA.ipa "dist/aura-mobile_${{ steps.version.outputs.version }}_ios.ipa"
+
+      - name: Summarize iOS release outputs
+        run: |
+          node infra/scripts/release/mobile-release-summary.mjs \
+            --platform ios \
+            --mode ship \
+            --output-dir mobile-release-summary \
+            --roots interface/ios/build
+
+      - name: Attach iOS release summary
+        shell: bash
+        run: cat mobile-release-summary/ios-ship-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload iOS nightly artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-nightly-ios
+          if-no-files-found: error
+          path: |
+            dist/**
+            mobile-release-summary/**
+
+  release:
+    needs:
+      - build-android
+      - build-ios
+    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute mobile nightly version
+        id: version
+        shell: bash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "version=mobile-nightly.${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Download mobile artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: mobile-artifacts
+          merge-multiple: true
+
+      - name: Create or update mobile nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mobile-nightly
+          name: "Mobile Nightly (${{ steps.version.outputs.version }})"
+          draft: false
+          prerelease: true
+          make_latest: false
+          files: mobile-artifacts/**/*
+          body: |
+            Automated mobile nightly build from `main` at ${{ github.sha }}.
+
+            **Version**: `${{ steps.version.outputs.version }}`
+
+            Assets:
+            - Android APK
+            - iOS IPA
+
+      - name: Attach mobile release summaries
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for file in mobile-artifacts/*-ship-summary.md; do
+            cat "$file" >> "$GITHUB_STEP_SUMMARY"
+          done
