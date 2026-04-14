@@ -440,7 +440,7 @@ async fn setup_project_chat_persistence(
 pub(crate) async fn setup_agent_chat_persistence(
     state: &AppState,
     agent_id: &AgentId,
-    agent_name: &str,
+    _agent_name: &str,
     jwt: &str,
 ) -> Option<ChatPersistCtx> {
     let storage = match state.storage_client.as_ref() {
@@ -462,21 +462,11 @@ pub(crate) async fn setup_agent_chat_persistence(
         info!(%agent_id, project_agent_id = %pa.id, %pid, "agent chat persistence: matched existing project agent");
         (pa.id.clone(), pid)
     } else {
-        warn!(%agent_id, "agent chat persistence: no matching project agents found, attempting auto-create");
-        match auto_create_project_agent(state, &storage, &jwt, agent_id, agent_name).await {
-            Some(pa) => {
-                let pid = pa.project_id.clone().unwrap_or_default();
-                if pid.is_empty() {
-                    warn!(%agent_id, "agent chat persistence: auto-created project agent has no project_id");
-                    return None;
-                }
-                (pa.id, pid)
-            }
-            None => {
-                warn!(%agent_id, "agent chat persistence: auto-create failed");
-                return None;
-            }
-        }
+        info!(
+            %agent_id,
+            "agent chat persistence: no matching project agents found; skipping persistence"
+        );
+        return None;
     };
 
     let session_id = match resolve_chat_session(&storage, &jwt, &pai, &pid).await {
@@ -730,55 +720,6 @@ async fn find_matching_project_agents(
     matched
 }
 
-/// Auto-create a project agent binding for an agent that doesn't have one yet.
-/// Returns the newly created `StorageProjectAgent`, or `None` on failure.
-async fn auto_create_project_agent(
-    state: &AppState,
-    storage: &aura_os_storage::StorageClient,
-    jwt: &str,
-    agent_id: &AgentId,
-    agent_name: &str,
-) -> Option<aura_os_storage::StorageProjectAgent> {
-    let all_projects = match projects::list_all_projects_from_network(state, jwt).await {
-        Ok(p) => p,
-        Err(_) => state.project_service.list_projects().unwrap_or_default(),
-    };
-    let project = all_projects.first()?;
-    let project_id_str = project.project_id.to_string();
-    let req = aura_os_storage::CreateProjectAgentRequest {
-        agent_id: agent_id.to_string(),
-        name: agent_name.to_string(),
-        org_id: None,
-        role: None,
-        personality: None,
-        system_prompt: None,
-        skills: None,
-        icon: None,
-        harness: None,
-    };
-    match storage
-        .create_project_agent(&project_id_str, jwt, &req)
-        .await
-    {
-        Ok(mut pa) => {
-            if pa.project_id.as_ref().map_or(true, |p| p.is_empty()) {
-                pa.project_id = Some(project_id_str.clone());
-            }
-            info!(
-                %agent_id,
-                project_agent_id = %pa.id,
-                project_id = %project_id_str,
-                "auto-create project agent: created"
-            );
-            Some(pa)
-        }
-        Err(e) => {
-            warn!(error = %e, %agent_id, "auto-create project agent: failed");
-            None
-        }
-    }
-}
-
 async fn collect_session_events(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
@@ -945,22 +886,13 @@ async fn aggregate_agent_events_from_storage_result(
         return Ok(Vec::new());
     };
     let agent_id_str = agent_id.to_string();
-    let mut matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
+    let matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
     if matching.is_empty() {
-        let agent_name = state
-            .agent_service
-            .get_agent_local(agent_id)
-            .map(|a| a.name)
-            .unwrap_or_else(|_| agent_id_str.clone());
-        if let Some(pa) =
-            auto_create_project_agent(state, storage, jwt, agent_id, &agent_name).await
-        {
-            info!(%agent_id, "aggregate events: auto-created project agent for event retrieval");
-            matching.push(pa);
-        } else {
-            warn!(%agent_id, "aggregate events: no matching project agents and auto-create failed — returning empty history");
-            return Ok(Vec::new());
-        }
+        info!(
+            %agent_id,
+            "aggregate events: no matching project agents found — returning empty history"
+        );
+        return Ok(Vec::new());
     }
     let sessions_outcome = fetch_all_sessions(storage, &jwt, &matching).await;
     info!(
@@ -1078,19 +1010,16 @@ pub(crate) async fn get_or_create_chat_session(
     }
 
     let harness = state.harness_for(harness_mode);
-    let session = harness
-        .open_session(session_config)
-        .await
-        .map_err(|e| {
-            let error_message = e.to_string();
-            warn!(
-                session_key = key,
-                ?harness_mode,
-                error = %error_message,
-                "Failed to open harness chat session"
-            );
-            map_harness_session_startup_error(&error_message)
-        })?;
+    let session = harness.open_session(session_config).await.map_err(|e| {
+        let error_message = e.to_string();
+        warn!(
+            session_key = key,
+            ?harness_mode,
+            error = %error_message,
+            "Failed to open harness chat session"
+        );
+        map_harness_session_startup_error(&error_message)
+    })?;
 
     let rx = session.events_tx.subscribe();
     let commands_tx = session.commands_tx.clone();
@@ -1135,15 +1064,11 @@ fn map_harness_session_startup_error(message: &str) -> (StatusCode, Json<ApiErro
         || normalized.contains("swarm agent readiness check failed")
         || normalized.contains("swarm websocket")
     {
-        return ApiError::bad_gateway(format!(
-            "remote agent runtime startup failed: {message}"
-        ));
+        return ApiError::bad_gateway(format!("remote agent runtime startup failed: {message}"));
     }
 
     if normalized.contains("local harness websocket connect failed") {
-        return ApiError::service_unavailable(format!(
-            "local harness is unavailable: {message}"
-        ));
+        return ApiError::service_unavailable(format!("local harness is unavailable: {message}"));
     }
 
     if normalized.contains("local harness session_init send failed")

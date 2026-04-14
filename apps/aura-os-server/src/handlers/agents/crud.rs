@@ -1,4 +1,5 @@
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::Json;
 use futures_util::future::join_all;
 use serde::Serialize;
@@ -8,7 +9,7 @@ use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, Ha
 use aura_os_network::{NetworkAgent, NetworkClient};
 
 use crate::dto::{CreateAgentRequest, UpdateAgentRequest};
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{map_network_error, map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
 
@@ -640,22 +641,9 @@ pub(crate) async fn delete_agent(
     let client = state.require_network_client()?;
 
     if let Some(ref storage) = state.storage_client {
-        let projects = projects::list_all_projects_from_network(&state, &jwt).await?;
-        let agent_id_str = agent_id.to_string();
-        for project in &projects {
-            if let Ok(agents) = storage
-                .list_project_agents(&project.project_id.to_string(), &jwt)
-                .await
-            {
-                let has_match = agents
-                    .iter()
-                    .any(|a| a.agent_id.as_deref() == Some(&agent_id_str));
-                if has_match {
-                    return Err(ApiError::conflict(
-                        "Cannot delete agent while it is added to projects. Remove it from all projects first.",
-                    ));
-                }
-            }
+        let bindings = resolve_agent_project_bindings(&state, storage, &jwt, &agent_id).await?;
+        if !bindings.is_empty() {
+            return Err(agent_delete_conflict(&bindings));
         }
     }
 
@@ -671,7 +659,8 @@ pub(crate) async fn delete_agent(
 #[cfg(test)]
 mod tests {
     use super::{
-        agent_name_has_supported_format, build_runtime_config, sanitize_swarm_agent_name,
+        agent_name_has_supported_format, build_runtime_config, format_agent_binding_details,
+        sanitize_swarm_agent_name, AgentProjectBinding,
     };
 
     #[test]
@@ -821,13 +810,141 @@ mod tests {
         assert!(!agent_name_has_supported_format("Aura!"));
         assert!(!agent_name_has_supported_format(""));
     }
+
+    #[test]
+    fn binding_details_list_unique_project_names() {
+        let details = format_agent_binding_details(&[
+            AgentProjectBinding {
+                project_agent_id: "pa-1".to_string(),
+                project_id: "p-1".to_string(),
+                project_name: "General".to_string(),
+            },
+            AgentProjectBinding {
+                project_agent_id: "pa-2".to_string(),
+                project_id: "p-2".to_string(),
+                project_name: "General".to_string(),
+            },
+            AgentProjectBinding {
+                project_agent_id: "pa-3".to_string(),
+                project_id: "p-3".to_string(),
+                project_name: "Workspace".to_string(),
+            },
+        ]);
+
+        assert_eq!(
+            details.as_deref(),
+            Some("Still added to: General, Workspace.")
+        );
+    }
+
+    #[test]
+    fn binding_details_summarize_long_project_lists() {
+        let details = format_agent_binding_details(&[
+            AgentProjectBinding {
+                project_agent_id: "pa-1".to_string(),
+                project_id: "p-1".to_string(),
+                project_name: "Alpha".to_string(),
+            },
+            AgentProjectBinding {
+                project_agent_id: "pa-2".to_string(),
+                project_id: "p-2".to_string(),
+                project_name: "Beta".to_string(),
+            },
+            AgentProjectBinding {
+                project_agent_id: "pa-3".to_string(),
+                project_id: "p-3".to_string(),
+                project_name: "Gamma".to_string(),
+            },
+            AgentProjectBinding {
+                project_agent_id: "pa-4".to_string(),
+                project_id: "p-4".to_string(),
+                project_name: "Delta".to_string(),
+            },
+        ]);
+
+        assert_eq!(
+            details.as_deref(),
+            Some("Still added to: Alpha, Beta, Delta and 1 more.")
+        );
+    }
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub(crate) struct AgentProjectBinding {
     pub project_agent_id: String,
     pub project_id: String,
     pub project_name: String,
+}
+
+async fn resolve_agent_project_bindings(
+    state: &AppState,
+    storage: &aura_os_storage::StorageClient,
+    jwt: &str,
+    agent_id: &AgentId,
+) -> ApiResult<Vec<AgentProjectBinding>> {
+    let all_projects = projects::list_all_projects_from_network(state, jwt).await?;
+    let agent_id_str = agent_id.to_string();
+    let project_ids: Vec<String> = all_projects
+        .iter()
+        .map(|project| project.project_id.to_string())
+        .collect();
+    let requests: Vec<_> = project_ids
+        .iter()
+        .map(|project_id| storage.list_project_agents(project_id, jwt))
+        .collect();
+    let results = join_all(requests).await;
+
+    let mut bindings = Vec::new();
+    for (result, project) in results.into_iter().zip(all_projects.iter()) {
+        let agents = result.map_err(map_storage_error)?;
+        bindings.extend(
+            agents
+                .into_iter()
+                .filter(|project_agent| project_agent.agent_id.as_deref() == Some(&agent_id_str))
+                .map(|project_agent| AgentProjectBinding {
+                    project_agent_id: project_agent.id,
+                    project_id: project.project_id.to_string(),
+                    project_name: project.name.clone(),
+                }),
+        );
+    }
+
+    Ok(bindings)
+}
+
+fn format_agent_binding_details(bindings: &[AgentProjectBinding]) -> Option<String> {
+    let mut project_names: Vec<&str> = bindings
+        .iter()
+        .map(|binding| binding.project_name.trim())
+        .filter(|name| !name.is_empty())
+        .collect();
+    project_names.sort_unstable();
+    project_names.dedup();
+
+    if project_names.is_empty() {
+        return None;
+    }
+
+    let preview = project_names.iter().take(3).copied().collect::<Vec<_>>();
+    let remaining = project_names.len().saturating_sub(preview.len());
+    let suffix = if remaining > 0 {
+        format!(" and {remaining} more")
+    } else {
+        String::new()
+    };
+
+    Some(format!("Still added to: {}{}.", preview.join(", "), suffix))
+}
+
+fn agent_delete_conflict(bindings: &[AgentProjectBinding]) -> (StatusCode, Json<ApiError>) {
+    (
+        StatusCode::CONFLICT,
+        Json(ApiError {
+            error: "Cannot delete agent while it is added to projects. Remove it from all projects first.".to_string(),
+            code: "conflict".to_string(),
+            details: format_agent_binding_details(bindings),
+        }),
+    )
 }
 
 pub(crate) async fn list_agent_project_bindings(
@@ -836,34 +953,7 @@ pub(crate) async fn list_agent_project_bindings(
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<AgentProjectBinding>>> {
     let storage = state.require_storage_client()?;
-    let all_projects = projects::list_all_projects_from_network(&state, &jwt).await?;
-    let agent_id_str = agent_id.to_string();
-
-    let project_ids: Vec<String> = all_projects
-        .iter()
-        .map(|p| p.project_id.to_string())
-        .collect();
-    let futs: Vec<_> = project_ids
-        .iter()
-        .map(|pid| storage.list_project_agents(pid, &jwt))
-        .collect();
-    let results = join_all(futs).await;
-
-    let mut bindings = Vec::new();
-    for (result, project) in results.into_iter().zip(all_projects.iter()) {
-        if let Ok(agents) = result {
-            for pa in agents {
-                if pa.agent_id.as_deref() == Some(&agent_id_str) {
-                    bindings.push(AgentProjectBinding {
-                        project_agent_id: pa.id.clone(),
-                        project_id: project.project_id.to_string(),
-                        project_name: project.name.clone(),
-                    });
-                }
-            }
-        }
-    }
-
+    let bindings = resolve_agent_project_bindings(&state, storage, &jwt, &agent_id).await?;
     Ok(Json(bindings))
 }
 

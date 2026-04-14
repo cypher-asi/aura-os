@@ -11,7 +11,6 @@ import { AgentConversationRow } from "../AgentConversationRow";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import {
   api,
-  ApiClientError,
   STANDALONE_AGENT_HISTORY_LIMIT,
 } from "../../../api/client";
 import {
@@ -21,10 +20,13 @@ import {
   useSortedAgents,
   LAST_AGENT_ID_KEY,
 } from "../stores";
+import { useChatHandoffStore } from "../../../stores/chat-handoff-store";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
 import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
+import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
+import { getApiErrorDetails, getApiErrorMessage } from "../../../utils/api-errors";
 
 import type { Agent } from "../../../types";
 import styles from "./AgentList.module.css";
@@ -54,6 +56,12 @@ function buildAgentMenuItems(agent: Agent, pinnedIds: Set<string>, favoriteIds: 
   }
 
   return items;
+}
+
+function getDeleteAgentErrorMessage(err: unknown): string {
+  const details = getApiErrorDetails(err);
+  const message = getApiErrorMessage(err);
+  return details ? `${message} ${details}` : message;
 }
 
 interface CtxMenuState {
@@ -111,7 +119,10 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const navigate = useNavigate();
   const { agentId } = useParams();
   const [showEditor, setShowEditor] = useState(false);
+  const [pendingCreatedAgentId, setPendingCreatedAgentId] = useState<string | null>(null);
   const shouldOpenMobileCreate = isMobileLibrary && new URLSearchParams(location.search).get("create") === "1";
+  const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
+  const beginCreateAgentHandoff = useChatHandoffStore((state) => state.beginCreateAgentHandoff);
 
   useEffect(() => {
     fetchAgents();
@@ -122,6 +133,17 @@ export function AgentList({ mode = "default" }: AgentListProps) {
       setShowEditor(true);
     }
   }, [shouldOpenMobileCreate]);
+
+  useEffect(() => {
+    if (!pendingCreatedAgentId) {
+      return;
+    }
+    if (pendingCreateAgentHandoff?.target === standaloneAgentHandoffTarget(pendingCreatedAgentId)) {
+      return;
+    }
+    setShowEditor(false);
+    setPendingCreatedAgentId(null);
+  }, [pendingCreateAgentHandoff, pendingCreatedAgentId]);
 
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
@@ -179,13 +201,14 @@ export function AgentList({ mode = "default" }: AgentListProps) {
 
   const handleAgentSaved = useCallback(
     (agent: Agent) => {
-      setShowEditor(false);
+      setPendingCreatedAgentId(agent.agent_id);
+      beginCreateAgentHandoff(standaloneAgentHandoffTarget(agent.agent_id), agent.name);
       fetchAgents({ force: true });
       navigate(`/agents/${agent.agent_id}`, {
         state: createAgentChatHandoffState(),
       });
     },
-    [fetchAgents, navigate],
+    [beginCreateAgentHandoff, fetchAgents, navigate],
   );
 
   const handleEditorClose = useCallback(() => {
@@ -263,11 +286,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
       setDeleteTarget(null);
       useAgentStore.getState().fetchAgents({ force: true });
     } catch (err) {
-      if (err instanceof ApiClientError) {
-        setDeleteError(err.body.error);
-      } else {
-        setDeleteError("Failed to delete agent.");
-      }
+      setDeleteError(getDeleteAgentErrorMessage(err));
     } finally {
       setDeleteLoading(false);
     }
@@ -414,6 +433,13 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         isOpen={showEditor}
         onClose={handleEditorClose}
         onSaved={handleAgentSaved}
+        closeOnSave={false}
+        isTransitioning={!!pendingCreatedAgentId}
+        transitionLabel={
+          pendingCreateAgentHandoff?.target === (pendingCreatedAgentId ? standaloneAgentHandoffTarget(pendingCreatedAgentId) : "")
+            ? pendingCreateAgentHandoff.label
+            : undefined
+        }
         titleOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
         submitLabelOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
       />

@@ -7,7 +7,7 @@ import { SuperAgentDashboardPanel } from "../../../components/SuperAgentDashboar
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { api } from "../../../api/client";
-import { getApiErrorMessage } from "../../../utils/api-errors";
+import { getApiErrorDetails, getApiErrorMessage } from "../../../utils/api-errors";
 import { useSelectedAgent, useAgentStore } from "../stores";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";
@@ -32,12 +32,19 @@ type ProjectBinding = {
   project_name: string;
 };
 
+function getDeleteAgentErrorMessage(err: unknown): string {
+  const details = getApiErrorDetails(err);
+  const message = getApiErrorMessage(err);
+  return details ? `${message} ${details}` : message;
+}
+
 function useDeleteAgent(
   selectedAgent: Agent | null,
   setSelectedAgent: (id: string | null) => void,
   navigate: ReturnType<typeof useNavigate>,
   requestDelete: () => void,
   closeDeleteConfirm: () => void,
+  refreshProjectBindings: () => Promise<void>,
 ) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -63,11 +70,18 @@ function useDeleteAgent(
       useAgentStore.getState().fetchAgents({ force: true });
       navigate("/agents");
     } catch (err) {
-      setDeleteError(getApiErrorMessage(err));
+      setDeleteError(getDeleteAgentErrorMessage(err));
+      await refreshProjectBindings();
     } finally {
       setDeleting(false);
     }
-  }, [selectedAgent, setSelectedAgent, navigate, handleCloseDeleteConfirm]);
+  }, [
+    selectedAgent,
+    setSelectedAgent,
+    navigate,
+    handleCloseDeleteConfirm,
+    refreshProjectBindings,
+  ]);
 
   return { deleting, deleteError, openDeleteConfirm, handleDelete, handleCloseDeleteConfirm };
 }
@@ -113,16 +127,33 @@ function DeleteConfirmModal({
 }
 
 function ProjectsTab({
-  agent: a,
   projectBindings,
-  setProjectBindings,
+  projectBindingsLoading,
+  projectBindingsError,
+  onRemoveBinding,
+  onRetry,
   isOwnAgent,
 }: {
-  agent: Agent;
   projectBindings: ProjectBinding[];
-  setProjectBindings: React.Dispatch<React.SetStateAction<ProjectBinding[]>>;
+  projectBindingsLoading: boolean;
+  projectBindingsError: string | null;
+  onRemoveBinding: (binding: ProjectBinding) => Promise<void>;
+  onRetry: () => void;
   isOwnAgent: boolean;
 }) {
+  if (projectBindingsLoading) {
+    return <div className={styles.tabEmptyState}>Loading projects...</div>;
+  }
+
+  if (projectBindingsError && projectBindings.length === 0) {
+    return (
+      <div className={styles.section}>
+        <Text size="xs" className={styles.deleteError}>{projectBindingsError}</Text>
+        <Button variant="ghost" size="sm" onClick={onRetry}>Retry</Button>
+      </div>
+    );
+  }
+
   if (projectBindings.length === 0) {
     return <div className={styles.tabEmptyState}>Not added to any projects</div>;
   }
@@ -130,6 +161,9 @@ function ProjectsTab({
   return (
     <div className={styles.section}>
       <Text size="xs" variant="muted" weight="medium">Added to Projects</Text>
+      {projectBindingsError && (
+        <Text size="xs" className={styles.deleteError}>{projectBindingsError}</Text>
+      )}
       <div className={styles.bindingsList}>
         {projectBindings.map((b) => (
           <div key={b.project_agent_id} className={styles.bindingRow}>
@@ -142,11 +176,10 @@ function ProjectsTab({
                 title="Remove from project"
                 onClick={async () => {
                   try {
-                    await api.agents.removeProjectBinding(a.agent_id, b.project_agent_id);
-                    setProjectBindings((prev) =>
-                      prev.filter((p) => p.project_agent_id !== b.project_agent_id),
-                    );
-                  } catch { /* ignore */ }
+                    await onRemoveBinding(b);
+                  } catch {
+                    // Error state is handled by the parent so the panel can stay consistent.
+                  }
                 }}
               >
                 <X size={12} />
@@ -184,16 +217,55 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     })),
   );
   const [projectBindings, setProjectBindings] = useState<ProjectBinding[]>([]);
+  const [projectBindingsLoading, setProjectBindingsLoading] = useState(false);
+  const [projectBindingsError, setProjectBindingsError] = useState<string | null>(null);
 
-  const del = useDeleteAgent(selectedAgent, setSelectedAgent, navigate, requestDelete, closeDeleteConfirm);
+  const refreshProjectBindings = useCallback(async () => {
+    if (!selectedAgent) {
+      setProjectBindings([]);
+      setProjectBindingsError(null);
+      setProjectBindingsLoading(false);
+      return;
+    }
+
+    setProjectBindingsLoading(true);
+    setProjectBindingsError(null);
+    try {
+      const bindings = await api.agents.listProjectBindings(selectedAgent.agent_id);
+      setProjectBindings(bindings);
+    } catch (err) {
+      setProjectBindings([]);
+      setProjectBindingsError(getApiErrorMessage(err));
+    } finally {
+      setProjectBindingsLoading(false);
+    }
+  }, [selectedAgent]);
+
+  const handleRemoveBinding = useCallback(async (binding: ProjectBinding) => {
+    if (!selectedAgent) return;
+    setProjectBindingsError(null);
+    try {
+      await api.agents.removeProjectBinding(selectedAgent.agent_id, binding.project_agent_id);
+      await useProjectsListStore.getState().refreshProjectAgents(binding.project_id);
+      await refreshProjectBindings();
+    } catch (err) {
+      setProjectBindingsError(getApiErrorMessage(err));
+      throw err;
+    }
+  }, [selectedAgent, refreshProjectBindings]);
+
+  const del = useDeleteAgent(
+    selectedAgent,
+    setSelectedAgent,
+    navigate,
+    requestDelete,
+    closeDeleteConfirm,
+    refreshProjectBindings,
+  );
 
   useEffect(() => {
-    if (selectedAgent) {
-      api.agents.listProjectBindings(selectedAgent.agent_id)
-        .then(setProjectBindings)
-        .catch(() => setProjectBindings([]));
-    }
-  }, [selectedAgent?.agent_id]);
+    void refreshProjectBindings();
+  }, [refreshProjectBindings]);
 
   if (!selectedAgent) {
     return <EmptyState>Select an agent to see details</EmptyState>;
@@ -220,9 +292,13 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
         {effectiveTab === "skills" && <SkillsTab agent={a} />}
         {effectiveTab === "projects" && (
           <ProjectsTab
-            agent={a}
             projectBindings={projectBindings}
-            setProjectBindings={setProjectBindings}
+            projectBindingsLoading={projectBindingsLoading}
+            projectBindingsError={projectBindingsError}
+            onRemoveBinding={handleRemoveBinding}
+            onRetry={() => {
+              void refreshProjectBindings();
+            }}
             isOwnAgent={isOwnAgent}
           />
         )}

@@ -1,5 +1,9 @@
 import { ApiClientError } from "../api/core";
-import { getApiErrorMessage, getAuthErrorMessage } from "./api-errors";
+import {
+  getApiErrorDetails,
+  getApiErrorMessage,
+  getAuthErrorMessage,
+} from "./api-errors";
 
 function makeApiError(
   status: number,
@@ -62,6 +66,23 @@ describe("getApiErrorMessage", () => {
 
   it("returns fallback for undefined", () => {
     expect(getApiErrorMessage(undefined)).toBe("An unexpected error occurred");
+  });
+});
+
+describe("getApiErrorDetails", () => {
+  it("returns trimmed details from an ApiClientError", () => {
+    const err = new ApiClientError(409, {
+      error: "Conflict",
+      code: "conflict",
+      details: "  Still added to: General.  ",
+    });
+
+    expect(getApiErrorDetails(err)).toBe("Still added to: General.");
+  });
+
+  it("returns null when details are missing", () => {
+    const err = makeApiError(409, "Conflict");
+    expect(getApiErrorDetails(err)).toBeNull();
   });
 });
 

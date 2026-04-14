@@ -19,6 +19,14 @@ export function getApiErrorMessage(err: unknown): string {
   return "An unexpected error occurred";
 }
 
+export function getApiErrorDetails(err: unknown): string | null {
+  if (err instanceof ApiClientError) {
+    const details = err.body.details?.trim();
+    return details ? details : null;
+  }
+  return null;
+}
+
 /**
  * Auth-specific variant that maps well-known HTTP status codes to
  * user-facing messages and detects network-level failures.
