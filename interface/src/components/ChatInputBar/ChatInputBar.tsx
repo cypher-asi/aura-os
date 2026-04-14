@@ -49,6 +49,7 @@ interface Props {
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
   isVisible?: boolean;
+  suppressFocusTransition?: boolean;
 }
 
 function AttachmentPreviews({ attachments, onRemove }: { attachments: AttachmentItem[]; onRemove: (id: string) => void }) {
@@ -73,6 +74,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   selectedCommands = [], onCommandsChange,
   projects = [], selectedProjectId, onProjectChange,
   isVisible = true,
+  suppressFocusTransition = false,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
   const chatUI = useChatUI(streamKey);
@@ -221,7 +223,12 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
       aria-hidden={isVisible ? undefined : true}
       data-visible={isVisible ? "true" : "false"}
     >
-      <div className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+      <div
+        className={`${styles.inputContainer}${suppressFocusTransition ? ` ${styles.inputContainerStatic}` : ""} ${isDragOver ? styles.dropZoneActive : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         {slashMenuOpen && (
           <SlashCommandMenu
             query={slashQuery}

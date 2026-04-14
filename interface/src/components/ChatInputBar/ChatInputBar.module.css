@@ -52,6 +52,10 @@
   margin-right: auto;
 }
 
+.inputContainerStatic {
+  transition: none;
+}
+
 .dropZoneActive {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 1px var(--color-accent);
