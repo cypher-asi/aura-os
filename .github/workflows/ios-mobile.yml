@@ -157,6 +157,7 @@ jobs:
           echo "VITE_IOS_DEFAULT_HOST=${VITE_IOS_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
 
       - name: Upload build with fastlane
+        timeout-minutes: 30
         working-directory: interface/ios
         run: bundle exec fastlane ios ${{ inputs.lane }}
 
@@ -182,3 +183,13 @@ jobs:
             interface/ios/build/**/*.ipa
             interface/ios/build/**/*.app
             interface/ios/build/**/*.xcarchive
+
+      - name: Upload iOS build logs on failure
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-logs
+          if-no-files-found: ignore
+          path: |
+            /Users/runner/Library/Logs/gym/**
+            interface/ios/build/**

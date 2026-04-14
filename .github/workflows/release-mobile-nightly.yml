@@ -192,6 +192,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build signed iOS nightly IPA
+        timeout-minutes: 30
         working-directory: interface/ios
         run: bundle exec fastlane ios github_release
 
@@ -221,6 +222,16 @@ jobs:
           path: |
             dist/**
             mobile-release-summary/**
+
+      - name: Upload iOS build logs on failure
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-nightly-ios-logs
+          if-no-files-found: ignore
+          path: |
+            /Users/runner/Library/Logs/gym/**
+            interface/ios/build/**
 
   release:
     needs:
