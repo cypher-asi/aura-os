@@ -259,6 +259,18 @@ jobs:
         if: matrix.target == 'macos'
         run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
 
+      - name: Skip duplicate packager prebuild in CI
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
+          lines = cargo_toml.read_text(encoding="utf-8").splitlines()
+          filtered = [line for line in lines if not line.strip().startswith("before-packaging-command = ")]
+          cargo_toml.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+          PY
+
       - name: Package installer
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
