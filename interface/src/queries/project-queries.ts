@@ -80,18 +80,120 @@ export function projectLayoutQueryOptions(projectId: string) {
   });
 }
 
+export type AgentInstanceUpdate =
+  Partial<AgentInstance> &
+  Pick<AgentInstance, "agent_instance_id" | "project_id">;
+
+function parseTimestamp(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function compareUpdatedAt(
+  currentUpdatedAt: string | null | undefined,
+  incomingUpdatedAt: string | null | undefined,
+): -1 | 0 | 1 | null {
+  const current = parseTimestamp(currentUpdatedAt);
+  const incoming = parseTimestamp(incomingUpdatedAt);
+  if (current === null || incoming === null) return null;
+  if (incoming < current) return -1;
+  if (incoming > current) return 1;
+  return 0;
+}
+
+function shouldPreserveMissingArchivedAgent(
+  agent: AgentInstance,
+  requestStartedAtMs: number | undefined,
+): boolean {
+  if (agent.status !== "archived" || requestStartedAtMs === undefined) {
+    return false;
+  }
+  const updatedAtMs = parseTimestamp(agent.updated_at);
+  return updatedAtMs !== null && updatedAtMs >= requestStartedAtMs;
+}
+
+export function mergeAgentUpdate(
+  currentAgent: AgentInstance,
+  incomingUpdate: AgentInstanceUpdate,
+): AgentInstance {
+  const updatedAtComparison = compareUpdatedAt(
+    currentAgent.updated_at,
+    incomingUpdate.updated_at,
+  );
+  const nextAgent = { ...currentAgent } as AgentInstance;
+
+  for (const [key, value] of Object.entries(incomingUpdate)) {
+    if (value === undefined || key === "status" || key === "updated_at") {
+      continue;
+    }
+    if (updatedAtComparison === -1) {
+      continue;
+    }
+    (nextAgent as unknown as Record<string, unknown>)[key] = value;
+  }
+
+  if (incomingUpdate.updated_at !== undefined && updatedAtComparison !== -1) {
+    nextAgent.updated_at = incomingUpdate.updated_at;
+  }
+
+  if (incomingUpdate.status !== undefined) {
+    const preserveArchivedStatus =
+      currentAgent.status === "archived" &&
+      incomingUpdate.status !== "archived" &&
+      updatedAtComparison !== 1;
+    if (!preserveArchivedStatus && updatedAtComparison !== -1) {
+      nextAgent.status = incomingUpdate.status;
+    }
+  }
+
+  return nextAgent;
+}
+
 export function mergeAgentIntoProjectAgents(
   agents: AgentInstance[] | undefined,
-  nextAgent: AgentInstance,
+  nextAgent: AgentInstanceUpdate,
 ): AgentInstance[] {
   const currentAgents = agents ?? [];
   const found = currentAgents.some(
     (agent) => agent.agent_instance_id === nextAgent.agent_instance_id,
   );
   if (!found) {
-    return [...currentAgents, nextAgent];
+    return [...currentAgents, nextAgent as AgentInstance];
   }
   return currentAgents.map((agent) =>
-    agent.agent_instance_id === nextAgent.agent_instance_id ? nextAgent : agent,
+    agent.agent_instance_id === nextAgent.agent_instance_id
+      ? mergeAgentUpdate(agent, nextAgent)
+      : agent,
   );
+}
+
+export function mergeProjectAgentsSnapshot(
+  currentAgents: AgentInstance[] | undefined,
+  incomingAgents: AgentInstance[],
+  options: { requestStartedAtMs?: number } = {},
+): AgentInstance[] {
+  const existingAgents = currentAgents ?? [];
+  const currentAgentsById = new Map(
+    existingAgents.map((agent) => [agent.agent_instance_id, agent] as const),
+  );
+  const incomingAgentIds = new Set(incomingAgents.map((agent) => agent.agent_instance_id));
+  const mergedAgents = incomingAgents.map((incomingAgent) => {
+    const currentAgent = currentAgentsById.get(incomingAgent.agent_instance_id);
+    return currentAgent
+      ? mergeAgentUpdate(currentAgent, incomingAgent)
+      : incomingAgent;
+  });
+
+  for (const currentAgent of existingAgents) {
+    if (incomingAgentIds.has(currentAgent.agent_instance_id)) {
+      continue;
+    }
+    if (!shouldPreserveMissingArchivedAgent(currentAgent, options.requestStartedAtMs)) {
+      continue;
+    }
+    mergedAgents.push(currentAgent);
+  }
+
+  return mergedAgents;
 }

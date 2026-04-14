@@ -3,6 +3,7 @@ import type { Agent, AgentInstance, Project } from "../types";
 import { queryClient } from "../lib/query-client";
 import {
   dedupeProjects,
+  mergeProjectAgentsSnapshot,
   projectAgentsQueryOptions,
   projectQueryKeys,
   projectsQueryOptions,
@@ -128,6 +129,7 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
 
   refreshProjectAgents: async (projectId: string) => {
     const requestId = (agentRefreshRequestIds[projectId] ?? 0) + 1;
+    const requestStartedAtMs = Date.now();
     agentRefreshRequestIds[projectId] = requestId;
     set((state) => ({
       loadingAgentsByProject: { ...state.loadingAgentsByProject, [projectId]: true },
@@ -141,10 +143,12 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
       if (agentRefreshRequestIds[projectId] !== requestId) {
         return get().agentsByProject[projectId] ?? result;
       }
-      set((state) => ({
-        agentsByProject: { ...state.agentsByProject, [projectId]: nextAgents },
-      }));
-      result = nextAgents;
+      get().setAgentsByProject((previous) => {
+        result = mergeProjectAgentsSnapshot(previous[projectId], nextAgents, {
+          requestStartedAtMs,
+        });
+        return { ...previous, [projectId]: result };
+      });
     } catch (error) {
       if (agentRefreshRequestIds[projectId] === requestId) {
         console.error("Failed to load project agents", error);
@@ -233,6 +237,7 @@ function scheduleAgentPrefetch(batchId: number): void {
 
     const nextProjectId = _queuedAgentPrefetchIds.shift();
     if (!nextProjectId) return;
+    const requestStartedAtMs = Date.now();
 
     useProjectsListStore.setState((state) => ({
       loadingAgentsByProject: {
@@ -246,11 +251,13 @@ function scheduleAgentPrefetch(batchId: number): void {
       .catch(() => [] as AgentInstance[])
       .then((agents) => {
         if (_batchId !== batchId) return;
+        useProjectsListStore.getState().setAgentsByProject((previous) => ({
+          ...previous,
+          [nextProjectId]: mergeProjectAgentsSnapshot(previous[nextProjectId], agents, {
+            requestStartedAtMs,
+          }),
+        }));
         useProjectsListStore.setState((state) => ({
-          agentsByProject: {
-            ...state.agentsByProject,
-            [nextProjectId]: agents,
-          },
           loadingAgentsByProject: {
             ...state.loadingAgentsByProject,
             [nextProjectId]: false,

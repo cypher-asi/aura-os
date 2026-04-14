@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { mergeAgentIntoProjectAgents } from "../../../../queries/project-queries";
 import type { useProjectListData } from "../../../../components/ProjectList/useProjectListData";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import { useAppUIStore } from "../../../../stores/app-ui-store";
@@ -50,18 +51,12 @@ function useTaskAgentInstanceUpdates(
       data.setAgentsByProject((previous) => {
         const existingAgents = previous[instance.project_id];
         if (!existingAgents) return previous;
+        if (!existingAgents.some((agent) => agent.agent_instance_id === instance.agent_instance_id)) {
+          return previous;
+        }
         return {
           ...previous,
-          [instance.project_id]: existingAgents.map((agent) =>
-            agent.agent_instance_id === instance.agent_instance_id
-              ? {
-                  ...agent,
-                  name: instance.name,
-                  status: instance.status,
-                  updated_at: instance.updated_at,
-                }
-              : agent,
-          ),
+          [instance.project_id]: mergeAgentIntoProjectAgents(existingAgents, instance),
         };
       });
     });

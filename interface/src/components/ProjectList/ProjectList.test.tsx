@@ -260,6 +260,35 @@ describe("ProjectList", () => {
     expect(screen.getByText("Archived Agent")).toBeInTheDocument();
   });
 
+  it("moves an agent into the Archived subgroup when project data updates", () => {
+    mockProjectsList.projects = [makeProject()];
+    mockProjectsList.agentsByProject = {
+      p1: [
+        { agent_instance_id: "a1", name: "Agent Alpha", status: "idle" },
+      ],
+    };
+
+    const view = renderList();
+
+    expect(screen.getByText("Agent Alpha")).toBeInTheDocument();
+    expect(screen.queryByText("Archived")).not.toBeInTheDocument();
+
+    mockProjectsList.agentsByProject = {
+      p1: [
+        { agent_instance_id: "a1", name: "Agent Alpha", status: "archived" },
+      ],
+    };
+
+    view.rerender(
+      <MemoryRouter initialEntries={["/projects"]}>
+        <ProjectList />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(screen.getByText("Agent Alpha")).toBeInTheDocument();
+  });
+
   it("shows an empty placeholder when a project's agents are loaded but empty", () => {
     mockProjectsList.projects = [makeProject()];
     mockProjectsList.agentsByProject = { p1: [] };

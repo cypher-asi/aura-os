@@ -53,6 +53,36 @@ function makeProject(id: string, updatedAt: string): Project {
   };
 }
 
+function makeAgentInstance(overrides: Partial<AgentInstance> = {}): AgentInstance {
+  return {
+    agent_instance_id: "ai1",
+    project_id: "p1",
+    agent_id: "agent-1",
+    org_id: "org-1",
+    name: "Agent Alpha",
+    role: "dev",
+    personality: "",
+    system_prompt: "",
+    skills: [],
+    icon: null,
+    machine_type: "local",
+    adapter_type: "aura_harness",
+    environment: "local_host",
+    auth_source: "aura_managed",
+    integration_id: null,
+    default_model: null,
+    workspace_path: null,
+    status: "idle",
+    current_task_id: null,
+    current_session_id: null,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    created_at: "2026-04-13T10:00:00.000Z",
+    updated_at: "2026-04-13T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   queryClient.clear();
   useProjectsListStore.setState({
@@ -136,7 +166,7 @@ describe("projects-list-store", () => {
 
   describe("refreshProjectAgents", () => {
     it("loads agents for a project", async () => {
-      const agent = { agent_instance_id: "ai1" } as AgentInstance;
+      const agent = makeAgentInstance();
       mockApi.listAgentInstances.mockResolvedValue([agent]);
 
       const result = await useProjectsListStore.getState().refreshProjectAgents("p1");
@@ -151,6 +181,28 @@ describe("projects-list-store", () => {
       const result = await useProjectsListStore.getState().refreshProjectAgents("p1");
 
       expect(result).toEqual([]);
+    });
+
+    it("preserves a freshly archived agent when an in-flight refresh resolves stale data", async () => {
+      let resolveAgents: ((agents: AgentInstance[]) => void) | undefined;
+      mockApi.listAgentInstances.mockReturnValue(
+        new Promise<AgentInstance[]>((resolve) => {
+          resolveAgents = resolve;
+        }),
+      );
+
+      const refreshPromise = useProjectsListStore.getState().refreshProjectAgents("p1");
+      const archivedAgent = makeAgentInstance({
+        status: "archived",
+        updated_at: new Date(Date.now() + 1_000).toISOString(),
+      });
+      useProjectsListStore.getState().setAgentsByProject({ p1: [archivedAgent] });
+      resolveAgents?.([]);
+
+      const result = await refreshPromise;
+
+      expect(result).toEqual([archivedAgent]);
+      expect(useProjectsListStore.getState().agentsByProject["p1"]).toEqual([archivedAgent]);
     });
   });
 
