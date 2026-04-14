@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CREATE_AGENT_CHAT_HANDOFF } from "../../../utils/chat-handoff";
 
@@ -12,6 +12,12 @@ const mocks = vi.hoisted(() => ({
   useSortedAgents: vi.fn(),
   useSidebarSearch: vi.fn(),
   useAgentStore: vi.fn(),
+  storeFetchAgents: vi.fn(),
+  storeRemoveAgent: vi.fn(),
+  pendingCreateAgentHandoff: null as { target: string; label?: string } | null,
+  beginCreateAgentHandoff: vi.fn((target: string, label?: string) => {
+    mocks.pendingCreateAgentHandoff = { target, label };
+  }),
   entries: {} as Record<string, unknown>,
   useChatHistoryStore: Object.assign(
     (selector: (state: { entries: Record<string, unknown> }) => unknown) => selector({ entries: {} }),
@@ -24,14 +30,44 @@ const mocks = vi.hoisted(() => ({
 }));
 Object.assign(mocks.useAgentStore, {
   getState: () => ({
-    fetchAgents: vi.fn(),
+    fetchAgents: mocks.storeFetchAgents,
+    removeAgent: mocks.storeRemoveAgent,
   }),
 });
 
 vi.mock("@cypher-asi/zui", () => ({
   ButtonPlus: (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>+</button>,
-  Menu: () => null,
-  Modal: ({ children, isOpen }: { children?: ReactNode; isOpen: boolean }) => (isOpen ? <div>{children}</div> : null),
+  Menu: ({
+    items,
+    onChange,
+  }: {
+    items: Array<{ id: string; label: string }>;
+    onChange: (id: string) => void;
+  }) => (
+    <div>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          data-testid={`menu-item-${item.id}`}
+          onClick={() => onChange(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  ),
+  Modal: ({
+    children,
+    footer,
+    isOpen,
+    title,
+  }: {
+    children?: ReactNode;
+    footer?: ReactNode;
+    isOpen: boolean;
+    title?: string;
+  }) => (isOpen ? <div><div>{title}</div>{children}{footer}</div> : null),
   Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
 }));
 
@@ -84,13 +120,21 @@ vi.mock("../AgentConversationRow", () => ({
   AgentConversationRow: ({
     agent,
     onClick,
+    onContextMenu,
     onMouseEnter,
   }: {
-    agent: { name: string };
+    agent: { agent_id: string; name: string };
     onClick: () => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
     onMouseEnter?: () => void;
   }) => (
-    <button type="button" onClick={onClick} onMouseEnter={onMouseEnter}>
+    <button
+      id={agent.agent_id}
+      type="button"
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      onMouseEnter={onMouseEnter}
+    >
       {agent.name}
     </button>
   ),
@@ -134,6 +178,16 @@ vi.mock("../../../stores/chat-history-store", () => ({
   agentHistoryKey: (agentId: string) => `agent:${agentId}`,
 }));
 
+vi.mock("../../../stores/chat-handoff-store", () => ({
+  useChatHandoffStore: (selector: (state: {
+    pendingCreateAgentHandoff: typeof mocks.pendingCreateAgentHandoff;
+    beginCreateAgentHandoff: typeof mocks.beginCreateAgentHandoff;
+  }) => unknown) => selector({
+    pendingCreateAgentHandoff: mocks.pendingCreateAgentHandoff,
+    beginCreateAgentHandoff: mocks.beginCreateAgentHandoff,
+  }),
+}));
+
 vi.mock("../../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => mocks.useSidebarSearch(),
 }));
@@ -158,9 +212,30 @@ const agent = {
   updated_at: "2026-03-20T00:00:00Z",
 };
 
+const secondAgent = {
+  ...agent,
+  agent_id: "agent-2",
+  name: "Reviewer Bot",
+  updated_at: "2026-03-19T00:00:00Z",
+};
+
 describe("AgentList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.pendingCreateAgentHandoff = null;
+    mocks.storeFetchAgents = vi.fn();
+    mocks.storeRemoveAgent = vi.fn();
+    mocks.useAgentStore.mockImplementation((selector: (state: {
+      togglePin: (agentId: string) => void;
+      toggleFavorite: (agentId: string) => void;
+      pinnedAgentIds: Set<string>;
+      favoriteAgentIds: Set<string>;
+    }) => unknown) => selector({
+      togglePin: vi.fn(),
+      toggleFavorite: vi.fn(),
+      pinnedAgentIds: new Set<string>(),
+      favoriteAgentIds: new Set<string>(),
+    }));
     Object.defineProperty(globalThis, "localStorage", {
       value: {
         getItem: vi.fn(() => null),
@@ -255,16 +330,64 @@ describe("AgentList", () => {
     });
     const user = userEvent.setup();
 
-    render(<AgentList mode="mobile-library" />);
+    const view = render(<AgentList mode="mobile-library" />);
 
     await user.click(screen.getByRole("button", { name: "Save Agent" }));
 
+    expect(screen.getByText("Create Agent Modal")).toBeVisible();
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1", {
       state: {
         agentChatHandoff: {
           type: CREATE_AGENT_CHAT_HANDOFF,
         },
       },
+    });
+
+    mocks.pendingCreateAgentHandoff = null;
+    view.rerender(<AgentList mode="mobile-library" />);
+
+    expect(screen.queryByText("Create Agent Modal")).not.toBeInTheDocument();
+  });
+
+  it("optimistically removes the deleted agent and selects a replacement", async () => {
+    mocks.useParams.mockReturnValue({ agentId: "agent-1" });
+    mocks.useAgents.mockReturnValue({
+      agents: [agent, secondAgent],
+      status: "ready",
+      fetchAgents: vi.fn(async () => {}),
+    });
+    mocks.useSortedAgents.mockReturnValue([agent, secondAgent]);
+    const setSelectedAgent = vi.fn();
+    mocks.useSelectedAgent.mockReturnValue({
+      setSelectedAgent,
+    });
+
+    let resolveDelete: (() => void) | undefined;
+    const client = await import("../../../api/client");
+    vi.spyOn(client.api.agents, "delete").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDelete = resolve;
+        }),
+    );
+
+    const user = userEvent.setup();
+    render(<AgentList />);
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Builder Bot" }));
+    await user.click(screen.getByTestId("menu-item-delete"));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.queryByRole("button", { name: "Builder Bot" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reviewer Bot" })).toBeInTheDocument();
+    expect(setSelectedAgent).toHaveBeenCalledWith("agent-2");
+    expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-2");
+
+    resolveDelete?.();
+
+    await waitFor(() => {
+      expect(mocks.storeRemoveAgent).toHaveBeenCalledWith("agent-1");
+      expect(mocks.storeFetchAgents).toHaveBeenCalledWith({ force: true });
     });
   });
 });

@@ -64,6 +64,15 @@ function getDeleteAgentErrorMessage(err: unknown): string {
   return details ? `${message} ${details}` : message;
 }
 
+function pickReplacementAgentId(agents: Agent[], deletedAgentId: string): string | null {
+  const index = agents.findIndex((agent) => agent.agent_id === deletedAgentId);
+  if (index === -1) {
+    return agents[0]?.agent_id ?? null;
+  }
+
+  return agents[index + 1]?.agent_id ?? agents[index - 1]?.agent_id ?? null;
+}
+
 interface CtxMenuState {
   x: number;
   y: number;
@@ -150,6 +159,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [optimisticDeletedAgentId, setOptimisticDeletedAgentId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { thumbStyle, visible, onThumbPointerDown } = useOverlayScrollbar(scrollRef);
 
@@ -273,25 +283,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     [ctxMenu, togglePin, toggleFavorite],
   );
 
-  const handleDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    setDeleteLoading(true);
-    setDeleteError(null);
-    try {
-      await api.agents.delete(deleteTarget.agent_id);
-      if (agentId === deleteTarget.agent_id) {
-        setSelectedAgent(null);
-        navigate("/agents");
-      }
-      setDeleteTarget(null);
-      useAgentStore.getState().fetchAgents({ force: true });
-    } catch (err) {
-      setDeleteError(getDeleteAgentErrorMessage(err));
-    } finally {
-      setDeleteLoading(false);
-    }
-  }, [deleteTarget, agentId, setSelectedAgent, navigate]);
-
   const sortedAgents = useSortedAgents();
   const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
@@ -303,16 +294,58 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     if (remote.length > 0) registerRemote(remote);
   }, [agents, registerAgents, registerRemote]);
 
+  const visibleSortedAgents = useMemo(
+    () => sortedAgents.filter((agent) => agent.agent_id !== optimisticDeletedAgentId),
+    [optimisticDeletedAgentId, sortedAgents],
+  );
+
   const filteredAgents = useMemo(() => {
-    if (!searchQuery) return sortedAgents;
+    if (!searchQuery) return visibleSortedAgents;
     const q = searchQuery.toLowerCase();
-    return sortedAgents.filter((a) => {
+    return visibleSortedAgents.filter((a) => {
       const haystack = `${a.name} ${a.role} ${a.personality} ${a.system_prompt}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [sortedAgents, searchQuery]);
+  }, [visibleSortedAgents, searchQuery]);
 
-  if (loading && agents.length === 0) {
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    const deletingSelectedAgent = agentId === target.agent_id;
+    const replacementAgentId = deletingSelectedAgent
+      ? pickReplacementAgentId(filteredAgents, target.agent_id)
+        ?? pickReplacementAgentId(sortedAgents, target.agent_id)
+      : null;
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeleteTarget(null);
+    setOptimisticDeletedAgentId(target.agent_id);
+
+    if (deletingSelectedAgent) {
+      setSelectedAgent(replacementAgentId);
+      navigate(replacementAgentId ? `/agents/${replacementAgentId}` : "/agents");
+    }
+
+    try {
+      await api.agents.delete(target.agent_id);
+      useAgentStore.getState().removeAgent(target.agent_id);
+      setOptimisticDeletedAgentId(null);
+      useAgentStore.getState().fetchAgents({ force: true });
+    } catch (err) {
+      setOptimisticDeletedAgentId(null);
+      if (deletingSelectedAgent) {
+        setSelectedAgent(target.agent_id);
+        navigate(`/agents/${target.agent_id}`);
+      }
+      setDeleteTarget(target);
+      setDeleteError(getDeleteAgentErrorMessage(err));
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [agentId, deleteTarget, filteredAgents, navigate, setSelectedAgent, sortedAgents]);
+
+  if (loading && visibleSortedAgents.length === 0) {
     return (
       <div className={styles.loading}>
         <Loader2 size={18} className={styles.spin} />
@@ -320,7 +353,7 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
   }
 
-  if (agents.length === 0) {
+  if (visibleSortedAgents.length === 0) {
     return (
       <>
         <EmptyState>Add an agent to get started.</EmptyState>
@@ -328,6 +361,8 @@ export function AgentList({ mode = "default" }: AgentListProps) {
           isOpen={showEditor}
           onClose={() => setShowEditor(false)}
           onSaved={handleAgentSaved}
+          closeOnSave={false}
+          isTransitioning={!!pendingCreatedAgentId}
         />
       </>
     );
@@ -435,11 +470,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         onSaved={handleAgentSaved}
         closeOnSave={false}
         isTransitioning={!!pendingCreatedAgentId}
-        transitionLabel={
-          pendingCreateAgentHandoff?.target === (pendingCreatedAgentId ? standaloneAgentHandoffTarget(pendingCreatedAgentId) : "")
-            ? pendingCreateAgentHandoff.label
-            : undefined
-        }
         titleOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
         submitLabelOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
       />

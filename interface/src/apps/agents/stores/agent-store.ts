@@ -52,6 +52,7 @@ type AgentState = {
   favoriteAgentIds: Set<string>;
 
   fetchAgents: (opts?: { force?: boolean }) => Promise<void>;
+  removeAgent: (agentId: string) => void;
   patchAgent: (agent: Agent) => void;
   fetchHistory: (agentId: string, opts?: { force?: boolean }) => Promise<void>;
   prefetchHistory: (agentId: string) => void;
@@ -148,6 +149,12 @@ export const useAgentStore = create<AgentState>()(
           });
 
         return agentsFetchPromise;
+      },
+
+      removeAgent: (agentId): void => {
+        set((s) => ({
+          agents: s.agents.filter((a) => a.agent_id !== agentId),
+        }));
       },
 
       patchAgent: (updated): void => {
