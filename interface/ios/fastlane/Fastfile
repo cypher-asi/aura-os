@@ -109,6 +109,7 @@ end
 
 private_lane :build_store_archive do
   team_id = developer_team_id
+  profile_name = "match AppStore #{bundle_id}"
   sync_ios_web_assets
 
   increment_build_number(
@@ -124,14 +125,22 @@ private_lane :build_store_archive do
     export_method: "app-store",
     output_directory: File.join(ios_root, "build"),
     output_name: "AURA.ipa",
-    # The Xcode project already uses automatic signing, so we let fastlane
-    # archive with the provisioning assets that match synced into the runner.
     export_options: {
-      signingStyle: "automatic",
+      signingStyle: "manual",
       teamID: team_id,
+      signingCertificate: "Apple Distribution",
+      provisioningProfiles: {
+        bundle_id => profile_name
+      }
     },
     export_team_id: team_id,
-    xcargs: "DEVELOPMENT_TEAM=#{team_id} CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates"
+    skip_profile_detection: true,
+    xcargs: [
+      "DEVELOPMENT_TEAM=#{team_id}",
+      "CODE_SIGN_STYLE=Manual",
+      "PROVISIONING_PROFILE_SPECIFIER=#{Shellwords.escape(profile_name)}",
+      "CODE_SIGN_IDENTITY=#{Shellwords.escape('Apple Distribution')}"
+    ].join(" ")
   )
 end
 
