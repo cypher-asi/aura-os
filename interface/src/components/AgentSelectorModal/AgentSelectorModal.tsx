@@ -15,6 +15,8 @@ interface AgentSelectorModalProps {
   projectId: string;
   onClose: () => void;
   onCreated: (instance: AgentInstance) => void;
+  isTransitioning?: boolean;
+  transitionLabel?: string;
 }
 
 interface AgentCardProps {
@@ -24,18 +26,18 @@ interface AgentCardProps {
     name: string;
     role: string;
   };
-  creating: string | null;
+  disabled: boolean;
   onSelect: () => void;
 }
 
-function AgentCard({ agent, creating, onSelect }: AgentCardProps) {
+function AgentCard({ agent, disabled, onSelect }: AgentCardProps) {
   const { status, isLocal } = useAvatarState(agent.agent_id);
 
   return (
     <button
       className={styles.card}
       onClick={onSelect}
-      disabled={!!creating}
+      disabled={disabled}
     >
       <div className={styles.cardIcon}>
         <Avatar
@@ -53,7 +55,14 @@ function AgentCard({ agent, creating, onSelect }: AgentCardProps) {
   );
 }
 
-export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: AgentSelectorModalProps) {
+export function AgentSelectorModal({
+  isOpen,
+  projectId,
+  onClose,
+  onCreated,
+  isTransitioning = false,
+  transitionLabel,
+}: AgentSelectorModalProps) {
   const { isMobileLayout } = useAuraCapabilities();
   const agentsByProject = useProjectsListStore((state) => state.agentsByProject);
   const assignedProjectAgents = agentsByProject[projectId] ?? [];
@@ -72,6 +81,7 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
     },
     [agents, assignedAgentIds, isMobileLayout],
   );
+  const isBusy = Boolean(creating) || isTransitioning;
   useEffect(() => {
     if (!isMobileLayout || !isOpen || loading || showEditor) {
       return;
@@ -85,7 +95,7 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
   };
   const handleEditorClose = () => {
     setShowEditor(false);
-    if (isMobileLayout && visibleAgents.length === 0) {
+    if (isMobileLayout && visibleAgents.length === 0 && !isBusy) {
       handleClose();
     }
   };
@@ -116,13 +126,21 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
             <AgentCard
               key={agent.agent_id}
               agent={agent}
-              creating={creating}
+              disabled={isBusy}
               onSelect={() => handleSelect(agent)}
             />
           ))}
         </div>
       )}
       {error && <Text variant="muted" size="sm" className={styles.error}>{error}</Text>}
+      {isTransitioning ? (
+        <div className={styles.transitionOverlay} data-testid="agent-selector-transition">
+          <Spinner size="sm" />
+          <Text size="sm" weight="medium">
+            {transitionLabel ? `Opening ${transitionLabel}...` : "Opening agent chat..."}
+          </Text>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -132,7 +150,7 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
         <Drawer
           side="bottom"
           isOpen={isOpen && !showEditor}
-          onClose={handleClose}
+          onClose={() => { if (!isBusy) handleClose(); }}
           title="Add Remote Agent to Project"
           className={styles.mobileSheet}
           showMinimizedBar={false}
@@ -142,11 +160,11 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
           <div className={styles.mobileSheetBody}>
             {content}
             <div className={styles.mobileFooter}>
-              <Button variant="ghost" onClick={handleClose} disabled={!!creating}>
+              <Button variant="ghost" onClick={handleClose} disabled={isBusy}>
                 Not now
               </Button>
               {visibleAgents.length > 0 ? (
-                <Button variant="primary" onClick={handleOpenCreate} disabled={!!creating}>
+                <Button variant="primary" onClick={handleOpenCreate} disabled={isBusy}>
                   Create agent
                 </Button>
               ) : null}
@@ -156,11 +174,11 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
       ) : (
         <Modal
           isOpen={isOpen && !showEditor}
-          onClose={handleClose}
+          onClose={() => { if (!isBusy) handleClose(); }}
           title="Add Agent to Project"
           size="md"
           footer={visibleAgents.length > 0 ? (
-            <Button variant="ghost" onClick={handleOpenCreate} disabled={!!creating}>
+            <Button variant="ghost" onClick={handleOpenCreate} disabled={isBusy}>
               + Create New Agent
             </Button>
           ) : undefined}

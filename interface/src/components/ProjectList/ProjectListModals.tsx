@@ -53,6 +53,8 @@ export function ProjectListModals({ actions }: Props) {
         projectId={actions.agentSelectorProjectId!}
         onClose={() => actions.setAgentSelectorProjectId(null)}
         onCreated={actions.handleAgentCreated}
+        isTransitioning={!!actions.pendingCreatedAgent}
+        transitionLabel={actions.pendingCreatedAgent?.name}
       />
     </>
   );

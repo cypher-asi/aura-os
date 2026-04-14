@@ -36,6 +36,7 @@ export function useProjectListActions() {
   const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
   const [deleteAgentError, setDeleteAgentError] = useState<string | null>(null);
   const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
+  const [pendingCreatedAgent, setPendingCreatedAgent] = useState<AgentInstance | null>(null);
   const [creatingGeneralAgentProjectIds, setCreatingGeneralAgentProjectIds] = useState<string[]>([]);
   const [archivingAgentInstanceIds, setArchivingAgentInstanceIds] = useState<string[]>([]);
 
@@ -65,6 +66,19 @@ export function useProjectListActions() {
     };
   }, [ctxMenu]);
 
+  useEffect(() => {
+    if (!pendingCreatedAgent) {
+      return;
+    }
+    if (
+      projectId === pendingCreatedAgent.project_id &&
+      agentInstanceId === pendingCreatedAgent.agent_instance_id
+    ) {
+      setAgentSelectorProjectId(null);
+      setPendingCreatedAgent(null);
+    }
+  }, [agentInstanceId, pendingCreatedAgent, projectId]);
+
   const handleAddAgent = useCallback(
     (pid: string) => setAgentSelectorProjectId(pid),
     [],
@@ -81,6 +95,7 @@ export function useProjectListActions() {
         projectQueryKeys.agentInstance(pid, instance.agent_instance_id),
         instance,
       );
+      setPendingCreatedAgent(instance);
       navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`, {
         state: createAgentChatHandoffState(),
       });
@@ -250,7 +265,7 @@ export function useProjectListActions() {
     settingsTarget, setSettingsTarget,
     deleteTarget, setDeleteTarget, deleteLoading, deleteError, setDeleteError,
     deleteAgentTarget, setDeleteAgentTarget, deleteAgentLoading, deleteAgentError, setDeleteAgentError,
-    agentSelectorProjectId, setAgentSelectorProjectId,
+    agentSelectorProjectId, setAgentSelectorProjectId, pendingCreatedAgent,
     creatingGeneralAgentProjectIds,
     archivingAgentInstanceIds,
     handleAddAgent,

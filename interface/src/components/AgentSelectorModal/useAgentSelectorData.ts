@@ -59,16 +59,14 @@ export function useAgentSelectorData(
     try {
       const instance = await api.createAgentInstance(projectId, agent.agent_id);
       onCreated(instance);
-      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create agent instance");
     } finally {
       setCreating(null);
     }
-  }, [projectId, onCreated, onClose]);
+  }, [projectId, onCreated]);
 
   const handleAgentSaved = useCallback(async (agent: Agent) => {
-    setShowEditor(false);
     setAgents((prev) => {
       const idx = prev.findIndex((a) => a.agent_id === agent.agent_id);
       if (idx >= 0) return prev.map((a) => (a.agent_id === agent.agent_id ? agent : a));
@@ -79,16 +77,18 @@ export function useAgentSelectorData(
     try {
       const instance = await api.createAgentInstance(projectId, agent.agent_id);
       onCreated(instance);
-      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Created the agent but could not add it to this project");
     } finally {
       setCreating(null);
     }
-  }, [onClose, onCreated, projectId]);
+  }, [onCreated, projectId]);
 
   const handleClose = useCallback(() => {
-    setError(""); setCreating(null); onClose();
+    setError("");
+    setCreating(null);
+    setShowEditor(false);
+    onClose();
   }, [onClose]);
 
   return {

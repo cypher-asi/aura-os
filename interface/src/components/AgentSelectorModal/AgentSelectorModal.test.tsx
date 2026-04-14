@@ -150,4 +150,23 @@ describe("AgentSelectorModal", () => {
     expect(screen.queryByText("Remote Agent")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create agent" })).toBeInTheDocument();
   });
+
+  it("shows a transition overlay while switching to the created agent", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+
+    render(
+      <AgentSelectorModal
+        isOpen
+        projectId="project-1"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        isTransitioning
+        transitionLabel="Atlas"
+      />,
+    );
+
+    expect(screen.getByTestId("agent-selector-transition")).toBeInTheDocument();
+    expect(screen.getByText("Opening Atlas...")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Not now" })).toBeDisabled();
+  });
 });

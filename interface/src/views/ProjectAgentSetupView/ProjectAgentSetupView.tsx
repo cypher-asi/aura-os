@@ -10,6 +10,8 @@ import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
+import { queryClient } from "../../lib/query-client";
+import { projectQueryKeys } from "../../queries/project-queries";
 import type { Agent, AgentInstance } from "../../types";
 import { createAgentChatHandoffState } from "../../utils/chat-handoff";
 import { projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
@@ -136,6 +138,10 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
 
   const finishAttach = useCallback((instance: AgentInstance) => {
     upsertProjectAgent(instance, setAgentsByProject);
+    queryClient.setQueryData(
+      projectQueryKeys.agentInstance(instance.project_id, instance.agent_instance_id),
+      instance,
+    );
     navigate(projectAgentChatRoute(instance.project_id, instance.agent_instance_id), {
       state: createAgentChatHandoffState(),
     });

@@ -152,6 +152,35 @@ describe("useProjectListActions", () => {
     expect(mockSetAgentsByProject).toHaveBeenCalled();
   });
 
+  it("closes the selector once the created agent route is active", () => {
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    act(() => {
+      result.current.handleAddAgent("p-1");
+      result.current.handleAgentCreated({
+        agent_instance_id: "ai-1",
+        project_id: "p-1",
+        agent_id: "a-1",
+        name: "Agent",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(result.current.agentSelectorProjectId).toBeNull();
+    expect(result.current.pendingCreatedAgent).toBeNull();
+  });
+
   it("handleQuickAddAgent creates a general agent and navigates to it", async () => {
     const { result } = renderHook(() => useProjectListActions(), { wrapper });
 
