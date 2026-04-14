@@ -65,6 +65,14 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-${{ runner.os }}-${{ runner.arch }}
+          workspaces: |
+            . -> target
+            ../aura-harness -> target
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
