@@ -189,7 +189,7 @@ describe("ProjectsNav", () => {
     );
   });
 
-  it("renders archived agents inside an Archived subgroup", async () => {
+  it("renders a global Archived group collapsed by default", async () => {
     mockProjectListData = buildMockData({
       agentsByProject: {
         p1: [
@@ -206,8 +206,14 @@ describe("ProjectsNav", () => {
 
     render(<ProjectsNav />);
 
-    expect(await screen.findByText("Archived")).toBeInTheDocument();
-    expect(screen.getByText("Archived refactor thread")).toBeInTheDocument();
+    const archivedGroup = await screen.findByTestId("project-_archived");
+    expect(archivedGroup).toHaveTextContent("Archived");
+    expect(archivedGroup).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("node-a2")).not.toBeInTheDocument();
+
+    fireEvent.click(archivedGroup);
+
+    expect(await screen.findByTestId("node-a2")).toHaveTextContent("Archived refactor thread");
   });
 
   it("keeps project rows non-selectable and toggles them without remounting the row", async () => {

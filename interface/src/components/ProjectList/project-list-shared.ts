@@ -44,14 +44,13 @@ export function getPreferredProjectAgent(
   lastAgentId?: string | null,
 ): AgentInstance | undefined {
   const activeAgents = agents.filter((agent) => agent.status !== "archived");
-  const candidates = activeAgents.length > 0 ? activeAgents : agents;
-  if (candidates.length === 0) {
+  if (activeAgents.length === 0) {
     return undefined;
   }
 
   return (
     (lastAgentId
-      ? candidates.find((agent) => agent.agent_instance_id === lastAgentId)
-      : undefined) ?? candidates[0]
+      ? activeAgents.find((agent) => agent.agent_instance_id === lastAgentId)
+      : undefined) ?? activeAgents[0]
   );
 }

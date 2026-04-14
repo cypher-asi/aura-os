@@ -6,7 +6,9 @@ import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import type { useProjectListData } from "./useProjectListData";
 import { resolveStatus } from "./project-list-shared";
 
-type ProjectAgentNode = NonNullable<ReturnType<typeof useProjectListData>["agentsByProject"][string]>[number];
+export type ProjectAgentNode =
+  NonNullable<ReturnType<typeof useProjectListData>["agentsByProject"][string]>[number];
+export const ARCHIVED_ROOT_NODE_ID = "_archived";
 
 export interface ProjectExplorerNodeStyles {
   projectSuffix: string;
@@ -20,7 +22,7 @@ export interface ProjectExplorerNodeStyles {
   streamingDot: string;
 }
 
-interface ProjectExplorerBuildContext {
+export interface ProjectExplorerBuildContext {
   agentsByProject: ReturnType<typeof useProjectListData>["agentsByProject"];
   automatingProjectId: string | null;
   automatingAgentInstanceId: string | null;
@@ -38,10 +40,6 @@ export function executionNodeId(projectId: string): string {
 
 function emptyAgentsNodeId(projectId: string): string {
   return `_empty_${projectId}`;
-}
-
-function archivedAgentsNodeId(projectId: string): string {
-  return `_archived_${projectId}`;
 }
 
 function buildExecutionNode(projectId: string): ExplorerNode {
@@ -75,7 +73,7 @@ function buildProjectSuffix(
   );
 }
 
-function buildAgentNode(
+export function buildAgentNode(
   agent: ProjectAgentNode,
   projectId: string,
   context: ProjectExplorerBuildContext,
@@ -154,31 +152,6 @@ function buildAgentNode(
   };
 }
 
-function buildArchivedGroupNode(
-  projectId: string,
-  archivedAgents: ProjectAgentNode[],
-  context: ProjectExplorerBuildContext,
-  statusMap: Record<string, string>,
-  machineTypesMap: Record<string, string>,
-  explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
-  return {
-    id: archivedAgentsNodeId(projectId),
-    label: "Archived",
-    metadata: { type: "agent-group", groupKind: "archived", projectId },
-    children: archivedAgents.map((agent) =>
-      buildAgentNode(
-        agent,
-        projectId,
-        context,
-        statusMap,
-        machineTypesMap,
-        explorerStyles,
-      ),
-    ),
-  };
-}
-
 function buildProjectChildren(
   projectId: string,
   context: ProjectExplorerBuildContext,
@@ -205,7 +178,6 @@ function buildProjectChildren(
     ];
   }
   const activeAgents = projectAgents.filter((agent) => agent.status !== "archived");
-  const archivedAgents = projectAgents.filter((agent) => agent.status === "archived");
 
   const children: ExplorerNode[] = [
     ...mobileChildren,
@@ -220,19 +192,6 @@ function buildProjectChildren(
       ),
     ),
   ];
-
-  if (archivedAgents.length > 0) {
-    children.push(
-      buildArchivedGroupNode(
-        projectId,
-        archivedAgents,
-        context,
-        statusMap,
-        machineTypesMap,
-        explorerStyles,
-      ),
-    );
-  }
 
   if (children.length === 0) {
     return [

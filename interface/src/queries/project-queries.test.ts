@@ -58,7 +58,29 @@ describe("project-queries agent merging", () => {
     });
   });
 
-  it("preserves a newly archived agent when a stale snapshot resolves without it", () => {
+  it("preserves archived status against a newer non-archived update", () => {
+    const merged = mergeAgentIntoProjectAgents(
+      [
+        makeAgent({
+          status: "archived",
+          updated_at: "2026-04-13T10:00:05.000Z",
+        }),
+      ],
+      {
+        agent_instance_id: "ai-1",
+        project_id: "p-1",
+        status: "idle",
+        updated_at: "2026-04-13T10:00:10.000Z",
+      },
+    );
+
+    expect(merged[0]).toMatchObject({
+      status: "archived",
+      updated_at: "2026-04-13T10:00:10.000Z",
+    });
+  });
+
+  it("preserves an archived agent when a later snapshot resolves without it", () => {
     const archivedAgent = makeAgent({
       status: "archived",
       updated_at: "2026-04-13T10:00:05.000Z",
@@ -67,7 +89,7 @@ describe("project-queries agent merging", () => {
     const merged = mergeProjectAgentsSnapshot(
       [archivedAgent],
       [],
-      { requestStartedAtMs: Date.parse("2026-04-13T10:00:00.000Z") },
+      { requestStartedAtMs: Date.parse("2026-04-13T10:00:10.000Z") },
     );
 
     expect(merged).toEqual([archivedAgent]);

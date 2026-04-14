@@ -104,13 +104,9 @@ function compareUpdatedAt(
 
 function shouldPreserveMissingArchivedAgent(
   agent: AgentInstance,
-  requestStartedAtMs: number | undefined,
+  _requestStartedAtMs: number | undefined,
 ): boolean {
-  if (agent.status !== "archived" || requestStartedAtMs === undefined) {
-    return false;
-  }
-  const updatedAtMs = parseTimestamp(agent.updated_at);
-  return updatedAtMs !== null && updatedAtMs >= requestStartedAtMs;
+  return agent.status === "archived";
 }
 
 export function mergeAgentUpdate(
@@ -140,8 +136,7 @@ export function mergeAgentUpdate(
   if (incomingUpdate.status !== undefined) {
     const preserveArchivedStatus =
       currentAgent.status === "archived" &&
-      incomingUpdate.status !== "archived" &&
-      updatedAtComparison !== 1;
+      incomingUpdate.status !== "archived";
     if (!preserveArchivedStatus && updatedAtComparison !== -1) {
       nextAgent.status = incomingUpdate.status;
     }

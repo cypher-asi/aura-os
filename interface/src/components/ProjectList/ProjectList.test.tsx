@@ -244,23 +244,22 @@ describe("ProjectList", () => {
     expect(screen.getByText("Agent Beta")).toBeInTheDocument();
   });
 
-  it("renders archived agents under an Archived subgroup", () => {
+  it("shows archived-only projects as empty while keeping agents under Archived", () => {
     mockProjectsList.projects = [makeProject()];
     mockProjectsList.agentsByProject = {
       p1: [
-        { agent_instance_id: "a1", name: "Active Agent", status: "idle" },
         { agent_instance_id: "a2", name: "Archived Agent", status: "archived" },
       ],
     };
 
     renderList();
 
-    expect(screen.getByText("Active Agent")).toBeInTheDocument();
+    expect(screen.getByText("No agents yet")).toBeInTheDocument();
     expect(screen.getByText("Archived")).toBeInTheDocument();
     expect(screen.getByText("Archived Agent")).toBeInTheDocument();
   });
 
-  it("moves an agent into the Archived subgroup when project data updates", () => {
+  it("moves an archived agent out of its project children when project data updates", () => {
     mockProjectsList.projects = [makeProject()];
     mockProjectsList.agentsByProject = {
       p1: [
@@ -271,7 +270,8 @@ describe("ProjectList", () => {
     const view = renderList();
 
     expect(screen.getByText("Agent Alpha")).toBeInTheDocument();
-    expect(screen.queryByText("Archived")).not.toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(screen.queryByText("No agents yet")).not.toBeInTheDocument();
 
     mockProjectsList.agentsByProject = {
       p1: [
@@ -285,6 +285,7 @@ describe("ProjectList", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByText("No agents yet")).toBeInTheDocument();
     expect(screen.getByText("Archived")).toBeInTheDocument();
     expect(screen.getByText("Agent Alpha")).toBeInTheDocument();
   });

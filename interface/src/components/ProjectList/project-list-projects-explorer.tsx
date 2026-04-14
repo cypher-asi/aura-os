@@ -20,8 +20,11 @@ import {
 } from "./project-list-shared";
 import { useExplorerMenus } from "./useExplorerMenus";
 import {
+  ARCHIVED_ROOT_NODE_ID,
+  buildAgentNode,
   buildProjectExplorerNode,
   executionNodeId,
+  type ProjectExplorerBuildContext,
   type ProjectExplorerNodeStyles,
 } from "./project-list-explorer-node";
 import {
@@ -30,18 +33,73 @@ import {
 } from "./project-list-explorer-helpers";
 import { useProjectsSidebarEffects } from "./use-projects-sidebar-effects";
 
+function compareUpdatedAtDesc(
+  left: { updated_at?: string },
+  right: { updated_at?: string },
+): number {
+  const leftTime = Date.parse(left.updated_at ?? "");
+  const rightTime = Date.parse(right.updated_at ?? "");
+  const safeLeftTime = Number.isNaN(leftTime) ? 0 : leftTime;
+  const safeRightTime = Number.isNaN(rightTime) ? 0 : rightTime;
+  return safeRightTime - safeLeftTime;
+}
+
 function collectExpandableNodeIds(nodes: ExplorerNode[]): string[] {
   const expandedIds: string[] = [];
   for (const node of nodes) {
     if (!node.children || node.children.length === 0) {
       continue;
     }
-    if (!node.children[0]?.id?.startsWith("_load_")) {
+    if (
+      node.id !== ARCHIVED_ROOT_NODE_ID &&
+      !node.children[0]?.id?.startsWith("_load_")
+    ) {
       expandedIds.push(node.id);
     }
     expandedIds.push(...collectExpandableNodeIds(node.children));
   }
   return expandedIds;
+}
+
+function buildArchivedRootNode(
+  context: ProjectExplorerBuildContext,
+  statusMap: Record<string, string>,
+  machineTypesMap: Record<string, string>,
+  explorerStyles: ProjectExplorerNodeStyles,
+): ExplorerNode {
+  const archivedAgents = Object.entries(context.agentsByProject)
+    .flatMap(([projectId, agents]) =>
+      (agents ?? [])
+        .filter((agent) => agent.status === "archived")
+        .map((agent) => ({ projectId, agent })),
+    )
+    .sort((left, right) => compareUpdatedAtDesc(left.agent, right.agent));
+
+  return {
+    id: ARCHIVED_ROOT_NODE_ID,
+    label: "Archived",
+    metadata: { type: "archived-root" },
+    children: archivedAgents.length > 0
+      ? archivedAgents.map(({ projectId, agent }) =>
+          buildAgentNode(
+            agent,
+            projectId,
+            context,
+            statusMap,
+            machineTypesMap,
+            explorerStyles,
+          ),
+        )
+      : [
+          {
+            id: "_empty_archived",
+            label: "No archived agents",
+            icon: <span aria-hidden="true">-</span>,
+            disabled: true,
+            metadata: { type: "project-empty", projectId: ARCHIVED_ROOT_NODE_ID },
+          },
+        ],
+  };
 }
 
 function useProjectExplorerData(
@@ -70,8 +128,8 @@ function useProjectExplorerData(
   );
 
   const explorerData = useMemo(
-    () =>
-      data.projects
+    () => {
+      const projectNodes = data.projects
         .filter((project) => project.name.trim())
         .map((project) =>
           buildProjectExplorerNode(
@@ -81,7 +139,17 @@ function useProjectExplorerData(
             machineTypesMap,
             explorerStyles,
           ),
+        );
+      return [
+        ...projectNodes,
+        buildArchivedRootNode(
+          nodeBuildContext,
+          statusMap,
+          machineTypesMap,
+          explorerStyles,
         ),
+      ];
+    },
     [data.projects, explorerStyles, machineTypesMap, nodeBuildContext, statusMap],
   );
 
@@ -227,11 +295,17 @@ function useProjectSelectionHandler(
       navigate(projectAgentRoute(nodeId));
       return;
     }
-    if (agents.length === 0) return;
+    if (agents.length === 0) {
+      navigate(projectAgentRoute(nodeId));
+      return;
+    }
 
     const lastAgentId = getLastAgent(nodeId);
     const targetAgent = getPreferredProjectAgent(agents, lastAgentId);
-    if (!targetAgent) return;
+    if (!targetAgent) {
+      navigate(projectAgentRoute(nodeId));
+      return;
+    }
     navigate(`/projects/${nodeId}/agents/${targetAgent.agent_instance_id}`);
   }, [data, navigate]);
 }

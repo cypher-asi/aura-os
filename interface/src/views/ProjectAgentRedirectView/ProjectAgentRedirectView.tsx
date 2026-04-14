@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getLastAgent } from "../../utils/storage";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { useProjectsListStore } from "../../stores/projects-list-store";
+import { getPreferredProjectAgent } from "../../components/ProjectList/project-list-shared";
 import { ProjectEmptyView } from "../ProjectEmptyView";
 
 export function ProjectAgentRedirectView() {
@@ -24,18 +25,10 @@ export function ProjectAgentRedirectView() {
       if (cancelled) return;
 
       const lastAgentInstanceId = getLastAgent(projectId);
-      if (lastAgentInstanceId) {
-        const matching = agents.find((agent) => agent.agent_instance_id === lastAgentInstanceId);
-        if (matching) {
-          setEmptyProjectId((current) => (current === projectId ? null : current));
-          navigate(projectAgentChatRoute(projectId, matching.agent_instance_id), { replace: true });
-          return;
-        }
-      }
-
-      if (agents.length > 0) {
+      const targetAgent = getPreferredProjectAgent(agents, lastAgentInstanceId);
+      if (targetAgent) {
         setEmptyProjectId((current) => (current === projectId ? null : current));
-        navigate(projectAgentChatRoute(projectId, agents[0].agent_instance_id), { replace: true });
+        navigate(projectAgentChatRoute(projectId, targetAgent.agent_instance_id), { replace: true });
         return;
       }
 
