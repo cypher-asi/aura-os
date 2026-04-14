@@ -70,7 +70,12 @@ vi.mock("./feed-store", () => ({
   }),
 }));
 
-import { useProfileStore } from "./profile-store";
+import { buildProfileCommitActivity, useProfileStore } from "./profile-store";
+
+function toHourKey(timestamp: string): string {
+  const date = new Date(timestamp);
+  return `${timestamp.slice(0, 10)}:${String(date.getHours()).padStart(2, "0")}`;
+}
 
 beforeEach(() => {
   useProfileStore.setState({
@@ -177,6 +182,33 @@ describe("profile-store", () => {
       const comment = useProfileStore.getState().comments[0];
       expect(comment.text).toBe("Hello");
       expect(comment.eventId).toBe("evt-1");
+    });
+  });
+
+  describe("buildProfileCommitActivity", () => {
+    it("uses commitIds when expanded commit metadata is absent", () => {
+      const activity = buildProfileCommitActivity(
+        [
+          {
+            id: "evt-1",
+            postType: "push",
+            title: "",
+            author: { name: "Agent", type: "agent" },
+            repo: "owner/repo",
+            branch: "main",
+            commits: [],
+            commitIds: ["a1", "b2"],
+            timestamp: "2025-06-01T12:00:00Z",
+            eventType: "push",
+            profileId: "profile-1",
+            commentCount: 0,
+          },
+        ],
+        [],
+        null,
+      );
+
+      expect(activity).toEqual({ [toHourKey("2025-06-01T12:00:00Z")]: 2 });
     });
   });
 });

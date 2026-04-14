@@ -8,28 +8,11 @@ import styles from "./ActivityCard.module.css";
 const MAX_VISIBLE_COMMITS = 3;
 
 function CommentPreview({ comments, commentCount, onClick }: { comments: FeedComment[]; commentCount: number; onClick: () => void }) {
-  const count = comments.length || commentCount;
+  const count = Math.max(comments.length, commentCount);
   if (count === 0) return null;
-
-  const uniqueAuthors = [...new Map(comments.map((c) => [c.author.name, c.author])).values()].slice(0, 3);
 
   return (
     <button className={styles.commentPreview} onClick={onClick}>
-      {uniqueAuthors.length > 0 && (
-        <div className={styles.commentAvatarStack}>
-          {uniqueAuthors.map((author, i) => (
-            <Avatar
-              key={author.name}
-              avatarUrl={author.avatarUrl}
-              name={author.name}
-              type={author.type}
-              size={20}
-              className={styles.commentAvatar}
-              style={{ zIndex: uniqueAuthors.length - i }}
-            />
-          ))}
-        </div>
-      )}
       <span className={styles.commentCount}>
         <MessageSquare size={12} />
         {count} comment{count !== 1 ? "s" : ""}

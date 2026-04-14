@@ -68,6 +68,7 @@ function makeFeedEventDto(overrides: Partial<FeedEventDto> = {}): FeedEventDto {
       branch: "main",
       commits: [{ sha: "abc123", message: "feat: thing" }],
     },
+    commit_ids: ["abc123"],
     created_at: "2025-06-01T12:00:00Z",
     ...overrides,
   };
@@ -178,6 +179,7 @@ describe("networkEventToFeedEvent", () => {
     expect(result.repo).toBe("owner/repo");
     expect(result.branch).toBe("main");
     expect(result.commits).toEqual([{ sha: "abc123", message: "feat: thing" }]);
+    expect(result.commitIds).toEqual(["abc123"]);
     expect(result.timestamp).toBe("2025-06-01T12:00:00Z");
   });
 

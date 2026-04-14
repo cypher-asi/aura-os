@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from "./auth-store";
 import { useOrgStore } from "./org-store";
 import { api } from "../api/client";
+import { buildCommitActivityFromEvents, getCommitCount } from "../lib/commitActivity";
 
 export interface UserProfileData {
   id?: string;
@@ -48,26 +49,15 @@ function isUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }
 
-function commitActivityFromEvents(events: FeedEvent[]): Record<string, number> {
-  const activity: Record<string, number> = {};
-  for (const evt of events) {
-    if (evt.postType !== "push") continue;
-    const ts = new Date(evt.timestamp);
-    const dateKey = evt.timestamp.slice(0, 10);
-    const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
-    activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
-  }
-  return activity;
-}
-
 function repoActivityForProject(events: FeedEvent[], repo: string): Record<string, number> {
   const activity: Record<string, number> = {};
   for (const evt of events) {
-    if (evt.postType !== "push" || evt.repo !== repo) continue;
+    const commitCount = evt.repo === repo ? getCommitCount(evt) : 0;
+    if (commitCount === 0) continue;
     const ts = new Date(evt.timestamp);
     const dateKey = evt.timestamp.slice(0, 10);
     const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
-    activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
+    activity[hourKey] = (activity[hourKey] ?? 0) + commitCount;
   }
   return activity;
 }
@@ -103,9 +93,9 @@ export function buildProfileCommitActivity(
   projects: ProfileProject[],
   selectedProject: string | null,
 ): Record<string, number> {
-  if (!selectedProject) return commitActivityFromEvents(events);
+  if (!selectedProject) return buildCommitActivityFromEvents(events);
   const project = projects.find((item) => item.id === selectedProject);
-  if (!project) return commitActivityFromEvents(events);
+  if (!project) return buildCommitActivityFromEvents(events);
   return repoActivityForProject(events, project.repo);
 }
 

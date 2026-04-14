@@ -16,6 +16,7 @@ export {
 import type { FeedAuthor, FeedComment } from "./shared/event-comments-slice";
 import { api } from "../api/client";
 import type { FeedEventDto } from "../api/social";
+import { buildCommitActivityFromEvents } from "../lib/commitActivity";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
 export type { FeedFilter } from "../types/filters";
@@ -177,18 +178,6 @@ function applyFilter(
     default:
       return events;
   }
-}
-
-function commitActivityFromEvents(events: FeedEvent[]): Record<string, number> {
-  const activity: Record<string, number> = {};
-  for (const evt of events) {
-    if (evt.postType !== "push") continue;
-    const ts = new Date(evt.timestamp);
-    const dateKey = evt.timestamp.slice(0, 10);
-    const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
-    activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
-  }
-  return activity;
 }
 
 const CURRENT_USER = "real-n3o";
@@ -390,7 +379,7 @@ export function useFeedFilteredEvents(): FeedEvent[] {
 
 export function useFeedCommitActivity(): Record<string, number> {
   const filteredEvents = useFeedFilteredEvents();
-  return commitActivityFromEvents(filteredEvents);
+  return buildCommitActivityFromEvents(filteredEvents);
 }
 
 export function useFeedCommentsForEvent(eventId: string | null): FeedComment[] {
