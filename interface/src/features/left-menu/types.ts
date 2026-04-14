@@ -24,11 +24,12 @@ export interface LeftMenuGroupEntry {
   id: string;
   label: string;
   suffix?: ReactNode;
+  variant?: "default" | "section";
   expanded: boolean;
   selected?: boolean;
   testId?: string;
   toggleMode?: "activate" | "secondary";
-  children: LeftMenuLeafEntry[];
+  children: LeftMenuEntry[];
   emptyState?: LeftMenuEmptyEntry | null;
   onActivate: () => void;
   onToggle?: () => void;

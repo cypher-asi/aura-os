@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api, ApiClientError } from "../api/client";
+import { queryClient } from "../lib/query-client";
+import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../queries/project-queries";
 import { clearLastAgentIf } from "../utils/storage";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import type { Project, AgentInstance } from "../types";
@@ -33,10 +35,16 @@ export function useProjectListActions() {
   const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
   const [deleteAgentError, setDeleteAgentError] = useState<string | null>(null);
   const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
+  const [creatingGeneralAgentProjectIds, setCreatingGeneralAgentProjectIds] = useState<string[]>([]);
+  const [archivingAgentInstanceIds, setArchivingAgentInstanceIds] = useState<string[]>([]);
 
   const ctxMenuRef = useRef<HTMLDivElement>(null);
   const ctxMenuStateRef = useRef(ctxMenu);
   ctxMenuStateRef.current = ctxMenu;
+  const creatingGeneralAgentProjectIdsRef = useRef(creatingGeneralAgentProjectIds);
+  creatingGeneralAgentProjectIdsRef.current = creatingGeneralAgentProjectIds;
+  const archivingAgentInstanceIdsRef = useRef(archivingAgentInstanceIds);
+  archivingAgentInstanceIdsRef.current = archivingAgentInstanceIds;
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -60,6 +68,39 @@ export function useProjectListActions() {
     (pid: string) => setAgentSelectorProjectId(pid),
     [],
   );
+
+  const handleAgentCreated = useCallback(
+    (instance: AgentInstance) => {
+      const pid = instance.project_id;
+      setAgentsByProject((prev) => ({
+        ...prev,
+        [pid]: mergeAgentIntoProjectAgents(prev[pid], instance),
+      }));
+      queryClient.setQueryData(
+        projectQueryKeys.agentInstance(pid, instance.agent_instance_id),
+        instance,
+      );
+      navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`);
+      void refreshProjectAgents(pid);
+    },
+    [navigate, refreshProjectAgents, setAgentsByProject],
+  );
+
+  const handleQuickAddAgent = useCallback(async (pid: string) => {
+    if (creatingGeneralAgentProjectIdsRef.current.includes(pid)) {
+      return;
+    }
+
+    setCreatingGeneralAgentProjectIds((prev) => [...prev, pid]);
+    try {
+      const instance = await api.createGeneralAgentInstance(pid);
+      handleAgentCreated(instance);
+    } catch (err) {
+      console.error("Failed to create general project agent", err);
+    } finally {
+      setCreatingGeneralAgentProjectIds((prev) => prev.filter((projectId) => projectId !== pid));
+    }
+  }, [handleAgentCreated]);
 
   const handleMenuAction = useCallback((actionId: string) => {
     const menu = ctxMenuStateRef.current;
@@ -164,14 +205,38 @@ export function useProjectListActions() {
     }
   }, [agentInstanceId, agentsByProject, deleteAgentTarget, navigate, refreshProjectAgents, setAgentsByProject]);
 
-  const handleAgentCreated = useCallback(
-    (instance: AgentInstance) => {
-      const pid = instance.project_id;
-      void refreshProjectAgents(pid);
-      navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`);
-    },
-    [navigate, refreshProjectAgents],
-  );
+  const handleArchiveAgent = useCallback(async (target: AgentInstance) => {
+    const { project_id: pid, agent_instance_id: aid } = target;
+    if (archivingAgentInstanceIdsRef.current.includes(aid)) {
+      return;
+    }
+
+    const previousAgents = agentsByProject[pid] ?? [];
+    const optimisticUpdatedAt = new Date().toISOString();
+    setArchivingAgentInstanceIds((prev) => [...prev, aid]);
+    setAgentsByProject((prev) => ({
+      ...prev,
+      [pid]: (prev[pid] ?? []).map((agent) =>
+        agent.agent_instance_id === aid
+          ? { ...agent, status: "archived", updated_at: optimisticUpdatedAt }
+          : agent,
+      ),
+    }));
+
+    try {
+      const updated = await api.updateAgentInstance(pid, aid, { status: "archived" });
+      setAgentsByProject((prev) => ({
+        ...prev,
+        [pid]: mergeAgentIntoProjectAgents(prev[pid], updated),
+      }));
+      queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), updated);
+    } catch (err) {
+      console.error("Failed to archive agent instance", err);
+      setAgentsByProject((prev) => ({ ...prev, [pid]: previousAgents }));
+    } finally {
+      setArchivingAgentInstanceIds((prev) => prev.filter((id) => id !== aid));
+    }
+  }, [agentsByProject, setAgentsByProject]);
 
   const handleProjectSaved = useCallback(
     (project: Project) => {
@@ -190,12 +255,16 @@ export function useProjectListActions() {
     deleteTarget, setDeleteTarget, deleteLoading, deleteError, setDeleteError,
     deleteAgentTarget, setDeleteAgentTarget, deleteAgentLoading, deleteAgentError, setDeleteAgentError,
     agentSelectorProjectId, setAgentSelectorProjectId,
+    creatingGeneralAgentProjectIds,
+    archivingAgentInstanceIds,
     handleAddAgent,
+    handleQuickAddAgent,
     handleMenuAction,
     handleRename,
     handleDelete,
     handleDeleteAgent,
     handleAgentCreated,
+    handleArchiveAgent,
     handleProjectSaved,
   };
 }

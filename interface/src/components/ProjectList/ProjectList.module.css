@@ -79,6 +79,69 @@
   height: 10px;
 }
 
+.agentTrailing {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: var(--control-height-sm, 32px);
+  min-width: var(--control-height-sm, 32px);
+}
+
+.agentStatusWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: opacity 0.15s;
+}
+
+.agentActionWrap {
+  position: absolute;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.agentActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.agentActionButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text, #fff) 12%, transparent);
+  color: var(--color-text);
+}
+
+.agentActionButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.explorerWrap [class*="itemContent"]:hover .agentStatusWrap,
+.explorerWrap [class*="itemContent"]:focus-within .agentStatusWrap {
+  opacity: 0;
+}
+
+.explorerWrap [class*="itemContent"]:hover .agentActionWrap,
+.explorerWrap [class*="itemContent"]:focus-within .agentActionWrap {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .inlineRenameInput {
   position: fixed;
   z-index: 10;

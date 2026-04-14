@@ -5,6 +5,11 @@ import { useEffect } from "react";
 
 let autoSelectDefaultIds = false;
 const mockNavigate = vi.fn();
+type MockExplorerNode = {
+  id: string;
+  label: string;
+  children?: MockExplorerNode[];
+};
 
 vi.mock("@cypher-asi/zui", () => ({
   ButtonPlus: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
@@ -15,7 +20,7 @@ vi.mock("@cypher-asi/zui", () => ({
     defaultSelectedIds,
     onSelect,
   }: {
-    data: { id: string; label: string; children?: { id: string; label: string }[] }[];
+    data: MockExplorerNode[];
     defaultSelectedIds?: Iterable<string>;
     onSelect?: (ids: Iterable<string>) => void;
   }) => {
@@ -26,14 +31,14 @@ vi.mock("@cypher-asi/zui", () => ({
 
     return (
       <div data-testid="explorer">
-        {data.map((node) => (
-          <div key={node.id}>
-            <span>{node.label}</span>
-            {node.children?.map((child) => (
-              <span key={child.id}>{child.label}</span>
-            ))}
-          </div>
-        ))}
+        {data.map(function renderNode(node) {
+          return (
+            <div key={node.id}>
+              <span>{node.label}</span>
+              {node.children?.map(renderNode)}
+            </div>
+          );
+        })}
       </div>
     );
   },
@@ -53,7 +58,11 @@ const mockSidekickState = {
 };
 vi.mock("../../stores/sidekick-store", () => ({
   useSidekickStore: Object.assign(
-    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    vi.fn(
+      (
+        selector?: (state: typeof mockSidekickState) => unknown,
+      ) => selector ? selector(mockSidekickState) : mockSidekickState,
+    ),
     { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
   ),
 }));
@@ -91,6 +100,10 @@ const mockActions = {
   handleAgentCreated: vi.fn(),
   handleProjectSaved: vi.fn(),
   handleAddAgent: vi.fn(),
+  handleQuickAddAgent: vi.fn(),
+  handleArchiveAgent: vi.fn(),
+  creatingGeneralAgentProjectIds: [],
+  archivingAgentInstanceIds: [],
 };
 vi.mock("../../hooks/use-project-list-actions", () => ({
   useProjectListActions: () => mockActions,
@@ -229,6 +242,22 @@ describe("ProjectList", () => {
     renderList();
     expect(screen.getByText("Agent Alpha")).toBeInTheDocument();
     expect(screen.getByText("Agent Beta")).toBeInTheDocument();
+  });
+
+  it("renders archived agents under an Archived subgroup", () => {
+    mockProjectsList.projects = [makeProject()];
+    mockProjectsList.agentsByProject = {
+      p1: [
+        { agent_instance_id: "a1", name: "Active Agent", status: "idle" },
+        { agent_instance_id: "a2", name: "Archived Agent", status: "archived" },
+      ],
+    };
+
+    renderList();
+
+    expect(screen.getByText("Active Agent")).toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(screen.getByText("Archived Agent")).toBeInTheDocument();
   });
 
   it("shows an empty placeholder when a project's agents are loaded but empty", () => {

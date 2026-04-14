@@ -28,6 +28,10 @@ function isProjectEmptyNode(node: ExplorerNode): boolean {
   return node.metadata?.type === "project-empty";
 }
 
+function isGroupNode(node: ExplorerNode): boolean {
+  return Array.isArray(node.children);
+}
+
 function buildLeafEntry(
   node: ExplorerNode,
   selectedNodeId: string | null,
@@ -69,12 +73,14 @@ function buildGroupEntry(
   const childEntries = (node.children ?? [])
     .filter((childNode) => !isProjectEmptyNode(childNode))
     .map((childNode) =>
-      buildLeafEntry(
-        childNode,
-        options.selectedNodeId,
-        options.itemTestIdPrefix,
-        options.onItemSelect,
-      ),
+      isGroupNode(childNode)
+        ? buildGroupEntry(childNode, options)
+        : buildLeafEntry(
+            childNode,
+            options.selectedNodeId,
+            options.itemTestIdPrefix,
+            options.onItemSelect,
+          ),
     );
 
   return {
@@ -82,6 +88,7 @@ function buildGroupEntry(
     id: node.id,
     label: node.label,
     suffix: node.suffix,
+    variant: node.metadata?.type === "agent-group" ? "section" : "default",
     expanded: Boolean(options.searchActive) || options.expandedIds.has(node.id),
     selected: options.selectedGroupIds?.has(node.id),
     testId: buildTestId(options.groupTestIdPrefix, node.id),
@@ -100,7 +107,7 @@ export function buildLeftMenuEntries(
   options: BuildLeftMenuEntriesOptions,
 ): LeftMenuEntry[] {
   return nodes.map((node) =>
-    node.children
+    isGroupNode(node)
       ? buildGroupEntry(node, options)
       : buildLeafEntry(
           node,

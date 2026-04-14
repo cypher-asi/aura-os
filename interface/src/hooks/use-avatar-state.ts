@@ -10,6 +10,7 @@ const STATUS_MAP: Record<string, string> = {
   stopped: "stopped",
   error: "error",
   blocked: "error",
+  archived: "stopped",
 };
 
 export interface AvatarState {

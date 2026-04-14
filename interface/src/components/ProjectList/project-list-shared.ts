@@ -1,4 +1,5 @@
 import type { ExplorerNode } from "@cypher-asi/zui";
+import type { AgentInstance } from "../../types";
 
 export function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
   if (!q) return nodes;
@@ -30,9 +31,27 @@ export const STATUS_MAP: Record<string, string> = {
   stopped: "stopped",
   error: "error",
   blocked: "error",
+  archived: "stopped",
 };
 
 export function resolveStatus(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   return STATUS_MAP[raw.toLowerCase()] ?? raw;
+}
+
+export function getPreferredProjectAgent(
+  agents: AgentInstance[],
+  lastAgentId?: string | null,
+): AgentInstance | undefined {
+  const activeAgents = agents.filter((agent) => agent.status !== "archived");
+  const candidates = activeAgents.length > 0 ? activeAgents : agents;
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  return (
+    (lastAgentId
+      ? candidates.find((agent) => agent.agent_instance_id === lastAgentId)
+      : undefined) ?? candidates[0]
+  );
 }

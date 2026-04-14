@@ -119,11 +119,15 @@ pub(crate) struct UpdateAgentRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreateAgentInstanceRequest {
-    pub agent_id: AgentId,
+    #[serde(default)]
+    pub agent_id: Option<AgentId>,
+    #[serde(default)]
+    pub kind: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct UpdateAgentInstanceRequest {
+    pub name: Option<String>,
     pub status: Option<String>,
 }
 

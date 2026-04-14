@@ -104,37 +104,47 @@ pub(crate) fn resolve_workspace_path(
 
 /// Fetch all agents from the network, returning a map by network agent ID.
 pub(crate) async fn resolve_network_agents(state: &AppState, jwt: &str) -> HashMap<String, Agent> {
+    let mut resolved = HashMap::new();
     if let Some(ref client) = state.network_client {
         if let Ok(net_agents) = client.list_agents(jwt).await {
-            return net_agents
-                .iter()
-                .map(|na| {
-                    let mut agent = agent_from_network(na);
-                    let _ = state.agent_service.apply_runtime_config(&mut agent);
-                    if agent.icon.is_none() {
-                        if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
-                            agent.icon = shadow.icon;
-                        }
+            resolved.extend(net_agents.iter().map(|na| {
+                let mut agent = agent_from_network(na);
+                let _ = state.agent_service.apply_runtime_config(&mut agent);
+                if agent.icon.is_none() {
+                    if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
+                        agent.icon = shadow.icon;
                     }
-                    (na.id.clone(), agent)
-                })
-                .collect();
+                }
+                (na.id.clone(), agent)
+            }));
         }
     }
-    HashMap::new()
+
+    if let Ok(local_agents) = state.agent_service.list_agents() {
+        for agent in local_agents {
+            resolved.entry(agent.agent_id.to_string()).or_insert(agent);
+        }
+    }
+
+    resolved
 }
 
-/// Fetch a single agent's config from the network only (no local fallback).
+/// Fetch a single agent config, preferring network and falling back to local shadows.
 pub(crate) async fn resolve_single_agent(
     state: &AppState,
     jwt: &str,
     agent_id: &str,
 ) -> Option<Agent> {
-    let client = state.network_client.as_ref()?;
-    let net_agent = client.get_agent(agent_id, jwt).await.ok()?;
-    let mut agent = agent_from_network(&net_agent);
-    let _ = state.agent_service.apply_runtime_config(&mut agent);
-    Some(agent)
+    if let Some(client) = state.network_client.as_ref() {
+        if let Ok(net_agent) = client.get_agent(agent_id, jwt).await {
+            let mut agent = agent_from_network(&net_agent);
+            let _ = state.agent_service.apply_runtime_config(&mut agent);
+            return Some(agent);
+        }
+    }
+
+    let parsed = agent_id.parse().ok()?;
+    state.agent_service.get_agent_local(&parsed).ok()
 }
 
 /// Reconstruct `Vec<SessionEvent>` from persisted session events.

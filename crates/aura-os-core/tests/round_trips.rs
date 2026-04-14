@@ -93,6 +93,7 @@ mod agent_status_serde {
     test_enum_variant!(blocked, AgentStatus::Blocked, "blocked");
     test_enum_variant!(stopped, AgentStatus::Stopped, "stopped");
     test_enum_variant!(error, AgentStatus::Error, "error");
+    test_enum_variant!(archived, AgentStatus::Archived, "archived");
 }
 
 mod session_status_serde {

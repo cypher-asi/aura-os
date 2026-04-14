@@ -35,6 +35,10 @@ const addMenuItems: MenuItem[] = [
 const explorerNodeStyles = {
   projectSuffix: treeStyles.projectSuffix,
   newChatWrap: treeStyles.newChatWrap,
+  agentTrailing: treeStyles.agentTrailing,
+  agentStatusWrap: treeStyles.agentStatusWrap,
+  agentActionWrap: treeStyles.agentActionWrap,
+  agentActionButton: treeStyles.agentActionButton,
   sessionIndicator: treeStyles.sessionIndicator,
   automationSpinner: treeStyles.automationSpinner,
   streamingDot: treeStyles.streamingDot,

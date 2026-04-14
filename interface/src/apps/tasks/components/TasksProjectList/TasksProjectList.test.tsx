@@ -34,6 +34,10 @@ const agent: MockAgent = {
 
 const mockActions = {
   handleAddAgent: vi.fn(),
+  handleQuickAddAgent: vi.fn(),
+  handleArchiveAgent: vi.fn(),
+  creatingGeneralAgentProjectIds: [],
+  archivingAgentInstanceIds: [],
 };
 
 interface MockProjectListData {

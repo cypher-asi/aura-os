@@ -1,6 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
+import { api } from "../api/client";
 import { useProjectListActions } from "./use-project-list-actions";
 
 const mockNavigate = vi.fn();
@@ -8,6 +9,7 @@ const mockRefreshProjects = vi.fn().mockResolvedValue(undefined);
 const mockRefreshProjectAgents = vi.fn().mockResolvedValue(undefined);
 const mockSetAgentsByProject = vi.fn();
 const mockSetProjects = vi.fn();
+let mockAgentsByProject: Record<string, Array<{ agent_instance_id: string; project_id: string; status: string }>> = {};
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -20,7 +22,7 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("../apps/projects/useProjectsList", () => ({
   useProjectsList: () => ({
-    agentsByProject: {},
+    agentsByProject: mockAgentsByProject,
     setAgentsByProject: mockSetAgentsByProject,
     refreshProjects: mockRefreshProjects,
     refreshProjectAgents: mockRefreshProjectAgents,
@@ -33,6 +35,42 @@ vi.mock("../api/client", () => ({
     updateProject: vi.fn().mockResolvedValue({}),
     deleteProject: vi.fn().mockResolvedValue(undefined),
     deleteAgentInstance: vi.fn().mockResolvedValue(undefined),
+    createGeneralAgentInstance: vi.fn().mockResolvedValue({
+      agent_instance_id: "general-ai",
+      project_id: "p-9",
+      agent_id: "general-a",
+      name: "New Agent",
+      role: "general",
+      personality: "",
+      system_prompt: "",
+      skills: [],
+      icon: null,
+      status: "idle",
+      current_task_id: null,
+      current_session_id: null,
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      created_at: "",
+      updated_at: "",
+    }),
+    updateAgentInstance: vi.fn().mockResolvedValue({
+      agent_instance_id: "ai-2",
+      project_id: "p-2",
+      agent_id: "a-2",
+      name: "Archived Agent",
+      role: "dev",
+      personality: "",
+      system_prompt: "",
+      skills: [],
+      icon: null,
+      status: "archived",
+      current_task_id: null,
+      current_session_id: null,
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      created_at: "",
+      updated_at: "",
+    }),
   },
   ApiClientError: class extends Error {
     body: { error: string };
@@ -54,6 +92,7 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("useProjectListActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAgentsByProject = {};
   });
 
   it("returns initial state with all null targets", () => {
@@ -103,6 +142,56 @@ describe("useProjectListActions", () => {
 
     expect(mockNavigate).toHaveBeenCalledWith("/projects/p-2/agents/new-ai");
     expect(mockRefreshProjectAgents).toHaveBeenCalledWith("p-2");
+    expect(mockSetAgentsByProject).toHaveBeenCalled();
+  });
+
+  it("handleQuickAddAgent creates a general agent and navigates to it", async () => {
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    await act(async () => {
+      await result.current.handleQuickAddAgent("p-9");
+    });
+
+    expect(api.createGeneralAgentInstance).toHaveBeenCalledWith("p-9");
+    expect(mockNavigate).toHaveBeenCalledWith("/projects/p-9/agents/general-ai");
+  });
+
+  it("handleArchiveAgent archives the target instance", async () => {
+    mockAgentsByProject = {
+      "p-2": [
+        {
+          agent_instance_id: "ai-2",
+          project_id: "p-2",
+          status: "idle",
+        },
+      ],
+    };
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    await act(async () => {
+      await result.current.handleArchiveAgent({
+        agent_instance_id: "ai-2",
+        project_id: "p-2",
+        agent_id: "a-2",
+        name: "Agent",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-2", "ai-2", {
+      status: "archived",
+    });
   });
 
   it("handleProjectSaved updates the projects list", () => {

@@ -274,16 +274,42 @@ impl AgentInstanceService {
 
     /// Resolve agent config from aura-network only. Returns None if network is unavailable or agent not found.
     async fn resolve_agent_async(&self, agent_id_str: &str) -> Option<Agent> {
-        let client = self.network_client.as_ref()?;
-        let jwt = self.get_jwt().ok()?;
-        let net = client.get_agent(agent_id_str, &jwt).await.ok()?;
-        let mut agent = network_agent_to_core(&net);
         let runtime_config_service = AgentService {
             store: self.store.clone(),
             network_client: self.network_client.clone(),
         };
-        let _ = runtime_config_service.apply_runtime_config(&mut agent);
-        Some(agent)
+        if let Some(client) = self.network_client.as_ref() {
+            if let Ok(jwt) = self.get_jwt() {
+                if let Ok(net) = client.get_agent(agent_id_str, &jwt).await {
+                    let mut agent = network_agent_to_core(&net);
+                    let _ = runtime_config_service.apply_runtime_config(&mut agent);
+                    return Some(agent);
+                }
+            }
+        }
+
+        let agent_id = agent_id_str.parse::<AgentId>().ok()?;
+        runtime_config_service.get_agent_local(&agent_id).ok()
+    }
+
+    async fn persisted_status(
+        &self,
+        agent_instance_id: &AgentInstanceId,
+    ) -> Result<AgentStatus, AgentError> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let spa = storage
+            .get_project_agent(&agent_instance_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_os_storage::StorageError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Storage(e),
+            })?;
+        Ok(spa
+            .status
+            .as_deref()
+            .map(parse_agent_status)
+            .unwrap_or(AgentStatus::Idle))
     }
 
     pub async fn create_instance_from_agent(
@@ -369,6 +395,7 @@ impl AgentInstanceService {
             AgentStatus::Blocked => "blocked",
             AgentStatus::Stopped => "stopped",
             AgentStatus::Error => "error",
+            AgentStatus::Archived => "archived",
         };
         let req = aura_os_storage::UpdateProjectAgentRequest {
             status: status_str.to_string(),
@@ -420,8 +447,10 @@ impl AgentInstanceService {
         _project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<(), AgentError> {
-        self.update_status(agent_instance_id, AgentStatus::Idle)
-            .await?;
+        if self.persisted_status(agent_instance_id).await? != AgentStatus::Archived {
+            self.update_status(agent_instance_id, AgentStatus::Idle)
+                .await?;
+        }
         self.runtime_state.lock().await.remove(agent_instance_id);
         Ok(())
     }
@@ -441,6 +470,7 @@ impl AgentInstanceService {
                 | (AgentStatus::Idle, AgentStatus::Stopped)
                 | (AgentStatus::Stopped, AgentStatus::Idle)
                 | (AgentStatus::Error, AgentStatus::Idle)
+                | (_, AgentStatus::Archived)
         );
         if legal {
             Ok(())
@@ -461,6 +491,7 @@ pub fn parse_agent_status(s: &str) -> AgentStatus {
         "blocked" => AgentStatus::Blocked,
         "stopped" => AgentStatus::Stopped,
         "error" => AgentStatus::Error,
+        "archived" => AgentStatus::Archived,
         _ => AgentStatus::Idle,
     }
 }

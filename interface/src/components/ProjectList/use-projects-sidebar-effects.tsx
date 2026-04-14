@@ -4,6 +4,7 @@ import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { getLastAgent } from "../../utils/storage";
 import type { useProjectListData } from "./useProjectListData";
+import { getPreferredProjectAgent } from "./project-list-shared";
 
 function useProjectsActionButton(openNewProjectModal: () => void): void {
   const setAction = useAppUIStore((s) => s.setSidebarAction);
@@ -82,10 +83,8 @@ function useProjectRootRedirect(data: ReturnType<typeof useProjectListData>): vo
     if (!agents || agents.length === 0) return;
 
     const lastAgentId = getLastAgent(data.projectId);
-    const targetAgent =
-      (lastAgentId
-        ? agents.find((agent) => agent.agent_instance_id === lastAgentId)
-        : undefined) ?? agents[0];
+    const targetAgent = getPreferredProjectAgent(agents, lastAgentId);
+    if (!targetAgent) return;
     navigate(`/projects/${data.projectId}/agents/${targetAgent.agent_instance_id}`, {
       replace: true,
     });

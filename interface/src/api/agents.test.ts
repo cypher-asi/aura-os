@@ -165,6 +165,16 @@ describe("agentInstancesApi", () => {
     );
   });
 
+  it("createGeneralAgentInstance sends POST with kind", async () => {
+    const fetchMock = mockFetch(200, { id: "ai1" });
+    globalThis.fetch = fetchMock;
+    await agentInstancesApi.createGeneralAgentInstance("p1" as string);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/agents",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ kind: "general" }) }),
+    );
+  });
+
   it("listAgentInstances fetches GET", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;

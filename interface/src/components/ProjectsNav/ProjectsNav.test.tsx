@@ -34,6 +34,10 @@ const agent: MockAgent = {
 
 const mockActions = {
   handleAddAgent: vi.fn(),
+  handleQuickAddAgent: vi.fn(),
+  handleArchiveAgent: vi.fn(),
+  creatingGeneralAgentProjectIds: [],
+  archivingAgentInstanceIds: [],
 };
 
 interface MockProjectListData {
@@ -183,6 +187,27 @@ describe("ProjectsNav", () => {
     expect(await screen.findByTestId("node-a1")).toHaveTextContent(
       "Navigation rail and taskbar icons",
     );
+  });
+
+  it("renders archived agents inside an Archived subgroup", async () => {
+    mockProjectListData = buildMockData({
+      agentsByProject: {
+        p1: [
+          agent,
+          {
+            ...agent,
+            agent_instance_id: "a2",
+            name: "Archived refactor thread",
+            status: "archived",
+          },
+        ],
+      },
+    });
+
+    render(<ProjectsNav />);
+
+    expect(await screen.findByText("Archived")).toBeInTheDocument();
+    expect(screen.getByText("Archived refactor thread")).toBeInTheDocument();
   });
 
   it("keeps project rows non-selectable and toggles them without remounting the row", async () => {

@@ -27,15 +27,23 @@ interface LeftMenuTreeProps {
 const ROW_HEIGHT = 28;
 const VIRTUALIZE_AFTER = 30;
 
-function getVisibleChildCount(entry: LeftMenuGroupEntry): number {
-  if (!entry.expanded) return 0;
-  if (entry.emptyState) return 1;
-  return entry.children.length;
+function getVisibleRowCount(entry: LeftMenuEntry): number {
+  if (entry.kind === "item") {
+    return 1;
+  }
+
+  if (!entry.expanded) {
+    return 1;
+  }
+
+  const childRows = entry.emptyState
+    ? 1
+    : entry.children.reduce((total, child) => total + getVisibleRowCount(child), 0);
+  return 1 + childRows;
 }
 
 function getEntryHeight(entry: LeftMenuEntry): number {
-  if (entry.kind === "item") return ROW_HEIGHT;
-  return ROW_HEIGHT + getVisibleChildCount(entry) * ROW_HEIGHT;
+  return getVisibleRowCount(entry) * ROW_HEIGHT;
 }
 
 function LeftMenuEmptyStateRow({ entry }: { entry: LeftMenuEmptyEntry }) {
@@ -51,14 +59,14 @@ function LeftMenuEmptyStateRow({ entry }: { entry: LeftMenuEmptyEntry }) {
 
 function LeftMenuLeafRow({
   entry,
-  root,
+  depth,
 }: {
   entry: LeftMenuLeafEntry;
-  root?: boolean;
+  depth: number;
 }) {
   const className = [
     styles.agentRow,
-    root ? styles.rootItemRow : "",
+    depth === 0 ? styles.rootItemRow : "",
     entry.selected ? styles.agentRowSelected : "",
     entry.disabled ? styles.agentRowDisabled : "",
   ]
@@ -74,6 +82,7 @@ function LeftMenuLeafRow({
       disabled={entry.disabled}
       data-testid={entry.testId}
       onClick={entry.disabled ? undefined : entry.onSelect}
+      style={{ paddingLeft: 16 + Math.max(depth - 1, 0) * 16 }}
     >
       {entry.icon ? <span className={styles.agentIcon}>{entry.icon}</span> : null}
       <span className={styles.agentLabel} data-inline-rename-label>
@@ -84,15 +93,22 @@ function LeftMenuLeafRow({
   );
 }
 
-function LeftMenuGroup({ entry }: { entry: LeftMenuGroupEntry }) {
+function LeftMenuGroup({
+  entry,
+  depth,
+}: {
+  entry: LeftMenuGroupEntry;
+  depth: number;
+}) {
+  const isSection = entry.variant === "section";
   const headerClassName = [
-    styles.projectHeader,
+    isSection ? styles.sectionHeader : styles.projectHeader,
     entry.selected ? styles.projectHeaderSelected : "",
   ]
     .filter(Boolean)
     .join(" ");
   const buttonClassName = [
-    styles.projectMainButton,
+    isSection ? styles.sectionMainButton : styles.projectMainButton,
     entry.selected ? styles.projectMainButtonSelected : "",
   ]
     .filter(Boolean)
@@ -117,8 +133,11 @@ function LeftMenuGroup({ entry }: { entry: LeftMenuGroupEntry }) {
   };
 
   return (
-    <section className={styles.projectGroup}>
-      <div className={headerClassName}>
+    <section className={isSection ? styles.sectionGroup : styles.projectGroup}>
+      <div
+        className={headerClassName}
+        style={{ paddingLeft: 16 + depth * 16 }}
+      >
         <button
           id={entry.id}
           type="button"
@@ -129,11 +148,14 @@ function LeftMenuGroup({ entry }: { entry: LeftMenuGroupEntry }) {
           onClick={entry.onActivate}
           onKeyDown={handleProjectKeyDown}
         >
-          <span className={styles.projectLabel} data-inline-rename-label>
+          <span
+            className={isSection ? styles.sectionLabel : styles.projectLabel}
+            data-inline-rename-label
+          >
             {entry.label}
           </span>
           <span
-            className={`${styles.projectChevronWrap} ${entry.toggleMode === "secondary" ? styles.projectChevronWrapInteractive : ""}`}
+            className={`${styles.projectChevronWrap} ${isSection ? styles.sectionChevronWrap : ""} ${entry.toggleMode === "secondary" ? styles.projectChevronWrapInteractive : ""}`}
             aria-hidden="true"
             onClick={handleChevronClick}
           >
@@ -151,7 +173,7 @@ function LeftMenuGroup({ entry }: { entry: LeftMenuGroupEntry }) {
             <LeftMenuEmptyStateRow entry={entry.emptyState} />
           ) : (
             entry.children.map((childEntry) => (
-              <LeftMenuLeafRow key={childEntry.id} entry={childEntry} />
+              <LeftMenuEntryRow key={childEntry.id} entry={childEntry} depth={depth + 1} />
             ))
           )}
         </div>
@@ -160,11 +182,17 @@ function LeftMenuGroup({ entry }: { entry: LeftMenuGroupEntry }) {
   );
 }
 
-function LeftMenuEntryRow({ entry }: { entry: LeftMenuEntry }) {
+function LeftMenuEntryRow({
+  entry,
+  depth = 0,
+}: {
+  entry: LeftMenuEntry;
+  depth?: number;
+}) {
   return entry.kind === "group" ? (
-    <LeftMenuGroup entry={entry} />
+    <LeftMenuGroup entry={entry} depth={depth} />
   ) : (
-    <LeftMenuLeafRow entry={entry} root />
+    <LeftMenuLeafRow entry={entry} depth={depth} />
   );
 }
 

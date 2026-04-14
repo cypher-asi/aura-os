@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { X } from "lucide-react";
@@ -13,6 +13,9 @@ import { ChatPanel } from "../ChatPanel";
 import { projectChatHistoryKey, agentHistoryKey } from "../../stores/chat-history-store";
 import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
 import { useProjectsListStore } from "../../stores/projects-list-store";
+import { queryClient } from "../../lib/query-client";
+import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
+import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import type { AgentInstance, Project } from "../../types";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
@@ -186,6 +189,7 @@ function ProjectAgentChatPanel({
 }) {
   const isSessionView = !!sessionId;
   const currentProject = useProjectsListStore(useShallow(selectCurrentProject(projectId)));
+  const setAgentsByProject = useProjectsListStore((state) => state.setAgentsByProject);
   const { streamKey, sendMessage, stopStreaming, resetEvents } = useChatStream({
     projectId,
     agentInstanceId,
@@ -228,7 +232,54 @@ function ProjectAgentChatPanel({
     onClear,
   });
 
-  const wrappedSend = useMemo(() => wrapSend(sendMessage), [wrapSend, sendMessage]);
+  const hasHistory = historyMessages.length > 0;
+  const renameTriggeredRef = useRef(false);
+  useEffect(() => {
+    renameTriggeredRef.current = false;
+  }, [agentInstanceId, sessionId]);
+
+  const wrappedSendBase = useMemo(() => wrapSend(sendMessage), [wrapSend, sendMessage]);
+  const maybeRenameFromFirstPrompt = useCallback((content: string) => {
+    if (renameTriggeredRef.current || isSessionView || agentName !== "New Agent") {
+      return;
+    }
+    if (hasHistory) {
+      return;
+    }
+
+    const nextName = deriveProjectAgentTitle(content);
+    if (!nextName || nextName === "New Agent") {
+      return;
+    }
+
+    renameTriggeredRef.current = true;
+    void api.updateAgentInstance(projectId, agentInstanceId, { name: nextName })
+      .then((updated) => {
+        queryClient.setQueryData(
+          projectQueryKeys.agentInstance(projectId, agentInstanceId),
+          updated,
+        );
+        setAgentsByProject((prev) => ({
+          ...prev,
+          [projectId]: mergeAgentIntoProjectAgents(prev[projectId], updated),
+        }));
+      })
+      .catch((error) => {
+        renameTriggeredRef.current = false;
+        console.error("Failed to rename project agent from first prompt", error);
+      });
+  }, [
+    agentInstanceId,
+    agentName,
+    hasHistory,
+    isSessionView,
+    projectId,
+    setAgentsByProject,
+  ]);
+  const wrappedSend = useCallback((...args: Parameters<typeof wrappedSendBase>) => {
+    maybeRenameFromFirstPrompt(args[0] ?? "");
+    return wrappedSendBase(...args);
+  }, [maybeRenameFromFirstPrompt, wrappedSendBase]);
   const deferredLoading = useDelayedLoading(isLoading);
   const panelKey = isSessionView ? `${agentInstanceId}:${sessionId}` : agentInstanceId;
 

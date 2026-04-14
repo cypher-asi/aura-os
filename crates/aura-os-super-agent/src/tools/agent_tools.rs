@@ -431,7 +431,7 @@ impl SuperAgentTool for UpdateAgentInstanceTool {
                 "agent_instance_id": { "type": "string", "description": "Agent instance ID" },
                 "status": {
                     "type": "string",
-                    "enum": ["idle", "working", "blocked", "stopped", "error"],
+                    "enum": ["idle", "working", "blocked", "stopped", "error", "archived"],
                     "description": "New status for the agent instance"
                 }
             },

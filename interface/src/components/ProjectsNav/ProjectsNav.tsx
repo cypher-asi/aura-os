@@ -13,6 +13,10 @@ import styles from "../../features/left-menu/LeftMenuTree/LeftMenuTree.module.cs
 const explorerNodeStyles = {
   projectSuffix: styles.projectSuffix,
   newChatWrap: styles.newChatWrap,
+  agentTrailing: styles.agentTrailing,
+  agentStatusWrap: styles.agentStatusWrap,
+  agentActionWrap: styles.agentActionWrap,
+  agentActionButton: styles.agentActionButton,
   sessionIndicator: styles.sessionIndicator,
   automationSpinner: styles.automationSpinner,
   streamingDot: styles.streamingDot,

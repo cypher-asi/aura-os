@@ -77,11 +77,20 @@ export const agentInstancesApi = {
       method: "POST",
       body: JSON.stringify({ agent_id: agentId }),
     }),
+  createGeneralAgentInstance: (projectId: ProjectId) =>
+    apiFetch<AgentInstance>(`/api/projects/${projectId}/agents`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "general" }),
+    }),
   listAgentInstances: (projectId: ProjectId) =>
     apiFetch<AgentInstance[]>(`/api/projects/${projectId}/agents`),
   getAgentInstance: (projectId: ProjectId, agentInstanceId: AgentInstanceId, options?: ApiRequestOptions) =>
     apiFetch<AgentInstance>(`/api/projects/${projectId}/agents/${agentInstanceId}`, { signal: options?.signal }),
-  updateAgentInstance: (projectId: ProjectId, agentInstanceId: AgentInstanceId, data: Partial<Pick<AgentInstance, "name" | "role" | "personality" | "system_prompt" | "skills" | "icon" | "model">>) =>
+  updateAgentInstance: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    data: Partial<Pick<AgentInstance, "name" | "status">>,
+  ) =>
     apiFetch<AgentInstance>(`/api/projects/${projectId}/agents/${agentInstanceId}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -100,8 +109,8 @@ export const agentInstancesApi = {
 
 export const superAgentApi = {
   setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/super-agent/setup", { method: "POST" }),
-  listOrchestrations: () => apiFetch<any[]>("/api/super-agent/orchestrations"),
-  getOrchestration: (id: string) => apiFetch<any>(`/api/super-agent/orchestrations/${id}`),
+  listOrchestrations: () => apiFetch<unknown[]>("/api/super-agent/orchestrations"),
+  getOrchestration: (id: string) => apiFetch<unknown>(`/api/super-agent/orchestrations/${id}`),
 };
 
 export const sessionsApi = {

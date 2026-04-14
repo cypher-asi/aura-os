@@ -13,7 +13,11 @@ import {
 } from "../../utils/mobileNavigation";
 import { getCollapsedProjects, getLastAgent, setCollapsedProjects } from "../../utils/storage";
 import type { useProjectListData } from "./useProjectListData";
-import { filterTree, getLastSelectedId } from "./project-list-shared";
+import {
+  filterTree,
+  getLastSelectedId,
+  getPreferredProjectAgent,
+} from "./project-list-shared";
 import { useExplorerMenus } from "./useExplorerMenus";
 import {
   buildProjectExplorerNode,
@@ -25,6 +29,20 @@ import {
   registerProjectExplorerAgents,
 } from "./project-list-explorer-helpers";
 import { useProjectsSidebarEffects } from "./use-projects-sidebar-effects";
+
+function collectExpandableNodeIds(nodes: ExplorerNode[]): string[] {
+  const expandedIds: string[] = [];
+  for (const node of nodes) {
+    if (!node.children || node.children.length === 0) {
+      continue;
+    }
+    if (!node.children[0]?.id?.startsWith("_load_")) {
+      expandedIds.push(node.id);
+    }
+    expandedIds.push(...collectExpandableNodeIds(node.children));
+  }
+  return expandedIds;
+}
 
 function useProjectExplorerData(
   data: ReturnType<typeof useProjectListData>,
@@ -43,7 +61,10 @@ function useProjectExplorerData(
       automatingAgentInstanceId: data.automatingAgentInstanceId,
       isMobileLayout: data.isMobileLayout,
       streamingAgentInstanceId: data.sidekick.streamingAgentInstanceId,
-      handleAddAgent: data.actions.handleAddAgent,
+      creatingGeneralAgentProjectIds: data.actions.creatingGeneralAgentProjectIds,
+      archivingAgentInstanceIds: data.actions.archivingAgentInstanceIds,
+      handleQuickAddAgent: data.actions.handleQuickAddAgent,
+      handleArchiveAgent: data.actions.handleArchiveAgent,
     }),
     [data],
   );
@@ -70,15 +91,7 @@ function useProjectExplorerData(
   );
 
   const computedExpandedIds = useMemo(
-    () =>
-      explorerData
-        .filter(
-          (node) =>
-            node.children &&
-            node.children.length > 0 &&
-            !node.children[0]?.id?.startsWith("_load_"),
-        )
-        .map((node) => node.id),
+    () => collectExpandableNodeIds(explorerData),
     [explorerData],
   );
 
@@ -91,7 +104,7 @@ function useProjectExpandedIds(
 ): {
   defaultExpandedIds: string[];
   expandedIds: string[];
-  persistExpandedState: (nodeId: string, expanded: boolean) => void;
+  setExpandedState: (nodeId: string, expanded: boolean, persist: boolean) => void;
 } {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(
     () => new Set(getCollapsedProjects()),
@@ -102,6 +115,9 @@ function useProjectExpandedIds(
 
   useEffect(() => {
     if (loadingProjects) return;
+    // Sync newly discovered expandable nodes into local UI state without
+    // resetting any manual expand/collapse choices the user already made.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setExpandedIds((previousIds) => {
       const previousSet = new Set(previousIds);
       const nextIds = computedExpandedIds.filter(
@@ -111,13 +127,17 @@ function useProjectExpandedIds(
     });
   }, [collapsedIds, computedExpandedIds, loadingProjects]);
 
-  const persistExpandedState = useCallback((nodeId: string, expanded: boolean) => {
+  const setExpandedState = useCallback((nodeId: string, expanded: boolean, persist: boolean) => {
     setExpandedIds((previousIds) => {
       if (expanded) {
         return previousIds.includes(nodeId) ? previousIds : [...previousIds, nodeId];
       }
       return previousIds.filter((existingId) => existingId !== nodeId);
     });
+
+    if (!persist) {
+      return;
+    }
 
     setCollapsedIds((previousIds) => {
       const nextIds = new Set(previousIds);
@@ -136,7 +156,7 @@ function useProjectExpandedIds(
     [collapsedIds, computedExpandedIds],
   );
 
-  return { defaultExpandedIds, expandedIds, persistExpandedState };
+  return { defaultExpandedIds, expandedIds, setExpandedState };
 }
 
 function useSelectedProjectNode(
@@ -210,10 +230,8 @@ function useProjectSelectionHandler(
     if (agents.length === 0) return;
 
     const lastAgentId = getLastAgent(nodeId);
-    const targetAgent =
-      (lastAgentId
-        ? agents.find((agent) => agent.agent_instance_id === lastAgentId)
-        : undefined) ?? agents[0];
+    const targetAgent = getPreferredProjectAgent(agents, lastAgentId);
+    if (!targetAgent) return;
     navigate(`/projects/${nodeId}/agents/${targetAgent.agent_instance_id}`);
   }, [data, navigate]);
 }
@@ -251,14 +269,13 @@ function useProjectChildSelectionHandler(
 
 function useProjectExpandHandler(
   data: ReturnType<typeof useProjectListData>,
-  persistExpandedState: (nodeId: string, expanded: boolean) => void,
+  setExpandedState: (nodeId: string, expanded: boolean, persist: boolean) => void,
 ): (nodeId: string, expanded: boolean) => void {
   const navigate = useNavigate();
 
   return useCallback((nodeId: string, expanded: boolean) => {
-    if (data.projectMap.has(nodeId)) {
-      persistExpandedState(nodeId, expanded);
-    }
+    const isProjectGroup = data.projectMap.has(nodeId);
+    setExpandedState(nodeId, expanded, isProjectGroup);
 
     const isNested = isProjectNestedPath(
       data.location.pathname,
@@ -275,7 +292,7 @@ function useProjectExpandHandler(
     if (expanded && data.projectMap.has(nodeId) && !(nodeId in data.agentsByProject)) {
       void data.refreshProjectAgents(nodeId);
     }
-  }, [data, navigate, persistExpandedState]);
+  }, [data, navigate, setExpandedState]);
 }
 
 function useProjectSelectHandler(
@@ -327,7 +344,7 @@ export function useProjectsExplorerModel(
 
   const { computedExpandedIds, explorerData, filteredExplorerData } =
     useProjectExplorerData(data, explorerStyles, statusMap, machineTypesMap);
-  const { defaultExpandedIds, expandedIds, persistExpandedState } =
+  const { defaultExpandedIds, expandedIds, setExpandedState } =
     useProjectExpandedIds(computedExpandedIds, loadingProjects);
   const { defaultSelectedIds, selectedNodeId } = useSelectedProjectNode(data);
   const handleProjectSelection = useProjectSelectionHandler(data);
@@ -337,7 +354,7 @@ export function useProjectsExplorerModel(
     handleProjectSelection,
     handleChildSelection,
   );
-  const handleExpand = useProjectExpandHandler(data, persistExpandedState);
+  const handleExpand = useProjectExpandHandler(data, setExpandedState);
   const handleProjectToggle = useProjectToggleHandler(expandedIds, handleExpand);
 
   const { handleContextMenu, handleKeyDown } = useExplorerMenus(
