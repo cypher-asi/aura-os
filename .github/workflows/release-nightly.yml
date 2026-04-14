@@ -418,9 +418,20 @@ jobs:
             --channel nightly \
             --output-dir ../manifest-validation
 
+      - name: Validate nightly download manifest
+        run: |
+          cd repo
+          node infra/scripts/release/desktop-downloads-validate.mjs \
+            --manifest ../pages/downloads/nightly.json \
+            --artifacts-dir ../all-artifacts \
+            --channel nightly \
+            --output-dir ../manifest-validation
+
       - name: Attach nightly manifest summary
         shell: bash
-        run: cat manifest-validation/desktop-manifests-nightly.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          cat manifest-validation/desktop-manifests-nightly.md >> "$GITHUB_STEP_SUMMARY"
+          cat manifest-validation/desktop-downloads-nightly.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push manifests
         run: |
