@@ -295,6 +295,32 @@ jobs:
           generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
           generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
 
+          mkdir -p "../pages/downloads"
+          cat > "../pages/downloads/stable.json" <<MANIFEST
+          {
+            "channel": "stable",
+            "version": "${VERSION}",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
+            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "desktop": {
+              "windows": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
+              },
+              "mac": {
+                "apple-silicon": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_aarch64.dmg"
+                },
+                "intel": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_x64.dmg"
+                }
+              },
+              "linux": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
+              }
+            }
+          }
+          MANIFEST
+
       - name: Validate stable update manifests
         run: |
           cd repo
@@ -312,6 +338,6 @@ jobs:
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add stable/
+          git add stable/ downloads/stable.json
           git diff --cached --quiet || git commit -m "Update stable manifests for ${{ steps.version.outputs.version }}"
           git push

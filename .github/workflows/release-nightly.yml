@@ -384,6 +384,32 @@ jobs:
           generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
           generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
 
+          mkdir -p "../pages/downloads"
+          cat > "../pages/downloads/nightly.json" <<MANIFEST
+          {
+            "channel": "nightly",
+            "version": "${VERSION}",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/nightly",
+            "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "desktop": {
+              "windows": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/nightly/aura-os-desktop_${VERSION}_x64-setup.exe"
+              },
+              "mac": {
+                "apple-silicon": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/nightly/Aura_${VERSION}_aarch64.dmg"
+                },
+                "intel": {
+                  "url": "https://github.com/${{ github.repository }}/releases/download/nightly/Aura_${VERSION}_x64.dmg"
+                }
+              },
+              "linux": {
+                "url": "https://github.com/${{ github.repository }}/releases/download/nightly/aura-os-desktop_${VERSION}_x86_64.AppImage"
+              }
+            }
+          }
+          MANIFEST
+
       - name: Validate nightly update manifests
         run: |
           cd repo
@@ -401,6 +427,6 @@ jobs:
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add nightly/
+          git add nightly/ downloads/nightly.json
           git diff --cached --quiet || git commit -m "Update nightly manifests for ${{ steps.version.outputs.version }}"
           git push
