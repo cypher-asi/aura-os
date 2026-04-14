@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore, useSelectedAgent } from "../apps/agents/stores";
 import { projectAgentInstanceQueryOptions } from "../queries/project-queries";
@@ -71,6 +71,7 @@ export function useAgentChatMeta(
       ? projectAgentInstanceQueryOptions(params.projectId, params.agentInstanceId)
       : projectAgentInstanceQueryOptions("", "")),
     enabled: mode === "project" && Boolean(params.projectId && params.agentInstanceId),
+    placeholderData: keepPreviousData,
   });
 
   if (mode === "project") {
