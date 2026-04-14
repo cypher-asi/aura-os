@@ -101,9 +101,10 @@ struct PersistedUpdaterSettings {
 impl UpdateState {
     pub(crate) fn load(data_dir: &Path) -> Self {
         let settings_path = data_dir.join(SETTINGS_FILE_NAME);
+        let default_channel = default_channel_for_version(env!("CARGO_PKG_VERSION"));
         let channel = load_persisted_channel(&settings_path).unwrap_or_else(|error| {
             warn!(error = %error, path = %settings_path.display(), "failed to load persisted updater settings");
-            UpdateChannel::Stable
+            default_channel
         });
         Self {
             status: Arc::new(RwLock::new(UpdateStatus::Idle)),
@@ -119,7 +120,7 @@ impl UpdateState {
 
 fn load_persisted_channel(settings_path: &Path) -> Result<UpdateChannel, String> {
     if !settings_path.exists() {
-        return Ok(UpdateChannel::Stable);
+        return Ok(default_channel_for_version(env!("CARGO_PKG_VERSION")));
     }
     let bytes = fs::read(settings_path).map_err(|e| {
         format!(
@@ -134,6 +135,15 @@ fn load_persisted_channel(settings_path: &Path) -> Result<UpdateChannel, String>
         )
     })?;
     Ok(settings.channel)
+}
+
+fn default_channel_for_version(version: &str) -> UpdateChannel {
+    SemverVersion::parse(version)
+        .ok()
+        .map(|parsed| parsed.pre.as_str().split('.').next().unwrap_or_default().to_string())
+        .filter(|identifier| identifier == "nightly")
+        .map(|_| UpdateChannel::Nightly)
+        .unwrap_or(UpdateChannel::Stable)
 }
 
 fn persist_channel(settings_path: &Path, channel: UpdateChannel) -> Result<(), String> {
@@ -473,8 +483,8 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_base64_utf8, endpoint_for_channel_with_base, load_persisted_channel,
-        persist_channel, UpdateChannel,
+        decode_base64_utf8, default_channel_for_version, endpoint_for_channel_with_base,
+        load_persisted_channel, persist_channel, UpdateChannel,
     };
     use base64::Engine;
     use std::fs;
@@ -497,6 +507,22 @@ mod tests {
         assert_eq!(
             endpoint,
             "https://updates.example.com/nightly/{{target}}/{{arch}}.json"
+        );
+    }
+
+    #[test]
+    fn defaults_to_nightly_channel_for_nightly_versions() {
+        assert_eq!(
+            default_channel_for_version("0.1.0-nightly.89e6046"),
+            UpdateChannel::Nightly
+        );
+    }
+
+    #[test]
+    fn defaults_to_stable_channel_for_stable_versions() {
+        assert_eq!(
+            default_channel_for_version("0.1.0"),
+            UpdateChannel::Stable
         );
     }
 
