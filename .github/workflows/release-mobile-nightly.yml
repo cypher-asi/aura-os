@@ -11,6 +11,15 @@ on:
         required: true
         default: false
         type: boolean
+      platform:
+        description: "Which mobile platform(s) to build"
+        required: true
+        default: android
+        type: choice
+        options:
+          - android
+          - ios
+          - both
 
 permissions:
   contents: write
@@ -21,6 +30,7 @@ concurrency:
 
 jobs:
   build-android:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'android' || inputs.platform == 'both'
     runs-on: ubuntu-latest
     env:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -123,6 +133,7 @@ jobs:
             mobile-release-summary/**
 
   build-ios:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'ios' || inputs.platform == 'both'
     runs-on: macos-latest
     env:
       FASTLANE_SKIP_UPDATE_CHECK: "1"
@@ -215,7 +226,20 @@ jobs:
     needs:
       - build-android
       - build-ios
-    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
+    if: |
+      always() &&
+      (
+        github.ref_name == 'main' ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish_live)
+      ) &&
+      (
+        (needs.build-android.result == 'success' || needs.build-android.result == 'skipped') &&
+        (needs.build-ios.result == 'success' || needs.build-ios.result == 'skipped')
+      ) &&
+      (
+        needs.build-android.result == 'success' ||
+        needs.build-ios.result == 'success'
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
