@@ -1,22 +1,22 @@
 {
   "channel": "nightly",
-  "version": "0.1.0-nightly.24af56a",
+  "version": "0.1.0-nightly.7bf7235",
   "release_url": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "generated_at": "2026-04-14T15:28:39Z",
+  "generated_at": "2026-04-14T22:41:36Z",
   "desktop": {
     "windows": {
-      "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/aura-os-desktop_0.1.0-nightly.24af56a_x64-setup.exe"
+      "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/aura-os-desktop_0.1.0-nightly.7bf7235_x64-setup.exe"
     },
     "mac": {
       "apple-silicon": {
-        "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/Aura_0.1.0-nightly.24af56a_aarch64.dmg"
+        "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/Aura_0.1.0-nightly.7bf7235_aarch64.dmg"
       },
       "intel": {
-        "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/Aura_0.1.0-nightly.24af56a_x64.dmg"
+        "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/Aura_0.1.0-nightly.7bf7235_x64.dmg"
       }
     },
     "linux": {
-      "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/aura-os-desktop_0.1.0-nightly.24af56a_x86_64.AppImage"
+      "url": "https://github.com/cypher-asi/aura-os/releases/download/nightly/aura-os-desktop_0.1.0-nightly.7bf7235_x86_64.AppImage"
     }
   }
 }
