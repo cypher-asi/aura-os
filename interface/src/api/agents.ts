@@ -4,7 +4,6 @@ import type {
   AgentInstanceId,
   Agent,
   AgentInstance,
-  AgentRuntimeTestResult,
   Session,
   SessionEvent,
   Task,
@@ -78,8 +77,6 @@ export const agentTemplatesApi = {
     });
   },
   sendEventStream: sendAgentEventStream,
-  testRuntime: (agentId: AgentId) =>
-    apiFetch<AgentRuntimeTestResult>(`/api/agents/${agentId}/runtime/test`, { method: "POST" }),
 };
 
 export const agentInstancesApi = {

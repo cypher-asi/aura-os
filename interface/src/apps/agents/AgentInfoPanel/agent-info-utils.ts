@@ -1,16 +1,9 @@
-import type { Agent, Session } from "../../../types";
+import type { Session } from "../../../types";
 import {
   getAdapterLabel,
   getConnectionAuthLabel,
   getLocalAuthLabel,
 } from "../../../lib/integrationCatalog";
-
-export interface RuntimeReadiness {
-  tone: "info" | "success" | "warning";
-  label: string;
-  title: string;
-  message: string;
-}
 
 export type AnnotatedSession = Session & {
   _projectName: string;
@@ -50,54 +43,6 @@ export function formatRunsOnLabel(
     default:
       return "This Machine";
   }
-}
-
-export function describeRuntimeReadiness(
-  agent: Agent,
-  integration?: { name: string; has_secret: boolean } | null,
-): RuntimeReadiness {
-  if (agent.auth_source === "org_integration") {
-    if (!integration) {
-      return {
-        tone: "warning",
-        label: "Needs connection",
-        title: "Connection missing",
-        message:
-          "This agent expects a workspace connection, but none is currently attached. Attach one before running the agent.",
-      };
-    }
-    if (!integration.has_secret) {
-      return {
-        tone: "warning",
-        label: "Needs key",
-        title: "Connection missing a key",
-        message: `${integration.name} is attached, but it does not have a stored key yet. Add one in Connections before running this agent.`,
-      };
-    }
-    return {
-      tone: "success",
-      label: "Ready",
-      title: "Connection ready",
-      message: `${integration.name} has a stored key. Keys stay in Connections and are resolved only at runtime.`,
-    };
-  }
-
-  if (agent.auth_source === "local_cli_auth") {
-    return {
-      tone: "info",
-      label: "Local login",
-      title: "Uses a local login",
-      message: `${getLocalAuthLabel(agent.adapter_type ?? "aura_harness")} uses the login available to aura-os-server on this machine.`,
-    };
-  }
-
-  return {
-    tone: "success",
-    label: "Managed",
-    title: "Managed by Aura",
-    message:
-      "Aura provides the credentials and billing for this runtime path.",
-  };
 }
 
 export function formatDuration(

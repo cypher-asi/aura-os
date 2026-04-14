@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Text, Badge, Button } from "@cypher-asi/zui";
+import { Text, Badge } from "@cypher-asi/zui";
 import {
   Bot,
   Calendar,
@@ -20,7 +20,6 @@ import {
   formatAdapterLabel,
   formatAuthSourceLabel,
   formatRunsOnLabel,
-  type RuntimeReadiness,
 } from "./agent-info-utils";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
@@ -29,13 +28,6 @@ export interface ProfileTabProps {
   agent: Agent;
   isOwnAgent: boolean;
   isMobileStandalone?: boolean;
-  runtimeTesting: boolean;
-  runtimeTestMessage: string | null;
-  runtimeTestDetails: string | null;
-  runtimeTestStatus: "success" | "error" | null;
-  onRuntimeTest: () => void;
-  runtimeResultRef: React.RefObject<HTMLDivElement | null>;
-  runtimeReadiness: RuntimeReadiness;
   onViewSkill?: (skill: HarnessSkill, installation?: HarnessSkillInstallation) => void;
 }
 
@@ -275,118 +267,6 @@ function ProfileMetaGrid({ agent }: { agent: Agent }) {
   );
 }
 
-function RuntimeSection({
-  runtimeReadiness,
-  runtimeTesting,
-  runtimeTestMessage,
-  runtimeTestDetails,
-  runtimeTestStatus,
-  onRuntimeTest,
-  runtimeResultRef,
-}: {
-  runtimeReadiness: RuntimeReadiness;
-  runtimeTesting: boolean;
-  runtimeTestMessage: string | null;
-  runtimeTestDetails: string | null;
-  runtimeTestStatus: "success" | "error" | null;
-  onRuntimeTest: () => void;
-  runtimeResultRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const [showDetails, setShowDetails] = useState(false);
-  const readinessClass =
-    runtimeReadiness.tone === "success"
-      ? styles.runtimeReadinessSuccess
-      : runtimeReadiness.tone === "warning"
-        ? styles.runtimeReadinessWarning
-        : styles.runtimeReadinessInfo;
-  const shouldShowReadiness = runtimeReadiness.tone === "warning" || showDetails;
-  const hasExtraDetails = !!runtimeReadiness.message || !!runtimeTestDetails;
-
-  return (
-    <div className={styles.section}>
-      <Text size="xs" variant="muted" weight="medium">Runtime Tools</Text>
-      <div className={styles.runtimeToolbar}>
-        <div className={styles.runtimeToolbarActions}>
-          <Button variant="secondary" size="sm" onClick={onRuntimeTest} disabled={runtimeTesting}>
-            {runtimeTesting ? "Checking..." : "Check Runtime"}
-          </Button>
-          <span
-            className={`${styles.runtimeStatusBadge} ${
-              runtimeReadiness.tone === "success"
-                ? styles.runtimeStatusSuccess
-                : runtimeReadiness.tone === "warning"
-                  ? styles.runtimeStatusWarning
-                  : styles.runtimeStatusInfo
-            }`}
-          >
-            {runtimeReadiness.label}
-          </span>
-        </div>
-        {hasExtraDetails && (
-          <button
-            type="button"
-            className={styles.inlineAction}
-            onClick={() => setShowDetails((current) => !current)}
-          >
-            {showDetails ? "Hide details" : "Runtime details"}
-          </button>
-        )}
-      </div>
-      {shouldShowReadiness && (
-        <div className={`${styles.runtimeReadiness} ${readinessClass}`}>
-          <Text size="xs" weight="medium" className={styles.runtimeReadinessTitle}>
-            {runtimeReadiness.title}
-          </Text>
-          <Text size="xs" variant="muted">{runtimeReadiness.message}</Text>
-        </div>
-      )}
-      {runtimeTestMessage && (
-        <RuntimeTestResult
-          runtimeResultRef={runtimeResultRef}
-          runtimeTestStatus={runtimeTestStatus}
-          runtimeTestMessage={runtimeTestMessage}
-          runtimeTestDetails={runtimeTestDetails}
-          collapsed={!showDetails && runtimeTestStatus !== "error"}
-        />
-      )}
-    </div>
-  );
-}
-
-function RuntimeTestResult({
-  runtimeResultRef,
-  runtimeTestStatus,
-  runtimeTestMessage,
-  runtimeTestDetails,
-  collapsed,
-}: {
-  runtimeResultRef: React.RefObject<HTMLDivElement | null>;
-  runtimeTestStatus: "success" | "error" | null;
-  runtimeTestMessage: string;
-  runtimeTestDetails: string | null;
-  collapsed: boolean;
-}) {
-  return (
-    <div
-      ref={runtimeResultRef}
-      className={`${styles.runtimeTestResult} ${
-        runtimeTestStatus === "error" ? styles.runtimeTestError : styles.runtimeTestSuccess
-      }`}
-      aria-live="polite"
-    >
-      <Text size="xs" weight="medium" className={styles.runtimeTestTitle}>
-        {runtimeTestStatus === "error" ? "Runtime check failed" : "Runtime ready"}
-      </Text>
-      <Text size="xs" variant="muted">{runtimeTestMessage}</Text>
-      {runtimeTestDetails && !collapsed && (
-        <Text size="xs" variant="muted" className={styles.runtimeTestMeta}>
-          {runtimeTestDetails}
-        </Text>
-      )}
-    </div>
-  );
-}
-
 export function ProfileTab(props: ProfileTabProps) {
   const { agent } = props;
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
@@ -415,15 +295,6 @@ export function ProfileTab(props: ProfileTabProps) {
         isOwnAgent={props.isOwnAgent}
       />
       <ProfileMetaGrid agent={agent} />
-      <RuntimeSection
-        runtimeReadiness={props.runtimeReadiness}
-        runtimeTesting={props.runtimeTesting}
-        runtimeTestMessage={props.runtimeTestMessage}
-        runtimeTestDetails={props.runtimeTestDetails}
-        runtimeTestStatus={props.runtimeTestStatus}
-        onRuntimeTest={props.onRuntimeTest}
-        runtimeResultRef={props.runtimeResultRef}
-      />
       {props.isMobileStandalone && <MobileRemoteRuntimeSection agent={agent} />}
       {props.isMobileStandalone && (
         <MobileSkillsSection

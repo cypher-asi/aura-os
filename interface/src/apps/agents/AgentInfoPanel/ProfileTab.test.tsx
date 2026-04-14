@@ -58,18 +58,6 @@ const baseProps = {
     system_prompt: "",
   } as any,
   isOwnAgent: true,
-  runtimeTesting: false,
-  runtimeTestMessage: null,
-  runtimeTestDetails: null,
-  runtimeTestStatus: null,
-  onRuntimeTest: vi.fn(),
-  runtimeResultRef: { current: null },
-  runtimeReadiness: {
-    tone: "success",
-    label: "Ready",
-    title: "Ready",
-    message: "Runtime is configured.",
-  } as const,
   onViewSkill: vi.fn(),
 };
 

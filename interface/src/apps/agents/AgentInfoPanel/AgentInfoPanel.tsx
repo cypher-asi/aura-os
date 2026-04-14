@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Button, Modal } from "@cypher-asi/zui";
 import { Loader2, FolderOpen, X } from "lucide-react";
@@ -13,19 +13,12 @@ import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
-import { useOrgStore } from "../../../stores/org-store";
 import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
 import { SkillPreview } from "./SkillPreview";
 import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
-import {
-  describeRuntimeReadiness,
-  formatAdapterLabel,
-  formatAuthSourceLabel,
-  formatRunsOnLabel,
-} from "./agent-info-utils";
 import type { Agent } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
 
@@ -38,57 +31,6 @@ type ProjectBinding = {
   project_id: string;
   project_name: string;
 };
-
-function useRuntimeTest(selectedAgent: Agent | null) {
-  const [runtimeTesting, setRuntimeTesting] = useState(false);
-  const [runtimeTestMessage, setRuntimeTestMessage] = useState<string | null>(null);
-  const [runtimeTestDetails, setRuntimeTestDetails] = useState<string | null>(null);
-  const [runtimeTestStatus, setRuntimeTestStatus] = useState<"success" | "error" | null>(null);
-  const runtimeResultRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!runtimeTestMessage || !runtimeResultRef.current) return;
-    requestAnimationFrame(() => {
-      runtimeResultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-  }, [runtimeTestMessage]);
-
-  const handleRuntimeTest = useCallback(async () => {
-    if (!selectedAgent) return;
-    setRuntimeTesting(true);
-    setRuntimeTestMessage(null);
-    setRuntimeTestDetails(null);
-    setRuntimeTestStatus(null);
-    try {
-      const result = await api.agents.testRuntime(selectedAgent.agent_id);
-      setRuntimeTestMessage(result.message || "Runtime test passed.");
-      const details = [
-        `${formatAdapterLabel(result.adapter_type)} on ${formatRunsOnLabel(result.environment)}`,
-        `Authentication: ${formatAuthSourceLabel(result.auth_source, result.adapter_type)}`,
-        result.integration_name ? `Integration: ${result.integration_name}` : null,
-        result.provider ? `Provider: ${result.provider}` : null,
-        result.model ? `Model: ${result.model}` : null,
-      ].filter(Boolean).join(" \u2022 ");
-      setRuntimeTestDetails(details || null);
-      setRuntimeTestStatus("success");
-    } catch (err) {
-      setRuntimeTestMessage(err instanceof Error ? err.message : "Runtime test failed.");
-      setRuntimeTestDetails(null);
-      setRuntimeTestStatus("error");
-    } finally {
-      setRuntimeTesting(false);
-    }
-  }, [selectedAgent]);
-
-  return {
-    runtimeTesting,
-    runtimeTestMessage,
-    runtimeTestDetails,
-    runtimeTestStatus,
-    runtimeResultRef,
-    handleRuntimeTest,
-  };
-}
 
 function useDeleteAgent(
   selectedAgent: Agent | null,
@@ -220,7 +162,6 @@ function ProjectsTab({
 export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { user } = useAuth();
-  const { integrations } = useOrgStore(useShallow((s) => ({ integrations: s.integrations })));
   const navigate = useNavigate();
   const {
     activeTab, showEditor, showDeleteConfirm,
@@ -245,7 +186,6 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const [projectBindings, setProjectBindings] = useState<ProjectBinding[]>([]);
 
   const del = useDeleteAgent(selectedAgent, setSelectedAgent, navigate, requestDelete, closeDeleteConfirm);
-  const rt = useRuntimeTest(selectedAgent);
 
   useEffect(() => {
     if (selectedAgent) {
@@ -260,10 +200,6 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   }
 
   const a = selectedAgent;
-  const selectedIntegration = a.integration_id
-    ? integrations.find((i) => i.integration_id === a.integration_id) ?? null
-    : null;
-  const runtimeReadiness = describeRuntimeReadiness(a, selectedIntegration);
   const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
   const isMobileStandalone = variant === "mobileStandalone";
   const effectiveTab = isMobileStandalone ? "profile" : activeTab;
@@ -276,13 +212,6 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
             agent={a}
             isOwnAgent={isOwnAgent}
             isMobileStandalone={isMobileStandalone}
-            runtimeTesting={rt.runtimeTesting}
-            runtimeTestMessage={rt.runtimeTestMessage}
-            runtimeTestDetails={rt.runtimeTestDetails}
-            runtimeTestStatus={rt.runtimeTestStatus}
-            onRuntimeTest={rt.handleRuntimeTest}
-            runtimeResultRef={rt.runtimeResultRef}
-            runtimeReadiness={runtimeReadiness}
             onViewSkill={viewSkill}
           />
         )}
