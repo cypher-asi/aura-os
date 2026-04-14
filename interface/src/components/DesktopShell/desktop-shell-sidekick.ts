@@ -54,11 +54,10 @@ export function getProjectsSidekickTargetWidth(mainWidth: number, sidekickWidth:
 export function getSidekickTransitionTargetWidth(
   profile: SidekickLayoutProfile,
   mainWidth: number,
-  collapsed: boolean,
+  currentSidekickWidth: number,
 ): number {
   if (profile === "projects") {
-    const projectWidth = collapsed ? 0 : readStoredSidekickWidth("projects");
-    return getProjectsSidekickTargetWidth(mainWidth, projectWidth);
+    return getProjectsSidekickTargetWidth(mainWidth, currentSidekickWidth);
   }
   return readStoredSidekickWidth("shared");
 }

@@ -256,11 +256,14 @@ export function DesktopShell() {
       const mainWidth = Math.round(mainPanelHost.getBoundingClientRect().width);
       if (mainWidth <= 0) return false;
 
+      const currentSidekickWidth = sidekickCollapsed
+        ? 0
+        : sidekickResizeControls.getSize();
       sidekickResizeControls.setSize(
         getSidekickTransitionTargetWidth(
           sidekickProfile,
           mainWidth,
-          sidekickHostCollapsed,
+          currentSidekickWidth,
         ),
       );
       return true;
@@ -272,7 +275,7 @@ export function DesktopShell() {
       syncProjectsSidekickWidth();
     });
     return () => cancelAnimationFrame(rafId);
-  }, [sidekickHostCollapsed, sidekickProfile]);
+  }, [sidekickCollapsed, sidekickProfile]);
 
   return (
     <>
