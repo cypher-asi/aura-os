@@ -249,6 +249,7 @@ interface BenchmarkOperationLogEntry {
 
 const demoModeEnabled = process.env.AURA_EVAL_DEMO_MODE === "1";
 const demoStepDelayMs = Number(process.env.AURA_EVAL_DEMO_STEP_DELAY_MS ?? 1200);
+const evalExpectationTimeoutMs = Number(process.env.AURA_EVAL_EXPECT_TIMEOUT_MS ?? 10_000);
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const scenariosDir = path.join(currentDir, "scenarios");
@@ -312,23 +313,33 @@ async function assertExpectations(page: Page, expectation?: BrowserStepExpectati
   if (!expectation) return;
 
   if (expectation.urlMatches) {
-    await expect(page).toHaveURL(new RegExp(expectation.urlMatches));
+    await expect(page).toHaveURL(new RegExp(expectation.urlMatches), {
+      timeout: evalExpectationTimeoutMs,
+    });
   }
 
   for (const text of expectation.visibleTexts ?? []) {
-    await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(text, { exact: true }).first()).toBeVisible({
+      timeout: evalExpectationTimeoutMs,
+    });
   }
 
   for (const target of expectation.visibleRoles ?? []) {
-    await expect(roleLocator(page, target)).toBeVisible();
+    await expect(roleLocator(page, target)).toBeVisible({
+      timeout: evalExpectationTimeoutMs,
+    });
   }
 
   for (const target of expectation.hiddenRoles ?? []) {
-    await expect(roleLocator(page, target)).toHaveCount(0);
+    await expect(roleLocator(page, target)).toHaveCount(0, {
+      timeout: evalExpectationTimeoutMs,
+    });
   }
 
   for (const target of expectation.roleValues ?? []) {
-    await expect(roleLocator(page, target)).toHaveValue(target.value);
+    await expect(roleLocator(page, target)).toHaveValue(target.value, {
+      timeout: evalExpectationTimeoutMs,
+    });
   }
 }
 

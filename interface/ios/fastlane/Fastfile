@@ -139,7 +139,9 @@ private_lane :build_store_archive do
       "DEVELOPMENT_TEAM=#{team_id}",
       "CODE_SIGN_STYLE=Manual",
       "PROVISIONING_PROFILE_SPECIFIER=#{Shellwords.escape(profile_name)}",
-      "CODE_SIGN_IDENTITY=#{Shellwords.escape('Apple Distribution')}"
+      "CODE_SIGN_IDENTITY=#{Shellwords.escape('Apple Distribution')}",
+      # Avoid CI stalls inside codesign when Apple timestamp services are slow.
+      "OTHER_CODE_SIGN_FLAGS=--timestamp=none"
     ].join(" ")
   )
 end
