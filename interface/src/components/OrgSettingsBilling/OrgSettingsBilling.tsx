@@ -86,20 +86,19 @@ export function OrgSettingsBilling({
           </div>
         </div>
         {isAdminOrOwner && (
-          <div className={styles.settingsRow}>
+          <div className={billingStyles.billingEmailSection}>
             <div className={styles.rowInfo}>
               <span className={styles.rowLabel}>Billing Email</span>
               <span className={styles.rowDescription}>
                 Invoices and receipts will be sent here
               </span>
             </div>
-            <div className={styles.rowControl}>
+            <div className={billingStyles.billingEmailRow}>
               <Input
                 size="sm"
                 value={billingEmail}
                 onChange={(e) => onBillingEmailChange(e.target.value)}
                 placeholder="billing@example.com"
-                className={billingStyles.inputWidth200}
               />
               <Button
                 variant="primary"

@@ -199,7 +199,6 @@ export function OrgSettingsIntegrations({
             {!newIntegration ? (
               <div className={styles.integrationFields}>
                 <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
-                  <span className={styles.integrationFieldLabel}>Choose Provider</span>
                   <ProviderButtons
                     value=""
                     onChange={(provider) => setNewIntegration(emptyDraft(provider))}

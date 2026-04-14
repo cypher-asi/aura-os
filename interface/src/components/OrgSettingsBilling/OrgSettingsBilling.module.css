@@ -164,6 +164,25 @@
   margin-bottom: var(--space-4);
 }
 
+.billingEmailSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.billingEmailRow {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.billingEmailRow input {
+  flex: 1;
+  min-width: 0;
+}
+
 .inputWidth200 {
   width: 200px;
 }

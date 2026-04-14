@@ -83,7 +83,7 @@
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: var(--space-3) var(--space-4) var(--space-2);
+  padding: var(--space-3) 0 var(--space-2);
 }
 
 /* ── Settings row (label + description | control) ── */
@@ -171,6 +171,8 @@
 /* ── Invites ── */
 
 .inviteActions {
+  display: flex;
+  justify-content: center;
   padding: var(--space-3) var(--space-4);
 }
 
