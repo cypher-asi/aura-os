@@ -17,8 +17,10 @@
   flex-direction: column;
   max-width: 560px;
   width: 100%;
+  box-sizing: border-box;
   margin-left: max(0px, calc(50vw - 280px - var(--left-panel-width, 248px) - 1px - var(--space-5)));
   margin-right: auto;
+  padding-right: var(--space-2);
 }
 
 .row {
