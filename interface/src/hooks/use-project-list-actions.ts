@@ -211,8 +211,12 @@ export function useProjectListActions() {
       return;
     }
 
-    const previousAgents = agentsByProject[pid] ?? [];
     const optimisticUpdatedAt = new Date().toISOString();
+    const archivedAgent: AgentInstance = {
+      ...target,
+      status: "archived",
+      updated_at: optimisticUpdatedAt,
+    };
     setArchivingAgentInstanceIds((prev) => [...prev, aid]);
     setAgentsByProject((prev) => ({
       ...prev,
@@ -223,20 +227,9 @@ export function useProjectListActions() {
       ),
     }));
 
-    try {
-      const updated = await api.updateAgentInstance(pid, aid, { status: "archived" });
-      setAgentsByProject((prev) => ({
-        ...prev,
-        [pid]: mergeAgentIntoProjectAgents(prev[pid], updated),
-      }));
-      queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), updated);
-    } catch (err) {
-      console.error("Failed to archive agent instance", err);
-      setAgentsByProject((prev) => ({ ...prev, [pid]: previousAgents }));
-    } finally {
-      setArchivingAgentInstanceIds((prev) => prev.filter((id) => id !== aid));
-    }
-  }, [agentsByProject, setAgentsByProject]);
+    queryClient.setQueryData(projectQueryKeys.agentInstance(pid, aid), archivedAgent);
+    setArchivingAgentInstanceIds((prev) => prev.filter((id) => id !== aid));
+  }, [setAgentsByProject]);
 
   const handleProjectSaved = useCallback(
     (project: Project) => {

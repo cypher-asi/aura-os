@@ -156,7 +156,7 @@ describe("useProjectListActions", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/projects/p-9/agents/general-ai");
   });
 
-  it("handleArchiveAgent archives the target instance", async () => {
+  it("handleArchiveAgent archives the target instance locally", async () => {
     mockAgentsByProject = {
       "p-2": [
         {
@@ -189,9 +189,14 @@ describe("useProjectListActions", () => {
       });
     });
 
-    expect(api.updateAgentInstance).toHaveBeenCalledWith("p-2", "ai-2", {
-      status: "archived",
-    });
+    expect(api.updateAgentInstance).not.toHaveBeenCalled();
+    expect(mockSetAgentsByProject).toHaveBeenCalled();
+    const updater = mockSetAgentsByProject.mock.calls[0]?.[0] as
+      | ((prev: typeof mockAgentsByProject) => typeof mockAgentsByProject)
+      | undefined;
+    expect(updater).toBeTypeOf("function");
+    const nextState = updater?.(mockAgentsByProject);
+    expect(nextState?.["p-2"]?.[0]?.status).toBe("archived");
   });
 
   it("handleProjectSaved updates the projects list", () => {
