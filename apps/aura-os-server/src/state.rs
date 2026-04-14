@@ -264,7 +264,7 @@ pub struct CreditCache {
     pub last_check: Instant,
     pub has_credits: bool,
 }
-pub type CreditCacheRef = Arc<Mutex<Option<CreditCache>>>;
+pub type CreditCacheRef = Arc<Mutex<HashMap<String, CreditCache>>>;
 
 #[derive(Clone)]
 pub struct AppState {

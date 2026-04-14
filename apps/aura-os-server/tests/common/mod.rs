@@ -63,6 +63,7 @@ pub async fn build_test_app_with_storage(
         None,
         Some(storage.clone()),
         None,
+        None,
     );
     (app, state, storage, db_dir)
 }
@@ -220,6 +221,7 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
         Some(Arc::new(NetworkClient::with_base_url(&net_url))),
         Some(Arc::new(StorageClient::with_base_url(&storage_url))),
         None,
+        None,
     );
     (app, state, db_dir)
 }
@@ -230,8 +232,9 @@ pub fn build_test_app_from_store(
     network_client: Option<Arc<NetworkClient>>,
     storage_client: Option<Arc<StorageClient>>,
     swarm_base_url: Option<String>,
+    billing_client: Option<Arc<BillingClient>>,
 ) -> (Router, AppState) {
-    let billing_client = Arc::new(BillingClient::new());
+    let billing_client = billing_client.unwrap_or_else(|| Arc::new(BillingClient::new()));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new());
     let project_service = Arc::new(ProjectService::new_with_network(
@@ -318,7 +321,7 @@ pub fn build_test_app_from_store(
         swarm_harness,
         harness_sessions: Arc::new(Mutex::new(HashMap::new())),
         chat_sessions: Arc::new(Mutex::new(HashMap::new())),
-        credit_cache: Arc::new(Mutex::new(None)),
+        credit_cache: Arc::new(Mutex::new(HashMap::new())),
         event_broadcast,
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
         network_client,
@@ -345,7 +348,24 @@ pub fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     let (app, state) =
-        build_test_app_from_store(store, db_dir.path().to_path_buf(), None, None, None);
+        build_test_app_from_store(store, db_dir.path().to_path_buf(), None, None, None, None);
+    (app, state, db_dir)
+}
+
+#[allow(dead_code)]
+pub fn build_test_app_with_billing_client(
+    billing_client: Arc<BillingClient>,
+) -> (Router, AppState, tempfile::TempDir) {
+    let db_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let (app, state) = build_test_app_from_store(
+        store,
+        db_dir.path().to_path_buf(),
+        None,
+        None,
+        None,
+        Some(billing_client),
+    );
     (app, state, db_dir)
 }
 

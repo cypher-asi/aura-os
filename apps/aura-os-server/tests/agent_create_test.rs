@@ -196,6 +196,7 @@ fn build_app_with_swarm(
         Some(Arc::new(NetworkClient::with_base_url(network_url))),
         None,
         swarm_url,
+        None,
     );
     app
 }

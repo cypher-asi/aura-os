@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use reqwest::Client;
+use reqwest::{Client, Method, StatusCode};
 use tracing::{debug, warn};
 
 use aura_os_core::{BillingAccount, CheckoutSessionResponse, CreditBalance, TransactionsResponse};
@@ -38,20 +38,33 @@ impl BillingClient {
         }
     }
 
-    pub async fn get_balance(&self, access_token: &str) -> Result<CreditBalance, BillingError> {
-        let url = format!("{}/v1/credits/balance", self.base_url);
-        debug!(%url, "Fetching credit balance");
-
-        let resp = self
+    async fn send_authed_json(
+        &self,
+        method: Method,
+        path: &str,
+        access_token: &str,
+        body: Option<serde_json::Value>,
+    ) -> Result<reqwest::Response, BillingError> {
+        let url = format!("{}{}", self.base_url, path);
+        let mut req = self
             .http
-            .get(&url)
-            .header("authorization", format!("Bearer {access_token}"))
-            .send()
-            .await?;
+            .request(method, &url)
+            .header("authorization", format!("Bearer {access_token}"));
+        if let Some(body) = body {
+            req = req.json(&body);
+        }
+        req.send().await.map_err(BillingError::from)
+    }
+
+    async fn json_or_server_error<T: serde::de::DeserializeOwned>(
+        &self,
+        resp: reqwest::Response,
+        error_context: &str,
+    ) -> Result<T, BillingError> {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "z-billing error fetching balance");
+            warn!(status = status.as_u16(), %body, "{error_context}");
             return Err(BillingError::ServerError {
                 status: status.as_u16(),
                 body,
@@ -60,6 +73,121 @@ impl BillingClient {
         resp.json()
             .await
             .map_err(|e| BillingError::Deserialize(e.to_string()))
+    }
+
+    async fn get_balance_once(&self, access_token: &str) -> Result<CreditBalance, BillingError> {
+        let url = format!("{}/v1/credits/balance", self.base_url);
+        debug!(%url, "Fetching credit balance");
+        let resp = self
+            .send_authed_json(Method::GET, "/v1/credits/balance", access_token, None)
+            .await?;
+        self.json_or_server_error(resp, "z-billing error fetching balance")
+            .await
+    }
+
+    async fn create_purchase_once(
+        &self,
+        access_token: &str,
+        amount_usd: f64,
+    ) -> Result<CheckoutSessionResponse, BillingError> {
+        let url = format!("{}/v1/credits/purchase", self.base_url);
+        debug!(%url, amount_usd, "Creating purchase");
+        let resp = self
+            .send_authed_json(
+                Method::POST,
+                "/v1/credits/purchase",
+                access_token,
+                Some(serde_json::json!({ "amount_usd": amount_usd })),
+            )
+            .await?;
+        self.json_or_server_error(resp, "z-billing error creating purchase")
+            .await
+    }
+
+    async fn get_transactions_once(
+        &self,
+        access_token: &str,
+    ) -> Result<TransactionsResponse, BillingError> {
+        let url = format!("{}/v1/credits/transactions", self.base_url);
+        debug!(%url, "Fetching transactions");
+        let resp = self
+            .send_authed_json(Method::GET, "/v1/credits/transactions", access_token, None)
+            .await?;
+        self.json_or_server_error(resp, "z-billing error fetching transactions")
+            .await
+    }
+
+    async fn get_account_once(&self, access_token: &str) -> Result<BillingAccount, BillingError> {
+        let url = format!("{}/v1/accounts/me", self.base_url);
+        debug!(%url, "Fetching billing account");
+        let resp = self
+            .send_authed_json(Method::GET, "/v1/accounts/me", access_token, None)
+            .await?;
+        let status = resp.status();
+        if status == StatusCode::NOT_FOUND {
+            let body = resp.text().await.unwrap_or_default();
+            warn!(status = status.as_u16(), %body, "z-billing error fetching account");
+            return Err(BillingError::AccountNotFound { body });
+        }
+        self.json_or_server_error(resp, "z-billing error fetching account")
+            .await
+    }
+
+    async fn provision_account(&self, access_token: &str) -> Result<(), BillingError> {
+        for path in ["/v1/accounts", "/v1/accounts/register", "/v1/accounts/provision"] {
+            let resp = self
+                .send_authed_json(Method::POST, path, access_token, Some(serde_json::json!({})))
+                .await?;
+            let status = resp.status();
+            if status.is_success() || status == StatusCode::CONFLICT {
+                debug!(%path, status = status.as_u16(), "Provisioned billing account");
+                return Ok(());
+            }
+
+            let body = resp.text().await.unwrap_or_default();
+            if status == StatusCode::NOT_FOUND || status == StatusCode::METHOD_NOT_ALLOWED {
+                debug!(
+                    %path,
+                    status = status.as_u16(),
+                    %body,
+                    "Billing provisioning endpoint unavailable, trying fallback"
+                );
+                continue;
+            }
+
+            warn!(
+                %path,
+                status = status.as_u16(),
+                %body,
+                "z-billing error provisioning account"
+            );
+            return Err(BillingError::AccountProvisioningFailed {
+                status: status.as_u16(),
+                body,
+            });
+        }
+
+        Err(BillingError::AccountProvisioningFailed {
+            status: StatusCode::NOT_FOUND.as_u16(),
+            body: "no supported z-billing account provisioning endpoint found".to_string(),
+        })
+    }
+
+    pub async fn ensure_account(&self, access_token: &str) -> Result<(), BillingError> {
+        match self.get_account_once(access_token).await {
+            Ok(_) => Ok(()),
+            Err(BillingError::AccountNotFound { body }) => {
+                debug!(%body, "Billing account missing, attempting auto-provision");
+                self.provision_account(access_token).await?;
+                self.get_account_once(access_token).await.map(|_| ())
+            }
+            Err(other) => Err(other),
+        }
+    }
+
+    pub async fn get_balance(&self, access_token: &str) -> Result<CreditBalance, BillingError> {
+        self.ensure_account(access_token).await?;
+        self.get_balance_once(access_token).await
     }
 
     pub async fn create_purchase(
@@ -67,79 +195,21 @@ impl BillingClient {
         access_token: &str,
         amount_usd: f64,
     ) -> Result<CheckoutSessionResponse, BillingError> {
-        let url = format!("{}/v1/credits/purchase", self.base_url);
-        debug!(%url, amount_usd, "Creating purchase");
-
-        let resp = self
-            .http
-            .post(&url)
-            .header("authorization", format!("Bearer {access_token}"))
-            .json(&serde_json::json!({ "amount_usd": amount_usd }))
-            .send()
-            .await?;
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "z-billing error creating purchase");
-            return Err(BillingError::ServerError {
-                status: status.as_u16(),
-                body,
-            });
-        }
-        resp.json()
-            .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))
+        self.ensure_account(access_token).await?;
+        self.create_purchase_once(access_token, amount_usd).await
     }
 
     pub async fn get_transactions(
         &self,
         access_token: &str,
     ) -> Result<TransactionsResponse, BillingError> {
-        let url = format!("{}/v1/credits/transactions", self.base_url);
-        debug!(%url, "Fetching transactions");
-
-        let resp = self
-            .http
-            .get(&url)
-            .header("authorization", format!("Bearer {access_token}"))
-            .send()
-            .await?;
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "z-billing error fetching transactions");
-            return Err(BillingError::ServerError {
-                status: status.as_u16(),
-                body,
-            });
-        }
-        resp.json()
-            .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))
+        self.ensure_account(access_token).await?;
+        self.get_transactions_once(access_token).await
     }
 
     pub async fn get_account(&self, access_token: &str) -> Result<BillingAccount, BillingError> {
-        let url = format!("{}/v1/accounts/me", self.base_url);
-        debug!(%url, "Fetching billing account");
-
-        let resp = self
-            .http
-            .get(&url)
-            .header("authorization", format!("Bearer {access_token}"))
-            .send()
-            .await?;
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "z-billing error fetching account");
-            return Err(BillingError::ServerError {
-                status: status.as_u16(),
-                body,
-            });
-        }
-        resp.json()
-            .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))
+        self.ensure_account(access_token).await?;
+        self.get_account_once(access_token).await
     }
 
     pub async fn ensure_has_credits(&self, access_token: &str) -> Result<i64, BillingError> {
@@ -164,10 +234,15 @@ impl Default for BillingClient {
 mod tests {
     use super::*;
     use axum::{
+        extract::State,
+        http::StatusCode as AxumStatusCode,
         routing::{get, post},
+        response::IntoResponse,
         Json, Router,
     };
+    use std::sync::Arc;
     use tokio::net::TcpListener;
+    use tokio::sync::Mutex;
 
     async fn start_server(app: Router) -> (String, BillingClient) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -313,6 +388,91 @@ mod tests {
         assert_eq!(acct.balance_cents, 100000);
         assert_eq!(acct.plan, "pro");
         assert!(acct.auto_refill_enabled);
+    }
+
+    #[tokio::test]
+    async fn test_get_balance_auto_provisions_missing_account() {
+        #[derive(Default)]
+        struct MockState {
+            account_exists: bool,
+            account_probe_count: usize,
+            provision_count: usize,
+        }
+
+        type SharedState = Arc<Mutex<MockState>>;
+
+        async fn get_account(State(state): State<SharedState>) -> axum::response::Response {
+            let mut guard = state.lock().await;
+            guard.account_probe_count += 1;
+            if guard.account_exists {
+                Json(serde_json::json!({
+                    "user_id": "u-123",
+                    "balance_cents": 5000,
+                    "balance_formatted": "$50.00",
+                    "lifetime_purchased_cents": 5000,
+                    "lifetime_granted_cents": 0,
+                    "lifetime_used_cents": 0,
+                    "plan": "free",
+                    "auto_refill_enabled": false,
+                    "created_at": "2026-01-15T12:00:00Z"
+                }))
+                .into_response()
+            } else {
+                (
+                    AxumStatusCode::NOT_FOUND,
+                    Json(serde_json::json!({
+                        "error": { "code": "not_found", "message": "Account not found" }
+                    })),
+                )
+                    .into_response()
+            }
+        }
+
+        async fn create_account(State(state): State<SharedState>) -> axum::response::Response {
+            let mut guard = state.lock().await;
+            guard.provision_count += 1;
+            guard.account_exists = true;
+            (
+                AxumStatusCode::CREATED,
+                Json(serde_json::json!({ "status": "created" })),
+            )
+                .into_response()
+        }
+
+        async fn get_balance(State(state): State<SharedState>) -> axum::response::Response {
+            let guard = state.lock().await;
+            if guard.account_exists {
+                Json(serde_json::json!({
+                    "balance_cents": 5000,
+                    "plan": "free",
+                    "balance_formatted": "$50.00"
+                }))
+                .into_response()
+            } else {
+                (
+                    AxumStatusCode::NOT_FOUND,
+                    Json(serde_json::json!({
+                        "error": { "code": "not_found", "message": "Account not found" }
+                    })),
+                )
+                    .into_response()
+            }
+        }
+
+        let state = Arc::new(Mutex::new(MockState::default()));
+        let app = Router::new()
+            .route("/v1/accounts/me", get(get_account))
+            .route("/v1/accounts", post(create_account))
+            .route("/v1/credits/balance", get(get_balance))
+            .with_state(state.clone());
+        let (_url, client) = start_server(app).await;
+
+        let balance = client.get_balance("tok").await.unwrap();
+        assert_eq!(balance.balance_cents, 5000);
+
+        let guard = state.lock().await;
+        assert_eq!(guard.provision_count, 1);
+        assert_eq!(guard.account_probe_count, 2);
     }
 
     #[tokio::test]

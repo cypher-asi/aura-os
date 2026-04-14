@@ -437,7 +437,7 @@ mod tests {
             event_broadcast,
             require_zero_pro: false,
             chat_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
-            credit_cache: Arc::new(tokio::sync::Mutex::new(None)),
+            credit_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             automaton_client: Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999")),
             harness_http: Arc::new(crate::HarnessHttpGateway::new("http://localhost:9999")),
             automaton_registry: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),

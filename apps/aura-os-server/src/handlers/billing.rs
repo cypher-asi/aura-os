@@ -15,10 +15,27 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 "Insufficient credits (balance: {balance_cents} cents). Please purchase credits to continue."
             ))
         }
+        aura_os_billing::BillingError::AccountNotFound { body } => (
+            StatusCode::BAD_GATEWAY,
+            Json(ApiError {
+                error: "billing account not provisioned".to_string(),
+                code: "billing_account_missing".to_string(),
+                details: Some(body),
+            }),
+        ),
+        aura_os_billing::BillingError::AccountProvisioningFailed { status, body } => (
+            StatusCode::BAD_GATEWAY,
+            Json(ApiError {
+                error: "unable to provision billing account".to_string(),
+                code: "billing_account_provisioning_failed".to_string(),
+                details: Some(format!("status={status} body={body}")),
+            }),
+        ),
         aura_os_billing::BillingError::ServerError { status, body } => {
             let (sc, code, msg) = match status {
                 401 => (StatusCode::UNAUTHORIZED, "unauthorized", "billing token expired or invalid"),
                 403 => (StatusCode::FORBIDDEN, "forbidden", "billing server rejected the request"),
+                404 => (StatusCode::BAD_GATEWAY, "billing_account_missing", "billing account not provisioned"),
                 _ => (StatusCode::BAD_GATEWAY, "billing_error", "billing server error"),
             };
             (sc, Json(ApiError { error: msg.to_string(), code: code.to_string(), details: Some(body) }))
@@ -48,8 +65,9 @@ pub(crate) async fn require_credits(
     const CACHE_TTL: Duration = Duration::from_secs(60);
 
     {
-        let cache = state.credit_cache.lock().await;
-        if let Some(ref c) = *cache {
+        let mut cache = state.credit_cache.lock().await;
+        cache.retain(|_, c| c.last_check.elapsed() < CACHE_TTL);
+        if let Some(c) = cache.get(jwt) {
             if c.has_credits && c.last_check.elapsed() < CACHE_TTL {
                 return Ok(());
             }
@@ -61,7 +79,7 @@ pub(crate) async fn require_credits(
     let has_credits = result.is_ok();
     {
         let mut cache = state.credit_cache.lock().await;
-        *cache = Some(CreditCache {
+        cache.insert(jwt.to_string(), CreditCache {
             last_check: Instant::now(),
             has_credits,
         });
@@ -134,4 +152,196 @@ pub(crate) async fn get_account(
         .await
         .map_err(billing_err)?;
     Ok(Json(result))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use axum::{
+        extract::State as AxumState,
+        http::{HeaderMap, StatusCode as HttpStatusCode},
+        response::IntoResponse,
+        routing::get,
+        Json, Router,
+    };
+    use tokio::net::TcpListener;
+    use tokio::sync::{broadcast, Mutex};
+
+    use aura_os_agents::{AgentInstanceService, AgentService};
+    use aura_os_auth::AuthService;
+    use aura_os_billing::BillingClient;
+    use aura_os_link::{AutomatonClient, HarnessLink, LocalHarness, SwarmHarness};
+    use aura_os_orgs::OrgService;
+    use aura_os_projects::ProjectService;
+    use aura_os_sessions::SessionService;
+    use aura_os_store::RocksStore;
+    use aura_os_super_agent::SuperAgentService;
+    use aura_os_tasks::TaskService;
+
+    use crate::HarnessHttpGateway;
+
+    #[derive(Default)]
+    struct MockBillingState {
+        balance_calls: HashMap<String, usize>,
+    }
+
+    fn bearer_token(headers: &HeaderMap) -> String {
+        headers
+            .get("authorization")
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.strip_prefix("Bearer "))
+            .unwrap_or_default()
+            .to_string()
+    }
+
+    async fn start_credit_server() -> (String, Arc<Mutex<MockBillingState>>) {
+        type SharedState = Arc<Mutex<MockBillingState>>;
+
+        async fn get_account(headers: HeaderMap) -> axum::response::Response {
+            let token = bearer_token(&headers);
+            Json(serde_json::json!({
+                "user_id": token,
+                "balance_cents": 5000,
+                "balance_formatted": "$50.00",
+                "lifetime_purchased_cents": 5000,
+                "lifetime_granted_cents": 0,
+                "lifetime_used_cents": 0,
+                "plan": "free",
+                "auto_refill_enabled": false,
+                "created_at": "2026-01-15T12:00:00Z"
+            }))
+            .into_response()
+        }
+
+        async fn get_balance(
+            headers: HeaderMap,
+            AxumState(state): AxumState<SharedState>,
+        ) -> axum::response::Response {
+            let token = bearer_token(&headers);
+            let mut guard = state.lock().await;
+            *guard.balance_calls.entry(token.clone()).or_default() += 1;
+            let balance_cents = if token == "tok-a" { 5000 } else { 0 };
+            Json(serde_json::json!({
+                "balance_cents": balance_cents,
+                "plan": "free",
+                "balance_formatted": format!("${:.2}", balance_cents as f64 / 100.0)
+            }))
+            .into_response()
+        }
+
+        let state = Arc::new(Mutex::new(MockBillingState::default()));
+        let app = Router::new()
+            .route("/v1/accounts/me", get(get_account))
+            .route("/v1/credits/balance", get(get_balance))
+            .with_state(state.clone());
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+        (url, state)
+    }
+
+    fn build_test_state(billing_client: Arc<BillingClient>) -> (AppState, tempfile::TempDir) {
+        let db_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+
+        let org_service = Arc::new(OrgService::new(store.clone()));
+        let auth_service = Arc::new(AuthService::new());
+        let project_service = Arc::new(ProjectService::new_with_network(None, store.clone()));
+        let task_service = Arc::new(TaskService::new(store.clone(), None));
+        let agent_service = Arc::new(AgentService::new(store.clone(), None));
+        let runtime_agent_state: aura_os_agents::RuntimeAgentStateMap =
+            Arc::new(Mutex::new(HashMap::new()));
+        let agent_instance_service = Arc::new(AgentInstanceService::new(
+            store.clone(),
+            None,
+            runtime_agent_state,
+            None,
+        ));
+        let session_service = Arc::new(SessionService::new(store.clone(), 0.8, 200_000));
+        let harness_base = "http://localhost:19080".to_string();
+        let local_harness: Arc<dyn HarnessLink> = Arc::new(LocalHarness::new(harness_base.clone()));
+        let swarm_harness: Arc<dyn HarnessLink> = Arc::new(SwarmHarness::new(
+            "http://localhost:19800".to_string(),
+            None,
+        ));
+        let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(64);
+        let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
+        let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
+        let super_agent_service = Arc::new(SuperAgentService::new(
+            "http://localhost:19080".to_string(),
+            project_service.clone(),
+            agent_service.clone(),
+            agent_instance_service.clone(),
+            task_service.clone(),
+            session_service.clone(),
+            org_service.clone(),
+            billing_client.clone(),
+            automaton_client.clone(),
+            None,
+            None,
+            None,
+            store.clone(),
+            event_broadcast.clone(),
+            local_harness.clone(),
+            db_dir.path().to_path_buf(),
+        ));
+
+        (
+            AppState {
+                data_dir: db_dir.path().to_path_buf(),
+                store,
+                org_service,
+                auth_service,
+                billing_client,
+                project_service,
+                task_service,
+                agent_service,
+                agent_instance_service,
+                session_service,
+                local_harness,
+                swarm_harness,
+                harness_sessions: Arc::new(Mutex::new(HashMap::new())),
+                terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
+                network_client: None,
+                storage_client: None,
+                integrations_client: None,
+                event_broadcast,
+                require_zero_pro: false,
+                chat_sessions: Arc::new(Mutex::new(HashMap::new())),
+                credit_cache: Arc::new(Mutex::new(HashMap::new())),
+                automaton_client,
+                harness_http,
+                automaton_registry: Arc::new(Mutex::new(HashMap::new())),
+                swarm_base_url: None,
+                task_output_cache: Arc::new(Mutex::new(HashMap::new())),
+                orbit_client: None,
+                validation_cache: Arc::new(dashmap::DashMap::new()),
+                super_agent_service,
+                super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
+            },
+            db_dir,
+        )
+    }
+
+    #[tokio::test]
+    async fn require_credits_caches_per_jwt() {
+        let (billing_url, billing_state) = start_credit_server().await;
+        let billing_client = Arc::new(BillingClient::with_base_url(billing_url));
+        let (state, _db_dir) = build_test_state(billing_client);
+
+        require_credits(&state, "tok-a").await.unwrap();
+
+        let err = require_credits(&state, "tok-b").await.unwrap_err();
+        assert_eq!(err.0, HttpStatusCode::PAYMENT_REQUIRED);
+
+        require_credits(&state, "tok-a").await.unwrap();
+
+        let guard = billing_state.lock().await;
+        assert_eq!(guard.balance_calls.get("tok-a"), Some(&1));
+        assert_eq!(guard.balance_calls.get("tok-b"), Some(&1));
+    }
 }
