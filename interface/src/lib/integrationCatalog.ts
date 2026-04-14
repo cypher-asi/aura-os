@@ -1,4 +1,5 @@
 import type { OrgIntegration } from "../types";
+import { isSettingsProviderSelectionEnabled } from "./featureFlags";
 
 export type IntegrationKind =
   | "workspace_connection"
@@ -36,6 +37,17 @@ export const MODEL_RUNTIME_ADAPTERS = [
 ] as const;
 
 export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
+  {
+    id: "aura_proxy",
+    label: "AURA Proxy",
+    kind: "workspace_connection",
+    description: "Workspace-level Aura proxy access for managed model and runtime requests.",
+    secretLabel: "AURA Proxy API Key",
+    secretPlaceholder: "Paste the AURA Proxy API key",
+    authHint: "Use a shared AURA Proxy key when the workspace should route requests through Aura.",
+    supportsDefaultModel: true,
+    runtimeCompatibleAdapters: [],
+  },
   {
     id: "anthropic",
     label: "Anthropic",
@@ -418,12 +430,17 @@ export function integrationSections(): Array<{
   description: string;
   providers: IntegrationDefinition[];
 }> {
+  const showProviderSelection = isSettingsProviderSelectionEnabled();
+  const workspaceConnectionProviders = showProviderSelection
+    ? INTEGRATION_CATALOG.filter((provider) => provider.kind === "workspace_connection")
+    : INTEGRATION_CATALOG.filter((provider) => provider.id === "aura_proxy");
+
   return [
     {
       id: "workspace_connection",
       title: "Connections",
       description: "Shared model providers for agent runtimes.",
-      providers: INTEGRATION_CATALOG.filter((provider) => provider.kind === "workspace_connection"),
+      providers: workspaceConnectionProviders,
     },
     {
       id: "workspace_integration",

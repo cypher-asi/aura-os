@@ -16,7 +16,12 @@ vi.mock("@cypher-asi/zui", () => ({
 }));
 
 describe("OrgSettingsIntegrations", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("switches create form labels when a tool integration is selected", async () => {
+    vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "true");
     const user = userEvent.setup();
 
     render(
@@ -42,6 +47,43 @@ describe("OrgSettingsIntegrations", () => {
 
     expect(screen.queryByLabelText("New preferred model")).not.toBeInTheDocument();
     expect(screen.getByLabelText("New GitHub Token")).toBeInTheDocument();
+  });
+
+  it("defaults new workspace connections to AURA Proxy when provider selection is hidden", async () => {
+    vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "");
+    const user = userEvent.setup();
+    const onCreate = vi.fn().mockResolvedValue(null);
+
+    render(
+      <OrgSettingsIntegrations
+        integrations={[]}
+        busyId={null}
+        canManage
+        onCreate={onCreate}
+        onUpdate={vi.fn().mockResolvedValue(null)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add Integration" }));
+
+    expect(screen.getByRole("button", { name: "AURA Proxy" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Anthropic" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "GitHub" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "AURA Proxy" }));
+    await user.type(screen.getByLabelText("New integration name"), "Aura Default");
+    await user.type(screen.getByLabelText("New AURA Proxy API Key"), "proxy_test_123");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(onCreate).toHaveBeenCalledWith({
+      name: "Aura Default",
+      provider: "aura_proxy",
+      kind: "workspace_connection",
+      default_model: null,
+      provider_config: null,
+      api_key: "proxy_test_123",
+    });
   });
 
   it("submits tool integrations without a default model", async () => {
@@ -239,6 +281,6 @@ describe("OrgSettingsIntegrations", () => {
     );
 
     expect(screen.getByText(/Only team admins and owners can add, edit, or delete integrations./i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add Integration" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Add Integration" })).not.toBeInTheDocument();
   });
 });
