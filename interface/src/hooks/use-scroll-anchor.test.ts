@@ -402,11 +402,15 @@ describe("useScrollAnchor", () => {
     act(() => latestMO().trigger());
 
     expect(el.scrollTop).toBe(1000);
-    expect(nextRafId - rafsBefore).toBe(1); // content-change RAF
+    expect(nextRafId - rafsBefore).toBe(1); // mutation-settle RAF
 
-    act(() => flushRafs());
+    act(() => flushOneRaf());
+    expect(el.scrollTop).toBe(1000);
+    expect(nextRafId - rafsBefore).toBe(2); // mutation-settle RAF + content-change RAF
+
+    act(() => flushOneRaf());
     expect(el.scrollTop).toBe(1400);
-    expect(nextRafId - rafsBefore).toBe(2); // content-change RAF + guard RAF
+    expect(nextRafId - rafsBefore).toBe(3); // ... + guard RAF
   });
 
   it("does NOT scroll on mutation when user has scrolled up", () => {
@@ -601,6 +605,28 @@ describe("useScrollAnchor", () => {
     triggerContainerResize();
 
     expect(el.scrollTop).toBe(scrollTopBefore);
+  });
+
+  it("re-pins to the bottom when the container height changes and auto-follow is active", () => {
+    const { el } = renderSettled({ clientHeight: 400 });
+
+    (el as any).scrollTop = 600;
+    (el as any).clientHeight = 300;
+    triggerContainerResize();
+
+    expect(el.scrollTop).toBe(1000);
+  });
+
+  it("preserves scroll position on container height changes when auto-follow is disabled", () => {
+    const { el, result } = renderSettled({ clientHeight: 400 });
+
+    (el as any).scrollTop = 100;
+    act(() => result.current.handleScroll());
+
+    (el as any).clientHeight = 300;
+    triggerContainerResize();
+
+    expect(el.scrollTop).toBe(100);
   });
 
   // ---------------------------------------------------------------------------

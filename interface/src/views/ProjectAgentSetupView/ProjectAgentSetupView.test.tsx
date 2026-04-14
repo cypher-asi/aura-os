@@ -9,6 +9,7 @@ const mockSetAgentsByProject = vi.fn();
 const mockCreateAgent = vi.fn();
 const mockCreateAgentInstance = vi.fn();
 const mockListAgents = vi.fn();
+const mockGetRemoteAgentState = vi.fn();
 
 const mockProjectsState = {
   projects: [
@@ -79,6 +80,19 @@ vi.mock("../../api/client", () => ({
       create: (...args: unknown[]) => mockCreateAgent(...args),
     },
     createAgentInstance: (...args: unknown[]) => mockCreateAgentInstance(...args),
+    swarm: {
+      getRemoteAgentState: (...args: unknown[]) => mockGetRemoteAgentState(...args),
+    },
+  },
+  ApiClientError: class ApiClientError extends Error {
+    status: number;
+    body: { error: string; code: string; details: string | null };
+
+    constructor(status: number, body: { error: string; code: string; details: string | null }) {
+      super(body.error);
+      this.status = status;
+      this.body = body;
+    }
   },
 }));
 
@@ -106,6 +120,7 @@ describe("ProjectAgentSetupView", () => {
     mockOrgState.integrations = [];
     mockListAgents.mockResolvedValue([]);
     mockCreateAgent.mockResolvedValue({ agent_id: "agent-9" });
+    mockGetRemoteAgentState.mockResolvedValue({ state: "running" });
     mockCreateAgentInstance.mockResolvedValue({
       agent_instance_id: "agent-inst-9",
       project_id: "proj-1",
@@ -173,6 +188,39 @@ describe("ProjectAgentSetupView", () => {
     await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
 
     await waitFor(() => {
+      expect(screen.getByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
+    });
+  });
+
+  it("waits for the remote agent to be ready before navigating to chat", async () => {
+    const user = userEvent.setup();
+    let resolveRemoteState: ((value: { state: string }) => void) | null = null;
+    mockGetRemoteAgentState.mockReturnValue(new Promise((resolve) => {
+      resolveRemoteState = resolve;
+    }));
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<LocationStateProbe />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.type(screen.getByLabelText("Role"), "Engineer");
+    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+
+    await waitFor(() => {
+      expect(mockGetRemoteAgentState).toHaveBeenCalledWith("agent-9");
+    });
+    expect(screen.queryByText(CREATE_AGENT_CHAT_HANDOFF)).not.toBeInTheDocument();
+    expect(mockCreateAgentInstance).not.toHaveBeenCalled();
+
+    resolveRemoteState?.({ state: "running" });
+
+    await waitFor(() => {
+      expect(mockCreateAgentInstance).toHaveBeenCalledWith("proj-1", "agent-9");
       expect(screen.getByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
     });
   });

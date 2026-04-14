@@ -292,6 +292,29 @@ impl AgentInstanceService {
         runtime_config_service.get_agent_local(&agent_id).ok()
     }
 
+    async fn resolve_agent_for_project_agent(
+        &self,
+        spa: &aura_os_storage::StorageProjectAgent,
+    ) -> Option<Agent> {
+        let runtime_config_service = AgentService {
+            store: self.store.clone(),
+            network_client: self.network_client.clone(),
+        };
+        let agent_id = spa.agent_id.as_deref()?;
+
+        if let Some(agent) = self.resolve_agent_async(agent_id).await {
+            return Some(agent);
+        }
+
+        let parsed_agent_id = agent_id.parse::<AgentId>().ok()?;
+        let runtime_config = runtime_config_service
+            .load_agent_runtime_config(&parsed_agent_id)
+            .ok()
+            .flatten()?;
+
+        synthesize_agent_from_project_agent(spa, &runtime_config)
+    }
+
     async fn persisted_status(
         &self,
         agent_instance_id: &AgentInstanceId,
@@ -350,10 +373,7 @@ impl AgentInstanceService {
                 aura_os_storage::StorageError::Server { status: 404, .. } => AgentError::NotFound,
                 _ => AgentError::Storage(e),
             })?;
-        let agent = match spa.agent_id.as_deref() {
-            Some(aid) => self.resolve_agent_async(aid).await,
-            None => None,
-        };
+        let agent = self.resolve_agent_for_project_agent(&spa).await;
         let runtime_map = self.runtime_state.lock().await;
         let runtime = runtime_map.get(agent_instance_id);
         Ok(merge_agent_instance(&spa, agent.as_ref(), runtime))
@@ -371,10 +391,7 @@ impl AgentInstanceService {
         let runtime_map = self.runtime_state.lock().await;
         let mut instances = Vec::with_capacity(spas.len());
         for spa in &spas {
-            let agent = match spa.agent_id.as_deref() {
-                Some(aid) => self.resolve_agent_async(aid).await,
-                None => None,
-            };
+            let agent = self.resolve_agent_for_project_agent(spa).await;
             let aiid = spa.id.parse::<AgentInstanceId>().ok();
             let runtime = aiid.and_then(|id| runtime_map.get(&id));
             instances.push(merge_agent_instance(spa, agent.as_ref(), runtime));
@@ -480,6 +497,48 @@ impl AgentInstanceService {
     }
 }
 
+fn synthesize_agent_from_project_agent(
+    spa: &aura_os_storage::StorageProjectAgent,
+    config: &AgentRuntimeConfig,
+) -> Option<Agent> {
+    let agent_id = spa.agent_id.as_deref()?.parse::<AgentId>().ok()?;
+    let auth_source = aura_os_core::effective_auth_source(
+        &config.adapter_type,
+        Some(config.auth_source.as_str()),
+        config.integration_id.as_deref(),
+    );
+    let machine_type = if config.environment == "swarm_microvm" {
+        "remote".to_string()
+    } else {
+        "local".to_string()
+    };
+
+    Some(Agent {
+        agent_id,
+        user_id: String::new(),
+        org_id: spa.org_id.as_deref().and_then(|value| value.parse().ok()),
+        name: spa.name.clone().unwrap_or_default(),
+        role: spa.role.clone().unwrap_or_default(),
+        personality: spa.personality.clone().unwrap_or_default(),
+        system_prompt: spa.system_prompt.clone().unwrap_or_default(),
+        skills: spa.skills.clone().unwrap_or_default(),
+        icon: spa.icon.clone(),
+        machine_type,
+        adapter_type: config.adapter_type.clone(),
+        environment: config.environment.clone(),
+        auth_source,
+        integration_id: config.integration_id.clone(),
+        default_model: config.default_model.clone(),
+        vm_id: None,
+        network_agent_id: None,
+        profile_id: None,
+        tags: Vec::new(),
+        is_pinned: false,
+        created_at: parse_dt(&spa.created_at),
+        updated_at: parse_dt(&spa.updated_at),
+    })
+}
+
 // ---------------------------------------------------------------------------
 // StorageProjectAgent -> AgentInstance merge (three-source)
 // ---------------------------------------------------------------------------
@@ -570,5 +629,54 @@ pub fn merge_agent_instance(
         model: spa.model.clone(),
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aura_os_storage::StorageProjectAgent;
+
+    #[test]
+    fn synthesize_agent_from_project_agent_preserves_remote_runtime() {
+        let agent_id = AgentId::new();
+        let org_id = OrgId::new();
+        let spa = StorageProjectAgent {
+            id: AgentInstanceId::new().to_string(),
+            project_id: Some(ProjectId::new().to_string()),
+            org_id: Some(org_id.to_string()),
+            agent_id: Some(agent_id.to_string()),
+            name: Some("Atlas".to_string()),
+            role: Some("Engineer".to_string()),
+            personality: Some(String::new()),
+            system_prompt: Some("Help with the project.".to_string()),
+            skills: Some(vec!["search".to_string()]),
+            icon: None,
+            harness: None,
+            status: Some("idle".to_string()),
+            model: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            created_at: None,
+            updated_at: None,
+        };
+        let runtime = AgentRuntimeConfig {
+            adapter_type: "aura_harness".to_string(),
+            environment: "swarm_microvm".to_string(),
+            auth_source: "aura_managed".to_string(),
+            integration_id: None,
+            default_model: Some("claude-sonnet".to_string()),
+        };
+
+        let agent = synthesize_agent_from_project_agent(&spa, &runtime)
+            .expect("runtime fallback should synthesize an agent");
+
+        assert_eq!(agent.agent_id, agent_id);
+        assert_eq!(agent.org_id, Some(org_id));
+        assert_eq!(agent.name, "Atlas");
+        assert_eq!(agent.machine_type, "remote");
+        assert_eq!(agent.environment, "swarm_microvm");
+        assert_eq!(agent.auth_source, "aura_managed");
+        assert_eq!(agent.default_model.as_deref(), Some("claude-sonnet"));
     }
 }

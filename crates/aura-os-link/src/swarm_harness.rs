@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use async_trait::async_trait;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use tokio::sync::Mutex;
@@ -166,7 +167,8 @@ impl HarnessLink for SwarmHarness {
             .headers(headers.clone())
             .json(&agent_body)
             .send()
-            .await?;
+            .await
+            .context("swarm create agent request failed")?;
         let agent_status = agent_response.status();
         let agent_body_text = agent_response.text().await?;
         if !agent_status.is_success() {
@@ -188,7 +190,9 @@ impl HarnessLink for SwarmHarness {
                 status = %agent_resp.status,
                 "Agent not ready, waiting for provisioning..."
             );
-            self.wait_for_agent_ready(agent_id, token).await?;
+            self.wait_for_agent_ready(agent_id, token)
+                .await
+                .context("swarm agent readiness check failed")?;
         }
 
         info!(agent_id = %agent_id, "Swarm agent ready");
@@ -209,7 +213,8 @@ impl HarnessLink for SwarmHarness {
             .headers(headers.clone())
             .json(&session_body)
             .send()
-            .await?;
+            .await
+            .context("swarm create session request failed")?;
         let session_status = session_response.status();
         let session_body_text = session_response.text().await?;
         if !session_status.is_success() {
@@ -240,40 +245,46 @@ impl HarnessLink for SwarmHarness {
             session_resp.ws_url.trim_start_matches('/')
         );
 
-        let mut ws_request = ws_url.into_client_request()?;
+        let mut ws_request = ws_url
+            .into_client_request()
+            .context("swarm websocket request build failed")?;
         if let Some(t) = token {
             ws_request.headers_mut().insert(
                 "Authorization",
                 format!("Bearer {t}")
                     .parse()
-                    .map_err(|e| anyhow::anyhow!("bad auth header: {e}"))?,
+                    .map_err(|e| anyhow::anyhow!("swarm websocket auth header build failed: {e}"))?,
             );
         }
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(ws_request).await?;
+        let (ws_stream, _) = tokio_tungstenite::connect_async(ws_request)
+            .await
+            .context("swarm websocket connect failed")?;
 
         // 5. Spawn bridge and send session_init (required by harness protocol)
         let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
-        commands_tx.send(InboundMessage::SessionInit(Box::new(SessionInit {
-            system_prompt: config.system_prompt,
-            model: config.model,
-            max_tokens: config.max_tokens,
-            temperature: None,
-            max_turns: config.max_turns,
-            installed_tools: config.installed_tools,
-            installed_integrations: config.installed_integrations,
-            workspace: config.workspace,
-            project_path: config.project_path,
-            token: config.token,
-            project_id: config.project_id,
-            conversation_messages: config.conversation_messages,
-            aura_agent_id: config.agent_id.clone(),
-            aura_session_id: config.aura_session_id,
-            aura_org_id: config.aura_org_id,
-            agent_id: config.agent_id,
-            provider_config: config.provider_config,
-        })))?;
+        commands_tx
+            .send(InboundMessage::SessionInit(Box::new(SessionInit {
+                system_prompt: config.system_prompt,
+                model: config.model,
+                max_tokens: config.max_tokens,
+                temperature: None,
+                max_turns: config.max_turns,
+                installed_tools: config.installed_tools,
+                installed_integrations: config.installed_integrations,
+                workspace: config.workspace,
+                project_path: config.project_path,
+                token: config.token,
+                project_id: config.project_id,
+                conversation_messages: config.conversation_messages,
+                aura_agent_id: config.agent_id.clone(),
+                aura_session_id: config.aura_session_id,
+                aura_org_id: config.aura_org_id,
+                agent_id: config.agent_id,
+                provider_config: config.provider_config,
+            })))
+            .context("swarm session_init send failed")?;
 
         Ok(HarnessSession {
             session_id: session_resp.session_id,

@@ -1,3 +1,4 @@
+use anyhow::Context;
 use async_trait::async_trait;
 use tracing::info;
 
@@ -32,29 +33,33 @@ impl LocalHarness {
 #[async_trait]
 impl HarnessLink for LocalHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&self.ws_url()).await?;
+        let (ws_stream, _) = tokio_tungstenite::connect_async(&self.ws_url())
+            .await
+            .context("local harness websocket connect failed")?;
 
         let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
-        commands_tx.send(InboundMessage::SessionInit(Box::new(SessionInit {
-            system_prompt: config.system_prompt,
-            model: config.model,
-            max_tokens: config.max_tokens,
-            temperature: None,
-            max_turns: config.max_turns,
-            installed_tools: config.installed_tools,
-            installed_integrations: config.installed_integrations,
-            workspace: config.workspace,
-            project_path: config.project_path,
-            token: config.token,
-            project_id: config.project_id,
-            conversation_messages: config.conversation_messages,
-            aura_agent_id: config.agent_id.clone(),
-            aura_session_id: config.aura_session_id,
-            aura_org_id: config.aura_org_id,
-            agent_id: config.agent_id,
-            provider_config: config.provider_config,
-        })))?;
+        commands_tx
+            .send(InboundMessage::SessionInit(Box::new(SessionInit {
+                system_prompt: config.system_prompt,
+                model: config.model,
+                max_tokens: config.max_tokens,
+                temperature: None,
+                max_turns: config.max_turns,
+                installed_tools: config.installed_tools,
+                installed_integrations: config.installed_integrations,
+                workspace: config.workspace,
+                project_path: config.project_path,
+                token: config.token,
+                project_id: config.project_id,
+                conversation_messages: config.conversation_messages,
+                aura_agent_id: config.agent_id.clone(),
+                aura_session_id: config.aura_session_id,
+                aura_org_id: config.aura_org_id,
+                agent_id: config.agent_id,
+                provider_config: config.provider_config,
+            })))
+            .context("local harness session_init send failed")?;
 
         let mut rx = events_tx.subscribe();
         let session_id = loop {

@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
-use axum::http::HeaderValue;
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use futures_util::future::join_all;
@@ -1081,7 +1081,16 @@ pub(crate) async fn get_or_create_chat_session(
     let session = harness
         .open_session(session_config)
         .await
-        .map_err(|e| ApiError::internal(format!("opening harness session: {e}")))?;
+        .map_err(|e| {
+            let error_message = e.to_string();
+            warn!(
+                session_key = key,
+                ?harness_mode,
+                error = %error_message,
+                "Failed to open harness chat session"
+            );
+            map_harness_session_startup_error(&error_message)
+        })?;
 
     let rx = session.events_tx.subscribe();
     let commands_tx = session.commands_tx.clone();
@@ -1100,6 +1109,51 @@ pub(crate) async fn get_or_create_chat_session(
     }
 
     Ok((true, rx, commands_tx))
+}
+
+fn map_harness_session_startup_error(message: &str) -> (StatusCode, Json<ApiError>) {
+    let normalized = message.to_ascii_lowercase();
+
+    if normalized.contains("swarm gateway is not configured") {
+        return ApiError::service_unavailable(
+            "remote agent runtime is not configured (SWARM_BASE_URL)",
+        );
+    }
+
+    if normalized.contains("did not become ready within")
+        || normalized.contains("entered error state")
+    {
+        return ApiError::service_unavailable(format!(
+            "remote agent is still provisioning or unavailable: {message}"
+        ));
+    }
+
+    if normalized.contains("swarm create agent request failed")
+        || normalized.contains("swarm create session request failed")
+        || normalized.contains("swarm create agent failed with")
+        || normalized.contains("swarm create session failed with")
+        || normalized.contains("swarm agent readiness check failed")
+        || normalized.contains("swarm websocket")
+    {
+        return ApiError::bad_gateway(format!(
+            "remote agent runtime startup failed: {message}"
+        ));
+    }
+
+    if normalized.contains("local harness websocket connect failed") {
+        return ApiError::service_unavailable(format!(
+            "local harness is unavailable: {message}"
+        ));
+    }
+
+    if normalized.contains("local harness session_init send failed")
+        || normalized.contains("harness error during init")
+        || normalized.contains("connection closed before session_ready")
+    {
+        return ApiError::bad_gateway(format!("local harness startup failed: {message}"));
+    }
+
+    ApiError::internal(format!("opening harness session: {message}"))
 }
 
 fn dto_attachments_to_protocol(
@@ -1604,4 +1658,48 @@ fn build_project_system_prompt(
         }
     };
     format!("{}{}", project_ctx, agent_prompt)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_swarm_configuration_errors_to_service_unavailable() {
+        let (status, body) =
+            map_harness_session_startup_error("swarm gateway is not configured (SWARM_BASE_URL)");
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.0.code, "service_unavailable");
+    }
+
+    #[test]
+    fn maps_swarm_readiness_errors_to_service_unavailable() {
+        let (status, body) = map_harness_session_startup_error(
+            "swarm agent readiness check failed: agent abc did not become ready within 90s",
+        );
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.0.code, "service_unavailable");
+        assert!(body.0.error.contains("still provisioning"));
+    }
+
+    #[test]
+    fn maps_swarm_session_start_errors_to_bad_gateway() {
+        let (status, body) = map_harness_session_startup_error(
+            "swarm create session failed with 502 Bad Gateway: upstream unavailable",
+        );
+
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+        assert_eq!(body.0.code, "bad_gateway");
+    }
+
+    #[test]
+    fn maps_local_harness_connect_errors_to_service_unavailable() {
+        let (status, body) =
+            map_harness_session_startup_error("local harness websocket connect failed");
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body.0.code, "service_unavailable");
+    }
 }

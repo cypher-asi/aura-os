@@ -180,6 +180,7 @@ export function useScrollAnchor(
     const el = ref.current;
     if (!el) return;
     let contentChangeRaf = 0;
+    let mutationSettleRaf = 0;
 
     const syncHeight = () => {
       prevScrollHeightRef.current = el.scrollHeight;
@@ -218,13 +219,38 @@ export function useScrollAnchor(
       });
     };
 
+    const queueMutationContentChange = () => {
+      if (mutationSettleRaf !== 0) return;
+      mutationSettleRaf = requestAnimationFrame(() => {
+        mutationSettleRaf = 0;
+        queueContentChange();
+      });
+    };
+
     let lastWidth = el.clientWidth;
+    let lastHeight = el.clientHeight;
     const containerObs = new ResizeObserver(() => {
       if (phaseRef.current !== "active") return;
       const w = el.clientWidth;
-      if (w === lastWidth) return;
+      const h = el.clientHeight;
+      const widthChanged = w !== lastWidth;
+      const heightChanged = h !== lastHeight;
+
+      if (!widthChanged && !heightChanged) return;
+
       lastWidth = w;
-      queueContentChange();
+      lastHeight = h;
+
+      if (heightChanged) {
+        if (pinnedRef.current) {
+          guardedScroll(el, el.scrollHeight, guardRef);
+        }
+        syncHeight();
+      }
+
+      if (widthChanged) {
+        queueContentChange();
+      }
     });
     containerObs.observe(el);
 
@@ -252,7 +278,7 @@ export function useScrollAnchor(
 
     const mutationObs = new MutationObserver(() => {
       syncObservedChildren();
-      queueContentChange();
+      queueMutationContentChange();
     });
     mutationObs.observe(el, {
       childList: true,
@@ -264,6 +290,9 @@ export function useScrollAnchor(
     syncHeight();
 
     return () => {
+      if (mutationSettleRaf !== 0) {
+        cancelAnimationFrame(mutationSettleRaf);
+      }
       if (contentChangeRaf !== 0) {
         cancelAnimationFrame(contentChangeRaf);
       }

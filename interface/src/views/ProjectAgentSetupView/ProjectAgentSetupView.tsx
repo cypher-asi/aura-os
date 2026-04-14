@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Spinner, Text } from "@cypher-asi/zui";
 import { ArrowLeft, Cloud, Sparkles } from "lucide-react";
-import { api } from "../../api/client";
+import { ApiClientError, api } from "../../api/client";
 import { Avatar } from "../../components/Avatar";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { getAgentNameValidationMessage } from "../../lib/agentNameValidation";
@@ -11,11 +11,48 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
 import type { Agent, AgentInstance } from "../../types";
-import { CREATE_AGENT_CHAT_HANDOFF } from "../../utils/chat-handoff";
+import { createAgentChatHandoffState } from "../../utils/chat-handoff";
 import { projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
 import styles from "./ProjectAgentSetupView.module.css";
 
 const EMPTY_PROJECT_AGENTS: AgentInstance[] = [];
+const REMOTE_AGENT_READY_STATES = new Set(["running", "idle"]);
+const REMOTE_AGENT_READY_POLL_MS = 2000;
+const REMOTE_AGENT_READY_TIMEOUT_MS = 30000;
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForRemoteAgentReady(agentId: string) {
+  const deadline = Date.now() + REMOTE_AGENT_READY_TIMEOUT_MS;
+  let lastTransientError: Error | null = null;
+
+  while (Date.now() < deadline) {
+    try {
+      const state = await api.swarm.getRemoteAgentState(agentId);
+      if (REMOTE_AGENT_READY_STATES.has(state.state)) {
+        return;
+      }
+      if (state.state === "error") {
+        throw new Error(state.error_message || "Remote agent entered an error state during startup.");
+      }
+    } catch (error) {
+      if (error instanceof ApiClientError && (error.status === 400 || error.status === 401)) {
+        throw error;
+      }
+      lastTransientError = error instanceof Error
+        ? error
+        : new Error("Could not verify remote agent startup.");
+    }
+
+    await delay(REMOTE_AGENT_READY_POLL_MS);
+  }
+
+  throw lastTransientError ?? new Error(
+    "Remote agent is still provisioning. Please wait a moment and try again.",
+  );
+}
 
 function upsertProjectAgent(
   instance: AgentInstance,
@@ -100,11 +137,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
   const finishAttach = useCallback((instance: AgentInstance) => {
     upsertProjectAgent(instance, setAgentsByProject);
     navigate(projectAgentChatRoute(instance.project_id, instance.agent_instance_id), {
-      state: {
-        agentChatHandoff: {
-          type: CREATE_AGENT_CHAT_HANDOFF,
-        },
-      },
+      state: createAgentChatHandoffState(),
     });
   }, [navigate, setAgentsByProject]);
 
@@ -146,6 +179,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
         integration_id: null,
         default_model: null,
       });
+      await waitForRemoteAgentReady(created.agent_id);
       const instance = await api.createAgentInstance(projectId, created.agent_id);
       finishAttach(instance);
     } catch (error) {
