@@ -1,4 +1,15 @@
-import type { ProjectId, AgentId, AgentInstanceId, Agent, AgentInstance, AgentRuntimeTestResult, Session, SessionEvent, Task } from "../types";
+import type {
+  ProjectId,
+  AgentId,
+  AgentInstanceId,
+  Agent,
+  AgentInstance,
+  AgentRuntimeTestResult,
+  Session,
+  SessionEvent,
+  Task,
+  SuperAgentOrchestration,
+} from "../types";
 import { apiFetch } from "./core";
 import { sendAgentEventStream, sendEventStream } from "./streams";
 
@@ -109,8 +120,8 @@ export const agentInstancesApi = {
 
 export const superAgentApi = {
   setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/super-agent/setup", { method: "POST" }),
-  listOrchestrations: () => apiFetch<unknown[]>("/api/super-agent/orchestrations"),
-  getOrchestration: (id: string) => apiFetch<unknown>(`/api/super-agent/orchestrations/${id}`),
+  listOrchestrations: () => apiFetch<SuperAgentOrchestration[]>("/api/super-agent/orchestrations"),
+  getOrchestration: (id: string) => apiFetch<SuperAgentOrchestration>(`/api/super-agent/orchestrations/${id}`),
 };
 
 export const sessionsApi = {
