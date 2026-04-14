@@ -121,6 +121,17 @@ export function useChatPanelState({
   useEffect(() => {
     chatUI.init(streamKey, adapterType, defaultModel);
   }, [streamKey, adapterType, defaultModel, chatUI.init]);
+
+  const resetKeyMountRef = useRef(true);
+  useEffect(() => {
+    if (resetKeyMountRef.current) {
+      resetKeyMountRef.current = false;
+      return;
+    }
+    setInput("");
+    setAttachments([]);
+    setCommands([]);
+  }, [scrollResetKey]);
   const selectedModel = chatUI.selectedModel;
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [commands, setCommands] = useState<SlashCommand[]>([]);

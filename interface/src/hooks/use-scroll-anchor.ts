@@ -74,6 +74,7 @@ export function useScrollAnchor(
   const guardRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
   const lastScrollTopRef = useRef(0);
+  const hasBeenReadyRef = useRef(false);
 
   const [isReady, setIsReady] = useState(false);
   const [isAutoFollowing, setIsAutoFollowing] = useState(true);
@@ -97,11 +98,29 @@ export function useScrollAnchor(
 
   // ── Settling phase ──────────────────────────────────────────────────
   useEffect(() => {
+    const skipSettle = hasBeenReadyRef.current;
+
     phaseRef.current = "settling";
     pinnedRef.current = true;
+    syncFollowState();
+
+    if (skipSettle) {
+      // Already shown once -- keep chrome visible and just re-anchor scroll.
+      const el = ref.current;
+      if (el) {
+        scrollSentinelToEnd();
+        prevScrollHeightRef.current = el.scrollHeight;
+        lastScrollTopRef.current = el.scrollTop;
+      }
+      phaseRef.current = "active";
+      isReadyRef.current = true;
+      setIsReady(true);
+      syncFollowState();
+      return;
+    }
+
     setIsReady(false);
     isReadyRef.current = false;
-    syncFollowState();
 
     const el = ref.current;
     if (!el) return;
@@ -121,6 +140,7 @@ export function useScrollAnchor(
       phaseRef.current = "active";
       setIsReady(true);
       isReadyRef.current = true;
+      hasBeenReadyRef.current = true;
       syncFollowState();
     };
 

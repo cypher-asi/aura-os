@@ -110,6 +110,9 @@ function StandaloneAgentChatPanel({
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() =>
     loadPersistedProject(agentId),
   );
+  useEffect(() => {
+    setSelectedProjectId(loadPersistedProject(agentId));
+  }, [agentId]);
   const { streamKey, sendMessage, stopStreaming, resetEvents } = useAgentChatStream({ agentId });
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } = useAgentChatMeta(
     "agent",
@@ -167,7 +170,6 @@ function StandaloneAgentChatPanel({
 
   return (
     <ChatPanel
-      key={agentId}
       streamKey={streamKey}
       onSend={wrappedSend}
       onStop={stopStreaming}
@@ -308,7 +310,6 @@ function ProjectAgentChatPanel({
     <>
       {isSessionView && <SessionBanner onExit={onExitSessionView} />}
       <ChatPanel
-        key={panelKey}
         streamKey={streamKey}
         onSend={isSessionView ? noopSend : wrappedSend}
         onStop={stopStreaming}
