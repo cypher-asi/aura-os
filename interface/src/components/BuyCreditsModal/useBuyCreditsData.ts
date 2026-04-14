@@ -45,7 +45,10 @@ export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
 
   useEffect(() => {
     if (!isOpen || !orgId) return;
-    loadBalance();
+    const frame = window.requestAnimationFrame(() => {
+      void loadBalance();
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen, orgId, loadBalance]);
 
   useEffect(() => {
@@ -64,10 +67,11 @@ export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
   const wasOpenRef = useRef(false);
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
+      resetPolling();
       window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
     }
     wasOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, resetPolling]);
 
   const handlePurchase = useCallback(async (amountUsd: number) => {
     if (!orgId) return;

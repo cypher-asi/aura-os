@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -205,12 +205,14 @@ describe("OrgSettingsPanel", () => {
     expect(screen.getByText("Integrations")).toBeInTheDocument();
   });
 
-  it("fetches data on open", () => {
+  it("fetches data on open", async () => {
     renderPanel();
-    expect(mockOrgStore.refreshMembers).toHaveBeenCalled();
-    expect(mockOrgStore.refreshIntegrations).toHaveBeenCalled();
-    expect(mockApis.orgs.listInvites).toHaveBeenCalledWith("org-1");
-    expect(mockApis.orgs.getBilling).toHaveBeenCalledWith("org-1");
+    await waitFor(() => {
+      expect(mockOrgStore.refreshMembers).toHaveBeenCalled();
+      expect(mockOrgStore.refreshIntegrations).toHaveBeenCalled();
+      expect(mockApis.orgs.listInvites).toHaveBeenCalledWith("org-1");
+      expect(mockApis.orgs.getBilling).toHaveBeenCalledWith("org-1");
+    });
   });
 
   describe("when no org available", () => {

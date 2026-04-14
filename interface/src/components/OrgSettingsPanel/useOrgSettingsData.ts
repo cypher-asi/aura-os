@@ -82,7 +82,14 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
 
   useEffect(() => {
     if (!isOpen || !orgId) return;
-    refreshMembers(); refreshIntegrations(); loadInvites(); loadBilling(); loadCreditBalance();
+    const frame = window.requestAnimationFrame(() => {
+      void refreshMembers();
+      void refreshIntegrations();
+      void loadInvites();
+      void loadBilling();
+      void loadCreditBalance();
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen, orgId, refreshMembers, refreshIntegrations, loadInvites, loadBilling, loadCreditBalance]);
 
   const handleCreateInvite = async () => { if (orgId) { try { await api.orgs.createInvite(orgId); loadInvites(); } catch (err) { console.error("Failed to create invite", err); } } };
@@ -167,7 +174,19 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       resetPolling();
       window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
     }
+    if (pollingStatus === "timeout") {
+      window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
+    }
   }, [pollingStatus, settledBalance, resetPolling]);
+
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpen) {
+      resetPolling();
+      window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, resetPolling]);
 
   return {
     activeOrg, isLoading, user, section, setSection, retryingOrg,
