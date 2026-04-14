@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import type { ExplorerNode } from "@cypher-asi/zui";
 import { Loader2 } from "lucide-react";
 import { Avatar } from "../../../../components/Avatar";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
 import type { useProjectListData } from "../../../../components/ProjectList/useProjectListData";
 import { resolveStatus } from "../../../../components/ProjectList/project-list-shared";
+import type { ExplorerNodeWithSuffix } from "../../../../lib/zui-compat";
 
 function buildTaskProjectSuffix(
   projectId: string,
@@ -34,7 +34,7 @@ function buildTaskAgentNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
+): ExplorerNodeWithSuffix {
   const isAutomating =
     data.automatingProjectId === projectId &&
     data.automatingAgentInstanceId === agent.agent_instance_id;
@@ -83,7 +83,7 @@ export function buildTasksExplorerNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
+): ExplorerNodeWithSuffix {
   const projectAgents = data.agentsByProject[project.project_id];
   const children =
     projectAgents !== undefined

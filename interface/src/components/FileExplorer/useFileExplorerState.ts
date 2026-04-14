@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, createElement } from "react";
 import { api, type DirEntry } from "../../api/client";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import type { ExplorerNode } from "@cypher-asi/zui";
@@ -6,8 +6,8 @@ import { Folder, File, FolderOpen, FolderOutput } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useEventStore } from "../../stores/event-store/index";
 import { EventType } from "../../types/aura-events";
-import { createElement } from "react";
 import styles from "./FileExplorer.module.css";
+import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 
 function toExplorerNodes(entries: DirEntry[]): ExplorerNode[] {
   return entries.map((entry) => ({
@@ -139,7 +139,7 @@ export function useFileExplorerState({
     [rootPath],
   );
 
-  const explorerData: ExplorerNode[] = useMemo(() => {
+  const explorerData: ExplorerNodeWithSuffix[] = useMemo(() => {
     if (!rootPath) return [];
     const rootName = rootPath.split(/[\\/]/).pop() ?? rootPath;
     return [

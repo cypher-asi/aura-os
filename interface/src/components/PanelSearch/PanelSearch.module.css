@@ -35,4 +35,23 @@
 
 .searchInput {
   padding-left: calc(var(--space-4, 16px) + 14px + var(--space-2, 8px));
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.searchInput:hover {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.searchInput:focus,
+.searchInput:focus-visible {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: none;
 }

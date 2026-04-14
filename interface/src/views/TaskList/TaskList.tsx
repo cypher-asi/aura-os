@@ -10,6 +10,7 @@ import { useSidekickStore } from "../../stores/sidekick-store";
 import { useTaskListData } from "./useTaskListData";
 import styles from "../aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 
 export function TaskList({ searchQuery }: { searchQuery: string }) {
   const { specs, tasks, liveTaskIds, loopActive, loading } = useTaskListData();
@@ -56,7 +57,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
         }
       }
 
-      function toNode(task: Task): ExplorerNode {
+      function toNode(task: Task): ExplorerNodeWithSuffix {
         const subtasks = childrenByParent.get(task.task_id);
         const displayStatus =
           task.status === "in_progress" &&

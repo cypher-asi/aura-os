@@ -1,4 +1,5 @@
 import type { ExplorerNode } from "@cypher-asi/zui";
+import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 import type {
   LeftMenuEmptyEntry,
   LeftMenuEntry,
@@ -33,7 +34,7 @@ function isGroupNode(node: ExplorerNode): boolean {
 }
 
 function buildLeafEntry(
-  node: ExplorerNode,
+  node: ExplorerNodeWithSuffix,
   selectedNodeId: string | null,
   itemTestIdPrefix: string | undefined,
   onItemSelect: (nodeId: string) => void,
@@ -66,7 +67,7 @@ function buildEmptyEntry(
 }
 
 function buildGroupEntry(
-  node: ExplorerNode,
+  node: ExplorerNodeWithSuffix,
   options: BuildLeftMenuEntriesOptions,
 ): LeftMenuGroupEntry {
   const emptyNode = node.children?.find(isProjectEmptyNode);
@@ -103,7 +104,7 @@ function buildGroupEntry(
 }
 
 export function buildLeftMenuEntries(
-  nodes: ExplorerNode[],
+  nodes: ExplorerNodeWithSuffix[],
   options: BuildLeftMenuEntriesOptions,
 ): LeftMenuEntry[] {
   return nodes.map((node) =>

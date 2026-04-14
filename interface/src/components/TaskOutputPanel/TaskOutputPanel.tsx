@@ -286,7 +286,7 @@ function PanelTabs({
         tabs={tabs as any}
         value={activeTab}
         onChange={(id) => onTabChange(id as OutputPanelTab)}
-        size="xs"
+        size="sm"
         className={styles.panelTabsRoot}
         tabClassName={styles.panelTabBtn}
       />

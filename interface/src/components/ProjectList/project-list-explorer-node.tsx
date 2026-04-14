@@ -5,6 +5,7 @@ import { Avatar } from "../Avatar";
 import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import type { useProjectListData } from "./useProjectListData";
 import { resolveStatus } from "./project-list-shared";
+import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 
 export type ProjectAgentNode =
   NonNullable<ReturnType<typeof useProjectListData>["agentsByProject"][string]>[number];
@@ -80,7 +81,7 @@ export function buildAgentNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
+): ExplorerNodeWithSuffix {
   const isAutomating =
     context.automatingProjectId === projectId &&
     context.automatingAgentInstanceId === agent.agent_instance_id;
@@ -214,7 +215,7 @@ export function buildProjectExplorerNode(
   statusMap: Record<string, string>,
   machineTypesMap: Record<string, string>,
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
+): ExplorerNodeWithSuffix {
   return {
     id: project.project_id,
     label: project.name,

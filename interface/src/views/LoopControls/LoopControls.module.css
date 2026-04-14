@@ -8,6 +8,7 @@
 .controlRow :global(.zui-button),
 .controlRow :global(button) {
   min-width: 0;
+  opacity: 1;
 }
 
 .startButton {

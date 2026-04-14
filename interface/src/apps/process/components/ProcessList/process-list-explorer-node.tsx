@@ -3,6 +3,7 @@ import type { ExplorerNode } from "@cypher-asi/zui";
 import { Cpu } from "lucide-react";
 import { ProjectsPlusButton } from "../../../../components/ProjectsPlusButton";
 import type { ProjectExplorerNodeStyles } from "../../../../components/ProjectList/project-list-explorer-node";
+import type { ExplorerNodeWithSuffix } from "../../../../lib/zui-compat";
 
 interface BuildProcessExplorerDataParams {
   processes: {
@@ -44,7 +45,7 @@ function buildEnabledIndicator(
 function buildProcessNode(
   process: BuildProcessExplorerDataParams["processes"][number],
   explorerStyles: ProjectExplorerNodeStyles,
-): ExplorerNode {
+): ExplorerNodeWithSuffix {
   return {
     id: process.process_id,
     label: process.name,
@@ -57,7 +58,7 @@ function buildProcessNode(
 function buildProjectProcessNode(
   project: BuildProcessExplorerDataParams["projects"][number],
   params: BuildProcessExplorerDataParams,
-): ExplorerNode {
+): ExplorerNodeWithSuffix {
   return {
     id: project.project_id,
     label: project.name,
