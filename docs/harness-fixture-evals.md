@@ -27,7 +27,7 @@ This matches what we see in stronger agent systems:
 
 Aura now has a fixture-backed direct harness suite in:
 
-- `evals/local-stack/bin/run-harness-fixture-suite.sh`
+- `infra/evals/local-stack/bin/run-harness-fixture-suite.sh`
 - `interface/scripts/lib/harness-benchmark-scenarios.mjs`
 - `interface/scripts/run-harness-context-benchmark.mjs`
 
@@ -73,8 +73,8 @@ do not use it as the only proof path for harness correctness.
 To keep harness evals trustworthy, we should follow a few rules consistently.
 
 1. Prefer a clean worktree before final benchmark runs.
-2. Use the wrapper scripts in `evals/local-stack/bin/` by default.
-3. If running the Node benchmark directly, source `evals/local-stack/.runtime/auth.env` first.
+2. Use the wrapper scripts in `infra/evals/local-stack/bin/` by default.
+3. If running the Node benchmark directly, source `infra/evals/local-stack/.runtime/auth.env` first.
 4. Treat validator-backed fixture scenarios as pass/fail gates, not just signal.
 5. Use same-system A/B comparisons whenever possible:
    - cache on vs cache off

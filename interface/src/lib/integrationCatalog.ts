@@ -1,5 +1,4 @@
 import type { OrgIntegration } from "../types";
-import { isSettingsProviderSelectionEnabled } from "./featureFlags";
 
 export type IntegrationKind =
   | "workspace_connection"
@@ -430,10 +429,9 @@ export function integrationSections(): Array<{
   description: string;
   providers: IntegrationDefinition[];
 }> {
-  const showProviderSelection = isSettingsProviderSelectionEnabled();
-  const workspaceConnectionProviders = showProviderSelection
-    ? INTEGRATION_CATALOG.filter((provider) => provider.kind === "workspace_connection")
-    : INTEGRATION_CATALOG.filter((provider) => provider.id === "aura_proxy");
+  const workspaceConnectionProviders = INTEGRATION_CATALOG.filter(
+    (provider) => provider.kind === "workspace_connection" && provider.id !== "aura_proxy",
+  );
 
   return [
     {

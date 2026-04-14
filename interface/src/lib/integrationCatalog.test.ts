@@ -54,12 +54,15 @@ describe("integrationCatalog auth labels", () => {
     }
   });
 
-  it("defaults settings connections to AURA Proxy when provider selection is off", () => {
+  it("omits AURA Proxy from connections when provider selection is off", () => {
     vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "");
 
     const connections = integrationSections().find((section) => section.id === "workspace_connection");
+    const connectionIds = new Set(connections?.providers.map((provider) => provider.id));
 
-    expect(connections?.providers.map((provider) => provider.id)).toEqual(["aura_proxy"]);
+    expect(connectionIds.has("aura_proxy")).toBe(false);
+    expect(connectionIds.has("anthropic")).toBe(true);
+    expect(connectionIds.has("openai")).toBe(true);
     expect(getIntegrationDefinition("aura_proxy")?.kind).toBe("workspace_connection");
   });
 
@@ -69,7 +72,7 @@ describe("integrationCatalog auth labels", () => {
     const connections = integrationSections().find((section) => section.id === "workspace_connection");
     const connectionIds = new Set(connections?.providers.map((provider) => provider.id));
 
-    expect(connectionIds.has("aura_proxy")).toBe(true);
+    expect(connectionIds.has("aura_proxy")).toBe(false);
     expect(connectionIds.has("anthropic")).toBe(true);
     expect(connectionIds.has("openai")).toBe(true);
   });

@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, useCallback, useEffect, useRef } from "react";
+import { type ReactNode, type RefObject, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
@@ -50,13 +50,6 @@ export function ChatMessageList({
     })),
   );
 
-  const initialMountRef = useRef(true);
-  useEffect(() => {
-    if (messages.length > 0) {
-      initialMountRef.current = false;
-    }
-  }, [messages.length]);
-
   const getItemKey = useCallback(
     (index: number) => messages[index].id,
     [messages],
@@ -96,7 +89,7 @@ export function ChatMessageList({
               transform: `translateY(${virtualRow.start}px)`,
             }}
           >
-            <MessageBubble message={messages[virtualRow.index]} fadeIn={initialMountRef.current} />
+            <MessageBubble message={messages[virtualRow.index]} />
           </div>
         ))}
       </div>

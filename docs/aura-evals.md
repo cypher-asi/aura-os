@@ -27,7 +27,7 @@ Scenario definitions live in:
 - `interface/tests/e2e/evals/scenarios/core-browser-smoke.json`
 - `interface/tests/e2e/evals/scenarios/workflow-e2e.json`
 - `interface/tests/e2e/evals/scenarios/live-benchmark.json`
-- `evals/promptfoo/tests/`
+- `infra/evals/promptfoo/tests/`
 
 Fixture projects live under:
 
@@ -73,7 +73,7 @@ That summary is the first building block for historical baselines and trend comp
 You can compare a fresh summary against the checked-in baselines with:
 
 ```bash
-npm run test:evals:compare -- test-results/aura-evals-summary.json ../evals/reports/baselines/workflow-summary.json workflow-compare
+npm run test:evals:compare -- test-results/aura-evals-summary.json ../infra/evals/reports/baselines/workflow-summary.json workflow-compare
 ```
 
 ## Running locally
@@ -84,7 +84,7 @@ From `interface/`:
 npm run test:evals:smoke
 npm run test:evals:workflow
 npm run test:evals:report
-npm run test:evals:compare -- test-results/aura-evals-summary.json ../evals/reports/baselines/smoke-summary.json smoke-compare
+npm run test:evals:compare -- test-results/aura-evals-summary.json ../infra/evals/reports/baselines/smoke-summary.json smoke-compare
 ```
 
 To run the live benchmark lane, point Playwright at a real Aura host and provide a real account:
@@ -111,7 +111,7 @@ Current local-stack status:
 
 There is now a local-first integration stack in:
 
-- `evals/local-stack/`
+- `infra/evals/local-stack/`
 
 This stack is the bridge between the deterministic mocked workflow lane and the fully remote live benchmark lane.
 
@@ -133,26 +133,26 @@ That gives us a real local integration lane without pretending every sibling rep
 Quick start:
 
 ```bash
-cp evals/local-stack/stack.env.example evals/local-stack/stack.env
-./evals/local-stack/bin/doctor.sh
-./evals/local-stack/bin/up.sh
-./evals/local-stack/bin/run-service.sh network
-./evals/local-stack/bin/run-service.sh storage
-./evals/local-stack/bin/run-service.sh orbit
-./evals/local-stack/bin/run-service.sh aura-os
-./evals/local-stack/bin/run-service.sh frontend
+cp infra/evals/local-stack/stack.env.example infra/evals/local-stack/stack.env
+./infra/evals/local-stack/bin/doctor.sh
+./infra/evals/local-stack/bin/up.sh
+./infra/evals/local-stack/bin/run-service.sh network
+./infra/evals/local-stack/bin/run-service.sh storage
+./infra/evals/local-stack/bin/run-service.sh orbit
+./infra/evals/local-stack/bin/run-service.sh aura-os
+./infra/evals/local-stack/bin/run-service.sh frontend
 ```
 
-Full instructions live in `evals/local-stack/README.md`.
+Full instructions live in `infra/evals/local-stack/README.md`.
 
 The external-agent adapter plan and architecture live in:
 
-- `docs/external-agent-benchmark-adapters.md`
+- [External Agent Benchmark Adapters](./external-agent-benchmark-adapters.md)
 
 To run the behavior evals:
 
 ```bash
-cd evals/promptfoo
+cd infra/evals/promptfoo
 npm ci
 npm run eval:ci
 ```

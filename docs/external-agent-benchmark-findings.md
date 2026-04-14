@@ -8,7 +8,7 @@ It is meant to answer three questions quickly:
 2. How is each tool being run?
 3. What did the latest results show?
 
-For the adapter design and contract itself, see `docs/external-agent-benchmark-adapters.md`.
+For the adapter design and contract itself, see [External Agent Benchmark Adapters](./external-agent-benchmark-adapters.md).
 
 ## What I am testing
 

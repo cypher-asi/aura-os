@@ -161,8 +161,6 @@
   scroll-padding-bottom: 140px;
   display: flex;
   flex-direction: column;
-  opacity: 1;
-  transition: opacity 0.3s ease;
 }
 
 .messageAreaFollowing {
@@ -175,10 +173,6 @@
 
 .messageArea::-webkit-scrollbar {
   display: none;
-}
-
-.messageAreaHidden {
-  opacity: 0;
 }
 
 .messageContent {

@@ -53,9 +53,9 @@ Paperclip uses distinct test layers rather than one giant catch-all framework:
    - The evals focus on deterministic behavioral invariants like assignment pickup, approval compliance, blocked reporting, and boundary enforcement.
    - Sources:
      - `evals/README.md`
-     - `evals/promptfoo/promptfooconfig.yaml`
-     - `evals/promptfoo/tests/core.yaml`
-     - `evals/promptfoo/tests/governance.yaml`
+     - `infra/evals/promptfoo/promptfooconfig.yaml`
+     - `infra/evals/promptfoo/tests/core.yaml`
+     - `infra/evals/promptfoo/tests/governance.yaml`
      - `doc/plans/2026-03-13-agent-evals-framework.md`
 
 ### Important design choices from Paperclip
@@ -203,7 +203,7 @@ Important:
 
 Implementation note:
 
-- Aura now has a first local integration-stack scaffold in `evals/local-stack/`.
+- Aura now has a first local integration-stack scaffold in `infra/evals/local-stack/`.
 - It is intentionally hybrid: Docker for shared infra plus harness, repo-native service processes for sibling Rust services, and per-service local/remote URL overrides.
 - This is the bridge between the mocked workflow lane and the fully live benchmark lane.
 - The first stabilization target is `machineType=local`, because that exercises imported workspaces, filesystem tools, build/test commands, and the local harness execution loop directly.
@@ -675,7 +675,7 @@ These should be visible:
 
 1. Keep the current browser smoke lane as the permanent PR sanity layer.
 2. Add a second Playwright suite for deterministic workflow E2E using imported fixtures and API-driven lifecycle checks.
-3. Add a top-level `evals/promptfoo/` directory to Aura for narrow planning/execution behavior cases.
+3. Add a dedicated `infra/evals/promptfoo/` directory to Aura for narrow planning/execution behavior cases.
 4. Add a staging-backed live benchmark lane for the hello-world fixture.
 5. Start storing run-to-run metric deltas so we can compare candidate vs baseline rather than only reading one-off test output.
 

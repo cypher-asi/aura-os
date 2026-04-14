@@ -24,18 +24,6 @@ function guardedScroll(
   });
 }
 
-function guardedScrollIntoView(
-  target: HTMLElement,
-  options: ScrollIntoViewOptions,
-  guardRef: React.MutableRefObject<boolean>,
-) {
-  guardRef.current = true;
-  target.scrollIntoView(options);
-  requestAnimationFrame(() => {
-    guardRef.current = false;
-  });
-}
-
 /**
  * Returns true when the sentinel (content-end marker) is below the
  * visible area of the scroll container, accounting for the input overlay.
@@ -57,10 +45,9 @@ function isSentinelBelowViewport(
  *
  * Operates in two phases:
  *
- *   **Settling** – entered on mount / `resetKey` change. Content is
- *   hidden (`isReady = false`). A tight RAF loop polls `scrollHeight`
- *   until the virtualiser finishes its measure-render cascade, then
- *   scrolls the sentinel to the bottom of the viewport and reveals.
+ *   **Settling** – entered on mount / `resetKey` change. A tight RAF
+ *   loop polls `scrollHeight` until the virtualiser finishes its
+ *   measure-render cascade, then seeds the active-phase scroll anchor.
  *
  *   **Active** – content is visible. MutationObserver and
  *   ResizeObservers keep the sentinel pinned to the viewport bottom
@@ -104,14 +91,9 @@ export function useScrollAnchor(
 
   /** Scroll sentinel to the bottom of the visible area (above input overlay). */
   const scrollSentinelToEnd = useCallback(() => {
-    const sentinel = sentinelRef.current;
-    if (sentinel) {
-      guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
-    } else {
-      const el = ref.current;
-      if (el) guardedScroll(el, el.scrollHeight, guardRef);
-    }
-  }, [ref, sentinelRef]);
+    const el = ref.current;
+    if (el) guardedScroll(el, el.scrollHeight, guardRef);
+  }, [ref]);
 
   // ── Settling phase ──────────────────────────────────────────────────
   useEffect(() => {
@@ -221,12 +203,7 @@ export function useScrollAnchor(
       }
 
       if (pinnedRef.current && delta !== 0) {
-        const sentinel = sentinelRef.current;
-        if (sentinel) {
-          guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
-        } else {
-          guardedScroll(el, el.scrollHeight, guardRef);
-        }
+        guardedScroll(el, el.scrollHeight, guardRef);
         syncHeight();
         return;
       }
@@ -247,25 +224,7 @@ export function useScrollAnchor(
       const w = el.clientWidth;
       if (w === lastWidth) return;
       lastWidth = w;
-
-      const oldSH = prevScrollHeightRef.current;
-      const newSH = el.scrollHeight;
-
-      if (pinnedRef.current) {
-        const sentinel = sentinelRef.current;
-        if (sentinel) {
-          guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
-        } else {
-          guardedScroll(el, newSH, guardRef);
-        }
-      } else if (oldSH > 0 && newSH !== oldSH) {
-        guardedScroll(
-          el,
-          Math.round(el.scrollTop * (newSH / oldSH)),
-          guardRef,
-        );
-      }
-      syncHeight();
+      queueContentChange();
     });
     containerObs.observe(el);
 

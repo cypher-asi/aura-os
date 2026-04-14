@@ -4,19 +4,14 @@ import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 
 const mockUseAuraCapabilities = vi.fn();
+const mockUseScrollAnchor = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
 
 vi.mock("../../hooks/use-scroll-anchor", () => ({
-  useScrollAnchor: () => ({
-    handleScroll: vi.fn(),
-    scrollToBottom: vi.fn(),
-    scrollToBottomIfPinned: vi.fn(),
-    isReady: true,
-    isAutoFollowing: true,
-  }),
+  useScrollAnchor: () => mockUseScrollAnchor(),
 }));
 
 vi.mock("../../hooks/stream/hooks", () => ({
@@ -72,6 +67,14 @@ vi.mock("./ChatPanel.module.css", () => ({
 describe("ChatPanel", () => {
   beforeEach(() => {
     mockUseAuraCapabilities.mockReset();
+    mockUseScrollAnchor.mockReset();
+    mockUseScrollAnchor.mockReturnValue({
+      handleScroll: vi.fn(),
+      scrollToBottom: vi.fn(),
+      scrollToBottomIfPinned: vi.fn(),
+      isReady: true,
+      isAutoFollowing: true,
+    });
   });
 
   function renderPanel(overrides: Partial<ComponentProps<typeof ChatPanel>> = {}) {
@@ -153,6 +156,23 @@ describe("ChatPanel", () => {
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
     expect(screen.getByTestId("chat-loading-state")).toBeInTheDocument();
     expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
+  });
+
+  it("keeps the message area visible even while the scroll hook is settling", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseScrollAnchor.mockReturnValue({
+      handleScroll: vi.fn(),
+      scrollToBottom: vi.fn(),
+      scrollToBottomIfPinned: vi.fn(),
+      isReady: false,
+      isAutoFollowing: true,
+    });
+
+    const { container } = renderPanel();
+    const messageArea = container.querySelector(".messageArea");
+
+    expect(messageArea).not.toBeNull();
+    expect(messageArea?.className).not.toContain("messageAreaHidden");
   });
 
   it("shows an error state separately from loading and empty states", () => {

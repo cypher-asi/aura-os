@@ -143,7 +143,11 @@ export function SkillsTab({ agent }: SkillsTabProps) {
           Installed{!loading && ` (${installedSkills.length})`}
         </Text>
         <div className={styles.skillHeaderActions}>
-          {loading && <Loader2 size={12} className={styles.spin} style={{ opacity: 0.5 }} />}
+          {loading && (
+            <div className={styles.skillHeaderSpinner} aria-hidden="true">
+              <Loader2 size={12} className={styles.spin} />
+            </div>
+          )}
           <button
             type="button"
             className={styles.skillCreateBtn}

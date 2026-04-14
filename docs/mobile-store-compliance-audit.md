@@ -21,10 +21,10 @@ flows or deep-link users into web checkout from native UI.
 
 Relevant files:
 
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/lib/billing.ts`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/components/BuyCreditsModal/BuyCreditsModal.tsx`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/components/BuyCreditsModal/useBuyCreditsData.ts`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx`
+- `interface/src/lib/billing.ts`
+- `interface/src/components/BuyCreditsModal/BuyCreditsModal.tsx`
+- `interface/src/components/BuyCreditsModal/useBuyCreditsData.ts`
+- `interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx`
 
 Verified tests:
 
@@ -47,8 +47,8 @@ path when users can create accounts in-app.
 Current repo state:
 
 - Account creation/login exists in:
-  - `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/views/LoginView/LoginView.tsx`
-  - `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/views/LoginView/use-login-form.ts`
+  - `interface/src/views/LoginView/LoginView.tsx`
+  - `interface/src/views/LoginView/use-login-form.ts`
 - I did not find an in-app account deletion flow or backend delete-account API.
 
 Impact:
@@ -64,9 +64,9 @@ surfaces.
 
 Relevant surfaces:
 
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/apps/feed`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/apps/profile/shared/ProfileCommentsPanel`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/src/hooks/use-chat-stream`
+- `interface/src/apps/feed`
+- `interface/src/apps/profile/shared/ProfileCommentsPanel`
+- `interface/src/hooks/use-chat-stream`
 
 Impact:
 
@@ -86,7 +86,7 @@ The repo-level release checklist is still missing final submission metadata:
 
 See:
 
-- `/Users/shahrozkhan/Documents/zero/aura-os/README.md`
+- `README.md`
 
 ### iOS privacy disclosure follow-up
 
@@ -107,13 +107,13 @@ submission along with App Store Connect privacy declarations.
 
 Relevant files:
 
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/capacitor.config.ts`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/ios/fastlane/Appfile`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/ios/fastlane/Fastfile`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/android/fastlane/Appfile`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/android/fastlane/Fastfile`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json`
-- `/Users/shahrozkhan/Documents/zero/aura-os/interface/android/app/build.gradle`
+- `interface/capacitor.config.ts`
+- `interface/ios/fastlane/Appfile`
+- `interface/ios/fastlane/Fastfile`
+- `interface/android/fastlane/Appfile`
+- `interface/android/fastlane/Fastfile`
+- `interface/ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json`
+- `interface/android/app/build.gradle`
 
 ### Still missing before real store submission
 

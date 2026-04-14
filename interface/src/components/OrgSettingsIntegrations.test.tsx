@@ -49,7 +49,7 @@ describe("OrgSettingsIntegrations", () => {
     expect(screen.getByLabelText("New GitHub Token")).toBeInTheDocument();
   });
 
-  it("defaults new workspace connections to AURA Proxy when provider selection is hidden", async () => {
+  it("does not offer AURA Proxy when provider selection is hidden", async () => {
     vi.stubEnv("VITE_ENABLE_SETTINGS_PROVIDER_SELECTION", "");
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(null);
@@ -67,22 +67,22 @@ describe("OrgSettingsIntegrations", () => {
 
     await user.click(screen.getByRole("button", { name: "Add Integration" }));
 
-    expect(screen.getByRole("button", { name: "AURA Proxy" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Anthropic" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "AURA Proxy" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Anthropic" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "GitHub" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "AURA Proxy" }));
-    await user.type(screen.getByLabelText("New integration name"), "Aura Default");
-    await user.type(screen.getByLabelText("New AURA Proxy API Key"), "proxy_test_123");
+    await user.click(screen.getByRole("button", { name: "Anthropic" }));
+    await user.type(screen.getByLabelText("New integration name"), "Anthropic Default");
+    await user.type(screen.getByLabelText("New Anthropic API Key"), "sk-ant-test-123");
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     expect(onCreate).toHaveBeenCalledWith({
-      name: "Aura Default",
-      provider: "aura_proxy",
+      name: "Anthropic Default",
+      provider: "anthropic",
       kind: "workspace_connection",
       default_model: null,
       provider_config: null,
-      api_key: "proxy_test_123",
+      api_key: "sk-ant-test-123",
     });
   });
 

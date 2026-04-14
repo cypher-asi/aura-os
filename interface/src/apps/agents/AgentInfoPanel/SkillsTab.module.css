@@ -19,7 +19,8 @@
 .skillActionRemove { color: var(--color-text-secondary); opacity: 0.5; }
 .skillActionRemove:hover:not(:disabled) { opacity: 1; background: var(--color-overlay-medium, rgba(255,255,255,0.08)); color: var(--color-danger, #ef4444); }
 .skillActionAdd:disabled, .skillActionRemove:disabled { opacity: 0.3; cursor: default; }
-.skillHeaderActions { display: flex; gap: 2px; }
+.skillHeaderActions { display: flex; align-items: center; gap: 2px; }
+.skillHeaderSpinner { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; opacity: 0.5; }
 
 .skillsError {
   display: flex;

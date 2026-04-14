@@ -111,8 +111,28 @@ export function useResize({
   );
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{ startPos: number; startSize: number } | null>(null);
+  const latestSizeRef = useRef(size);
+  const onResizeRef = useRef(onResize);
+  const onResizeEndRef = useRef(onResizeEnd);
   
   const isHorizontal = side === 'left' || side === 'right';
+
+  useEffect(() => {
+    latestSizeRef.current = size;
+  }, [size]);
+
+  useEffect(() => {
+    onResizeRef.current = onResize;
+  }, [onResize]);
+
+  useEffect(() => {
+    onResizeEndRef.current = onResizeEnd;
+  }, [onResizeEnd]);
+
+  const updateSize = useCallback((nextSize: number) => {
+    latestSizeRef.current = nextSize;
+    setSize((prev) => (prev === nextSize ? prev : nextSize));
+  }, []);
   
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!enabled) return;
@@ -122,10 +142,10 @@ export function useResize({
     
     dragRef.current = {
       startPos: isHorizontal ? e.clientX : e.clientY,
-      startSize: size,
+      startSize: latestSizeRef.current,
     };
     setIsResizing(true);
-  }, [enabled, onResizeStart, isHorizontal, size]);
+  }, [enabled, onResizeStart, isHorizontal]);
   
   useEffect(() => {
     if (!isResizing || !enabled) return;
@@ -142,15 +162,17 @@ export function useResize({
         : start.startSize + delta;
       
       const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
-      setSize(clampedSize);
-      onResize?.(clampedSize);
+      if (clampedSize === latestSizeRef.current) return;
+      updateSize(clampedSize);
+      onResizeRef.current?.(clampedSize);
     };
     
     const handleMouseUp = () => {
+      const finalSize = latestSizeRef.current;
       setIsResizing(false);
       dragRef.current = null;
-      saveSize(storageKey, size);
-      onResizeEnd?.(size);
+      saveSize(storageKey, finalSize);
+      onResizeEndRef.current?.(finalSize);
     };
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -165,12 +187,12 @@ export function useResize({
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
     };
-  }, [isResizing, enabled, size, side, minSize, maxSize, storageKey, isHorizontal, onResize, onResizeEnd]);
+  }, [isResizing, enabled, side, minSize, maxSize, storageKey, isHorizontal, updateSize]);
   
   return {
     size,
     isResizing,
     handleMouseDown,
-    setSize,
+    setSize: updateSize,
   };
 }

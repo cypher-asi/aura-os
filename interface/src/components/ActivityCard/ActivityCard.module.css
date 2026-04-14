@@ -204,8 +204,11 @@
 /* ── Active card ── */
 
 .cardActive {
-  background: color-mix(in srgb, var(--color-bg-hover) 82%, white 6%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-border) 82%, white 18%);
+  background: color-mix(in srgb, var(--color-bg-hover) 72%, white 28%);
+}
+
+.cardActive:hover {
+  background: color-mix(in srgb, var(--color-bg-hover) 68%, white 32%);
 }
 
 /* ── Comment preview ── */

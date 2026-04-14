@@ -137,7 +137,6 @@
 }
 
 .projectHeaderDraggable {
-  cursor: grab;
 }
 
 .projectHeaderDragging {
@@ -161,7 +160,6 @@
 }
 
 .projectMainButtonDraggable {
-  cursor: grab;
   touch-action: none;
 }
 

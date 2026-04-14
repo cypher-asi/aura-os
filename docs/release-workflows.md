@@ -21,7 +21,7 @@ That means:
 ### `Desktop Validate`
 
 Workflow:
-[desktop-validate.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/desktop-validate.yml)
+[desktop-validate.yml](../.github/workflows/desktop-validate.yml)
 
 Purpose:
 
@@ -42,7 +42,7 @@ It is intended to run on:
 ### `Release Nightly`
 
 Workflow:
-[release-nightly.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/release-nightly.yml)
+[release-nightly.yml](../.github/workflows/release-nightly.yml)
 
 Purpose:
 
@@ -56,7 +56,7 @@ This is the automatic desktop distribution path for `main`.
 ### `Release Stable`
 
 Workflow:
-[release-stable.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/release-stable.yml)
+[release-stable.yml](../.github/workflows/release-stable.yml)
 
 Purpose:
 
@@ -72,7 +72,7 @@ This is the canonical stable desktop shipping path.
 ### `Android Mobile`
 
 Workflow:
-[android-mobile.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/android-mobile.yml)
+[android-mobile.yml](../.github/workflows/android-mobile.yml)
 
 Purpose:
 
@@ -87,7 +87,7 @@ Validation and shipping are intentionally separated:
 ### `iOS Mobile`
 
 Workflow:
-[ios-mobile.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/ios-mobile.yml)
+[ios-mobile.yml](../.github/workflows/ios-mobile.yml)
 
 Purpose:
 
@@ -105,8 +105,8 @@ The release system does not replace the functional eval system.
 
 Functional verification remains here:
 
-- [aura-evals.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/aura-evals.yml)
-- [evals/local-stack/README.md](/Users/shahrozkhan/Documents/zero/aura-os/evals/local-stack/README.md)
+- [aura-evals.yml](../.github/workflows/aura-evals.yml)
+- [local-stack README](../infra/evals/local-stack/README.md)
 
 That system answers:
 
@@ -144,7 +144,7 @@ There is now a dedicated local script for exercising the packaged macOS updater
 path with a real signed `.app.tar.gz` bundle and the same per-channel manifest
 shape that `gh-pages` publishes:
 
-- [desktop-local-auto-update-smoke.mjs](/Users/shahrozkhan/Documents/zero/aura-os-desktop-release-flow/infra/scripts/release/desktop-local-auto-update-smoke.mjs)
+- `aura-os-desktop-release-flow/infra/scripts/release/desktop-local-auto-update-smoke.mjs` in the sibling release-flow repo
 
 It is intended for validating the "can the packaged desktop app discover,
 download, and install the published update bundle?" question that the lighter CI

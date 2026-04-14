@@ -569,7 +569,7 @@ describe("useScrollAnchor", () => {
     expect(el.scrollTop).toBe(1400);
   });
 
-  it("proportionally adjusts scroll position on width change when unpinned", () => {
+  it("preserves scroll position on width change when unpinned", () => {
     const { el, result } = renderSettled({ clientWidth: 300 });
 
     // Scroll up (auto-scroll off)
@@ -581,8 +581,7 @@ describe("useScrollAnchor", () => {
     (el as any).scrollHeight = 2000;
     triggerContainerResize();
 
-    // 300 * (2000 / 1000) = 600
-    expect(el.scrollTop).toBe(600);
+    expect(el.scrollTop).toBe(300);
   });
 
   it("ignores resize when width has not changed", () => {
@@ -591,6 +590,16 @@ describe("useScrollAnchor", () => {
     const scrollTopBefore = el.scrollTop;
     (el as any).scrollHeight = 1500;
     triggerContainerResize();
+    expect(el.scrollTop).toBe(scrollTopBefore);
+  });
+
+  it("does not force a bottom correction when width changes but content height is stable", () => {
+    const { el } = renderSettled({ clientWidth: 300 });
+    const scrollTopBefore = el.scrollTop;
+
+    (el as any).clientWidth = 500;
+    triggerContainerResize();
+
     expect(el.scrollTop).toBe(scrollTopBefore);
   });
 

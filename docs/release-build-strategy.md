@@ -37,31 +37,31 @@ This project should not:
 The repo already contains major pieces of the release system:
 
 - Desktop nightly release workflow:
-  [release-nightly.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/release-nightly.yml)
+  [release-nightly.yml](../.github/workflows/release-nightly.yml)
 - Desktop stable release workflow:
-  [release-stable.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/release-stable.yml)
+  [release-stable.yml](../.github/workflows/release-stable.yml)
 - Desktop packager metadata:
-  [Cargo.toml](/Users/shahrozkhan/Documents/zero/aura-os/apps/aura-os-desktop/Cargo.toml)
+  [Cargo.toml](../apps/aura-os-desktop/Cargo.toml)
 - Desktop updater implementation:
-  [updater.rs](/Users/shahrozkhan/Documents/zero/aura-os/apps/aura-os-desktop/src/updater.rs)
+  [updater.rs](../apps/aura-os-desktop/src/updater.rs)
 - Desktop build-time frontend bundling:
-  [build.rs](/Users/shahrozkhan/Documents/zero/aura-os/apps/aura-os-desktop/build.rs)
+  [build.rs](../apps/aura-os-desktop/build.rs)
 - Android workflow and Fastlane path:
-  [android-mobile.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/android-mobile.yml)
+  [android-mobile.yml](../.github/workflows/android-mobile.yml)
 - iOS workflow and Fastlane path:
-  [ios-mobile.yml](/Users/shahrozkhan/Documents/zero/aura-os/.github/workflows/ios-mobile.yml)
+  [ios-mobile.yml](../.github/workflows/ios-mobile.yml)
 
 The repo also already contains strong functional verification via the eval
 stack:
 
 - local-stack orchestration:
-  [evals/local-stack/README.md](/Users/shahrozkhan/Documents/zero/aura-os/evals/local-stack/README.md)
+  [local-stack README](../infra/evals/local-stack/README.md)
 - Playwright evals:
-  [interface/tests/e2e/evals](/Users/shahrozkhan/Documents/zero/aura-os/interface/tests/e2e/evals)
+  [`interface/tests/e2e/evals/`](../interface/tests/e2e/evals/)
 
 For the current operational workflow map, see:
 
-- [release-workflows.md](/Users/shahrozkhan/Documents/zero/aura-os/docs/release-workflows.md)
+- [Release Workflows](./release-workflows.md)
 
 ## Core Insight
 
