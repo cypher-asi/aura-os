@@ -13,6 +13,8 @@ import type { GenerationMode } from "../../constants/models";
 import type { DisplaySessionEvent } from "../../types/stream";
 import styles from "./ChatPanel.module.css";
 
+type ChatPanelHandoffMode = "create-agent";
+
 export interface ChatPanelProps {
   streamKey: string;
   onSend: (
@@ -46,6 +48,7 @@ export interface ChatPanelProps {
   mobileHeaderSummaryHint?: string;
   mobileHeaderSummaryLabel?: string;
   mobileHeaderSummaryKind?: "details" | "switch";
+  initialHandoff?: ChatPanelHandoffMode;
 }
 
 export function ChatPanel({
@@ -73,7 +76,10 @@ export function ChatPanel({
   mobileHeaderSummaryHint,
   mobileHeaderSummaryLabel,
   mobileHeaderSummaryKind = "details",
+  initialHandoff,
 }: ChatPanelProps) {
+  const isCreateAgentHandoff = initialHandoff === "create-agent";
+  const showLoadingState = isLoading || (isCreateAgentHandoff && !historyResolved && !errorMessage);
   const s = useChatPanelState({
     streamKey,
     onSend,
@@ -82,14 +88,17 @@ export function ChatPanel({
     scrollResetKey,
     historyMessages,
     selectedProjectId,
+    contentReady: isCreateAgentHandoff ? historyResolved : true,
+    autoFocusOnReady: isCreateAgentHandoff,
   });
+  const chromeReady = s.isReady;
 
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
       <AlertCircle size={40} />
       <Text variant="muted" size="sm">{errorMessage}</Text>
     </div>
-  ) : isLoading ? (
+  ) : showLoadingState ? (
     <div className={`${styles.emptyState} ${styles.loadingState}`} data-testid="chat-loading-state">
       <LoaderCircle size={40} className={styles.loadingIcon} />
       <Text variant="muted" size="sm">Loading conversation...</Text>
@@ -182,7 +191,10 @@ export function ChatPanel({
         </div>
 
         {s.queue.length > 0 && (
-          <div className={styles.queueSection}>
+          <div
+            className={`${styles.queueSection}${chromeReady ? "" : ` ${styles.queueSectionHidden}`}`}
+            aria-hidden={chromeReady ? undefined : true}
+          >
             <MessageQueue
               streamKey={streamKey}
               onEdit={s.handleQueueEdit}
@@ -213,6 +225,7 @@ export function ChatPanel({
           projects={projects}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
+          isVisible={chromeReady}
         />
       </div>
     </div>

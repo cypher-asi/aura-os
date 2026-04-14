@@ -11,6 +11,7 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
 import type { Agent, AgentInstance } from "../../types";
+import { CREATE_AGENT_CHAT_HANDOFF } from "../../utils/chat-handoff";
 import { projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
 import styles from "./ProjectAgentSetupView.module.css";
 
@@ -98,7 +99,13 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
 
   const finishAttach = useCallback((instance: AgentInstance) => {
     upsertProjectAgent(instance, setAgentsByProject);
-    navigate(projectAgentChatRoute(instance.project_id, instance.agent_instance_id));
+    navigate(projectAgentChatRoute(instance.project_id, instance.agent_instance_id), {
+      state: {
+        agentChatHandoff: {
+          type: CREATE_AGENT_CHAT_HANDOFF,
+        },
+      },
+    });
   }, [navigate, setAgentsByProject]);
 
   const handleAttachExisting = useCallback(async (agent: Agent) => {

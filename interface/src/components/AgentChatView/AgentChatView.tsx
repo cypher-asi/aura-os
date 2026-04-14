@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { X } from "lucide-react";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../api/client";
@@ -17,6 +17,7 @@ import { queryClient } from "../../lib/query-client";
 import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import type { AgentInstance, Project } from "../../types";
+import { isCreateAgentChatHandoff } from "../../utils/chat-handoff";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];
@@ -181,11 +182,13 @@ function ProjectAgentChatPanel({
   agentInstanceId,
   sessionId,
   onExitSessionView,
+  initialCreateHandoff,
 }: {
   projectId: string;
   agentInstanceId: string;
   sessionId: string | null;
   onExitSessionView: () => void;
+  initialCreateHandoff: boolean;
 }) {
   const isSessionView = !!sessionId;
   const currentProject = useProjectsListStore(useShallow(selectCurrentProject(projectId)));
@@ -282,6 +285,7 @@ function ProjectAgentChatPanel({
   }, [maybeRenameFromFirstPrompt, wrappedSendBase]);
   const deferredLoading = useDelayedLoading(isLoading);
   const panelKey = isSessionView ? `${agentInstanceId}:${sessionId}` : agentInstanceId;
+  const shouldUseCreateHandoff = initialCreateHandoff && !isSessionView;
 
   return (
     <>
@@ -301,6 +305,7 @@ function ProjectAgentChatPanel({
         historyResolved={historyResolved}
         errorMessage={historyError ? historyError : null}
         emptyMessage={isSessionView ? "No events in this session" : undefined}
+        initialHandoff={shouldUseCreateHandoff ? "create-agent" : undefined}
         scrollResetKey={panelKey}
         historyMessages={historyMessages}
         projects={currentProject}
@@ -316,8 +321,10 @@ export function AgentChatView() {
     agentInstanceId: string;
     agentId: string;
   }>();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
+  const isCreateHandoff = isCreateAgentChatHandoff(location.state);
 
   const exitSessionView = useCallback(() => {
     setSearchParams((prev) => {
@@ -334,6 +341,7 @@ export function AgentChatView() {
         agentInstanceId={agentInstanceId}
         sessionId={sessionId}
         onExitSessionView={exitSessionView}
+        initialCreateHandoff={isCreateHandoff}
       />
     );
   }

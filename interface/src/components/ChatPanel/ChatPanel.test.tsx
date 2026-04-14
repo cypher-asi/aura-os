@@ -34,7 +34,9 @@ vi.mock("../ChatMessageList", () => ({
 }));
 
 vi.mock("../ChatInputBar", () => ({
-  ChatInputBar: () => <div data-testid="chat-input-bar" />,
+  ChatInputBar: ({ isVisible }: { isVisible?: boolean }) => (
+    <div data-testid="chat-input-bar" data-visible={isVisible ? "true" : "false"} />
+  ),
 }));
 
 vi.mock("../MessageQueue", () => ({
@@ -158,6 +160,19 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
   });
 
+  it("shows the loading shell immediately during a create-agent handoff", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({
+      initialHandoff: "create-agent",
+      isLoading: false,
+      historyResolved: false,
+    });
+
+    expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("chat-loading-state")).toBeInTheDocument();
+  });
+
   it("keeps the message area visible even while the scroll hook is settling", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     mockUseScrollAnchor.mockReturnValue({
@@ -173,6 +188,7 @@ describe("ChatPanel", () => {
 
     expect(messageArea).not.toBeNull();
     expect(messageArea?.className).not.toContain("messageAreaHidden");
+    expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "false");
   });
 
   it("shows an error state separately from loading and empty states", () => {

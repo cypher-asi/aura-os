@@ -229,6 +229,12 @@
   pointer-events: auto;
 }
 
+.queueSectionHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (max-width: 640px) {
   .projectAgentSummary {
     align-items: center;

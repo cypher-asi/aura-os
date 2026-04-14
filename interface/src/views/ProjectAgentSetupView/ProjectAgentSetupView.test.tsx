@@ -1,6 +1,7 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "../../test/render";
+import { CREATE_AGENT_CHAT_HANDOFF } from "../../utils/chat-handoff";
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectActions = vi.fn();
@@ -91,6 +92,12 @@ vi.mock("./ProjectAgentSetupView.module.css", () => ({
 
 import { ProjectAgentSetupView } from "./ProjectAgentSetupView";
 
+function LocationStateProbe() {
+  const location = useLocation();
+  const handoffType = (location.state as { agentChatHandoff?: { type?: string } } | null)?.agentChatHandoff?.type;
+  return <div>{handoffType ?? "no-handoff"}</div>;
+}
+
 describe("ProjectAgentSetupView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -147,6 +154,26 @@ describe("ProjectAgentSetupView", () => {
         auth_source: "aura_managed",
         integration_id: null,
       }));
+    });
+  });
+
+  it("navigates to the new chat with a create handoff flag", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<LocationStateProbe />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.type(screen.getByLabelText("Role"), "Engineer");
+    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
     });
   });
 

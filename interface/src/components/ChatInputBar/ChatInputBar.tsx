@@ -48,6 +48,7 @@ interface Props {
   projects?: Project[];
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
+  isVisible?: boolean;
 }
 
 function AttachmentPreviews({ attachments, onRemove }: { attachments: AttachmentItem[]; onRemove: (id: string) => void }) {
@@ -71,6 +72,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   attachments = [], onAttachmentsChange, onRemoveAttachment,
   selectedCommands = [], onCommandsChange,
   projects = [], selectedProjectId, onProjectChange,
+  isVisible = true,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
   const chatUI = useChatUI(streamKey);
@@ -214,7 +216,11 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   };
 
   return (
-    <div className={styles.inputWrapper}>
+    <div
+      className={`${styles.inputWrapper}${isVisible ? "" : ` ${styles.inputWrapperHidden}`}`}
+      aria-hidden={isVisible ? undefined : true}
+      data-visible={isVisible ? "true" : "false"}
+    >
       <div className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
         {slashMenuOpen && (
           <SlashCommandMenu

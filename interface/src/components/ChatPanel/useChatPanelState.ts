@@ -100,6 +100,8 @@ export interface UseChatPanelStateOptions {
   scrollResetKey?: unknown;
   historyMessages?: DisplaySessionEvent[];
   selectedProjectId?: string;
+  contentReady?: boolean;
+  autoFocusOnReady?: boolean;
 }
 
 export function useChatPanelState({
@@ -110,6 +112,8 @@ export function useChatPanelState({
   scrollResetKey,
   historyMessages,
   selectedProjectId,
+  contentReady = true,
+  autoFocusOnReady = false,
 }: UseChatPanelStateOptions) {
   const [input, setInput] = useState("");
   const availableModels = availableModelsForAdapter(adapterType);
@@ -137,7 +141,7 @@ export function useChatPanelState({
     isAutoFollowing,
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
-    contentReady: true,
+    contentReady,
   });
 
   const isStreaming = useIsStreaming(streamKey);
@@ -148,10 +152,21 @@ export function useChatPanelState({
     [historyMessages, streamMessages],
   );
 
+  const readyAutofocusCompleteRef = useRef(false);
   useEffect(() => {
-    if (isMobileLayout) return;
+    readyAutofocusCompleteRef.current = false;
+  }, [autoFocusOnReady, scrollResetKey]);
+
+  useEffect(() => {
+    if (autoFocusOnReady || isMobileLayout) return;
     requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [isMobileLayout, scrollResetKey]);
+  }, [autoFocusOnReady, isMobileLayout, scrollResetKey]);
+
+  useEffect(() => {
+    if (!autoFocusOnReady || !isReady || readyAutofocusCompleteRef.current) return;
+    readyAutofocusCompleteRef.current = true;
+    requestAnimationFrame(() => inputBarRef.current?.focus());
+  }, [autoFocusOnReady, isReady]);
 
   useEffect(() => {
     chatUI.syncAvailableModels(streamKey, adapterType, defaultModel);

@@ -36,7 +36,11 @@
 }
 
 .rowActive {
-  background: var(--color-bg-hover);
+  background: var(--color-bg-active, var(--color-overlay-subtle, var(--color-bg-hover)));
+}
+
+.rowActive:hover {
+  background: var(--color-bg-active, var(--color-overlay-subtle, var(--color-bg-hover)));
 }
 
 .rankCell {

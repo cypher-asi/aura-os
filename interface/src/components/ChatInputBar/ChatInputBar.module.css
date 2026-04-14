@@ -9,6 +9,12 @@
   background: var(--color-bg, #111);
 }
 
+.inputWrapperHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .inputWrapper::before {
   content: "";
   position: absolute;

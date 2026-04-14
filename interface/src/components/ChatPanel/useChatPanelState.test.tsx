@@ -6,6 +6,7 @@ const mockHandleScroll = vi.fn();
 const mockScrollToBottom = vi.fn();
 const mockScrollToBottomIfPinned = vi.fn();
 const mockEnqueue = vi.fn();
+const mockFocus = vi.fn();
 const mockChatUI = {
   selectedModel: "gpt-5.4",
   init: vi.fn(),
@@ -14,13 +15,15 @@ const mockChatUI = {
 
 let mockIsStreaming = false;
 let mockStreamMessages: Array<{ id: string }> = [];
+let mockScrollReady = true;
+let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 vi.mock("../../hooks/use-scroll-anchor", () => ({
   useScrollAnchor: () => ({
     handleScroll: mockHandleScroll,
     scrollToBottom: mockScrollToBottom,
     scrollToBottomIfPinned: mockScrollToBottomIfPinned,
-    isReady: true,
+    isReady: mockScrollReady,
     isAutoFollowing: true,
   }),
 }));
@@ -62,12 +65,25 @@ describe("useChatPanelState", () => {
   beforeEach(() => {
     mockIsStreaming = false;
     mockStreamMessages = [];
+    mockScrollReady = true;
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
     mockScrollToBottomIfPinned.mockReset();
     mockEnqueue.mockReset();
+    mockFocus.mockReset();
     mockChatUI.init.mockReset();
     mockChatUI.syncAvailableModels.mockReset();
+    requestAnimationFrameSpy = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+  });
+
+  afterEach(() => {
+    requestAnimationFrameSpy?.mockRestore();
+    requestAnimationFrameSpy = null;
   });
 
   it("does not force-scroll when an idle send adds a new message", () => {
@@ -123,5 +139,30 @@ describe("useChatPanelState", () => {
       }),
     );
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits until the panel is ready before autofocus during a create handoff", () => {
+    mockScrollReady = false;
+    const onSend = vi.fn();
+    const { result, rerender } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+        autoFocusOnReady: true,
+      }),
+    );
+
+    act(() => {
+      result.current.inputBarRef.current = { focus: mockFocus };
+    });
+
+    expect(mockFocus).not.toHaveBeenCalled();
+
+    mockScrollReady = true;
+    act(() => {
+      rerender();
+    });
+
+    expect(mockFocus).toHaveBeenCalledTimes(1);
   });
 });
