@@ -112,7 +112,10 @@ jobs:
           rm -f apps/aura-os-desktop/Cargo.toml.bak
 
       - name: Install cargo-packager
-        run: cargo install cargo-packager --locked
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-packager
+          version: 0.11.8
 
       - name: Prepare bundled aura-node sidecar
         run: node infra/scripts/release/prepare-desktop-sidecar.mjs

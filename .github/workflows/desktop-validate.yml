@@ -140,7 +140,10 @@ jobs:
 
       - name: Install cargo-packager
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
-        run: cargo install cargo-packager --locked
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-packager
+          version: 0.11.8
 
       - name: Clean stale macOS DMG mounts
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
