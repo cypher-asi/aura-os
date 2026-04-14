@@ -53,6 +53,28 @@ export function snapshotTimeline(refs: StreamRefs): TimelineItem[] | undefined {
     : undefined;
 }
 
+function getStreamErrorMessage(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function normalizeStreamError(error: unknown): {
+  message: string;
+  displayVariant?: "insufficientCreditsError";
+} {
+  if (isInsufficientCreditsError(error)) {
+    return {
+      message: "You have no credits remaining. Buy more credits to continue.",
+      displayVariant: "insufficientCreditsError",
+    };
+  }
+
+  return {
+    message: getStreamErrorMessage(error),
+  };
+}
+
 export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): void {
   setters.setStreamingText("");
   refs.streamBuffer.current = "";
@@ -482,10 +504,13 @@ function getPendingToolResolution(
 export function handleStreamError(
   refs: StreamRefs,
   setters: StreamSetters,
-  message: string,
+  error: unknown,
 ): void {
-  console.error("Chat stream error:", message);
-  if (isInsufficientCreditsError(message)) {
+  const rawMessage = getStreamErrorMessage(error);
+  const { message, displayVariant } = normalizeStreamError(error);
+
+  console.error("Chat stream error:", rawMessage);
+  if (displayVariant === "insufficientCreditsError") {
     dispatchInsufficientCredits();
   }
   resolvePendingToolCalls(refs, setters, {
@@ -503,7 +528,10 @@ export function handleStreamError(
     {
       id: `error-${Date.now()}`,
       role: "assistant",
-      content: prefix + `*Error: ${message}*`,
+      content: displayVariant
+        ? prefix + message
+        : prefix + `*Error: ${message}*`,
+      displayVariant,
       toolCalls: snapshotToolCalls(refs),
       thinkingText: savedThinking,
       thinkingDurationMs: savedThinkingDuration,

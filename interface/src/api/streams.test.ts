@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { ApiClientError } from "./core";
 import {
   generateSpecsStream,
   sendAgentEventStream,
@@ -190,6 +191,28 @@ describe("sendAgentEventStream", () => {
 
     sseCallbacks.onDone();
     expect(handler.onDone).toHaveBeenCalled();
+  });
+
+  it("preserves transport errors for chat handlers", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await sendAgentEventStream("a1", "hi", null, undefined, undefined, handler);
+
+    const sseCallbacks = streamSSE.mock.calls[0][2] as {
+      onError: (err: Error) => void;
+    };
+    const err = new ApiClientError(402, {
+      error: "billing server error",
+      code: "insufficient_credits",
+      details: null,
+    });
+
+    sseCallbacks.onError(err);
+
+    expect(handler.onError).toHaveBeenCalledWith(err);
   });
 });
 

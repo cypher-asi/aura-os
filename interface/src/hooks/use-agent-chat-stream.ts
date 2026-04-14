@@ -166,7 +166,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               break;
           }
         },
-        onError: (message) => handleStreamError(refs, setters, message),
+        onError: (error) => handleStreamError(refs, setters, error),
         onDone: () => finalizeStream(refs, setters, abortRef, false),
       };
 
@@ -193,7 +193,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
+        handleStreamError(refs, setters, err);
       } finally {
         if (abortRef.current === controller) {
           core.setIsStreaming(false);

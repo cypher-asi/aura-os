@@ -84,7 +84,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
+        handleStreamError(refs, setters, err);
       } finally {
         if (abortRef.current === controller) {
           core.setIsStreaming(false);

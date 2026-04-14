@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { ApiClientError } from "./core";
 import { streamSSE } from "./sse";
 import type { SSECallbacks } from "./sse";
 
@@ -77,9 +78,9 @@ describe("streamSSE", () => {
   it("calls onError for non-ok response with JSON error body", async () => {
     const fetchFn = vi.fn().mockResolvedValue({
       ok: false,
-      status: 500,
-      statusText: "Internal Server Error",
-      text: () => Promise.resolve(JSON.stringify({ error: "boom" })),
+      status: 402,
+      statusText: "Payment Required",
+      text: () => Promise.resolve(JSON.stringify({ error: "billing server error", code: "insufficient_credits", details: null })),
       body: null,
     }) as unknown as typeof globalThis.fetch;
     globalThis.fetch = fetchFn;
@@ -91,7 +92,11 @@ describe("streamSSE", () => {
 
     await streamSSE("/api/stream", {}, callbacks);
     expect(callbacks.onError).toHaveBeenCalledOnce();
-    expect((callbacks.onError as ReturnType<typeof vi.fn>).mock.calls[0][0].message).toBe("boom");
+    const err = (callbacks.onError as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(err).toBeInstanceOf(ApiClientError);
+    expect(err.message).toBe("billing server error");
+    expect(err.status).toBe(402);
+    expect(err.body.code).toBe("insufficient_credits");
   });
 
   it("calls onError for non-ok response with plain text", async () => {

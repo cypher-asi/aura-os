@@ -3,6 +3,7 @@ import { FileText } from "lucide-react";
 import type { DisplaySessionEvent } from "../../types/stream";
 import { langFromPath } from "../../ide/lang";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
+import { useUIModalStore } from "../../stores/ui-modal-store";
 import styles from "./MessageBubble.module.css";
 import { ResponseBlock } from "../ResponseBlock";
 import { LLMOutput } from "../LLMOutput";
@@ -10,7 +11,6 @@ import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 
 interface Props {
   message: DisplaySessionEvent;
-  fadeIn?: boolean;
 }
 
 const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
@@ -43,12 +43,15 @@ function FileAttachmentBlock({ text }: { text: string }) {
   );
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Props) {
+export const MessageBubble = memo(function MessageBubble({ message }: Props) {
+  const openBuyCredits = useUIModalStore((state) => state.openBuyCredits);
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasArtifactRefs = message.artifactRefs && message.artifactRefs.length > 0;
   const hasContentBlocks = message.contentBlocks && message.contentBlocks.length > 0;
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
+  const hasTimeline = message.timeline && message.timeline.length > 0;
+  const isInsufficientCreditsError = message.displayVariant === "insufficientCreditsError";
 
   if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking && !hasArtifactRefs) return null;
 
@@ -83,6 +86,48 @@ export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Pr
     return message.content;
   };
 
+  const renderAssistantContent = () => {
+    if (!isInsufficientCreditsError) {
+      return (
+        <div className={styles.markdown}>
+          <LLMOutput
+            content={message.content}
+            timeline={message.timeline}
+            toolCalls={message.toolCalls}
+            thinkingText={message.thinkingText}
+            thinkingDurationMs={message.thinkingDurationMs}
+            artifactRefs={message.artifactRefs}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.inlineError}>
+        <span className={styles.inlineErrorMessage}>{message.content}</span>
+        <button
+          type="button"
+          className={styles.inlineErrorLink}
+          onClick={openBuyCredits}
+        >
+          Buy credits
+        </button>
+        {(hasToolCalls || hasThinking || hasArtifactRefs || hasTimeline) && (
+          <div className={styles.inlineErrorMeta}>
+            <LLMOutput
+              content=""
+              timeline={message.timeline}
+              toolCalls={message.toolCalls}
+              thinkingText={message.thinkingText}
+              thinkingDurationMs={message.thinkingDurationMs}
+              artifactRefs={message.artifactRefs}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       className={`${styles.message} ${
@@ -93,22 +138,13 @@ export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Pr
         className={`${styles.bubble} ${
           message.role === "user"
             ? styles.bubbleUser
-            : `${styles.bubbleAssistant}${fadeIn ? ` ${styles.bubbleAssistantFadeIn}` : ""}`
+            : styles.bubbleAssistant
         }`}
       >
         {message.role === "user" ? (
           renderUserContent()
         ) : (
-          <div className={styles.markdown}>
-            <LLMOutput
-              content={message.content}
-              timeline={message.timeline}
-              toolCalls={message.toolCalls}
-              thinkingText={message.thinkingText}
-              thinkingDurationMs={message.thinkingDurationMs}
-              artifactRefs={message.artifactRefs}
-            />
-          </div>
+          renderAssistantContent()
         )}
       </div>
     </div>

@@ -1,4 +1,6 @@
 import { authHeaders } from "../lib/auth-token";
+import type { ApiError } from "../types";
+import { ApiClientError } from "./core";
 
 export interface SSECallbacks<T extends string> {
   onEvent: (eventType: T, data: unknown) => void;
@@ -7,6 +9,22 @@ export interface SSECallbacks<T extends string> {
 }
 
 const IDLE_TIMEOUT_MS = 90_000;
+
+function parseApiErrorBody(text: string): ApiError | null {
+  try {
+    const body = JSON.parse(text) as Partial<ApiError>;
+    if (typeof body.error !== "string") return null;
+    return {
+      error: body.error,
+      code: typeof body.code === "string" ? body.code : "unknown",
+      details: typeof body.details === "string" || body.details === null
+        ? body.details
+        : null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function streamSSE<T extends string>(
   url: string,
@@ -29,12 +47,10 @@ export async function streamSSE<T extends string>(
 
   if (!response.ok) {
     const text = await response.text().catch(() => response.statusText);
-    let message = `SSE request failed (${response.status}): ${text}`;
-    try {
-      const body = JSON.parse(text);
-      if (body.error) message = body.error;
-    } catch { /* use raw text */ }
-    const err = new Error(message);
+    const body = parseApiErrorBody(text);
+    const err = body
+      ? new ApiClientError(response.status, body)
+      : new Error(`SSE request failed (${response.status}): ${text}`);
     callbacks.onError?.(err);
     return;
   }

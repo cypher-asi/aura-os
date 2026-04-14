@@ -75,11 +75,6 @@
   word-break: break-word;
 }
 
-@keyframes bubbleFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
 .bubbleAssistant {
   background: transparent;
   border: none;
@@ -90,14 +85,40 @@
   color: #ffffff;
 }
 
-.bubbleAssistantFadeIn {
-  animation: bubbleFadeIn 0.3s ease both;
-}
-
 .fallbackStack {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.inlineError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+
+.inlineErrorMessage {
+  color: inherit;
+}
+
+.inlineErrorLink {
+  background: none;
+  border: none;
+  color: var(--color-accent, #60a5fa);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inlineErrorLink:hover {
+  opacity: 0.8;
+}
+
+.inlineErrorMeta {
+  flex-basis: 100%;
 }
 
 /* Markdown inside assistant messages */

@@ -57,7 +57,7 @@ export interface ToolCallSnapshotInfo {
 
 export interface StreamEventHandler {
   onEvent: (event: AuraEvent) => void;
-  onError: (message: string) => void;
+  onError: (error: unknown) => void;
   onDone?: () => void;
 }
 
@@ -86,7 +86,7 @@ function createChatStreamHandler(handler: StreamEventHandler): SSECallbacks<stri
       handler.onEvent(parseAuraEvent(eventType, data, {}));
     },
     onError(err: Error) {
-      handler.onError(err.message);
+      handler.onError(err);
     },
     onDone() {
       handler.onDone?.();

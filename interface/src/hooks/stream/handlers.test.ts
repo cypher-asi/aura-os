@@ -22,6 +22,10 @@ import {
   handleStreamError,
   finalizeStream,
 } from "./handlers";
+import {
+  dispatchInsufficientCredits,
+  isInsufficientCreditsError,
+} from "../../api/client";
 import type { StreamRefs, StreamSetters, ToolCallEntry } from "../../types/stream";
 
 function makeRefs(): StreamRefs {
@@ -63,6 +67,7 @@ describe("stream/handlers", () => {
   let origRAF: typeof requestAnimationFrame;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     origRAF = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
       cb(0);
@@ -407,6 +412,24 @@ describe("stream/handlers", () => {
       const result = updater([]) as Array<{ content: string }>;
       expect(result[0].content).toContain("partial response");
       expect(result[0].content).toContain("connection lost");
+    });
+
+    it("normalizes insufficient credits errors into a purchase prompt", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      vi.mocked(isInsufficientCreditsError).mockReturnValue(true);
+
+      handleStreamError(refs, setters, new Error("billing server error"));
+
+      expect(dispatchInsufficientCredits).toHaveBeenCalledOnce();
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => unknown[];
+      const result = updater([]) as Array<{ content: string; displayVariant?: string }>;
+
+      expect(result[0].content).toBe("You have no credits remaining. Buy more credits to continue.");
+      expect(result[0].displayVariant).toBe("insufficientCreditsError");
     });
   });
 

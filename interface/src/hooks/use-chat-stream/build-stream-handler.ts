@@ -209,7 +209,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
 
   return {
     onEvent,
-    onError: (message) => handleStreamError(refs, setters, message),
+    onError: (error) => handleStreamError(refs, setters, error),
     onDone: () => {
       finalizeStream(refs, setters, abortRef, false);
       sidekickRef.current.setStreamingAgentInstanceId(null);
