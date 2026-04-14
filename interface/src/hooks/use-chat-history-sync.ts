@@ -115,7 +115,7 @@ export function useChatHistorySync({
     prevHistoryLastMessageAtRef.current = historyLastMessageAt;
 
     if (
-      previousLastMessageAt == null ||
+      historyLastMessageAt == null ||
       previousLastMessageAt === historyLastMessageAt ||
       isStreaming
     ) {

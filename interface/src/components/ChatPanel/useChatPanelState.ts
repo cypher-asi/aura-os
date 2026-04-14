@@ -13,6 +13,77 @@ import type { GenerationMode } from "../../constants/models";
 import { availableModelsForAdapter } from "../../constants/models";
 import { useChatUI } from "../../stores/chat-ui-store";
 
+function contentBlocksMatch(
+  first: DisplaySessionEvent["contentBlocks"],
+  second: DisplaySessionEvent["contentBlocks"],
+): boolean {
+  if (first === second) {
+    return true;
+  }
+  if (!first || !second || first.length !== second.length) {
+    return false;
+  }
+
+  return first.every((block, index) => {
+    const other = second[index];
+    if (!other || block.type !== other.type) {
+      return false;
+    }
+    if (block.type === "text" && other.type === "text") {
+      return block.text === other.text;
+    }
+    if (block.type === "image" && other.type === "image") {
+      return block.media_type === other.media_type && block.data === other.data;
+    }
+    return false;
+  });
+}
+
+function isPersistedVersionOfTempMessage(
+  historyMessage: DisplaySessionEvent | undefined,
+  streamMessage: DisplaySessionEvent,
+): boolean {
+  if (!historyMessage) {
+    return false;
+  }
+
+  return (
+    streamMessage.id.startsWith("temp-") &&
+    historyMessage.role === "user" &&
+    streamMessage.role === "user" &&
+    historyMessage.content === streamMessage.content &&
+    contentBlocksMatch(historyMessage.contentBlocks, streamMessage.contentBlocks)
+  );
+}
+
+function combineHistoryAndStreamMessages(
+  historyMessages: DisplaySessionEvent[] | undefined,
+  streamMessages: DisplaySessionEvent[],
+): DisplaySessionEvent[] {
+  if (!historyMessages || historyMessages.length === 0) {
+    return streamMessages;
+  }
+  if (streamMessages.length === 0) {
+    return historyMessages;
+  }
+
+  const historyIds = new Set(historyMessages.map((message) => message.id));
+  const lastHistoryMessage = historyMessages[historyMessages.length - 1];
+  const liveOnlyMessages = streamMessages.filter((message) => {
+    if (historyIds.has(message.id)) {
+      return false;
+    }
+    if (isPersistedVersionOfTempMessage(lastHistoryMessage, message)) {
+      return false;
+    }
+    return true;
+  });
+  if (liveOnlyMessages.length === 0) {
+    return historyMessages;
+  }
+  return [...historyMessages, ...liveOnlyMessages];
+}
+
 export interface UseChatPanelStateOptions {
   streamKey: string;
   onSend: (
@@ -29,25 +100,6 @@ export interface UseChatPanelStateOptions {
   scrollResetKey?: unknown;
   historyMessages?: DisplaySessionEvent[];
   selectedProjectId?: string;
-}
-
-function combineHistoryAndStreamMessages(
-  historyMessages: DisplaySessionEvent[] | undefined,
-  streamMessages: DisplaySessionEvent[],
-): DisplaySessionEvent[] {
-  if (!historyMessages || historyMessages.length === 0) {
-    return streamMessages;
-  }
-  if (streamMessages.length === 0) {
-    return historyMessages;
-  }
-
-  const historyIds = new Set(historyMessages.map((message) => message.id));
-  const liveOnlyMessages = streamMessages.filter((message) => !historyIds.has(message.id));
-  if (liveOnlyMessages.length === 0) {
-    return historyMessages;
-  }
-  return [...historyMessages, ...liveOnlyMessages];
 }
 
 export function useChatPanelState({
@@ -81,6 +133,7 @@ export function useChatPanelState({
     handleScroll,
     scrollToBottom,
     scrollToBottomIfPinned,
+    isReady,
     isAutoFollowing,
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
@@ -253,6 +306,7 @@ export function useChatPanelState({
     scrollSentinelRef,
     inputBarRef,
     isMobileLayout,
+    isReady,
     handleScroll,
     isAutoFollowing,
     isStreaming,
