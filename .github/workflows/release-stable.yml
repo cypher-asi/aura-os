@@ -28,6 +28,12 @@ jobs:
       SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
       REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
       AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+      MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
+      MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+      MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
+      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
+      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
+      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
     strategy:
       fail-fast: false
       matrix:
@@ -142,6 +148,99 @@ jobs:
           PY
 
           rm -f target/release/rw.Aura*.dmg
+
+      - name: Prepare macOS signing inputs
+        if: matrix.target == 'macos'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import base64
+          import os
+          import re
+          import subprocess
+          import tempfile
+          from pathlib import Path
+
+          required = [
+              "MACOS_DEVELOPER_ID_P12_BASE64",
+              "MACOS_DEVELOPER_ID_P12_PASSWORD",
+              "IOS_APP_STORE_CONNECT_KEY_ID",
+              "IOS_APP_STORE_CONNECT_ISSUER_ID",
+              "IOS_APP_STORE_CONNECT_KEY_BASE64",
+          ]
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit(f"Missing required macOS signing secrets: {', '.join(missing)}")
+
+          temp_dir = Path(tempfile.mkdtemp(prefix="aura-macos-signing-"))
+          p12_path = temp_dir / "developer-id.p12"
+          p8_path = temp_dir / f"AuthKey_{os.environ['IOS_APP_STORE_CONNECT_KEY_ID']}.p8"
+
+          p12_path.write_bytes(base64.b64decode(os.environ["MACOS_DEVELOPER_ID_P12_BASE64"]))
+          p8_path.write_bytes(base64.b64decode(os.environ["IOS_APP_STORE_CONNECT_KEY_BASE64"]))
+
+          pem = subprocess.run(
+              [
+                  "openssl",
+                  "pkcs12",
+                  "-in",
+                  str(p12_path),
+                  "-clcerts",
+                  "-nokeys",
+                  "-passin",
+                  f"pass:{os.environ['MACOS_DEVELOPER_ID_P12_PASSWORD']}",
+              ],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout
+
+          subject = subprocess.run(
+              ["openssl", "x509", "-noout", "-subject", "-nameopt", "RFC2253"],
+              input=pem,
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.strip()
+
+          match = re.search(r"CN=([^,]+)", subject)
+          if not match:
+              raise SystemExit(f"Unable to derive signing identity from certificate subject: {subject}")
+          signing_identity = match.group(1)
+
+          env_path = Path(os.environ["GITHUB_ENV"])
+          with env_path.open("a", encoding="utf-8") as fh:
+              fh.write(f"APPLE_CERTIFICATE={os.environ['MACOS_DEVELOPER_ID_P12_BASE64']}\n")
+              fh.write(f"APPLE_CERTIFICATE_PASSWORD={os.environ['MACOS_DEVELOPER_ID_P12_PASSWORD']}\n")
+              fh.write(f"APPLE_API_KEY={os.environ['IOS_APP_STORE_CONNECT_KEY_ID']}\n")
+              fh.write(f"APPLE_API_ISSUER={os.environ['IOS_APP_STORE_CONNECT_ISSUER_ID']}\n")
+              fh.write(f"APPLE_API_KEY_PATH={p8_path}\n")
+              fh.write(f"MACOS_SIGNING_IDENTITY={signing_identity}\n")
+          PY
+
+      - name: Inject macOS signing identity into packager config
+        if: matrix.target == 'macos'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
+          text = cargo_toml.read_text(encoding="utf-8")
+          identity_line = f'signing-identity = "{os.environ["MACOS_SIGNING_IDENTITY"]}"'
+
+          if "signing-identity =" in text:
+              text = re.sub(r'^signing-identity = ".*"$', identity_line, text, flags=re.MULTILINE)
+          else:
+              marker = "[package.metadata.packager.macos]\n"
+              if marker not in text:
+                  raise SystemExit("Missing [package.metadata.packager.macos] section in Cargo.toml")
+              text = text.replace(marker, marker + identity_line + "\n", 1)
+
+          cargo_toml.write_text(text, encoding="utf-8")
+          PY
 
       - name: Package installer
         env:
