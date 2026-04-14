@@ -7,6 +7,7 @@ const mockRegisterAgents = vi.fn();
 const mockRegisterRemoteAgents = vi.fn();
 const mockRefreshProjectAgents = vi.fn();
 const mockSetAgentsByProject = vi.fn();
+const mockSaveProjectOrder = vi.fn();
 const mockClosePreview = vi.fn();
 
 type MockProject = { project_id: string; name: string };
@@ -51,6 +52,7 @@ interface MockProjectListData {
   };
   projects: MockProject[];
   loadingProjects: boolean;
+  saveProjectOrder: typeof mockSaveProjectOrder;
   agentsByProject: Record<string, MockAgent[]>;
   setAgentsByProject: typeof mockSetAgentsByProject;
   refreshProjectAgents: typeof mockRefreshProjectAgents;
@@ -151,6 +153,7 @@ function buildMockData(overrides: Partial<MockProjectListData> = {}): MockProjec
     },
     projects,
     loadingProjects: false,
+    saveProjectOrder: mockSaveProjectOrder,
     agentsByProject,
     setAgentsByProject: mockSetAgentsByProject,
     refreshProjectAgents: mockRefreshProjectAgents,
@@ -322,5 +325,38 @@ describe("ProjectsNav", () => {
     render(<ProjectsNav />);
 
     expect(await screen.findByTestId("project-p0")).toHaveTextContent("Project 0");
+  });
+
+  it("reorders root projects by drag and drop without moving Archived", async () => {
+    mockProjectListData = buildMockData({
+      projects: [
+        { project_id: "p1", name: "Project 1" },
+        { project_id: "p2", name: "Project 2" },
+      ],
+      agentsByProject: { p1: [agent], p2: [] },
+    });
+
+    render(<ProjectsNav />);
+
+    const projectOne = await screen.findByTestId("project-p1");
+    const projectTwo = await screen.findByTestId("project-p2");
+    const rectMap = new Map<Element, DOMRect>([
+      [projectOne, new DOMRect(0, 0, 200, 28)],
+      [projectTwo, new DOMRect(0, 40, 200, 28)],
+    ]);
+    const getBoundingClientRectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function () {
+        return rectMap.get(this) ?? new DOMRect(0, 0, 200, 28);
+      });
+
+    fireEvent.pointerDown(projectOne, { button: 0, clientY: 12, pointerId: 1 });
+    fireEvent.pointerMove(window, { clientY: 64, pointerId: 1 });
+    fireEvent.pointerUp(window, { clientY: 64, pointerId: 1 });
+
+    expect(mockSaveProjectOrder).toHaveBeenCalledWith(["p2", "p1"]);
+    expect(screen.getByTestId("project-_archived")).toBeInTheDocument();
+
+    getBoundingClientRectSpy.mockRestore();
   });
 });

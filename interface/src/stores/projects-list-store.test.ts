@@ -35,7 +35,17 @@ vi.stubGlobal("sessionStorage", {
   removeItem: (key: string) => { delete mockSessionStorage[key]; },
 });
 
+const localStorageStore: Record<string, string> = {};
+
+vi.stubGlobal("localStorage", {
+  getItem: vi.fn((key: string) => localStorageStore[key] ?? null),
+  setItem: vi.fn((key: string, val: string) => { localStorageStore[key] = val; }),
+  removeItem: vi.fn((key: string) => { delete localStorageStore[key]; }),
+});
+
 import {
+  applyProjectOrder,
+  normalizeProjectOrderIds,
   useProjectsListStore,
   getRecentProjects,
   getMostRecentProject,
@@ -93,6 +103,7 @@ beforeEach(() => {
     newProjectModalOpen: false,
   });
   for (const key of Object.keys(mockSessionStorage)) delete mockSessionStorage[key];
+  for (const key of Object.keys(localStorageStore)) delete localStorageStore[key];
   vi.clearAllMocks();
 });
 
@@ -125,6 +136,43 @@ describe("projects-list-store", () => {
       const p2 = makeProject("p2", "2025-06-02T00:00:00Z");
       useProjectsListStore.getState().setProjects((prev) => [...prev, p2]);
       expect(useProjectsListStore.getState().projects).toHaveLength(2);
+    });
+
+    it("applies a saved local order and appends new projects", () => {
+      localStorageStore["aura-project-order:all"] = JSON.stringify(["p2", "p1"]);
+
+      const p1 = makeProject("p1", "2025-06-01T00:00:00Z");
+      const p2 = makeProject("p2", "2025-06-02T00:00:00Z");
+      const p3 = makeProject("p3", "2025-06-03T00:00:00Z");
+
+      useProjectsListStore.getState().setProjects([p1, p2, p3]);
+
+      expect(useProjectsListStore.getState().projects.map((project) => project.project_id)).toEqual([
+        "p2",
+        "p1",
+        "p3",
+      ]);
+    });
+  });
+
+  describe("saveProjectOrder", () => {
+    it("reorders projects and persists the normalized id order", () => {
+      const p1 = makeProject("p1", "2025-06-01T00:00:00Z");
+      const p2 = makeProject("p2", "2025-06-02T00:00:00Z");
+      const p3 = makeProject("p3", "2025-06-03T00:00:00Z");
+      useProjectsListStore.setState({ projects: [p1, p2, p3], loadingProjects: false });
+
+      useProjectsListStore.getState().saveProjectOrder(["p3", "p1"]);
+
+      expect(useProjectsListStore.getState().projects.map((project) => project.project_id)).toEqual([
+        "p3",
+        "p1",
+        "p2",
+      ]);
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        "aura-project-order:all",
+        JSON.stringify(["p3", "p1", "p2"]),
+      );
     });
   });
 
@@ -265,6 +313,26 @@ describe("projects-list-store", () => {
 
     it("returns null for empty list", () => {
       expect(getMostRecentProject([])).toBeNull();
+    });
+  });
+
+  describe("project order helpers", () => {
+    it("normalizes stored order ids against the current project list", () => {
+      expect(normalizeProjectOrderIds(["p1", "p2", "p3"], ["p2", "missing"])).toEqual([
+        "p2",
+        "p1",
+        "p3",
+      ]);
+    });
+
+    it("applies a normalized order to project records", () => {
+      const p1 = makeProject("p1", "2025-01-01T00:00:00Z");
+      const p2 = makeProject("p2", "2025-06-01T00:00:00Z");
+
+      expect(applyProjectOrder([p1, p2], ["p2", "p1"]).map((project) => project.project_id)).toEqual([
+        "p2",
+        "p1",
+      ]);
     });
   });
 });

@@ -9,6 +9,7 @@ import {
   projectsQueryOptions,
 } from "../queries/project-queries";
 import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../lib/browser-db";
+import { getProjectOrder, setProjectOrder } from "../utils/storage";
 import { useOrgStore } from "./org-store";
 import { useAuthStore } from "./auth-store";
 
@@ -28,6 +29,46 @@ function syncAgentsQueryCache(agentsByProject: Record<string, AgentInstance[]>):
   }
 }
 
+export function normalizeProjectOrderIds(
+  projectIds: string[],
+  orderedIds: string[],
+): string[] {
+  const availableIds = new Set(projectIds);
+  const normalizedOrderedIds = orderedIds.filter((id) => availableIds.has(id));
+  const normalizedSet = new Set(normalizedOrderedIds);
+  const missingIds = projectIds.filter((id) => !normalizedSet.has(id));
+  return [...normalizedOrderedIds, ...missingIds];
+}
+
+export function applyProjectOrder(
+  projects: Project[],
+  orderedIds: string[],
+): Project[] {
+  const dedupedProjects = dedupeProjects(projects);
+  const projectIds = dedupedProjects.map((project) => project.project_id);
+  const normalizedOrderedIds = normalizeProjectOrderIds(projectIds, orderedIds);
+  const projectMap = new Map(dedupedProjects.map((project) => [project.project_id, project]));
+  return normalizedOrderedIds
+    .map((projectId) => projectMap.get(projectId))
+    .filter((project): project is Project => project !== undefined);
+}
+
+function getOrderedProjectsForOrg(
+  projects: Project[],
+  orgId: string | null | undefined,
+): Project[] {
+  const dedupedProjects = dedupeProjects(projects);
+  const nextProjects = applyProjectOrder(dedupedProjects, getProjectOrder(orgId));
+  setProjectOrder(
+    orgId,
+    normalizeProjectOrderIds(
+      dedupedProjects.map((project) => project.project_id),
+      nextProjects.map((project) => project.project_id),
+    ),
+  );
+  return nextProjects;
+}
+
 interface ProjectsListState {
   projects: Project[];
   loadingProjects: boolean;
@@ -36,6 +77,7 @@ interface ProjectsListState {
   newProjectModalOpen: boolean;
 
   setProjects: (updater: Project[] | ((prev: Project[]) => Project[])) => void;
+  saveProjectOrder: (orderedIds: string[]) => void;
   refreshProjects: () => Promise<void>;
   setAgentsByProject: (
     updater:
@@ -66,7 +108,7 @@ async function hydratePersistedProjectsState(orgId: string | null): Promise<void
     return;
   }
   useProjectsListStore.setState({
-    projects: cached.projects,
+    projects: getOrderedProjectsForOrg(cached.projects, orgId),
     agentsByProject: cached.agentsByProject,
     loadingProjects: false,
   });
@@ -85,29 +127,45 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     window.sessionStorage.getItem(NEW_PROJECT_MODAL_STORAGE_KEY) === "1",
 
   setProjects: (updater) => {
+    const orgId = getActiveOrgId() ?? null;
     set((state) => ({
       projects: (() => {
         const nextProjects =
           typeof updater === "function" ? updater(state.projects) : updater;
-        const dedupedProjects = dedupeProjects(nextProjects);
-        syncProjectsQueryCache(dedupedProjects);
-        return dedupedProjects;
+        const orderedProjects = getOrderedProjectsForOrg(nextProjects, orgId);
+        syncProjectsQueryCache(orderedProjects);
+        return orderedProjects;
       })(),
     }));
   },
 
+  saveProjectOrder: (orderedIds) => {
+    const orgId = getActiveOrgId() ?? null;
+    set((state) => {
+      const normalizedOrderedIds = normalizeProjectOrderIds(
+        state.projects.map((project) => project.project_id),
+        orderedIds,
+      );
+      const nextProjects = applyProjectOrder(state.projects, normalizedOrderedIds);
+      setProjectOrder(orgId, normalizedOrderedIds);
+      syncProjectsQueryCache(nextProjects);
+      return { projects: nextProjects };
+    });
+  },
+
   refreshProjects: async () => {
     const requestId = ++refreshRequestId;
+    const orgId = getActiveOrgId() ?? null;
     set({ loadingProjects: true });
     try {
       const nextProjects = await queryClient.fetchQuery(
         {
-          ...projectsQueryOptions(getActiveOrgId()),
+          ...projectsQueryOptions(orgId ?? undefined),
           staleTime: 0,
         },
       );
       if (refreshRequestId === requestId) {
-        set({ projects: nextProjects });
+        set({ projects: getOrderedProjectsForOrg(nextProjects, orgId) });
       }
     } catch (error) {
       if (refreshRequestId === requestId) {

@@ -2,16 +2,19 @@ import {
   clearLastAgentIf,
   getLastAgent,
   getLastProject,
+  getProjectOrder,
   getTaskbarAppOrder,
   getTaskbarAppsCollapsed,
   setLastAgent,
   setLastProject,
+  setProjectOrder,
   setTaskbarAppOrder,
   setTaskbarAppsCollapsed,
 } from "./storage";
 
 const LAST_AGENT_KEY = "aura-last-agent";
 const LAST_PROJECT_KEY = "aura-last-project";
+const PROJECT_ORDER_KEY = "aura-project-order";
 const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";
 const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
 
@@ -169,6 +172,57 @@ describe("storage", () => {
     it("falls back to collapsed for malformed values", () => {
       store[TASKBAR_APPS_COLLAPSED_KEY] = "maybe";
       expect(getTaskbarAppsCollapsed()).toBe(true);
+    });
+  });
+
+  describe("getProjectOrder", () => {
+    it("defaults to an empty order when nothing is stored", () => {
+      expect(getProjectOrder("org-1")).toEqual([]);
+    });
+
+    it("returns the stored order for the given org", () => {
+      store[`${PROJECT_ORDER_KEY}:org-1`] = JSON.stringify(["p2", "p1"]);
+      store[`${PROJECT_ORDER_KEY}:org-2`] = JSON.stringify(["p9"]);
+
+      expect(getProjectOrder("org-1")).toEqual(["p2", "p1"]);
+    });
+
+    it("filters out non-string values", () => {
+      store[`${PROJECT_ORDER_KEY}:org-1`] = JSON.stringify(["p2", 5, "p1", null]);
+
+      expect(getProjectOrder("org-1")).toEqual(["p2", "p1"]);
+    });
+
+    it("falls back to an empty order for malformed JSON", () => {
+      store[`${PROJECT_ORDER_KEY}:org-1`] = "not-json";
+
+      expect(getProjectOrder("org-1")).toEqual([]);
+    });
+  });
+
+  describe("setProjectOrder", () => {
+    it("stores the order under an org-scoped key", () => {
+      setProjectOrder("org-1", ["p2", "p1"]);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        `${PROJECT_ORDER_KEY}:org-1`,
+        JSON.stringify(["p2", "p1"]),
+      );
+    });
+
+    it("removes the org key when the order is empty", () => {
+      setProjectOrder("org-1", []);
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith(`${PROJECT_ORDER_KEY}:org-1`);
+    });
+
+    it("uses the shared fallback scope when org is missing", () => {
+      setProjectOrder(null, ["p2"]);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        `${PROJECT_ORDER_KEY}:all`,
+        JSON.stringify(["p2"]),
+      );
     });
   });
 

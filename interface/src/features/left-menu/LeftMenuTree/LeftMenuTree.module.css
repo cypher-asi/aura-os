@@ -136,6 +136,15 @@
   background: var(--left-menu-selected-bg);
 }
 
+.projectHeaderDraggable {
+  cursor: grab;
+}
+
+.projectHeaderDragging {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .projectMainButton {
   display: inline-flex;
   align-items: center;
@@ -149,6 +158,11 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.projectMainButtonDraggable {
+  cursor: grab;
+  touch-action: none;
 }
 
 .sectionMainButton {
@@ -238,6 +252,25 @@
 
 .projectChevronWrapInteractive {
   cursor: pointer;
+}
+
+.projectDragOverlay {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.projectDragOverlayInner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--control-height-sm, 28px);
+  padding: 0 16px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg, #111) 88%, white 12%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  color: #ffffff;
 }
 
 .projectActions {

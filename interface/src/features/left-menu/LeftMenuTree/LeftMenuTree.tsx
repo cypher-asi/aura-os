@@ -1,11 +1,16 @@
 import {
+  useEffect,
+  useMemo,
   useRef,
+  useState,
   type KeyboardEvent,
   type KeyboardEventHandler,
   type MouseEvent,
   type MouseEventHandler,
+  type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChevronRight } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
@@ -22,10 +27,42 @@ interface LeftMenuTreeProps {
   entries: LeftMenuEntry[];
   onContextMenu?: MouseEventHandler<HTMLDivElement>;
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
+  rootReorder?: {
+    draggableEntryIds: string[];
+    onReorder: (orderedIds: string[]) => void;
+  };
 }
 
 const ROW_HEIGHT = 28;
 const VIRTUALIZE_AFTER = 30;
+const DRAG_START_THRESHOLD_PX = 6;
+
+type RootButtonRect = {
+  id: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  centerY: number;
+};
+
+type RootDragState = {
+  activeId: string;
+  activeVisibleIndex: number;
+  buttonRects: RootButtonRect[];
+  overlayRect: { left: number; top: number; width: number; height: number };
+  pointerDeltaY: number;
+  targetVisibleIndex: number;
+  rootIds: string[];
+  visibleIds: string[];
+};
+
+type RootReorderState = {
+  activeId: string | null;
+  draggableIds: ReadonlySet<string>;
+  onActivate: (entryId: string, activate: () => void) => void;
+  onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, entryId: string) => void;
+};
 
 function getVisibleRowCount(entry: LeftMenuEntry): number {
   if (entry.kind === "item") {
@@ -44,6 +81,97 @@ function getVisibleRowCount(entry: LeftMenuEntry): number {
 
 function getEntryHeight(entry: LeftMenuEntry): number {
   return getVisibleRowCount(entry) * ROW_HEIGHT;
+}
+
+function getTargetVisibleIndex(
+  buttonRects: RootButtonRect[],
+  activeId: string,
+  draggedCenterY: number,
+): number {
+  return buttonRects.reduce((count, rect) => {
+    if (rect.id === activeId) return count;
+    return count + (draggedCenterY > rect.centerY ? 1 : 0);
+  }, 0);
+}
+
+function moveVisibleEntryOrder(
+  fullOrder: string[],
+  visibleIds: string[],
+  activeId: string,
+  targetVisibleIndex: number,
+): string[] {
+  const withoutActive = fullOrder.filter((id) => id !== activeId);
+  const visibleWithoutActive = visibleIds.filter((id) => id !== activeId);
+  const beforeId = visibleWithoutActive[targetVisibleIndex] ?? null;
+
+  if (!beforeId) {
+    return [...withoutActive, activeId];
+  }
+
+  const insertIndex = withoutActive.indexOf(beforeId);
+  if (insertIndex === -1) {
+    return fullOrder;
+  }
+
+  return [
+    ...withoutActive.slice(0, insertIndex),
+    activeId,
+    ...withoutActive.slice(insertIndex),
+  ];
+}
+
+function reorderTopLevelEntries(entries: LeftMenuEntry[], orderedIds: string[]): LeftMenuEntry[] {
+  if (orderedIds.length === 0) {
+    return entries;
+  }
+
+  const orderedIdSet = new Set(orderedIds);
+  const entryMap = new Map(entries.map((entry) => [entry.id, entry]));
+  const orderedEntries = orderedIds
+    .map((id) => entryMap.get(id))
+    .filter((entry): entry is LeftMenuEntry => entry !== undefined);
+  const nextEntries: LeftMenuEntry[] = [];
+  let insertedOrderedEntries = false;
+
+  for (const entry of entries) {
+    if (orderedIdSet.has(entry.id)) {
+      if (!insertedOrderedEntries) {
+        nextEntries.push(...orderedEntries);
+        insertedOrderedEntries = true;
+      }
+      continue;
+    }
+    nextEntries.push(entry);
+  }
+
+  return nextEntries;
+}
+
+function getRenderedRootButtonRects(
+  container: HTMLDivElement | null,
+  draggableIds: ReadonlySet<string>,
+): RootButtonRect[] {
+  if (!container) {
+    return [];
+  }
+
+  return Array.from(
+    container.querySelectorAll<HTMLButtonElement>("[data-left-menu-root-entry-id]"),
+  )
+    .map((button) => {
+      const id = button.dataset.leftMenuRootEntryId;
+      if (!id || !draggableIds.has(id)) return null;
+      const rect = button.getBoundingClientRect();
+      return {
+        id,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        centerY: rect.top + rect.height / 2,
+      } satisfies RootButtonRect;
+    })
+    .filter((rect): rect is RootButtonRect => rect !== null);
 }
 
 function LeftMenuEmptyStateRow({ entry }: { entry: LeftMenuEmptyEntry }) {
@@ -96,20 +224,27 @@ function LeftMenuLeafRow({
 function LeftMenuGroup({
   entry,
   depth,
+  rootReorderState,
 }: {
   entry: LeftMenuGroupEntry;
   depth: number;
+  rootReorderState?: RootReorderState;
 }) {
   const isSection = entry.variant === "section";
+  const isRootDraggable =
+    depth === 0 && !isSection && rootReorderState?.draggableIds.has(entry.id);
   const headerClassName = [
     isSection ? styles.sectionHeader : styles.projectHeader,
     entry.selected ? styles.projectHeaderSelected : "",
+    isRootDraggable ? styles.projectHeaderDraggable : "",
+    rootReorderState?.activeId === entry.id ? styles.projectHeaderDragging : "",
   ]
     .filter(Boolean)
     .join(" ");
   const buttonClassName = [
     isSection ? styles.sectionMainButton : styles.projectMainButton,
     entry.selected ? styles.projectMainButtonSelected : "",
+    isRootDraggable ? styles.projectMainButtonDraggable : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -131,6 +266,17 @@ function LeftMenuGroup({
       entry.onToggle();
     }
   };
+  const handleButtonClick = () => {
+    if (isRootDraggable) {
+      rootReorderState?.onActivate(entry.id, entry.onActivate);
+      return;
+    }
+    entry.onActivate();
+  };
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!isRootDraggable) return;
+    rootReorderState?.onPointerDown(event, entry.id);
+  };
 
   return (
     <section className={isSection ? styles.sectionGroup : styles.projectGroup}>
@@ -145,8 +291,10 @@ function LeftMenuGroup({
           aria-expanded={entry.expanded}
           aria-selected={entry.selected ?? false}
           data-testid={entry.testId}
-          onClick={entry.onActivate}
+          data-left-menu-root-entry-id={isRootDraggable ? entry.id : undefined}
+          onClick={handleButtonClick}
           onKeyDown={handleProjectKeyDown}
+          onPointerDown={handlePointerDown}
         >
           <span
             className={isSection ? styles.sectionLabel : styles.projectLabel}
@@ -158,6 +306,7 @@ function LeftMenuGroup({
             className={`${styles.projectChevronWrap} ${isSection ? styles.sectionChevronWrap : ""} ${entry.toggleMode === "secondary" ? styles.projectChevronWrapInteractive : ""}`}
             aria-hidden="true"
             onClick={handleChevronClick}
+            data-left-menu-drag-ignore="true"
           >
             <ChevronRight
               size={14}
@@ -185,12 +334,14 @@ function LeftMenuGroup({
 function LeftMenuEntryRow({
   entry,
   depth = 0,
+  rootReorderState,
 }: {
   entry: LeftMenuEntry;
   depth?: number;
+  rootReorderState?: RootReorderState;
 }) {
   return entry.kind === "group" ? (
-    <LeftMenuGroup entry={entry} depth={depth} />
+    <LeftMenuGroup entry={entry} depth={depth} rootReorderState={rootReorderState} />
   ) : (
     <LeftMenuLeafRow entry={entry} depth={depth} />
   );
@@ -199,14 +350,20 @@ function LeftMenuEntryRow({
 function StaticEntries({
   ariaLabel,
   entries,
+  rootReorderState,
 }: {
   ariaLabel: string;
   entries: LeftMenuEntry[];
+  rootReorderState?: RootReorderState;
 }) {
   return (
     <div className={styles.entriesList} role="tree" aria-label={ariaLabel}>
       {entries.map((entry) => (
-        <LeftMenuEntryRow key={entry.id} entry={entry} />
+        <LeftMenuEntryRow
+          key={entry.id}
+          entry={entry}
+          rootReorderState={rootReorderState}
+        />
       ))}
     </div>
   );
@@ -216,10 +373,12 @@ function VirtualizedEntries({
   ariaLabel,
   entries,
   scrollRef,
+  rootReorderState,
 }: {
   ariaLabel: string;
   entries: LeftMenuEntry[];
   scrollRef: RefObject<HTMLDivElement | null>;
+  rootReorderState?: RootReorderState;
 }) {
   const virtualizer = useVirtualizer({
     count: entries.length,
@@ -235,7 +394,13 @@ function VirtualizedEntries({
   const virtualItems = virtualizer.getVirtualItems();
 
   if (virtualItems.length === 0) {
-    return <StaticEntries ariaLabel={ariaLabel} entries={entries} />;
+    return (
+      <StaticEntries
+        ariaLabel={ariaLabel}
+        entries={entries}
+        rootReorderState={rootReorderState}
+      />
+    );
   }
 
   return (
@@ -255,7 +420,7 @@ function VirtualizedEntries({
               className={styles.virtualRow}
               style={{ transform: `translateY(${item.start}px)` }}
             >
-              <LeftMenuEntryRow entry={entry} />
+              <LeftMenuEntryRow entry={entry} rootReorderState={rootReorderState} />
             </div>
           );
         })}
@@ -269,10 +434,170 @@ export function LeftMenuTree({
   entries,
   onContextMenu,
   onKeyDown,
+  rootReorder,
 }: LeftMenuTreeProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { thumbStyle, visible, onThumbPointerDown } = useOverlayScrollbar(scrollRef);
   const shouldVirtualize = entries.length > VIRTUALIZE_AFTER;
+  const [dragState, setDragState] = useState<RootDragState | null>(null);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+  const suppressClickRef = useRef<string | null>(null);
+  const draggableRootIds = useMemo(
+    () => rootReorder?.draggableEntryIds ?? [],
+    [rootReorder?.draggableEntryIds],
+  );
+  const draggableRootIdSet = useMemo(() => new Set(draggableRootIds), [draggableRootIds]);
+  const displayEntries = useMemo(() => {
+    if (!dragState) {
+      return entries;
+    }
+    const nextOrder = moveVisibleEntryOrder(
+      dragState.rootIds,
+      dragState.visibleIds,
+      dragState.activeId,
+      dragState.targetVisibleIndex,
+    );
+    return reorderTopLevelEntries(entries, nextOrder);
+  }, [dragState, entries]);
+  const activeDraggedEntry = useMemo(
+    () =>
+      entries.find(
+        (entry): entry is LeftMenuGroupEntry =>
+          entry.kind === "group" && entry.id === dragState?.activeId,
+      ) ?? null,
+    [dragState?.activeId, entries],
+  );
+
+  useEffect(
+    () => () => {
+      dragCleanupRef.current?.();
+    },
+    [],
+  );
+
+  const handleRootActivate = (entryId: string, activate: () => void) => {
+    if (suppressClickRef.current === entryId) {
+      suppressClickRef.current = null;
+      return;
+    }
+    suppressClickRef.current = null;
+    activate();
+  };
+
+  const handleRootPointerDown = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    entryId: string,
+  ) => {
+    if (!rootReorder || event.button !== 0) return;
+    if (
+      event.target instanceof Element &&
+      event.target.closest("[data-left-menu-drag-ignore='true']")
+    ) {
+      return;
+    }
+
+    dragCleanupRef.current?.();
+    setDragState(null);
+
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
+    const startY = event.clientY;
+    const buttonRects = getRenderedRootButtonRects(scrollRef.current, draggableRootIdSet);
+    const activeVisibleIndex = buttonRects.findIndex((rect) => rect.id === entryId);
+    const activeRect = buttonRects[activeVisibleIndex];
+    let dragging = false;
+    let latestTargetVisibleIndex = activeVisibleIndex;
+    let pointerCaptured = false;
+
+    if (!activeRect || activeVisibleIndex === -1) {
+      return;
+    }
+
+    const cleanup = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
+      if (
+        pointerCaptured &&
+        typeof target.releasePointerCapture === "function" &&
+        typeof target.hasPointerCapture === "function" &&
+        target.hasPointerCapture(pointerId)
+      ) {
+        target.releasePointerCapture(pointerId);
+      }
+      dragCleanupRef.current = null;
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+
+      const pointerDeltaY = moveEvent.clientY - startY;
+      if (!dragging) {
+        if (Math.abs(pointerDeltaY) < DRAG_START_THRESHOLD_PX) return;
+        dragging = true;
+        if (typeof target.setPointerCapture === "function") {
+          target.setPointerCapture(pointerId);
+          pointerCaptured = true;
+        }
+      }
+
+      moveEvent.preventDefault();
+      latestTargetVisibleIndex = getTargetVisibleIndex(
+        buttonRects,
+        entryId,
+        activeRect.centerY + pointerDeltaY,
+      );
+      setDragState({
+        activeId: entryId,
+        activeVisibleIndex,
+        buttonRects,
+        overlayRect: {
+          left: activeRect.left,
+          top: activeRect.top,
+          width: activeRect.width,
+          height: activeRect.height,
+        },
+        pointerDeltaY,
+        targetVisibleIndex: latestTargetVisibleIndex,
+        rootIds: draggableRootIds,
+        visibleIds: buttonRects.map((rect) => rect.id),
+      });
+    };
+
+    const handlePointerEnd = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) return;
+
+      cleanup();
+      if (dragging) {
+        const nextOrder = moveVisibleEntryOrder(
+          draggableRootIds,
+          buttonRects.map((rect) => rect.id),
+          entryId,
+          latestTargetVisibleIndex,
+        );
+        suppressClickRef.current = entryId;
+        if (nextOrder.join("|") !== draggableRootIds.join("|")) {
+          rootReorder.onReorder(nextOrder);
+        }
+      }
+
+      setDragState(null);
+    };
+
+    dragCleanupRef.current = cleanup;
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
+  };
+
+  const rootReorderState = rootReorder
+    ? {
+        activeId: dragState?.activeId ?? null,
+        draggableIds: draggableRootIdSet,
+        onActivate: handleRootActivate,
+        onPointerDown: handleRootPointerDown,
+      }
+    : undefined;
 
   return (
     <div className={styles.root}>
@@ -283,9 +608,18 @@ export function LeftMenuTree({
         onKeyDown={onKeyDown}
       >
         {shouldVirtualize ? (
-          <VirtualizedEntries ariaLabel={ariaLabel} entries={entries} scrollRef={scrollRef} />
+          <VirtualizedEntries
+            ariaLabel={ariaLabel}
+            entries={displayEntries}
+            scrollRef={scrollRef}
+            rootReorderState={rootReorderState}
+          />
         ) : (
-          <StaticEntries ariaLabel={ariaLabel} entries={entries} />
+          <StaticEntries
+            ariaLabel={ariaLabel}
+            entries={displayEntries}
+            rootReorderState={rootReorderState}
+          />
         )}
       </div>
       <div className={styles.scrollTrack}>
@@ -295,6 +629,33 @@ export function LeftMenuTree({
           onPointerDown={onThumbPointerDown}
         />
       </div>
+      {dragState && activeDraggedEntry && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className={styles.projectDragOverlay}
+              style={{
+                left: dragState.overlayRect.left,
+                top: dragState.overlayRect.top + dragState.pointerDeltaY,
+                width: dragState.overlayRect.width,
+              }}
+            >
+              <div
+                className={`${styles.projectDragOverlayInner} ${activeDraggedEntry.selected ? styles.projectHeaderSelected : ""}`}
+              >
+                <span
+                  className={`${styles.projectLabel} ${activeDraggedEntry.selected ? styles.projectMainButtonSelected : ""}`}
+                >
+                  {activeDraggedEntry.label}
+                </span>
+                <ChevronRight
+                  size={14}
+                  className={`${styles.projectChevron} ${activeDraggedEntry.expanded ? styles.projectChevronExpanded : ""}`}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

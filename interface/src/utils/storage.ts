@@ -3,6 +3,7 @@ import {
   LAST_AGENT_KEY,
   LAST_APP_KEY,
   LAST_PROJECT_KEY,
+  PROJECT_ORDER_KEY,
   TASKBAR_APP_ORDER_KEY,
   TASKBAR_APPS_COLLAPSED_KEY,
 } from "../constants";
@@ -71,6 +72,37 @@ export function setCollapsedProjects(ids: string[]): void {
     localStorage.removeItem(COLLAPSED_PROJECTS_KEY);
   } else {
     localStorage.setItem(COLLAPSED_PROJECTS_KEY, JSON.stringify(ids));
+  }
+}
+
+function getProjectOrderStorageKey(orgId: string | null | undefined): string {
+  return `${PROJECT_ORDER_KEY}:${orgId ?? "all"}`;
+}
+
+export function getProjectOrder(orgId: string | null | undefined): string[] {
+  try {
+    const raw = localStorage.getItem(getProjectOrderStorageKey(orgId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === "string");
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return [];
+}
+
+export function setProjectOrder(orgId: string | null | undefined, ids: string[]): void {
+  try {
+    const storageKey = getProjectOrderStorageKey(orgId);
+    if (ids.length === 0) {
+      localStorage.removeItem(storageKey);
+      return;
+    }
+    localStorage.setItem(storageKey, JSON.stringify(ids));
+  } catch {
+    // ignore storage failures
   }
 }
 

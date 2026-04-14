@@ -11,6 +11,7 @@ export function useProjectsList() {
       projects: s.projects,
       loadingProjects: s.loadingProjects,
       setProjects: s.setProjects,
+      saveProjectOrder: s.saveProjectOrder,
       refreshProjects: s.refreshProjects,
       agentsByProject: s.agentsByProject,
       loadingAgentsByProject: s.loadingAgentsByProject,
