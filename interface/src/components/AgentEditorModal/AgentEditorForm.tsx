@@ -60,6 +60,38 @@ function describeAuthReadiness(
   };
 }
 
+function CompactEnvironmentPicker({
+  environment,
+  setEnvironment,
+}: {
+  environment: string;
+  setEnvironment: (v: string) => void;
+}) {
+  return (
+    <div className={styles.fieldGroup}>
+      <label className={styles.label}>Environment</label>
+      <div className={styles.envGrid}>
+        <button
+          type="button"
+          className={`${styles.envOption} ${environment === "swarm_microvm" ? styles.envOptionActive : ""}`}
+          onClick={() => setEnvironment("swarm_microvm")}
+        >
+          <Cloud size={14} />
+          Swarm
+        </button>
+        <button
+          type="button"
+          className={`${styles.envOption} ${environment === "local_host" ? styles.envOptionActive : ""}`}
+          onClick={() => setEnvironment("local_host")}
+        >
+          <Monitor size={14} />
+          Local
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export interface AgentEditorFormProps {
   name: string;
   setName: (v: string) => void;
@@ -167,261 +199,161 @@ export function AgentEditorForm({
 
   return (
     <div className={styles.form}>
-      <FormSection title="Basics">
-        <div className={styles.avatarRow}>
+      <div className={styles.avatarRow}>
+        <button
+          type="button"
+          className={styles.avatarUpload}
+          onClick={handleAvatarClick}
+        >
+          {icon ? (
+            <img
+              src={icon}
+              alt="Agent avatar"
+              className={styles.avatarImg}
+            />
+          ) : (
+            <ImagePlus size={20} className={styles.avatarPlaceholder} />
+          )}
+          {icon && (
+            <span
+              className={styles.avatarRemove}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAvatarRemove();
+              }}
+            >
+              <X size={12} />
+            </span>
+          )}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className={styles.hiddenInput}
+          onChange={handleFileSelect}
+        />
+      </div>
+
+      <div className={styles.fieldGroup}>
+        <label className={styles.label}>Name *</label>
+        <Input
+          aria-label="Name"
+          ref={nameRef}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameError("");
+          }}
+          placeholder="e.g. Atlas"
+          validationMessage={nameError}
+        />
+      </div>
+
+      <div className={styles.fieldGroup}>
+        <label className={styles.label}>Role</label>
+        <Input
+          aria-label="Role"
+          value={isSuperAgent ? "SuperAgent" : role}
+          onChange={(e) => setRole(e.target.value)}
+          placeholder="e.g. Senior Developer"
+          disabled={isSuperAgent}
+        />
+      </div>
+
+      {restrictCreateToAuraRuntimes && simplifyForMobileCreate ? (
+        <CompactEnvironmentPicker
+          environment="swarm_microvm"
+          setEnvironment={setEnvironment}
+        />
+      ) : restrictCreateToAuraRuntimes ? (
+        <CompactEnvironmentPicker
+          environment={environment}
+          setEnvironment={setEnvironment}
+        />
+      ) : !showAdvancedRuntime ? (
+        <>
+          <CompactEnvironmentPicker
+            environment={environment}
+            setEnvironment={setEnvironment}
+          />
           <button
             type="button"
-            className={styles.avatarUpload}
-            onClick={handleAvatarClick}
+            className={styles.inlineAction}
+            onClick={() => setShowAdvancedRuntime(true)}
           >
-            {icon ? (
-              <img
-                src={icon}
-                alt="Agent avatar"
-                className={styles.avatarImg}
-              />
-            ) : (
-              <ImagePlus size={24} className={styles.avatarPlaceholder} />
-            )}
-            {icon && (
-              <span
-                className={styles.avatarRemove}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAvatarRemove();
-                }}
-              >
-                <X size={12} />
-              </span>
-            )}
+            Advanced options
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className={styles.hiddenInput}
-            onChange={handleFileSelect}
-          />
-        </div>
-
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Name *</label>
-          <Input
-            aria-label="Name"
-            ref={nameRef}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setNameError("");
-            }}
-            placeholder="e.g. Atlas"
-            validationMessage={nameError}
-          />
-          <Text variant="muted" size="sm">
-            Use letters, numbers, hyphens, or underscores.
-          </Text>
-        </div>
-
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Role</label>
-          <Input
-            aria-label="Role"
-            value={isSuperAgent ? "SuperAgent" : role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="e.g. Senior Developer"
-            disabled={isSuperAgent}
-          />
-          {isSuperAgent && (
-            <Text variant="muted" size="sm">
-              SuperAgent role cannot be changed
-            </Text>
-          )}
-        </div>
-      </FormSection>
-
-      <FormSection title={simplifyForMobileCreate ? "Remote Setup" : "Setup"}>
-        {restrictCreateToAuraRuntimes && simplifyForMobileCreate ? (
-          <div className={styles.setupSummary}>
+        </>
+      ) : (
+        <>
+          <div className={styles.runtimeSectionHeader}>
             <Text size="sm" weight="medium">
-              Aura Swarm
+              Advanced
             </Text>
-            <Text variant="muted" size="sm">
-              Mobile creates a remote Aura agent that uses Aura-managed credentials and billing.
-            </Text>
-
-            <div className={styles.summaryList}>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Agent Type</Text>
-                <Text size="sm">Aura</Text>
-              </div>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Runs On</Text>
-                <Text size="sm">Aura Swarm</Text>
-              </div>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Billing</Text>
-                <Text size="sm">Aura-managed</Text>
-              </div>
-            </div>
-          </div>
-        ) : restrictCreateToAuraRuntimes ? (
-          <div className={styles.setupSummary}>
-            <Text size="sm" weight="medium">
-              Choose where this Aura agent runs
-            </Text>
-            <Text variant="muted" size="sm">
-              New agents now use Aura-managed credentials and billing by default.
-            </Text>
-
-            <RunsOnFields
-              adapterType="aura_harness"
-              environment={environment}
-              setEnvironment={setEnvironment}
-              auraLabels
-            />
-
-            <div className={styles.summaryList}>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Agent Type</Text>
-                <Text size="sm">Aura</Text>
-              </div>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Billing</Text>
-                <Text size="sm">Aura-managed</Text>
-              </div>
-            </div>
-          </div>
-        ) : !showAdvancedRuntime ? (
-          <div className={styles.setupSummary}>
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Runs On</label>
-              <RunsOnFields
-                adapterType={adapterType}
-                environment={environment}
-                setEnvironment={setEnvironment}
-                compact
-              />
-            </div>
-
-            <div className={styles.summaryList}>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Agent Type</Text>
-                <Text size="sm">Aura</Text>
-              </div>
-              <div className={styles.summaryRow}>
-                <Text size="xs" variant="muted">Credentials</Text>
-                <Text size="sm">
-                  {authSource === "aura_managed"
-                    ? "Managed by Aura"
-                    : authSource === "local_cli_auth"
-                      ? getLocalAuthLabel(adapterType)
-                      : getConnectionAuthLabel(adapterType)}
-                </Text>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className={styles.inlineAction}
-              onClick={() => setShowAdvancedRuntime(true)}
-            >
-              Change runtime or credentials
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className={styles.runtimeSectionHeader}>
-              <Text size="sm" weight="medium">
-                Advanced Setup
-              </Text>
-              {isDefaultAuraPath ? (
-                <button
-                  type="button"
-                  className={styles.inlineAction}
-                  onClick={() => setShowAdvancedRuntime(false)}
-                >
-                  Hide advanced options
-                </button>
-              ) : null}
-            </div>
-
-            <RuntimeFields
-              adapterType={adapterType}
-              setAdapterType={setAdapterType}
-              environment={environment}
-              setEnvironment={setEnvironment}
-            />
-
-            <AuthFields
-              adapterType={adapterType}
-              authSource={authSource}
-              setAuthSource={setAuthSource}
-            />
-
-            {showsIntegrationPicker ? (
-              <IntegrationPicker
-                integrationChoices={integrationChoices}
-                integrationId={integrationId}
-                setIntegrationId={setIntegrationId}
-              />
+            {isDefaultAuraPath ? (
+              <button
+                type="button"
+                className={styles.inlineAction}
+                onClick={() => setShowAdvancedRuntime(false)}
+              >
+                Hide
+              </button>
             ) : null}
+          </div>
 
-            {!showsIntegrationPicker &&
-              adapterType !== "aura_harness" &&
-              availableIntegrations.length === 0 && (
-                <div className={styles.fieldGroup}>
-                  <Text variant="muted" size="sm">
-                    Connections are optional for local CLI runtimes. You can keep using local login.
-                  </Text>
-                </div>
-              )}
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Default Model</label>
-              <Input
-                value={defaultModel}
-                onChange={(e) => setDefaultModel(e.target.value)}
-                placeholder="Optional override (otherwise uses the runtime or connection default)"
-              />
-            </div>
-
-            <div className={`${styles.readinessCard} ${readinessClassName}`}>
-              <Text size="xs" weight="medium" className={styles.readinessTitle}>
-                Ready to use
-              </Text>
-              <Text size="sm">{authReadiness.title}</Text>
-              <Text size="xs" variant="muted">
-                {authReadiness.message}
-              </Text>
-            </div>
-          </>
-        )}
-      </FormSection>
-
-      <FormSection title="Instructions">
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Personality</label>
-          <Textarea
-            aria-label="Personality"
-            value={personality}
-            onChange={(e) => setPersonality(e.target.value)}
-            placeholder="e.g. Thorough, opinionated, loves clean code"
-            rows={2}
+          <RuntimeFields
+            adapterType={adapterType}
+            setAdapterType={setAdapterType}
+            environment={environment}
+            setEnvironment={setEnvironment}
           />
-        </div>
 
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>System Prompt</label>
-          <Textarea
-            aria-label="System Prompt"
-            value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
-            placeholder="Instructions for this agent (agents.md content)..."
-            rows={6}
-            mono
+          <AuthFields
+            adapterType={adapterType}
+            authSource={authSource}
+            setAuthSource={setAuthSource}
           />
-        </div>
-      </FormSection>
+
+          {showsIntegrationPicker ? (
+            <IntegrationPicker
+              integrationChoices={integrationChoices}
+              integrationId={integrationId}
+              setIntegrationId={setIntegrationId}
+            />
+          ) : null}
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Default Model</label>
+            <Input
+              value={defaultModel}
+              onChange={(e) => setDefaultModel(e.target.value)}
+              placeholder="Optional override"
+            />
+          </div>
+
+          <div className={`${styles.readinessCard} ${readinessClassName}`}>
+            <Text size="xs" weight="medium" className={styles.readinessTitle}>
+              Ready to use
+            </Text>
+            <Text size="sm">{authReadiness.title}</Text>
+            <Text size="xs" variant="muted">
+              {authReadiness.message}
+            </Text>
+          </div>
+        </>
+      )}
+
+      <div className={styles.fieldGroup}>
+        <label className={styles.label}>Personality</label>
+        <Textarea
+          aria-label="Personality"
+          value={personality}
+          onChange={(e) => setPersonality(e.target.value)}
+          placeholder="e.g. Thorough, opinionated, loves clean code"
+          rows={2}
+        />
+      </div>
 
       {error && (
         <Text variant="muted" size="sm" className={styles.error}>
@@ -433,34 +365,8 @@ export function AgentEditorForm({
 }
 
 // ---------------------------------------------------------------------------
-// Sub-sections
+// Advanced sub-components (used only in edit / advanced mode)
 // ---------------------------------------------------------------------------
-
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={styles.sectionBlock}>
-      <div className={styles.sectionHeader}>
-        <Text size="xs" weight="medium" className={styles.sectionTitle}>
-          {title}
-        </Text>
-        {description ? (
-          <Text size="xs" variant="muted">
-            {description}
-          </Text>
-        ) : null}
-      </div>
-      <div className={styles.sectionBody}>{children}</div>
-    </section>
-  );
-}
 
 function RuntimeFields({
   adapterType,

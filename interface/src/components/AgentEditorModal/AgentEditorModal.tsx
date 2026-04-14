@@ -134,6 +134,7 @@ export function AgentEditorModal({
           onClose={form.handleClose}
           title={title}
           size="md"
+          className={styles.compactModal}
           initialFocusRef={form.initialFocusRef}
           footer={null}
         >

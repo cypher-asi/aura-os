@@ -55,10 +55,9 @@ describe("AgentEditorForm", () => {
   it("keeps runtime customization collapsed for the default Aura create flow", () => {
     render(<AgentEditorForm {...makeProps()} />);
 
-    expect(screen.getByText("Setup")).toBeInTheDocument();
-    expect(screen.getByText("Choose where this Aura agent runs")).toBeInTheDocument();
-    expect(screen.getByText("Aura Local")).toBeInTheDocument();
-    expect(screen.getByText("Aura Swarm")).toBeInTheDocument();
+    expect(screen.getByText("Environment")).toBeInTheDocument();
+    expect(screen.getByText("Swarm")).toBeInTheDocument();
+    expect(screen.getByText("Local")).toBeInTheDocument();
     expect(screen.queryByText("Default Model")).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
   });
@@ -73,9 +72,8 @@ describe("AgentEditorForm", () => {
       />,
     );
 
-    expect(screen.getByText("Remote Setup")).toBeInTheDocument();
-    expect(screen.getAllByText("Aura Swarm")).not.toHaveLength(0);
-    expect(screen.getAllByText("Aura-managed")).not.toHaveLength(0);
+    expect(screen.getByText("Environment")).toBeInTheDocument();
+    expect(screen.getByText("Swarm")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change runtime or credentials" })).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
   });

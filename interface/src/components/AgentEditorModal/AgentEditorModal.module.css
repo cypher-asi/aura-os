@@ -1,7 +1,11 @@
+.compactModal :global(.header) {
+  padding: var(--space-2) var(--space-4);
+}
+
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .sectionBlock {
@@ -35,6 +39,37 @@
   gap: var(--space-3);
 }
 
+.envGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.envOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 8px var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: border-color 0.15s;
+}
+
+.envOption:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.envOptionActive {
+  border-color: #fff;
+  background: var(--color-bg-subtle);
+}
+
 .runtimeSectionHeader {
   display: flex;
   align-items: center;
@@ -61,8 +96,8 @@
 
 .avatarUpload {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: 2px dashed var(--color-border);
   background: var(--color-bg-subtle);
@@ -254,9 +289,8 @@
 .runtimeOptionActive,
 .choiceCardActive,
 .integrationOptionActive {
-  border-color: var(--color-primary);
-  background: var(--color-primary-subtle, rgba(var(--color-primary-rgb, 99, 102, 241), 0.1));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary, #3b82f6) 45%, transparent);
+  border-color: #fff;
+  background: var(--color-bg-subtle);
 }
 
 .choiceGrid {
@@ -328,8 +362,8 @@
   }
 
   .avatarUpload {
-    width: 88px;
-    height: 88px;
+    width: 64px;
+    height: 64px;
   }
 
   .fieldGroup {
