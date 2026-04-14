@@ -109,6 +109,40 @@ jobs:
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
         run: cargo build --release --package aura-os-desktop
 
+      - name: Clean stale macOS DMG mounts
+        if: matrix.target == 'macos'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import re
+          import subprocess
+
+          info = subprocess.run(
+              ["hdiutil", "info"],
+              capture_output=True,
+              text=True,
+              check=True,
+          ).stdout.splitlines()
+
+          stale_mount = re.compile(r"^/Volumes/Aura(?: \d+)?$")
+          devices = []
+
+          for line in info:
+              if not line.startswith("/dev/disk"):
+                  continue
+              parts = line.split("\t")
+              device = parts[0]
+              mount_point = parts[-1].strip() if len(parts) > 2 else ""
+              if stale_mount.match(mount_point):
+                  devices.append((device, mount_point))
+
+          for device, mount_point in devices:
+              print(f"Detaching stale DMG mount {mount_point} ({device})")
+              subprocess.run(["hdiutil", "detach", device], check=True)
+          PY
+
+          rm -f target/release/rw.Aura*.dmg
+
       - name: Package installer
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
