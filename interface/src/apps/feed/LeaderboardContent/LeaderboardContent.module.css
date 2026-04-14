@@ -17,14 +17,14 @@
   flex-direction: column;
   max-width: 560px;
   width: 100%;
-  box-sizing: border-box;
   margin-left: max(0px, calc(50vw - 280px - var(--left-panel-width, 248px) - 1px - var(--space-5)));
   margin-right: auto;
-  padding-right: var(--space-2);
 }
 
 .row {
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   align-items: center;
   gap: var(--space-2);
   padding: 5px var(--space-2);
@@ -49,7 +49,7 @@
   flex-shrink: 0;
   width: 28px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .rankBadge {

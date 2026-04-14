@@ -84,6 +84,15 @@
   gap: 6px;
 }
 
+.statusCard::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 6px;
+}
+
 .statusRow {
   display: flex;
   align-items: baseline;
