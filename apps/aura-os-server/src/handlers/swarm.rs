@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use aura_os_core::HarnessMode;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::handlers::agents::reprovision_remote_agent;
 use crate::state::{AppState, AuthJwt};
 
 const VALID_LIFECYCLE_ACTIONS: &[&str] = &["hibernate", "stop", "restart", "wake", "start"];
@@ -13,6 +14,14 @@ const VALID_LIFECYCLE_ACTIONS: &[&str] = &["hibernate", "stop", "restart", "wake
 pub(crate) struct LifecycleActionResponse {
     pub agent_id: String,
     pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct RecoveryActionResponse {
+    pub agent_id: String,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vm_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -164,4 +173,36 @@ pub(crate) async fn remote_agent_lifecycle(
     }));
 
     Ok(Json(result))
+}
+
+pub(crate) async fn recover_remote_agent(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(agent_id): Path<String>,
+) -> ApiResult<Json<RecoveryActionResponse>> {
+    let network = state.require_network_client()?;
+    let net_agent = network
+        .get_agent(&agent_id, &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    let machine_type = net_agent.machine_type.as_deref().unwrap_or("local");
+    if HarnessMode::from_machine_type(machine_type) != HarnessMode::Swarm {
+        return Err(ApiError::bad_request("agent is not a remote agent"));
+    }
+
+    let reprovisioned = reprovision_remote_agent(&state, network, &jwt, &net_agent).await?;
+
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "remote_agent_state_changed",
+        "agent_id": agent_id,
+        "state": reprovisioned.status,
+        "action": "recover",
+    }));
+
+    Ok(Json(RecoveryActionResponse {
+        agent_id,
+        status: reprovisioned.status,
+        vm_id: reprovisioned.agent.vm_id.clone(),
+    }))
 }

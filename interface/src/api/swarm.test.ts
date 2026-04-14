@@ -110,6 +110,16 @@ describe("swarmApi", () => {
     );
   });
 
+  it("recoverRemoteAgent sends POST to recover endpoint", async () => {
+    const fetchMock = mockFetch(200, { agent_id: "a1", status: "provisioning", vm_id: "vm-2" });
+    globalThis.fetch = fetchMock;
+    await swarmApi.recoverRemoteAgent("a1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/agents/a1/remote_agent/recover",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("listRemoteDirectory sends POST with path", async () => {
     const response = { ok: true, entries: [{ name: "file.txt", is_dir: false }] };
     const fetchMock = mockFetch(200, response);

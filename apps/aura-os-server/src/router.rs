@@ -342,6 +342,10 @@ fn agent_routes() -> Router<AppState> {
             post(remote_files::read_remote_file),
         )
         .route(
+            "/api/agents/:agent_id/remote_agent/recover",
+            post(swarm::recover_remote_agent),
+        )
+        .route(
             "/api/agents/:agent_id/remote_agent/:action",
             post(swarm::remote_agent_lifecycle),
         )

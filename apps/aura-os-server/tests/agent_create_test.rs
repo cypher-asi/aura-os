@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::extract::Path;
 use axum::http::StatusCode;
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::Json;
 use axum::Router;
 use serde_json::Value;
@@ -82,6 +82,52 @@ async fn start_mock_network_with_update(
         .route(
             "/api/agents/:agent_id",
             axum::routing::put(
+                move |Path(_agent_id): Path<String>, Json(body): Json<Value>| {
+                    let capture = update_capture.clone();
+                    let vm = vm_id_for_update.clone();
+                    async move {
+                        *capture.lock().await = Some(body);
+                        let mut updated = network_agent_json("remote", Some(&vm));
+                        updated["vmId"] = Value::String(vm);
+                        Json(updated)
+                    }
+                },
+            ),
+        );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+    format!("http://{}", addr)
+}
+
+async fn start_mock_network_get_only(agent_json: Value) -> String {
+    let app = Router::new().route(
+        "/api/agents/:agent_id",
+        get(move |Path(_agent_id): Path<String>| {
+            let j = agent_json.clone();
+            async move { Json(j) }
+        }),
+    );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+    format!("http://{}", addr)
+}
+
+async fn start_mock_network_get_with_update(
+    agent_json: Value,
+    vm_id_for_update: String,
+    update_capture: Arc<tokio::sync::Mutex<Option<Value>>>,
+) -> String {
+    let agent_json_clone = agent_json.clone();
+    let app = Router::new()
+        .route(
+            "/api/agents/:agent_id",
+            get(move |Path(_agent_id): Path<String>| {
+                let j = agent_json_clone.clone();
+                async move { Json(j) }
+            })
+            .put(
                 move |Path(_agent_id): Path<String>, Json(body): Json<Value>| {
                     let capture = update_capture.clone();
                     let vm = vm_id_for_update.clone();
@@ -279,6 +325,57 @@ async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
     );
 }
 
+#[tokio::test]
+async fn recover_remote_agent_reprovisions_swarm_and_sets_vm_id() {
+    let db_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
+        Arc::new(tokio::sync::Mutex::new(None));
+
+    let network_url = start_mock_network_get_with_update(
+        network_agent_json("remote", Some("old-vm")),
+        "pod-recovered-123".to_string(),
+        update_capture.clone(),
+    )
+    .await;
+
+    let swarm_url = start_mock_swarm(
+        StatusCode::OK,
+        serde_json::json!({
+            "agent_id": AGENT_UUID,
+            "status": "provisioning",
+            "pod_id": "pod-recovered-123"
+        }),
+    )
+    .await;
+
+    let app = build_app_with_swarm(
+        store,
+        db_dir.path().to_path_buf(),
+        &network_url,
+        Some(swarm_url),
+    );
+
+    let req = json_request("POST", &format!("/api/agents/{AGENT_UUID}/remote_agent/recover"), None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let body = response_json(resp).await;
+    assert_eq!(body["status"], "provisioning");
+    assert_eq!(body["vm_id"], "pod-recovered-123");
+
+    let captured = update_capture.lock().await;
+    let update_body = captured
+        .as_ref()
+        .expect("network update should have been called");
+    assert_eq!(
+        update_body["vmId"], "pod-recovered-123",
+        "PUT body should contain the recovered vmId"
+    );
+}
+
 // ===========================================================================
 // Failure Path Tests
 // ===========================================================================
@@ -333,6 +430,67 @@ async fn create_remote_agent_fails_when_swarm_returns_error() {
 
     let body = response_json(resp).await;
     assert_eq!(body["code"], "bad_gateway");
+}
+
+#[tokio::test]
+async fn recover_remote_agent_rejects_local_agents() {
+    let db_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let network_url = start_mock_network_get_only(network_agent_json("local", None)).await;
+
+    let app = build_app_with_swarm(
+        store,
+        db_dir.path().to_path_buf(),
+        &network_url,
+        None,
+    );
+
+    let req = json_request("POST", &format!("/api/agents/{AGENT_UUID}/remote_agent/recover"), None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_request");
+}
+
+#[tokio::test]
+async fn recover_remote_agent_surfaces_swarm_errors() {
+    let db_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
+        Arc::new(tokio::sync::Mutex::new(None));
+
+    let network_url = start_mock_network_get_with_update(
+        network_agent_json("remote", Some("old-vm")),
+        "unused-vm".to_string(),
+        update_capture.clone(),
+    )
+    .await;
+
+    let swarm_url = start_mock_swarm(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        serde_json::json!({"error": "internal"}),
+    )
+    .await;
+
+    let app = build_app_with_swarm(
+        store,
+        db_dir.path().to_path_buf(),
+        &network_url,
+        Some(swarm_url),
+    );
+
+    let req = json_request("POST", &format!("/api/agents/{AGENT_UUID}/remote_agent/recover"), None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
+
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_gateway");
+    assert!(update_capture.lock().await.is_none(), "network update should not run on failure");
 }
 
 #[tokio::test]

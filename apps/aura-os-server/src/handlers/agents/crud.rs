@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::time::Duration;
 
 use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, HarnessMode};
+use aura_os_network::{NetworkAgent, NetworkClient};
 
 use crate::dto::{CreateAgentRequest, UpdateAgentRequest};
 use crate::error::{map_network_error, ApiError, ApiResult};
@@ -130,6 +131,88 @@ fn build_runtime_config(
     })
 }
 
+pub(crate) struct ReprovisionedRemoteAgent {
+    pub agent: Agent,
+    pub status: String,
+}
+
+pub(crate) async fn reprovision_remote_agent(
+    state: &AppState,
+    client: &NetworkClient,
+    jwt: &str,
+    net_agent: &NetworkAgent,
+) -> ApiResult<ReprovisionedRemoteAgent> {
+    let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
+        ApiError::service_unavailable(
+            "swarm gateway is not configured (SWARM_BASE_URL); cannot create remote agent",
+        )
+    })?;
+
+    let provisioned = provision_swarm_agent(
+        client.http_client(),
+        swarm_base_url,
+        jwt,
+        &net_agent.id,
+        &net_agent.name,
+    )
+    .await?;
+
+    let update_req = aura_os_network::UpdateAgentRequest {
+        name: None,
+        role: None,
+        personality: None,
+        system_prompt: None,
+        skills: None,
+        icon: None,
+        harness: None,
+        machine_type: None,
+        vm_id: Some(provisioned.vm_id.clone()),
+    };
+
+    let updated_net_agent = client
+        .update_agent(&net_agent.id, jwt, &update_req)
+        .await
+        .map_err(|e| {
+            warn!(
+                agent_id = %net_agent.id,
+                error = %e,
+                "Failed to persist vm_id to aura-network after swarm provisioning"
+            );
+            ApiError::bad_gateway(format!(
+                "VM provisioned but failed to update agent record: {e}"
+            ))
+        })?;
+
+    let mut agent = agent_from_network(&updated_net_agent);
+    state
+        .agent_service
+        .apply_runtime_config(&mut agent)
+        .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    let _ = state.agent_service.save_agent_shadow(&agent);
+
+    info!(
+        agent_id = %net_agent.id,
+        vm_id = %provisioned.vm_id,
+        "Swarm VM provisioned for remote agent"
+    );
+
+    if !matches!(provisioned.status.as_str(), "running" | "idle") {
+        spawn_swarm_readiness_check(
+            client.http_client().clone(),
+            swarm_base_url.to_owned(),
+            jwt.to_string(),
+            provisioned.agent_id.clone(),
+            provisioned.vm_id.clone(),
+            net_agent.id.clone(),
+        );
+    }
+
+    Ok(ReprovisionedRemoteAgent {
+        agent,
+        status: provisioned.status,
+    })
+}
+
 pub(crate) async fn create_agent(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -168,7 +251,6 @@ pub(crate) async fn create_agent(
         .await
         .map_err(map_network_error)?;
 
-    let agent_id_str = net_agent.id.clone();
     let mut agent = agent_from_network(&net_agent);
     state
         .agent_service
@@ -184,117 +266,8 @@ pub(crate) async fn create_agent(
         == HarnessMode::Swarm;
 
     if is_remote {
-        let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
-            ApiError::service_unavailable(
-                "swarm gateway is not configured (SWARM_BASE_URL); cannot create remote agent",
-            )
-        })?;
-
-        let provisioned = provision_swarm_agent(
-            client.http_client(),
-            swarm_base_url,
-            &jwt,
-            &agent_id_str,
-            &agent.name,
-        )
-        .await?;
-
-        let update_req = aura_os_network::UpdateAgentRequest {
-            name: None,
-            role: None,
-            personality: None,
-            system_prompt: None,
-            skills: None,
-            icon: None,
-            harness: None,
-            machine_type: None,
-            vm_id: Some(provisioned.vm_id.clone()),
-        };
-
-        let updated_net_agent = client
-            .update_agent(&agent_id_str, &jwt, &update_req)
-            .await
-            .map_err(|e| {
-                warn!(
-                    agent_id = %agent_id_str,
-                    error = %e,
-                    "Failed to persist vm_id to aura-network after swarm provisioning"
-                );
-                ApiError::bad_gateway(format!(
-                    "VM provisioned but failed to update agent record: {e}"
-                ))
-            })?;
-
-        agent = agent_from_network(&updated_net_agent);
-        state
-            .agent_service
-            .apply_runtime_config(&mut agent)
-            .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
-        let _ = state.agent_service.save_agent_shadow(&agent);
-
-        info!(
-            agent_id = %agent_id_str,
-            vm_id = %provisioned.vm_id,
-            "Swarm VM provisioned for remote agent"
-        );
-
-        if !matches!(provisioned.status.as_str(), "running" | "idle") {
-            let bg_http = client.http_client().clone();
-            let bg_swarm_url = swarm_base_url.to_owned();
-            let bg_jwt = jwt.clone();
-            let bg_prov_agent_id = provisioned.agent_id.clone();
-            let bg_vm_id = provisioned.vm_id.clone();
-            let bg_agent_id_str = agent_id_str.clone();
-
-            tokio::spawn(async move {
-                match wait_for_swarm_agent_ready(
-                    &bg_http,
-                    &bg_swarm_url,
-                    &bg_jwt,
-                    &bg_prov_agent_id,
-                )
-                .await
-                {
-                    Ok(()) => {
-                        info!(
-                            agent_id = %bg_agent_id_str,
-                            vm_id = %bg_vm_id,
-                            "Remote agent reached ready state in background"
-                        );
-                    }
-                    Err(SwarmAgentReadyError::Timeout) => {
-                        warn!(
-                            agent_id = %bg_agent_id_str,
-                            vm_id = %bg_vm_id,
-                            "Remote agent still provisioning after background readiness timeout"
-                        );
-                    }
-                    Err(SwarmAgentReadyError::ErrorState) => {
-                        warn!(
-                            agent_id = %bg_agent_id_str,
-                            vm_id = %bg_vm_id,
-                            "Remote agent entered error state during background readiness check"
-                        );
-                    }
-                    Err(SwarmAgentReadyError::Transport(msg)) => {
-                        warn!(
-                            agent_id = %bg_agent_id_str,
-                            vm_id = %bg_vm_id,
-                            error = %msg,
-                            "Background readiness check transport error"
-                        );
-                    }
-                    Err(SwarmAgentReadyError::Parse(msg)) => {
-                        warn!(
-                            agent_id = %bg_agent_id_str,
-                            vm_id = %bg_vm_id,
-                            error = %msg,
-                            "Background readiness check parse error"
-                        );
-                    }
-                }
-            });
-        }
+        let reprovisioned = reprovision_remote_agent(&state, client, &jwt, &net_agent).await?;
+        agent = reprovisioned.agent;
     }
 
     let _ = state.agent_service.save_agent_shadow(&agent);
@@ -360,6 +333,58 @@ struct ProvisionedSwarmAgent {
     agent_id: String,
     vm_id: String,
     status: String,
+}
+
+fn spawn_swarm_readiness_check(
+    http: reqwest::Client,
+    swarm_base_url: String,
+    jwt: String,
+    provisioned_agent_id: String,
+    vm_id: String,
+    agent_id: String,
+) {
+    tokio::spawn(async move {
+        match wait_for_swarm_agent_ready(&http, &swarm_base_url, &jwt, &provisioned_agent_id).await
+        {
+            Ok(()) => {
+                info!(
+                    agent_id = %agent_id,
+                    vm_id = %vm_id,
+                    "Remote agent reached ready state in background"
+                );
+            }
+            Err(SwarmAgentReadyError::Timeout) => {
+                warn!(
+                    agent_id = %agent_id,
+                    vm_id = %vm_id,
+                    "Remote agent still provisioning after background readiness timeout"
+                );
+            }
+            Err(SwarmAgentReadyError::ErrorState) => {
+                warn!(
+                    agent_id = %agent_id,
+                    vm_id = %vm_id,
+                    "Remote agent entered error state during background readiness check"
+                );
+            }
+            Err(SwarmAgentReadyError::Transport(msg)) => {
+                warn!(
+                    agent_id = %agent_id,
+                    vm_id = %vm_id,
+                    error = %msg,
+                    "Background readiness check transport error"
+                );
+            }
+            Err(SwarmAgentReadyError::Parse(msg)) => {
+                warn!(
+                    agent_id = %agent_id,
+                    vm_id = %vm_id,
+                    error = %msg,
+                    "Background readiness check parse error"
+                );
+            }
+        }
+    });
 }
 
 fn sanitize_swarm_agent_name(agent_name: &str, agent_id: &str) -> String {

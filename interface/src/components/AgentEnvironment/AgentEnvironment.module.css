@@ -169,6 +169,17 @@
   border-color: var(--color-text-tertiary);
 }
 
+.actionBtnDanger {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.actionBtnDanger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  border-color: #f87171;
+}
+
 .actionHint {
   font-size: 10px;
   color: var(--color-text-tertiary);

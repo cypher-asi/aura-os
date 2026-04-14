@@ -21,10 +21,11 @@ function formatUptime(seconds: number): string {
 }
 
 interface ActionDef {
-  action: LifecycleAction
+  action: LifecycleAction | "recover"
   label: string
   hint?: string
   primary?: boolean
+  danger?: boolean
 }
 
 function getActionsForState(state: string): ActionDef[] {
@@ -42,7 +43,7 @@ function getActionsForState(state: string): ActionDef[] {
       return [{ action: "start", label: "Start", primary: true }]
     case "error":
       return [
-        { action: "restart", label: "Restart", primary: true },
+        { action: "recover", label: "Recovery", primary: true, danger: true },
         { action: "stop", label: "Stop" },
       ]
     default:
@@ -82,12 +83,16 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
   }, [isRemote, agentId, refreshState])
 
   const handleAction = useCallback(
-    async (action: LifecycleAction) => {
+    async (action: LifecycleAction | "recover") => {
       if (!agentId || actionLoading) return
       setActionLoading(action)
       setActionError(null)
       try {
-        await api.swarm.remoteAgentAction(agentId, action)
+        if (action === "recover") {
+          await api.swarm.recoverRemoteAgent(agentId)
+        } else {
+          await api.swarm.remoteAgentAction(agentId, action)
+        }
         refreshState()
       } catch (e: unknown) {
         setActionError(e instanceof Error ? e.message : "Action failed")
@@ -235,7 +240,12 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
                         {actions.map((a) => (
                           <button
                             key={a.action}
-                            className={`${styles.actionBtn} ${a.primary ? styles.actionBtnPrimary : ""}`}
+                            className={[
+                              styles.actionBtn,
+                              a.primary ? styles.actionBtnPrimary : "",
+                              a.danger ? styles.actionBtnDanger : "",
+                            ].filter(Boolean).join(" ")}
+                            data-variant={a.danger ? "danger" : undefined}
                             disabled={!!actionLoading}
                             onClick={(e) => {
                               e.stopPropagation()

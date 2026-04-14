@@ -9,7 +9,7 @@ pub(crate) mod workspace_tools;
 pub(crate) use chat::{list_agent_events, list_events, send_agent_event_stream, send_event_stream};
 pub(crate) use crud::{
     create_agent, delete_agent, get_agent, list_agent_project_bindings, list_agents,
-    remove_agent_project_binding, update_agent,
+    remove_agent_project_binding, reprovision_remote_agent, update_agent,
 };
 pub(crate) use instances::{
     create_agent_instance, delete_agent_instance, get_agent_instance, list_agent_instances,

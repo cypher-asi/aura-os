@@ -7,6 +7,12 @@ export interface LifecycleActionResult {
   status: string
 }
 
+export interface RecoveryActionResult {
+  agent_id: string
+  status: string
+  vm_id?: string | null
+}
+
 export type LifecycleAction = "hibernate" | "stop" | "restart" | "wake" | "start"
 
 export const swarmApi = {
@@ -16,6 +22,12 @@ export const swarmApi = {
   remoteAgentAction: (agentId: string, action: LifecycleAction) =>
     apiFetch<LifecycleActionResult>(
       `/api/agents/${agentId}/remote_agent/${action}`,
+      { method: "POST" },
+    ),
+
+  recoverRemoteAgent: (agentId: string) =>
+    apiFetch<RecoveryActionResult>(
+      `/api/agents/${agentId}/remote_agent/recover`,
       { method: "POST" },
     ),
 
