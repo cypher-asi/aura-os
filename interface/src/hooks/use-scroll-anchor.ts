@@ -157,8 +157,13 @@ export function useScrollAnchor(
 
     raf = requestAnimationFrame(poll);
 
-    const timeout = setTimeout(() => {
-      if (!isReadyRef.current) reveal();
+    const timeout = setTimeout(function checkReveal() {
+      if (isReadyRef.current) return;
+      if (contentReadyRef.current) {
+        reveal();
+      } else {
+        setTimeout(checkReveal, 200);
+      }
     }, SETTLE_TIMEOUT_MS);
 
     return () => {

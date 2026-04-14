@@ -334,11 +334,11 @@ describe("useScrollAnchor", () => {
     expect(el.scrollTop).toBe(100);
   });
 
-  it("safety timeout forces reveal if settling takes too long", () => {
+  it("safety timeout defers reveal until contentReady is true", () => {
     const el = makeEl();
     const ref = { current: el };
     const opts = { ...DEFAULT_OPTIONS, contentReady: false };
-    const { result } = renderHook(
+    const { result, rerender } = renderHook(
       (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: opts },
     );
@@ -346,6 +346,12 @@ describe("useScrollAnchor", () => {
 
     act(() => {
       vi.advanceTimersByTime(2000);
+    });
+    expect(result.current.isReady).toBe(false);
+
+    rerender({ ...opts, contentReady: true });
+    act(() => {
+      vi.advanceTimersByTime(200);
     });
     expect(result.current.isReady).toBe(true);
   });

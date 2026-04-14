@@ -184,6 +184,10 @@
   flex: 1;
 }
 
+.messageContentSettling {
+  opacity: 0;
+}
+
 .scrollSentinel {
   height: 0;
   flex-shrink: 0;

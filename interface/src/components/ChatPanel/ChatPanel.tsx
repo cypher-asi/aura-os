@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { MessageSquare, AlertCircle, LoaderCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
@@ -49,6 +49,7 @@ export interface ChatPanelProps {
   mobileHeaderSummaryLabel?: string;
   mobileHeaderSummaryKind?: "details" | "switch";
   initialHandoff?: ChatPanelHandoffMode;
+  onInitialHandoffReady?: () => void;
 }
 
 export function ChatPanel({
@@ -77,6 +78,7 @@ export function ChatPanel({
   mobileHeaderSummaryLabel,
   mobileHeaderSummaryKind = "details",
   initialHandoff,
+  onInitialHandoffReady,
 }: ChatPanelProps) {
   const isCreateAgentHandoff = initialHandoff === "create-agent";
   const showLoadingState = isLoading || (isCreateAgentHandoff && !historyResolved && !errorMessage);
@@ -88,10 +90,23 @@ export function ChatPanel({
     scrollResetKey,
     historyMessages,
     selectedProjectId,
-    contentReady: isCreateAgentHandoff ? historyResolved : true,
+    contentReady: historyResolved,
     autoFocusOnReady: isCreateAgentHandoff,
   });
   const chromeReady = s.isReady;
+  const initialHandoffReadyRef = useRef(false);
+
+  useEffect(() => {
+    initialHandoffReadyRef.current = false;
+  }, [initialHandoff, scrollResetKey]);
+
+  useEffect(() => {
+    if (!initialHandoff || !chromeReady || initialHandoffReadyRef.current) {
+      return;
+    }
+    initialHandoffReadyRef.current = true;
+    onInitialHandoffReady?.();
+  }, [chromeReady, initialHandoff, onInitialHandoffReady]);
 
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
@@ -177,7 +192,7 @@ export function ChatPanel({
             ref={s.messageAreaRef}
             onScroll={s.handleScroll}
           >
-            <div className={styles.messageContent}>
+            <div className={`${styles.messageContent}${chromeReady ? '' : ` ${styles.messageContentSettling}`}`}>
               <ChatMessageList
                 messages={s.messages}
                 streamKey={streamKey}
