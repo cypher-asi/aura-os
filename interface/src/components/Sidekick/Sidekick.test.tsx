@@ -222,6 +222,20 @@ describe("SidekickTaskbar", () => {
     render(<SidekickTaskbar />);
     expect(screen.getByRole("button", { name: "More actions" })).toBeInTheDocument();
   });
+
+  it("rerenders cleanly when project info is toggled", () => {
+    const { container, rerender } = render(<SidekickTaskbar />);
+
+    expect(container.innerHTML).not.toBe("");
+
+    mockSidekick.showInfo = true;
+    expect(() => rerender(<SidekickTaskbar />)).not.toThrow();
+    expect(container.innerHTML).toBe("");
+
+    mockSidekick.showInfo = false;
+    expect(() => rerender(<SidekickTaskbar />)).not.toThrow();
+    expect(screen.getByRole("button", { name: "Tasks" })).toBeInTheDocument();
+  });
 });
 
 describe("SidekickContent", () => {

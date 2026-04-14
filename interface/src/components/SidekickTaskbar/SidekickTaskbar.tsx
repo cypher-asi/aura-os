@@ -57,9 +57,6 @@ export function SidekickTaskbar() {
       setActiveTab("tasks");
     }
   }, [activeTab, canBrowseFiles, setActiveTab]);
-
-  if (showInfo) return null;
-
   const project = ctx?.project;
   const handleArchive = ctx?.handleArchive;
   const visibleTabs = canBrowseFiles ? TAB_ICONS : TAB_ICONS.filter((tab) => tab.id !== "files");
@@ -73,6 +70,8 @@ export function SidekickTaskbar() {
       { id: "info", label: "Project Info", icon: <Info size={14} /> },
     ];
   }, [project]);
+
+  if (showInfo) return null;
 
   const handleAction = (id: string) => {
     if (id === "archive") handleArchive?.();
