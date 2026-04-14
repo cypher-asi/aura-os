@@ -26,6 +26,7 @@ on:
         type: choice
         options:
           - preflight
+          - bootstrap_signing
           - beta
           - release
       submit_for_review:
