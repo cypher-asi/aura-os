@@ -329,9 +329,20 @@ jobs:
             --channel stable \
             --output-dir ../manifest-validation
 
+      - name: Validate stable download manifest
+        run: |
+          cd repo
+          node infra/scripts/release/desktop-downloads-validate.mjs \
+            --manifest ../pages/downloads/stable.json \
+            --artifacts-dir ../all-artifacts \
+            --channel stable \
+            --output-dir ../manifest-validation
+
       - name: Attach stable manifest summary
         shell: bash
-        run: cat manifest-validation/desktop-manifests-stable.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          cat manifest-validation/desktop-manifests-stable.md >> "$GITHUB_STEP_SUMMARY"
+          cat manifest-validation/desktop-downloads-stable.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push manifests
         run: |
