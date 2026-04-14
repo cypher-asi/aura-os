@@ -29,7 +29,8 @@ export interface LaneProps {
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
-  storageKey?: string;
+  storageKey?: string | null;
+  onResizeEnd?: (size: number) => void;
 
   /** Take remaining horizontal space instead of a fixed width. */
   flex?: boolean;
@@ -62,7 +63,8 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
       defaultWidth = 240,
       minWidth = 0,
       maxWidth = 400,
-      storageKey = "lane-width",
+      storageKey,
+      onResizeEnd,
       flex = false,
       collapsible = false,
       collapsed = false,
@@ -77,15 +79,18 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
     useImperativeHandle(ref, () => laneRef.current as HTMLDivElement);
 
     const panelSide = resizePosition === "right" ? "left" : "right";
+    const resolvedStorageKey =
+      storageKey === null ? undefined : (storageKey ?? "lane-width");
 
     const { size: width, isResizing, handleMouseDown, setSize } = useResize({
       side: panelSide,
       minSize: minWidth,
       maxSize: maxWidth,
       defaultSize: defaultWidth,
-      storageKey,
+      storageKey: resolvedStorageKey,
       elementRef: laneRef,
       enabled: resizable,
+      onResizeEnd,
     });
 
     const openWidth = resizable ? width : defaultWidth;

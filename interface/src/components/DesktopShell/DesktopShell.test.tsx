@@ -8,44 +8,27 @@ import {
   getProjectsSidekickTargetWidth,
 } from "./desktop-shell-sidekick";
 
-const mockProjectsApp = {
-  id: "projects",
-  label: "Projects",
-  basePath: "/projects",
-  LeftPanel: () => <div data-testid="left-panel" />,
-  MainPanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="main-panel">{children}</div>,
-  SidekickPanel: () => <div data-testid="sidekick-panel" />,
-  SidekickTaskbar: () => <div data-testid="sidekick-taskbar" />,
-  SidekickHeader: () => <div data-testid="sidekick-header" />,
-  PreviewPanel: () => <div data-testid="preview-panel" />,
-  PreviewHeader: () => <div data-testid="preview-header" />,
-};
+function createMockApp(id: string, label: string, basePath: string) {
+  return {
+    id,
+    label,
+    basePath,
+    LeftPanel: () => <div data-testid="left-panel" data-app={id} />,
+    MainPanel: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="main-panel">{children}</div>
+    ),
+    SidekickPanel: () => <div data-testid="sidekick-panel" data-app={id} />,
+    SidekickTaskbar: () => <div data-testid="sidekick-taskbar" data-app={id} />,
+    SidekickHeader: () => <div data-testid="sidekick-header" data-app={id} />,
+    PreviewPanel: () => <div data-testid="preview-panel" data-app={id} />,
+    PreviewHeader: () => <div data-testid="preview-header" data-app={id} />,
+  };
+}
 
-const mockTasksApp = {
-  id: "tasks",
-  label: "Tasks",
-  basePath: "/tasks",
-  LeftPanel: () => <div data-testid="left-panel" />,
-  MainPanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="main-panel">{children}</div>,
-  SidekickPanel: () => <div data-testid="sidekick-panel" />,
-  SidekickTaskbar: () => <div data-testid="sidekick-taskbar" />,
-  SidekickHeader: () => <div data-testid="sidekick-header" />,
-  PreviewPanel: () => <div data-testid="preview-panel" />,
-  PreviewHeader: () => <div data-testid="preview-header" />,
-};
-
-const mockProcessApp = {
-  id: "process",
-  label: "Processes",
-  basePath: "/process",
-  LeftPanel: () => <div data-testid="left-panel" />,
-  MainPanel: ({ children }: { children?: React.ReactNode }) => <div data-testid="main-panel">{children}</div>,
-  SidekickPanel: () => <div data-testid="sidekick-panel" />,
-  SidekickTaskbar: () => <div data-testid="sidekick-taskbar" />,
-  SidekickHeader: () => <div data-testid="sidekick-header" />,
-  PreviewPanel: () => <div data-testid="preview-panel" />,
-  PreviewHeader: () => <div data-testid="preview-header" />,
-};
+const mockAgentsApp = createMockApp("agents", "Agents", "/agents");
+const mockProjectsApp = createMockApp("projects", "Projects", "/projects");
+const mockTasksApp = createMockApp("tasks", "Tasks", "/tasks");
+const mockProcessApp = createMockApp("process", "Processes", "/process");
 
 const mockDesktopApp = {
   id: "desktop",
@@ -199,6 +182,7 @@ vi.mock("../Lane", () => ({
     children,
     header,
     taskbar,
+    resizePosition,
     storageKey,
     defaultWidth = 240,
     collapsed = false,
@@ -208,15 +192,18 @@ vi.mock("../Lane", () => ({
     children?: React.ReactNode;
     header?: React.ReactNode;
     taskbar?: React.ReactNode;
-    storageKey?: string;
+    resizePosition?: "left" | "right";
+    storageKey?: string | null;
     defaultWidth?: number;
     collapsed?: boolean;
     animateCollapse?: boolean;
     resizeControlsRef?: { current: { getSize: () => number; setSize: (size: number) => void } | null };
   }) => {
-    laneRenderSpy({ storageKey, defaultWidth, collapsed, animateCollapse });
-    if (storageKey?.includes("sidekick") && resizeControlsRef) {
-      currentSidekickWidth = defaultWidth;
+    laneRenderSpy({ resizePosition, storageKey, defaultWidth, collapsed, animateCollapse });
+    if (resizePosition === "left" && resizeControlsRef) {
+      if (!resizeControlsRef.current) {
+        currentSidekickWidth = defaultWidth;
+      }
       resizeControlsRef.current = {
         getSize: () => currentSidekickWidth,
         setSize: setSidekickSize,
@@ -224,7 +211,10 @@ vi.mock("../Lane", () => ({
     }
 
     return (
-      <div data-testid="lane" data-storage-key={storageKey}>
+      <div
+        data-testid={resizePosition === "left" ? "sidekick-lane" : "sidebar-lane"}
+        data-storage-key={storageKey ?? undefined}
+      >
         {header}
         {taskbar}
         {children}
@@ -300,6 +290,8 @@ afterAll(() => {
 
 beforeEach(() => {
   localStorage.removeItem("aura:desktopWindows");
+  localStorage.removeItem(SHARED_SIDEKICK_STORAGE_KEY);
+  localStorage.removeItem(PROJECTS_SIDEKICK_STORAGE_KEY);
   useDesktopWindowStore.setState({ windows: {}, nextZ: 1 });
   currentActiveApp = mockProjectsApp;
   currentVisitedAppIds = new Set(["projects"]);
@@ -321,8 +313,17 @@ function renderShell(pathname = "/projects") {
 
 function getLatestSidekickLaneProps() {
   const sidekickLaneCalls = laneRenderSpy.mock.calls
-    .map(([props]) => props as { storageKey?: string; defaultWidth?: number; collapsed?: boolean; animateCollapse?: boolean })
-    .filter((props) => props.storageKey?.includes("sidekick"));
+    .map(
+      ([props]) =>
+        props as {
+          resizePosition?: "left" | "right";
+          storageKey?: string | null;
+          defaultWidth?: number;
+          collapsed?: boolean;
+          animateCollapse?: boolean;
+        },
+    )
+    .filter((props) => props.resizePosition === "left");
 
   return sidekickLaneCalls.at(-1);
 }
@@ -375,6 +376,37 @@ describe("DesktopShell", () => {
 
     expect(screen.getAllByTestId("left-panel")).toHaveLength(1);
     expect(screen.getAllByTestId("sidekick-panel")).toHaveLength(1);
+    expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "projects");
+  });
+
+  it("keeps the sidekick lane mounted while swapping app content", () => {
+    currentActiveApp = mockAgentsApp;
+    currentVisitedAppIds = new Set(["agents"]);
+    const view = renderShell("/agents");
+    const sidekickLane = screen.getByTestId("sidekick-lane");
+
+    expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "agents");
+
+    currentActiveApp = mockProjectsApp;
+    currentVisitedAppIds = new Set(["agents", "projects"]);
+    view.rerender(
+      <MemoryRouter initialEntries={["/projects"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("sidekick-lane")).toBe(sidekickLane);
+    expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "projects");
+
+    currentActiveApp = mockAgentsApp;
+    view.rerender(
+      <MemoryRouter initialEntries={["/agents"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("sidekick-lane")).toBe(sidekickLane);
+    expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "agents");
   });
 
   it("keeps shared desktop left menu panes mounted across app switches", () => {
@@ -466,22 +498,26 @@ describe("DesktopShell", () => {
     expect(rerenderedHost?.parentElement).toHaveClass("desktopContent");
   });
 
-  it("keeps non-project apps on the shared sidekick storage key", () => {
+  it("keeps the persistent sidekick lane mounted for shared apps", () => {
     currentActiveApp = mockTasksApp;
 
     renderShell();
 
-    expect(getLatestSidekickLaneProps()?.storageKey).toBe(SHARED_SIDEKICK_STORAGE_KEY);
+    expect(getLatestSidekickLaneProps()?.storageKey).toBeNull();
     expect(setSidekickSize).not.toHaveBeenCalled();
   });
 
-  it("syncs the sidekick width when entering projects", () => {
-    currentActiveApp = mockTasksApp;
-    const view = renderShell();
+  it("retargets the sidekick width when crossing the projects boundary", () => {
+    localStorage.setItem(SHARED_SIDEKICK_STORAGE_KEY, "320");
+    localStorage.setItem(PROJECTS_SIDEKICK_STORAGE_KEY, "320");
+    currentActiveApp = mockAgentsApp;
+    currentVisitedAppIds = new Set(["agents"]);
+    const view = renderShell("/agents");
 
-    expect(getLatestSidekickLaneProps()?.storageKey).toBe(SHARED_SIDEKICK_STORAGE_KEY);
+    expect(setSidekickSize).not.toHaveBeenCalled();
 
     currentActiveApp = mockProjectsApp;
+    currentVisitedAppIds = new Set(["agents", "projects"]);
     mainPanelHostWidth = 640;
     view.rerender(
       <MemoryRouter initialEntries={["/projects"]}>
@@ -489,8 +525,17 @@ describe("DesktopShell", () => {
       </MemoryRouter>,
     );
 
-    expect(getLatestSidekickLaneProps()?.storageKey).toBe(PROJECTS_SIDEKICK_STORAGE_KEY);
+    expect(screen.getByTestId("sidekick-lane")).toBeInTheDocument();
     expect(setSidekickSize).toHaveBeenLastCalledWith(480);
+
+    currentActiveApp = mockAgentsApp;
+    view.rerender(
+      <MemoryRouter initialEntries={["/agents"]}>
+        <DesktopShell />
+      </MemoryRouter>,
+    );
+
+    expect(setSidekickSize).toHaveBeenLastCalledWith(320);
   });
 
   it("disables left sidebar collapse animation in desktop mode", () => {

@@ -1,4 +1,12 @@
-import { Fragment, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { PanelRight, Server } from "lucide-react";
@@ -23,12 +31,12 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { windowCommand } from "../../lib/windowCommand";
 import { LeftMenu } from "../../features/left-menu";
 import {
-  DEFAULT_SIDEKICK_WIDTH,
-  PROJECTS_SIDEKICK_STORAGE_KEY,
-  SHARED_SIDEKICK_STORAGE_KEY,
   SIDEKICK_MAX_WIDTH,
   SIDEKICK_MIN_WIDTH,
-  getProjectsSidekickTargetWidth,
+  getSidekickLayoutProfile,
+  getSidekickTransitionTargetWidth,
+  persistSidekickWidth,
+  readStoredSidekickWidth,
 } from "./desktop-shell-sidekick";
 import styles from "./DesktopShell.module.css";
 
@@ -79,42 +87,72 @@ function SidebarSearchInput() {
   );
 }
 
-function SidekickLane({
-  resizeControlsRef,
+function SidekickPortalBridge({
+  headerTarget,
+  panelTarget,
 }: {
-  resizeControlsRef?: { current: LaneResizeControls | null };
+  headerTarget: HTMLDivElement | null;
+  panelTarget: HTMLDivElement | null;
 }) {
   const activeApp = useAppStore((s) => s.activeApp);
-  const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
-  const { SidekickTaskbar } = activeApp;
-  const sidekickStorageKey =
-    activeApp.id === "projects" ? PROJECTS_SIDEKICK_STORAGE_KEY : SHARED_SIDEKICK_STORAGE_KEY;
+  const { SidekickPanel, SidekickTaskbar } = activeApp;
 
-
-  const hasAnySidekick = Boolean(activeApp.SidekickPanel);
-  if (!hasAnySidekick) return null;
+  if (!SidekickPanel || !panelTarget) return null;
 
   return (
+    <>
+      {SidekickTaskbar && headerTarget
+        ? createPortal(<SidekickTaskbar />, headerTarget)
+        : null}
+      {createPortal(<SidekickPanel />, panelTarget)}
+    </>
+  );
+}
+
+function PersistentSidekickLane({
+  resizeControlsRef,
+  collapsed,
+  defaultWidth,
+  showHeaderSlot,
+  onResizeEnd,
+  onHeaderTargetChange,
+  onPanelTargetChange,
+}: {
+  resizeControlsRef?: { current: LaneResizeControls | null };
+  collapsed: boolean;
+  defaultWidth: number;
+  showHeaderSlot: boolean;
+  onResizeEnd: (size: number) => void;
+  onHeaderTargetChange: (node: HTMLDivElement | null) => void;
+  onPanelTargetChange: (node: HTMLDivElement | null) => void;
+}) {
+  return (
     <Lane
-      key={sidekickStorageKey}
       resizable
       resizePosition="left"
-      defaultWidth={DEFAULT_SIDEKICK_WIDTH}
+      defaultWidth={defaultWidth}
       minWidth={SIDEKICK_MIN_WIDTH}
       maxWidth={SIDEKICK_MAX_WIDTH}
-      storageKey={sidekickStorageKey}
+      storageKey={null}
       collapsible
-      collapsed={sidekickCollapsed}
+      collapsed={collapsed}
       resizeControlsRef={resizeControlsRef}
-      header={SidekickTaskbar && <SidekickTaskbar />}
+      onResizeEnd={onResizeEnd}
+      header={
+        showHeaderSlot ? (
+          <div
+            ref={onHeaderTargetChange}
+            className={styles.sidekickHeaderSlot}
+          />
+        ) : undefined
+      }
       className={styles.laneLeftBorder}
     >
       <div className={styles.sidekickPanels}>
-        {activeApp.SidekickPanel && (
-          <div className={styles.panelActive}>
-            <activeApp.SidekickPanel />
-          </div>
-        )}
+        <div
+          ref={onPanelTargetChange}
+          className={styles.sidekickPanelSlot}
+        />
       </div>
     </Lane>
   );
@@ -137,10 +175,46 @@ export function DesktopShell() {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const mainPanelRef = useRef<HTMLDivElement>(null);
   const sidekickResizeControlsRef = useRef<LaneResizeControls | null>(null);
-  const previousActiveAppIdRef = useRef<string | null>(null);
+  const previousSidekickProfileRef = useRef<"shared" | "projects" | null>(null);
+  const [sidekickInitialWidth] = useState(() =>
+    readStoredSidekickWidth(getSidekickLayoutProfile(activeApp.id)),
+  );
+  const [sidekickHeaderTarget, setSidekickHeaderTarget] =
+    useState<HTMLDivElement | null>(null);
+  const [sidekickPanelTarget, setSidekickPanelTarget] =
+    useState<HTMLDivElement | null>(null);
   const { MainPanel } = activeApp;
   const ActiveProvider = activeApp.Provider ?? Fragment;
   const isDesktop = activeApp.id === "desktop";
+  const sidekickProfile = getSidekickLayoutProfile(activeApp.id);
+  const hasActiveSidekick = Boolean(activeApp.SidekickPanel) && !isDesktop;
+  const sidekickHostCollapsed = sidekickCollapsed || !hasActiveSidekick;
+  const showSidekickHeader = hasActiveSidekick && Boolean(activeApp.SidekickTaskbar);
+
+  const handleSidekickHeaderTargetChange = useCallback(
+    (node: HTMLDivElement | null) => {
+      setSidekickHeaderTarget((currentNode) =>
+        currentNode === node ? currentNode : node,
+      );
+    },
+    [],
+  );
+
+  const handleSidekickPanelTargetChange = useCallback(
+    (node: HTMLDivElement | null) => {
+      setSidekickPanelTarget((currentNode) =>
+        currentNode === node ? currentNode : node,
+      );
+    },
+    [],
+  );
+
+  const handleSidekickResizeEnd = useCallback(
+    (size: number) => {
+      persistSidekickWidth(sidekickProfile, size);
+    },
+    [sidekickProfile],
+  );
 
 
   useEffect(() => {
@@ -166,10 +240,13 @@ export function DesktopShell() {
   }, []);
 
   useLayoutEffect(() => {
-    const previousActiveAppId = previousActiveAppIdRef.current;
-    previousActiveAppIdRef.current = activeApp.id;
+    const previousSidekickProfile = previousSidekickProfileRef.current;
+    previousSidekickProfileRef.current = sidekickProfile;
 
-    if (activeApp.id !== "projects" || previousActiveAppId === "projects") return;
+    const isCrossingProjectsBoundary =
+      sidekickProfile === "projects" || previousSidekickProfile === "projects";
+    if (!isCrossingProjectsBoundary) return;
+    if (previousSidekickProfile === sidekickProfile) return;
 
     const syncProjectsSidekickWidth = () => {
       const mainPanelHost = mainPanelRef.current;
@@ -179,9 +256,12 @@ export function DesktopShell() {
       const mainWidth = Math.round(mainPanelHost.getBoundingClientRect().width);
       if (mainWidth <= 0) return false;
 
-      const currentSidekickWidth = sidekickCollapsed ? 0 : sidekickResizeControls.getSize();
       sidekickResizeControls.setSize(
-        getProjectsSidekickTargetWidth(mainWidth, currentSidekickWidth),
+        getSidekickTransitionTargetWidth(
+          sidekickProfile,
+          mainWidth,
+          sidekickHostCollapsed,
+        ),
       );
       return true;
     };
@@ -192,7 +272,7 @@ export function DesktopShell() {
       syncProjectsSidekickWidth();
     });
     return () => cancelAnimationFrame(rafId);
-  }, [activeApp.id, sidekickCollapsed]);
+  }, [sidekickHostCollapsed, sidekickProfile]);
 
   return (
     <>
@@ -266,12 +346,24 @@ export function DesktopShell() {
                 <MainPanel>{routeContent}</MainPanel>
               </ErrorBoundary>
             </div>
-            {!isDesktop && (
+            {hasActiveSidekick && (
               <ErrorBoundary name="sidekick">
-                <SidekickLane resizeControlsRef={sidekickResizeControlsRef} />
+                <SidekickPortalBridge
+                  headerTarget={sidekickHeaderTarget}
+                  panelTarget={sidekickPanelTarget}
+                />
               </ErrorBoundary>
             )}
           </ActiveProvider>
+          <PersistentSidekickLane
+            resizeControlsRef={sidekickResizeControlsRef}
+            collapsed={sidekickHostCollapsed}
+            defaultWidth={sidekickInitialWidth}
+            showHeaderSlot={showSidekickHeader}
+            onResizeEnd={handleSidekickResizeEnd}
+            onHeaderTargetChange={handleSidekickHeaderTargetChange}
+            onPanelTargetChange={handleSidekickPanelTargetChange}
+          />
           <ErrorBoundary name="windows">
             <div className={styles.windowLayerHost} data-window-layer-host="true">
               <DesktopWindowLayer />

@@ -83,6 +83,21 @@
   flex-direction: column;
 }
 
+.sidekickHeaderSlot {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+}
+
+.sidekickPanelSlot {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .laneLeftBorder {
   box-shadow: -1px 0 0 0 var(--color-border);
 }
