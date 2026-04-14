@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
@@ -242,11 +242,37 @@ function useSelectedProjectNode(
     return null;
   }, [data.agentInstanceId, data.isMobileLayout, data.location.pathname, data.projectId]);
 
+  const handoffTarget = useMemo(() => {
+    if (!data.projectId || !data.agentInstanceId) {
+      return null;
+    }
+    return `project:${data.projectId}:${data.agentInstanceId}`;
+  }, [data.agentInstanceId, data.projectId]);
+
+  const shouldFreezeSelection =
+    handoffTarget !== null &&
+    data.pendingCreateAgentHandoff?.target === handoffTarget;
+  const stableSelectionRef = useRef<{ selectedNodeId: string | null; defaultSelectedIds: string[] }>({
+    selectedNodeId,
+    defaultSelectedIds: selectedNodeId ? [selectedNodeId] : (data.projectId ? [data.projectId] : []),
+  });
+
   const defaultSelectedIds = useMemo(() => {
     if (selectedNodeId) return [selectedNodeId];
     if (data.projectId) return [data.projectId];
     return [];
   }, [data.projectId, selectedNodeId]);
+
+  useEffect(() => {
+    if (shouldFreezeSelection) {
+      return;
+    }
+    stableSelectionRef.current = { selectedNodeId, defaultSelectedIds };
+  }, [defaultSelectedIds, selectedNodeId, shouldFreezeSelection]);
+
+  if (shouldFreezeSelection) {
+    return stableSelectionRef.current;
+  }
 
   return { defaultSelectedIds, selectedNodeId };
 }

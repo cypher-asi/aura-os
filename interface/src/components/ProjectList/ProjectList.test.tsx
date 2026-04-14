@@ -1,10 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Project, ProjectId } from "../../types";
 import { useEffect } from "react";
 
 let autoSelectDefaultIds = false;
 const mockNavigate = vi.fn();
+let latestDefaultSelectedIds: string[] = [];
 type MockExplorerNode = {
   id: string;
   label: string;
@@ -24,6 +25,7 @@ vi.mock("@cypher-asi/zui", () => ({
     defaultSelectedIds?: Iterable<string>;
     onSelect?: (ids: Iterable<string>) => void;
   }) => {
+    latestDefaultSelectedIds = defaultSelectedIds ? Array.from(defaultSelectedIds) : [];
     useEffect(() => {
       if (!autoSelectDefaultIds || !defaultSelectedIds || !onSelect) return;
       onSelect(defaultSelectedIds);
@@ -65,6 +67,13 @@ vi.mock("../../stores/sidekick-store", () => ({
     ),
     { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
   ),
+}));
+
+const mockChatHandoffState = {
+  pendingCreateAgentHandoff: null as { target: string; label?: string } | null,
+};
+vi.mock("../../stores/chat-handoff-store", () => ({
+  useChatHandoffStore: (selector: (state: typeof mockChatHandoffState) => unknown) => selector(mockChatHandoffState),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -197,6 +206,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   autoSelectDefaultIds = false;
+  latestDefaultSelectedIds = [];
+  mockChatHandoffState.pendingCreateAgentHandoff = null;
   mockProjectsList.projects = [];
   mockProjectsList.loadingProjects = false;
   mockProjectsList.agentsByProject = {};
@@ -336,5 +347,39 @@ describe("ProjectList", () => {
       expect(mockNavigate).not.toHaveBeenCalledWith("/projects/p1/agents/a1");
       expect(mockNavigate).not.toHaveBeenCalledWith("/projects/p1/agent");
     });
+  });
+
+  it("keeps the previous explorer selection during a pending create handoff", () => {
+    mockProjectsList.projects = [makeProject()];
+    mockProjectsList.agentsByProject = {
+      p1: [
+        { agent_instance_id: "a1", name: "Agent Alpha" },
+        { agent_instance_id: "a2", name: "Agent Beta" },
+      ],
+    };
+
+    const view = render(
+      <MemoryRouter initialEntries={["/projects/p1/agents/a1"]}>
+        <Routes>
+          <Route path="/projects/:projectId/agents/:agentInstanceId" element={<ProjectList />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(latestDefaultSelectedIds).toEqual(["a1"]);
+
+    mockChatHandoffState.pendingCreateAgentHandoff = {
+      target: "project:p1:a2",
+      label: "Agent Beta",
+    };
+
+    view.rerender(
+      <MemoryRouter initialEntries={["/projects/p1/agents/a2"]}>
+        <Routes>
+          <Route path="/projects/:projectId/agents/:agentInstanceId" element={<ProjectList />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(latestDefaultSelectedIds).toEqual(["a1"]);
   });
 });

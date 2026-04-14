@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useSidekickStore } from "../../stores/sidekick-store";
+import { useChatHandoffStore } from "../../stores/chat-handoff-store";
 import type { AgentInstance } from "../../types";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useAppStore } from "../../stores/app-store";
@@ -36,6 +37,7 @@ export function useProjectListData(appIdOverride?: string) {
   const { isMobileLayout } = useAuraCapabilities();
   const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(agentInstanceId);
   const actions = useProjectListActions();
+  const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
 
   const projectMap = useMemo(
     () => new Map(projects.map((p) => [p.project_id, p])),
@@ -69,6 +71,7 @@ export function useProjectListData(appIdOverride?: string) {
       isMobileLayout,
       automatingProjectId,
       automatingAgentInstanceId,
+      pendingCreateAgentHandoff,
       actions,
       projectMap,
       agentMeta,
@@ -89,6 +92,7 @@ export function useProjectListData(appIdOverride?: string) {
       isMobileLayout,
       automatingProjectId,
       automatingAgentInstanceId,
+      pendingCreateAgentHandoff,
       actions,
       projectMap,
       agentMeta,
