@@ -163,7 +163,7 @@ export function OrgSettingsBilling({
               <div className={styles.rowInfo}>
                 <span className={styles.rowLabel}>Custom Amount</span>
                 <span className={styles.rowDescription}>
-                  Enter a USD amount (${MIN_USD}\u2013${MAX_USD})
+                  Enter a USD amount (${MIN_USD}–${MAX_USD})
                 </span>
               </div>
               <div className={styles.rowControl}>

@@ -162,23 +162,7 @@ export function OrgSettingsIntegrations({
 
   return (
     <div>
-      <div className={styles.sectionHeaderRow}>
-        <div>
-          <h2 className={styles.sectionTitle}>Integrations</h2>
-          <p className={styles.sectionIntro}>Manage connections, app access, and MCP servers.</p>
-        </div>
-        <Button
-          variant={isCreating ? "ghost" : "primary"}
-          disabled={!canManage}
-          onClick={() => {
-            setErrorMessage(null);
-            setIsCreating((current) => !current);
-            setNewIntegration(null);
-          }}
-        >
-          {isCreating ? "Close" : "Add Integration"}
-        </Button>
-      </div>
+      <h2 className={styles.sectionTitle}>Integrations</h2>
 
       {!canManage ? (
         <Text size="xs" variant="muted">
@@ -193,8 +177,9 @@ export function OrgSettingsIntegrations({
       ) : null}
 
       {isCreating && (
+        <>
+        <div className={styles.settingsGroupLabel}>New Integration</div>
         <div className={styles.settingsGroup}>
-          <div className={styles.settingsGroupLabel}>New Integration</div>
           <div className={`${styles.formRow} ${styles.integrationRow}`}>
             {!newIntegration ? (
               <div className={styles.integrationFields}>
@@ -307,13 +292,15 @@ export function OrgSettingsIntegrations({
             )}
           </div>
         </div>
+        </>
       )}
 
       {sections.map((section) => {
         const sectionIntegrations = integrations.filter((integration) => integration.kind === section.id);
         return (
-          <div key={section.id} className={styles.settingsGroup}>
+          <div key={section.id}>
             <div className={styles.settingsGroupLabel}>{section.title}</div>
+            <div className={styles.settingsGroup}>
             {sectionIntegrations.length === 0 ? (
               <div className={styles.emptyMessage}>No {section.title.toLowerCase()} yet.</div>
             ) : (
@@ -521,9 +508,31 @@ export function OrgSettingsIntegrations({
                 );
               })
             )}
+            </div>
           </div>
         );
       })}
+
+      {canManage && (
+        <>
+          <div className={styles.settingsGroupLabel}>Actions</div>
+          <div className={styles.settingsGroup}>
+            <div className={styles.inviteActions}>
+              <Button
+                variant={isCreating ? "ghost" : "primary"}
+                size="sm"
+                onClick={() => {
+                  setErrorMessage(null);
+                  setIsCreating((current) => !current);
+                  setNewIntegration(null);
+                }}
+              >
+                {isCreating ? "Close" : "Add Integration"}
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
