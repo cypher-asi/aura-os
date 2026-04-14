@@ -127,18 +127,12 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
     }
   }, [visible]);
 
-  const mountedRef = useRef(false);
   useEffect(() => {
-    if (focused && xtermRef.current) {
-      const shouldStealFocus = mountedRef.current;
+    if (focused && fitRef.current) {
       requestAnimationFrame(() => {
         fitRef.current?.fit();
-        if (shouldStealFocus) {
-          xtermRef.current?.focus();
-        }
       });
     }
-    mountedRef.current = true;
   }, [focused]);
 
   return (
