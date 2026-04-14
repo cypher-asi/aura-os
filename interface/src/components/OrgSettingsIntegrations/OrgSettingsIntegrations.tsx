@@ -11,6 +11,7 @@ import {
   integrationSections,
   supportsDefaultModel,
 } from "../../lib/integrationCatalog";
+import { isSettingsProviderSelectionEnabled } from "../../lib/featureFlags";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 interface Props {
@@ -548,7 +549,9 @@ function ProviderButtons({
   showSectionDescriptions?: boolean;
   compact?: boolean;
 }) {
-  const sections = integrationSections();
+  const sections = integrationSections().filter(
+    (section) => section.id !== "workspace_connection" || isSettingsProviderSelectionEnabled(),
+  );
 
   return (
     <div className={styles.integrationProviderSections}>
