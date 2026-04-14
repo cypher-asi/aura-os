@@ -21,7 +21,12 @@ pub(crate) struct RecoveryActionResponse {
     pub agent_id: String,
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_vm_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vm_id: Option<String>,
+    pub vm_id_changed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -197,12 +202,21 @@ pub(crate) async fn recover_remote_agent(
         "type": "remote_agent_state_changed",
         "agent_id": agent_id,
         "state": reprovisioned.status,
+        "uptime_seconds": 0,
+        "active_sessions": 0,
+        "error_message": reprovisioned.message,
         "action": "recover",
+        "vm_id": reprovisioned.agent.vm_id,
+        "previous_vm_id": reprovisioned.previous_vm_id,
+        "vm_id_changed": reprovisioned.vm_id_changed,
     }));
 
     Ok(Json(RecoveryActionResponse {
         agent_id,
         status: reprovisioned.status,
+        previous_vm_id: reprovisioned.previous_vm_id,
         vm_id: reprovisioned.agent.vm_id.clone(),
+        vm_id_changed: reprovisioned.vm_id_changed,
+        message: reprovisioned.message,
     }))
 }

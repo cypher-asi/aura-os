@@ -135,6 +135,9 @@ fn build_runtime_config(
 pub(crate) struct ReprovisionedRemoteAgent {
     pub agent: Agent,
     pub status: String,
+    pub previous_vm_id: Option<String>,
+    pub vm_id_changed: bool,
+    pub message: Option<String>,
 }
 
 pub(crate) async fn reprovision_remote_agent(
@@ -143,6 +146,7 @@ pub(crate) async fn reprovision_remote_agent(
     jwt: &str,
     net_agent: &NetworkAgent,
 ) -> ApiResult<ReprovisionedRemoteAgent> {
+    let previous_vm_id = net_agent.vm_id.clone();
     let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
         ApiError::service_unavailable(
             "swarm gateway is not configured (SWARM_BASE_URL); cannot create remote agent",
@@ -191,9 +195,20 @@ pub(crate) async fn reprovision_remote_agent(
         .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
     let _ = state.agent_service.save_agent_shadow(&agent);
 
+    let vm_id_changed = previous_vm_id.as_deref() != agent.vm_id.as_deref();
+    let message = if !vm_id_changed {
+        Some(
+            "Swarm accepted the recovery request but kept the same machine mapping.".to_string(),
+        )
+    } else {
+        None
+    };
+
     info!(
         agent_id = %net_agent.id,
+        previous_vm_id = previous_vm_id.as_deref().unwrap_or("none"),
         vm_id = %provisioned.vm_id,
+        vm_id_changed,
         "Swarm VM provisioned for remote agent"
     );
 
@@ -211,6 +226,9 @@ pub(crate) async fn reprovision_remote_agent(
     Ok(ReprovisionedRemoteAgent {
         agent,
         status: provisioned.status,
+        previous_vm_id,
+        vm_id_changed,
+        message,
     })
 }
 
