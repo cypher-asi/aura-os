@@ -4,6 +4,7 @@ import { api, ApiClientError } from "../api/client";
 import { queryClient } from "../lib/query-client";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../queries/project-queries";
 import { clearLastAgentIf } from "../utils/storage";
+import { createAgentChatHandoffState } from "../utils/chat-handoff";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import type { Project, AgentInstance } from "../types";
 
@@ -80,7 +81,9 @@ export function useProjectListActions() {
         projectQueryKeys.agentInstance(pid, instance.agent_instance_id),
         instance,
       );
-      navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`);
+      navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`, {
+        state: createAgentChatHandoffState(),
+      });
       void refreshProjectAgents(pid);
     },
     [navigate, refreshProjectAgents, setAgentsByProject],

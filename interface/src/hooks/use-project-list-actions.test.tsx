@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import { useProjectListActions } from "./use-project-list-actions";
+import { CREATE_AGENT_CHAT_HANDOFF } from "../utils/chat-handoff";
 
 const mockNavigate = vi.fn();
 const mockRefreshProjects = vi.fn().mockResolvedValue(undefined);
@@ -140,7 +141,13 @@ describe("useProjectListActions", () => {
       });
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith("/projects/p-2/agents/new-ai");
+    expect(mockNavigate).toHaveBeenCalledWith("/projects/p-2/agents/new-ai", {
+      state: {
+        agentChatHandoff: {
+          type: CREATE_AGENT_CHAT_HANDOFF,
+        },
+      },
+    });
     expect(mockRefreshProjectAgents).toHaveBeenCalledWith("p-2");
     expect(mockSetAgentsByProject).toHaveBeenCalled();
   });
@@ -153,7 +160,13 @@ describe("useProjectListActions", () => {
     });
 
     expect(api.createGeneralAgentInstance).toHaveBeenCalledWith("p-9");
-    expect(mockNavigate).toHaveBeenCalledWith("/projects/p-9/agents/general-ai");
+    expect(mockNavigate).toHaveBeenCalledWith("/projects/p-9/agents/general-ai", {
+      state: {
+        agentChatHandoff: {
+          type: CREATE_AGENT_CHAT_HANDOFF,
+        },
+      },
+    });
   });
 
   it("handleArchiveAgent archives the target instance locally", async () => {

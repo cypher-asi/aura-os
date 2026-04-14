@@ -24,6 +24,7 @@ import {
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
+import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
 
 import type { Agent } from "../../../types";
 import styles from "./AgentList.module.css";
@@ -180,7 +181,9 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     (agent: Agent) => {
       setShowEditor(false);
       fetchAgents({ force: true });
-      navigate(`/agents/${agent.agent_id}`);
+      navigate(`/agents/${agent.agent_id}`, {
+        state: createAgentChatHandoffState(),
+      });
     },
     [fetchAgents, navigate],
   );

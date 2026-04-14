@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CREATE_AGENT_CHAT_HANDOFF } from "../../../utils/chat-handoff";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -53,7 +54,30 @@ vi.mock("../../../components/EmptyState", () => ({
 }));
 
 vi.mock("../../../components/AgentEditorModal", () => ({
-  AgentEditorModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Create Agent Modal</div> : null),
+  AgentEditorModal: ({
+    isOpen,
+    onSaved,
+  }: {
+    isOpen: boolean;
+    onSaved?: (agent: {
+      agent_id: string;
+      user_id: string;
+      name: string;
+      role: string;
+      personality: string;
+      system_prompt: string;
+      skills: [];
+      icon: null;
+      machine_type: string;
+      created_at: string;
+      updated_at: string;
+    }) => void;
+  }) => (isOpen ? (
+    <div>
+      <div>Create Agent Modal</div>
+      <button type="button" onClick={() => onSaved?.(agent)}>Save Agent</button>
+    </div>
+  ) : null),
 }));
 
 vi.mock("../AgentConversationRow", () => ({
@@ -221,5 +245,26 @@ describe("AgentList", () => {
     render(<AgentList mode="mobile-library" />);
 
     expect(screen.getByText("Create Agent Modal")).toBeVisible();
+  });
+
+  it("navigates with create handoff state after saving a new agent", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useLocation.mockReturnValue({
+      pathname: "/agents",
+      search: "?create=1",
+    });
+    const user = userEvent.setup();
+
+    render(<AgentList mode="mobile-library" />);
+
+    await user.click(screen.getByRole("button", { name: "Save Agent" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1", {
+      state: {
+        agentChatHandoff: {
+          type: CREATE_AGENT_CHAT_HANDOFF,
+        },
+      },
+    });
   });
 });

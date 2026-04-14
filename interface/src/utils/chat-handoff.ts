@@ -6,6 +6,14 @@ export interface AgentChatHandoffState {
   };
 }
 
+export function createAgentChatHandoffState(): AgentChatHandoffState {
+  return {
+    agentChatHandoff: {
+      type: CREATE_AGENT_CHAT_HANDOFF,
+    },
+  };
+}
+
 export function isCreateAgentChatHandoff(value: unknown): value is AgentChatHandoffState {
   if (!value || typeof value !== "object") {
     return false;

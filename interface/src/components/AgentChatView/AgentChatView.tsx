@@ -92,7 +92,13 @@ function SessionBanner({ onExit }: { onExit: () => void }) {
   );
 }
 
-function StandaloneAgentChatPanel({ agentId }: { agentId: string }) {
+function StandaloneAgentChatPanel({
+  agentId,
+  initialCreateHandoff,
+}: {
+  agentId: string;
+  initialCreateHandoff: boolean;
+}) {
   const agentProjects = useProjectsListStore(useShallow(selectProjectsForAgent(agentId)));
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() =>
     loadPersistedProject(agentId),
@@ -168,6 +174,7 @@ function StandaloneAgentChatPanel({ agentId }: { agentId: string }) {
       historyResolved={historyResolved}
       errorMessage={historyError ? historyError : null}
       emptyMessage="Send a message"
+      initialHandoff={initialCreateHandoff ? "create-agent" : undefined}
       scrollResetKey={agentId}
       historyMessages={historyMessages}
       projects={agentProjects}
@@ -347,7 +354,7 @@ export function AgentChatView() {
   }
 
   if (agentId) {
-    return <StandaloneAgentChatPanel agentId={agentId} />;
+    return <StandaloneAgentChatPanel agentId={agentId} initialCreateHandoff={isCreateHandoff} />;
   }
 
   return null;
