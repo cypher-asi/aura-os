@@ -14,6 +14,8 @@ interface AgentEditorModalProps {
   titleOverride?: string;
   submitLabelOverride?: string;
   closeLabelOverride?: string;
+  closeOnSave?: boolean;
+  isTransitioning?: boolean;
 }
 
 export function AgentEditorModal({
@@ -24,13 +26,16 @@ export function AgentEditorModal({
   titleOverride,
   submitLabelOverride,
   closeLabelOverride,
+  closeOnSave = true,
+  isTransitioning = false,
 }: AgentEditorModalProps) {
   const { isMobileLayout } = useAuraCapabilities();
-  const form = useAgentEditorForm(isOpen, agent, onClose, onSaved);
+  const form = useAgentEditorForm(isOpen, agent, onClose, onSaved, closeOnSave);
   const isEditing = !!agent;
   const title = titleOverride ?? (isEditing ? "Edit Agent" : "Create Agent");
   const submitLabel = submitLabelOverride ?? (isEditing ? "Save Changes" : "Create Agent");
   const closeLabel = closeLabelOverride ?? "Cancel";
+  const isPending = form.saving || isTransitioning;
   const formFields = (
     <AgentEditorForm
       name={form.name}
@@ -73,18 +78,18 @@ export function AgentEditorModal({
       <Button
         variant="ghost"
         onClick={form.handleClose}
-        disabled={form.saving}
+        disabled={isPending}
       >
         {closeLabel}
       </Button>
       <Button
         variant="primary"
         onClick={form.handleSave}
-        disabled={form.saving}
+        disabled={isPending}
       >
-        {form.saving ? (
+        {isPending ? (
           <>
-            <Spinner size="sm" /> Saving...
+            <Spinner size="sm" /> {submitLabel}
           </>
         ) : (
           submitLabel
@@ -93,12 +98,12 @@ export function AgentEditorModal({
     </>
   );
   const content = (
-    <>
+    <div>
       {formFields}
       <div className={styles.footer}>
         {actionButtons}
       </div>
-    </>
+    </div>
   );
 
   return (

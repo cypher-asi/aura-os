@@ -3,8 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api, ApiClientError } from "../api/client";
 import { queryClient } from "../lib/query-client";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../queries/project-queries";
+import { useChatHandoffStore } from "../stores/chat-handoff-store";
 import { clearLastAgentIf } from "../utils/storage";
-import { createAgentChatHandoffState } from "../utils/chat-handoff";
+import {
+  createAgentChatHandoffState,
+  projectAgentHandoffTarget,
+} from "../utils/chat-handoff";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import type { Project, AgentInstance } from "../types";
 
@@ -25,6 +29,8 @@ export function useProjectListActions() {
     refreshProjectAgents,
     setProjects,
   } = useProjectsList();
+  const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
+  const beginCreateAgentHandoff = useChatHandoffStore((state) => state.beginCreateAgentHandoff);
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
@@ -70,14 +76,16 @@ export function useProjectListActions() {
     if (!pendingCreatedAgent) {
       return;
     }
-    if (
-      projectId === pendingCreatedAgent.project_id &&
-      agentInstanceId === pendingCreatedAgent.agent_instance_id
-    ) {
-      setAgentSelectorProjectId(null);
-      setPendingCreatedAgent(null);
+    const pendingTarget = projectAgentHandoffTarget(
+      pendingCreatedAgent.project_id,
+      pendingCreatedAgent.agent_instance_id,
+    );
+    if (pendingCreateAgentHandoff?.target === pendingTarget) {
+      return;
     }
-  }, [agentInstanceId, pendingCreatedAgent, projectId]);
+    setAgentSelectorProjectId(null);
+    setPendingCreatedAgent(null);
+  }, [pendingCreateAgentHandoff, pendingCreatedAgent]);
 
   const handleAddAgent = useCallback(
     (pid: string) => setAgentSelectorProjectId(pid),
@@ -96,12 +104,16 @@ export function useProjectListActions() {
         instance,
       );
       setPendingCreatedAgent(instance);
+      beginCreateAgentHandoff(
+        projectAgentHandoffTarget(pid, instance.agent_instance_id),
+        instance.name,
+      );
       navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`, {
         state: createAgentChatHandoffState(),
       });
       void refreshProjectAgents(pid);
     },
-    [navigate, refreshProjectAgents, setAgentsByProject],
+    [beginCreateAgentHandoff, navigate, refreshProjectAgents, setAgentsByProject],
   );
 
   const handleQuickAddAgent = useCallback(async (pid: string) => {

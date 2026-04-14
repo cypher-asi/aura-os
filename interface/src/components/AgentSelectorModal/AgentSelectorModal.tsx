@@ -16,7 +16,6 @@ interface AgentSelectorModalProps {
   onClose: () => void;
   onCreated: (instance: AgentInstance) => void;
   isTransitioning?: boolean;
-  transitionLabel?: string;
 }
 
 interface AgentCardProps {
@@ -61,7 +60,6 @@ export function AgentSelectorModal({
   onClose,
   onCreated,
   isTransitioning = false,
-  transitionLabel,
 }: AgentSelectorModalProps) {
   const { isMobileLayout } = useAuraCapabilities();
   const agentsByProject = useProjectsListStore((state) => state.agentsByProject);
@@ -133,14 +131,6 @@ export function AgentSelectorModal({
         </div>
       )}
       {error && <Text variant="muted" size="sm" className={styles.error}>{error}</Text>}
-      {isTransitioning ? (
-        <div className={styles.transitionOverlay} data-testid="agent-selector-transition">
-          <Spinner size="sm" />
-          <Text size="sm" weight="medium">
-            {transitionLabel ? `Opening ${transitionLabel}...` : "Opening agent chat..."}
-          </Text>
-        </div>
-      ) : null}
     </div>
   );
 
@@ -191,6 +181,7 @@ export function AgentSelectorModal({
         isOpen={showEditor}
         onClose={handleEditorClose}
         onSaved={handleAgentSaved}
+        closeOnSave={false}
         titleOverride={isMobileLayout ? "Create Remote Agent" : undefined}
         submitLabelOverride={isMobileLayout ? "Create agent" : undefined}
         closeLabelOverride={isMobileLayout ? (visibleAgents.length === 0 ? "Back to project" : "Back") : undefined}

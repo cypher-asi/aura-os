@@ -151,7 +151,7 @@ describe("AgentSelectorModal", () => {
     expect(screen.getByRole("button", { name: "Create agent" })).toBeInTheDocument();
   });
 
-  it("shows a transition overlay while switching to the created agent", () => {
+  it("keeps the selector visible without a second overlay while switching", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
 
     render(
@@ -161,12 +161,35 @@ describe("AgentSelectorModal", () => {
         onClose={vi.fn()}
         onCreated={vi.fn()}
         isTransitioning
-        transitionLabel="Atlas"
       />,
     );
 
-    expect(screen.getByTestId("agent-selector-transition")).toBeInTheDocument();
-    expect(screen.getByText("Opening Atlas...")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-selector-transition")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Not now" })).toBeDisabled();
+  });
+
+  it("does not add a selector overlay while creating a new agent", () => {
+    mockUseAgentSelectorData.mockReturnValue({
+      agents: [makeAgent("Atlas", "remote")],
+      loading: false,
+      creating: "atlas",
+      error: "",
+      showEditor: false,
+      setShowEditor: vi.fn(),
+      handleSelect: vi.fn(),
+      handleAgentSaved: vi.fn(),
+      handleClose: vi.fn(),
+    });
+
+    render(
+      <AgentSelectorModal
+        isOpen
+        projectId="project-1"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("agent-selector-transition")).not.toBeInTheDocument();
   });
 });

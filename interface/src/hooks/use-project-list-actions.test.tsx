@@ -11,6 +11,10 @@ const mockRefreshProjectAgents = vi.fn().mockResolvedValue(undefined);
 const mockSetAgentsByProject = vi.fn();
 const mockSetProjects = vi.fn();
 let mockAgentsByProject: Record<string, Array<{ agent_instance_id: string; project_id: string; status: string }>> = {};
+let mockPendingCreateAgentHandoff: { target: string; label?: string } | null = null;
+const mockBeginCreateAgentHandoff = vi.fn((target: string, label?: string) => {
+  mockPendingCreateAgentHandoff = { target, label };
+});
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -86,6 +90,16 @@ vi.mock("../utils/storage", () => ({
   clearLastAgentIf: vi.fn(),
 }));
 
+vi.mock("../stores/chat-handoff-store", () => ({
+  useChatHandoffStore: (selector: (state: {
+    pendingCreateAgentHandoff: typeof mockPendingCreateAgentHandoff;
+    beginCreateAgentHandoff: typeof mockBeginCreateAgentHandoff;
+  }) => unknown) => selector({
+    pendingCreateAgentHandoff: mockPendingCreateAgentHandoff,
+    beginCreateAgentHandoff: mockBeginCreateAgentHandoff,
+  }),
+}));
+
 function wrapper({ children }: { children: ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
@@ -94,6 +108,7 @@ describe("useProjectListActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAgentsByProject = {};
+    mockPendingCreateAgentHandoff = null;
   });
 
   it("returns initial state with all null targets", () => {
@@ -152,8 +167,8 @@ describe("useProjectListActions", () => {
     expect(mockSetAgentsByProject).toHaveBeenCalled();
   });
 
-  it("closes the selector once the created agent route is active", () => {
-    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+  it("keeps the selector open until the created agent handoff completes", () => {
+    const { result, rerender } = renderHook(() => useProjectListActions(), { wrapper });
 
     act(() => {
       result.current.handleAddAgent("p-1");
@@ -176,6 +191,12 @@ describe("useProjectListActions", () => {
         updated_at: "",
       });
     });
+
+    expect(result.current.agentSelectorProjectId).toBe("p-1");
+    expect(result.current.pendingCreatedAgent?.agent_instance_id).toBe("ai-1");
+
+    mockPendingCreateAgentHandoff = null;
+    rerender();
 
     expect(result.current.agentSelectorProjectId).toBeNull();
     expect(result.current.pendingCreatedAgent).toBeNull();

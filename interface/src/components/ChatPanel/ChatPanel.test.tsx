@@ -160,7 +160,7 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
   });
 
-  it("shows the loading shell immediately during a create-agent handoff", () => {
+  it("does not show a second loading shell during a create-agent handoff", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
     renderPanel({
@@ -170,7 +170,7 @@ describe("ChatPanel", () => {
     });
 
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("chat-loading-state")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-loading-state")).not.toBeInTheDocument();
   });
 
   it("keeps the message area visible even while the scroll hook is settling", () => {

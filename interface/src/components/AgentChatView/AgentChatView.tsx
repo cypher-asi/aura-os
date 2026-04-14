@@ -16,8 +16,13 @@ import { useProjectsListStore } from "../../stores/projects-list-store";
 import { queryClient } from "../../lib/query-client";
 import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
+import { useChatHandoffStore } from "../../stores/chat-handoff-store";
 import type { AgentInstance, Project } from "../../types";
-import { isCreateAgentChatHandoff } from "../../utils/chat-handoff";
+import {
+  isCreateAgentChatHandoff,
+  projectAgentHandoffTarget,
+  standaloneAgentHandoffTarget,
+} from "../../utils/chat-handoff";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];
@@ -95,9 +100,11 @@ function SessionBanner({ onExit }: { onExit: () => void }) {
 function StandaloneAgentChatPanel({
   agentId,
   initialCreateHandoff,
+  onInitialHandoffReady,
 }: {
   agentId: string;
   initialCreateHandoff: boolean;
+  onInitialHandoffReady?: () => void;
 }) {
   const agentProjects = useProjectsListStore(useShallow(selectProjectsForAgent(agentId)));
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() =>
@@ -175,6 +182,7 @@ function StandaloneAgentChatPanel({
       errorMessage={historyError ? historyError : null}
       emptyMessage="Send a message"
       initialHandoff={initialCreateHandoff ? "create-agent" : undefined}
+      onInitialHandoffReady={onInitialHandoffReady}
       scrollResetKey={agentId}
       historyMessages={historyMessages}
       projects={agentProjects}
@@ -190,12 +198,14 @@ function ProjectAgentChatPanel({
   sessionId,
   onExitSessionView,
   initialCreateHandoff,
+  onInitialHandoffReady,
 }: {
   projectId: string;
   agentInstanceId: string;
   sessionId: string | null;
   onExitSessionView: () => void;
   initialCreateHandoff: boolean;
+  onInitialHandoffReady?: () => void;
 }) {
   const isSessionView = !!sessionId;
   const currentProject = useProjectsListStore(useShallow(selectCurrentProject(projectId)));
@@ -313,6 +323,7 @@ function ProjectAgentChatPanel({
         errorMessage={historyError ? historyError : null}
         emptyMessage={isSessionView ? "No events in this session" : undefined}
         initialHandoff={shouldUseCreateHandoff ? "create-agent" : undefined}
+        onInitialHandoffReady={onInitialHandoffReady}
         scrollResetKey={panelKey}
         historyMessages={historyMessages}
         projects={currentProject}
@@ -332,6 +343,21 @@ export function AgentChatView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
   const isCreateHandoff = isCreateAgentChatHandoff(location.state);
+  const completeCreateAgentHandoff = useChatHandoffStore((state) => state.completeCreateAgentHandoff);
+
+  const handleProjectHandoffReady = useCallback(() => {
+    if (!projectId || !agentInstanceId) {
+      return;
+    }
+    completeCreateAgentHandoff(projectAgentHandoffTarget(projectId, agentInstanceId));
+  }, [agentInstanceId, completeCreateAgentHandoff, projectId]);
+
+  const handleStandaloneHandoffReady = useCallback(() => {
+    if (!agentId) {
+      return;
+    }
+    completeCreateAgentHandoff(standaloneAgentHandoffTarget(agentId));
+  }, [agentId, completeCreateAgentHandoff]);
 
   const exitSessionView = useCallback(() => {
     setSearchParams((prev) => {
@@ -349,12 +375,19 @@ export function AgentChatView() {
         sessionId={sessionId}
         onExitSessionView={exitSessionView}
         initialCreateHandoff={isCreateHandoff}
+        onInitialHandoffReady={isCreateHandoff ? handleProjectHandoffReady : undefined}
       />
     );
   }
 
   if (agentId) {
-    return <StandaloneAgentChatPanel agentId={agentId} initialCreateHandoff={isCreateHandoff} />;
+    return (
+      <StandaloneAgentChatPanel
+        agentId={agentId}
+        initialCreateHandoff={isCreateHandoff}
+        onInitialHandoffReady={isCreateHandoff ? handleStandaloneHandoffReady : undefined}
+      />
+    );
   }
 
   return null;

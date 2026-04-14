@@ -90,6 +90,7 @@ export function useAgentEditorForm(
   agent: Agent | undefined,
   onClose: () => void,
   onSaved: (agent: Agent) => void,
+  closeOnSave = true,
 ): AgentEditorFormResult {
   const { isMobileLayout } = useAuraCapabilities();
   const simplifyForMobileCreate = isMobileLayout && !agent;
@@ -339,11 +340,14 @@ export function useAgentEditorForm(
       const saved = agent
         ? await api.agents.update(agent.agent_id, payload)
         : await api.agents.create({ ...payload, icon: payload.icon ?? "" });
-      onSaved(saved); onClose();
+      onSaved(saved);
+      if (closeOnSave) {
+        onClose();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, agent, activeOrg?.org_id, isMobileLayout, onSaved, onClose]);
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, agent, activeOrg?.org_id, isMobileLayout, onSaved, closeOnSave, onClose]);
 
   const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent") || false;
 

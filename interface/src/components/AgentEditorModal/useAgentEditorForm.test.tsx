@@ -234,4 +234,24 @@ describe("useAgentEditorForm", () => {
     expect(onSaved).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("can keep the modal open after save when closeOnSave is disabled", async () => {
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAgentEditorForm(true, undefined, onClose, onSaved, false),
+    );
+
+    act(() => {
+      result.current.setName("Atlas");
+    });
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(onSaved).toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

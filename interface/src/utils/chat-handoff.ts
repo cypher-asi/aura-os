@@ -6,6 +6,14 @@ export interface AgentChatHandoffState {
   };
 }
 
+export function projectAgentHandoffTarget(projectId: string, agentInstanceId: string): string {
+  return `project:${projectId}:${agentInstanceId}`;
+}
+
+export function standaloneAgentHandoffTarget(agentId: string): string {
+  return `agent:${agentId}`;
+}
+
 export function createAgentChatHandoffState(): AgentChatHandoffState {
   return {
     agentChatHandoff: {
