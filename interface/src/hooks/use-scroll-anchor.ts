@@ -64,8 +64,7 @@ function isSentinelBelowViewport(
  *
  *   **Active** – content is visible. MutationObserver and
  *   ResizeObservers keep the sentinel pinned to the viewport bottom
- *   while new content streams in, unless the user scrolls up or the
- *   view is in "hold" mode (user message at top).
+ *   while new content streams in, unless the user scrolls up.
  */
 export function useScrollAnchor(
   ref: React.RefObject<HTMLElement | null>,
@@ -78,15 +77,12 @@ export function useScrollAnchor(
   handleScroll: () => void;
   scrollToBottom: () => void;
   scrollToBottomIfPinned: () => void;
-  scrollToTop: (target: HTMLElement) => void;
-  holdPosition: () => void;
   isReady: boolean;
   isAutoFollowing: boolean;
 } {
   const { resetKey, contentReady } = options;
 
   const pinnedRef = useRef(true);
-  const holdScrollRef = useRef(false);
   const phaseRef = useRef<"settling" | "active">("settling");
   const guardRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
@@ -102,7 +98,7 @@ export function useScrollAnchor(
   const syncFollowState = useCallback(() => {
     const next = phaseRef.current !== "active"
       ? true
-      : pinnedRef.current && !holdScrollRef.current;
+      : pinnedRef.current;
     setIsAutoFollowing((prev) => (prev === next ? prev : next));
   }, []);
 
@@ -121,7 +117,6 @@ export function useScrollAnchor(
   useEffect(() => {
     phaseRef.current = "settling";
     pinnedRef.current = true;
-    holdScrollRef.current = false;
     setIsReady(false);
     isReadyRef.current = false;
     syncFollowState();
@@ -222,20 +217,7 @@ export function useScrollAnchor(
 
       if (userInteractingWithContent) {
         pinnedRef.current = false;
-        holdScrollRef.current = false;
         syncFollowState();
-      }
-
-      if (holdScrollRef.current) {
-        const sentinel = sentinelRef.current;
-        if (sentinel && isSentinelBelowViewport(sentinel, el)) {
-          holdScrollRef.current = false;
-          pinnedRef.current = true;
-          syncFollowState();
-          guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
-        }
-        syncHeight();
-        return;
       }
 
       if (pinnedRef.current && delta !== 0) {
@@ -358,11 +340,6 @@ export function useScrollAnchor(
       return;
     }
 
-    if (holdScrollRef.current) {
-      holdScrollRef.current = false;
-      syncFollowState();
-    }
-
     // "At bottom" means sentinel is within the visible area
     if (sentinel) {
       const nextPinned = !isSentinelBelowViewport(sentinel, el);
@@ -385,7 +362,6 @@ export function useScrollAnchor(
 
   const scrollToBottom = useCallback(() => {
     pinnedRef.current = true;
-    holdScrollRef.current = false;
     syncFollowState();
     scrollSentinelToEnd();
   }, [scrollSentinelToEnd, syncFollowState]);
@@ -395,28 +371,10 @@ export function useScrollAnchor(
     scrollSentinelToEnd();
   }, [scrollSentinelToEnd]);
 
-  /** Scroll a target element to the top of the viewport. */
-  const scrollToTop = useCallback((target: HTMLElement) => {
-    guardedScrollIntoView(target, { block: "start", behavior: "instant" }, guardRef);
-  }, []);
-
-  /**
-   * Freeze the current scroll position. Auto-scroll is suppressed until
-   * the sentinel falls below the viewport, at which point normal pinned
-   * auto-scroll resumes automatically.
-   */
-  const holdPosition = useCallback(() => {
-    holdScrollRef.current = true;
-    pinnedRef.current = false;
-    syncFollowState();
-  }, [syncFollowState]);
-
   return {
     handleScroll,
     scrollToBottom,
     scrollToBottomIfPinned,
-    scrollToTop,
-    holdPosition,
     isReady,
     isAutoFollowing,
   };

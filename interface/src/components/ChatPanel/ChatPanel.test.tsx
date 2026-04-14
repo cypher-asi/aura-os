@@ -14,9 +14,8 @@ vi.mock("../../hooks/use-scroll-anchor", () => ({
     handleScroll: vi.fn(),
     scrollToBottom: vi.fn(),
     scrollToBottomIfPinned: vi.fn(),
-    scrollToTop: vi.fn(),
-    holdPosition: vi.fn(),
     isReady: true,
+    isAutoFollowing: true,
   }),
 }));
 

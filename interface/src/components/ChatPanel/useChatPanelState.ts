@@ -70,7 +70,6 @@ export function useChatPanelState({
   const [commands, setCommands] = useState<SlashCommand[]>([]);
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const scrollSentinelRef = useRef<HTMLDivElement>(null);
-  const spacerRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { isMobileLayout } = useAuraCapabilities();
   const attachmentsRef = useRef(attachments);
@@ -80,21 +79,14 @@ export function useChatPanelState({
 
   const {
     handleScroll,
-    scrollToBottom: _scrollToBottom,
+    scrollToBottom,
     scrollToBottomIfPinned,
-    scrollToTop,
-    holdPosition,
     isReady,
     isAutoFollowing,
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
     contentReady: true,
   });
-
-  const scrollToBottom = useCallback(() => {
-    if (spacerRef.current) spacerRef.current.style.minHeight = "0";
-    _scrollToBottom();
-  }, [_scrollToBottom]);
 
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
@@ -103,32 +95,6 @@ export function useChatPanelState({
     () => combineHistoryAndStreamMessages(historyMessages, streamMessages),
     [historyMessages, streamMessages],
   );
-  const prevMessageCountRef = useRef(messages.length);
-  const pendingScrollToTopRef = useRef(false);
-
-  useEffect(() => {
-    if (
-      messages.length > prevMessageCountRef.current &&
-      pendingScrollToTopRef.current
-    ) {
-      pendingScrollToTopRef.current = false;
-      const lastIndex = messages.length - 1;
-      const el = messageAreaRef.current?.querySelector<HTMLElement>(
-        `[data-index="${lastIndex}"]`,
-      );
-      if (el) {
-        const container = messageAreaRef.current;
-        if (container && spacerRef.current) {
-          spacerRef.current.style.minHeight = `${container.clientHeight}px`;
-        }
-        scrollToTop(el);
-        holdPosition();
-      } else {
-        scrollToBottom();
-      }
-    }
-    prevMessageCountRef.current = messages.length;
-  }, [messages.length, scrollToTop, scrollToBottom, holdPosition]);
 
   useEffect(() => {
     if (isMobileLayout) return;
@@ -198,7 +164,6 @@ export function useChatPanelState({
         });
         scrollToBottom();
       } else {
-        pendingScrollToTopRef.current = true;
         onSend(
           content,
           action ?? null,
@@ -287,7 +252,6 @@ export function useChatPanelState({
     setCommands,
     messageAreaRef,
     scrollSentinelRef,
-    spacerRef,
     inputBarRef,
     isMobileLayout,
     handleScroll,

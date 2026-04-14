@@ -176,7 +176,6 @@ export function ChatPanel({
                 emptyState={emptyState}
               />
               <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
-              <div ref={s.spacerRef} style={{ flexShrink: 0 }} />
             </div>
           </div>
           <OverlayScrollbar scrollRef={s.messageAreaRef} />
