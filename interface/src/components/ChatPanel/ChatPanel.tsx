@@ -241,7 +241,6 @@ export function ChatPanel({
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
           isVisible={chromeReady}
-          suppressFocusTransition={isCreateAgentHandoff}
         />
       </div>
     </div>
