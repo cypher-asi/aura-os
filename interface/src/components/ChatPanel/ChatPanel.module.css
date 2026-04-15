@@ -204,24 +204,6 @@
   text-align: center;
 }
 
-.loadingState {
-  gap: var(--space-2);
-}
-
-.loadingIcon {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Queue section — sits above the input area */
 .queueSection {
   position: absolute;

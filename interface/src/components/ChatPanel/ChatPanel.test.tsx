@@ -150,14 +150,14 @@ describe("ChatPanel", () => {
     expect(screen.queryByText("Remote agent chat")).not.toBeInTheDocument();
   });
 
-  it("shows a loading state without unmounting the shell", () => {
+  it("keeps the shell visible while loading without showing a spinner", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
     renderPanel({ isLoading: true, historyResolved: false });
 
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("chat-loading-state")).toBeInTheDocument();
-    expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-loading-state")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
   });
 
   it("does not show a second loading shell during a create-agent handoff", () => {

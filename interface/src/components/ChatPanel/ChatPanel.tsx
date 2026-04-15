@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { MessageSquare, AlertCircle, LoaderCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { MessageSquare, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
 import { ChatMessageList } from "../ChatMessageList";
@@ -113,12 +113,7 @@ export function ChatPanel({
       <AlertCircle size={40} />
       <Text variant="muted" size="sm">{errorMessage}</Text>
     </div>
-  ) : showLoadingState ? (
-    <div className={`${styles.emptyState} ${styles.loadingState}`} data-testid="chat-loading-state">
-      <LoaderCircle size={40} className={styles.loadingIcon} />
-      <Text variant="muted" size="sm">Loading conversation...</Text>
-    </div>
-  ) : historyResolved ? (
+  ) : showLoadingState ? null : historyResolved ? (
     <div className={styles.emptyState}>
       <MessageSquare size={40} />
       <Text variant="muted" size="sm">
