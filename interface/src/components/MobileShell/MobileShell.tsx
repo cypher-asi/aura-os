@@ -2,7 +2,6 @@ import { Fragment, Suspense, lazy, useCallback } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Drawer } from "@cypher-asi/zui";
 import { ErrorBoundary } from "../ErrorBoundary";
-import { RouteFallback } from "../RouteFallback/RouteFallback";
 import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
@@ -80,7 +79,7 @@ export function MobileShell() {
             {state.isStandaloneAgentLibraryRoot ? (
               <div className={styles.mobileMainPanel}>
                 <ErrorBoundary name="main">
-                  <Suspense fallback={<RouteFallback />}>
+                  <Suspense fallback={null}>
                     <MobileAgentLibraryView />
                   </Suspense>
                 </ErrorBoundary>
@@ -88,7 +87,7 @@ export function MobileShell() {
             ) : state.isStandaloneAgentDetailRoute ? (
               <div className={styles.mobileMainPanel}>
                 <ErrorBoundary name="main">
-                  <Suspense fallback={<RouteFallback />}>
+                  <Suspense fallback={null}>
                     <MobileAgentDetailsView />
                   </Suspense>
                 </ErrorBoundary>

@@ -6,7 +6,6 @@ import { AppShell } from "./components/AppShell";
 import { LoginView } from "./views/LoginView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
-import { RouteFallback } from "./components/RouteFallback/RouteFallback";
 import { ShellRoutePlaceholder } from "./components/ShellRoutePlaceholder/ShellRoutePlaceholder";
 import { LAST_APP_BASE_PATH } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
@@ -59,7 +58,7 @@ function LastAppRedirect() {
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */
 function ShellOutletSuspense() {
   return (
-    <Suspense fallback={<RouteFallback />}>
+    <Suspense fallback={null}>
       <Outlet />
     </Suspense>
   );
@@ -96,7 +95,7 @@ export default function App() {
         <Route
           path="ide"
           element={
-            <Suspense fallback={<RouteFallback />}>
+            <Suspense fallback={null}>
               <IdeView />
             </Suspense>
           }
@@ -105,7 +104,7 @@ export default function App() {
           <Route
             path="invite/:token"
             element={
-              <Suspense fallback={<RouteFallback />}>
+              <Suspense fallback={null}>
                 <InviteAcceptView />
               </Suspense>
             }
