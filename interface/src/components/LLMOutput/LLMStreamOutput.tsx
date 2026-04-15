@@ -35,9 +35,7 @@ function StreamingIndicator({
     toolCalls: toolCalls ?? [],
     progressText,
   });
-
-  if (!label) return null;
-  return <CookingIndicator label={label} />;
+  return <CookingIndicator label={label ?? "Cooking..."} hidden={!label} />;
 }
 
 export function LLMStreamOutput({

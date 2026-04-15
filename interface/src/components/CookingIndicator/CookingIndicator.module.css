@@ -5,6 +5,10 @@
   padding: var(--space-6) 0 var(--space-2) 0;
 }
 
+.cookingIndicatorHidden {
+  visibility: hidden;
+}
+
 .cookingText {
   font-size: 14px;
   font-weight: 500;
@@ -19,6 +23,10 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer 2s ease-in-out infinite;
+}
+
+.cookingTextHidden {
+  animation: none;
 }
 
 @keyframes shimmer {

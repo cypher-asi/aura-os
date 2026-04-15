@@ -168,7 +168,7 @@
 }
 
 .messageAreaReading {
-  overflow-anchor: auto;
+  overflow-anchor: none;
 }
 
 .messageArea::-webkit-scrollbar {

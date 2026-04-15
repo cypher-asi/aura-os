@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef, useCallback, useState } from "react";
 
 const BOTTOM_THRESHOLD_PX = 40;
 const INPUT_OVERLAY_PX = 140;
+const EXIT_FOLLOW_THRESHOLD_PX = BOTTOM_THRESHOLD_PX + INPUT_OVERLAY_PX + 48;
+const ENTER_FOLLOW_THRESHOLD_PX = BOTTOM_THRESHOLD_PX + INPUT_OVERLAY_PX;
 
 export interface AnchorInfo {
   messageId: string;
@@ -125,8 +127,10 @@ export function useScrollAnchorV2(
 
     const distFromBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight;
-    const nextPinned =
-      distFromBottom < BOTTOM_THRESHOLD_PX + INPUT_OVERLAY_PX;
+    const threshold = pinnedRef.current
+      ? EXIT_FOLLOW_THRESHOLD_PX
+      : ENTER_FOLLOW_THRESHOLD_PX;
+    const nextPinned = distFromBottom < threshold;
 
     if (pinnedRef.current !== nextPinned) {
       pinnedRef.current = nextPinned;

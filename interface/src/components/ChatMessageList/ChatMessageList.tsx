@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -205,22 +204,21 @@ export function ChatMessageList({
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const layoutSignature = useMemo(
-    () => [
-      messages.length,
-      Math.round(totalSize),
-      nowStreaming ? 1 : 0,
-    ].join(":"),
-    [messages.length, nowStreaming, totalSize],
-  );
+  const initialLayoutReadyKeyRef = useRef<string | null>(null);
 
   useLayoutEffect(() => {
     if (!hasMessages) {
+      initialLayoutReadyKeyRef.current = null;
       return;
     }
+    const initialLayoutReadyKey = `${streamKey}:ready`;
+    if (initialLayoutReadyKeyRef.current === initialLayoutReadyKey) {
+      return;
+    }
+    initialLayoutReadyKeyRef.current = initialLayoutReadyKey;
     onContentHeightChange?.({ immediate: true });
     onInitialAnchorReady?.();
-  }, [hasMessages, layoutSignature, onContentHeightChange, onInitialAnchorReady]);
+  }, [hasMessages, onContentHeightChange, onInitialAnchorReady, streamKey]);
 
   useEffect(() => () => {
     for (const observer of resizeObserversRef.current.values()) {

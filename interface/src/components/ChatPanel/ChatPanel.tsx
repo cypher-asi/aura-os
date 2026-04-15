@@ -85,7 +85,6 @@ export function ChatPanel({
   contextUtilization,
   onNewSession,
 }: ChatPanelProps) {
-  const showLoadingState = isLoading;
   const {
     input,
     setInput,
@@ -137,7 +136,6 @@ export function ChatPanel({
     initialColdLoadRef.current && historyResolved && messages.length > 0 && !isInitialThreadRevealReady;
   const shouldShowColdLoadOverlay =
     !errorMessage && initialColdLoadRef.current && (!historyResolved || shouldHideThreadForInitialReveal);
-  const showLoadingPlaceholder = false;
   const threadReady = contentReady && !shouldHideThreadForInitialReveal;
 
   useEffect(() => {
