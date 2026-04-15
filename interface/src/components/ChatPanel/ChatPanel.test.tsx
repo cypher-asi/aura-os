@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { useLayoutEffect, type ComponentProps } from "react";
+import { act, forwardRef, useImperativeHandle, useLayoutEffect, useRef, type ComponentProps, type ForwardedRef } from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import type { DisplaySessionEvent } from "../../types/stream";
@@ -57,9 +57,23 @@ vi.mock("../ChatMessageList", () => ({
 }));
 
 vi.mock("../ChatInputBar", () => ({
-  ChatInputBar: ({ isVisible }: { isVisible?: boolean }) => (
-    <div data-testid="chat-input-bar" data-visible={isVisible ? "true" : "false"} />
-  ),
+  ChatInputBar: forwardRef(function MockChatInputBar(
+    { isVisible }: { isVisible?: boolean },
+    ref: ForwardedRef<{ focus: () => void }>,
+  ) {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useImperativeHandle(ref, () => ({
+      focus: () => textareaRef.current?.focus(),
+    }));
+
+    return (
+      <textarea
+        ref={textareaRef}
+        data-testid="chat-input-bar"
+        data-visible={isVisible ? "true" : "false"}
+      />
+    );
+  }),
 }));
 
 vi.mock("../MessageQueue", () => ({
@@ -91,6 +105,7 @@ vi.mock("./ChatPanel.module.css", () => ({
 
 describe("ChatPanel", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     mockUseAuraCapabilities.mockReset();
     autoSignalInitialAnchorReady = false;
     useMessageStore.setState({ messages: {}, orderedIds: {} });
@@ -106,6 +121,7 @@ describe("ChatPanel", () => {
   afterEach(() => {
     requestAnimationFrameSpy?.mockRestore();
     requestAnimationFrameSpy = null;
+    vi.useRealTimers();
   });
 
   function renderPanel(overrides: Partial<ComponentProps<typeof ChatPanel>> = {}) {
@@ -119,6 +135,10 @@ describe("ChatPanel", () => {
         {...overrides}
       />,
     );
+  }
+
+  function getInputBar() {
+    return screen.getByTestId("chat-input-bar");
   }
 
   it("shows the inline agent header on mobile", () => {
@@ -182,23 +202,25 @@ describe("ChatPanel", () => {
   it("keeps the shell visible while showing a loading placeholder", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
-    renderPanel({ isLoading: true, historyResolved: false });
+    const { container } = renderPanel({ isLoading: true, historyResolved: false });
 
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
-    expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
+    expect(container.querySelector(".initialRevealOverlay")).not.toBeNull();
+    expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
   });
 
   it("shows the same loading placeholder during a create-agent handoff", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
-    renderPanel({
+    const { container } = renderPanel({
       initialHandoff: "create-agent",
       isLoading: false,
       historyResolved: false,
     });
 
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
-    expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
+    expect(container.querySelector(".initialRevealOverlay")).not.toBeNull();
+    expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
   });
 
   it("reveals warm cached history immediately", () => {
@@ -210,7 +232,7 @@ describe("ChatPanel", () => {
     });
     expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(container.querySelector(".messageContentHidden")).toBeNull();
-    expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
+    expect(getInputBar()).toHaveAttribute("data-visible", "true");
   });
 
   it("keeps cold-load history hidden until the initial anchor is ready", () => {
@@ -260,6 +282,12 @@ describe("ChatPanel", () => {
     );
 
     expect(container.querySelector(".messageContentHidden")).toBeNull();
+    expect(container.querySelector(".initialRevealOverlayFading")).not.toBeNull();
+
+    act(() => {
+      vi.runAllTimers();
+    });
+
     expect(container.querySelector(".initialRevealOverlay")).toBeNull();
   });
 
@@ -268,7 +296,59 @@ describe("ChatPanel", () => {
 
     renderPanel();
 
-    expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
+    expect(getInputBar()).toHaveAttribute("data-visible", "true");
+  });
+
+  it("focuses the input when the desktop thread is ready", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({ historyResolved: true, isLoading: false });
+
+    expect(getInputBar()).toHaveFocus();
+  });
+
+  it("re-focuses the input when switching desktop chats", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    const { rerender } = render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        historyResolved
+        scrollResetKey="chat-a"
+      />,
+    );
+
+    const inputBar = getInputBar();
+    expect(inputBar).toHaveFocus();
+
+    inputBar.blur();
+    expect(inputBar).not.toHaveFocus();
+
+    rerender(
+      <ChatPanel
+        streamKey="stream-2"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        historyResolved
+        scrollResetKey="chat-b"
+      />,
+    );
+
+    expect(getInputBar()).toHaveFocus();
+  });
+
+  it("does not auto-focus the input on mobile", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+
+    renderPanel({ historyResolved: true, isLoading: false });
+
+    expect(getInputBar()).not.toHaveFocus();
   });
 
   it("shows an error state separately from loading and empty states", () => {
@@ -280,11 +360,11 @@ describe("ChatPanel", () => {
     expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
   });
 
-  it("shows the empty state once history is resolved and not loading", () => {
+  it("renders no default empty prompt once history is resolved and not loading", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
     renderPanel({ historyResolved: true, isLoading: false });
 
-    expect(screen.getByText("Start chatting with Coca.")).toBeInTheDocument();
+    expect(screen.queryByText("Start chatting with Coca.")).not.toBeInTheDocument();
   });
 });

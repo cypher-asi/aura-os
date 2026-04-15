@@ -14,6 +14,7 @@ import type { DisplaySessionEvent } from "../../types/stream";
 import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
+const LOADING_OVERLAY_FADE_MS = 120;
 
 export interface ChatPanelProps {
   streamKey: string;
@@ -126,13 +127,17 @@ export function ChatPanel({
   const inputFocusReadyRef = useRef(false);
   const initialColdLoadRef = useRef(!historyResolved);
   const revealAnimationFrameRef = useRef<number | null>(null);
+  const loadingOverlayTimeoutRef = useRef<number | null>(null);
   const [isInitialThreadRevealReady, setIsInitialThreadRevealReady] = useState(() => historyResolved);
-  const showLoadingPlaceholder =
-    !errorMessage && messages.length === 0 && (showLoadingState || !historyResolved);
+  const [isLoadingOverlayVisible, setIsLoadingOverlayVisible] = useState(() => !historyResolved);
+  const [isLoadingOverlayFadingOut, setIsLoadingOverlayFadingOut] = useState(false);
 
   const contentReady = historyResolved && !isLoading;
   const shouldHideThreadForInitialReveal =
     initialColdLoadRef.current && historyResolved && messages.length > 0 && !isInitialThreadRevealReady;
+  const shouldShowColdLoadOverlay =
+    !errorMessage && initialColdLoadRef.current && (!historyResolved || shouldHideThreadForInitialReveal);
+  const showLoadingPlaceholder = false;
   const threadReady = contentReady && !shouldHideThreadForInitialReveal;
 
   useEffect(() => {
@@ -144,6 +149,12 @@ export function ChatPanel({
       cancelAnimationFrame(revealAnimationFrameRef.current);
       revealAnimationFrameRef.current = null;
     }
+    if (loadingOverlayTimeoutRef.current != null) {
+      clearTimeout(loadingOverlayTimeoutRef.current);
+      loadingOverlayTimeoutRef.current = null;
+    }
+    setIsLoadingOverlayVisible(!historyResolved);
+    setIsLoadingOverlayFadingOut(false);
   }, [initialHandoff, scrollResetKey]);
 
   useEffect(() => {
@@ -163,7 +174,43 @@ export function ChatPanel({
     if (revealAnimationFrameRef.current != null) {
       cancelAnimationFrame(revealAnimationFrameRef.current);
     }
+    if (loadingOverlayTimeoutRef.current != null) {
+      clearTimeout(loadingOverlayTimeoutRef.current);
+    }
   }, []);
+
+  useEffect(() => {
+    if (errorMessage) {
+      if (loadingOverlayTimeoutRef.current != null) {
+        clearTimeout(loadingOverlayTimeoutRef.current);
+        loadingOverlayTimeoutRef.current = null;
+      }
+      setIsLoadingOverlayVisible(false);
+      setIsLoadingOverlayFadingOut(false);
+      return;
+    }
+
+    if (shouldShowColdLoadOverlay) {
+      if (loadingOverlayTimeoutRef.current != null) {
+        clearTimeout(loadingOverlayTimeoutRef.current);
+        loadingOverlayTimeoutRef.current = null;
+      }
+      setIsLoadingOverlayVisible(true);
+      setIsLoadingOverlayFadingOut(false);
+      return;
+    }
+
+    if (!isLoadingOverlayVisible || isLoadingOverlayFadingOut) {
+      return;
+    }
+
+    setIsLoadingOverlayFadingOut(true);
+    loadingOverlayTimeoutRef.current = window.setTimeout(() => {
+      loadingOverlayTimeoutRef.current = null;
+      setIsLoadingOverlayVisible(false);
+      setIsLoadingOverlayFadingOut(false);
+    }, LOADING_OVERLAY_FADE_MS);
+  }, [errorMessage, isLoadingOverlayFadingOut, isLoadingOverlayVisible, shouldShowColdLoadOverlay]);
 
   const handleInitialAnchorReady = useCallback(() => {
     if (!initialColdLoadRef.current || !historyResolved || messages.length === 0) {
@@ -188,7 +235,7 @@ export function ChatPanel({
     }
     inputFocusReadyRef.current = true;
     requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [inputBarRef, isMobileLayout, threadReady]);
+  }, [inputBarRef, initialHandoff, isMobileLayout, scrollResetKey, threadReady]);
 
   useEffect(() => {
     if (!initialHandoff || !threadReady || initialHandoffReadyRef.current) {
@@ -203,16 +250,11 @@ export function ChatPanel({
       <AlertCircle size={40} />
       <Text variant="muted" size="sm">{errorMessage}</Text>
     </div>
-  ) : showLoadingPlaceholder ? (
-    <div className={styles.emptyState}>
-      <MessageSquare size={40} />
-      <Text variant="muted" size="sm">Loading conversation...</Text>
-    </div>
-  ) : historyResolved ? (
+  ) : historyResolved && emptyMessage ? (
     <div className={styles.emptyState}>
       <MessageSquare size={40} />
       <Text variant="muted" size="sm">
-        {emptyMessage ?? `Start chatting with ${agentName ?? "this agent"}.`}
+        {emptyMessage}
       </Text>
     </div>
   ) : null;
@@ -299,13 +341,10 @@ export function ChatPanel({
               />
             </div>
           </div>
-          {shouldHideThreadForInitialReveal && (
-            <div className={styles.initialRevealOverlay}>
-              <div className={styles.emptyState}>
-                <MessageSquare size={40} />
-                <Text variant="muted" size="sm">Loading conversation...</Text>
-              </div>
-            </div>
+          {isLoadingOverlayVisible && (
+            <div
+              className={`${styles.initialRevealOverlay}${isLoadingOverlayFadingOut ? ` ${styles.initialRevealOverlayFading}` : ""}`}
+            />
           )}
           <OverlayScrollbar scrollRef={messageAreaRef} />
           {!isAutoFollowing && unreadCount > 0 && (

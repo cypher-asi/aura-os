@@ -3,6 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 const mockSendMessage = vi.fn();
 const mockStopStreaming = vi.fn();
 const mockResetEvents = vi.fn();
+const storageState = new Map<string, string>();
 
 vi.mock("./use-agent-chat-stream", () => ({
   useAgentChatStream: vi.fn(() => ({
@@ -72,7 +73,26 @@ describe("useAgentChatWindow", () => {
     mockStopStreaming.mockReset();
     mockResetEvents.mockReset();
     mockSetSelectedAgent.mockReset();
-    localStorage.clear();
+    storageState.clear();
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => storageState.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          storageState.set(key, value);
+        },
+        removeItem: (key: string) => {
+          storageState.delete(key);
+        },
+        clear: () => {
+          storageState.clear();
+        },
+        key: (index: number) => Array.from(storageState.keys())[index] ?? null,
+        get length() {
+          return storageState.size;
+        },
+      },
+    });
   });
 
   it("returns a stable shell payload when agentId is undefined", () => {
@@ -98,7 +118,7 @@ describe("useAgentChatWindow", () => {
     expect(result.current.adapterType).toBe("codex");
     expect(result.current.defaultModel).toBe("gpt-5.4");
     expect(result.current.agentId).toBe("agent-1");
-    expect(result.current.emptyMessage).toBe("Send a message");
+    expect(result.current.emptyMessage).toBeUndefined();
     expect(result.current.errorMessage).toBeNull();
     expect(result.current.historyResolved).toBe(true);
     expect(result.current.isLoading).toBe(false);

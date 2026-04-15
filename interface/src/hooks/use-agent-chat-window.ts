@@ -136,7 +136,6 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     isLoading: deferredLoading,
     historyResolved,
     errorMessage: historyError ?? null,
-    emptyMessage: "Send a message",
     scrollResetKey: agentId,
     historyMessages,
     projects: agentProjects,

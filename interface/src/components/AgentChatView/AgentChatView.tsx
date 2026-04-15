@@ -190,7 +190,6 @@ function StandaloneAgentChatPanel({
       isLoading={deferredLoading}
       historyResolved={historyResolved}
       errorMessage={historyError ? historyError : null}
-      emptyMessage="Send a message"
       initialHandoff={initialCreateHandoff ? "create-agent" : undefined}
       onInitialHandoffReady={onInitialHandoffReady}
       scrollResetKey={agentId}

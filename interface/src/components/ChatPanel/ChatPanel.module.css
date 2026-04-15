@@ -205,6 +205,16 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  opacity: 1;
+  transition: opacity 120ms ease-out;
+}
+
+.initialRevealOverlayFading {
+  opacity: 0;
 }
 
 /* Queue section — sits above the input area */
