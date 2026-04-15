@@ -83,11 +83,6 @@ export function BottomTaskbar() {
 
       <div className={styles.right}>
         <div className={styles.rightPrimary}>
-          {creditsExpanded ? (
-            <span className={styles.creditsSummary} aria-live="polite">
-              {creditsLabel}
-            </span>
-          ) : null}
           <TaskbarIconButton
             icon={
               creditsExpanded ? (
@@ -99,6 +94,11 @@ export function BottomTaskbar() {
             onClick={() => setCreditsExpanded((current) => !current)}
             aria-label={creditsExpanded ? "Hide credits balance" : "Show credits balance"}
           />
+          {creditsExpanded ? (
+            <span className={styles.creditsSummary} aria-live="polite">
+              {creditsLabel}
+            </span>
+          ) : null}
           <TaskbarIconButton
             icon={<CreditCard size={TASKBAR_ICON_SIZE} />}
             title="Credits"

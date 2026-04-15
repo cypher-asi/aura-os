@@ -242,8 +242,14 @@ describe("BottomTaskbar", () => {
 
     await user.click(creditsToggle);
 
+    const creditsSummary = screen.getByText("1,200 Z");
     expect(screen.getByRole("button", { name: "Hide credits balance" })).toBeInTheDocument();
-    expect(screen.getByText("1,200 Z")).toBeInTheDocument();
+    expect(
+      creditsToggle.compareDocumentPosition(creditsSummary) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      creditsSummary.compareDocumentPosition(creditsButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("hides the credits balance on a second right chevron click", async () => {
