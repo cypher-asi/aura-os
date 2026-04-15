@@ -129,6 +129,8 @@ export function ChatPanel({
     onInitialHandoffReady?.();
   }, [chromeReady, initialHandoff, onInitialHandoffReady]);
 
+  const inputVisible = chromeReady || historyResolved;
+
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
       <AlertCircle size={40} />
@@ -263,7 +265,7 @@ export function ChatPanel({
           projects={projects}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
-          isVisible={chromeReady}
+          isVisible={inputVisible}
           contextUtilization={contextUtilization}
           onNewSession={onNewSession}
         />

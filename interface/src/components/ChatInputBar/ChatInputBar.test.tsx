@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 let mockIsStreaming = false;
@@ -12,6 +12,8 @@ vi.mock("./ChatInputBar.module.css", () => ({
 
 let mockSelectedModel: string | null = null;
 const mockSetSelectedModel = vi.fn();
+const mockAddFiles = vi.fn();
+const mockHandleRemove = vi.fn();
 vi.mock("../../stores/chat-ui-store", () => ({
   useChatUI: () => ({
     selectedModel: mockSelectedModel,
@@ -20,6 +22,14 @@ vi.mock("../../stores/chat-ui-store", () => ({
     setProjectId: vi.fn(),
     init: vi.fn(),
     syncAvailableModels: vi.fn(),
+  }),
+}));
+
+vi.mock("./useFileAttachments", () => ({
+  useFileAttachments: () => ({
+    canAddMore: true,
+    addFiles: mockAddFiles,
+    handleRemove: mockHandleRemove,
   }),
 }));
 
@@ -41,6 +51,8 @@ beforeEach(() => {
   mockIsStreaming = false;
   mockSelectedModel = null;
   mockSetSelectedModel.mockClear();
+  mockAddFiles.mockClear();
+  mockHandleRemove.mockClear();
 });
 
 describe("ChatInputBar", () => {
@@ -170,7 +182,6 @@ describe("ChatInputBar", () => {
 
   it("calls onRemoveAttachment when remove button clicked", async () => {
     const user = userEvent.setup();
-    const onRemoveAttachment = vi.fn();
     const attachment: AttachmentItem = {
       id: "a1",
       file: new File(["data"], "test.png", { type: "image/png" }),
@@ -183,14 +194,14 @@ describe("ChatInputBar", () => {
       <ChatInputBar
         {...makeProps({
           attachments: [attachment],
-          onRemoveAttachment,
+          onRemoveAttachment: vi.fn(),
           onAttachmentsChange: vi.fn(),
         })}
       />,
     );
 
     await user.click(screen.getByRole("button", { name: "Remove attachment" }));
-    expect(onRemoveAttachment).toHaveBeenCalledWith("a1");
+    expect(mockHandleRemove).toHaveBeenCalledWith("a1");
   });
 
   it("enables send when no text but has attachments", () => {
@@ -204,5 +215,83 @@ describe("ChatInputBar", () => {
     };
     render(<ChatInputBar {...makeProps({ input: "", attachments: [attachment] })} />);
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+  });
+
+  it("preserves mixed text and image pastes for the browser to handle", () => {
+    const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("Add a follow-up");
+    const event = createEvent.paste(textarea, {
+      clipboardData: {
+        items: [
+          {
+            kind: "file",
+            type: "image/png",
+            getAsFile: () => new File(["img"], "pasted.png", { type: "image/png" }),
+          },
+          {
+            kind: "string",
+            type: "text/plain",
+            getAsFile: () => null,
+          },
+        ],
+      },
+    });
+
+    event.preventDefault = vi.fn();
+    fireEvent(textarea, event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(mockAddFiles).not.toHaveBeenCalled();
+  });
+
+  it("intercepts pure image pastes and forwards them to attachments", () => {
+    const originalDataTransfer = globalThis.DataTransfer;
+    const fileList = {
+      length: 1,
+      0: new File(["img"], "pasted.png", { type: "image/png" }),
+      item: (index: number) => (index === 0 ? fileList[0] : null),
+      [Symbol.iterator]: function* iterator() {
+        yield fileList[0];
+      },
+    } as unknown as FileList;
+
+    class MockDataTransfer {
+      files = fileList;
+      items = {
+        add: vi.fn(),
+      };
+    }
+
+    // JSDOM does not provide a writable DataTransfer implementation for clipboard tests.
+    Object.defineProperty(globalThis, "DataTransfer", {
+      configurable: true,
+      value: MockDataTransfer,
+    });
+
+    try {
+      const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("Add a follow-up");
+      const event = createEvent.paste(textarea, {
+        clipboardData: {
+          items: [
+            {
+              kind: "file",
+              type: "image/png",
+              getAsFile: () => fileList[0],
+            },
+          ],
+        },
+      });
+
+      event.preventDefault = vi.fn();
+      fireEvent(textarea, event);
+
+      expect(event.preventDefault).toHaveBeenCalledOnce();
+      expect(mockAddFiles).toHaveBeenCalledTimes(1);
+      expect(mockAddFiles).toHaveBeenCalledWith(fileList);
+    } finally {
+      Object.defineProperty(globalThis, "DataTransfer", {
+        configurable: true,
+        value: originalDataTransfer,
+      });
+    }
   });
 });

@@ -106,13 +106,17 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     const items = e.clipboardData?.items;
     if (!items) return;
     const imageFiles: File[] = [];
+    let hasNonImageClipboardItem = false;
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith("image/")) {
-        const file = items[i].getAsFile();
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
         if (file) imageFiles.push(file);
+        continue;
       }
+      hasNonImageClipboardItem = true;
     }
-    if (imageFiles.length > 0) {
+    if (imageFiles.length > 0 && !hasNonImageClipboardItem) {
       e.preventDefault();
       const dt = new DataTransfer();
       imageFiles.forEach((f) => dt.items.add(f));

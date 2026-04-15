@@ -175,12 +175,12 @@ describe("ChatPanel", () => {
       isReady: false,
     });
 
-    const { container } = renderPanel();
+    const { container } = renderPanel({ historyResolved: true });
     const messageArea = container.querySelector(".messageArea");
 
     expect(messageArea).not.toBeNull();
     expect(messageArea?.className).not.toContain("messageAreaHidden");
-    expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "false");
+    expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
   });
 
   it("covers the message viewport with a veil while the first reveal is still settling", () => {
