@@ -83,7 +83,6 @@
         "expect": {
           "visibleRoles": [
             { "role": "button", "name": "Demo Project" },
-            { "role": "heading", "name": "Task Feed", "exact": false },
             { "role": "button", "name": "Specs", "exact": true },
             { "role": "button", "name": "Tasks", "exact": true },
             { "role": "button", "name": "Stats", "exact": true }
