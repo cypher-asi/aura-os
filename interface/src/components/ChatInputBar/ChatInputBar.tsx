@@ -280,7 +280,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
               }
               title={`Context window ${Math.round(contextUtilization * 100)}% used`}
             >
-              Ctx {Math.round(contextUtilization * 100)}%
+              {Math.round(contextUtilization * 100)}%
             </span>
             {onNewSession ? (
               <button
