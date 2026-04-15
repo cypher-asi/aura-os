@@ -36,6 +36,16 @@ test("desktop browser projects root keeps desktop welcome layout", async ({ page
   await expect(page.getByRole("button", { name: "Open host settings" })).toBeVisible();
 });
 
+test("desktop direct mobile organization route redirects back to projects", async ({ page }) => {
+  await mockAuthenticatedApp(page);
+
+  await page.goto("/projects/organization");
+
+  await expect(page).toHaveURL(/\/projects$/);
+  await expect(page.getByText("Welcome to AURA")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick Up Remote Work" })).toHaveCount(0);
+});
+
 test("desktop browser project execution keeps desktop chrome and hides workspace-only files tab", async ({ page }) => {
   await mockAuthenticatedApp(page);
 
@@ -44,7 +54,7 @@ test("desktop browser project execution keeps desktop chrome and hides workspace
   await expect(page.getByText("Demo Project")).toBeVisible();
   await expect(page.getByRole("button", { name: "Chat" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Specs" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Tasks" }).nth(1)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tasks" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Files" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
 });
@@ -54,7 +64,7 @@ test("desktop browser agents route keeps desktop layout without mobile switcher"
 
   await page.goto("/agents/agent-1");
 
-  await expect(page.getByPlaceholder("Search Agents...")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Choose agent" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Builder Bot/i }).first()).toBeVisible();
   await expect(page.getByRole("paragraph").filter({ hasText: "Helpful" })).toBeVisible();
@@ -149,8 +159,28 @@ test("desktop imported projects hide file browsing even with a desktop bridge", 
   });
 
   await mockAuthenticatedApp(page, {
-    project: {
-    },
+    agentInstances: [
+      {
+        agent_instance_id: "agent-inst-1",
+        project_id: "proj-1",
+        agent_id: "agent-1",
+        name: "Builder Bot",
+        role: "Engineer",
+        personality: "Helpful",
+        system_prompt: "Build features carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "local",
+        workspace_path: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
   });
 
   await page.goto("/projects/proj-1/execution");

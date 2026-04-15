@@ -74,9 +74,9 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
   });
 
   await page.goto("/process");
-  await expect(page.getByRole("treeitem", { name: "Nightly QA" })).toBeVisible();
-  await expect(page.getByPlaceholder("Search Processes...")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Run", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nightly QA" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Run/i }).first()).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-process.png`,
     fullPage: true,
@@ -98,7 +98,7 @@ test("capture desktop agents, feed, and profile views", async ({ page }, testInf
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
 
   await page.goto("/agents/agent-1");
-  await expect(page.getByPlaceholder("Search Agents...")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Research Bot/i })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-agents.png`,
@@ -111,9 +111,8 @@ test("capture desktop agents, feed, and profile views", async ({ page }, testInf
 
   await page.getByTitle("New Agent").click();
   await expect(page.getByRole("heading", { name: "Create Agent" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Change runtime or credentials" })).toBeVisible();
-  await page.getByRole("button", { name: "Change runtime or credentials" }).click();
-  await expect(page.getByText("Advanced Setup")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Swarm/i })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Personality" })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-agent-create.png`,
     fullPage: true,
