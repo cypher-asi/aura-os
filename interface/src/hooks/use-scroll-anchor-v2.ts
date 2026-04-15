@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useCallback, useState } from "react";
+import type { ChatResizeSessionState } from "../components/ChatPanel/chat-resize-session-context";
 
 const BOTTOM_THRESHOLD_PX = 40;
 const INPUT_OVERLAY_PX = 140;
@@ -51,14 +52,18 @@ function findFirstVisibleMessage(
 
 export function useScrollAnchorV2(
   ref: React.RefObject<HTMLElement | null>,
-  options: { resetKey?: unknown },
+  options: { resetKey?: unknown; resizeSession?: ChatResizeSessionState },
 ): UseScrollAnchorV2Return {
-  const { resetKey } = options;
+  const { resetKey, resizeSession } = options;
 
   const pinnedRef = useRef(true);
   const guardRef = useRef(false);
   const currentAnchorRef = useRef<AnchorInfo | null>(null);
   const contentChangeRafRef = useRef(0);
+  const resizeFollowRafRef = useRef(0);
+  const resizeActiveRef = useRef(false);
+  const resizeAnchorRef = useRef<AnchorInfo | null>(null);
+  const resizePendingRef = useRef(false);
 
   const [isAutoFollowing, setIsAutoFollowing] = useState(true);
 
@@ -72,12 +77,27 @@ export function useScrollAnchorV2(
     if (el) guardedScroll(el, el.scrollHeight, guardRef);
   }, [ref]);
 
+  const scheduleResizePinnedFollow = useCallback(() => {
+    if (resizeFollowRafRef.current !== 0) return;
+    resizeFollowRafRef.current = requestAnimationFrame(() => {
+      resizeFollowRafRef.current = 0;
+      if (!resizeActiveRef.current || !pinnedRef.current) return;
+      doScrollToBottom();
+    });
+  }, [doScrollToBottom]);
+
   useLayoutEffect(() => {
     pinnedRef.current = true;
     currentAnchorRef.current = null;
+    resizeAnchorRef.current = null;
+    resizePendingRef.current = false;
     if (contentChangeRafRef.current !== 0) {
       cancelAnimationFrame(contentChangeRafRef.current);
       contentChangeRafRef.current = 0;
+    }
+    if (resizeFollowRafRef.current !== 0) {
+      cancelAnimationFrame(resizeFollowRafRef.current);
+      resizeFollowRafRef.current = 0;
     }
     syncFollowState();
     doScrollToBottom();
@@ -110,6 +130,34 @@ export function useScrollAnchorV2(
     },
     [ref],
   );
+
+  const reconcileResizeSession = useCallback(() => {
+    if (pinnedRef.current) {
+      resizeAnchorRef.current = null;
+      doScrollToBottom();
+      return;
+    }
+    const anchor = resizeAnchorRef.current ?? currentAnchorRef.current;
+    resizeAnchorRef.current = null;
+    if (anchor) {
+      currentAnchorRef.current = anchor;
+      restoreAnchor(anchor);
+    }
+  }, [doScrollToBottom, restoreAnchor]);
+
+  useLayoutEffect(() => {
+    const nextActive = resizeSession?.isActive ?? false;
+    if (nextActive) {
+      resizeActiveRef.current = true;
+      resizePendingRef.current = false;
+      resizeAnchorRef.current = pinnedRef.current
+        ? null
+        : (currentAnchorRef.current ?? captureAnchor());
+      return;
+    }
+
+    resizeActiveRef.current = false;
+  }, [captureAnchor, resizeSession?.isActive]);
 
   const reconcileContent = useCallback(() => {
     if (pinnedRef.current) {
@@ -159,6 +207,24 @@ export function useScrollAnchorV2(
 
   const onContentHeightChange = useCallback(
     (options?: { immediate?: boolean }) => {
+      if (resizeActiveRef.current) {
+        resizePendingRef.current = true;
+        if (pinnedRef.current) {
+          scheduleResizePinnedFollow();
+        }
+        return;
+      }
+
+      if (resizePendingRef.current) {
+        resizePendingRef.current = false;
+        if (resizeFollowRafRef.current !== 0) {
+          cancelAnimationFrame(resizeFollowRafRef.current);
+          resizeFollowRafRef.current = 0;
+        }
+        reconcileResizeSession();
+        return;
+      }
+
       if (options?.immediate) {
         if (contentChangeRafRef.current !== 0) {
           cancelAnimationFrame(contentChangeRafRef.current);
@@ -174,7 +240,7 @@ export function useScrollAnchorV2(
         reconcileContent();
       });
     },
-    [reconcileContent],
+    [reconcileContent, reconcileResizeSession, scheduleResizePinnedFollow],
   );
 
   return {

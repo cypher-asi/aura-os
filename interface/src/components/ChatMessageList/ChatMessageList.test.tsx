@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatMessageList } from "./ChatMessageList";
 import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
+import { ChatResizeSessionContext } from "../ChatPanel/chat-resize-session-context";
 
 const mockMessageBubble = vi.fn();
 const mockStreamEntry = {
@@ -22,6 +23,7 @@ let mockVirtualItems = [
 ];
 let mockTotalSize = 100;
 const mockMeasureElement = vi.fn();
+const mockMeasure = vi.fn();
 let nextStreamingBubbleHeight = 0;
 
 class MockResizeObserver {
@@ -65,6 +67,7 @@ vi.mock("@tanstack/react-virtual", () => ({
     getVirtualItems: () => mockVirtualItems.slice(0, count),
     getTotalSize: () => mockTotalSize,
     measureElement: mockMeasureElement,
+    measure: mockMeasure,
   }),
 }));
 
@@ -100,6 +103,7 @@ describe("ChatMessageList", () => {
   beforeEach(() => {
     mockMessageBubble.mockReset();
     mockMeasureElement.mockReset();
+    mockMeasure.mockReset();
     MockResizeObserver.reset();
     nextStreamingBubbleHeight = 0;
     Object.assign(mockStreamEntry, {
@@ -188,6 +192,45 @@ describe("ChatMessageList", () => {
 
     expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
     expect(onInitialAnchorReady).toHaveBeenCalled();
+  });
+
+  it("runs one batched remeasure when a resize session settles", () => {
+    const scrollRef = { current: document.createElement("div") };
+    const onContentHeightChange = vi.fn();
+
+    const { rerender } = render(
+      <ChatResizeSessionContext.Provider value={{ isActive: false, settledAt: 0 }}>
+        <ChatMessageList
+          messages={[
+            { id: "message-1", role: "assistant", content: "Hello" } as any,
+          ]}
+          streamKey="stream-1"
+          scrollRef={scrollRef}
+          heightCache={heightCache}
+          onContentHeightChange={onContentHeightChange}
+        />
+      </ChatResizeSessionContext.Provider>,
+    );
+
+    mockMeasure.mockClear();
+    onContentHeightChange.mockClear();
+
+    rerender(
+      <ChatResizeSessionContext.Provider value={{ isActive: false, settledAt: 1 }}>
+        <ChatMessageList
+          messages={[
+            { id: "message-1", role: "assistant", content: "Hello" } as any,
+          ]}
+          streamKey="stream-1"
+          scrollRef={scrollRef}
+          heightCache={heightCache}
+          onContentHeightChange={onContentHeightChange}
+        />
+      </ChatResizeSessionContext.Provider>,
+    );
+
+    expect(mockMeasure).toHaveBeenCalledTimes(1);
+    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
   });
 
   it("shows a load older trigger when older history is available", () => {

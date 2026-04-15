@@ -14,6 +14,7 @@ import type { DisplaySessionEvent } from "../../types/stream";
 import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 
 import { useStreamStore } from "../../hooks/stream/store";
+import { useChatResizeSession } from "../ChatPanel/chat-resize-session-context";
 
 const MESSAGE_GAP = 12;
 
@@ -68,6 +69,7 @@ export function ChatMessageList({
       progressText: state.entries[streamKey]?.progressText ?? "",
     })),
   );
+  const resizeSession = useChatResizeSession();
 
   const getItemKey = useCallback(
     (index: number) => messages[index].id,
@@ -94,11 +96,15 @@ export function ChatMessageList({
 
   const measureElementRef = useRef(virtualizer.measureElement);
   measureElementRef.current = virtualizer.measureElement;
+  const measureVirtualizerRef = useRef(virtualizer.measure);
+  measureVirtualizerRef.current = virtualizer.measure;
   const resizeObserversRef = useRef(new Map<string, ResizeObserver>());
   const streamingBubbleRef = useRef<HTMLDivElement>(null);
   const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
   const streamingBubbleHeightRef = useRef<number | null>(null);
   const lastStreamingBubbleHeightRef = useRef<number | null>(null);
+  const resizeSettleRafRef = useRef(0);
+  const lastResizeSettleRef = useRef(0);
 
   const updateMeasuredHeight = useCallback(
     (messageId: string, node: HTMLElement) => {
@@ -230,7 +236,29 @@ export function ChatMessageList({
     resizeObserversRef.current.clear();
     streamingBubbleObserverRef.current?.disconnect();
     streamingBubbleObserverRef.current = null;
+    if (resizeSettleRafRef.current !== 0) {
+      cancelAnimationFrame(resizeSettleRafRef.current);
+      resizeSettleRafRef.current = 0;
+    }
   }, []);
+
+  useEffect(() => {
+    if (resizeSession.isActive) {
+      return;
+    }
+    if (resizeSession.settledAt === 0 || resizeSession.settledAt === lastResizeSettleRef.current) {
+      return;
+    }
+    lastResizeSettleRef.current = resizeSession.settledAt;
+    if (resizeSettleRafRef.current !== 0) {
+      cancelAnimationFrame(resizeSettleRafRef.current);
+    }
+    resizeSettleRafRef.current = requestAnimationFrame(() => {
+      resizeSettleRafRef.current = 0;
+      measureVirtualizerRef.current?.();
+      onContentHeightChange?.({ immediate: true });
+    });
+  }, [onContentHeightChange, resizeSession.isActive, resizeSession.settledAt]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;

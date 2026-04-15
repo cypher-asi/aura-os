@@ -30,6 +30,8 @@ export interface LaneProps {
   minWidth?: number;
   maxWidth?: number;
   storageKey?: string | null;
+  onResizeStart?: () => void;
+  onResize?: (size: number) => void;
   onResizeEnd?: (size: number) => void;
 
   /** Take remaining horizontal space instead of a fixed width. */
@@ -45,6 +47,8 @@ export interface LaneProps {
   collapsed?: boolean;
   /** When false, collapse/expand snaps instead of tweening width. */
   animateCollapse?: boolean;
+  /** When false, width updates snap instead of easing after resize ends. */
+  animateResizeRelease?: boolean;
   resizeControlsRef?: MutableRefObject<LaneResizeControls | null>;
 
   className?: string;
@@ -64,11 +68,14 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
       minWidth = 0,
       maxWidth = 400,
       storageKey,
+      onResizeStart,
+      onResize,
       onResizeEnd,
       flex = false,
       collapsible = false,
       collapsed = false,
       animateCollapse = true,
+      animateResizeRelease = true,
       resizeControlsRef,
       className,
       style,
@@ -90,6 +97,8 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
       storageKey: resolvedStorageKey,
       elementRef: laneRef,
       enabled: resizable,
+      onResizeStart,
+      onResize,
       onResizeEnd,
     });
 
@@ -121,7 +130,9 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
             width: resolvedWidth,
             ...(collapsed && { minWidth: 0 }),
             transition:
-              isResizing || (!animateCollapse && isCollapseToggling)
+              isResizing
+                || (!animateCollapse && isCollapseToggling)
+                || (!isCollapseToggling && !animateResizeRelease)
                 ? "none"
                 : "width 100ms ease-out",
           }),

@@ -39,6 +39,7 @@ import {
   readStoredSidekickWidth,
 } from "./desktop-shell-sidekick";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
+import { ChatResizeSessionContext } from "../ChatPanel/chat-resize-session-context";
 import styles from "./DesktopShell.module.css";
 
 const DesktopWindowLayer = lazy(() =>
@@ -122,6 +123,7 @@ function PersistentSidekickLane({
   collapsed,
   defaultWidth,
   showHeaderSlot,
+  onResizeStart,
   onResizeEnd,
   onHeaderTargetChange,
   onPanelTargetChange,
@@ -130,6 +132,7 @@ function PersistentSidekickLane({
   collapsed: boolean;
   defaultWidth: number;
   showHeaderSlot: boolean;
+  onResizeStart: () => void;
   onResizeEnd: (size: number) => void;
   onHeaderTargetChange: (node: HTMLDivElement | null) => void;
   onPanelTargetChange: (node: HTMLDivElement | null) => void;
@@ -144,7 +147,9 @@ function PersistentSidekickLane({
       storageKey={null}
       collapsible
       collapsed={collapsed}
+      animateResizeRelease={false}
       resizeControlsRef={resizeControlsRef}
+      onResizeStart={onResizeStart}
       onResizeEnd={onResizeEnd}
       className={styles.sidekickLane}
       header={
@@ -191,6 +196,10 @@ export function DesktopShell() {
     useState<HTMLDivElement | null>(null);
   const [sidekickPanelTarget, setSidekickPanelTarget] =
     useState<HTMLDivElement | null>(null);
+  const [sidekickChatResizeSession, setSidekickChatResizeSession] = useState({
+    isActive: false,
+    settledAt: 0,
+  });
   const openDesktopWindowCount = useDesktopWindowStore((state) => Object.keys(state.windows).length);
   const { MainPanel } = activeApp;
   const ActiveProvider = activeApp.Provider ?? Fragment;
@@ -218,9 +227,19 @@ export function DesktopShell() {
     [],
   );
 
+  const handleSidekickResizeStart = useCallback(() => {
+    setSidekickChatResizeSession((current) => (
+      current.isActive ? current : { ...current, isActive: true }
+    ));
+  }, []);
+
   const handleSidekickResizeEnd = useCallback(
     (size: number) => {
       persistSidekickWidth(sidekickProfile, size);
+      setSidekickChatResizeSession((current) => ({
+        isActive: false,
+        settledAt: current.settledAt + 1,
+      }));
     },
     [sidekickProfile],
   );
@@ -360,10 +379,12 @@ export function DesktopShell() {
             </div>
             {hasActiveSidekick && (
               <ErrorBoundary name="sidekick">
-                <SidekickPortalBridge
-                  headerTarget={sidekickHeaderTarget}
-                  panelTarget={sidekickPanelTarget}
-                />
+                <ChatResizeSessionContext.Provider value={sidekickChatResizeSession}>
+                  <SidekickPortalBridge
+                    headerTarget={sidekickHeaderTarget}
+                    panelTarget={sidekickPanelTarget}
+                  />
+                </ChatResizeSessionContext.Provider>
               </ErrorBoundary>
             )}
           </ActiveProvider>
@@ -372,6 +393,7 @@ export function DesktopShell() {
             collapsed={sidekickHostCollapsed}
             defaultWidth={sidekickInitialWidth}
             showHeaderSlot={showSidekickHeader}
+            onResizeStart={handleSidekickResizeStart}
             onResizeEnd={handleSidekickResizeEnd}
             onHeaderTargetChange={handleSidekickHeaderTargetChange}
             onPanelTargetChange={handleSidekickPanelTargetChange}
