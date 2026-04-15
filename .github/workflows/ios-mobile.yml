@@ -57,38 +57,12 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
-      - name: Install interface dependencies
-        working-directory: interface
-        run: npm ci
-
-      - name: Build interface and sync Capacitor iOS
-        working-directory: interface
-        run: |
-          npm run build
-          npx cap sync ios
-
-      - name: Build iOS simulator app
-        working-directory: interface
-        run: |
-          xcodebuild \
-            -project ios/App/App.xcodeproj \
-            -scheme App \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath /tmp/aura-ios-validate \
-            build
-
-      - name: Summarize iOS validation outputs
-        run: |
-          node infra/scripts/release/mobile-release-summary.mjs \
-            --platform ios \
-            --mode validate \
-            --output-dir mobile-release-summary \
-            --roots /tmp/aura-ios-validate/Build/Products
+      - name: Run iOS validation entrypoint
+        run: node scripts/ci/verify-ios.mjs
 
       - name: Attach iOS validation summary
         shell: bash
@@ -132,14 +106,17 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4"
+          ruby-version: "4.0.2"
+
+      - name: Check iOS runtime parity
+        run: node scripts/ci/check-runtime.mjs ios --native --ruby
 
       - name: Install interface dependencies
         working-directory: interface

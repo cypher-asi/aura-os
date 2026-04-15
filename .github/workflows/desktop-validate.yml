@@ -79,7 +79,7 @@ jobs:
           include-harness: "true"
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.94.1
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
@@ -92,7 +92,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
@@ -102,29 +102,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
 
-      - name: Install interface dependencies
-        working-directory: interface
-        run: npm ci
-
-      - name: Prepare bundled aura-node sidecar
-        run: node infra/scripts/release/prepare-desktop-sidecar.mjs
-
-      - name: Build interface
-        working-directory: interface
-        run: npm run build
-
-      - name: Build desktop release binary
+      - name: Run desktop validation entrypoint
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
-        run: cargo build --release --package aura-os-desktop
-
-      - name: Smoke test built desktop app
-        env:
           AURA_DESKTOP_BINARY: ${{ matrix.binary }}
           AURA_DESKTOP_SMOKE_LOG_DIR: desktop-smoke-logs/${{ matrix.target }}
-        run: node infra/scripts/release/desktop-ci-smoke.mjs
+          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+        run: node scripts/ci/verify-desktop.mjs --smoke --binary "${{ matrix.binary }}"
 
       - name: Install cargo-packager
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''

@@ -26,26 +26,13 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
-
-      - name: Run smoke evals
-        run: npm run test:evals:smoke
-
-      - name: Summarize smoke evals
+      - name: Run smoke evals entrypoint
         if: always()
-        run: npm run test:evals:report
-
-      - name: Compare smoke evals to baseline
-        if: always()
-        run: npm run test:evals:compare -- test-results/aura-evals-summary.json ../infra/evals/reports/baselines/smoke-summary.json smoke-compare
+        run: node ../scripts/ci/verify-evals.mjs smoke
 
       - name: Upload smoke artifacts
         if: always()
@@ -69,26 +56,13 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run deterministic workflow evals
-        run: npm run test:evals:workflow
-
-      - name: Summarize workflow evals
+      - name: Run workflow evals entrypoint
         if: always()
-        run: npm run test:evals:report
-
-      - name: Compare workflow evals to baseline
-        if: always()
-        run: npm run test:evals:compare -- test-results/aura-evals-summary.json ../infra/evals/reports/baselines/workflow-summary.json workflow-compare
+        run: node ../scripts/ci/verify-evals.mjs workflow
 
       - name: Upload workflow artifacts
         if: always()
@@ -112,15 +86,12 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: infra/evals/promptfoo/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run behavior evals
-        run: npm run eval:ci
+      - name: Run behavior evals entrypoint
+        run: node ../../../scripts/ci/verify-evals.mjs behavior
 
       - name: Upload behavior eval artifacts
         if: always()
@@ -145,27 +116,17 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run live benchmark evals
+      - name: Run live benchmark entrypoint
+        if: always()
         env:
-          AURA_EVAL_LIVE: "1"
           AURA_EVAL_BASE_URL: ${{ secrets.AURA_EVAL_BASE_URL }}
           AURA_EVAL_USER_EMAIL: ${{ secrets.AURA_EVAL_USER_EMAIL }}
           AURA_EVAL_USER_PASSWORD: ${{ secrets.AURA_EVAL_USER_PASSWORD }}
-        run: npm run test:evals:benchmark
-
-      - name: Summarize live benchmark evals
-        if: always()
-        run: npm run test:evals:report
+        run: node ../scripts/ci/verify-evals.mjs live-benchmark
 
       - name: Upload live benchmark artifacts
         if: always()

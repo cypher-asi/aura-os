@@ -35,9 +35,37 @@ Persisted browser-owned state lives client-side in IndexedDB, while the local ba
 
 ### Prerequisites
 
-- Rust toolchain (1.85.0+)
-- Node.js and npm
+- Rust toolchain `1.94.1`
+- Node.js `25.9.0` and npm
+- Java `26` for Android validation and release lanes
+- Ruby `4.0.2` for iOS and Android release lanes
 - Vendored [ZUI](https://github.com/cypher-asi/zui) source already included under `vendor/zui`
+
+### CI Runtime Parity
+
+GitHub Actions now uses the same explicit runtime matrix across desktop, mobile, and eval workflows:
+
+- Node.js `25.9.0` via [`.nvmrc`](.nvmrc)
+- Rust `1.94.1` via [`rust-toolchain.toml`](rust-toolchain.toml)
+- Java `26` for Android native lanes
+- Ruby `4.0.2` for mobile release lanes
+
+Use the shared parity scripts from the repo root before pushing changes:
+
+```bash
+node scripts/ci/check-runtime.mjs desktop
+node scripts/ci/verify-desktop.mjs --smoke
+node scripts/ci/verify-evals.mjs smoke
+```
+
+For native mobile validation:
+
+```bash
+node scripts/ci/check-runtime.mjs ios --native
+node scripts/ci/check-runtime.mjs android --native
+```
+
+Desktop packaging parity also expects an `aura-harness` checkout next to this repo, or an `AURA_HARNESS_DIR` override that points to that checkout.
 
 ### Environment and `.env`
 

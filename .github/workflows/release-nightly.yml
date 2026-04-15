@@ -55,7 +55,7 @@ jobs:
           include-harness: "true"
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.94.1
 
       - name: Restore sidecar Rust cache
         uses: Swatinem/rust-cache@v2
@@ -63,6 +63,14 @@ jobs:
           shared-key: desktop-sidecar-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
             ../aura-harness -> target
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+
+      - name: Check desktop runtime parity
+        run: node scripts/ci/check-runtime.mjs desktop --require-harness
 
       - name: Build bundled aura-node sidecar
         run: node infra/scripts/release/prepare-desktop-sidecar.mjs
@@ -115,7 +123,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.94.1
 
       - name: Restore desktop Rust cache
         uses: Swatinem/rust-cache@v2
@@ -127,9 +135,12 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
+
+      - name: Check desktop runtime parity
+        run: node scripts/ci/check-runtime.mjs desktop
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -220,12 +231,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.94.1
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
+
+      - name: Check desktop runtime parity
+        run: node scripts/ci/check-runtime.mjs desktop
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -584,7 +598,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
 
       - name: Compute nightly version
         id: version
@@ -679,7 +693,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 25.9.0
 
       - name: Compute nightly version
         id: version
