@@ -3,14 +3,14 @@
   "promptVersion": 1,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-15T18:43:36.937Z",
+  "generatedAt": "2026-04-15T20:54:22.027Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.9e40e99",
+  "version": "0.1.0-nightly.fb677ae",
   "date": "2026-04-15",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
-  "previousProcessedSha": null,
+  "lastIncludedSha": "fb677ae6781e6a7b6359ad3de7c945e80fde4b93",
+  "previousProcessedSha": "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
   "commitShas": [
     "5509bcd2ec8b00a10a83389832104f5f15ead590",
     "6d76e47fbb251878c6534497acfaaf893791d8e7",
@@ -31,9 +31,12 @@
     "2e8ecb8eaae05af54dbcafee03280ebbf3337a99",
     "38e020c06497fba072c83c26d4259b27fdce66d0",
     "9f34383527083ffac59a8d07a94538cda3d77095",
-    "9e40e99b0dff8228ec078cf76cbee06be9fc70b8"
+    "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
+    "b9dc017cb28758381d31cfc3bbf30794d659ab8b",
+    "805f16f35178699feae9d062d565ae11ef07173a",
+    "fb677ae6781e6a7b6359ad3de7c945e80fde4b93"
   ],
-  "rawCommitCount": 20,
+  "rawCommitCount": 23,
   "rawCommits": [
     {
       "sha": "5509bcd2ec8b00a10a83389832104f5f15ead590",
@@ -596,35 +599,111 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "b9dc017cb28758381d31cfc3bbf30794d659ab8b",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T16:33:18-04:00",
+      "subject": "Update stale desktop eval workbench assertions",
+      "body": "",
+      "parents": [
+        "9e40e99b0dff8228ec078cf76cbee06be9fc70b8"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/scenarios/core-browser-smoke.json",
+        "interface/tests/e2e/evals/workflow-e2e.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 1,
+        "deletions": 2
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "805f16f35178699feae9d062d565ae11ef07173a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T16:35:41-04:00",
+      "subject": "Refine changelog prompt toward editorial release notes",
+      "body": "",
+      "parents": [
+        "b9dc017cb28758381d31cfc3bbf30794d659ab8b"
+      ],
+      "files": [
+        "infra/scripts/release/generate-daily-changelog.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 16,
+        "deletions": 1
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "fb677ae6781e6a7b6359ad3de7c945e80fde4b93",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T16:36:07-04:00",
+      "subject": "Remove Cursor reference from changelog prompt",
+      "body": "",
+      "parents": [
+        "805f16f35178699feae9d062d565ae11ef07173a"
+      ],
+      "files": [
+        "infra/scripts/release/generate-daily-changelog.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.9e40e99",
+      "version": "0.1.0-nightly.fb677ae",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 24464956
+          "sizeBytes": 24464866
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 456
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
           "sizeBytes": 92264952
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 464
@@ -634,29 +713,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.9e40e99",
+      "version": "0.1.0-nightly.fb677ae",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.9e40e99_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.fb677ae_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21127218
+          "sizeBytes": 21126900
         },
         {
-          "name": "Aura_0.1.0-nightly.9e40e99_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.fb677ae_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 444
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 20946428
+          "sizeBytes": 20946111
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 468
@@ -666,29 +745,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.9e40e99",
+      "version": "0.1.0-nightly.fb677ae",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.9e40e99_x64.dmg",
+          "name": "Aura_0.1.0-nightly.fb677ae_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 22554565
+          "sizeBytes": 22555003
         },
         {
-          "name": "Aura_0.1.0-nightly.9e40e99_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.fb677ae_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 22391720
+          "sizeBytes": 22391474
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 468
@@ -698,17 +777,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.9e40e99",
+      "version": "0.1.0-nightly.fb677ae",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 14785262
+          "sizeBytes": 14786616
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -720,38 +799,31 @@
     "date": "2026-04-15",
     "repo": "aura-os",
     "channel": "nightly",
-    "version": "0.1.0-nightly.9e40e99",
+    "version": "0.1.0-nightly.fb677ae",
     "title": "Mobile Workspace Shell and Release Infrastructure Improvements",
-    "intro": "Major mobile experience overhaul with dedicated workspace shell, refined agent workflows, and enhanced release automation. This release focuses on making mobile navigation coherent while preserving desktop behavior.",
+    "intro": "Today's release introduces a dedicated mobile workspace shell with improved navigation and agent workflows, alongside significant release infrastructure enhancements including automated changelog generation.",
     "sections": [
       {
         "title": "Mobile Experience",
         "items": [
           {
-            "text": "Added dedicated mobile workspace shell with organization hub, project navigation drawer, and mobile-optimized topbar",
+            "text": "Introduced dedicated mobile workspace shell with organization hub, project navigation drawer, and streamlined mobile-first layouts",
             "commit_shas": [
               "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Refined mobile agent and project workflows with improved agent conversation rows and project navigation",
+            "text": "Refined mobile agent and project workflows with improved agent selection, conversation handling, and project setup flows",
             "commit_shas": [
               "7299fdd6262cfbc622274f96e571a7816ff91dde"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished mobile execution view with redesigned layout, execution cards, and floating action controls",
+            "text": "Polished mobile execution view with redesigned task controls, execution summaries, and action buttons optimized for touch interaction",
             "commit_shas": [
               "38e020c06497fba072c83c26d4259b27fdce66d0"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Enhanced mobile and desktop regression test coverage with updated visual specs and layout capability tests",
-            "commit_shas": [
-              "032889cd17c430ba008f5ed8d5a95560d12e262c"
             ],
             "confidence": "high"
           }
@@ -761,21 +833,21 @@
         "title": "Interface Improvements",
         "items": [
           {
-            "text": "Fixed chat panel reveal timing by waiting for virtualized tail before showing chrome, eliminating visible scroll corrections",
+            "text": "Fixed chat panel reveal timing by waiting for virtualized message list to reach tail before showing chrome, eliminating visible scroll corrections on first open",
             "commit_shas": [
               "5509bcd2ec8b00a10a83389832104f5f15ead590"
             ],
             "confidence": "high"
           },
           {
-            "text": "Improved desktop update banner positioning to float above taskbar",
+            "text": "Positioned desktop update banner to float above taskbar for better visibility",
             "commit_shas": [
               "f6335a768f71f084f135c8b13489bf87b22ad1b3"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Cleaned up agent editor by removing dead system prompt props",
+            "text": "Cleaned up agent editor interface by removing unused system prompt properties",
             "commit_shas": [
               "78ab4d25e06aa5a678f66bd67eafcbe6b8bc7aa8"
             ],
@@ -787,14 +859,16 @@
         "title": "Release Infrastructure",
         "items": [
           {
-            "text": "Added automated daily changelog generation for both nightly and stable releases",
+            "text": "Added automated daily changelog generation for both nightly and stable releases using AI-powered commit analysis",
             "commit_shas": [
-              "9e40e99b0dff8228ec078cf76cbee06be9fc70b8"
+              "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
+              "805f16f35178699feae9d062d565ae11ef07173a",
+              "fb677ae6781e6a7b6359ad3de7c945e80fde4b93"
             ],
             "confidence": "high"
           },
           {
-            "text": "Upgraded CI Node version from 22 to 25 across all workflows to align with local development",
+            "text": "Upgraded CI Node version to 25 across all workflows to align with local development environment",
             "commit_shas": [
               "2828dc38355612749f9d06e617c8ccd5c8fc57ad",
               "9557757d9eb2770b6921079bf25659d936de5f9f"
@@ -802,14 +876,14 @@
             "confidence": "high"
           },
           {
-            "text": "Configured desktop validation to run only for pull requests, optimizing CI resource usage",
+            "text": "Optimized desktop validation workflow to run only on pull requests, reducing unnecessary CI overhead",
             "commit_shas": [
               "1d74cc60a48632b98520ef566cfd66edff69328d"
             ],
             "confidence": "medium"
           },
           {
-            "text": "Set up iOS beta lane to run on main branch pushes for continuous mobile testing",
+            "text": "Configured iOS beta lane to run on main branch pushes for continuous mobile testing",
             "commit_shas": [
               "80d9e3942f6ba9d196ecdd9e294052a11c7ab7f3"
             ],
@@ -818,26 +892,37 @@
         ]
       },
       {
-        "title": "Platform Updates",
+        "title": "Platform & Testing",
         "items": [
           {
-            "text": "Enhanced Desktop updater security by preserving encoded public key for signature validation",
+            "text": "Enhanced mobile and desktop regression test coverage with improved assertions and visual validation",
             "commit_shas": [
-              "75589e4e5e50113d21b7587b235e2a57162c10b9"
+              "032889cd17c430ba008f5ed8d5a95560d12e262c",
+              "9f34383527083ffac59a8d07a94538cda3d77095"
             ],
             "confidence": "high"
           },
           {
-            "text": "Configured iOS CI keychain setup for proper code signing in automated builds",
+            "text": "Stabilized evaluation test expectations for shell interactions and workflow statistics",
+            "commit_shas": [
+              "fd625fd64f52f58d53fa154cdf41d5bd3c777f7b",
+              "fc15ffb2fd05d94af7c0b5121011345c387c160f",
+              "2e8ecb8eaae05af54dbcafee03280ebbf3337a99",
+              "b9dc017cb28758381d31cfc3bbf30794d659ab8b"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Set up CI keychain configuration for iOS code signing in automated builds",
             "commit_shas": [
               "5dd83aefe30f468d9ae098d1ce5701a13cf5ea69"
             ],
             "confidence": "medium"
           },
           {
-            "text": "Applied rustfmt formatting across server handlers, billing, orgs, sessions, and related crates",
+            "text": "Preserved encoded updater public key in Desktop application for secure update verification",
             "commit_shas": [
-              "6d76e47fbb251878c6534497acfaaf893791d8e7"
+              "75589e4e5e50113d21b7587b235e2a57162c10b9"
             ],
             "confidence": "medium"
           }
@@ -845,10 +930,10 @@
       }
     ],
     "highlights": [
-      "Mobile workspace shell provides coherent navigation without breaking desktop flows",
-      "Chat panel timing improvements eliminate visible scroll corrections on first open",
-      "Automated changelog generation now included in release pipeline"
+      "New mobile workspace shell with dedicated organization and project navigation",
+      "Automated changelog generation for release transparency",
+      "Improved chat panel timing eliminates scroll corrections"
     ],
-    "raw_commit_count": 20
+    "raw_commit_count": 23
   }
 }

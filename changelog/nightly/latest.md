@@ -2,40 +2,40 @@
 
 - Date: `2026-04-15`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.9e40e99`
+- Version: `0.1.0-nightly.fb677ae`
 - Release: https://github.com/cypher-asi/aura-os/releases/tag/nightly
 
-Major mobile experience overhaul with dedicated workspace shell, refined agent workflows, and enhanced release automation. This release focuses on making mobile navigation coherent while preserving desktop behavior.
+Today's release introduces a dedicated mobile workspace shell with improved navigation and agent workflows, alongside significant release infrastructure enhancements including automated changelog generation.
 
 ## Mobile Experience
 
-- Added dedicated mobile workspace shell with organization hub, project navigation drawer, and mobile-optimized topbar (`0f05d0f`)
-- Refined mobile agent and project workflows with improved agent conversation rows and project navigation (`7299fdd`)
-- Polished mobile execution view with redesigned layout, execution cards, and floating action controls (`38e020c`)
-- Enhanced mobile and desktop regression test coverage with updated visual specs and layout capability tests (`032889c`)
+- Introduced dedicated mobile workspace shell with organization hub, project navigation drawer, and streamlined mobile-first layouts (`0f05d0f`)
+- Refined mobile agent and project workflows with improved agent selection, conversation handling, and project setup flows (`7299fdd`)
+- Polished mobile execution view with redesigned task controls, execution summaries, and action buttons optimized for touch interaction (`38e020c`)
 
 ## Interface Improvements
 
-- Fixed chat panel reveal timing by waiting for virtualized tail before showing chrome, eliminating visible scroll corrections (`5509bcd`)
-- Improved desktop update banner positioning to float above taskbar (`f6335a7`)
-- Cleaned up agent editor by removing dead system prompt props (`78ab4d2`)
+- Fixed chat panel reveal timing by waiting for virtualized message list to reach tail before showing chrome, eliminating visible scroll corrections on first open (`5509bcd`)
+- Positioned desktop update banner to float above taskbar for better visibility (`f6335a7`)
+- Cleaned up agent editor interface by removing unused system prompt properties (`78ab4d2`)
 
 ## Release Infrastructure
 
-- Added automated daily changelog generation for both nightly and stable releases (`9e40e99`)
-- Upgraded CI Node version from 22 to 25 across all workflows to align with local development (`2828dc3`, `9557757`)
-- Configured desktop validation to run only for pull requests, optimizing CI resource usage (`1d74cc6`)
-- Set up iOS beta lane to run on main branch pushes for continuous mobile testing (`80d9e39`)
+- Added automated daily changelog generation for both nightly and stable releases using AI-powered commit analysis (`9e40e99`, `805f16f`, `fb677ae`)
+- Upgraded CI Node version to 25 across all workflows to align with local development environment (`2828dc3`, `9557757`)
+- Optimized desktop validation workflow to run only on pull requests, reducing unnecessary CI overhead (`1d74cc6`)
+- Configured iOS beta lane to run on main branch pushes for continuous mobile testing (`80d9e39`)
 
-## Platform Updates
+## Platform & Testing
 
-- Enhanced Desktop updater security by preserving encoded public key for signature validation (`75589e4`)
-- Configured iOS CI keychain setup for proper code signing in automated builds (`5dd83ae`)
-- Applied rustfmt formatting across server handlers, billing, orgs, sessions, and related crates (`6d76e47`)
+- Enhanced mobile and desktop regression test coverage with improved assertions and visual validation (`032889c`, `9f34383`)
+- Stabilized evaluation test expectations for shell interactions and workflow statistics (`fd625fd`, `fc15ffb`, `2e8ecb8`, `b9dc017`)
+- Set up CI keychain configuration for iOS code signing in automated builds (`5dd83ae`)
+- Preserved encoded updater public key in Desktop application for secure update verification (`75589e4`)
 
 ## Highlights
 
-- Mobile workspace shell provides coherent navigation without breaking desktop flows
-- Chat panel timing improvements eliminate visible scroll corrections on first open
-- Automated changelog generation now included in release pipeline
+- New mobile workspace shell with dedicated organization and project navigation
+- Automated changelog generation for release transparency
+- Improved chat panel timing eliminates scroll corrections
 

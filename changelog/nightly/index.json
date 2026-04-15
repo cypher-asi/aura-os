@@ -2,16 +2,16 @@
   {
     "date": "2026-04-15",
     "channel": "nightly",
-    "version": "0.1.0-nightly.9e40e99",
+    "version": "0.1.0-nightly.fb677ae",
     "title": "Mobile Workspace Shell and Release Infrastructure Improvements",
-    "intro": "Major mobile experience overhaul with dedicated workspace shell, refined agent workflows, and enhanced release automation. This release focuses on making mobile navigation coherent while preserving desktop behavior.",
+    "intro": "Today's release introduces a dedicated mobile workspace shell with improved navigation and agent workflows, alongside significant release infrastructure enhancements including automated changelog generation.",
     "highlights": [
-      "Mobile workspace shell provides coherent navigation without breaking desktop flows",
-      "Chat panel timing improvements eliminate visible scroll corrections on first open",
-      "Automated changelog generation now included in release pipeline"
+      "New mobile workspace shell with dedicated organization and project navigation",
+      "Automated changelog generation for release transparency",
+      "Improved chat panel timing eliminates scroll corrections"
     ],
-    "rawCommitCount": 20,
-    "generatedAt": "2026-04-15T18:43:36.937Z",
+    "rawCommitCount": 23,
+    "generatedAt": "2026-04-15T20:54:22.027Z",
     "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
     "path": "history/2026-04-15.json"
   }
