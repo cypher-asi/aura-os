@@ -201,6 +201,9 @@ export function ChatPanel({
               <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
             </div>
           </div>
+          {!chromeReady ? (
+            <div className={styles.messageAreaVeil} aria-hidden="true" />
+          ) : null}
           <OverlayScrollbar scrollRef={s.messageAreaRef} />
         </div>
 

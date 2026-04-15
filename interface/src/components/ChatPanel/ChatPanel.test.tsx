@@ -191,6 +191,29 @@ describe("ChatPanel", () => {
     expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "false");
   });
 
+  it("covers the message viewport with a veil while the first reveal is still settling", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseScrollAnchor.mockReturnValue({
+      handleScroll: vi.fn(),
+      scrollToBottom: vi.fn(),
+      scrollToBottomIfPinned: vi.fn(),
+      isReady: false,
+      isAutoFollowing: true,
+    });
+
+    const { container } = renderPanel();
+
+    expect(container.querySelector(".messageAreaVeil")).not.toBeNull();
+  });
+
+  it("removes the viewport veil once the panel is ready", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    const { container } = renderPanel();
+
+    expect(container.querySelector(".messageAreaVeil")).toBeNull();
+  });
+
   it("shows an error state separately from loading and empty states", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
