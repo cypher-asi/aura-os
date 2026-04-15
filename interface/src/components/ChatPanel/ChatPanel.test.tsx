@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import type { ComponentProps } from "react";
+import { useLayoutEffect, type ComponentProps } from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import type { DisplaySessionEvent } from "../../types/stream";
@@ -7,6 +7,8 @@ import { useMessageStore } from "../../stores/message-store";
 import { useChatViewStore } from "../../stores/chat-view-store";
 
 const mockUseAuraCapabilities = vi.fn();
+let autoSignalInitialAnchorReady = false;
+let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn> | null = null;
 const sampleHistoryMessages: DisplaySessionEvent[] = [
   { id: "msg-1", role: "user", content: "Hello" },
 ];
@@ -32,16 +34,26 @@ vi.mock("../ChatMessageList", () => ({
   ChatMessageList: ({
     messages,
     emptyState,
+    onInitialAnchorReady,
   }: {
     messages?: Array<{ id: string; content: string }>;
     emptyState?: React.ReactNode;
-  }) => (
-    <div data-testid="chat-message-list">
-      {messages?.length
-        ? messages.map((message) => <div key={message.id}>{message.content}</div>)
-        : emptyState}
-    </div>
-  ),
+    onInitialAnchorReady?: () => void;
+  }) => {
+    useLayoutEffect(() => {
+      if (autoSignalInitialAnchorReady && messages?.length) {
+        onInitialAnchorReady?.();
+      }
+    }, [messages, onInitialAnchorReady]);
+
+    return (
+      <div data-testid="chat-message-list">
+        {messages?.length
+          ? messages.map((message) => <div key={message.id}>{message.content}</div>)
+          : emptyState}
+      </div>
+    );
+  },
 }));
 
 vi.mock("../ChatInputBar", () => ({
@@ -80,8 +92,20 @@ vi.mock("./ChatPanel.module.css", () => ({
 describe("ChatPanel", () => {
   beforeEach(() => {
     mockUseAuraCapabilities.mockReset();
+    autoSignalInitialAnchorReady = false;
     useMessageStore.setState({ messages: {}, orderedIds: {} });
     useChatViewStore.setState({ threads: {} });
+    requestAnimationFrameSpy = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+  });
+
+  afterEach(() => {
+    requestAnimationFrameSpy?.mockRestore();
+    requestAnimationFrameSpy = null;
   });
 
   function renderPanel(overrides: Partial<ComponentProps<typeof ChatPanel>> = {}) {
@@ -177,15 +201,66 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
   });
 
-  it("keeps populated history visible once messages are available", () => {
+  it("reveals warm cached history immediately", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
-    renderPanel({
+    const { container } = renderPanel({
       historyResolved: true,
       historyMessages: [...sampleHistoryMessages],
     });
     expect(screen.getByText("Hello")).toBeInTheDocument();
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
     expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
+  });
+
+  it("keeps cold-load history hidden until the initial anchor is ready", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    const { container, rerender } = render(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading
+        historyResolved={false}
+      />,
+    );
+
+    rerender(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+      />,
+    );
+
+    expect(container.querySelector(".messageContentHidden")).not.toBeNull();
+    expect(container.querySelector(".initialRevealOverlay")).not.toBeNull();
+
+    autoSignalInitialAnchorReady = true;
+
+    rerender(
+      <ChatPanel
+        streamKey="stream-1"
+        onSend={vi.fn()}
+        onStop={vi.fn()}
+        agentName="Coca"
+        machineType="remote"
+        isLoading={false}
+        historyResolved
+        historyMessages={[...sampleHistoryMessages]}
+      />,
+    );
+
+    expect(container.querySelector(".messageContentHidden")).toBeNull();
+    expect(container.querySelector(".initialRevealOverlay")).toBeNull();
   });
 
   it("does not hide an empty conversation while history is already resolved", () => {

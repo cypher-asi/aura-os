@@ -28,6 +28,7 @@ interface ChatMessageListProps {
   isLoadingOlder?: boolean;
   hasOlderMessages?: boolean;
   onContentHeightChange?: (options?: { immediate?: boolean }) => void;
+  onInitialAnchorReady?: () => void;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -47,6 +48,7 @@ export function ChatMessageList({
   isLoadingOlder,
   hasOlderMessages,
   onContentHeightChange,
+  onInitialAnchorReady,
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -176,7 +178,8 @@ export function ChatMessageList({
       return;
     }
     onContentHeightChange?.({ immediate: true });
-  }, [hasMessages, layoutSignature, onContentHeightChange]);
+    onInitialAnchorReady?.();
+  }, [hasMessages, layoutSignature, onContentHeightChange, onInitialAnchorReady]);
 
   useEffect(() => () => {
     for (const observer of resizeObserversRef.current.values()) {

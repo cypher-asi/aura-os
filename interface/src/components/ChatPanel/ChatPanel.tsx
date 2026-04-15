@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageSquare, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
@@ -124,31 +124,79 @@ export function ChatPanel({
 
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
+  const initialColdLoadRef = useRef(!historyResolved);
+  const revealAnimationFrameRef = useRef<number | null>(null);
+  const [isInitialThreadRevealReady, setIsInitialThreadRevealReady] = useState(() => historyResolved);
   const showLoadingPlaceholder =
     !errorMessage && messages.length === 0 && (showLoadingState || !historyResolved);
 
   const contentReady = historyResolved && !isLoading;
+  const shouldHideThreadForInitialReveal =
+    initialColdLoadRef.current && historyResolved && messages.length > 0 && !isInitialThreadRevealReady;
+  const threadReady = contentReady && !shouldHideThreadForInitialReveal;
 
   useEffect(() => {
     initialHandoffReadyRef.current = false;
     inputFocusReadyRef.current = false;
+    initialColdLoadRef.current = !historyResolved;
+    setIsInitialThreadRevealReady(historyResolved);
+    if (revealAnimationFrameRef.current != null) {
+      cancelAnimationFrame(revealAnimationFrameRef.current);
+      revealAnimationFrameRef.current = null;
+    }
   }, [initialHandoff, scrollResetKey]);
 
   useEffect(() => {
-    if (isMobileLayout || !contentReady || inputFocusReadyRef.current) {
+    if (!historyResolved) {
+      initialColdLoadRef.current = true;
+      setIsInitialThreadRevealReady(false);
+      return;
+    }
+
+    if (messages.length === 0) {
+      initialColdLoadRef.current = false;
+      setIsInitialThreadRevealReady(true);
+    }
+  }, [historyResolved, messages.length]);
+
+  useEffect(() => () => {
+    if (revealAnimationFrameRef.current != null) {
+      cancelAnimationFrame(revealAnimationFrameRef.current);
+    }
+  }, []);
+
+  const handleInitialAnchorReady = useCallback(() => {
+    if (!initialColdLoadRef.current || !historyResolved || messages.length === 0) {
+      return;
+    }
+    if (revealAnimationFrameRef.current != null) {
+      cancelAnimationFrame(revealAnimationFrameRef.current);
+    }
+
+    revealAnimationFrameRef.current = requestAnimationFrame(() => {
+      revealAnimationFrameRef.current = requestAnimationFrame(() => {
+        revealAnimationFrameRef.current = null;
+        initialColdLoadRef.current = false;
+        setIsInitialThreadRevealReady(true);
+      });
+    });
+  }, [historyResolved, messages.length]);
+
+  useEffect(() => {
+    if (isMobileLayout || !threadReady || inputFocusReadyRef.current) {
       return;
     }
     inputFocusReadyRef.current = true;
     requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [contentReady, inputBarRef, isMobileLayout]);
+  }, [inputBarRef, isMobileLayout, threadReady]);
 
   useEffect(() => {
-    if (!initialHandoff || !contentReady || initialHandoffReadyRef.current) {
+    if (!initialHandoff || !threadReady || initialHandoffReadyRef.current) {
       return;
     }
     initialHandoffReadyRef.current = true;
     onInitialHandoffReady?.();
-  }, [contentReady, initialHandoff, onInitialHandoffReady]);
+  }, [initialHandoff, onInitialHandoffReady, threadReady]);
 
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
@@ -234,7 +282,9 @@ export function ChatPanel({
             ref={messageAreaRef}
             onScroll={handleScroll}
           >
-            <div className={styles.messageContent}>
+            <div
+              className={`${styles.messageContent}${shouldHideThreadForInitialReveal ? ` ${styles.messageContentHidden}` : ""}`}
+            >
               <ChatMessageList
                 messages={messages}
                 streamKey={streamKey}
@@ -245,9 +295,18 @@ export function ChatPanel({
                 isLoadingOlder={isLoadingOlder}
                 hasOlderMessages={hasOlderMessages}
                 onContentHeightChange={onContentHeightChange}
+                onInitialAnchorReady={handleInitialAnchorReady}
               />
             </div>
           </div>
+          {shouldHideThreadForInitialReveal && (
+            <div className={styles.initialRevealOverlay}>
+              <div className={styles.emptyState}>
+                <MessageSquare size={40} />
+                <Text variant="muted" size="sm">Loading conversation...</Text>
+              </div>
+            </div>
+          )}
           <OverlayScrollbar scrollRef={messageAreaRef} />
           {!isAutoFollowing && unreadCount > 0 && (
             <button

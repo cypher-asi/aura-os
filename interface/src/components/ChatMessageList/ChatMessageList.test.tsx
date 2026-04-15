@@ -97,6 +97,7 @@ describe("ChatMessageList", () => {
   it("reconciles content height when the virtualized layout changes", () => {
     const scrollRef = { current: document.createElement("div") };
     const onContentHeightChange = vi.fn();
+    const onInitialAnchorReady = vi.fn();
 
     render(
       <ChatMessageList
@@ -108,10 +109,12 @@ describe("ChatMessageList", () => {
         scrollRef={scrollRef}
         heightCache={heightCache}
         onContentHeightChange={onContentHeightChange}
+        onInitialAnchorReady={onInitialAnchorReady}
       />,
     );
 
     expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
+    expect(onInitialAnchorReady).toHaveBeenCalled();
   });
 
   it("shows a load older trigger when older history is available", () => {

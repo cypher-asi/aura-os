@@ -184,6 +184,11 @@
   flex: 1;
 }
 
+.messageContentHidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .emptyState {
   display: flex;
   flex-direction: column;
@@ -193,6 +198,13 @@
   gap: var(--space-3);
   color: var(--color-text-muted);
   text-align: center;
+}
+
+.initialRevealOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
 }
 
 /* Queue section — sits above the input area */
