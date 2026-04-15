@@ -73,7 +73,7 @@
           "urlMatches": "/projects$",
           "visibleTexts": ["Welcome to AURA"],
           "visibleRoles": [
-            { "role": "treeitem", "name": "Demo Project" }
+            { "role": "button", "name": "Demo Project" }
           ]
         }
       },
@@ -82,7 +82,7 @@
         "navigate": "/projects/proj-1/work",
         "expect": {
           "visibleRoles": [
-            { "role": "treeitem", "name": "Demo Project" },
+            { "role": "button", "name": "Demo Project" },
             { "role": "heading", "name": "Task Feed", "exact": false },
             { "role": "button", "name": "Specs", "exact": true },
             { "role": "button", "name": "Tasks", "exact": true },

@@ -45,8 +45,6 @@ export function AgentEditorModal({
       isSuperAgent={form.isSuperAgent}
       personality={form.personality}
       setPersonality={form.setPersonality}
-      systemPrompt={form.systemPrompt}
-      setSystemPrompt={form.setSystemPrompt}
       icon={form.icon}
       adapterType={form.adapterType}
       setAdapterType={form.setAdapterType}

@@ -100,8 +100,6 @@ export interface AgentEditorFormProps {
   isSuperAgent: boolean;
   personality: string;
   setPersonality: (v: string) => void;
-  systemPrompt: string;
-  setSystemPrompt: (v: string) => void;
   icon: string;
   adapterType: string;
   setAdapterType: (v: string) => void;
@@ -136,8 +134,6 @@ export function AgentEditorForm({
   isSuperAgent,
   personality,
   setPersonality,
-  systemPrompt,
-  setSystemPrompt,
   icon,
   adapterType,
   setAdapterType,
