@@ -359,6 +359,10 @@ function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { ty
   return b.type === "text" || b.type === "image";
 }
 
+function isAssistantBoundaryPlaceholder(message: DisplaySessionEvent): boolean {
+  return message.role === "assistant" && message.id.startsWith("stream-");
+}
+
 export function handleEventSaved(
   refs: StreamRefs,
   setters: StreamSetters,
@@ -382,20 +386,30 @@ export function handleEventSaved(
   const savedThinking = msg.thinking || refs.thinkingBuffer.current || undefined;
   const savedThinkingDuration = msg.thinking_duration_ms
     ?? (refs.thinkingStart.current != null ? Date.now() - refs.thinkingStart.current : null);
-  setters.setEvents((prev) => [
-    ...prev,
-    {
-      id: msg.event_id,
-      role: "assistant",
-      content: msg.content,
-      contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
-      toolCalls: finalToolCalls,
-      artifactRefs: extractArtifactRefs(allBlocks),
-      thinkingText: savedThinking,
-      thinkingDurationMs: savedThinkingDuration,
-      timeline: snapshotTimeline(refs),
-    },
-  ]);
+  const savedMessage: DisplaySessionEvent = {
+    id: msg.event_id,
+    role: "assistant",
+    content: msg.content,
+    contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
+    toolCalls: finalToolCalls,
+    artifactRefs: extractArtifactRefs(allBlocks),
+    thinkingText: savedThinking,
+    thinkingDurationMs: savedThinkingDuration,
+    timeline: snapshotTimeline(refs),
+  };
+
+  setters.setEvents((prev) => {
+    const lastMessage = prev[prev.length - 1];
+    if (
+      lastMessage &&
+      isAssistantBoundaryPlaceholder(lastMessage) &&
+      lastMessage.content === savedMessage.content
+    ) {
+      return [...prev.slice(0, -1), savedMessage];
+    }
+
+    return [...prev, savedMessage];
+  });
   resetStreamBuffers(refs, setters);
 }
 

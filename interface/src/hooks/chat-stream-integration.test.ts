@@ -31,7 +31,10 @@ const mockSidekickState = {
 };
 vi.mock("../stores/sidekick-store", () => ({
   useSidekickStore: Object.assign(
-    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    vi.fn(
+      (selector?: (state: typeof mockSidekickState) => unknown) =>
+        selector ? selector(mockSidekickState) : mockSidekickState,
+    ),
     { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
   ),
 }));
@@ -181,6 +184,55 @@ describe("Chat Stream Integration (SessionEvent)", () => {
       (c: unknown[]) => (c[0] as { spec_id: string }).spec_id === "spec-real-1",
     );
     expect(specCall).toBeDefined();
+  });
+
+  it("replaces the assistant boundary placeholder when message_end arrives", async () => {
+    simulateSSEStream([
+      {
+        type: "text_delta",
+        content: { text: "Hey there! I'm up and running." },
+      },
+      {
+        type: "assistant_message_end",
+        content: {
+          message_id: "m-1",
+          stop_reason: "end_turn",
+          usage: { input_tokens: 100, output_tokens: 50 },
+        },
+      },
+      {
+        type: "message_end",
+        content: {
+          event: {
+            event_id: "evt-1",
+            role: "assistant",
+            content: "Hey there! I'm up and running.",
+            content_blocks: [],
+            thinking: "Thought",
+            thinking_duration_ms: 6000,
+          },
+        },
+      },
+      { type: "done", content: {} },
+    ]);
+
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("Testing");
+    });
+
+    const entry = getStreamEntry(result.current.streamKey);
+    expect(entry).toBeDefined();
+
+    const assistantEvents = entry.events.filter(
+      (message: DisplaySessionEvent) => message.role === "assistant",
+    );
+    expect(assistantEvents).toHaveLength(1);
+    expect(assistantEvents[0]?.id).toBe("evt-1");
+    expect(assistantEvents[0]?.content).toBe("Hey there! I'm up and running.");
   });
 
   it("promotePendingSpec replaces pending on successful tool_result", async () => {
