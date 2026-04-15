@@ -123,7 +123,15 @@ export function useChatHistorySync({
     }
 
     const streamEntry = getStreamEntry(streamKey);
-    if ((streamEntry?.events.length ?? 0) === 0) {
+    const streamCount = streamEntry?.events.length ?? 0;
+    if (streamCount === 0) {
+      return;
+    }
+
+    // Only clear stream events when history has caught up with at least as
+    // many messages. This prevents a flash where stream events are wiped
+    // before the server has finished persisting the assistant reply.
+    if (historyMessages.length < streamCount) {
       return;
     }
 
@@ -131,6 +139,7 @@ export function useChatHistorySync({
   }, [
     historyKey,
     historyLastMessageAt,
+    historyMessages.length,
     historyStatus,
     hydrateToStream,
     isStreaming,
