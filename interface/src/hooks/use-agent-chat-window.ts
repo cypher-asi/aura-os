@@ -8,6 +8,7 @@ import { useStandaloneAgentMeta } from "./use-agent-chat-meta";
 import { agentHistoryKey } from "../stores/chat-history-store";
 import { useAgentStore } from "../apps/agents/stores";
 import { useProjectsListStore } from "../stores/projects-list-store";
+import { useContextUtilization, useContextUsageStore } from "../stores/context-usage-store";
 import type { ChatPanelProps } from "../components/ChatPanel";
 import type { AgentInstance, Project } from "../types";
 
@@ -68,6 +69,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
   );
 
   const { streamKey, sendMessage, stopStreaming, resetEvents } = useAgentChatStream({ agentId });
+  const contextUtilization = useContextUtilization(streamKey);
 
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } =
     useStandaloneAgentMeta(agentId);
@@ -94,6 +96,13 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
   const onClear = useCallback(() => {
     resetEvents([], { allowWhileStreaming: true });
   }, [resetEvents]);
+
+  const handleNewSession = useCallback(() => {
+    if (!agentId) return;
+    api.agents.resetSession(agentId).catch(() => {});
+    useContextUsageStore.getState().clearContextUtilization(streamKey);
+    resetEvents([], { allowWhileStreaming: true });
+  }, [agentId, streamKey, resetEvents]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -133,5 +142,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     projects: agentProjects,
     selectedProjectId: effectiveProjectId,
     onProjectChange: handleProjectChange,
+    contextUtilization,
+    onNewSession: handleNewSession,
   };
 }
