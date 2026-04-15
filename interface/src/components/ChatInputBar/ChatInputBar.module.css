@@ -144,10 +144,6 @@
   white-space: nowrap;
 }
 
-.inputContainer:focus-within {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
 .inputRow {
   display: flex;
   align-items: flex-end;
