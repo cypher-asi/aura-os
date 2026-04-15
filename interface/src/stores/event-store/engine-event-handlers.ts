@@ -1,5 +1,6 @@
 import type { AuraEvent, AuraEventContent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
+import { useSidekickStore } from "../sidekick-store";
 import type { BuildStep, TestStep, GitStep, TaskOutputEntry } from "./event-store";
 import { useEventStore, EMPTY_OUTPUT, subscribers, notifyTaskOutputListeners } from "./event-store";
 import { persistTaskOutputText, removePersistedTaskOutputText } from "./task-output-cache";
@@ -149,6 +150,18 @@ function handleTaskFinish(event: AuraEvent, u: OutputUpdate): void {
   notifyTaskOutputListeners(c.task_id);
 }
 
+function handleSpecSaved(event: AuraEvent, _u: OutputUpdate): void {
+  const spec = (event.content as AuraEventContent<EventType.SpecSaved>).spec;
+  if (!spec) return;
+  useSidekickStore.getState().pushSpec(spec);
+}
+
+function handleTaskSaved(event: AuraEvent, _u: OutputUpdate): void {
+  const task = (event.content as AuraEventContent<EventType.TaskSaved>).task;
+  if (!task) return;
+  useSidekickStore.getState().pushTask(task);
+}
+
 function handleLoopEnd(_event: AuraEvent, u: OutputUpdate): void {
   for (const taskId of Object.keys(u.outputs)) {
     notifyTaskOutputListeners(taskId);
@@ -172,6 +185,8 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.GitCommitFailed]: handleGitCommitFailed,
   [EventType.GitPushed]: handleGitPushed,
   [EventType.GitPushFailed]: handleGitPushFailed,
+  [EventType.SpecSaved]: handleSpecSaved,
+  [EventType.TaskSaved]: handleTaskSaved,
   [EventType.TaskCompleted]: handleTaskFinish,
   [EventType.TaskFailed]: handleTaskFinish,
   [EventType.LoopStopped]: handleLoopEnd,

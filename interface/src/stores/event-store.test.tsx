@@ -7,6 +7,11 @@ const { capture } = vi.hoisted(() => {
   return { capture };
 });
 
+const sidekickCapture = vi.hoisted(() => ({
+  pushSpec: vi.fn(),
+  pushTask: vi.fn(),
+}));
+
 vi.mock("../hooks/ws-reconnect", () => ({
   createReconnectingWebSocket: (
     _cfg: unknown,
@@ -25,6 +30,12 @@ vi.mock("../lib/auth-token", () => ({
   getStoredJwt: () => "test-jwt",
 }));
 
+vi.mock("./sidekick-store", () => ({
+  useSidekickStore: {
+    getState: () => sidekickCapture,
+  },
+}));
+
 function simulateEvent(event: Record<string, unknown>) {
   act(() => {
     capture.onMessage!(JSON.stringify(event));
@@ -33,6 +44,8 @@ function simulateEvent(event: Record<string, unknown>) {
 
 beforeEach(() => {
   useEventStore.setState({ connected: false, lastEventAt: null, taskOutputs: {} });
+  sidekickCapture.pushSpec.mockClear();
+  sidekickCapture.pushTask.mockClear();
   connectEventSocket();
 });
 
@@ -107,5 +120,16 @@ describe("event-store", () => {
     simulateEvent({ type: "build_verification_passed", task_id: "t6" });
     expect(getTaskOutput("t6").buildSteps).toHaveLength(2);
     expect(getTaskOutput("t6").buildSteps[1].kind).toBe("passed");
+  });
+
+  it("pushes saved artifacts into the sidekick store", () => {
+    const spec = { spec_id: "spec-1", title: "Spec" };
+    const task = { task_id: "task-1", title: "Task" };
+
+    simulateEvent({ type: "spec_saved", project_id: "proj-1", spec });
+    simulateEvent({ type: "task_saved", project_id: "proj-1", task });
+
+    expect(sidekickCapture.pushSpec).toHaveBeenCalledWith(spec);
+    expect(sidekickCapture.pushTask).toHaveBeenCalledWith(task);
   });
 });
