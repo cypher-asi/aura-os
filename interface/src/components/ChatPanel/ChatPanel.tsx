@@ -187,7 +187,10 @@ export function ChatPanel({
             ref={s.messageAreaRef}
             onScroll={s.handleScroll}
           >
-            <div className={`${styles.messageContent}${chromeReady ? '' : ` ${styles.messageContentSettling}`}`}>
+            <div
+              className={`${styles.messageContent}${chromeReady ? '' : ` ${styles.messageContentSettling}`}`}
+              style={chromeReady ? undefined : { visibility: 'hidden' }}
+            >
               <ChatMessageList
                 messages={s.messages}
                 streamKey={streamKey}

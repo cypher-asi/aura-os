@@ -97,7 +97,10 @@ export function useScrollAnchor(
   }, [ref]);
 
   // ── Settling phase ──────────────────────────────────────────────────
-  useEffect(() => {
+  // useLayoutEffect so that on resetKey change the skipSettle fast-path
+  // scrolls to the bottom *before* the browser paints (prevents a single
+  // visible frame with new content at the old scroll position).
+  useLayoutEffect(() => {
     const skipSettle = hasBeenReadyRef.current;
 
     phaseRef.current = "settling";

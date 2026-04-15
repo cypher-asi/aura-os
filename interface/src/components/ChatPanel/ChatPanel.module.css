@@ -185,7 +185,7 @@
 }
 
 .messageContentSettling {
-  opacity: 0;
+  visibility: hidden;
 }
 
 .scrollSentinel {
