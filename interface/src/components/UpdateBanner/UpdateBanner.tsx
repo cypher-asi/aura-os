@@ -1,9 +1,11 @@
 import { Button, Spinner, Text } from "@cypher-asi/zui";
 import { Download, X } from "lucide-react";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useUpdateBanner } from "./useUpdateBanner";
 import styles from "./UpdateBanner.module.css";
 
 export function UpdateBanner() {
+  const { isMobileLayout } = useAuraCapabilities();
   const {
     data,
     enabled,
@@ -15,10 +17,11 @@ export function UpdateBanner() {
   if (!enabled || !data) return null;
 
   const { update } = data;
+  const floatingProps = !isMobileLayout ? { "data-floating": "true" as const } : {};
 
   if (update.status === "available") {
     return (
-      <div className={styles.banner} data-variant="ready">
+      <div className={styles.banner} data-variant="ready" {...floatingProps}>
         <Download size={14} className={styles.icon} />
         <Text size="sm">
           Aura v{update.version} is ready. Install when you’re ready to restart.
@@ -48,7 +51,7 @@ export function UpdateBanner() {
 
   if (update.status === "downloading") {
     return (
-      <div className={styles.banner} data-variant="info">
+      <div className={styles.banner} data-variant="info" {...floatingProps}>
         <Download size={14} className={styles.icon} />
         <Text size="sm">Downloading Aura v{update.version}&hellip;</Text>
       </div>
@@ -57,7 +60,7 @@ export function UpdateBanner() {
 
   if (update.status === "installing") {
     return (
-      <div className={styles.banner} data-variant="ready">
+      <div className={styles.banner} data-variant="ready" {...floatingProps}>
         <Download size={14} className={styles.icon} />
         <Text size="sm">
           Installing Aura v{update.version} and restarting&hellip;
@@ -68,7 +71,7 @@ export function UpdateBanner() {
 
   if (update.status === "failed") {
     return (
-      <div className={styles.banner} data-variant="info">
+      <div className={styles.banner} data-variant="info" {...floatingProps}>
         <Download size={14} className={styles.icon} />
         <Text size="sm">Update failed: {update.error || "unknown error"}</Text>
       </div>
