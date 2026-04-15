@@ -347,7 +347,7 @@ function validateRenderedEntry(candidate, commitShas) {
 
 async function generateWithAnthropic(bundle) {
   const systemPrompt = [
-    "You are writing a polished daily product changelog entry for Aura, inspired by the style of Cursor's changelog.",
+    "You are writing a polished daily product changelog entry for Aura.",
     "Aim for release-sized editorial notes with a strong title, a short intro, grouped sections, and concise outcome-oriented bullets.",
     "Use the release metadata, commit history, file-level context, and selected diff excerpts to produce a user-facing changelog entry.",
     "Write like a product editor, not like a git log summarizer.",
@@ -381,7 +381,7 @@ async function generateWithAnthropic(bundle) {
     "- bullets should be specific and meaningful",
     "- if there are important release or reliability changes, include them",
     "- write like an editorial product changelog, not a cleaned-up commit dump",
-    "- be inspired by Cursor's changelog structure: coherent release themes, polished phrasing, and compact but meaningful sections",
+    "- use coherent release themes, polished phrasing, and compact but meaningful sections",
     "",
     "JSON schema:",
     "{",
