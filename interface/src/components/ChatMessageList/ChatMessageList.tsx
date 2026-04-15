@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, useCallback, useLayoutEffect, useMemo } from "react";
+import { type ReactNode, type RefObject, useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
@@ -15,7 +15,7 @@ interface ChatMessageListProps {
   streamKey: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyState?: ReactNode;
-  onLayoutStateChange?: (state: { signature: string; coversTail: boolean }) => void;
+  onTailLayoutChange?: (ready: boolean) => void;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -30,7 +30,7 @@ export function ChatMessageList({
   streamKey,
   scrollRef,
   emptyState,
-  onLayoutStateChange,
+  onTailLayoutChange,
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -70,30 +70,31 @@ export function ChatMessageList({
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const renderedRangeSignature = useMemo(
-    () => virtualItems.map((item) => `${item.index}:${Math.round(item.start)}:${Math.round(item.size)}`).join("|"),
-    [virtualItems],
-  );
   const coversTail = messages.length === 0
     ? true
     : (virtualItems[virtualItems.length - 1]?.index ?? -1) >= messages.length - 1;
-  const layoutSignature = useMemo(
+  const firstRenderedIndex = virtualItems[0]?.index ?? -1;
+  const lastRenderedIndex = virtualItems[virtualItems.length - 1]?.index ?? -1;
+  const prevTailLayoutKeyRef = useRef<string | null>(null);
+  const tailLayoutKey = useMemo(
     () => [
-      messages.length,
-      totalSize,
       coversTail ? "tail" : "partial",
-      renderedRangeSignature,
-      isStreaming ? "streaming" : "idle",
+      messages.length,
+      firstRenderedIndex,
+      lastRenderedIndex,
+      Math.round(totalSize),
       activeToolCalls.length,
       Boolean(streamingText),
       Boolean(thinkingText),
+      isStreaming ? "streaming" : "idle",
     ].join(":"),
     [
       activeToolCalls.length,
       coversTail,
+      firstRenderedIndex,
       isStreaming,
+      lastRenderedIndex,
       messages.length,
-      renderedRangeSignature,
       streamingText,
       thinkingText,
       totalSize,
@@ -101,11 +102,13 @@ export function ChatMessageList({
   );
 
   useLayoutEffect(() => {
-    onLayoutStateChange?.({
-      signature: hasMessages ? layoutSignature : "empty",
-      coversTail: hasMessages ? coversTail : true,
-    });
-  }, [coversTail, hasMessages, layoutSignature, onLayoutStateChange]);
+    const nextKey = hasMessages ? tailLayoutKey : "empty";
+    if (prevTailLayoutKeyRef.current === nextKey) {
+      return;
+    }
+    prevTailLayoutKeyRef.current = nextKey;
+    onTailLayoutChange?.(hasMessages ? coversTail : true);
+  }, [coversTail, hasMessages, onTailLayoutChange, tailLayoutKey]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;

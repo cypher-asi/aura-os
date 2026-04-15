@@ -4,14 +4,14 @@ import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 
 const mockUseAuraCapabilities = vi.fn();
-const mockUseScrollAnchor = vi.fn();
+const mockUseChatViewportPhase = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
 
-vi.mock("../../hooks/use-scroll-anchor", () => ({
-  useScrollAnchor: () => mockUseScrollAnchor(),
+vi.mock("./useChatViewportPhase", () => ({
+  useChatViewportPhase: () => mockUseChatViewportPhase(),
 }));
 
 vi.mock("../../hooks/stream/hooks", () => ({
@@ -69,13 +69,9 @@ vi.mock("./ChatPanel.module.css", () => ({
 describe("ChatPanel", () => {
   beforeEach(() => {
     mockUseAuraCapabilities.mockReset();
-    mockUseScrollAnchor.mockReset();
-    mockUseScrollAnchor.mockReturnValue({
-      handleScroll: vi.fn(),
-      scrollToBottom: vi.fn(),
-      scrollToBottomIfPinned: vi.fn(),
+    mockUseChatViewportPhase.mockReset();
+    mockUseChatViewportPhase.mockReturnValue({
       isReady: true,
-      isAutoFollowing: true,
     });
   });
 
@@ -175,12 +171,8 @@ describe("ChatPanel", () => {
 
   it("keeps the message area visible even while the scroll hook is settling", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
-    mockUseScrollAnchor.mockReturnValue({
-      handleScroll: vi.fn(),
-      scrollToBottom: vi.fn(),
-      scrollToBottomIfPinned: vi.fn(),
+    mockUseChatViewportPhase.mockReturnValue({
       isReady: false,
-      isAutoFollowing: true,
     });
 
     const { container } = renderPanel();
@@ -193,12 +185,8 @@ describe("ChatPanel", () => {
 
   it("covers the message viewport with a veil while the first reveal is still settling", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
-    mockUseScrollAnchor.mockReturnValue({
-      handleScroll: vi.fn(),
-      scrollToBottom: vi.fn(),
-      scrollToBottomIfPinned: vi.fn(),
+    mockUseChatViewportPhase.mockReturnValue({
       isReady: false,
-      isAutoFollowing: true,
     });
 
     const { container } = renderPanel();

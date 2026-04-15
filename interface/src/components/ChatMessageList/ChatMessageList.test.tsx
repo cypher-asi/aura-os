@@ -64,4 +64,23 @@ describe("ChatMessageList", () => {
       }),
     });
   });
+
+  it("reports when the rendered range reaches the tail", () => {
+    const scrollRef = { current: document.createElement("div") };
+    const onTailLayoutChange = vi.fn();
+
+    render(
+      <ChatMessageList
+        messages={[
+          { id: "message-1", role: "assistant", content: "Hello" } as any,
+          { id: "message-2", role: "assistant", content: "World" } as any,
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+        onTailLayoutChange={onTailLayoutChange}
+      />,
+    );
+
+    expect(onTailLayoutChange).toHaveBeenCalledWith(true);
+  });
 });

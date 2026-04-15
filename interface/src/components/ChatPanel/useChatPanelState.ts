@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
-import { useIsStreaming, useStreamEvents } from "../../hooks/stream/hooks";
+import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
 import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queue-store";
@@ -12,77 +12,7 @@ import { isGenerationCommand } from "../../constants/commands";
 import type { GenerationMode } from "../../constants/models";
 import { availableModelsForAdapter } from "../../constants/models";
 import { useChatUI } from "../../stores/chat-ui-store";
-
-function contentBlocksMatch(
-  first: DisplaySessionEvent["contentBlocks"],
-  second: DisplaySessionEvent["contentBlocks"],
-): boolean {
-  if (first === second) {
-    return true;
-  }
-  if (!first || !second || first.length !== second.length) {
-    return false;
-  }
-
-  return first.every((block, index) => {
-    const other = second[index];
-    if (!other || block.type !== other.type) {
-      return false;
-    }
-    if (block.type === "text" && other.type === "text") {
-      return block.text === other.text;
-    }
-    if (block.type === "image" && other.type === "image") {
-      return block.media_type === other.media_type && block.data === other.data;
-    }
-    return false;
-  });
-}
-
-function isPersistedVersionOfTempMessage(
-  historyMessage: DisplaySessionEvent | undefined,
-  streamMessage: DisplaySessionEvent,
-): boolean {
-  if (!historyMessage) {
-    return false;
-  }
-
-  return (
-    streamMessage.id.startsWith("temp-") &&
-    historyMessage.role === "user" &&
-    streamMessage.role === "user" &&
-    historyMessage.content === streamMessage.content &&
-    contentBlocksMatch(historyMessage.contentBlocks, streamMessage.contentBlocks)
-  );
-}
-
-function combineHistoryAndStreamMessages(
-  historyMessages: DisplaySessionEvent[] | undefined,
-  streamMessages: DisplaySessionEvent[],
-): DisplaySessionEvent[] {
-  if (!historyMessages || historyMessages.length === 0) {
-    return streamMessages;
-  }
-  if (streamMessages.length === 0) {
-    return historyMessages;
-  }
-
-  const historyIds = new Set(historyMessages.map((message) => message.id));
-  const lastHistoryMessage = historyMessages[historyMessages.length - 1];
-  const liveOnlyMessages = streamMessages.filter((message) => {
-    if (historyIds.has(message.id)) {
-      return false;
-    }
-    if (isPersistedVersionOfTempMessage(lastHistoryMessage, message)) {
-      return false;
-    }
-    return true;
-  });
-  if (liveOnlyMessages.length === 0) {
-    return historyMessages;
-  }
-  return [...historyMessages, ...liveOnlyMessages];
-}
+import { useConversationSnapshot } from "../../hooks/use-conversation-snapshot";
 
 export interface UseChatPanelStateOptions {
   streamKey: string;
@@ -100,8 +30,6 @@ export interface UseChatPanelStateOptions {
   scrollResetKey?: unknown;
   historyMessages?: DisplaySessionEvent[];
   selectedProjectId?: string;
-  contentReady?: boolean;
-  autoFocusOnReady?: boolean;
 }
 
 export function useChatPanelState({
@@ -112,12 +40,24 @@ export function useChatPanelState({
   scrollResetKey,
   historyMessages,
   selectedProjectId,
-  contentReady = true,
-  autoFocusOnReady = false,
 }: UseChatPanelStateOptions) {
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [commands, setCommands] = useState<SlashCommand[]>([]);
   const availableModels = availableModelsForAdapter(adapterType);
   const chatUI = useChatUI(streamKey);
+  const selectedModel = chatUI.selectedModel;
+  const messageAreaRef = useRef<HTMLDivElement>(null);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
+  const inputBarRef = useRef<ChatInputBarHandle>(null);
+  const { isMobileLayout } = useAuraCapabilities();
+  const attachmentsRef = useRef(attachments);
+  const { messages } = useConversationSnapshot(streamKey, historyMessages);
+  const isStreaming = useIsStreaming(streamKey);
+  const queue = useMessageQueue(streamKey);
+  const [tailLayoutReady, setTailLayoutReady] = useState(messages.length === 0);
+  const [tailLayoutRevision, setTailLayoutRevision] = useState(0);
+
   useEffect(() => {
     chatUI.init(streamKey, adapterType, defaultModel);
   }, [streamKey, adapterType, defaultModel, chatUI.init]);
@@ -132,72 +72,24 @@ export function useChatPanelState({
     setAttachments([]);
     setCommands([]);
   }, [scrollResetKey]);
-  const selectedModel = chatUI.selectedModel;
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [commands, setCommands] = useState<SlashCommand[]>([]);
-  const messageAreaRef = useRef<HTMLDivElement>(null);
-  const scrollSentinelRef = useRef<HTMLDivElement>(null);
-  const inputBarRef = useRef<ChatInputBarHandle>(null);
-  const { isMobileLayout } = useAuraCapabilities();
-  const attachmentsRef = useRef(attachments);
+
   useEffect(() => {
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  const isStreaming = useIsStreaming(streamKey);
-  const queue = useMessageQueue(streamKey);
-  const streamMessages = useStreamEvents(streamKey);
-  const messages = useMemo(
-    () => combineHistoryAndStreamMessages(historyMessages, streamMessages),
-    [historyMessages, streamMessages],
-  );
-  const [messageListLayoutState, setMessageListLayoutState] = useState<{
-    signature: string;
-    coversTail: boolean;
-  } | null>(null);
-
   useEffect(() => {
-    setMessageListLayoutState(null);
-  }, [scrollResetKey]);
-
-  const handleMessageListLayoutChange = useCallback(
-    (next: { signature: string; coversTail: boolean }) => {
-      setMessageListLayoutState((prev) => (
-        prev?.signature === next.signature && prev.coversTail === next.coversTail
-          ? prev
-          : next
-      ));
-    },
-    [],
-  );
+    setTailLayoutReady(messages.length === 0);
+    setTailLayoutRevision(0);
+  }, [messages.length, scrollResetKey]);
 
   const {
     handleScroll,
     scrollToBottom,
     scrollToBottomIfPinned,
-    isReady,
     isAutoFollowing,
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
-    contentReady,
-    layoutState: messageListLayoutState,
   });
-
-  const readyAutofocusCompleteRef = useRef(false);
-  useEffect(() => {
-    readyAutofocusCompleteRef.current = false;
-  }, [autoFocusOnReady, scrollResetKey]);
-
-  useEffect(() => {
-    if (autoFocusOnReady || isMobileLayout) return;
-    requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [autoFocusOnReady, isMobileLayout, scrollResetKey]);
-
-  useEffect(() => {
-    if (!autoFocusOnReady || !isReady || readyAutofocusCompleteRef.current) return;
-    readyAutofocusCompleteRef.current = true;
-    requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [autoFocusOnReady, isReady]);
 
   useEffect(() => {
     chatUI.syncAvailableModels(streamKey, adapterType, defaultModel);
@@ -208,6 +100,11 @@ export function useChatPanelState({
     chatUI.syncAvailableModels,
     streamKey,
   ]);
+
+  const handleTailLayoutChange = useCallback((ready: boolean) => {
+    setTailLayoutReady(ready);
+    setTailLayoutRevision((prev) => prev + 1);
+  }, []);
 
   const handleRemoveAttachment = useCallback(
     (id: string) => setAttachments((prev) => prev.filter((a) => a.id !== id)),
@@ -352,13 +249,15 @@ export function useChatPanelState({
     scrollSentinelRef,
     inputBarRef,
     isMobileLayout,
-    isReady,
     handleScroll,
     isAutoFollowing,
     isStreaming,
     queue,
     messages,
-    handleMessageListLayoutChange,
+    tailLayoutReady,
+    tailLayoutRevision,
+    scrollToBottom,
+    handleTailLayoutChange,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,

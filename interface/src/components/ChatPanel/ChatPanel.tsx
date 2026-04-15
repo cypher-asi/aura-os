@@ -7,6 +7,7 @@ import { ChatInputBar } from "../ChatInputBar";
 import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { useChatPanelState } from "./useChatPanelState";
+import { useChatViewportPhase } from "./useChatViewportPhase";
 import type { ChatAttachment } from "../../api/streams";
 import type { Project } from "../../types";
 import type { GenerationMode } from "../../constants/models";
@@ -90,15 +91,32 @@ export function ChatPanel({
     scrollResetKey,
     historyMessages,
     selectedProjectId,
-    contentReady: historyResolved,
-    autoFocusOnReady: isCreateAgentHandoff,
   });
-  const chromeReady = s.isReady;
+  const { isReady: chromeReady } = useChatViewportPhase({
+    resetKey: scrollResetKey,
+    contentReady: historyResolved,
+    hasMessages: s.messages.length > 0,
+    tailLayoutReady: s.tailLayoutReady,
+    layoutRevision: s.tailLayoutRevision,
+    scrollToBottom: s.scrollToBottom,
+    containerRef: s.messageAreaRef,
+    sentinelRef: s.scrollSentinelRef,
+  });
   const initialHandoffReadyRef = useRef(false);
+  const inputFocusReadyRef = useRef(false);
 
   useEffect(() => {
     initialHandoffReadyRef.current = false;
+    inputFocusReadyRef.current = false;
   }, [initialHandoff, scrollResetKey]);
+
+  useEffect(() => {
+    if (s.isMobileLayout || !chromeReady || inputFocusReadyRef.current) {
+      return;
+    }
+    inputFocusReadyRef.current = true;
+    requestAnimationFrame(() => s.inputBarRef.current?.focus());
+  }, [chromeReady, s.inputBarRef, s.isMobileLayout]);
 
   useEffect(() => {
     if (!initialHandoff || !chromeReady || initialHandoffReadyRef.current) {
@@ -196,7 +214,7 @@ export function ChatPanel({
                 streamKey={streamKey}
                 scrollRef={s.messageAreaRef}
                 emptyState={emptyState}
-                onLayoutStateChange={s.handleMessageListLayoutChange}
+                onTailLayoutChange={s.handleTailLayoutChange}
               />
               <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
             </div>
