@@ -58,6 +58,7 @@ describe("useChatViewportPhase", () => {
       hasMessages: false,
       tailLayoutReady: false,
       layoutRevision: 0,
+      resetKey: "chat-a",
       scrollToBottom,
       containerRef,
       sentinelRef,
@@ -82,6 +83,7 @@ describe("useChatViewportPhase", () => {
         hasMessages: true,
         tailLayoutReady: props.tailLayoutReady,
         layoutRevision: props.layoutRevision,
+        resetKey: "chat-a",
         scrollToBottom,
         containerRef,
         sentinelRef,
@@ -98,7 +100,7 @@ describe("useChatViewportPhase", () => {
     expect(scrollToBottom).toHaveBeenCalled();
   });
 
-  it("resets to hidden when the conversation key changes", () => {
+  it("re-settles when the conversation key changes after the first reveal", () => {
     const containerRef = { current: makeContainer() };
     const sentinelRef = { current: null };
     const scrollToBottom = vi.fn(() => {
@@ -109,11 +111,11 @@ describe("useChatViewportPhase", () => {
 
     const { result, rerender } = renderHook(
       ({ resetKey, layoutRevision }: { resetKey: string; layoutRevision: number }) => useChatViewportPhase({
-        resetKey,
         contentReady: true,
         hasMessages: true,
         tailLayoutReady: true,
         layoutRevision,
+        resetKey,
         scrollToBottom,
         containerRef,
         sentinelRef,
@@ -130,6 +132,7 @@ describe("useChatViewportPhase", () => {
     rerender({ resetKey: "b", layoutRevision: 1 });
     act(() => flushRafs());
     expect(result.current.isReady).toBe(true);
+    expect(scrollToBottom.mock.calls.length).toBeGreaterThan(1);
   });
 
   it("stays revealed after transient layout or history regressions", () => {
@@ -151,6 +154,7 @@ describe("useChatViewportPhase", () => {
         hasMessages: true,
         tailLayoutReady: props.tailLayoutReady,
         layoutRevision: props.layoutRevision,
+        resetKey: "chat-a",
         scrollToBottom,
         containerRef,
         sentinelRef,

@@ -159,6 +159,7 @@ export function useChatPanelState({
         });
         scrollToBottom();
       } else {
+        scrollToBottom();
         onSend(
           content,
           action ?? null,

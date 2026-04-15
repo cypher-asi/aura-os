@@ -81,7 +81,7 @@ describe("useChatPanelState", () => {
     requestAnimationFrameSpy = null;
   });
 
-  it("does not force-scroll when an idle send adds a new message", () => {
+  it("re-anchors to the bottom when an idle send adds a new message", () => {
     const onSend = vi.fn();
     const { result, rerender } = renderHook(() =>
       useChatPanelState({
@@ -101,14 +101,14 @@ describe("useChatPanelState", () => {
       undefined,
       undefined,
     );
-    expect(mockScrollToBottom).not.toHaveBeenCalled();
+    expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
 
     mockStreamMessages = [{ id: "msg-1" }];
     act(() => {
       rerender();
     });
 
-    expect(mockScrollToBottom).not.toHaveBeenCalled();
+    expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
   });
 
   it("keeps queued sends bottom-anchored while a response is already streaming", () => {

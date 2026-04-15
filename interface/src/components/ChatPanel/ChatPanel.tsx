@@ -96,17 +96,18 @@ export function ChatPanel({
     selectedProjectId,
   });
   const { isReady: chromeReady } = useChatViewportPhase({
-    resetKey: scrollResetKey,
     contentReady: historyResolved,
     hasMessages: s.messages.length > 0,
     tailLayoutReady: s.tailLayoutReady,
     layoutRevision: s.tailLayoutRevision,
+    resetKey: scrollResetKey,
     scrollToBottom: s.scrollToBottom,
     containerRef: s.messageAreaRef,
     sentinelRef: s.scrollSentinelRef,
   });
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
+  const hideMessageContent = s.messages.length > 0 && !chromeReady;
 
   useEffect(() => {
     initialHandoffReadyRef.current = false;
@@ -128,8 +129,6 @@ export function ChatPanel({
     initialHandoffReadyRef.current = true;
     onInitialHandoffReady?.();
   }, [chromeReady, initialHandoff, onInitialHandoffReady]);
-
-  const inputVisible = chromeReady || historyResolved;
 
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
@@ -211,8 +210,8 @@ export function ChatPanel({
             onScroll={s.handleScroll}
           >
             <div
-              className={`${styles.messageContent}${chromeReady ? '' : ` ${styles.messageContentSettling}`}`}
-              style={chromeReady ? undefined : { visibility: 'hidden' }}
+              className={`${styles.messageContent}${hideMessageContent ? ` ${styles.messageContentSettling}` : ""}`}
+              aria-hidden={hideMessageContent}
             >
               <ChatMessageList
                 messages={s.messages}
@@ -224,17 +223,11 @@ export function ChatPanel({
               <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
             </div>
           </div>
-          {!chromeReady ? (
-            <div className={styles.messageAreaVeil} aria-hidden="true" />
-          ) : null}
           <OverlayScrollbar scrollRef={s.messageAreaRef} />
         </div>
 
         {s.queue.length > 0 && (
-          <div
-            className={`${styles.queueSection}${chromeReady ? "" : ` ${styles.queueSectionHidden}`}`}
-            aria-hidden={chromeReady ? undefined : true}
-          >
+          <div className={styles.queueSection}>
             <MessageQueue
               streamKey={streamKey}
               onEdit={s.handleQueueEdit}
@@ -265,7 +258,7 @@ export function ChatPanel({
           projects={projects}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
-          isVisible={inputVisible}
+          isVisible
           contextUtilization={contextUtilization}
           onNewSession={onNewSession}
         />

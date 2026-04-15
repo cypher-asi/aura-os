@@ -151,14 +151,6 @@
   min-height: 0;
 }
 
-.messageAreaVeil {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: var(--color-bg, #111);
-  pointer-events: none;
-}
-
 .messageArea {
   height: 100%;
   overflow-y: auto;
@@ -194,6 +186,7 @@
 
 .messageContentSettling {
   visibility: hidden;
+  pointer-events: none;
 }
 
 .scrollSentinel {
@@ -221,12 +214,6 @@
   z-index: 11;
   padding: 0 var(--space-3);
   pointer-events: auto;
-}
-
-.queueSectionHidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 @media (max-width: 640px) {

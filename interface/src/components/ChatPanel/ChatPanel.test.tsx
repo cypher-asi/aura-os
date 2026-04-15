@@ -5,6 +5,7 @@ import { ChatPanel } from "./ChatPanel";
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseChatViewportPhase = vi.fn();
+const sampleHistoryMessages = [{ id: "msg-1", role: "user", content: "Hello" }] as const;
 
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
@@ -169,21 +170,25 @@ describe("ChatPanel", () => {
     expect(screen.queryByTestId("chat-loading-state")).not.toBeInTheDocument();
   });
 
-  it("keeps the message area visible even while the scroll hook is settling", () => {
+  it("keeps the shell visible while hiding populated history until the scroll hook settles", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     mockUseChatViewportPhase.mockReturnValue({
       isReady: false,
     });
 
-    const { container } = renderPanel({ historyResolved: true });
+    const { container } = renderPanel({
+      historyResolved: true,
+      historyMessages: [...sampleHistoryMessages] as any,
+    });
     const messageArea = container.querySelector(".messageArea");
+    const messageContent = container.querySelector(".messageContent");
 
     expect(messageArea).not.toBeNull();
-    expect(messageArea?.className).not.toContain("messageAreaHidden");
+    expect(messageContent?.className).toContain("messageContentSettling");
     expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
   });
 
-  it("covers the message viewport with a veil while the first reveal is still settling", () => {
+  it("does not hide an empty conversation while there is nothing to settle", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     mockUseChatViewportPhase.mockReturnValue({
       isReady: false,
@@ -191,15 +196,8 @@ describe("ChatPanel", () => {
 
     const { container } = renderPanel();
 
-    expect(container.querySelector(".messageAreaVeil")).not.toBeNull();
-  });
-
-  it("removes the viewport veil once the panel is ready", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
-
-    const { container } = renderPanel();
-
-    expect(container.querySelector(".messageAreaVeil")).toBeNull();
+    expect(container.querySelector(".messageContentSettling")).toBeNull();
+    expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
   });
 
   it("shows an error state separately from loading and empty states", () => {

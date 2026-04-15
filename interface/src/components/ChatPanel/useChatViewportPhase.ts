@@ -27,22 +27,22 @@ function isAnchoredAtBottom(
 }
 
 interface UseChatViewportPhaseOptions {
-  resetKey?: unknown;
   contentReady: boolean;
   hasMessages: boolean;
   tailLayoutReady: boolean;
   layoutRevision: number;
+  resetKey?: unknown;
   scrollToBottom: () => void;
   containerRef: React.RefObject<HTMLElement | null>;
   sentinelRef: React.RefObject<HTMLElement | null>;
 }
 
 export function useChatViewportPhase({
-  resetKey,
   contentReady,
   hasMessages,
   tailLayoutReady,
   layoutRevision,
+  resetKey,
   scrollToBottom,
   containerRef,
   sentinelRef,
@@ -110,6 +110,7 @@ export function useChatViewportPhase({
     hasMessages,
     isReady,
     layoutRevision,
+    resetKey,
     scrollToBottom,
     sentinelRef,
     tailLayoutReady,
