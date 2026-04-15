@@ -8,6 +8,10 @@
   background: var(--color-bg);
 }
 
+.desktopShell[data-desktop-mode] {
+  background: transparent;
+}
+
 .backgroundLayer {
   position: absolute;
   inset: 0;
@@ -41,6 +45,10 @@
 
 .mainPanelHostWithSidekick {
   box-shadow: inset -1px 0 0 0 var(--color-border);
+}
+
+:global([data-desktop-mode]) .mainPanelHost {
+  background: transparent;
 }
 
 .windowLayerHost {
@@ -102,6 +110,11 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.sidekickLane {
+  box-shadow: -1px 0 0 0 var(--color-border);
+  background: var(--color-bg);
 }
 
 .titleLink {

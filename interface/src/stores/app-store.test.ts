@@ -6,6 +6,7 @@ const { mockApps, mockSetTaskbarAppOrder } = vi.hoisted(() => ({
     { id: "projects", basePath: "/projects", label: "Projects", preload: vi.fn() },
     { id: "tasks", basePath: "/tasks", label: "Tasks", preload: vi.fn() },
     { id: "feed", basePath: "/feed", label: "Feed", preload: vi.fn() },
+    { id: "desktop", basePath: "/desktop", label: "Desktop", preload: vi.fn() },
   ],
   mockSetTaskbarAppOrder: vi.fn(),
 }));
@@ -25,7 +26,18 @@ vi.mock("./sidekick-store", () => ({
   },
 }));
 
-import { getOrderedTaskbarApps, useAppStore, syncActiveApp } from "./app-store";
+import { getOrderedTaskbarApps, resolveActiveApp, useAppStore, syncActiveApp } from "./app-store";
+
+function setDesktopBridge(enabled: boolean) {
+  if (enabled) {
+    Object.defineProperty(window, "ipc", {
+      configurable: true,
+      value: { postMessage: vi.fn() },
+    });
+    return;
+  }
+  delete (window as Window & { ipc?: unknown }).ipc;
+}
 
 beforeEach(() => {
   mockSetTaskbarAppOrder.mockReset();
@@ -33,6 +45,7 @@ beforeEach(() => {
   for (const app of mockApps) {
     app.preload.mockReset();
   }
+  setDesktopBridge(false);
   useAppStore.setState({
     apps: mockApps,
     activeApp: mockApps[0],
@@ -52,6 +65,16 @@ describe("app-store", () => {
   });
 
   describe("syncActiveApp", () => {
+    it("prefers the desktop workspace on the root path when the desktop bridge is available", () => {
+      setDesktopBridge(true);
+
+      syncActiveApp("/");
+
+      expect(useAppStore.getState().activeApp.id).toBe("desktop");
+      expect(mockApps[4].preload).toHaveBeenCalledTimes(1);
+      expect(mockSetActiveTab).not.toHaveBeenCalled();
+    });
+
     it("switches activeApp when pathname matches a different app", () => {
       syncActiveApp("/projects/123");
       expect(useAppStore.getState().activeApp.id).toBe("projects");
@@ -83,10 +106,22 @@ describe("app-store", () => {
     });
   });
 
+  describe("resolveActiveApp", () => {
+    it("keeps web root resolution unchanged without the desktop bridge", () => {
+      expect(resolveActiveApp("/").id).toBe("agents");
+    });
+
+    it("maps the root path to desktop when the desktop bridge is available", () => {
+      setDesktopBridge(true);
+
+      expect(resolveActiveApp("/").id).toBe("desktop");
+    });
+  });
+
   describe("taskbar app order", () => {
     it("sorts apps using the stored taskbar order", () => {
       const ordered = getOrderedTaskbarApps(mockApps, ["feed", "agents", "projects", "tasks"]);
-      expect(ordered.map((app) => app.id)).toEqual(["feed", "agents", "projects", "tasks"]);
+      expect(ordered.map((app) => app.id)).toEqual(["feed", "agents", "projects", "tasks", "desktop"]);
     });
 
     it("normalizes and persists a provided taskbar order", () => {

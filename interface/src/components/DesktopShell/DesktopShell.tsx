@@ -146,6 +146,7 @@ function PersistentSidekickLane({
       collapsed={collapsed}
       resizeControlsRef={resizeControlsRef}
       onResizeEnd={onResizeEnd}
+      className={styles.sidekickLane}
       header={
         showHeaderSlot ? (
           <div
@@ -352,10 +353,7 @@ export function DesktopShell() {
           </div>
 
           <ActiveProvider>
-            <div
-              ref={mainPanelRef}
-              className={`${styles.mainPanelHost}${!sidekickHostCollapsed ? ` ${styles.mainPanelHostWithSidekick}` : ""}`}
-            >
+            <div ref={mainPanelRef} className={styles.mainPanelHost}>
               <ErrorBoundary name="main">
                 <MainPanel>{routeContent}</MainPanel>
               </ErrorBoundary>

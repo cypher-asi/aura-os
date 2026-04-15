@@ -12,10 +12,19 @@ interface AppState {
   reorderTaskbarApps: (activeId: string, overId: string) => void;
 }
 
+function shouldPreferDesktopWorkspace(pathname: string): boolean {
+  if (pathname !== "/" || typeof window === "undefined") return false;
+  return typeof window.ipc?.postMessage === "function";
+}
+
+export function resolveActiveApp(pathname: string): AuraApp {
+  const effectivePathname = shouldPreferDesktopWorkspace(pathname) ? "/desktop" : pathname;
+  return registeredApps.find((a) => effectivePathname.startsWith(a.basePath)) ?? registeredApps[0];
+}
+
 function getInitialActiveApp(): AuraApp {
   if (typeof window === "undefined") return registeredApps[0];
-  const pathname = window.location.pathname;
-  const initialApp = registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
+  const initialApp = resolveActiveApp(window.location.pathname);
   initialApp.preload?.();
   return initialApp;
 }
@@ -83,7 +92,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
  * Kept as a plain function so it can be called from a useEffect.
  */
 export function syncActiveApp(pathname: string): void {
-  const match = registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
+  const match = resolveActiveApp(pathname);
   match.preload?.();
   const current = useAppStore.getState().activeApp;
   if (current.id !== match.id) {

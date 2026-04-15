@@ -7,7 +7,8 @@ import { LoginView } from "./views/LoginView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
 import { ShellRoutePlaceholder } from "./components/ShellRoutePlaceholder/ShellRoutePlaceholder";
-import { LAST_APP_BASE_PATH } from "./utils/last-app-path";
+import { useAuraCapabilities } from "./hooks/use-aura-capabilities";
+import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 import { hydrateStoredAuth } from "./lib/auth-token";
@@ -43,16 +44,14 @@ const ProjectProcessView = lazy(() =>
 );
 const ProjectStatsView = lazy(() => import("./views/ProjectStatsView").then((m) => ({ default: m.ProjectStatsView })));
 
-const DEFAULT_APP_PATH = "/agents";
-
 function EmptyRoute() {
   return null;
 }
 
 function LastAppRedirect() {
+  const { supportsDesktopWorkspace } = useAuraCapabilities();
   const lastAppId = getLastApp();
-  const targetPath = lastAppId ? LAST_APP_BASE_PATH[lastAppId] : undefined;
-  return <Navigate to={targetPath ?? DEFAULT_APP_PATH} replace />;
+  return <Navigate to={getInitialShellPath(lastAppId, supportsDesktopWorkspace)} replace />;
 }
 
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */

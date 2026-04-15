@@ -8,3 +8,14 @@ export const LAST_APP_BASE_PATH: Record<string, string> = {
   profile: "/profile",
   desktop: "/desktop",
 };
+
+export const DEFAULT_APP_PATH = "/agents";
+
+export function getInitialShellPath(
+  lastAppId: string | null,
+  supportsDesktopWorkspace: boolean,
+): string {
+  if (supportsDesktopWorkspace) return "/desktop";
+  const targetPath = lastAppId ? LAST_APP_BASE_PATH[lastAppId] : undefined;
+  return targetPath ?? DEFAULT_APP_PATH;
+}
