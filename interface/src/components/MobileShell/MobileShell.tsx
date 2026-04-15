@@ -1,15 +1,13 @@
-import { Fragment, useCallback } from "react";
+import { Fragment, Suspense, lazy, useCallback } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Drawer } from "@cypher-asi/zui";
 import { ErrorBoundary } from "../ErrorBoundary";
+import { RouteFallback } from "../RouteFallback/RouteFallback";
 import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { HostSettingsModal } from "../HostSettingsModal";
-import { MobileAgentLibraryView } from "../../apps/agents/MobileAgentLibraryView";
-import { MobileAgentDetailsView } from "../../apps/agents/MobileAgentDetailsView";
 import { projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import { useMobileShellState } from "./useMobileShellState";
 import { blurActiveElement, resolveProjectAgentPath } from "./mobile-shell-utils";
@@ -17,6 +15,20 @@ import { ProjectNavigationDrawerContent } from "./ProjectNavigationDrawer";
 import { MobileTopbar } from "./MobileTopbar";
 import { AppSwitcherContent, AccountSheetContent, PreviewSheetContent } from "./MobileDrawerContents";
 import styles from "./MobileShell.module.css";
+
+const HostSettingsModal = lazy(() =>
+  import("../HostSettingsModal").then((module) => ({ default: module.HostSettingsModal })),
+);
+const MobileAgentLibraryView = lazy(() =>
+  import("../../apps/agents/MobileAgentLibraryView").then((module) => ({
+    default: module.MobileAgentLibraryView,
+  })),
+);
+const MobileAgentDetailsView = lazy(() =>
+  import("../../apps/agents/MobileAgentDetailsView").then((module) => ({
+    default: module.MobileAgentDetailsView,
+  })),
+);
 
 export function MobileShell() {
   const state = useMobileShellState();
@@ -66,9 +78,21 @@ export function MobileShell() {
           <div className={styles.mobileMain}>
             {state.showProjectResponsiveControls && ResponsiveControls && <div className={styles.mobileResponsiveControls}><ResponsiveControls /></div>}
             {state.isStandaloneAgentLibraryRoot ? (
-              <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MobileAgentLibraryView /></ErrorBoundary></div>
+              <div className={styles.mobileMainPanel}>
+                <ErrorBoundary name="main">
+                  <Suspense fallback={<RouteFallback />}>
+                    <MobileAgentLibraryView />
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
             ) : state.isStandaloneAgentDetailRoute ? (
-              <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MobileAgentDetailsView /></ErrorBoundary></div>
+              <div className={styles.mobileMainPanel}>
+                <ErrorBoundary name="main">
+                  <Suspense fallback={<RouteFallback />}>
+                    <MobileAgentDetailsView />
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
             ) : (
               <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary></div>
             )}
@@ -99,13 +123,17 @@ export function MobileShell() {
           <AccountSheetContent />
         </Drawer>
 
-        <HostSettingsModal
-          isOpen={hostSettingsOpen}
-          onClose={() => {
-            blurActiveElement();
-            closeHostSettings();
-          }}
-        />
+        {hostSettingsOpen ? (
+          <Suspense fallback={null}>
+            <HostSettingsModal
+              isOpen={hostSettingsOpen}
+              onClose={() => {
+                blurActiveElement();
+                closeHostSettings();
+              }}
+            />
+          </Suspense>
+        ) : null}
       </ActiveProvider>
     </>
   );

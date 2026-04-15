@@ -1,7 +1,9 @@
 import {
   Fragment,
+  Suspense,
   useCallback,
   useEffect,
+  lazy,
   useLayoutEffect,
   useRef,
   useState,
@@ -14,10 +16,8 @@ import { Lane, type LaneResizeControls } from "../Lane";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { OrgSelector } from "../OrgSelector";
 import { ErrorBoundary } from "../ErrorBoundary";
-import { HostSettingsModal } from "../HostSettingsModal";
 import { UpdateBanner } from "../UpdateBanner";
 import { PanelSearch } from "../PanelSearch";
-import { DesktopWindowLayer } from "../AgentWindow";
 import { WindowControls } from "../WindowControls";
 import { useAppStore } from "../../stores/app-store";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
@@ -38,7 +38,15 @@ import {
   persistSidekickWidth,
   readStoredSidekickWidth,
 } from "./desktop-shell-sidekick";
+import { useDesktopWindowStore } from "../../stores/desktop-window-store";
 import styles from "./DesktopShell.module.css";
+
+const DesktopWindowLayer = lazy(() =>
+  import("../AgentWindow").then((module) => ({ default: module.DesktopWindowLayer })),
+);
+const HostSettingsModal = lazy(() =>
+  import("../HostSettingsModal").then((module) => ({ default: module.HostSettingsModal })),
+);
 
 const sharedDesktopLeftMenuPanes = apps
   .filter((app) => Boolean(app.DesktopLeftMenuPane))
@@ -183,6 +191,7 @@ export function DesktopShell() {
     useState<HTMLDivElement | null>(null);
   const [sidekickPanelTarget, setSidekickPanelTarget] =
     useState<HTMLDivElement | null>(null);
+  const openDesktopWindowCount = useDesktopWindowStore((state) => Object.keys(state.windows).length);
   const { MainPanel } = activeApp;
   const ActiveProvider = activeApp.Provider ?? Fragment;
   const isDesktop = activeApp.id === "desktop";
@@ -367,22 +376,30 @@ export function DesktopShell() {
             onHeaderTargetChange={handleSidekickHeaderTargetChange}
             onPanelTargetChange={handleSidekickPanelTargetChange}
           />
-          <ErrorBoundary name="windows">
-            <div className={styles.windowLayerHost} data-window-layer-host="true">
-              <DesktopWindowLayer />
-            </div>
-          </ErrorBoundary>
+          {openDesktopWindowCount > 0 ? (
+            <ErrorBoundary name="windows">
+              <div className={styles.windowLayerHost} data-window-layer-host="true">
+                <Suspense fallback={null}>
+                  <DesktopWindowLayer />
+                </Suspense>
+              </div>
+            </ErrorBoundary>
+          ) : null}
         </div>
         <BottomTaskbar />
       </div>
 
-      <HostSettingsModal
-        isOpen={hostSettingsOpen}
-        onClose={() => {
-          blurActiveElement();
-          closeHostSettings();
-        }}
-      />
+      {hostSettingsOpen ? (
+        <Suspense fallback={null}>
+          <HostSettingsModal
+            isOpen={hostSettingsOpen}
+            onClose={() => {
+              blurActiveElement();
+              closeHostSettings();
+            }}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

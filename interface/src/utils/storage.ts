@@ -9,6 +9,8 @@ import {
 } from "../constants";
 
 type LastAgentMap = Record<string, string>;
+const LAST_STANDALONE_AGENT_KEY = "aura:lastAgentId";
+const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
 
 function getMap(): LastAgentMap {
   try {
@@ -53,6 +55,54 @@ export function getLastProject(): string | null {
 
 export function setLastProject(projectId: string): void {
   localStorage.setItem(LAST_PROJECT_KEY, projectId);
+}
+
+export function getLastStandaloneAgentId(): string | null {
+  try {
+    return localStorage.getItem(LAST_STANDALONE_AGENT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastStandaloneAgentId(agentId: string): void {
+  try {
+    localStorage.setItem(LAST_STANDALONE_AGENT_KEY, agentId);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function clearLastStandaloneAgentId(): void {
+  try {
+    localStorage.removeItem(LAST_STANDALONE_AGENT_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function getLastProcessId(): string | null {
+  try {
+    return localStorage.getItem(LAST_PROCESS_ID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastProcessId(processId: string): void {
+  try {
+    localStorage.setItem(LAST_PROCESS_ID_KEY, processId);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function clearLastProcessId(): void {
+  try {
+    localStorage.removeItem(LAST_PROCESS_ID_KEY);
+  } catch {
+    // ignore storage failures
+  }
 }
 
 export function getCollapsedProjects(): string[] {

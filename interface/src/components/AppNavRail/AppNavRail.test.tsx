@@ -68,17 +68,11 @@ vi.mock("../../stores/app-store", () => ({
   },
 }));
 
-vi.mock("../../apps/agents/stores", () => ({
-  getLastSelectedAgentId: () => navigationMemory.lastSelectedAgentId,
-}));
-
 vi.mock("../../utils/storage", () => ({
+  getLastStandaloneAgentId: () => navigationMemory.lastSelectedAgentId,
   getLastProject: () => navigationMemory.lastProject,
   getLastAgent: () => navigationMemory.lastAgent,
-}));
-
-vi.mock("../../apps/process/stores/process-store", () => ({
-  LAST_PROCESS_ID_KEY: "last-process-id",
+  getLastProcessId: () => null,
 }));
 
 vi.mock("./AppNavRail.module.css", () => ({

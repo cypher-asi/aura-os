@@ -7,8 +7,15 @@ import {
   hydrateStoredAuth,
   setStoredAuth,
 } from "../lib/auth-token";
-import { api, ApiClientError } from "../api/client";
-import { connectEventSocket, disconnectEventSocket } from "./event-store";
+import { authApi } from "../api/auth";
+import { ApiClientError } from "../api/core";
+import { disconnectEventSocket, scheduleDeferredEventSocketConnect } from "./event-store";
+import { markAuthRestoreComplete } from "../lib/perf/startup-perf";
+
+async function loadAndRunShellRealtimeBootstrap(): Promise<void> {
+  const { bootstrapAuthenticatedShellStores } = await import("./authenticated-realtime");
+  bootstrapAuthenticatedShellStores();
+}
 
 function sessionToUser(session: AuthSession): ZeroUser {
   return {
@@ -56,38 +63,47 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
     // Restore from localStorage first (instant, no network call)
     const cached = getStoredSession();
+    const hadCachedSession = Boolean(cached);
+    const prevZeroProErr = cached ? getZeroProRefreshError(cached) : null;
     if (cached) {
       set({ user: sessionToUser(cached), zeroProRefreshError: getZeroProRefreshError(cached) });
+      // Let the shell render immediately with the cached session while validation runs.
+      set({ isLoading: false });
+      await loadAndRunShellRealtimeBootstrap();
     }
 
-    // Validate with server to refresh session
     try {
-      const validated = await api.auth.validate();
+      // GET /api/auth/session: middleware may use the server TTL cache (no duplicate zOS work in the handler).
+      const validated = await authApi.getSession();
       await setStoredAuth(validated);
       set({
         user: sessionToUser(validated),
-        zeroProRefreshError: getZeroProRefreshError(validated),
+        zeroProRefreshError: getZeroProRefreshError(validated) ?? prevZeroProErr,
       });
-      connectEventSocket();
+      await loadAndRunShellRealtimeBootstrap();
+      scheduleDeferredEventSocketConnect();
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
         await clearStoredAuth();
         disconnectEventSocket();
         set({ user: null, zeroProRefreshError: null });
-      } else if (cached) {
+      } else if (hadCachedSession) {
         // Non-401 error (e.g. network): keep cached session with event socket
-        connectEventSocket();
+        scheduleDeferredEventSocketConnect();
         set({ zeroProRefreshError: formatZeroProRefreshError(err) });
       }
     } finally {
-      set({ isLoading: false });
+      if (!hadCachedSession) {
+        set({ isLoading: false });
+      }
+      markAuthRestoreComplete();
     }
   },
 
   refreshSession: async () => {
     set({ isLoading: true, zeroProRefreshError: null });
     try {
-      const validated = await api.auth.validate();
+      const validated = await authApi.validate();
       await setStoredAuth(validated);
       set({
         user: sessionToUser(validated),
@@ -110,27 +126,29 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   login: async (email: string, password: string) => {
-    const session = await api.auth.login(email, password);
+    const session = await authApi.login(email, password);
     await setStoredAuth(session);
     set({
       user: sessionToUser(session),
       zeroProRefreshError: getZeroProRefreshError(session),
     });
-    connectEventSocket();
+    await loadAndRunShellRealtimeBootstrap();
+    scheduleDeferredEventSocketConnect();
   },
 
   register: async (email: string, password: string, name: string, inviteCode: string) => {
-    const session = await api.auth.register(email, password, name, inviteCode);
+    const session = await authApi.register(email, password, name, inviteCode);
     await setStoredAuth(session);
     set({
       user: sessionToUser(session),
       zeroProRefreshError: getZeroProRefreshError(session),
     });
-    connectEventSocket();
+    await loadAndRunShellRealtimeBootstrap();
+    scheduleDeferredEventSocketConnect();
   },
 
   logout: async () => {
-    await api.auth.logout();
+    await authApi.logout();
     await clearStoredAuth();
     disconnectEventSocket();
     set({ user: null, zeroProRefreshError: null });

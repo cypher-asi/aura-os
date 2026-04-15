@@ -3,23 +3,33 @@ import type { AuthSession, ZeroUser } from "../types";
 
 const { mockApi } = vi.hoisted(() => {
   const mockApi = {
-    auth: {
-      getSession: vi.fn(),
-      validate: vi.fn(),
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
+    getSession: vi.fn(),
+    validate: vi.fn(),
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    follows: {
+      list: vi.fn().mockResolvedValue([]),
     },
   };
   return { mockApi };
 });
 
+vi.mock("../api/auth", () => ({
+  authApi: mockApi,
+}));
+
 vi.mock("../api/client", () => ({
-  api: mockApi,
+  api: {
+    follows: mockApi.follows,
+  },
+}));
+
+vi.mock("../api/core", () => ({
   ApiClientError: class ApiClientError extends Error {
     status: number;
-    constructor(msg: string, status: number) {
-      super(msg);
+    constructor(status: number, body: { error: string }) {
+      super(body.error);
       this.status = status;
     }
   },
@@ -45,7 +55,7 @@ const sessionWithZeroProError: AuthSession = {
 };
 
 import { useAuthStore } from "./auth-store";
-import { ApiClientError } from "../api/client";
+import { ApiClientError } from "../api/core";
 import { clearStoredAuth } from "../lib/auth-token";
 
 function expectedUser(session: AuthSession): ZeroUser {
@@ -83,7 +93,7 @@ describe("auth-store", () => {
 
   describe("restoreSession", () => {
     it("sets user from validated session", async () => {
-      mockApi.auth.validate.mockResolvedValue(mockSession);
+      mockApi.getSession.mockResolvedValue(mockSession);
 
       await useAuthStore.getState().restoreSession();
 
@@ -92,10 +102,10 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it("falls back to cached session when validate fails", async () => {
+    it("falls back to cached session when getSession fails", async () => {
       window.localStorage.setItem("aura-jwt", "stored-token");
       window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
-      mockApi.auth.validate.mockRejectedValue(new Error("validation failed"));
+      mockApi.getSession.mockRejectedValue(new Error("validation failed"));
 
       await useAuthStore.getState().restoreSession();
 
@@ -106,10 +116,10 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it("clears the cached user when validate returns 401", async () => {
+    it("clears the cached user when getSession returns 401", async () => {
       window.localStorage.setItem("aura-jwt", "expired-token");
       window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
-      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
+      mockApi.getSession.mockRejectedValue(new ApiClientError(401, { error: "unauth" }));
 
       await useAuthStore.getState().restoreSession();
 
@@ -118,10 +128,10 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it("clears user on 401 from validate", async () => {
+    it("clears user on 401 from getSession", async () => {
       window.localStorage.setItem("aura-jwt", "expired-token");
       window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
-      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
+      mockApi.getSession.mockRejectedValue(new ApiClientError(401, { error: "unauth" }));
 
       await useAuthStore.getState().restoreSession();
 
@@ -134,7 +144,7 @@ describe("auth-store", () => {
     it("does not clear user on non-401 errors when cached session exists", async () => {
       window.localStorage.setItem("aura-jwt", "stored-token");
       window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
-      mockApi.auth.validate.mockRejectedValue(new Error("network error"));
+      mockApi.getSession.mockRejectedValue(new Error("network error"));
 
       await useAuthStore.getState().restoreSession();
 
@@ -146,21 +156,21 @@ describe("auth-store", () => {
 
   describe("login", () => {
     it("sets user from session", async () => {
-      mockApi.auth.login.mockResolvedValue(mockSession);
+      mockApi.login.mockResolvedValue(mockSession);
 
       await useAuthStore.getState().login("a@b.com", "pass");
 
-      expect(mockApi.auth.login).toHaveBeenCalledWith("a@b.com", "pass");
+      expect(mockApi.login).toHaveBeenCalledWith("a@b.com", "pass");
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
     });
 
     it("propagates errors", async () => {
-      mockApi.auth.login.mockRejectedValue(new Error("bad creds"));
+      mockApi.login.mockRejectedValue(new Error("bad creds"));
       await expect(useAuthStore.getState().login("a@b.com", "x")).rejects.toThrow("bad creds");
     });
 
     it("preserves a zero pro verification error from the session response", async () => {
-      mockApi.auth.login.mockResolvedValue(sessionWithZeroProError);
+      mockApi.login.mockResolvedValue(sessionWithZeroProError);
 
       await useAuthStore.getState().login("a@b.com", "pass");
 
@@ -178,7 +188,7 @@ describe("auth-store", () => {
         is_zero_pro: true,
       };
       useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
-      mockApi.auth.validate.mockResolvedValue(validatedSession);
+      mockApi.validate.mockResolvedValue(validatedSession);
 
       await useAuthStore.getState().refreshSession();
 
@@ -189,7 +199,7 @@ describe("auth-store", () => {
 
     it("keeps a verification error from validate without logging the user out", async () => {
       useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
-      mockApi.auth.validate.mockResolvedValue(sessionWithZeroProError);
+      mockApi.validate.mockResolvedValue(sessionWithZeroProError);
 
       await useAuthStore.getState().refreshSession();
 
@@ -202,7 +212,7 @@ describe("auth-store", () => {
 
     it("clears the user on 401", async () => {
       useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
-      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
+      mockApi.validate.mockRejectedValue(new ApiClientError(401, { error: "unauth" }));
 
       await expect(useAuthStore.getState().refreshSession()).rejects.toThrow("unauth");
       expect(useAuthStore.getState().user).toBeNull();
@@ -213,7 +223,7 @@ describe("auth-store", () => {
 
   describe("register", () => {
     it("sets user from session", async () => {
-      mockApi.auth.register.mockResolvedValue(mockSession);
+      mockApi.register.mockResolvedValue(mockSession);
 
       await useAuthStore.getState().register("a@b.com", "pass", "Test", "INVITE");
 
@@ -221,7 +231,7 @@ describe("auth-store", () => {
     });
 
     it("preserves a zero pro verification error from registration", async () => {
-      mockApi.auth.register.mockResolvedValue(sessionWithZeroProError);
+      mockApi.register.mockResolvedValue(sessionWithZeroProError);
 
       await useAuthStore.getState().register("a@b.com", "pass", "Test", "INVITE");
 
@@ -235,7 +245,7 @@ describe("auth-store", () => {
   describe("logout", () => {
     it("clears the user", async () => {
       useAuthStore.setState({ user: expectedUser(mockSession) });
-      mockApi.auth.logout.mockResolvedValue(undefined);
+      mockApi.logout.mockResolvedValue(undefined);
 
       await useAuthStore.getState().logout();
 

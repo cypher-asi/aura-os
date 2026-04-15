@@ -1,17 +1,27 @@
-import { useCallback } from "react";
+import { lazy, Suspense, useCallback, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { SettingsModal } from "../SettingsModal";
-import { OrgSettingsPanel } from "../OrgSettingsPanel";
-import { BuyCreditsModal } from "../BuyCreditsModal";
 import { AppProviders } from "../AppProviders";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
-import { NewProjectModal } from "../NewProjectModal";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../MobileShell";
+import { markShellVisible } from "../../lib/perf/startup-perf";
+
+const BuyCreditsModal = lazy(() =>
+  import("../BuyCreditsModal").then((module) => ({ default: module.BuyCreditsModal })),
+);
+const OrgSettingsPanel = lazy(() =>
+  import("../OrgSettingsPanel").then((module) => ({ default: module.OrgSettingsPanel })),
+);
+const SettingsModal = lazy(() =>
+  import("../SettingsModal").then((module) => ({ default: module.SettingsModal })),
+);
+const NewProjectModal = lazy(() =>
+  import("../NewProjectModal").then((module) => ({ default: module.NewProjectModal })),
+);
 
 function ProjectCreationModalHost() {
   const navigate = useNavigate();
@@ -28,18 +38,28 @@ function ProjectCreationModalHost() {
     navigate(`/projects/${project.project_id}`);
   }, [closeNewProjectModal, navigate, setProjects, closePreview]);
 
+  if (!newProjectModalOpen) {
+    return null;
+  }
+
   return (
-    <NewProjectModal
-      isOpen={newProjectModalOpen}
-      onClose={closeNewProjectModal}
-      onCreated={handleProjectCreated}
-    />
+    <LazyModalBoundary>
+      <NewProjectModal
+        isOpen={newProjectModalOpen}
+        onClose={closeNewProjectModal}
+        onCreated={handleProjectCreated}
+      />
+    </LazyModalBoundary>
   );
 }
 
 function ResponsiveShell() {
   const { isMobileLayout } = useAuraCapabilities();
   return isMobileLayout ? <MobileShell /> : <DesktopShell />;
+}
+
+function LazyModalBoundary({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={null}>{children}</Suspense>;
 }
 
 function AppContent() {
@@ -64,23 +84,39 @@ function AppContent() {
     <>
       <ResponsiveShell />
 
-      <OrgSettingsPanel
-        isOpen={orgSettingsOpen}
-        onClose={closeOrgSettings}
-        initialSection={orgInitialSection}
-      />
-      <BuyCreditsModal
-        isOpen={buyCreditsOpen}
-        onClose={closeBuyCredits}
-        onOpenBilling={openOrgBilling}
-      />
-      <SettingsModal isOpen={settingsOpen} onClose={closeSettings} />
+      {orgSettingsOpen ? (
+        <LazyModalBoundary>
+          <OrgSettingsPanel
+            isOpen={orgSettingsOpen}
+            onClose={closeOrgSettings}
+            initialSection={orgInitialSection}
+          />
+        </LazyModalBoundary>
+      ) : null}
+      {buyCreditsOpen ? (
+        <LazyModalBoundary>
+          <BuyCreditsModal
+            isOpen={buyCreditsOpen}
+            onClose={closeBuyCredits}
+            onOpenBilling={openOrgBilling}
+          />
+        </LazyModalBoundary>
+      ) : null}
+      {settingsOpen ? (
+        <LazyModalBoundary>
+          <SettingsModal isOpen={settingsOpen} onClose={closeSettings} />
+        </LazyModalBoundary>
+      ) : null}
       <ProjectCreationModalHost />
     </>
   );
 }
 
 export function AppShell() {
+  useLayoutEffect(() => {
+    markShellVisible();
+  }, []);
+
   return (
     <AppProviders>
       <AppContent />

@@ -7,13 +7,19 @@ import {
   Topbar,
   Badge,
 } from "@cypher-asi/zui";
+import { lazy, Suspense } from "react";
 import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
-import { HostSettingsModal } from "../../components/HostSettingsModal";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
 import styles from "./LoginView.module.css";
+
+const HostSettingsModal = lazy(() =>
+  import("../../components/HostSettingsModal").then((module) => ({
+    default: module.HostSettingsModal,
+  })),
+);
 
 export function LoginView() {
   const f = useLoginForm();
@@ -117,9 +123,11 @@ export function LoginView() {
         </Panel>
       </div>
 
-      {f.features.hostRetargeting && (
-        <HostSettingsModal isOpen={f.hostSettingsOpen} onClose={f.closeHostSettings} />
-      )}
+      {f.features.hostRetargeting && f.hostSettingsOpen ? (
+        <Suspense fallback={null}>
+          <HostSettingsModal isOpen={f.hostSettingsOpen} onClose={f.closeHostSettings} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

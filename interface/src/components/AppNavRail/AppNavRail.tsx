@@ -14,16 +14,19 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import type { AuraApp } from "../../apps/types";
 import { getOrderedTaskbarApps, useAppStore } from "../../stores/app-store";
-import { getLastSelectedAgentId } from "../../apps/agents/stores";
-import { getLastProject, getLastAgent } from "../../utils/storage";
-import { LAST_PROCESS_ID_KEY } from "../../apps/process/stores/process-store";
+import {
+  getLastAgent,
+  getLastProcessId,
+  getLastProject,
+  getLastStandaloneAgentId,
+} from "../../utils/storage";
 import styles from "./AppNavRail.module.css";
 
 export const TASKBAR_ICON_SIZE = 15;
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
   if (app.id === "agents") {
-    const lastId = getLastSelectedAgentId();
+    const lastId = getLastStandaloneAgentId();
     if (lastId) return `/agents/${lastId}`;
   }
   if (app.id === "projects") {
@@ -39,7 +42,7 @@ function resolveAppPath(app: { id: string; basePath: string }): string {
     if (projectId) return `/tasks/${projectId}`;
   }
   if (app.id === "process") {
-    const lastId = localStorage.getItem(LAST_PROCESS_ID_KEY);
+    const lastId = getLastProcessId();
     if (lastId) return `/process/${lastId}`;
   }
   return app.basePath;

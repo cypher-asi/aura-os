@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
 import { useTerminalPanelStore } from "../../../stores/terminal-panel-store";
 import { AgentInfoPanel } from "../AgentInfoPanel";
-import { LAST_AGENT_ID_KEY, useAgents, useSelectedAgent } from "../stores";
+import { setLastStandaloneAgentId } from "../../../utils/storage";
+import { useAgents, useSelectedAgent } from "../stores";
 import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 
 export function AgentMainPanel({ children }: { children?: ReactNode }) {
@@ -19,7 +20,7 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
   useEffect(() => {
     setSelectedAgent(agentId ?? null);
     if (agentId) {
-      localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
+      setLastStandaloneAgentId(agentId);
     }
   }, [agentId, setSelectedAgent]);
 
