@@ -83,7 +83,6 @@ export function useChatPanelState({
   const {
     handleScroll,
     scrollToBottom,
-    scrollToBottomIfPinned,
     isAutoFollowing,
     captureAnchor,
     restoreAnchor,
@@ -237,12 +236,10 @@ export function useChatPanelState({
           selectedProjectIdRef.current,
         );
         scrollToBottom();
-      } else {
-        requestAnimationFrame(() => scrollToBottomIfPinned());
       }
     }
     prevStreamingRef.current = isStreaming;
-  }, [adapterType, isStreaming, streamKey, scrollToBottom, scrollToBottomIfPinned]);
+  }, [adapterType, isStreaming, streamKey, scrollToBottom]);
 
   const handleQueueEdit = useCallback(
     (item: QueuedMessage) => {

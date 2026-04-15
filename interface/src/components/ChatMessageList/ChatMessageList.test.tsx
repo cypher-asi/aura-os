@@ -257,5 +257,77 @@ describe("ChatMessageList", () => {
     });
 
     expect(onContentHeightChange).toHaveBeenCalledTimes(1);
+    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
+  });
+
+  it("reuses the final streaming bubble height for the saved assistant row", () => {
+    mockStreamEntry.isStreaming = true;
+    mockStreamEntry.streamingText = "partial output";
+
+    const scrollRef = { current: document.createElement("div") };
+    const onContentHeightChange = vi.fn();
+
+    const { rerender } = render(
+      <ChatMessageList
+        messages={[
+          { id: "message-1", role: "assistant", content: "Hello" } as any,
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+        heightCache={heightCache}
+        onContentHeightChange={onContentHeightChange}
+      />,
+    );
+
+    const streamingBubbleContainer = screen.getByTestId("streaming-bubble").parentElement;
+    if (!streamingBubbleContainer) {
+      throw new Error("Expected streaming bubble container to be rendered");
+    }
+
+    Object.defineProperty(streamingBubbleContainer, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 300,
+        bottom: nextStreamingBubbleHeight,
+        width: 300,
+        height: nextStreamingBubbleHeight,
+        toJSON: () => ({}),
+      }),
+    });
+
+    nextStreamingBubbleHeight = 212;
+
+    act(() => {
+      MockResizeObserver.trigger(streamingBubbleContainer);
+    });
+
+    vi.mocked(heightCache.setHeight).mockClear();
+    onContentHeightChange.mockClear();
+    Object.assign(mockStreamEntry, {
+      isStreaming: false,
+      streamingText: "",
+    });
+
+    act(() => {
+      rerender(
+        <ChatMessageList
+          messages={[
+            { id: "message-1", role: "assistant", content: "Hello" } as any,
+            { id: "message-2", role: "assistant", content: "Saved output" } as any,
+          ]}
+          streamKey="stream-1"
+          scrollRef={scrollRef}
+          heightCache={heightCache}
+          onContentHeightChange={onContentHeightChange}
+        />,
+      );
+    });
+
+    expect(heightCache.setHeight).toHaveBeenCalledWith("message-2", 212);
+    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
   });
 });

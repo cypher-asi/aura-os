@@ -9,6 +9,7 @@ const mockCaptureAnchor = vi.fn();
 const mockRestoreAnchor = vi.fn();
 const mockOnContentHeightChange = vi.fn();
 const mockEnqueue = vi.fn();
+const mockDequeue = vi.fn();
 const mockChatUI = {
   selectedModel: "gpt-5.4",
   init: vi.fn(),
@@ -76,7 +77,7 @@ vi.mock("../../stores/message-queue-store", () => ({
   useMessageQueueStore: {
     getState: () => ({
       enqueue: mockEnqueue,
-      dequeue: vi.fn(),
+      dequeue: mockDequeue,
       remove: vi.fn(),
       moveUp: vi.fn(),
     }),
@@ -96,6 +97,7 @@ describe("useChatPanelState", () => {
     mockScrollToBottom.mockReset();
     mockScrollToBottomIfPinned.mockReset();
     mockEnqueue.mockReset();
+    mockDequeue.mockReset();
     mockChatUI.init.mockReset();
     mockChatUI.syncAvailableModels.mockReset();
     requestAnimationFrameSpy = vi
@@ -164,5 +166,26 @@ describe("useChatPanelState", () => {
       }),
     );
     expect(mockScrollToBottom).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trigger an extra bottom scroll when streaming finishes without a queued send", () => {
+    mockIsStreaming = true;
+    const onSend = vi.fn();
+    const { rerender } = renderHook(() =>
+      useChatPanelState({
+        streamKey: "stream-1",
+        onSend,
+      }),
+    );
+
+    mockIsStreaming = false;
+
+    act(() => {
+      rerender();
+    });
+
+    expect(mockDequeue).toHaveBeenCalledWith("stream-1");
+    expect(mockScrollToBottomIfPinned).not.toHaveBeenCalled();
+    expect(mockScrollToBottom).not.toHaveBeenCalled();
   });
 });

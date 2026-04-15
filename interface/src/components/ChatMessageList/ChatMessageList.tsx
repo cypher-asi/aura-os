@@ -98,6 +98,7 @@ export function ChatMessageList({
   const streamingBubbleRef = useRef<HTMLDivElement>(null);
   const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
   const streamingBubbleHeightRef = useRef<number | null>(null);
+  const lastStreamingBubbleHeightRef = useRef<number | null>(null);
 
   const updateMeasuredHeight = useCallback(
     (messageId: string, node: HTMLElement) => {
@@ -151,8 +152,9 @@ export function ChatMessageList({
       }
       const previousHeight = streamingBubbleHeightRef.current;
       streamingBubbleHeightRef.current = nextHeight;
+      lastStreamingBubbleHeightRef.current = nextHeight;
       if (previousHeight === null || Math.abs(previousHeight - nextHeight) >= 1) {
-        onContentHeightChange?.();
+        onContentHeightChange?.({ immediate: true });
       }
     },
     [onContentHeightChange],
@@ -189,16 +191,17 @@ export function ChatMessageList({
     const wasStreaming = prevStreamingRef.current;
     prevStreamingRef.current = nowStreaming;
 
-    if (wasStreaming && !nowStreaming && streamingBubbleRef.current) {
+    if (wasStreaming && !nowStreaming) {
       const lastMsg = messages[messages.length - 1];
+      const height = lastStreamingBubbleHeightRef.current;
       if (lastMsg) {
-        const height = streamingBubbleRef.current.getBoundingClientRect().height;
-        if (height > 0) {
+        if (height && height > 0) {
           heightCache.setHeight(lastMsg.id, height);
+          onContentHeightChange?.({ immediate: true });
         }
       }
     }
-  }, [nowStreaming, messages, heightCache]);
+  }, [nowStreaming, messages, heightCache, onContentHeightChange]);
 
   const hasMessages =
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
