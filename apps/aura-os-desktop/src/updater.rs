@@ -183,18 +183,22 @@ pub(crate) fn endpoint_for_channel(channel: UpdateChannel) -> String {
     endpoint_for_channel_with_base(channel, &base)
 }
 
-fn decode_base64_utf8(label: &str, encoded: &str) -> Result<String, String> {
+fn validate_base64_utf8(label: &str, encoded: &str) -> Result<String, String> {
+    let trimmed = encoded.trim();
     let decoded = base64::engine::general_purpose::STANDARD
-        .decode(encoded.trim())
+        .decode(trimmed)
         .map_err(|e| format!("invalid {label} base64: {e}"))?;
-    String::from_utf8(decoded).map_err(|e| format!("invalid {label} utf-8: {e}"))
+    String::from_utf8(decoded).map_err(|e| format!("invalid {label} utf-8: {e}"))?;
+    Ok(trimmed.to_string())
 }
 
 fn updater_public_key() -> Result<String, String> {
     if UPDATER_PUB_KEY.starts_with("NOT_SET__") {
         return Err("updater public key is not configured".into());
     }
-    decode_base64_utf8("public key", UPDATER_PUB_KEY)
+    // cargo-packager-updater expects the public key to remain base64-encoded.
+    // We validate it here, but preserve the encoded value for the updater crate.
+    validate_base64_utf8("public key", UPDATER_PUB_KEY)
 }
 
 pub(crate) fn updater_supported() -> bool {
@@ -478,7 +482,7 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_base64_utf8, default_update_channel, endpoint_for_channel_with_base,
+        default_update_channel, endpoint_for_channel_with_base, validate_base64_utf8,
         load_persisted_channel, persist_channel, UpdateChannel,
     };
     use base64::Engine;
@@ -513,12 +517,15 @@ mod tests {
     #[test]
     fn decodes_base64_encoded_public_key() {
         let public_key = "untrusted comment: minisign public key E7620F1842B4E81F\nRWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
-        let decoded = decode_base64_utf8(
+        let encoded = validate_base64_utf8(
             "public key",
             &base64::engine::general_purpose::STANDARD.encode(public_key),
         )
-        .expect("public key should decode");
-        assert_eq!(decoded, public_key);
+        .expect("public key should validate");
+        assert_eq!(
+            encoded,
+            base64::engine::general_purpose::STANDARD.encode(public_key)
+        );
     }
 
     #[test]
