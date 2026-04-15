@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Text, Badge } from "@cypher-asi/zui";
-import { Zap, Loader2, Plus, Minus, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
+import { Text, ButtonMore } from "@cypher-asi/zui";
+import { Zap, Loader2, Plus, Trash2, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
@@ -35,25 +35,38 @@ function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps
             <div className={styles.skillRowDesc}>{skill.description}</div>
           )}
         </div>
-        <Badge variant="stopped" className={styles.skillSourceBadge}>
-          {skill.source}
-        </Badge>
       </button>
-      <button
-        type="button"
-        className={installed ? styles.skillActionRemove : styles.skillActionAdd}
-        onClick={onAction}
-        disabled={loading}
-        title={installed ? `Uninstall ${skill.name}` : `Install ${skill.name}`}
-      >
-        {loading ? (
-          <Loader2 size={14} className={styles.spin} />
-        ) : installed ? (
-          <Minus size={14} />
+      {installed ? (
+        loading ? (
+          <div className={styles.skillActionRemove}>
+            <Loader2 size={14} className={styles.spin} />
+          </div>
         ) : (
-          <Plus size={14} />
-        )}
-      </button>
+          <ButtonMore
+            items={[{ id: "delete", label: "Delete", icon: <Trash2 size={14} /> }]}
+            onSelect={() => onAction()}
+            icon="horizontal"
+            size="sm"
+            variant="ghost"
+            className={styles.skillMoreBtn}
+            title={`Actions for ${skill.name}`}
+          />
+        )
+      ) : (
+        <button
+          type="button"
+          className={styles.skillActionAdd}
+          onClick={onAction}
+          disabled={loading}
+          title={`Install ${skill.name}`}
+        >
+          {loading ? (
+            <Loader2 size={14} className={styles.spin} />
+          ) : (
+            <Plus size={14} />
+          )}
+        </button>
+      )}
     </div>
   );
 }
