@@ -28,10 +28,16 @@ interface FinalizeStreamOptions {
   message?: string;
 }
 
-const STREAM_TEXT_FLUSH_INTERVAL_MS = 48;
-const STREAM_TEXT_EARLY_FLUSH_INTERVAL_MS = 20;
-const STREAM_TEXT_EARLY_FLUSH_CHARS = 96;
-const STREAM_TEXT_EARLY_FLUSH_RE = /(?:\n|[.!?])\s*$/;
+const WORD_REVEAL_INITIAL_DELAY_MS = 16;
+const WORD_REVEAL_INTERVAL_MS = 42;
+const WORD_REVEAL_MEDIUM_BACKLOG_INTERVAL_MS = 24;
+const WORD_REVEAL_LARGE_BACKLOG_INTERVAL_MS = 12;
+const WORD_REVEAL_MAX_BACKLOG_INTERVAL_MS = 8;
+const WORD_REVEAL_MEDIUM_BACKLOG_WORDS = 6;
+const WORD_REVEAL_LARGE_BACKLOG_WORDS = 12;
+const WORD_REVEAL_MAX_BACKLOG_WORDS = 24;
+const MARKDOWN_LINE_PREFIX_RE = /^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+\.\s+|>\s+|#{1,6}\s+)/;
+const CODE_FENCE_LINE_RE = /^(?:`{3,}|~{3,})[^\n]*(?:\n|$)/;
 
 /* ------------------------------------------------------------------ */
 /*  Pure helpers                                                       */
@@ -91,48 +97,171 @@ function cancelPendingStreamFlush(refs: StreamRefs): void {
   }
 }
 
-function flushStreamingText(refs: StreamRefs, setters: StreamSetters): void {
-  if (refs.flushTimeout.current !== null) {
-    clearTimeout(refs.flushTimeout.current);
-    refs.flushTimeout.current = null;
-  }
-  if (refs.raf.current !== null) return;
-
-  refs.raf.current = requestAnimationFrame(() => {
-    refs.raf.current = null;
-    refs.lastTextFlushAt.current = Date.now();
-    refs.displayedTextLength.current = refs.streamBuffer.current.length;
-    setters.setStreamingText(refs.streamBuffer.current);
-    setters.setTimeline([...refs.timeline.current]);
-  });
+function getDisplayedStreamingText(refs: StreamRefs): string {
+  return refs.streamBuffer.current.slice(0, refs.displayedTextLength.current);
 }
 
-function scheduleStreamingTextFlush(
+function buildDisplayedTimeline(
+  refs: StreamRefs,
+  visibleText: string,
+): TimelineItem[] {
+  const displayedTimeline: TimelineItem[] = [];
+  let remainingVisibleText = visibleText;
+  let previousKind: TimelineItem["kind"] | null = null;
+
+  for (const item of refs.timeline.current) {
+    if (item.kind !== "text") {
+      displayedTimeline.push({ ...item });
+      previousKind = item.kind;
+      continue;
+    }
+
+    if (previousKind && previousKind !== "text") {
+      remainingVisibleText = remainingVisibleText.replace(/^\s+/, "");
+    }
+
+    if (!remainingVisibleText) {
+      previousKind = item.kind;
+      continue;
+    }
+
+    const visibleSegment = remainingVisibleText.slice(
+      0,
+      Math.min(item.content.length, remainingVisibleText.length),
+    );
+    remainingVisibleText = remainingVisibleText.slice(visibleSegment.length);
+    if (visibleSegment.length > 0) {
+      displayedTimeline.push({ ...item, content: visibleSegment });
+    }
+    previousKind = item.kind;
+  }
+
+  return displayedTimeline;
+}
+
+function syncDisplayedTimeline(
   refs: StreamRefs,
   setters: StreamSetters,
-  lastDelta: string,
+): void {
+  setters.setTimeline(buildDisplayedTimeline(refs, getDisplayedStreamingText(refs)));
+}
+
+function applyDisplayedStreamingState(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  displayedTextLength: number,
+): void {
+  refs.displayedTextLength.current = displayedTextLength;
+  refs.lastTextFlushAt.current = Date.now();
+
+  const visibleText = getDisplayedStreamingText(refs);
+  setters.setStreamingText(visibleText);
+  setters.setTimeline(buildDisplayedTimeline(refs, visibleText));
+}
+
+function isWhitespace(char: string): boolean {
+  return /\s/.test(char);
+}
+
+function getNextWordRevealIndex(buffer: string, start: number): number {
+  if (start >= buffer.length) return buffer.length;
+
+  let cursor = start;
+  while (cursor < buffer.length && isWhitespace(buffer[cursor])) {
+    cursor++;
+  }
+  if (cursor >= buffer.length) {
+    return buffer.length;
+  }
+
+  const consumedLeadingWhitespace = buffer.slice(start, cursor);
+  const isLineStart = start === 0
+    || buffer[start - 1] === "\n"
+    || consumedLeadingWhitespace.includes("\n");
+  const remaining = buffer.slice(cursor);
+
+  if (isLineStart) {
+    const codeFenceMatch = remaining.match(CODE_FENCE_LINE_RE);
+    if (codeFenceMatch) {
+      return cursor + codeFenceMatch[0].length;
+    }
+
+    const markdownPrefixMatch = remaining.match(MARKDOWN_LINE_PREFIX_RE);
+    if (markdownPrefixMatch) {
+      cursor += markdownPrefixMatch[0].length;
+    }
+  }
+
+  while (cursor < buffer.length && !isWhitespace(buffer[cursor])) {
+    cursor++;
+  }
+
+  return cursor;
+}
+
+function getPendingRevealWordCount(refs: StreamRefs): number {
+  const hiddenText = refs.streamBuffer.current.slice(refs.displayedTextLength.current);
+  const matches = hiddenText.match(/\S+/g);
+  return matches ? matches.length : 0;
+}
+
+function getWordRevealDelayMs(refs: StreamRefs): number {
+  if (refs.displayedTextLength.current === 0) {
+    return WORD_REVEAL_INITIAL_DELAY_MS;
+  }
+
+  const pendingWords = getPendingRevealWordCount(refs);
+  if (pendingWords >= WORD_REVEAL_MAX_BACKLOG_WORDS) {
+    return WORD_REVEAL_MAX_BACKLOG_INTERVAL_MS;
+  }
+  if (pendingWords >= WORD_REVEAL_LARGE_BACKLOG_WORDS) {
+    return WORD_REVEAL_LARGE_BACKLOG_INTERVAL_MS;
+  }
+  if (pendingWords >= WORD_REVEAL_MEDIUM_BACKLOG_WORDS) {
+    return WORD_REVEAL_MEDIUM_BACKLOG_INTERVAL_MS;
+  }
+  return WORD_REVEAL_INTERVAL_MS;
+}
+
+function queueStreamingTextReveal(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  mode: "step" | "full" = "step",
+): void {
+  if (refs.raf.current !== null) return;
+
+  let ranSynchronously = false;
+  const rafId = requestAnimationFrame(() => {
+    ranSynchronously = true;
+    refs.raf.current = null;
+    const nextDisplayedLength = mode === "full"
+      ? refs.streamBuffer.current.length
+      : getNextWordRevealIndex(refs.streamBuffer.current, refs.displayedTextLength.current);
+
+    applyDisplayedStreamingState(refs, setters, nextDisplayedLength);
+    if (mode === "step" && refs.displayedTextLength.current < refs.streamBuffer.current.length) {
+      scheduleStreamingTextReveal(refs, setters);
+    }
+  });
+  refs.raf.current = ranSynchronously ? null : rafId;
+}
+
+function flushStreamingText(refs: StreamRefs, setters: StreamSetters): void {
+  cancelPendingStreamFlush(refs);
+  applyDisplayedStreamingState(refs, setters, refs.streamBuffer.current.length);
+}
+
+function scheduleStreamingTextReveal(
+  refs: StreamRefs,
+  setters: StreamSetters,
 ): void {
   if (refs.raf.current !== null || refs.flushTimeout.current !== null) return;
-
-  const pendingChars = refs.streamBuffer.current.length - refs.displayedTextLength.current;
-  if (pendingChars <= 0) return;
-
-  const shouldFlushEarly =
-    refs.displayedTextLength.current === 0
-    || pendingChars >= STREAM_TEXT_EARLY_FLUSH_CHARS
-    || STREAM_TEXT_EARLY_FLUSH_RE.test(lastDelta);
-  const targetIntervalMs = shouldFlushEarly
-    ? STREAM_TEXT_EARLY_FLUSH_INTERVAL_MS
-    : STREAM_TEXT_FLUSH_INTERVAL_MS;
-  const elapsedSinceLastFlush = refs.lastTextFlushAt.current === 0
-    ? 0
-    : Date.now() - refs.lastTextFlushAt.current;
-  const delayMs = Math.max(0, targetIntervalMs - elapsedSinceLastFlush);
+  if (refs.displayedTextLength.current >= refs.streamBuffer.current.length) return;
 
   refs.flushTimeout.current = setTimeout(() => {
     refs.flushTimeout.current = null;
-    flushStreamingText(refs, setters);
-  }, delayMs);
+    queueStreamingTextReveal(refs, setters);
+  }, getWordRevealDelayMs(refs));
 }
 
 export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): void {
@@ -241,11 +370,14 @@ export function handleThinkingDelta(
   }
 
   if (refs.thinkingRaf.current === null) {
-    refs.thinkingRaf.current = requestAnimationFrame(() => {
+    let ranSynchronously = false;
+    const rafId = requestAnimationFrame(() => {
+      ranSynchronously = true;
       refs.thinkingRaf.current = null;
       setters.setThinkingText(refs.thinkingBuffer.current);
-      setters.setTimeline([...refs.timeline.current]);
+      syncDisplayedTimeline(refs, setters);
     });
+    refs.thinkingRaf.current = ranSynchronously ? null : rafId;
   }
 }
 
@@ -273,7 +405,7 @@ export function handleTextDelta(
     tl.push({ kind: "text", content: text, id: nextTimelineId() });
   }
 
-  scheduleStreamingTextFlush(refs, setters, text);
+  scheduleStreamingTextReveal(refs, setters);
 }
 
 export function handleToolCallStarted(
@@ -292,7 +424,7 @@ export function handleToolCallStarted(
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
-  setters.setTimeline([...refs.timeline.current]);
+  syncDisplayedTimeline(refs, setters);
 }
 
 export function handleToolCallSnapshot(
@@ -313,7 +445,7 @@ export function handleToolCallSnapshot(
       },
     ];
     refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
-    setters.setTimeline([...refs.timeline.current]);
+    syncDisplayedTimeline(refs, setters);
     setters.setActiveToolCalls([...refs.toolCalls.current]);
     return;
   }
@@ -371,7 +503,7 @@ export function handleToolCall(
     refs.toolCalls.current = [...refs.toolCalls.current, entry];
 
     refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
-    setters.setTimeline([...refs.timeline.current]);
+    syncDisplayedTimeline(refs, setters);
   }
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 }
@@ -485,8 +617,9 @@ export function handleAssistantTurnBoundary(
 ): void {
   const hasBuffer = !!refs.streamBuffer.current;
   if (hasBuffer) {
-    cancelPendingStreamFlush(refs);
+    flushStreamingText(refs, setters);
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
+    const bufferedContent = refs.streamBuffer.current;
 
     const newToolCalls = refs.toolCalls.current.filter(
       (tc) => !refs.snapshottedToolCallIds.current.has(tc.id),
@@ -506,7 +639,7 @@ export function handleAssistantTurnBoundary(
       {
         id: `stream-${Date.now()}`,
         role: "assistant",
-        content: refs.streamBuffer.current,
+        content: bufferedContent,
         toolCalls: newToolCalls.length > 0 ? [...newToolCalls] : undefined,
         thinkingText: savedThinking,
         thinkingDurationMs: savedThinkingDuration,
@@ -587,6 +720,7 @@ export function handleStreamError(
   if (displayVariant === "insufficientCreditsError") {
     dispatchInsufficientCredits();
   }
+  flushStreamingText(refs, setters);
   resolvePendingToolCalls(refs, setters, {
     isError: true,
     result: `Stream error: ${message}`,
@@ -622,7 +756,11 @@ export function finalizeStream(
   closureIsStreaming: boolean,
   options?: FinalizeStreamOptions,
 ): void {
-  cancelPendingStreamFlush(refs);
+  if (refs.streamBuffer.current) {
+    flushStreamingText(refs, setters);
+  } else {
+    cancelPendingStreamFlush(refs);
+  }
   resolvePendingToolCalls(
     refs,
     setters,
@@ -634,20 +772,25 @@ export function finalizeStream(
 
   if (hasBuffer && !closureIsStreaming) {
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
+    const bufferedContent = refs.streamBuffer.current;
+    const bufferedToolCalls = snapshotToolCalls(refs);
+    const bufferedTimeline = snapshotTimeline(refs);
     setters.setEvents((prev) => [
       ...prev,
       {
         id: `stream-${Date.now()}`,
         role: "assistant",
-        content: refs.streamBuffer.current,
-        toolCalls: snapshotToolCalls(refs),
+        content: bufferedContent,
+        toolCalls: bufferedToolCalls,
         thinkingText: savedThinking,
         thinkingDurationMs: savedThinkingDuration,
-        timeline: snapshotTimeline(refs),
+        timeline: bufferedTimeline,
       },
     ]);
     setters.setStreamingText("");
     refs.streamBuffer.current = "";
+    refs.displayedTextLength.current = 0;
+    refs.lastTextFlushAt.current = 0;
     refs.toolCalls.current = [];
     setters.setActiveToolCalls([]);
     refs.timeline.current = [];

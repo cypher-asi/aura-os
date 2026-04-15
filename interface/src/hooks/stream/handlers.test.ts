@@ -68,14 +68,16 @@ function makeSetters(): StreamSetters & { calls: Record<string, unknown[]> } {
 
 describe("stream/handlers", () => {
   let origRAF: typeof requestAnimationFrame;
+  let nextRafId = 1;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    nextRafId = 1;
     origRAF = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
       cb(0);
-      return 0;
+      return nextRafId++;
     };
   });
 
@@ -242,30 +244,69 @@ describe("stream/handlers", () => {
       expect(refs.timeline.current).toHaveLength(1);
     });
 
-    it("flushes visible text on a small timer cadence", () => {
+    it("reveals one word at a time", () => {
       const refs = makeRefs();
       const setters = makeSetters();
 
-      handleTextDelta(refs, setters, null, "hello");
+      handleTextDelta(refs, setters, null, "hello world again");
       expect(setters.calls.setStreamingText).toBeUndefined();
 
-      vi.advanceTimersByTime(20);
+      vi.advanceTimersByTime(15);
+      expect(setters.calls.setStreamingText).toBeUndefined();
 
+      vi.advanceTimersByTime(1);
       expect(setters.calls.setStreamingText).toEqual(["hello"]);
       expect(refs.displayedTextLength.current).toBe(5);
+      expect(setters.calls.setTimeline?.[0]).toMatchObject([
+        { kind: "text", content: "hello" },
+      ]);
+
+      vi.advanceTimersByTime(41);
+      expect(setters.calls.setStreamingText).toEqual(["hello"]);
+
+      vi.advanceTimersByTime(1);
+      expect(setters.calls.setStreamingText).toEqual(["hello", "hello world"]);
+
+      vi.advanceTimersByTime(42);
+      expect(setters.calls.setStreamingText).toEqual([
+        "hello",
+        "hello world",
+        "hello world again",
+      ]);
     });
 
-    it("coalesces multiple deltas before the scheduled flush", () => {
+    it("accelerates reveal cadence when the hidden backlog grows", () => {
       const refs = makeRefs();
       const setters = makeSetters();
 
-      handleTextDelta(refs, setters, null, "hello");
-      handleTextDelta(refs, setters, null, " world");
+      handleTextDelta(
+        refs,
+        setters,
+        null,
+        "one two three four five six seven eight nine ten eleven twelve thirteen",
+      );
 
-      vi.advanceTimersByTime(20);
+      vi.advanceTimersByTime(16);
+      expect(setters.calls.setStreamingText).toEqual(["one"]);
 
-      expect(setters.calls.setStreamingText).toEqual(["hello world"]);
-      expect(setters.calls.setTimeline).toHaveLength(1);
+      vi.advanceTimersByTime(11);
+      expect(setters.calls.setStreamingText).toEqual(["one"]);
+
+      vi.advanceTimersByTime(1);
+      expect(setters.calls.setStreamingText).toEqual(["one", "one two"]);
+    });
+
+    it("keeps punctuation and markdown prefixes attached to the revealed word", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleTextDelta(refs, setters, null, "Hello,\n- bullet item");
+
+      vi.advanceTimersByTime(16);
+      expect(setters.calls.setStreamingText).toEqual(["Hello,"]);
+
+      vi.advanceTimersByTime(42);
+      expect(setters.calls.setStreamingText).toEqual(["Hello,", "Hello,\n- bullet"]);
     });
   });
 
@@ -543,6 +584,24 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current[0].pending).toBe(false);
       expect(refs.toolCalls.current[0].isError).toBe(true);
       expect(refs.toolCalls.current[0].result).toBe("Harness timed out");
+    });
+
+    it("saves the full buffered content even when only part of it was revealed", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      handleTextDelta(refs, setters, null, "hello world again");
+      vi.advanceTimersByTime(16);
+      expect(setters.calls.setStreamingText).toEqual(["hello"]);
+
+      finalizeStream(refs, setters, abortRef, false);
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => Array<{ content: string }>;
+      const result = updater([]);
+
+      expect(result[0].content).toBe("hello world again");
     });
   });
 });
