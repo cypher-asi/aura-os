@@ -125,7 +125,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 25
           cache: npm
           cache-dependency-path: interface/package-lock.json
 
@@ -221,7 +221,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 25
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -580,7 +580,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 25
 
       - name: Compute nightly version
         id: version
@@ -675,7 +675,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 25
 
       - name: Compute nightly version
         id: version
