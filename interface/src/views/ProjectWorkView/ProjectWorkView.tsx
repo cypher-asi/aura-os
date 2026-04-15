@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Badge, Text } from "@cypher-asi/zui";
 import { useEventStore } from "../../stores/event-store/index";
 import { useLoopControl } from "../../hooks/use-loop-control";
@@ -8,12 +9,26 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
+import { getLastAgent } from "../../utils/storage";
 import { useMobileSpecs } from "./useMobileSpecs";
 import styles from "./ProjectWorkView.module.css";
 
+const EMPTY_PROJECT_AGENTS: ReadonlyArray<{
+  agent_instance_id: string;
+  name: string;
+  role?: string | null;
+}> = [];
+
 function ExecutionSummary({ projectId }: { projectId: string }) {
   const connected = useEventStore((s) => s.connected);
-  const activeAgent = useProjectsListStore((s) => (s.agentsByProject[projectId] ?? [])[0] ?? null);
+  const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId] ?? EMPTY_PROJECT_AGENTS);
+  const activeAgent = useMemo(() => {
+    const rememberedAgentId = getLastAgent(projectId);
+    if (!rememberedAgentId) {
+      return projectAgents[0] ?? null;
+    }
+    return projectAgents.find((agent) => agent.agent_instance_id === rememberedAgentId) ?? projectAgents[0] ?? null;
+  }, [projectAgents, projectId]);
   const { loopRunning, loopPaused, error, handleStart, handlePause, handleStop } =
     useLoopControl(projectId);
   const loopStatus = loopRunning ? (loopPaused ? "Paused" : "Running") : "Idle";

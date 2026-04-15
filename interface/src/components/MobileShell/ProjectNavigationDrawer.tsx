@@ -1,24 +1,20 @@
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { useShallow } from "zustand/react/shallow";
 import { PanelSearch } from "../PanelSearch";
-import { ProjectsPlusButton } from "../ProjectsPlusButton";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import {
   getMobileProjectDestination,
-  getProjectAgentInstanceIdFromPathname,
   getProjectIdFromPathname,
-  projectAgentDetailsRoute,
   projectProcessRoute,
   projectTasksRoute,
   projectWorkRoute,
   projectStatsRoute,
 } from "../../utils/mobileNavigation";
-import { getLastAgent } from "../../utils/storage";
+import { setLastProject } from "../../utils/storage";
 import { resolveProjectAgentPath } from "./mobile-shell-utils";
 import styles from "./MobileShell.module.css";
 
@@ -41,9 +37,11 @@ function ProjectRow({
     >
       <span className={styles.mobileProjectDrawerRowMain}>
         <span className={styles.mobileProjectDrawerTitle}>{project.name}</span>
-        <span className={styles.mobileProjectDrawerRowMeta}>
-          {project.description?.trim() || "Open this project."}
-        </span>
+        {project.description?.trim() ? (
+          <span className={styles.mobileProjectDrawerRowMeta}>
+            {project.description.trim()}
+          </span>
+        ) : null}
       </span>
     </button>
   );
@@ -51,17 +49,11 @@ function ProjectRow({
 
 export function ProjectNavigationDrawerContent() {
   const { query, setQuery } = useSidebarSearch("projects");
-  const { openNewProjectModal, projects, agentsByProject } = useProjectsListStore(
-    useShallow((state) => ({
-      openNewProjectModal: state.openNewProjectModal,
-      projects: state.projects,
-      agentsByProject: state.agentsByProject,
-    })),
-  );
+  const projects = useProjectsListStore((state) => state.projects);
   const navigate = useNavigate();
   const location = useLocation();
   const closePreview = useSidekickStore((s) => s.closePreview);
-  const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
+  const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
@@ -79,46 +71,41 @@ export function ProjectNavigationDrawerContent() {
     });
   }, [projects, query]);
 
+  const runDrawerNavigation = useCallback((path: string) => {
+    navigate(path);
+    closeDrawers();
+  }, [closeDrawers, navigate]);
+
   const openProjectLanding = useCallback((projectId: string) => {
     if (projectId !== currentProjectId) {
       closePreview();
     }
 
-    openAfterDrawerClose(() => {
-      if (mobileDestination === "tasks") {
-        navigate(projectTasksRoute(projectId));
-        return;
-      }
+    setLastProject(projectId);
 
-      if (mobileDestination === "execution") {
-        navigate(projectWorkRoute(projectId));
-        return;
-      }
+    if (mobileDestination === "tasks") {
+      runDrawerNavigation(projectTasksRoute(projectId));
+      return;
+    }
 
-      if (mobileDestination === "process") {
-        navigate(projectProcessRoute(projectId));
-        return;
-      }
+    if (mobileDestination === "execution") {
+      runDrawerNavigation(projectWorkRoute(projectId));
+      return;
+    }
 
-      if (mobileDestination === "stats") {
-        navigate(projectStatsRoute(projectId));
-        return;
-      }
+    if (mobileDestination === "process") {
+      runDrawerNavigation(projectProcessRoute(projectId));
+      return;
+    }
 
-      navigate(resolveProjectAgentPath(projectId));
-    });
-  }, [currentProjectId, mobileDestination, navigate, openAfterDrawerClose, closePreview]);
+    if (mobileDestination === "stats") {
+      runDrawerNavigation(projectStatsRoute(projectId));
+      return;
+    }
 
-  const currentProject = currentProjectId
-    ? projects.find((project) => project.project_id === currentProjectId) ?? null
-    : null;
-  const currentProjectAgents = currentProjectId ? agentsByProject[currentProjectId] ?? [] : [];
-  const routedAgentInstanceId = getProjectAgentInstanceIdFromPathname(location.pathname);
-  const rememberedAgentInstanceId = currentProjectId ? getLastAgent(currentProjectId) : null;
-  const currentProjectAgent = currentProjectAgents.find((agent) => agent.agent_instance_id === routedAgentInstanceId)
-    ?? currentProjectAgents.find((agent) => agent.agent_instance_id === rememberedAgentInstanceId)
-    ?? currentProjectAgents[0]
-    ?? null;
+    runDrawerNavigation(resolveProjectAgentPath(projectId));
+  }, [currentProjectId, mobileDestination, runDrawerNavigation, closePreview]);
+
   const activeQuery = query.trim();
   const recentProjectIds = new Set(recentProjects.map((project) => project.project_id));
   const projectRows = filteredProjects
@@ -135,69 +122,26 @@ export function ProjectNavigationDrawerContent() {
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerSearch}>
         <div className={styles.mobileDrawerHeaderBar}>
-          <div className={styles.mobileDrawerHeaderTitle}>Project navigation</div>
-          <button
-            type="button"
-            className={styles.mobileDrawerDoneButton}
-            aria-label="Close project navigation"
-            onClick={() => setNavOpen(false)}
-          >
-            Done
-          </button>
+          <div className={styles.mobileDrawerHeaderTitle}>Switch project</div>
+          <div className={styles.mobileDrawerHeaderActions}>
+            <button
+              type="button"
+              className={styles.mobileDrawerDoneButton}
+              aria-label="Close project navigation"
+              onClick={() => setNavOpen(false)}
+            >
+              Done
+            </button>
+          </div>
         </div>
         <PanelSearch
-          placeholder="Search"
+          placeholder="Search Projects..."
           value={query}
           onChange={setQuery}
-          action={<ProjectsPlusButton onClick={() => openAfterDrawerClose(openNewProjectModal)} title="New Project" />}
         />
       </div>
       <div className={styles.mobileDrawerBody}>
         <div className={styles.mobileProjectDrawerList} role="tree" aria-label="Project navigation">
-          {currentProject && (!activeQuery || filteredProjects.some((project) => project.project_id === currentProject.project_id)) ? (
-            <section className={styles.mobileDrawerSection}>
-              <div className={styles.mobileDrawerSectionHeader}>
-                <span className={styles.mobileDrawerSectionTitle}>Current project</span>
-              </div>
-              <section
-                className={`${styles.mobileProjectDrawerCard} ${styles.mobileProjectDrawerCardActive} ${styles.mobileWorkspaceHero}`}
-              >
-                <button
-                  type="button"
-                  role="treeitem"
-                  aria-label={currentProject.name}
-                  aria-selected
-                  className={styles.mobileProjectDrawerPrimary}
-                  onClick={() => openProjectLanding(currentProject.project_id)}
-                >
-                  <span className={styles.mobileProjectDrawerTitle}>{currentProject.name}</span>
-                  <span className={styles.mobileProjectDrawerDescription}>
-                    {currentProject.description?.trim() || "Open this project and keep working in the current tab."}
-                  </span>
-                </button>
-                {currentProjectAgent ? (
-                  <button
-                    type="button"
-                    className={styles.mobileWorkspaceAgentButton}
-                    aria-label={`Open details for ${currentProjectAgent.name}`}
-                    onClick={() => openAfterDrawerClose(() => navigate(projectAgentDetailsRoute(currentProjectAgent.project_id, currentProjectAgent.agent_instance_id)))}
-                  >
-                    <span className={styles.mobileWorkspaceAgentCopy}>
-                      <span className={styles.mobileProjectDrawerEyebrow}>Agent &amp; skills</span>
-                      <span className={styles.mobileWorkspaceAgentTitle}>{currentProjectAgent.name}</span>
-                      <span className={styles.mobileProjectDrawerDescription}>
-                        {currentProjectAgent.role?.trim()
-                          ? `${currentProjectAgent.role} · skills and runtime`
-                          : "Open skills and runtime"}
-                      </span>
-                    </span>
-                    <span className={styles.mobileProjectDrawerDetailCta}>Open agent</span>
-                  </button>
-                ) : null}
-              </section>
-            </section>
-          ) : null}
-
           {activeQuery ? (
             <section className={styles.mobileDrawerSection}>
               <div className={styles.mobileDrawerSectionHeader}>

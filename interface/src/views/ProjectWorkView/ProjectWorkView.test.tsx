@@ -7,6 +7,7 @@ vi.mock("@cypher-asi/zui", () => ({
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectContext = vi.fn();
+const mockGetLastAgent = vi.fn();
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
@@ -18,6 +19,27 @@ vi.mock("../../stores/project-action-store", () => ({
 
 vi.mock("../../stores/event-store/index", () => ({
   useEventStore: (selector: (state: { connected: boolean }) => unknown) => selector({ connected: true }),
+}));
+
+vi.mock("../../stores/projects-list-store", () => ({
+  useProjectsListStore: (selector: (state: {
+    agentsByProject: Record<string, Array<{
+      agent_instance_id: string;
+      name: string;
+      role?: string;
+    }>>;
+  }) => unknown) => selector({
+    agentsByProject: {
+      "proj-1": [
+        { agent_instance_id: "agent-a", name: "MOT Local", role: "Remote Aura agent" },
+        { agent_instance_id: "agent-b", name: "AtlasE2E0415", role: "MobileE2EValidator" },
+      ],
+    },
+  }),
+}));
+
+vi.mock("../../utils/storage", () => ({
+  getLastAgent: (...args: unknown[]) => mockGetLastAgent(...args),
 }));
 
 vi.mock("../../hooks/use-loop-control", () => ({
@@ -74,6 +96,7 @@ import { ProjectWorkView } from "./ProjectWorkView";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetLastAgent.mockReturnValue(null);
   mockUseProjectContext.mockReturnValue({
     project: { project_id: "proj-1" },
     initialSpecs: [],
@@ -99,5 +122,16 @@ describe("ProjectWorkView", () => {
     expect(screen.getByText("Specs")).toBeInTheDocument();
     expect(screen.queryByText("Log panel")).not.toBeInTheDocument();
     expect(screen.getByText("Task feed")).toBeInTheDocument();
+  });
+
+  it("uses the remembered current agent in the mobile execution summary", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    mockGetLastAgent.mockReturnValue("agent-b");
+
+    render(<ProjectWorkView />);
+
+    expect(screen.getByText("AtlasE2E0415")).toBeInTheDocument();
+    expect(screen.getByText("MobileE2EValidator")).toBeInTheDocument();
+    expect(screen.queryByText("MOT Local")).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { api } from "../../api/client";
 import type { Agent, AgentInstance } from "../../types";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
+import { useOrgStore } from "../../stores/org-store";
 
 interface AgentSelectorData {
   agents: Agent[];
@@ -25,6 +26,7 @@ export function useAgentSelectorData(
 ): AgentSelectorData {
   const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
+  const activeOrg = useOrgStore((state) => state.activeOrg);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState<string | null>(null);
@@ -37,10 +39,15 @@ export function useAgentSelectorData(
     setError("");
     api.agents
       .list()
-      .then(setAgents)
+      .then((nextAgents) => {
+        const visibleAgents = activeOrg?.org_id
+          ? nextAgents.filter((agent) => agent.org_id === activeOrg.org_id)
+          : nextAgents;
+        setAgents(visibleAgents);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load agents"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeOrg?.org_id]);
 
   useEffect(() => {
     if (isOpen) fetchAgents();
