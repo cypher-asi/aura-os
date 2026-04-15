@@ -366,6 +366,10 @@ fn agent_routes() -> Router<AppState> {
             post(agents::send_agent_event_stream),
         )
         .route(
+            "/api/agents/:agent_id/reset-session",
+            post(agents::reset_agent_session),
+        )
+        .route(
             "/api/projects/:project_id/agents",
             post(agents::create_agent_instance).get(agents::list_agent_instances),
         )
@@ -382,6 +386,10 @@ fn agent_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/events/stream",
             post(agents::send_event_stream),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/reset-session",
+            post(agents::reset_instance_session),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions",

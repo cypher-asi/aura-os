@@ -24,6 +24,7 @@ import {
   getThinkingDurationMs,
 } from "./use-stream-core";
 import type { DisplaySessionEvent } from "../types/stream";
+import { useContextUsageStore } from "../stores/context-usage-store";
 
 interface UseAgentChatStreamOptions {
   agentId: string | undefined;
@@ -126,8 +127,11 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               break;
             case EventType.AssistantMessageEnd: {
               handleAssistantTurnBoundary(refs, setters);
-              const stopReason = (event.content as { stop_reason?: string }).stop_reason;
-              if (stopReason !== "tool_use") {
+              const amc = event.content as { stop_reason?: string; usage?: { context_utilization?: number } };
+              if (amc.usage?.context_utilization != null) {
+                useContextUsageStore.getState().setContextUtilization(core.key, amc.usage.context_utilization);
+              }
+              if (amc.stop_reason !== "tool_use") {
                 resetStreamBuffers(refs, setters);
                 core.setIsStreaming(false);
               }

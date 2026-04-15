@@ -17,6 +17,7 @@ import { queryClient } from "../../lib/query-client";
 import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
+import { useContextUtilization, useContextUsageStore } from "../../stores/context-usage-store";
 import type { AgentInstance, Project } from "../../types";
 import {
   isCreateAgentChatHandoff,
@@ -119,6 +120,7 @@ function StandaloneAgentChatPanel({
     { agentId },
   );
   const { setSelectedAgent } = useSelectedAgent();
+  const contextUtilization = useContextUtilization(streamKey);
 
   const effectiveProjectId = useMemo(() => {
     if (selectedProjectId && agentProjects.some((project) => project.project_id === selectedProjectId)) {
@@ -152,6 +154,12 @@ function StandaloneAgentChatPanel({
   const onClear = useCallback(() => {
     resetEvents([], { allowWhileStreaming: true });
   }, [resetEvents]);
+
+  const handleNewSession = useCallback(() => {
+    api.agents.resetSession(agentId).catch(() => {});
+    useContextUsageStore.getState().clearContextUtilization(streamKey);
+    resetEvents([], { allowWhileStreaming: true });
+  }, [agentId, streamKey, resetEvents]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -190,6 +198,8 @@ function StandaloneAgentChatPanel({
       projects={agentProjects}
       selectedProjectId={effectiveProjectId}
       onProjectChange={handleProjectChange}
+      contextUtilization={contextUtilization}
+      onNewSession={handleNewSession}
     />
   );
 }
@@ -220,6 +230,7 @@ function ProjectAgentChatPanel({
     "project",
     { projectId, agentInstanceId },
   );
+  const contextUtilization = useContextUtilization(streamKey);
 
   const historyKey = useMemo(() => {
     if (sessionId) {
@@ -243,6 +254,12 @@ function ProjectAgentChatPanel({
   const onClear = useCallback(() => {
     resetEvents([], { allowWhileStreaming: true });
   }, [resetEvents]);
+
+  const handleNewSession = useCallback(() => {
+    api.resetInstanceSession(projectId, agentInstanceId).catch(() => {});
+    useContextUsageStore.getState().clearContextUtilization(streamKey);
+    resetEvents([], { allowWhileStreaming: true });
+  }, [projectId, agentInstanceId, streamKey, resetEvents]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
     historyKey,
@@ -329,6 +346,8 @@ function ProjectAgentChatPanel({
         historyMessages={historyMessages}
         projects={currentProject}
         selectedProjectId={projectId}
+        contextUtilization={isSessionView ? undefined : contextUtilization}
+        onNewSession={isSessionView ? undefined : handleNewSession}
       />
     </>
   );

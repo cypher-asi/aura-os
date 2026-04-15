@@ -136,6 +136,7 @@ export function sendAgentEventStream(
   signal?: AbortSignal,
   commands?: string[],
   projectId?: string,
+  newSession?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) body.model = model;
@@ -146,6 +147,7 @@ export function sendAgentEventStream(
     body.commands = commands;
   }
   if (projectId) body.project_id = projectId;
+  if (newSession) body.new_session = true;
   return streamSSE<string>(
     `${BASE_URL}/api/agents/${agentId}/events/stream`,
     {
@@ -220,6 +222,7 @@ export function sendEventStream(
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
   commands?: string[],
+  newSession?: boolean,
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) body.model = model;
@@ -229,6 +232,7 @@ export function sendEventStream(
   if (commands && commands.length > 0) {
     body.commands = commands;
   }
+  if (newSession) body.new_session = true;
   return streamSSE<string>(
     `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,
     {

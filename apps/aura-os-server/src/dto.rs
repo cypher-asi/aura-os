@@ -152,6 +152,8 @@ pub(crate) struct SendChatRequest {
     pub project_id: Option<String>,
     #[serde(default)]
     pub attachments: Option<Vec<ChatAttachmentDto>>,
+    #[serde(default)]
+    pub new_session: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

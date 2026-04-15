@@ -30,6 +30,7 @@ import {
   promotePendingTask,
   backfillToolCallInput,
 } from "./optimistic-artifacts";
+import { useContextUsageStore } from "../../stores/context-usage-store";
 
 export interface DispatchDeps {
   projectId: string;
@@ -158,8 +159,11 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       case EventType.AssistantMessageEnd: {
         handleAssistantTurnBoundary(refs, setters);
-        const stopReason = (event.content as { stop_reason?: string }).stop_reason;
-        if (stopReason !== "tool_use") {
+        const amc = event.content as { stop_reason?: string; usage?: { context_utilization?: number } };
+        if (amc.usage?.context_utilization != null) {
+          useContextUsageStore.getState().setContextUtilization(coreKey, amc.usage.context_utilization);
+        }
+        if (amc.stop_reason !== "tool_use") {
           resetStreamBuffers(refs, setters);
           setters.setIsStreaming(false);
           sidekickRef.current.setStreamingAgentInstanceId(null);

@@ -51,6 +51,8 @@ export interface ChatPanelProps {
   mobileHeaderSummaryKind?: "details" | "switch";
   initialHandoff?: ChatPanelHandoffMode;
   onInitialHandoffReady?: () => void;
+  contextUtilization?: number;
+  onNewSession?: () => void;
 }
 
 export function ChatPanel({
@@ -80,6 +82,8 @@ export function ChatPanel({
   mobileHeaderSummaryKind = "details",
   initialHandoff,
   onInitialHandoffReady,
+  contextUtilization,
+  onNewSession,
 }: ChatPanelProps) {
   const showLoadingState = isLoading;
   const s = useChatPanelState({
@@ -260,6 +264,8 @@ export function ChatPanel({
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
           isVisible={chromeReady}
+          contextUtilization={contextUtilization}
+          onNewSession={onNewSession}
         />
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useRef, useState, useImperativeHandle, forwardRef, memo, useCallback, useEffect } from "react";
-import { ArrowUp, Plus, X, FileText, ChevronDown, FolderOpen } from "lucide-react";
+import { ArrowUp, Plus, X, FileText, ChevronDown, FolderOpen, RotateCcw } from "lucide-react";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import type { GenerationMode } from "../../constants/models";
@@ -49,6 +49,8 @@ interface Props {
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
   isVisible?: boolean;
+  contextUtilization?: number;
+  onNewSession?: () => void;
 }
 
 function AttachmentPreviews({ attachments, onRemove }: { attachments: AttachmentItem[]; onRemove: (id: string) => void }) {
@@ -73,6 +75,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   selectedCommands = [], onCommandsChange,
   projects = [], selectedProjectId, onProjectChange,
   isVisible = true,
+  contextUtilization, onNewSession,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
   const chatUI = useChatUI(streamKey);
@@ -259,6 +262,48 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         <span className={styles.orbitWrap}>
           <OrbitStatusIndicator project={selectedProject} />
         </span>
+        {contextUtilization != null && contextUtilization > 0 ? (
+          <>
+            <span className={styles.infoDivider} aria-hidden="true">·</span>
+            <span
+              className={
+                styles.contextIndicator +
+                (contextUtilization >= 0.9
+                  ? ` ${styles.contextDanger}`
+                  : contextUtilization >= 0.7
+                    ? ` ${styles.contextWarning}`
+                    : "")
+              }
+              title={`Context window ${Math.round(contextUtilization * 100)}% used`}
+            >
+              Ctx {Math.round(contextUtilization * 100)}%
+            </span>
+            {onNewSession ? (
+              <button
+                type="button"
+                className={styles.newSessionButton}
+                onClick={onNewSession}
+                title="Start new session (reset context)"
+                aria-label="Start new session"
+              >
+                <RotateCcw size={10} />
+              </button>
+            ) : null}
+          </>
+        ) : onNewSession ? (
+          <>
+            <span className={styles.infoDivider} aria-hidden="true">·</span>
+            <button
+              type="button"
+              className={styles.newSessionButton}
+              onClick={onNewSession}
+              title="Start new session (reset context)"
+              aria-label="Start new session"
+            >
+              <RotateCcw size={10} />
+            </button>
+          </>
+        ) : null}
         {selectedProject ? <span className={styles.infoDivider} aria-hidden="true">·</span> : null}
         <button
           type="button"

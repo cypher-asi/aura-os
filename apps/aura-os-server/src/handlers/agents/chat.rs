@@ -521,6 +521,39 @@ async fn has_live_session(state: &AppState, key: &str) -> bool {
     false
 }
 
+async fn remove_live_session(state: &AppState, key: &str) {
+    let mut reg = state.chat_sessions.lock().await;
+    reg.remove(key);
+}
+
+pub(crate) async fn reset_agent_session(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    Path(agent_id): Path<AgentId>,
+) -> ApiResult<StatusCode> {
+    let session_key = format!("agent:{agent_id}");
+    remove_live_session(&state, &session_key).await;
+    let sa_key = format!("super_agent:{agent_id}");
+    remove_live_session(&state, &sa_key).await;
+    {
+        let mut cache = state.super_agent_messages.lock().await;
+        cache.remove(&sa_key);
+    }
+    info!(%agent_id, "Agent chat session reset");
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub(crate) async fn reset_instance_session(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+) -> ApiResult<StatusCode> {
+    let session_key = format!("instance:{agent_instance_id}");
+    remove_live_session(&state, &session_key).await;
+    info!(%agent_instance_id, "Instance chat session reset");
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<ConversationMessage> {
     events
         .iter()
@@ -1358,7 +1391,19 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let session_key = format!("agent:{agent_id}");
-    let conversation_messages = if !has_live_session(&state, &session_key).await {
+    let force_new = body.new_session.unwrap_or(false);
+    if force_new {
+        remove_live_session(&state, &session_key).await;
+        let sa_key = format!("super_agent:{agent_id}");
+        remove_live_session(&state, &sa_key).await;
+        {
+            let mut cache = state.super_agent_messages.lock().await;
+            cache.remove(&sa_key);
+        }
+    }
+    let conversation_messages = if force_new {
+        None
+    } else if !has_live_session(&state, &session_key).await {
         let stored = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
         if stored.is_empty() {
             None
@@ -1456,7 +1501,13 @@ pub(crate) async fn send_event_stream(
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt).await;
 
     let session_key = format!("instance:{agent_instance_id}");
-    let conversation_messages = if !has_live_session(&state, &session_key).await {
+    let force_new = body.new_session.unwrap_or(false);
+    if force_new {
+        remove_live_session(&state, &session_key).await;
+    }
+    let conversation_messages = if force_new {
+        None
+    } else if !has_live_session(&state, &session_key).await {
         let stored = load_project_session_history(&state, &agent_instance_id, &jwt)
             .await
             .map_err(map_storage_error)?;

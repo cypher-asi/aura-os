@@ -215,6 +215,39 @@
   font-size: 11px;
 }
 
+.contextIndicator {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.contextWarning {
+  color: var(--color-warning, #e5a817);
+}
+
+.contextDanger {
+  color: var(--color-error, #e54017);
+}
+
+.newSessionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+
+.newSessionButton:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .commandsTrigger {
   display: inline;
   padding: 0;

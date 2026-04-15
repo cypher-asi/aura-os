@@ -77,6 +77,8 @@ export const agentTemplatesApi = {
     });
   },
   sendEventStream: sendAgentEventStream,
+  resetSession: (agentId: AgentId) =>
+    apiFetch<void>(`/api/agents/${agentId}/reset-session`, { method: "POST" }),
 };
 
 export const agentInstancesApi = {
@@ -113,6 +115,11 @@ export const agentInstancesApi = {
       { signal: options?.signal },
     ),
   sendEventStream,
+  resetInstanceSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/reset-session`,
+      { method: "POST" },
+    ),
 };
 
 export const superAgentApi = {
