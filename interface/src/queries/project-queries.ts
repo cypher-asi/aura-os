@@ -13,6 +13,21 @@ function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => a.order_index - b.order_index);
 }
 
+function upsertById<T extends Record<string, unknown>>(
+  items: T[],
+  item: T,
+  idKey: keyof T,
+): T[] {
+  const next = [...items];
+  const index = next.findIndex((candidate) => candidate[idKey] === item[idKey]);
+  if (index === -1) {
+    next.push(item);
+  } else {
+    next[index] = item;
+  }
+  return next;
+}
+
 export function dedupeProjects(projects: Project[]): Project[] {
   const seen = new Set<string>();
   const next: Project[] = [];
@@ -78,6 +93,28 @@ export function projectLayoutQueryOptions(projectId: string) {
     },
     retry: 0,
   });
+}
+
+export function mergeSpecIntoProjectLayout(
+  current: ProjectLayoutBundle | undefined,
+  spec: Spec,
+): ProjectLayoutBundle | undefined {
+  if (!current) return current;
+  return {
+    ...current,
+    specs: upsertById(current.specs, spec, "spec_id").sort(compareSpecs),
+  };
+}
+
+export function mergeTaskIntoProjectLayout(
+  current: ProjectLayoutBundle | undefined,
+  task: Task,
+): ProjectLayoutBundle | undefined {
+  if (!current) return current;
+  return {
+    ...current,
+    tasks: sortTasks(upsertById(current.tasks, task, "task_id")),
+  };
 }
 
 export type AgentInstanceUpdate =

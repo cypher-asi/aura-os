@@ -232,7 +232,36 @@ async fn finalize_process_task_session(
 // Spec/Task creation for project-linked processes
 // ---------------------------------------------------------------------------
 
+fn emit_process_spec_saved_event(
+    broadcast: &broadcast::Sender<serde_json::Value>,
+    project_id: &ProjectId,
+    spec: Spec,
+) {
+    let spec_id = spec.spec_id.to_string();
+    let _ = broadcast.send(serde_json::json!({
+        "type": "spec_saved",
+        "project_id": project_id.to_string(),
+        "spec": spec,
+        "spec_id": spec_id,
+    }));
+}
+
+fn emit_process_task_saved_event(
+    broadcast: &broadcast::Sender<serde_json::Value>,
+    project_id: &ProjectId,
+    task: Task,
+) {
+    let task_id = task.task_id.to_string();
+    let _ = broadcast.send(serde_json::json!({
+        "type": "task_saved",
+        "project_id": project_id.to_string(),
+        "task": task,
+        "task_id": task_id,
+    }));
+}
+
 async fn create_spec_and_tasks(
+    broadcast: &broadcast::Sender<serde_json::Value>,
     storage: &StorageClient,
     jwt: Option<&str>,
     project_id: &ProjectId,
@@ -247,7 +276,7 @@ async fn create_spec_and_tasks(
         jwt.ok_or_else(|| ProcessError::Execution("No JWT available for task creation".into()))?;
     let pid = project_id.to_string();
 
-    let spec = storage
+    let created_spec = storage
         .create_spec(
             &pid,
             jwt,
@@ -260,6 +289,10 @@ async fn create_spec_and_tasks(
         )
         .await
         .map_err(|e| ProcessError::Execution(format!("Failed to create spec: {e}")))?;
+    let spec = Spec::try_from(created_spec)
+        .map_err(|e| ProcessError::Execution(format!("Failed to decode created spec: {e}")))?;
+    let spec_id = spec.spec_id.to_string();
+    emit_process_spec_saved_event(broadcast, project_id, spec);
 
     let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
         nodes.iter().map(|n| (n.node_id, n)).collect();
@@ -297,12 +330,12 @@ async fn create_spec_and_tasks(
             .project_agent_id,
         );
 
-        let task = storage
+        let created_task = storage
             .create_task(
                 &pid,
                 jwt,
                 &aura_os_storage::CreateTaskRequest {
-                    spec_id: spec.id.clone(),
+                    spec_id: spec_id.clone(),
                     title: node.label.clone(),
                     org_id: None,
                     description: Some(node.prompt.clone()),
@@ -319,10 +352,14 @@ async fn create_spec_and_tasks(
                     node.label
                 ))
             })?;
+        let task = Task::try_from(created_task)
+            .map_err(|e| ProcessError::Execution(format!("Failed to decode created task: {e}")))?;
+        let task_id = task.task_id.to_string();
+        emit_process_task_saved_event(broadcast, project_id, task);
 
-        task_map.insert(nid, task.id.clone());
-        info!(node_id = %nid, task_id = %task.id, "Created task for process node");
+        task_map.insert(nid, task_id.clone());
+        info!(node_id = %nid, task_id = %task_id, "Created task for process node");
     }
 
-    Ok((spec.id, task_map))
+    Ok((spec_id, task_map))
 }

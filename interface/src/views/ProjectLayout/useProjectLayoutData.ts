@@ -5,7 +5,13 @@ import { api } from "../../api/client";
 import type { Project, Spec, Task } from "../../types";
 import { EventType } from "../../types/aura-events";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
-import { projectLayoutQueryOptions, projectQueryKeys, type ProjectLayoutBundle } from "../../queries/project-queries";
+import {
+  mergeSpecIntoProjectLayout,
+  mergeTaskIntoProjectLayout,
+  projectLayoutQueryOptions,
+  projectQueryKeys,
+  type ProjectLayoutBundle,
+} from "../../queries/project-queries";
 import { useProjectRegister } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
@@ -86,6 +92,27 @@ export function useProjectLayoutData(): ProjectLayoutData {
         });
       }
     });
+  }, [projectId, queryClient, subscribe]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const unsubs = [
+      subscribe(EventType.SpecSaved, (e) => {
+        if (e.project_id !== projectId || !e.content.spec) return;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => mergeSpecIntoProjectLayout(current, e.content.spec),
+        );
+      }),
+      subscribe(EventType.TaskSaved, (e) => {
+        if (e.project_id !== projectId || !e.content.task) return;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => mergeTaskIntoProjectLayout(current, e.content.task),
+        );
+      }),
+    ];
+    return () => unsubs.forEach((unsubscribe) => unsubscribe());
   }, [projectId, queryClient, subscribe]);
 
   const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);

@@ -56,6 +56,7 @@ fn execute_run<'a>(
             ProcessError::Execution("StorageClient required for process execution".into())
         })?;
         let (spec_id_for_run, node_task_ids) = create_spec_and_tasks(
+            broadcast,
             storage,
             jwt.as_deref(),
             &project_id,

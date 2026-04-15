@@ -14,11 +14,25 @@ interface KanbanState {
 
   fetchTasks: (projectId: ProjectId) => Promise<void>;
   addTask: (projectId: ProjectId, task: Task) => void;
+  replaceTask: (projectId: ProjectId, previousTaskId: string, task: Task) => void;
+  removeTask: (projectId: ProjectId, taskId: string) => void;
   patchTask: (projectId: ProjectId, taskId: string, patch: Partial<Task>) => void;
   invalidate: (projectId: ProjectId) => void;
 }
 
 const STALE_MS = 30_000;
+
+function sortTasks(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => a.order_index - b.order_index);
+}
+
+function upsertTask(tasks: Task[], task: Task): Task[] {
+  const index = tasks.findIndex((candidate) => candidate.task_id === task.task_id);
+  if (index === -1) return sortTasks([...tasks, task]);
+  const next = [...tasks];
+  next[index] = task;
+  return sortTasks(next);
+}
 
 export const useKanbanStore = create<KanbanState>()((set, get) => ({
   tasksByProject: {},
@@ -34,7 +48,7 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
       set((s) => ({
         tasksByProject: {
           ...s.tasksByProject,
-          [projectId]: { tasks, fetchedAt: Date.now() },
+          [projectId]: { tasks: sortTasks(tasks), fetchedAt: Date.now() },
         },
         loading: { ...s.loading, [projectId]: false },
       }));
@@ -46,15 +60,46 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
   addTask: (projectId, task) => {
     set((s) => {
       const cached = s.tasksByProject[projectId];
+      return {
+        tasksByProject: {
+          ...s.tasksByProject,
+          [projectId]: {
+            tasks: upsertTask(cached?.tasks ?? [], task),
+            fetchedAt: cached?.fetchedAt ?? Date.now(),
+          },
+        },
+      };
+    });
+  },
+
+  replaceTask: (projectId, previousTaskId, task) => {
+    set((s) => {
+      const cached = s.tasksByProject[projectId];
+      const nextTasks = (cached?.tasks ?? []).filter(
+        (candidate) => candidate.task_id !== previousTaskId,
+      );
+      return {
+        tasksByProject: {
+          ...s.tasksByProject,
+          [projectId]: {
+            tasks: upsertTask(nextTasks, task),
+            fetchedAt: cached?.fetchedAt ?? Date.now(),
+          },
+        },
+      };
+    });
+  },
+
+  removeTask: (projectId, taskId) => {
+    set((s) => {
+      const cached = s.tasksByProject[projectId];
       if (!cached) return s;
       return {
         tasksByProject: {
           ...s.tasksByProject,
           [projectId]: {
             ...cached,
-            tasks: [...cached.tasks, task].sort(
-              (a, b) => a.order_index - b.order_index,
-            ),
+            tasks: cached.tasks.filter((task) => task.task_id !== taskId),
           },
         },
       };
@@ -65,8 +110,10 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
     set((s) => {
       const cached = s.tasksByProject[projectId];
       if (!cached) return s;
-      const updated = cached.tasks.map((t) =>
-        t.task_id === taskId ? { ...t, ...patch } : t,
+      const updated = sortTasks(
+        cached.tasks.map((t) =>
+          t.task_id === taskId ? { ...t, ...patch } : t,
+        ),
       );
       return {
         tasksByProject: {

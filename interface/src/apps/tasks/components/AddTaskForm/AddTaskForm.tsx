@@ -5,7 +5,9 @@ import { tasksApi } from "../../../../api/tasks";
 import { useKanbanStore } from "../../stores/kanban-store";
 import { useProjectActions } from "../../../../stores/project-action-store";
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
+import { useSidekickStore } from "../../../../stores/sidekick-store";
 import { Select } from "../../../../components/Select";
+import type { Task } from "../../../../types";
 import styles from "./AddTaskForm.module.css";
 
 const STATUS_OPTIONS = [
@@ -36,9 +38,13 @@ export function AddTaskForm({
   const [submitting, setSubmitting] = useState(false);
   const [createMore, setCreateMore] = useState(false);
   const addTask = useKanbanStore((s) => s.addTask);
+  const removeTask = useKanbanStore((s) => s.removeTask);
+  const replaceTask = useKanbanStore((s) => s.replaceTask);
   const ctx = useProjectActions();
   const specs = ctx?.initialSpecs ?? [];
   const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId]) ?? [];
+  const pushSidekickTask = useSidekickStore((s) => s.pushTask);
+  const removeSidekickTask = useSidekickStore((s) => s.removeTask);
 
   const assigneeOptions = useMemo(
     () => [
@@ -67,7 +73,33 @@ export function AddTaskForm({
     if (!trimmed || submitting) return;
     if (specs.length === 0) return;
 
+    const optimisticTaskId = `pending-task-${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+    const optimisticTask: Task = {
+      task_id: optimisticTaskId,
+      project_id: projectId,
+      spec_id: specs[0].spec_id,
+      title: trimmed,
+      description: description.trim(),
+      status,
+      order_index: Date.now(),
+      dependency_ids: [],
+      parent_task_id: null,
+      assigned_agent_instance_id: assignee || null,
+      completed_by_agent_instance_id: null,
+      session_id: null,
+      execution_notes: "",
+      files_changed: [],
+      live_output: "",
+      total_input_tokens: 0,
+      total_output_tokens: 0,
+      created_at: now,
+      updated_at: now,
+    };
+
     setSubmitting(true);
+    addTask(projectId, optimisticTask);
+    pushSidekickTask(optimisticTask);
     try {
       const task = await tasksApi.createTask(projectId, {
         title: trimmed,
@@ -76,7 +108,9 @@ export function AddTaskForm({
         status,
         assigned_agent_instance_id: assignee || undefined,
       });
-      addTask(projectId, task);
+      replaceTask(projectId, optimisticTaskId, task);
+      removeSidekickTask(optimisticTaskId);
+      pushSidekickTask(task);
       if (createMore) {
         resetForm();
         inputRef.current?.focus();
@@ -84,10 +118,29 @@ export function AddTaskForm({
         handleClose();
       }
     } catch (err) {
+      removeTask(projectId, optimisticTaskId);
+      removeSidekickTask(optimisticTaskId);
       console.error("Failed to create task:", err);
       setSubmitting(false);
     }
-  }, [title, description, assignee, submitting, specs, projectId, status, addTask, createMore, resetForm, handleClose, inputRef]);
+  }, [
+    title,
+    submitting,
+    specs,
+    projectId,
+    description,
+    status,
+    assignee,
+    addTask,
+    pushSidekickTask,
+    replaceTask,
+    removeSidekickTask,
+    createMore,
+    resetForm,
+    inputRef,
+    handleClose,
+    removeTask,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

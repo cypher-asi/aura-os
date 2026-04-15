@@ -23,7 +23,7 @@ use aura_os_core::{
     Agent, AgentId, ArtifactType, Process, ProcessArtifact, ProcessArtifactId, ProcessEvent,
     ProcessEventId, ProcessEventStatus, ProcessId, ProcessNode, ProcessNodeConnection,
     ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunStatus, ProcessRunTrigger,
-    ProjectId, TaskStatus,
+    ProjectId, Spec, Task, TaskStatus,
 };
 use aura_os_link::automaton_event_kinds::TEXT_DELTA;
 use aura_os_link::{

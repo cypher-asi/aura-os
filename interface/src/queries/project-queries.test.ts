@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { AgentInstance } from "../types";
+import type { AgentInstance, Project, Spec, Task } from "../types";
 import {
+  mergeSpecIntoProjectLayout,
+  mergeTaskIntoProjectLayout,
   mergeAgentIntoProjectAgents,
   mergeProjectAgentsSnapshot,
+  type ProjectLayoutBundle,
 } from "./project-queries";
 
 function makeAgent(overrides: Partial<AgentInstance> = {}): AgentInstance {
@@ -31,6 +34,78 @@ function makeAgent(overrides: Partial<AgentInstance> = {}): AgentInstance {
     total_output_tokens: 0,
     created_at: "2026-04-13T10:00:00.000Z",
     updated_at: "2026-04-13T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeProject(overrides: Partial<Project> = {}): Project {
+  return {
+    project_id: "p-1",
+    org_id: "org-1",
+    name: "Project Alpha",
+    description: "",
+    specs_title: "Specs",
+    current_status: "active",
+    specs_summary: "",
+    requirements_doc_path: "",
+    build_command: "",
+    test_command: "",
+    git_repo_url: "",
+    git_branch: "",
+    orbit_base_url: "",
+    orbit_owner: "",
+    orbit_repo: "",
+    created_at: "2026-04-13T10:00:00.000Z",
+    updated_at: "2026-04-13T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeSpec(overrides: Partial<Spec> = {}): Spec {
+  return {
+    spec_id: "spec-1",
+    project_id: "p-1",
+    title: "A spec",
+    order_index: 10,
+    markdown_contents: "",
+    created_at: "2026-04-13T10:00:00.000Z",
+    updated_at: "2026-04-13T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    task_id: "task-1",
+    project_id: "p-1",
+    spec_id: "spec-1",
+    title: "A task",
+    description: "",
+    status: "backlog",
+    order_index: 10,
+    dependency_ids: [],
+    parent_task_id: null,
+    assigned_agent_instance_id: null,
+    completed_by_agent_instance_id: null,
+    session_id: null,
+    execution_notes: "",
+    files_changed: [],
+    live_output: "",
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    created_at: "2026-04-13T10:00:00.000Z",
+    updated_at: "2026-04-13T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeLayoutBundle(
+  overrides: Partial<ProjectLayoutBundle> = {},
+): ProjectLayoutBundle {
+  return {
+    project: makeProject(),
+    specs: [],
+    tasks: [],
     ...overrides,
   };
 }
@@ -93,5 +168,38 @@ describe("project-queries agent merging", () => {
     );
 
     expect(merged).toEqual([archivedAgent]);
+  });
+});
+
+describe("project layout realtime merging", () => {
+  it("upserts specs and preserves sort order", () => {
+    const current = makeLayoutBundle({
+      specs: [makeSpec({ spec_id: "spec-2", order_index: 20 })],
+    });
+
+    const merged = mergeSpecIntoProjectLayout(
+      current,
+      makeSpec({ spec_id: "spec-1", order_index: 5 }),
+    );
+
+    expect(merged?.specs.map((spec) => spec.spec_id)).toEqual(["spec-1", "spec-2"]);
+  });
+
+  it("replaces existing tasks without duplicating them", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", title: "Old title", order_index: 20 })],
+    });
+
+    const merged = mergeTaskIntoProjectLayout(
+      current,
+      makeTask({ task_id: "task-1", title: "New title", order_index: 5 }),
+    );
+
+    expect(merged?.tasks).toHaveLength(1);
+    expect(merged?.tasks[0]).toMatchObject({
+      task_id: "task-1",
+      title: "New title",
+      order_index: 5,
+    });
   });
 });
