@@ -61,7 +61,7 @@
   transition: border-color 0.15s;
 }
 
-.envOption:hover {
+.envOption:hover:not(.envOptionActive) {
   border-color: var(--color-text-secondary);
 }
 
@@ -153,6 +153,7 @@
   gap: var(--space-2);
   justify-content: flex-end;
   min-width: 0;
+  padding-top: var(--space-3);
 }
 
 .footer button {
@@ -279,9 +280,9 @@
   min-height: 56px;
 }
 
-.runtimeOption:hover,
-.choiceCard:hover,
-.integrationOption:hover {
+.runtimeOption:hover:not(.runtimeOptionActive),
+.choiceCard:hover:not(.choiceCardActive),
+.integrationOption:hover:not(.integrationOptionActive) {
   border-color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary, #3b82f6) 4%, var(--color-bg-subtle));
 }
