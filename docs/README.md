@@ -7,6 +7,7 @@ This folder keeps the documents that are still useful for current architecture, 
 ## Architecture
 
 - [Capabilities and Credentials Architecture](./capabilities-and-credentials-architecture.md) - canonical reference for capability, credential, and runtime boundaries.
+- [Feedback System Requirements](./feedback-system-requirements.md) - current product and data requirements for the global Feedback app.
 
 ## Evals
 

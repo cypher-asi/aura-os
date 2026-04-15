@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_APP_PATH, getInitialShellPath } from "./last-app-path";
+import { DEFAULT_APP_PATH, getInitialShellPath, isValidRestorePath } from "./last-app-path";
 
 describe("getInitialShellPath", () => {
+  it("prefers the last visited in-app route when available", () => {
+    expect(getInitialShellPath("projects", "/projects/project-123/agents/agent-456?session=abc")).toBe(
+      "/projects/project-123/agents/agent-456?session=abc",
+    );
+  });
+
   it("restores the last visited app", () => {
     expect(getInitialShellPath("projects")).toBe("/projects");
   });
@@ -9,5 +15,20 @@ describe("getInitialShellPath", () => {
   it("falls back to the default app when there is no valid last app", () => {
     expect(getInitialShellPath(null)).toBe(DEFAULT_APP_PATH);
     expect(getInitialShellPath("unknown")).toBe(DEFAULT_APP_PATH);
+  });
+});
+
+describe("isValidRestorePath", () => {
+  it("rejects root, desktop, and login routes", () => {
+    expect(isValidRestorePath("/")).toBe(false);
+    expect(isValidRestorePath("/desktop")).toBe(false);
+    expect(isValidRestorePath("/desktop?panel=1")).toBe(false);
+    expect(isValidRestorePath("/login")).toBe(false);
+    expect(isValidRestorePath("/login?next=/projects")).toBe(false);
+  });
+
+  it("accepts deep shell routes including query strings", () => {
+    expect(isValidRestorePath("/projects/project-123/agents/agent-456?session=abc")).toBe(true);
+    expect(isValidRestorePath("/agents/agent-123")).toBe(true);
   });
 });

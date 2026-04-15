@@ -1,16 +1,13 @@
 import { create } from "zustand";
 import type { ReactNode } from "react";
 import { PREVIOUS_PATH_KEY } from "../constants";
-
-function isValidPreviousPath(path: string | null): path is string {
-  return !!path && path !== "/" && !path.startsWith("/desktop");
-}
+import { isValidRestorePath } from "../utils/last-app-path";
 
 function readPreviousPath(): string | null {
   if (typeof window === "undefined") return null;
   try {
     const value = localStorage.getItem(PREVIOUS_PATH_KEY);
-    return isValidPreviousPath(value) ? value : null;
+    return isValidRestorePath(value) ? value : null;
   } catch {
     return null;
   }
@@ -69,7 +66,7 @@ export const useAppUIStore = create<AppUIState>()((set) => ({
   },
 
   setPreviousPath: (path): void => {
-    if (!isValidPreviousPath(path)) return;
+    if (!isValidRestorePath(path)) return;
     writePreviousPath(path);
     set({ previousPath: path });
   },
@@ -77,8 +74,9 @@ export const useAppUIStore = create<AppUIState>()((set) => ({
   setSidebarAction: (appId, node): void => {
     set((s) => {
       if (node === null) {
-        const { [appId]: _, ...rest } = s.sidebarActions;
-        return { sidebarActions: rest };
+        const nextSidebarActions = { ...s.sidebarActions };
+        delete nextSidebarActions[appId];
+        return { sidebarActions: nextSidebarActions };
       }
       return { sidebarActions: { ...s.sidebarActions, [appId]: node } };
     });

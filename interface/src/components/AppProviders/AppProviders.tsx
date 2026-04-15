@@ -10,19 +10,19 @@ import { useAppUIStore } from "../../stores/app-ui-store";
 import { setLastApp } from "../../utils/storage";
 
 function AppSync(): null {
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
   const markAppVisited = useAppUIStore((s) => s.markAppVisited);
 
   const setPreviousPath = useAppUIStore((s) => s.setPreviousPath);
 
   useEffect(() => {
     if (pathname !== "/" && !pathname.startsWith("/desktop")) {
-      setPreviousPath(pathname);
+      setPreviousPath(`${pathname}${search}${hash}`);
     }
     syncActiveApp(pathname);
     const activeAppIdAfterSync = useAppStore.getState().activeApp.id;
     markAppVisited(activeAppIdAfterSync);
-  }, [pathname, markAppVisited, setPreviousPath]);
+  }, [hash, pathname, search, markAppVisited, setPreviousPath]);
 
   const activeAppId = useAppStore((s) => s.activeApp.id);
 

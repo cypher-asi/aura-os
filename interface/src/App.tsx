@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuthStore } from "./stores/auth-store";
+import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
 import { LoginView } from "./views/LoginView";
@@ -48,8 +49,9 @@ function EmptyRoute() {
 }
 
 function LastAppRedirect() {
+  const previousPath = useAppUIStore((s) => s.previousPath);
   const lastAppId = getLastApp();
-  return <Navigate to={getInitialShellPath(lastAppId)} replace />;
+  return <Navigate to={getInitialShellPath(lastAppId, previousPath)} replace />;
 }
 
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */
