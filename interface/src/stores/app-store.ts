@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AuraApp } from "../apps/types";
 import { apps as registeredApps } from "../apps/registry";
+import { useSidekickStore } from "./sidekick-store";
 import { getTaskbarAppOrder, setTaskbarAppOrder } from "../utils/storage";
 
 interface AppState {
@@ -87,6 +88,9 @@ export function syncActiveApp(pathname: string): void {
   const current = useAppStore.getState().activeApp;
   if (current.id !== match.id) {
     useAppStore.setState({ activeApp: match });
+    if (match.id === "tasks") {
+      useSidekickStore.getState().setActiveTab("tasks");
+    }
   }
 }
 
