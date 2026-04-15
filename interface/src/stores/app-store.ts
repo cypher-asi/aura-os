@@ -12,14 +12,8 @@ interface AppState {
   reorderTaskbarApps: (activeId: string, overId: string) => void;
 }
 
-function shouldPreferDesktopWorkspace(pathname: string): boolean {
-  if (pathname !== "/" || typeof window === "undefined") return false;
-  return typeof window.ipc?.postMessage === "function";
-}
-
 export function resolveActiveApp(pathname: string): AuraApp {
-  const effectivePathname = shouldPreferDesktopWorkspace(pathname) ? "/desktop" : pathname;
-  return registeredApps.find((a) => effectivePathname.startsWith(a.basePath)) ?? registeredApps[0];
+  return registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
 }
 
 function getInitialActiveApp(): AuraApp {

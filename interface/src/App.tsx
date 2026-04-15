@@ -7,7 +7,6 @@ import { LoginView } from "./views/LoginView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
 import { ShellRoutePlaceholder } from "./components/ShellRoutePlaceholder/ShellRoutePlaceholder";
-import { useAuraCapabilities } from "./hooks/use-aura-capabilities";
 import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
@@ -49,9 +48,8 @@ function EmptyRoute() {
 }
 
 function LastAppRedirect() {
-  const { supportsDesktopWorkspace } = useAuraCapabilities();
   const lastAppId = getLastApp();
-  return <Navigate to={getInitialShellPath(lastAppId, supportsDesktopWorkspace)} replace />;
+  return <Navigate to={getInitialShellPath(lastAppId)} replace />;
 }
 
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */

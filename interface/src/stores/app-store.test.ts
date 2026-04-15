@@ -28,24 +28,12 @@ vi.mock("./sidekick-store", () => ({
 
 import { getOrderedTaskbarApps, resolveActiveApp, useAppStore, syncActiveApp } from "./app-store";
 
-function setDesktopBridge(enabled: boolean) {
-  if (enabled) {
-    Object.defineProperty(window, "ipc", {
-      configurable: true,
-      value: { postMessage: vi.fn() },
-    });
-    return;
-  }
-  delete (window as Window & { ipc?: unknown }).ipc;
-}
-
 beforeEach(() => {
   mockSetTaskbarAppOrder.mockReset();
   mockSetActiveTab.mockReset();
   for (const app of mockApps) {
     app.preload.mockReset();
   }
-  setDesktopBridge(false);
   useAppStore.setState({
     apps: mockApps,
     activeApp: mockApps[0],
@@ -65,16 +53,6 @@ describe("app-store", () => {
   });
 
   describe("syncActiveApp", () => {
-    it("prefers the desktop workspace on the root path when the desktop bridge is available", () => {
-      setDesktopBridge(true);
-
-      syncActiveApp("/");
-
-      expect(useAppStore.getState().activeApp.id).toBe("desktop");
-      expect(mockApps[4].preload).toHaveBeenCalledTimes(1);
-      expect(mockSetActiveTab).not.toHaveBeenCalled();
-    });
-
     it("switches activeApp when pathname matches a different app", () => {
       syncActiveApp("/projects/123");
       expect(useAppStore.getState().activeApp.id).toBe("projects");
@@ -107,14 +85,9 @@ describe("app-store", () => {
   });
 
   describe("resolveActiveApp", () => {
-    it("keeps web root resolution unchanged without the desktop bridge", () => {
+    it("uses the route path directly", () => {
       expect(resolveActiveApp("/").id).toBe("agents");
-    });
-
-    it("maps the root path to desktop when the desktop bridge is available", () => {
-      setDesktopBridge(true);
-
-      expect(resolveActiveApp("/").id).toBe("desktop");
+      expect(resolveActiveApp("/desktop").id).toBe("desktop");
     });
   });
 
