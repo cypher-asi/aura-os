@@ -158,7 +158,7 @@ test("projects entry keeps desktop welcome, while mobile/tablet resolve directly
     await expect(page.getByPlaceholder("Search Projects...")).toBeVisible();
   } else {
     await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-    await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("treeitem", { name: "Demo Project" })).toHaveCount(0);
     await expectProjectMobileChrome(page, factor);
   }
@@ -181,7 +181,7 @@ test("projects entry uses remembered agent state on smaller form factors", async
     await expect(page.getByText("Welcome to AURA")).toBeVisible();
   } else {
     await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-    await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
   }
 
   if (factor === "desktop") {

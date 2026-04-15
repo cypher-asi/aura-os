@@ -58,7 +58,7 @@ beforeEach(() => {
 describe("ChatInputBar", () => {
   it("renders the textarea with placeholder", () => {
     render(<ChatInputBar {...makeProps()} />);
-    expect(screen.getByPlaceholderText("Add a follow-up")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("What do you want to create?")).toBeInTheDocument();
   });
 
   it("renders the current input value", () => {
@@ -71,7 +71,7 @@ describe("ChatInputBar", () => {
     const onInputChange = vi.fn();
     render(<ChatInputBar {...makeProps({ onInputChange })} />);
 
-    await user.type(screen.getByPlaceholderText("Add a follow-up"), "H");
+    await user.type(screen.getByPlaceholderText("What do you want to create?"), "H");
     expect(onInputChange).toHaveBeenCalled();
   });
 
@@ -80,7 +80,7 @@ describe("ChatInputBar", () => {
     const onSend = vi.fn();
     render(<ChatInputBar {...makeProps({ input: "Test message", onSend })} />);
 
-    const textarea = screen.getByPlaceholderText("Add a follow-up");
+    const textarea = screen.getByPlaceholderText("What do you want to create?");
     await user.click(textarea);
     await user.keyboard("{Enter}");
     expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined, undefined);
@@ -91,7 +91,7 @@ describe("ChatInputBar", () => {
     const onSend = vi.fn();
     render(<ChatInputBar {...makeProps({ input: "Test message", onSend })} />);
 
-    const textarea = screen.getByPlaceholderText("Add a follow-up");
+    const textarea = screen.getByPlaceholderText("What do you want to create?");
     await user.click(textarea);
     await user.keyboard("{Shift>}{Enter}{/Shift}");
     expect(onSend).not.toHaveBeenCalled();
@@ -218,7 +218,7 @@ describe("ChatInputBar", () => {
   });
 
   it("preserves mixed text and image pastes for the browser to handle", () => {
-    const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("Add a follow-up");
+    const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
     const event = createEvent.paste(textarea, {
       clipboardData: {
         items: [
@@ -268,7 +268,7 @@ describe("ChatInputBar", () => {
     });
 
     try {
-      const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("Add a follow-up");
+      const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
       const event = createEvent.paste(textarea, {
         clipboardData: {
           items: [

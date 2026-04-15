@@ -107,7 +107,7 @@ test("capture desktop agents, feed, and profile views", async ({ page }, testInf
 
   await page.getByRole("button", { name: /Research Bot/i }).click();
   await expect(page).toHaveURL(/\/agents\/agent-2$/);
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible();
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
 
   await page.getByTitle("New Agent").click();
   await expect(page.getByRole("heading", { name: "Create Agent" })).toBeVisible();

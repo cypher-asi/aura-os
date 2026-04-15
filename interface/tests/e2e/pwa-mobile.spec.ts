@@ -219,7 +219,7 @@ test("mobile root uses project drawer plus the five-tab project navigation", asy
   await page.goto("/projects");
 
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("button", { name: "Add or create project agent" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open apps" })).toBeVisible();
   await expect(
@@ -262,7 +262,7 @@ test("mobile project navigation opens shared agent, work, process, and stats rou
 
   await tapPrimaryNav(page, "Agent");
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "Add or create project agent" }).click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/create$/);
   await expect(page.getByLabel("Name")).toBeVisible({ timeout: 10000 });
@@ -271,7 +271,7 @@ test("mobile project navigation opens shared agent, work, process, and stats rou
   await createButton.scrollIntoViewIfNeeded();
   await expect(createButton).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "Back to project" }).click();
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
 
   await page.getByRole("button", { name: "Add or create project agent" }).click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/create$/);
@@ -290,7 +290,7 @@ test("mobile project navigation opens shared agent, work, process, and stats rou
     await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/create$/);
   }
   await page.getByRole("button", { name: "Back to project" }).click();
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
 
   await tapPrimaryNav(page, "Tasks");
   await expect(page).toHaveURL(/\/projects\/proj-1\/tasks$/);
@@ -430,7 +430,7 @@ test("mobile project agent tab reflects the routed agent instance", async ({ pag
   await page.goto("/projects/proj-1/agents/agent-inst-1");
 
   await expect(page.getByText("Start chatting with Builder Bot.")).toBeVisible();
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible();
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
 
   await page.goto("/projects/proj-1/agents/agent-inst-2");
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-2$/);
@@ -520,7 +520,7 @@ test("mobile global app switcher opens feed and profile", async ({ page }) => {
   await expect(page.getByText("Builder Bot")).toBeVisible();
   await expect(page.getByText("Helpful")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create Remote Agent" })).toBeVisible();
-  await expect(page.getByPlaceholder("Add a follow-up")).toHaveCount(0);
+  await expect(page.getByPlaceholder("What do you want to create?")).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toHaveCount(0);
 
   await openAppSwitcher(page);
@@ -671,7 +671,7 @@ test("mobile project create flow stays remote-first while exposing org integrati
   });
 
   await page.goto("/projects");
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible();
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
   await page.getByRole("button", { name: "Add or create project agent" }).click();
 
   await expect(page.getByLabel("Name")).toBeVisible();
@@ -689,7 +689,7 @@ test("mobile global surfaces use the app switcher to return to project mode", as
   await page.getByRole("button", { name: "Return to project" }).click();
 
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
 });
 
 test("mobile files route redirects back to the project agent flow", async ({ page }) => {
@@ -731,7 +731,7 @@ test("mobile files route redirects back to the project agent flow", async ({ pag
 
   await page.goto("/projects/proj-1/files");
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
 });
 
 test("mobile drawer scales across current, recent, and other projects", async ({ page }) => {

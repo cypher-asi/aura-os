@@ -246,7 +246,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
         <div className={styles.inputRow}>
           <button type="button" className={styles.attachButton} onClick={() => fileInputRef.current?.click()} disabled={!canAddMore} aria-label="Attach file"><Plus size={16} strokeWidth={1} /></button>
-          <textarea ref={textareaRef} className={styles.textarea} value={input} onChange={(e) => handleInputChange(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="Add a follow-up" rows={1} />
+          <textarea ref={textareaRef} className={styles.textarea} value={input} onChange={(e) => handleInputChange(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What do you want to create?" rows={1} />
           {isStreaming ? (
             <button type="button" className={`${styles.sendButton} ${styles.stopButton}`} onClick={onStop} aria-label="Stop"><span className={styles.stopIcon} /></button>
           ) : (
