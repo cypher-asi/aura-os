@@ -5,9 +5,15 @@
  */
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { desktopApi } from "../../api/desktop";
 import { syncActiveApp, useAppStore } from "../../stores/app-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
+import { sanitizeRestorePath } from "../../utils/last-app-path";
 import { setLastApp } from "../../utils/storage";
+
+function hasDesktopBridge(): boolean {
+  return typeof window !== "undefined" && typeof window.ipc?.postMessage === "function";
+}
 
 function AppSync(): null {
   const { pathname, search, hash } = useLocation();
@@ -16,8 +22,13 @@ function AppSync(): null {
   const setPreviousPath = useAppUIStore((s) => s.setPreviousPath);
 
   useEffect(() => {
-    if (pathname !== "/" && !pathname.startsWith("/desktop")) {
-      setPreviousPath(`${pathname}${search}${hash}`);
+    const restorePath = sanitizeRestorePath(`${pathname}${search}${hash}`);
+
+    if (restorePath) {
+      setPreviousPath(restorePath);
+      if (hasDesktopBridge()) {
+        void desktopApi.persistLastRoute(restorePath).catch(() => {});
+      }
     }
     syncActiveApp(pathname);
     const activeAppIdAfterSync = useAppStore.getState().activeApp.id;

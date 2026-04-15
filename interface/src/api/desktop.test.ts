@@ -2,6 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { desktopApi } from "./desktop";
 import { ApiClientError } from "./core";
 
+const storageState = new Map<string, string>();
+
+const mockStorage = {
+  getItem: vi.fn((key: string) => storageState.get(key) ?? null),
+  setItem: vi.fn((key: string, value: string) => {
+    storageState.set(key, value);
+  }),
+  removeItem: vi.fn((key: string) => {
+    storageState.delete(key);
+  }),
+};
+
 function mockFetch(status: number, body: unknown) {
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -14,8 +26,20 @@ function mockFetch(status: number, body: unknown) {
 
 describe("desktopApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    storageState.clear();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: mockStorage,
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    storageState.clear();
+  });
 
   it("getLogEntries fetches with default limit", async () => {
     const entries = [{ timestamp_ms: 1000, event: {} }];
@@ -63,6 +87,19 @@ describe("desktopApi", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pick-file",
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("persistLastRoute sends POST with route", async () => {
+    const fetchMock = mockFetch(200, { ok: true, route: "/projects/demo?session=abc" });
+    globalThis.fetch = fetchMock;
+    await desktopApi.persistLastRoute("/projects/demo?session=abc");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/last-route",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ route: "/projects/demo?session=abc" }),
+      }),
     );
   });
 

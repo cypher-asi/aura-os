@@ -1,13 +1,12 @@
 import { create } from "zustand";
 import type { ReactNode } from "react";
 import { PREVIOUS_PATH_KEY } from "../constants";
-import { isValidRestorePath } from "../utils/last-app-path";
+import { sanitizeRestorePath } from "../utils/last-app-path";
 
 function readPreviousPath(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const value = localStorage.getItem(PREVIOUS_PATH_KEY);
-    return isValidRestorePath(value) ? value : null;
+    return sanitizeRestorePath(localStorage.getItem(PREVIOUS_PATH_KEY));
   } catch {
     return null;
   }
@@ -16,7 +15,9 @@ function readPreviousPath(): string | null {
 function writePreviousPath(path: string): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(PREVIOUS_PATH_KEY, path);
+    const nextPath = sanitizeRestorePath(path);
+    if (!nextPath) return;
+    localStorage.setItem(PREVIOUS_PATH_KEY, nextPath);
   } catch {
     // ignore storage failures
   }
@@ -66,9 +67,10 @@ export const useAppUIStore = create<AppUIState>()((set) => ({
   },
 
   setPreviousPath: (path): void => {
-    if (!isValidRestorePath(path)) return;
-    writePreviousPath(path);
-    set({ previousPath: path });
+    const nextPath = sanitizeRestorePath(path);
+    if (!nextPath) return;
+    writePreviousPath(nextPath);
+    set({ previousPath: nextPath });
   },
 
   setSidebarAction: (appId, node): void => {

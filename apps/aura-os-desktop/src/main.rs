@@ -1,6 +1,7 @@
 #![allow(unexpected_cfgs)]
 
 mod handlers;
+mod route_state;
 mod updater;
 
 use axum::routing::{get as axum_get, post as axum_post};
@@ -20,6 +21,7 @@ use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
 use wry::{WebContext, WebViewBuilder};
 
+use route_state::{normalize_restore_route, RouteState};
 use updater::UpdateState;
 
 const PREFERRED_PORT: u16 = 19847;
@@ -580,6 +582,53 @@ fn append_query_param(url: &str, key: &str, value: &str) -> String {
     format!("{}{separator}{key}={value}", url.trim_end_matches('/'))
 }
 
+fn apply_restore_route(base_url: &str, restore_route: Option<&str>) -> String {
+    let Some(route) = restore_route.and_then(normalize_restore_route) else {
+        return base_url.to_string();
+    };
+
+    let (route_without_hash, route_hash) = match route.split_once('#') {
+        Some((value, fragment)) => (value, Some(fragment)),
+        None => (route.as_str(), None),
+    };
+    let (route_path, route_query) = match route_without_hash.split_once('?') {
+        Some((value, query)) => (value, Some(query)),
+        None => (route_without_hash, None),
+    };
+    let (base_without_hash, base_hash) = match base_url.split_once('#') {
+        Some((value, fragment)) => (value, Some(fragment)),
+        None => (base_url, None),
+    };
+    let (base_without_query, base_query) = match base_without_hash.split_once('?') {
+        Some((value, query)) => (value, Some(query)),
+        None => (base_without_hash, None),
+    };
+
+    let mut url = format!("{}{}", base_without_query.trim_end_matches('/'), route_path);
+    let mut query_parts = Vec::new();
+    if let Some(query) = route_query.filter(|value| !value.is_empty()) {
+        query_parts.push(query);
+    }
+    if let Some(query) = base_query.filter(|value| !value.is_empty()) {
+        query_parts.push(query);
+    }
+
+    if !query_parts.is_empty() {
+        url.push('?');
+        url.push_str(&query_parts.join("&"));
+    }
+
+    if let Some(fragment) = route_hash
+        .filter(|value| !value.is_empty())
+        .or(base_hash.filter(|value| !value.is_empty()))
+    {
+        url.push('#');
+        url.push_str(fragment);
+    }
+
+    url
+}
+
 fn probe_vite_dev_server(base_url: &str) -> bool {
     let probe_url = format!("{}/@vite/client", base_url.trim_end_matches('/'));
     let Ok(uri) = probe_url.parse::<axum::http::Uri>() else {
@@ -866,6 +915,7 @@ fn spawn_server(
     db_path: PathBuf,
     interface_dir: Option<PathBuf>,
     ide_proxy: Arc<EventLoopProxy<UserEvent>>,
+    route_state: RouteState,
 ) -> std::sync::mpsc::Receiver<()> {
     let (ready_tx, ready_rx) = std::sync::mpsc::channel::<()>();
 
@@ -883,6 +933,10 @@ fn spawn_server(
             let desktop_routes = Router::new()
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))
+                .route(
+                    "/api/last-route",
+                    axum_post(handlers::post_last_route).with_state(route_state.clone()),
+                )
                 .route("/api/open-path", axum_post(handlers::open_path))
                 .route("/api/write-file", axum_post(handlers::write_file))
                 .route(
@@ -965,9 +1019,10 @@ fn set_square_corners(_window: &tao::window::Window) {
 #[cfg(test)]
 mod tests {
     use super::{
-        append_query_param, build_frontend_dev_server_candidate, build_frontend_dev_server_config,
-        build_initialization_script, interface_dir_candidates, is_local_bind_host, parse_host_port,
-        resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
+        append_query_param, apply_restore_route, build_frontend_dev_server_candidate,
+        build_frontend_dev_server_config, build_initialization_script, interface_dir_candidates,
+        is_local_bind_host, parse_host_port, resolve_frontend_target_with_probe,
+        should_poll_for_frontend_dev_server,
     };
     use std::path::{Path, PathBuf};
 
@@ -1015,6 +1070,28 @@ mod tests {
         assert_eq!(
             candidate.frontend_url,
             "http://127.0.0.1:5173?foo=bar&host=http://127.0.0.1:19847"
+        );
+    }
+
+    #[test]
+    fn apply_restore_route_preserves_route_query_and_base_query() {
+        assert_eq!(
+            apply_restore_route(
+                "http://127.0.0.1:5173?host=http://127.0.0.1:19847",
+                Some("/projects/demo?session=abc#panel"),
+            ),
+            "http://127.0.0.1:5173/projects/demo?session=abc&host=http://127.0.0.1:19847#panel"
+        );
+    }
+
+    #[test]
+    fn apply_restore_route_strips_host_from_saved_route() {
+        assert_eq!(
+            apply_restore_route(
+                "http://127.0.0.1:5173?host=http://127.0.0.1:19847",
+                Some("/projects/demo?session=abc&host=http://127.0.0.1:19847"),
+            ),
+            "http://127.0.0.1:5173/projects/demo?session=abc&host=http://127.0.0.1:19847"
         );
     }
 
@@ -1357,11 +1434,12 @@ fn handle_user_event(
     ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
     managed_frontend_dev_server: &mut Option<Child>,
     managed_local_harness: &mut Option<Child>,
-    frontend_url: &mut String,
+    frontend_base_url: &mut String,
     using_frontend_dev_server: &mut bool,
     main_window_id: WindowId,
     proxy: &EventLoopProxy<UserEvent>,
     event_target: &tao::event_loop::EventLoopWindowTarget<UserEvent>,
+    route_state: &RouteState,
     control_flow: &mut ControlFlow,
 ) {
     match user_event {
@@ -1383,7 +1461,7 @@ fn handle_user_event(
         } => {
             open_ide_window_with_fallback(
                 event_target,
-                frontend_url,
+                frontend_base_url,
                 &file_path,
                 root_path.as_deref(),
                 icon_data,
@@ -1404,24 +1482,27 @@ fn handle_user_event(
         UserEvent::AttachFrontendDevServer {
             frontend_url: next_frontend_url,
         } => {
-            if *using_frontend_dev_server || *frontend_url == next_frontend_url {
+            if *using_frontend_dev_server || *frontend_base_url == next_frontend_url {
                 return;
             }
 
+            let next_main_url =
+                apply_restore_route(&next_frontend_url, route_state.current_route().as_deref());
+
             info!(
-                frontend = %next_frontend_url,
+                frontend = %next_main_url,
                 "switching main webview to Vite frontend dev server"
             );
 
-            match main_webview.load_url(&next_frontend_url) {
+            match main_webview.load_url(&next_main_url) {
                 Ok(()) => {
                     *using_frontend_dev_server = true;
-                    *frontend_url = next_frontend_url;
+                    *frontend_base_url = next_frontend_url;
                 }
                 Err(error) => {
                     warn!(
                         %error,
-                        frontend = %next_frontend_url,
+                        frontend = %next_main_url,
                         "failed to switch main webview to Vite frontend dev server"
                     );
                 }
@@ -1438,14 +1519,15 @@ fn run_event_loop(
     managed_frontend_dev_server: Option<Child>,
     managed_local_harness: Option<Child>,
     proxy: EventLoopProxy<UserEvent>,
-    initial_frontend_url: String,
+    initial_frontend_base_url: String,
     initial_using_frontend_dev_server: bool,
+    route_state: RouteState,
 ) {
     let main_window_id = window.id();
     let mut ide_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)> = HashMap::new();
     let mut managed_frontend_dev_server = managed_frontend_dev_server;
     let mut managed_local_harness = managed_local_harness;
-    let mut frontend_url = initial_frontend_url;
+    let mut frontend_base_url = initial_frontend_base_url;
     let mut using_frontend_dev_server = initial_using_frontend_dev_server;
 
     event_loop.run(move |event, elwt, control_flow| {
@@ -1472,11 +1554,12 @@ fn run_event_loop(
                 &mut ide_windows,
                 &mut managed_frontend_dev_server,
                 &mut managed_local_harness,
-                &mut frontend_url,
+                &mut frontend_base_url,
                 &mut using_frontend_dev_server,
                 main_window_id,
                 &proxy,
                 elwt,
+                &route_state,
                 control_flow,
             ),
             _ => {}
@@ -1549,6 +1632,7 @@ fn main() {
 
     let (db_path, webview_data_dir, interface_dir) = init_data_dirs();
     let data_dir = db_path.parent().unwrap_or(&db_path);
+    let route_state = RouteState::load(data_dir);
     install_panic_hook(data_dir);
     install_native_crash_handler(data_dir);
     let managed_local_harness = maybe_spawn_local_harness_sidecar(data_dir);
@@ -1558,7 +1642,13 @@ fn main() {
     let proxy = event_loop.create_proxy();
     let ide_proxy: Arc<EventLoopProxy<UserEvent>> = Arc::new(proxy.clone());
 
-    let ready_rx = spawn_server(std_listener, db_path, interface_dir, ide_proxy);
+    let ready_rx = spawn_server(
+        std_listener,
+        db_path,
+        interface_dir,
+        ide_proxy,
+        route_state.clone(),
+    );
     ready_rx
         .recv()
         .expect("server thread failed before becoming ready");
@@ -1573,7 +1663,11 @@ fn main() {
         frontend_dev_candidate.as_ref(),
     );
     let frontend_target = resolve_frontend_target(&url, frontend_dev_candidate.as_ref());
-    let initial_frontend_url = frontend_target.url.clone();
+    let initial_frontend_base_url = frontend_target.url.clone();
+    let initial_frontend_url = apply_restore_route(
+        &initial_frontend_base_url,
+        route_state.current_route().as_deref(),
+    );
 
     let icon_data = load_icon_data();
     let (window, main_window_id) = create_main_window(&event_loop, &icon_data);
@@ -1605,7 +1699,8 @@ fn main() {
         managed_frontend_dev_server,
         managed_local_harness,
         proxy,
-        initial_frontend_url,
+        initial_frontend_base_url,
         frontend_target.using_frontend_dev_server,
+        route_state,
     );
 }

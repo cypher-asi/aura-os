@@ -5,6 +5,7 @@ use axum::Json;
 use tao::event_loop::EventLoopProxy;
 use tracing::{debug, info, warn};
 
+use crate::route_state::RouteState;
 use crate::updater::{UpdateChannel, UpdateState};
 use crate::UserEvent;
 
@@ -139,6 +140,24 @@ pub(crate) async fn get_runtime_config() -> Json<serde_json::Value> {
         "require_zero_pro": std::env::var("REQUIRE_ZERO_PRO").ok(),
         "disable_local_harness_autospawn": std::env::var("AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN").ok(),
     }))
+}
+
+#[derive(serde::Deserialize)]
+pub(crate) struct PersistRouteRequest {
+    route: String,
+}
+
+pub(crate) async fn post_last_route(
+    AxumState(state): AxumState<RouteState>,
+    Json(req): Json<PersistRouteRequest>,
+) -> Json<serde_json::Value> {
+    match state.persist_route(&req.route) {
+        Ok(route) => Json(serde_json::json!({ "ok": true, "route": route })),
+        Err(error) => {
+            warn!(%error, route = %req.route, "failed to persist desktop route");
+            Json(serde_json::json!({ "ok": false, "error": error }))
+        }
+    }
 }
 
 pub(crate) async fn post_update_install(

@@ -25,6 +25,12 @@ export interface DesktopUpdateStatusResponse {
   endpoint_template?: string;
 }
 
+export interface PersistDesktopRouteResponse {
+  ok: boolean;
+  route?: string;
+  error?: string;
+}
+
 export const desktopApi = {
   getLogEntries: (limit = 1000) =>
     apiFetch<{ timestamp_ms: number; event: import("../types/aura-events").AuraEvent }[]>(
@@ -39,6 +45,11 @@ export const desktopApi = {
     apiFetch<string | null>("/api/pick-folder", { method: "POST" }),
   pickFile: () =>
     apiFetch<string | null>("/api/pick-file", { method: "POST" }),
+  persistLastRoute: (route: string) =>
+    apiFetch<PersistDesktopRouteResponse>("/api/last-route", {
+      method: "POST",
+      body: JSON.stringify({ route }),
+    }),
   openPath: (path: string) =>
     apiFetch<{ ok: boolean; error?: string }>("/api/open-path", {
       method: "POST",
