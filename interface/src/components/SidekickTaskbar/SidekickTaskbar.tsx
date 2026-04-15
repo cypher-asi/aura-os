@@ -11,6 +11,7 @@ import {
   Monitor,
   FolderClosed,
   Play,
+  Loader2,
   Plus,
   Terminal,
 } from "lucide-react";
@@ -21,18 +22,8 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
-
-const TAB_ICONS: TabItem[] = [
-  { id: "terminal", icon: <Terminal size={16} />, title: "Terminal" },
-  { id: "run", icon: <Play size={16} />, title: "Run" },
-  { id: "specs", icon: <File size={16} />, title: "Specs" },
-  { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
-  { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
-  { id: "log", icon: <ScrollText size={16} />, title: "Log" },
-  { id: "sessions", icon: <Monitor size={16} />, title: "Sessions" },
-  { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
-  { id: "new-terminal", icon: <Plus size={16} />, title: "New terminal", kind: "action" },
-];
+import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
+import styles from "../Sidekick/Sidekick.module.css";
 
 export function SidekickTaskbar() {
   const { activeTab, setActiveTab, showInfo, toggleInfo } = useSidekickStore(
@@ -47,10 +38,12 @@ export function SidekickTaskbar() {
   const { features } = useAuraCapabilities();
   const addTerminal = useTerminalPanelStore((s) => s.addTerminal);
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
+  const { status } = useAutomationStatus(projectId ?? "");
   const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });
   const canBrowseLocal = features.linkedWorkspace && !remoteAgentId && Boolean(workspacePath);
   const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteWorkspacePath);
   const canBrowseFiles = canBrowseLocal || canBrowseRemote;
+  const showRunProgress = status === "starting" || status === "preparing" || status === "active";
 
   useEffect(() => {
     if (!canBrowseFiles && activeTab === "files") {
@@ -59,7 +52,29 @@ export function SidekickTaskbar() {
   }, [activeTab, canBrowseFiles, setActiveTab]);
   const project = ctx?.project;
   const handleArchive = ctx?.handleArchive;
-  const visibleTabs = canBrowseFiles ? TAB_ICONS : TAB_ICONS.filter((tab) => tab.id !== "files");
+  const tabs = useMemo<TabItem[]>(
+    () => [
+      { id: "terminal", icon: <Terminal size={16} />, title: "Terminal" },
+      {
+        id: "run",
+        icon: showRunProgress ? (
+          <Loader2 size={16} className={styles.automationSpinner} />
+        ) : (
+          <Play size={16} />
+        ),
+        title: "Run",
+      },
+      { id: "specs", icon: <File size={16} />, title: "Specs" },
+      { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
+      { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
+      { id: "log", icon: <ScrollText size={16} />, title: "Log" },
+      { id: "sessions", icon: <Monitor size={16} />, title: "Sessions" },
+      { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
+      { id: "new-terminal", icon: <Plus size={16} />, title: "New terminal", kind: "action" },
+    ],
+    [showRunProgress],
+  );
+  const visibleTabs = canBrowseFiles ? tabs : tabs.filter((tab) => tab.id !== "files");
 
   const actions = useMemo<MenuItem[]>(() => {
     if (!project) return [];

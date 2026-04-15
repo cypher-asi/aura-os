@@ -58,6 +58,10 @@
   box-shadow: none !important;
 }
 
+.automationSpinner {
+  animation: spinRing 1s linear infinite;
+}
+
 .moreButtonWrap {
   position: relative;
   flex-shrink: 0;
