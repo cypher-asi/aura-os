@@ -54,7 +54,6 @@
 .dropZoneActive {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 1px var(--color-accent);
-  transition: border-color 0.15s ease;
 }
 
 .attachmentPreviews {
@@ -147,7 +146,6 @@
 
 .inputContainer:focus-within {
   border-color: rgba(255, 255, 255, 0.2);
-  transition: border-color 0.15s ease;
 }
 
 .inputRow {
