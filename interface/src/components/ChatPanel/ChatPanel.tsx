@@ -196,6 +196,7 @@ export function ChatPanel({
                 streamKey={streamKey}
                 scrollRef={s.messageAreaRef}
                 emptyState={emptyState}
+                onLayoutStateChange={s.handleMessageListLayoutChange}
               />
               <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
             </div>

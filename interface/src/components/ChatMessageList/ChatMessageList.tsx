@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, useCallback } from "react";
+import { type ReactNode, type RefObject, useCallback, useLayoutEffect, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
@@ -15,6 +15,7 @@ interface ChatMessageListProps {
   streamKey: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyState?: ReactNode;
+  onLayoutStateChange?: (state: { signature: string; coversTail: boolean }) => void;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -29,6 +30,7 @@ export function ChatMessageList({
   streamKey,
   scrollRef,
   emptyState,
+  onLayoutStateChange,
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -64,17 +66,54 @@ export function ChatMessageList({
     gap: MESSAGE_GAP,
   });
 
-  const hasMessages = messages.length > 0 || isStreaming || streamingText || thinkingText;
+  const hasMessages =
+    messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
+  const virtualItems = virtualizer.getVirtualItems();
+  const totalSize = virtualizer.getTotalSize();
+  const renderedRangeSignature = useMemo(
+    () => virtualItems.map((item) => `${item.index}:${Math.round(item.start)}:${Math.round(item.size)}`).join("|"),
+    [virtualItems],
+  );
+  const coversTail = messages.length === 0
+    ? true
+    : (virtualItems[virtualItems.length - 1]?.index ?? -1) >= messages.length - 1;
+  const layoutSignature = useMemo(
+    () => [
+      messages.length,
+      totalSize,
+      coversTail ? "tail" : "partial",
+      renderedRangeSignature,
+      isStreaming ? "streaming" : "idle",
+      activeToolCalls.length,
+      Boolean(streamingText),
+      Boolean(thinkingText),
+    ].join(":"),
+    [
+      activeToolCalls.length,
+      coversTail,
+      isStreaming,
+      messages.length,
+      renderedRangeSignature,
+      streamingText,
+      thinkingText,
+      totalSize,
+    ],
+  );
+
+  useLayoutEffect(() => {
+    onLayoutStateChange?.({
+      signature: hasMessages ? layoutSignature : "empty",
+      coversTail: hasMessages ? coversTail : true,
+    });
+  }, [coversTail, hasMessages, layoutSignature, onLayoutStateChange]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;
   }
 
-  const virtualItems = virtualizer.getVirtualItems();
-
   return (
     <>
-      <div style={{ position: "relative", height: virtualizer.getTotalSize(), flexShrink: 0 }}>
+      <div style={{ position: "relative", height: totalSize, flexShrink: 0 }}>
         {virtualItems.map((virtualRow) => (
           <div
             key={virtualRow.key}

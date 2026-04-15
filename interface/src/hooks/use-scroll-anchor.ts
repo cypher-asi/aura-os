@@ -46,8 +46,9 @@ function isSentinelBelowViewport(
  * Operates in two phases:
  *
  *   **Settling** – entered on mount / `resetKey` change. A tight RAF
- *   loop polls `scrollHeight` until the virtualiser finishes its
- *   measure-render cascade, then seeds the active-phase scroll anchor.
+ *   loop waits for fetched content and, when available, for a
+ *   virtualized layout signal that says the bottom-rendered range has
+ *   converged before revealing the list.
  *
  *   **Active** – content is visible. MutationObserver and
  *   ResizeObservers keep the sentinel pinned to the viewport bottom
@@ -59,6 +60,10 @@ export function useScrollAnchor(
   options: {
     resetKey?: unknown;
     contentReady: boolean;
+    layoutState?: {
+      signature: string;
+      coversTail: boolean;
+    } | null;
   },
 ): {
   handleScroll: () => void;
@@ -67,7 +72,7 @@ export function useScrollAnchor(
   isReady: boolean;
   isAutoFollowing: boolean;
 } {
-  const { resetKey, contentReady } = options;
+  const { resetKey, contentReady, layoutState = null } = options;
 
   const pinnedRef = useRef(true);
   const phaseRef = useRef<"settling" | "active">("settling");
@@ -82,6 +87,8 @@ export function useScrollAnchor(
 
   const contentReadyRef = useRef(contentReady);
   useLayoutEffect(() => { contentReadyRef.current = contentReady; }, [contentReady]);
+  const layoutStateRef = useRef(layoutState);
+  useLayoutEffect(() => { layoutStateRef.current = layoutState; }, [layoutState]);
 
   const syncFollowState = useCallback(() => {
     const next = phaseRef.current !== "active"
@@ -131,8 +138,9 @@ export function useScrollAnchor(
     lastScrollTopRef.current = el.scrollTop;
 
     let prevHeight = el.scrollHeight;
+    let prevLayoutSignature = layoutStateRef.current?.signature ?? null;
     let stableFrames = 0;
-    let heightChanged = false;
+    let sawMeasuredLayout = false;
     let waitingFrames = 0;
     let raf = 0;
 
@@ -155,13 +163,53 @@ export function useScrollAnchor(
         return;
       }
 
+      const layout = layoutStateRef.current;
       const h = el.scrollHeight;
+      const layoutSignature = layout?.signature ?? null;
+      const hasLayoutSignal = layout !== null;
+      const layoutChanged = layoutSignature !== prevLayoutSignature;
+      const coversTail = layout?.coversTail ?? false;
+      const heightChanged = h !== prevHeight;
+
+      prevLayoutSignature = layoutSignature;
+
+      if (hasLayoutSignal) {
+        if (layoutChanged) {
+          sawMeasuredLayout = true;
+          stableFrames = 0;
+          waitingFrames = 0;
+          scrollSentinelToEnd();
+        } else if (!coversTail) {
+          stableFrames = 0;
+          waitingFrames = 0;
+          scrollSentinelToEnd();
+        } else if (sawMeasuredLayout) {
+          stableFrames++;
+        } else {
+          waitingFrames++;
+        }
+
+        prevHeight = h;
+
+        if (stableFrames >= STABLE_FRAMES_REQUIRED) {
+          reveal();
+          return;
+        }
+        if (!sawMeasuredLayout && coversTail && waitingFrames >= MAX_WAIT_FRAMES) {
+          reveal();
+          return;
+        }
+
+        raf = requestAnimationFrame(poll);
+        return;
+      }
+
       if (h !== prevHeight) {
-        heightChanged = true;
         stableFrames = 0;
         prevHeight = h;
         scrollSentinelToEnd();
-      } else if (heightChanged) {
+        sawMeasuredLayout = true;
+      } else if (sawMeasuredLayout) {
         stableFrames++;
       } else {
         waitingFrames++;
@@ -182,7 +230,9 @@ export function useScrollAnchor(
 
     const timeout = setTimeout(function checkReveal() {
       if (isReadyRef.current) return;
-      if (contentReadyRef.current) {
+      const layout = layoutStateRef.current;
+      const canRevealFromTimeout = layout === null || layout.coversTail;
+      if (contentReadyRef.current && canRevealFromTimeout) {
         reveal();
       } else {
         setTimeout(checkReveal, 200);

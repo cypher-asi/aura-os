@@ -42,11 +42,16 @@ class MockResizeObserver {
 interface HookOptions {
   resetKey?: unknown;
   contentReady?: boolean;
+  layoutState?: {
+    signature: string;
+    coversTail: boolean;
+  } | null;
 }
 
 const DEFAULT_OPTIONS: Required<HookOptions> = {
   resetKey: "default",
   contentReady: true,
+  layoutState: null,
 };
 
 const NULL_SENTINEL: React.RefObject<HTMLElement | null> = { current: null };
@@ -294,6 +299,69 @@ describe("useScrollAnchor", () => {
     expect(result.current.isReady).toBe(false);
 
     rerender({ ...opts, contentReady: true });
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it("waits for the virtualized layout to reach the tail before revealing", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const opts = {
+      ...DEFAULT_OPTIONS,
+      layoutState: { signature: "top-window", coversTail: false },
+    };
+    const { result, rerender } = renderHook(
+      (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
+      { initialProps: opts },
+    );
+
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(false);
+
+    rerender({
+      ...opts,
+      layoutState: { signature: "bottom-window:measuring", coversTail: true },
+    });
+    act(() => flushOneRaf());
+    expect(result.current.isReady).toBe(false);
+
+    rerender({
+      ...opts,
+      layoutState: { signature: "bottom-window:settled", coversTail: true },
+    });
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it("does not reveal while the bottom window keeps changing", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const opts = {
+      ...DEFAULT_OPTIONS,
+      layoutState: { signature: "tail-pass-1", coversTail: true },
+    };
+    const { result, rerender } = renderHook(
+      (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
+      { initialProps: opts },
+    );
+
+    act(() => flushOneRaf());
+    expect(result.current.isReady).toBe(false);
+
+    rerender({
+      ...opts,
+      layoutState: { signature: "tail-pass-2", coversTail: true },
+    });
+    act(() => flushOneRaf());
+    expect(result.current.isReady).toBe(false);
+
+    rerender({
+      ...opts,
+      layoutState: { signature: "tail-pass-3", coversTail: true },
+    });
+    act(() => flushOneRaf());
+    expect(result.current.isReady).toBe(false);
+
     act(() => flushRafs());
     expect(result.current.isReady).toBe(true);
   });

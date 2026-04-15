@@ -144,6 +144,33 @@ export function useChatPanelState({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
+  const isStreaming = useIsStreaming(streamKey);
+  const queue = useMessageQueue(streamKey);
+  const streamMessages = useStreamEvents(streamKey);
+  const messages = useMemo(
+    () => combineHistoryAndStreamMessages(historyMessages, streamMessages),
+    [historyMessages, streamMessages],
+  );
+  const [messageListLayoutState, setMessageListLayoutState] = useState<{
+    signature: string;
+    coversTail: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    setMessageListLayoutState(null);
+  }, [scrollResetKey]);
+
+  const handleMessageListLayoutChange = useCallback(
+    (next: { signature: string; coversTail: boolean }) => {
+      setMessageListLayoutState((prev) => (
+        prev?.signature === next.signature && prev.coversTail === next.coversTail
+          ? prev
+          : next
+      ));
+    },
+    [],
+  );
+
   const {
     handleScroll,
     scrollToBottom,
@@ -153,15 +180,8 @@ export function useChatPanelState({
   } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
     resetKey: scrollResetKey,
     contentReady,
+    layoutState: messageListLayoutState,
   });
-
-  const isStreaming = useIsStreaming(streamKey);
-  const queue = useMessageQueue(streamKey);
-  const streamMessages = useStreamEvents(streamKey);
-  const messages = useMemo(
-    () => combineHistoryAndStreamMessages(historyMessages, streamMessages),
-    [historyMessages, streamMessages],
-  );
 
   const readyAutofocusCompleteRef = useRef(false);
   useEffect(() => {
@@ -338,6 +358,7 @@ export function useChatPanelState({
     isStreaming,
     queue,
     messages,
+    handleMessageListLayoutChange,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,
