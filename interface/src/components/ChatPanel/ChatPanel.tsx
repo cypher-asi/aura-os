@@ -81,7 +81,6 @@ export function ChatPanel({
   initialHandoff,
   onInitialHandoffReady,
 }: ChatPanelProps) {
-  const isCreateAgentHandoff = initialHandoff === "create-agent";
   const showLoadingState = isLoading;
   const s = useChatPanelState({
     streamKey,

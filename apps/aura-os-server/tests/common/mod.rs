@@ -284,6 +284,7 @@ pub fn build_test_app_from_store(
                 validated_at: chrono::Utc::now(),
             },
             validated_at: std::time::Instant::now(),
+            zero_pro_refresh_error: None,
         },
     );
 

@@ -1,3 +1,8 @@
+/**
+ * App-level route/sync helpers. Realtime work (event socket, profile/follow subscriptions) is not
+ * initialized at module load; it runs from auth-store after session restore or login via
+ * `loadAndRunShellRealtimeBootstrap` and `scheduleDeferredEventSocketConnect`.
+ */
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { syncActiveApp, useAppStore } from "../../stores/app-store";

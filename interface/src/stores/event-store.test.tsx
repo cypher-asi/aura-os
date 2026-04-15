@@ -58,11 +58,11 @@ describe("event-store", () => {
     expect(output.text).toBe("Build output...");
   });
 
-  it("seedTaskOutput does not overwrite existing output", () => {
-    useEventStore.getState().seedTaskOutput("task-2", "First");
-    useEventStore.getState().seedTaskOutput("task-2", "Second");
+  it("seedTaskOutput does not overwrite existing output when new text is a prefix of stored text", () => {
+    useEventStore.getState().seedTaskOutput("task-2", "Hello world");
+    useEventStore.getState().seedTaskOutput("task-2", "Hello");
     const output = getTaskOutput("task-2");
-    expect(output.text).toBe("First");
+    expect(output.text).toBe("Hello world");
   });
 
   it("subscribe returns an unsubscribe function", () => {
@@ -86,7 +86,10 @@ describe("event-store", () => {
     simulateEvent({ type: "task_started", task_id: "t3", session_id: "s2" });
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "task_started", task_id: "t3" }),
+      expect.objectContaining({
+        type: "task_started",
+        content: expect.objectContaining({ task_id: "t3", session_id: "s2" }),
+      }),
     );
   });
 

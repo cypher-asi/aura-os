@@ -16,7 +16,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
 use crate::state::{
     clear_zero_auth_session, persist_zero_auth_session, AppState, AuthJwt, AuthSession,
-    CachedSession,
+    AuthZeroProMeta, CachedSession,
 };
 
 fn auth_token_import_enabled_from_var(value: Option<&str>) -> bool {
@@ -72,6 +72,7 @@ pub(crate) async fn login(
         CachedSession {
             session: result.session.clone(),
             validated_at: Instant::now(),
+            zero_pro_refresh_error: result.zero_pro_refresh_error.clone(),
         },
     );
 
@@ -96,6 +97,7 @@ pub(crate) async fn register(
         CachedSession {
             session: result.session.clone(),
             validated_at: Instant::now(),
+            zero_pro_refresh_error: result.zero_pro_refresh_error.clone(),
         },
     );
 
@@ -202,38 +204,47 @@ pub(crate) async fn request_password_reset(
 //     Ok(Json(code))
 // }
 
-/// GET /api/auth/session — return the current session from the middleware-validated auth.
+/// GET /api/auth/session — return the middleware-resolved session and best-effort aura-network sync.
+/// zOS validation runs only in the auth middleware (no second `validate_token` here).
 pub(crate) async fn get_session(
-    AuthSession(session): AuthSession,
+    State(state): State<AppState>,
+    AuthSession(mut session): AuthSession,
+    AuthZeroProMeta {
+        zero_pro_refresh_error,
+    }: AuthZeroProMeta,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    Ok(Json(AuthSessionResponse::from(session)))
+    sync_user_to_network(&state, &mut session).await;
+    let mut response = AuthSessionResponse::from(session);
+    response.zero_pro_refresh_error = zero_pro_refresh_error;
+    Ok(Json(response))
 }
 
-/// POST /api/auth/validate — force-refresh the session against zOS and update the cache.
+/// POST /api/auth/validate — force-refresh the session against zOS (middleware bypasses TTL cache)
+/// and sync aura-network profile fields. zOS validation runs once in the auth middleware.
 pub(crate) async fn validate(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(mut session): AuthSession,
+    AuthZeroProMeta {
+        zero_pro_refresh_error,
+    }: AuthZeroProMeta,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let mut result = state
-        .auth_service
-        .validate_token(&jwt)
-        .await
-        .map_err(map_auth_error)?;
+    sync_user_to_network(&state, &mut session).await;
 
-    sync_user_to_network(&state, &mut result.session).await;
-
-    // Update validation cache with the refreshed session.
     state.validation_cache.insert(
         jwt,
         CachedSession {
-            session: result.session.clone(),
+            session: session.clone(),
             validated_at: Instant::now(),
+            zero_pro_refresh_error: zero_pro_refresh_error.clone(),
         },
     );
 
-    persist_zero_auth_session(&state.store, &result.session);
+    persist_zero_auth_session(&state.store, &session);
 
-    Ok(Json(AuthSessionResponse::from_auth_result(result)))
+    let mut response = AuthSessionResponse::from(session);
+    response.zero_pro_refresh_error = zero_pro_refresh_error;
+    Ok(Json(response))
 }
 
 pub(crate) async fn logout(

@@ -12,6 +12,7 @@ import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../lib/browser-db
 import { getProjectOrder, setProjectOrder } from "../utils/storage";
 import { useOrgStore } from "./org-store";
 import { useAuthStore } from "./auth-store";
+import { markFirstProjectsDataReady } from "../lib/perf/startup-perf";
 
 const NEW_PROJECT_MODAL_STORAGE_KEY = "aura:new-project-modal-open";
 
@@ -174,6 +175,9 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     }
     if (refreshRequestId === requestId) {
       set({ loadingProjects: false });
+      if (useAuthStore.getState().user) {
+        markFirstProjectsDataReady();
+      }
     }
   },
 

@@ -18,16 +18,24 @@ export function RequireAuth() {
     }
   }
 
-  if (isLoading || isRefreshingStatus) {
+  if (isRefreshingStatus) {
     return (
       <div className={styles.loadingScreen}>
         <div style={{ textAlign: "center", maxWidth: 400 }}>
           <Spinner size="lg" />
-          {isRefreshingStatus ? (
-            <p style={{ color: "var(--color-text-secondary)", marginTop: 16 }}>
-              Checking your status...
-            </p>
-          ) : null}
+          <p style={{ color: "var(--color-text-secondary)", marginTop: 16 }}>
+            Checking your status...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading && !isAuthenticated) {
+    return (
+      <div className={styles.loadingScreen}>
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <Spinner size="lg" />
         </div>
       </div>
     );
@@ -98,5 +106,15 @@ export function RequireAuth() {
     );
   }
 
-  return <Outlet />;
+  return (
+    <>
+      {isLoading ? (
+        <div className={styles.sessionPendingBanner}>
+          <Spinner size="sm" />
+          <span>Updating session…</span>
+        </div>
+      ) : null}
+      <Outlet />
+    </>
+  );
 }

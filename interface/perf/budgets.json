@@ -1,0 +1,21 @@
+{
+  "_doc": "Perf guardrails for the Aura interface. See interface/docs/perf-instrumentation.md. Bump limits in PRs that intentionally grow bundles or startup time.",
+  "startupMs": {
+    "maxDeltaFromEntry": {
+      "aura:app:react:root-render-scheduled": 5000,
+      "aura:auth:session-restore:complete": 12000
+    }
+  },
+  "webVitals": {
+    "loginRoute": {
+      "maxLcpMsWhenPresent": 15000,
+      "maxCls": 0.35
+    }
+  },
+  "bundle": {
+    "distDir": "dist",
+    "maxInitialHtmlGraphGzipBytes": 950000,
+    "maxLargestJsAssetGzipBytes": 650000,
+    "maxTotalJsGzipBytes": 900000
+  }
+}

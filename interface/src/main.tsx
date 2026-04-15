@@ -9,6 +9,16 @@ import "./index.css";
 import App from "./App";
 import { queryClient } from "./lib/query-client";
 import { registerServiceWorker } from "./lib/registerServiceWorker";
+import {
+  installDevPerfHelpers,
+  markAppEntry,
+  markReactRootRenderScheduled,
+} from "./lib/perf/startup-perf";
+import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
+
+markAppEntry();
+initWebVitalsLite();
+installDevPerfHelpers();
 
 registerServiceWorker();
 
@@ -23,3 +33,4 @@ createRoot(rootEl).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+markReactRootRenderScheduled();

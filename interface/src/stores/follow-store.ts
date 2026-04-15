@@ -47,21 +47,35 @@ export const useFollowStore = create<FollowState>()((set, get) => ({
   },
 }));
 
-let _prevUserId: string | null = null;
-useAuthStore.subscribe((state) => {
-  const userId = state.user?.user_id ?? null;
-  if (userId === _prevUserId) return;
-  _prevUserId = userId;
-  if (userId) {
-    api.follows
-      .list()
-      .then((follows) =>
-        useFollowStore.setState({ follows, followedProfileIds: deriveIds(follows) }),
-      )
-      .catch(() =>
-        useFollowStore.setState({ follows: [], followedProfileIds: new Set() }),
-      );
-  } else {
-    useFollowStore.setState({ follows: [], followedProfileIds: new Set() });
-  }
-});
+let _followAuthSyncStarted = false;
+
+/** Idempotent: subscribe to auth and sync follows when the user changes (not at module load). */
+export function initFollowStoreAuthSync(): void {
+  if (_followAuthSyncStarted) return;
+  _followAuthSyncStarted = true;
+
+  let _prevUserId: string | null = null;
+
+  const applyUserId = (userId: string | null) => {
+    if (userId === _prevUserId) return;
+    _prevUserId = userId;
+    if (userId) {
+      api.follows
+        .list()
+        .then((follows) =>
+          useFollowStore.setState({ follows, followedProfileIds: deriveIds(follows) }),
+        )
+        .catch(() =>
+          useFollowStore.setState({ follows: [], followedProfileIds: new Set() }),
+        );
+    } else {
+      useFollowStore.setState({ follows: [], followedProfileIds: new Set() });
+    }
+  };
+
+  useAuthStore.subscribe((state) => {
+    applyUserId(state.user?.user_id ?? null);
+  });
+
+  applyUserId(useAuthStore.getState().user?.user_id ?? null);
+}

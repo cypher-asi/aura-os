@@ -11,7 +11,9 @@ use aura_os_auth::AuthError;
 use aura_os_core::ZeroAuthSession;
 
 use crate::error::ApiError;
-use crate::state::{persist_zero_auth_session, AppState, AuthJwt, AuthSession, CachedSession};
+use crate::state::{
+    persist_zero_auth_session, AppState, AuthJwt, AuthSession, AuthZeroProMeta, CachedSession,
+};
 
 const AUTH_REFRESH_TTL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 
@@ -71,10 +73,16 @@ fn extract_request_token(req: &Request) -> Option<String> {
 
 /// Check the validation cache for a fresh session. Returns the session if
 /// cached and within the refresh TTL.
-fn get_cached_session(state: &AppState, jwt: &str) -> Option<ZeroAuthSession> {
+fn get_cached_session(
+    state: &AppState,
+    jwt: &str,
+) -> Option<(ZeroAuthSession, Option<String>)> {
     let entry = state.validation_cache.get(jwt)?;
     if entry.validated_at.elapsed() < AUTH_REFRESH_TTL {
-        Some(entry.session.clone())
+        Some((
+            entry.session.clone(),
+            entry.zero_pro_refresh_error.clone(),
+        ))
     } else {
         None
     }
@@ -84,36 +92,43 @@ fn get_cached_session(state: &AppState, jwt: &str) -> Option<ZeroAuthSession> {
 async fn validate_and_cache(
     state: &AppState,
     jwt: &str,
-) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
+) -> Result<(ZeroAuthSession, Option<String>), (StatusCode, Json<ApiError>)> {
     let result = state
         .auth_service
         .validate_token(jwt)
         .await
         .map_err(map_auth_error)?;
 
+    let zero_pro_refresh_error = result.zero_pro_refresh_error.clone();
+    let session = result.session.clone();
+
     state.validation_cache.insert(
         jwt.to_string(),
         CachedSession {
-            session: result.session.clone(),
+            session: session.clone(),
             validated_at: Instant::now(),
+            zero_pro_refresh_error: zero_pro_refresh_error.clone(),
         },
     );
 
-    Ok(result.session)
+    Ok((session, zero_pro_refresh_error))
 }
 
-/// Resolve a session from a JWT: check cache first, then validate with zOS.
-/// On zOS network failure, falls back to a stale cached entry if available.
+/// Resolve a session from a JWT: check cache first (unless `allow_validation_cache` is false),
+/// then validate with zOS. On zOS network failure, falls back to a stale cached entry if available.
 async fn resolve_session_from_jwt(
     state: &AppState,
     jwt: &str,
-) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
-    if let Some(session) = get_cached_session(state, jwt) {
-        return Ok(session);
+    allow_validation_cache: bool,
+) -> Result<(ZeroAuthSession, Option<String>), (StatusCode, Json<ApiError>)> {
+    if allow_validation_cache {
+        if let Some((session, zp)) = get_cached_session(state, jwt) {
+            return Ok((session, zp));
+        }
     }
 
     match validate_and_cache(state, jwt).await {
-        Ok(session) => Ok(session),
+        Ok(pair) => Ok(pair),
         Err(err) if err.0 == StatusCode::UNAUTHORIZED => Err(err),
         Err(err) => {
             // zOS unreachable — try stale cache entry as fallback
@@ -122,7 +137,10 @@ async fn resolve_session_from_jwt(
                     user_id = %entry.session.user_id,
                     "zOS unreachable, using stale cached session"
                 );
-                Ok(entry.session.clone())
+                Ok((
+                    entry.session.clone(),
+                    entry.zero_pro_refresh_error.clone(),
+                ))
             } else {
                 Err(err)
             }
@@ -137,13 +155,20 @@ pub(crate) async fn require_verified_session(
 ) -> Result<Response, (StatusCode, Json<ApiError>)> {
     let token = extract_request_token(&req)
         .ok_or_else(|| ApiError::unauthorized("missing authorization token"))?;
-    let session = resolve_session_from_jwt(&state, &token).await?;
+    // POST /api/auth/validate skips the in-memory TTL cache so explicit refresh always hits zOS once.
+    let allow_validation_cache = !(req.method() == axum::http::Method::POST
+        && req.uri().path() == "/api/auth/validate");
+    let (session, zero_pro_refresh_error) =
+        resolve_session_from_jwt(&state, &token, allow_validation_cache).await?;
     persist_zero_auth_session(&state.store, &session);
 
     enforce_zero_pro(&state, &session)?;
 
     req.extensions_mut().insert(AuthJwt(token));
     req.extensions_mut().insert(AuthSession(session));
+    req.extensions_mut().insert(AuthZeroProMeta {
+        zero_pro_refresh_error,
+    });
 
     Ok(next.run(req).await)
 }
@@ -267,6 +292,7 @@ mod tests {
             CachedSession {
                 session: make_session(true, Utc::now()),
                 validated_at: Instant::now() - age,
+                zero_pro_refresh_error: None,
             },
         );
     }
@@ -279,7 +305,7 @@ mod tests {
         let state = mock_app_state_with_cache(cache);
         let result = get_cached_session(&state, "jwt-1");
         assert!(result.is_some());
-        assert_eq!(result.unwrap().user_id, "u1");
+        assert_eq!(result.unwrap().0.user_id, "u1");
     }
 
     #[test]
@@ -309,6 +335,7 @@ mod tests {
             CachedSession {
                 session,
                 validated_at: Instant::now(),
+                zero_pro_refresh_error: None,
             },
         );
 

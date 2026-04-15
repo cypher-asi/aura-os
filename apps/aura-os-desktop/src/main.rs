@@ -4,6 +4,7 @@ mod handlers;
 mod updater;
 
 use axum::routing::{get as axum_get, post as axum_post};
+use axum::Router;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener as StdTcpListener, ToSocketAddrs};
@@ -879,7 +880,7 @@ fn spawn_server(
 
             let app_state =
                 aura_os_server::build_app_state(&db_path).expect("failed to open database");
-            let app = aura_os_server::create_router_with_interface(app_state, interface_dir)
+            let desktop_routes = Router::new()
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))
                 .route("/api/open-path", axum_post(handlers::open_path))
@@ -903,7 +904,11 @@ fn spawn_server(
                 .route(
                     "/api/update-channel",
                     axum_post(handlers::post_update_channel).with_state(update_state.clone()),
-                );
+                )
+                .layer(aura_os_server::build_local_api_cors_layer());
+
+            let app = aura_os_server::create_router_with_interface(app_state, interface_dir)
+                .merge(desktop_routes);
 
             updater::spawn_update_loop(update_state);
 

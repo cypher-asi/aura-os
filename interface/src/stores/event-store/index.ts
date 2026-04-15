@@ -6,5 +6,6 @@ export {
   useTaskOutput,
   connectEventSocket,
   disconnectEventSocket,
+  scheduleDeferredEventSocketConnect,
 } from "./event-store";
 export { getCachedTaskOutputText } from "./task-output-cache";

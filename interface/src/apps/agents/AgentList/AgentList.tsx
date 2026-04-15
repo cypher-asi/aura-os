@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Menu, Modal, Button } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import { Loader2, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
+import { Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton";
@@ -18,7 +18,6 @@ import {
   useSelectedAgent,
   useAgentStore,
   useSortedAgents,
-  LAST_AGENT_ID_KEY,
 } from "../stores";
 import { useChatHandoffStore } from "../../../stores/chat-handoff-store";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
@@ -118,11 +117,10 @@ function AgentConversationRowWithHistory({
 }
 
 export function AgentList({ mode = "default" }: AgentListProps) {
-  const { agents, status, fetchAgents } = useAgents();
+  const { agents, fetchAgents } = useAgents();
   const { setSelectedAgent } = useSelectedAgent();
   const isMobileLibrary = mode === "mobile-library";
   const isDesktopSidebar = mode === "default";
-  const loading = status === "loading" || status === "idle";
   const { query: searchQuery, setAction } = useSidebarSearch("agents");
   const location = useLocation();
   const navigate = useNavigate();
@@ -133,9 +131,12 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
   const beginCreateAgentHandoff = useChatHandoffStore((state) => state.beginCreateAgentHandoff);
 
+  // Desktop/tablet: `AgentMainPanel` loads the agent list. Mobile standalone library (`/agents`)
+  // renders this list without the main panel — fetch here only in that mode.
   useEffect(() => {
-    fetchAgents();
-  }, [fetchAgents]);
+    if (!isMobileLibrary) return;
+    void fetchAgents().catch(() => {});
+  }, [fetchAgents, isMobileLibrary]);
 
   useEffect(() => {
     if (shouldOpenMobileCreate) {
@@ -170,21 +171,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
     return () => setAction("agents", null);
   }, [setAction]);
-
-  useEffect(() => {
-    if (status !== "ready") return;
-    if (isMobileLibrary) return;
-    const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
-    if (lastId && !agentId) {
-      useChatHistoryStore.getState().prefetchHistory(
-        agentHistoryKey(lastId),
-        () =>
-          api.agents.listEvents(lastId, {
-            limit: STANDALONE_AGENT_HISTORY_LIMIT,
-          }),
-      );
-    }
-  }, [status, agentId, isMobileLibrary]);
 
   const agentMap = useMemo(
     () => new Map(agents.map((a) => [a.agent_id, a])),
@@ -344,14 +330,6 @@ export function AgentList({ mode = "default" }: AgentListProps) {
       setDeleteLoading(false);
     }
   }, [agentId, deleteTarget, filteredAgents, navigate, setSelectedAgent, sortedAgents]);
-
-  if (loading && visibleSortedAgents.length === 0) {
-    return (
-      <div className={styles.loading}>
-        <Loader2 size={18} className={styles.spin} />
-      </div>
-    );
-  }
 
   if (visibleSortedAgents.length === 0) {
     return (

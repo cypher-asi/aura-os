@@ -202,6 +202,7 @@ pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAut
                     crate::state::CachedSession {
                         session: session.clone(),
                         validated_at: std::time::Instant::now(),
+                        zero_pro_refresh_error: None,
                     },
                 );
                 persist_zero_auth_session(&state.store, session);

@@ -38,7 +38,10 @@ const { mockApi } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../../api/client", () => ({ api: mockApi }));
+vi.mock("../../../api/client", () => ({
+  api: mockApi,
+  STANDALONE_AGENT_HISTORY_LIMIT: 80,
+}));
 
 vi.mock("../../../utils/build-display-messages", () => ({
   buildDisplayEvents: (msgs: SessionEvent[]): DisplaySessionEvent[] =>

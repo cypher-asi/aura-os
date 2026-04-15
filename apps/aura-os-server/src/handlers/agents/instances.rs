@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::extract::{Path, State};
 use axum::Json;
 use chrono::Utc;
@@ -12,7 +14,7 @@ use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::conversions::{
-    get_user_id, resolve_network_agents, resolve_single_agent, resolve_workspace_path,
+    get_user_id, resolve_merge_agents_for_ids, resolve_single_agent, resolve_workspace_path,
 };
 
 const GENERAL_AGENT_KIND: &str = "general";
@@ -165,7 +167,12 @@ pub(crate) async fn list_agent_instances(
         .await
         .map_err(map_storage_error)?;
 
-    let agent_map = resolve_network_agents(&state, &jwt).await;
+    let needed_agent_ids: HashSet<String> = storage_agents
+        .iter()
+        .filter_map(|spa| spa.agent_id.clone())
+        .collect();
+
+    let agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
 
     let project = state.project_service.get_project(&project_id).ok();
     let project_name = project.as_ref().map(|p| p.name.clone()).unwrap_or_default();

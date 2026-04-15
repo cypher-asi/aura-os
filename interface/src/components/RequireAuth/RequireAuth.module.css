@@ -4,3 +4,21 @@
   justify-content: center;
   height: 100vh;
 }
+
+.sessionPendingBanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated, rgba(15, 15, 20, 0.92));
+  border-bottom: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.08));
+  pointer-events: none;
+}

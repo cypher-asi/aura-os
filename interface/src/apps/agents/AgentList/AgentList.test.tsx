@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   useParams: vi.fn(),
   useLocation: vi.fn(),
+  fetchAgentsMock: vi.fn(async () => {}),
   useAgents: vi.fn(),
   useSelectedAgent: vi.fn(),
   useSortedAgents: vi.fn(),
@@ -244,10 +245,11 @@ describe("AgentList", () => {
       },
       configurable: true,
     });
+    mocks.fetchAgentsMock = vi.fn(async () => {});
     mocks.useAgents.mockReturnValue({
       agents: [agent],
       status: "ready",
-      fetchAgents: vi.fn(async () => {}),
+      fetchAgents: mocks.fetchAgentsMock,
     });
     mocks.useSelectedAgent.mockReturnValue({
       setSelectedAgent: vi.fn(),
@@ -268,6 +270,7 @@ describe("AgentList", () => {
     const user = userEvent.setup();
 
     render(<AgentList mode="mobile-library" />);
+    expect(mocks.fetchAgentsMock).toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");
@@ -278,6 +281,7 @@ describe("AgentList", () => {
     const user = userEvent.setup();
 
     render(<AgentList />);
+    expect(mocks.fetchAgentsMock).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
     expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");

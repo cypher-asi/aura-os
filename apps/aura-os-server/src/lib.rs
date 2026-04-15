@@ -14,7 +14,7 @@ pub(crate) mod state;
 
 pub use app_builder::build_app_state;
 pub use harness_gateway::HarnessHttpGateway;
-pub use router::create_router_with_interface;
+pub use router::{build_local_api_cors_layer, create_router_with_interface};
 pub use state::{AppState, CachedSession};
 
 /// Discover common user-level binary directories (pip `--user` scripts, `~/.local/bin`,

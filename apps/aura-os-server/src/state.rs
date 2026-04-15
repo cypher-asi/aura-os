@@ -72,6 +72,25 @@ impl<S: Send + Sync> FromRequestParts<S> for AuthSession {
     }
 }
 
+/// Metadata from the last zOS validation (Pro entitlement fetch), carried alongside [`AuthSession`].
+#[derive(Clone, Debug)]
+pub(crate) struct AuthZeroProMeta {
+    pub zero_pro_refresh_error: Option<String>,
+}
+
+#[async_trait]
+impl<S: Send + Sync> FromRequestParts<S> for AuthZeroProMeta {
+    type Rejection = (StatusCode, Json<ApiError>);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<AuthZeroProMeta>()
+            .cloned()
+            .ok_or_else(|| ApiError::unauthorized("missing auth metadata"))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Validation cache — caches zOS session validation results per JWT
 // ---------------------------------------------------------------------------
@@ -80,6 +99,8 @@ impl<S: Send + Sync> FromRequestParts<S> for AuthSession {
 pub struct CachedSession {
     pub session: ZeroAuthSession,
     pub validated_at: Instant,
+    /// Warning when zOS could not confirm ZERO Pro status (see `AuthSessionResult`).
+    pub zero_pro_refresh_error: Option<String>,
 }
 
 /// Thread-safe in-memory cache keyed by JWT string.
@@ -149,6 +170,7 @@ mod tests {
             CachedSession {
                 session: make_session(),
                 validated_at: Instant::now(),
+                zero_pro_refresh_error: None,
             },
         );
         cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
@@ -165,6 +187,7 @@ mod tests {
                 validated_at: Instant::now()
                     - CACHE_ENTRY_MAX_AGE
                     - std::time::Duration::from_secs(1),
+                zero_pro_refresh_error: None,
             },
         );
         cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
@@ -179,6 +202,7 @@ mod tests {
             CachedSession {
                 session: make_session(),
                 validated_at: Instant::now(),
+                zero_pro_refresh_error: None,
             },
         );
         cache.insert(
@@ -188,6 +212,7 @@ mod tests {
                 validated_at: Instant::now()
                     - CACHE_ENTRY_MAX_AGE
                     - std::time::Duration::from_secs(1),
+                zero_pro_refresh_error: None,
             },
         );
         cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);

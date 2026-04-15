@@ -58,14 +58,18 @@ fn is_allowed_cors_origin(origin: &HeaderValue) -> bool {
         .any(|allowed| !allowed.is_empty() && allowed == origin)
 }
 
-pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathBuf>) -> Router {
-    let cors = CorsLayer::new()
+pub fn build_local_api_cors_layer() -> CorsLayer {
+    CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(|origin, _| {
             is_allowed_cors_origin(origin)
         }))
         .allow_credentials(true)
         .allow_methods(AllowMethods::mirror_request())
-        .allow_headers(AllowHeaders::mirror_request());
+        .allow_headers(AllowHeaders::mirror_request())
+}
+
+pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathBuf>) -> Router {
+    let cors = build_local_api_cors_layer();
 
     let protected_api_router = Router::new()
         .merge(protected_auth_routes())

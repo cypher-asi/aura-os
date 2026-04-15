@@ -124,7 +124,52 @@ export function useTaskOutput(taskId: string | undefined): TaskOutputEntry {
 
 let _ws: { close: () => void } | null = null;
 
+/** Pending idle/timer handle for deferred connect (cancel on logout / disconnect). */
+let _deferredConnectHandle: number | undefined;
+
+function cancelDeferredEventSocketConnect(): void {
+  if (_deferredConnectHandle === undefined) return;
+  const id = _deferredConnectHandle;
+  _deferredConnectHandle = undefined;
+  if (typeof window === "undefined") return;
+  const w = window as Window & { cancelIdleCallback?: (handle: number) => void };
+  if (typeof w.cancelIdleCallback === "function") {
+    try {
+      w.cancelIdleCallback(id);
+    } catch {
+      clearTimeout(id);
+    }
+  } else {
+    clearTimeout(id);
+  }
+}
+
+/**
+ * Opens the events WebSocket after the browser is idle (or soon via timeout),
+ * so handshake and reconnect timers do not compete with first paint / shell work.
+ */
+export function scheduleDeferredEventSocketConnect(): void {
+  cancelDeferredEventSocketConnect();
+  const run = () => {
+    _deferredConnectHandle = undefined;
+    connectEventSocket();
+  };
+  if (typeof window === "undefined") {
+    run();
+    return;
+  }
+  const w = window as Window & {
+    requestIdleCallback?: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number;
+  };
+  if (typeof w.requestIdleCallback === "function") {
+    _deferredConnectHandle = w.requestIdleCallback(run, { timeout: 2500 });
+  } else {
+    _deferredConnectHandle = window.setTimeout(run, 0) as unknown as number;
+  }
+}
+
 export function disconnectEventSocket() {
+  cancelDeferredEventSocketConnect();
   _ws?.close();
   _ws = null;
 }
@@ -169,8 +214,8 @@ export function connectEventSocket() {
   );
 }
 
-// Event socket connection is deferred until after authentication.
-// Call connectEventSocket() from the auth store after login/restoreSession.
+// Prefer scheduleDeferredEventSocketConnect() from auth after session/login so
+// the socket does not compete with startup; connectEventSocket() is still used for tests.
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {

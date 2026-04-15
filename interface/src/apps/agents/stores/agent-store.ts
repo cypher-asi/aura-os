@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { api } from "../../../api/client";
+import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../api/client";
 import { buildDisplayEvents } from "../../../utils/build-display-messages";
 import type { Agent } from "../../../types";
 import type { DisplaySessionEvent } from "../../../types/stream";
@@ -195,7 +195,7 @@ export const useAgentStore = create<AgentState>()(
         }
 
         const promise = api.agents
-          .listEvents(agentId)
+          .listEvents(agentId, { limit: STANDALONE_AGENT_HISTORY_LIMIT })
           .then((raw) => {
             const events = buildDisplayEvents(raw);
             set((s) => ({

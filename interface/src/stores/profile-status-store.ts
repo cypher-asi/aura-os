@@ -224,6 +224,7 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
   },
 }));
 
-if (typeof window !== "undefined") {
+/** Idempotent: register event/auth/sidekick subscriptions once a session exists (not at module load). */
+export function ensureProfileStatusRealtimeInitialized(): void {
   useProfileStatusStore.getState().init();
 }

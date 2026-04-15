@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Archive, Gauge, Loader2 } from "lucide-react";
 import { Avatar } from "../Avatar";
@@ -50,6 +50,19 @@ function buildExecutionNode(projectId: string): ExplorerNode {
     icon: <Gauge size={16} />,
     metadata: { type: "execution", projectId },
   };
+}
+
+function activateArchiveAction(
+  event: ReactKeyboardEvent<HTMLSpanElement> | React.MouseEvent<HTMLSpanElement>,
+  callback: () => void,
+  disabled: boolean,
+) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (disabled) {
+    return;
+  }
+  callback();
 }
 
 function buildProjectSuffix(
@@ -128,23 +141,28 @@ export function buildAgentNode(
           {statusIndicator}
         </span>
         {canArchive ? (
-          <span
-            className={explorerStyles.agentActionWrap}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-          >
-            <button
-              type="button"
+          <span className={explorerStyles.agentActionWrap}>
+            <span
+              role="button"
+              tabIndex={isArchiving ? -1 : 0}
               className={explorerStyles.agentActionButton}
-              onClick={() => context.handleArchiveAgent(agent)}
-              disabled={isArchiving}
+              onClick={(event) =>
+                activateArchiveAction(event, () => context.handleArchiveAgent(agent), isArchiving)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  activateArchiveAction(
+                    event,
+                    () => context.handleArchiveAgent(agent),
+                    isArchiving,
+                  );
+                }
+              }}
               aria-label={`Archive ${agent.name}`}
+              aria-disabled={isArchiving}
               title="Archive agent"
             >
               <Archive size={12} />
-            </button>
+            </span>
           </span>
         ) : null}
       </span>

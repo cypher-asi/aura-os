@@ -451,7 +451,8 @@
   color: #ffffff;
 }
 
-.agentActionButton:disabled {
+.agentActionButton:disabled,
+.agentActionButton[aria-disabled="true"] {
   opacity: 0.4;
   cursor: default;
 }

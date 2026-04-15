@@ -105,6 +105,7 @@ mod tests {
             CachedSession {
                 session: make_session(),
                 validated_at: Instant::now(),
+                zero_pro_refresh_error: None,
             },
         );
         assert_eq!(get_cached_jwt(&cache).unwrap(), "my-jwt");
