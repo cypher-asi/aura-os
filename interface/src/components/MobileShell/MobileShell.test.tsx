@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
@@ -7,6 +7,17 @@ vi.mock("@cypher-asi/zui", () => ({
     <header data-testid="topbar">{icon}{title}{actions}</header>
   ),
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+  Input: ({ value, onChange, placeholder, onKeyDown }: Record<string, unknown>) => (
+    <input
+      value={value as string}
+      onChange={onChange as React.ChangeEventHandler<HTMLInputElement>}
+      placeholder={placeholder as string}
+      onKeyDown={onKeyDown as React.KeyboardEventHandler<HTMLInputElement>}
+    />
+  ),
+  Modal: ({ children, isOpen, title, footer }: { children?: React.ReactNode; isOpen: boolean; title?: string; footer?: React.ReactNode }) => (
+    isOpen ? <div data-testid={`modal-${title ?? "unnamed"}`}>{children}{footer}</div> : null
+  ),
   Button: ({ children, onClick, icon, ...rest }: Record<string, unknown>) => (
     <button
       onClick={onClick as () => void}
@@ -36,12 +47,33 @@ const demoProject = {
   name: "Demo Project",
   description: "Test project",
 };
+const projectAgentFixtures = [
+  { agent_instance_id: "agent-inst-1", name: "Project agent", role: "Build with me" },
+] as Array<{ agent_instance_id: string; name: string; role?: string }>;
+const openNewProjectModal = vi.fn();
 
 const orgFixtures = [
   { org_id: "org-1", name: "Alpha Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
   { org_id: "org-2", name: "Beta Team", owner_user_id: "u1", billing: null, created_at: "2025-01-01T00:00:00Z", updated_at: "2025-01-01T00:00:00Z" },
 ] as const;
 const switchOrg = vi.fn();
+const createOrg = vi.fn(async (name: string) => ({
+  org_id: "org-new",
+  name,
+  owner_user_id: "u1",
+  billing: null,
+  created_at: "2025-01-01T00:00:00Z",
+  updated_at: "2025-01-01T00:00:00Z",
+}));
+const mockOrgErrors = {
+  orgsError: null as string | null,
+  membersError: null as string | null,
+  integrationsError: null as string | null,
+};
+const mockProjectsError = {
+  value: null as string | null,
+};
+const mockSetLastProject = vi.fn();
 
 vi.mock("../../stores/app-store", () => ({
   useAppStore: (sel: (s: { activeApp: typeof mockActiveApp }) => unknown) =>
@@ -68,22 +100,39 @@ vi.mock("../../stores/mobile-drawer-store", () => ({
 }));
 
 vi.mock("../../stores/ui-modal-store", () => ({
-  useUIModalStore: () => ({
-    openOrgSettings: vi.fn(),
-    openSettings: vi.fn(),
-    openHostSettings: vi.fn(),
-  }),
+  useUIModalStore: (selector?: (state: {
+    openOrgSettings: ReturnType<typeof vi.fn>;
+    openSettings: ReturnType<typeof vi.fn>;
+    openHostSettings: ReturnType<typeof vi.fn>;
+  }) => unknown) => {
+    const state = {
+      openOrgSettings: vi.fn(),
+      openSettings: vi.fn(),
+      openHostSettings: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock("../../stores/org-store", () => ({
   useOrgStore: (selector: (state: {
     orgs: typeof orgFixtures;
     activeOrg: typeof orgFixtures[number];
+    orgsError: string | null;
+    membersError: string | null;
+    integrationsError: string | null;
     switchOrg: typeof switchOrg;
+    createOrg: typeof createOrg;
+    refreshOrgs: () => Promise<void>;
   }) => unknown) => selector({
     orgs: orgFixtures,
     activeOrg: orgFixtures[0],
+    orgsError: mockOrgErrors.orgsError,
+    membersError: mockOrgErrors.membersError,
+    integrationsError: mockOrgErrors.integrationsError,
     switchOrg,
+    createOrg,
+    refreshOrgs: async () => undefined,
   }),
 }));
 
@@ -112,18 +161,22 @@ vi.mock("../../hooks/use-sidebar-search", () => ({
 vi.mock("../../stores/projects-list-store", () => ({
   useProjectsListStore: (selector: (state: {
     projects: typeof demoProject[];
+    projectsError: string | null;
     agentsByProject: Record<string, Array<{ agent_instance_id: string; name: string; role?: string }>>;
     loadingAgentsByProject: Record<string, boolean>;
     openNewProjectModal: () => void;
+    refreshProjects: () => Promise<void>;
     refreshProjectAgents: (projectId: string) => Promise<Array<{ agent_instance_id: string; name: string; role?: string }>>;
   }) => unknown) => selector({
     projects: [demoProject],
+    projectsError: mockProjectsError.value,
     agentsByProject: {
-      "proj-1": [{ agent_instance_id: "agent-inst-1", name: "Project agent", role: "Build with me" }],
+      "proj-1": projectAgentFixtures,
     },
     loadingAgentsByProject: {},
-    openNewProjectModal: vi.fn(),
-    refreshProjectAgents: async () => [{ agent_instance_id: "agent-inst-1", name: "Project agent", role: "Build with me" }],
+    openNewProjectModal,
+    refreshProjects: async () => undefined,
+    refreshProjectAgents: async () => projectAgentFixtures,
   }),
   getRecentProjects: (projects: typeof demoProject[]) => projects,
   getMostRecentProject: (projects: typeof demoProject[]) => projects[0] ?? null,
@@ -145,6 +198,7 @@ vi.mock("../../utils/storage", () => ({
   getLastProject: () => null,
   getLastAgentEntry: () => null,
   getLastAgent: () => "agent-inst-1",
+  setLastProject: (...args: unknown[]) => mockSetLastProject(...args),
 }));
 
 vi.mock("../../utils/mobileNavigation", () => ({
@@ -160,7 +214,7 @@ vi.mock("../../utils/mobileNavigation", () => ({
   },
   getMobileShellMode: (pathname: string) => (pathname.startsWith("/projects/proj-1") ? "project" : "global"),
   getProjectIdFromPathname: (pathname: string) => (pathname.startsWith("/projects/proj-1") ? "proj-1" : null),
-  getProjectAgentInstanceIdFromPathname: (pathname: string) => pathname.includes("/agents/agent-inst-1") ? "agent-inst-1" : null,
+  getProjectAgentInstanceIdFromPathname: (pathname: string) => pathname.match(/\/agents\/([^/]+)/)?.[1] ?? null,
   isProjectSubroute: (pathname: string) => pathname.startsWith("/projects/proj-1/"),
   projectAgentRoute: (id: string) => `/projects/${id}/agent`,
   projectAgentChatRoute: (projectId: string, agentInstanceId: string) => `/projects/${projectId}/agents/${agentInstanceId}`,
@@ -188,6 +242,9 @@ vi.mock("../PanelSearch", () => ({
 vi.mock("../HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
+vi.mock("../../lib/host-config", () => ({
+  getHostDisplayLabel: () => "https://bad-host.example",
+}));
 vi.mock("../../apps/agents/MobileAgentLibraryView", () => ({
   MobileAgentLibraryView: () => <div data-testid="mobile-agent-library-view" />,
 }));
@@ -214,7 +271,10 @@ function renderMobile(path = "/projects") {
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route element={<MobileShell />}>
+          <Route path="/projects/organization" element={<div>Organization workspace</div>} />
           <Route path="/projects/:projectId/agent" element={<div>Project agent redirect</div>} />
+          <Route path="/projects/:projectId/agents/create" element={<div>Create remote agent</div>} />
+          <Route path="/projects/:projectId/agents/attach" element={<div>Attach remote agent</div>} />
           <Route path="/projects/:projectId/agents/:agentInstanceId/details" element={<div>Project agent details</div>} />
           <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Project agent chat</div>} />
           <Route path="/projects/:projectId/tasks" element={<div>Project tasks</div>} />
@@ -240,6 +300,11 @@ beforeEach(() => {
   drawers.accountOpen = false;
   mockActiveApp.PreviewPanel = undefined;
   mockActiveApp.ResponsiveControls = undefined;
+  mockOrgErrors.orgsError = null;
+  mockOrgErrors.membersError = null;
+  mockOrgErrors.integrationsError = null;
+  mockProjectsError.value = null;
+  projectAgentFixtures.splice(0, projectAgentFixtures.length, { agent_instance_id: "agent-inst-1", name: "Project agent", role: "Build with me" });
 });
 
 describe("MobileShell", () => {
@@ -321,31 +386,28 @@ describe("MobileShell", () => {
     expect(screen.queryByTestId("main-panel")).not.toBeInTheDocument();
   });
 
-  it("opens account drawer when account button clicked", async () => {
+  it("routes the mobile account button to the organization workspace", async () => {
     const user = userEvent.setup();
     renderMobile();
 
     await user.click(screen.getByRole("button", { name: "Open account" }));
-    expect(drawers.setAccountOpen).toHaveBeenCalledWith(true);
-  });
-
-  it("shows organizations in the mobile account sheet and switches orgs", async () => {
-    const user = userEvent.setup();
-    drawers.accountOpen = true;
-    renderMobile();
-
-    const orgList = screen.getByRole("list", { name: "Organizations" });
-    expect(orgList).toBeInTheDocument();
-    expect(within(orgList).getByText("Alpha Team")).toBeInTheDocument();
-    expect(within(orgList).getByText("Beta Team")).toBeInTheDocument();
-
-    await user.click(within(orgList).getByText("Beta Team"));
-    expect(switchOrg).toHaveBeenCalledWith("org-2");
+    expect(await screen.findByText("Organization workspace")).toBeInTheDocument();
   });
 
   it("renders update banner", () => {
     renderMobile();
     expect(screen.getByTestId("update-banner")).toBeInTheDocument();
+  });
+
+  it("surfaces a mobile warning when live workspace data failed to load", () => {
+    mockOrgErrors.orgsError = "Unexpected token '<'";
+
+    renderMobile("/projects/proj-1/agent");
+
+    expect(screen.getByText("Live workspace data could not load.")).toBeInTheDocument();
+    expect(screen.getByText(/saved device data/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Host settings" })).toBeInTheDocument();
   });
 
   it("navigates the mobile agent tab back to the last agent chat", async () => {
@@ -363,13 +425,15 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("navigation", { name: "Primary mobile navigation" })).not.toBeInTheDocument();
   });
 
-  it("keeps project drawer focused on secondary project actions", () => {
+  it("keeps project drawer focused on switching agents and projects", () => {
     drawers.navOpen = true;
     renderMobile("/projects/proj-1/work");
 
-    expect(screen.getByText("Current project")).toBeInTheDocument();
-    expect(screen.getByText("Agent & skills")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /open details for project agent/i })).toBeInTheDocument();
+    expect(screen.getByText("Switch project")).toBeInTheDocument();
+    expect(screen.queryByText("Agents")).not.toBeInTheDocument();
+    expect(screen.queryByText("Current project")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agent & skills")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /open details for project agent/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Recent projects")).not.toBeInTheDocument();
     expect(screen.queryByText("Other projects")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Agent" })).not.toBeInTheDocument();
@@ -379,12 +443,20 @@ describe("MobileShell", () => {
     expect(screen.queryByRole("button", { name: "Stats" })).not.toBeInTheDocument();
   });
 
-  it("shows organization entry in the app switcher", () => {
+  it("omits the project agent switcher when only one agent is attached", () => {
+    drawers.navOpen = true;
+    renderMobile("/projects/proj-1/work");
+
+    expect(screen.queryByRole("button", { name: /project agent/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the phone app switcher focused on app-level destinations", () => {
     drawers.appOpen = true;
     renderMobile("/projects/proj-1/agent");
 
-    expect(screen.getByRole("button", { name: "Organization" })).toBeInTheDocument();
-    expect(screen.getByText("Alpha Team")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Organization" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Return to project" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Account settings" })).not.toBeInTheDocument();
   });
 
   it("shows overlay backdrop when drawer is open", () => {
@@ -409,5 +481,22 @@ describe("MobileShell", () => {
 
     await user.click(screen.getByRole("button", { name: "Close project navigation" }));
     expect(drawers.setNavOpen).toHaveBeenCalledWith(false);
+  });
+
+  it("keeps the project drawer focused on projects even when multiple agents are attached", () => {
+    drawers.navOpen = true;
+    projectAgentFixtures.splice(
+      0,
+      projectAgentFixtures.length,
+      { agent_instance_id: "agent-inst-1", name: "Project agent", role: "Build with me" },
+      { agent_instance_id: "agent-inst-2", name: "Research agent", role: "Investigate with me" },
+    );
+
+    renderMobile("/projects/proj-1/work");
+
+    expect(screen.queryByText("Agents")).not.toBeInTheDocument();
+    expect(screen.queryByText("Research agent")).not.toBeInTheDocument();
+    expect(screen.getByText("Switch project")).toBeInTheDocument();
+    expect(screen.queryByText("Projects")).not.toBeInTheDocument();
   });
 });

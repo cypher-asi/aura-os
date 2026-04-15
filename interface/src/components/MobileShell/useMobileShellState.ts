@@ -62,10 +62,15 @@ export function useMobileShellState() {
     && (isProjectAgentManagementRoute || !isPrimaryProjectDestination);
   const isStandaloneAgentLibraryRoot = activeApp.id === "agents" && location.pathname === "/agents";
   const isStandaloneAgentDetailRoute = activeApp.id === "agents" && /^\/agents\/[^/]+$/.test(location.pathname);
+  const isMobileOrganizationRoute = location.pathname === "/projects/organization";
   const showProjectResponsiveControls = activeApp.id === "agents" && location.pathname.startsWith("/projects/");
   const isProjectAgentChatRoute = /^\/projects\/[^/]+\/agents\/(?!create$)[^/]+$/.test(location.pathname);
   const showGlobalTitle = mobileShellMode === "global";
-  const globalTitle = location.pathname === "/projects" ? "Projects" : activeApp.label;
+  const globalTitle = isMobileOrganizationRoute
+    ? "Organization"
+    : location.pathname === "/projects"
+      ? "Projects"
+      : activeApp.label;
 
   return {
     activeApp, isPhoneLayout, location,
@@ -73,6 +78,7 @@ export function useMobileShellState() {
     mobileTargetProjectId, mobileTargetProject,
     showProjectTitle, showProjectBack, showProjectResponsiveControls,
     isStandaloneAgentLibraryRoot, isStandaloneAgentDetailRoute,
+    isMobileOrganizationRoute,
     isProjectAgentChatRoute, isProjectAgentManagementRoute,
     showGlobalTitle, globalTitle,
   };

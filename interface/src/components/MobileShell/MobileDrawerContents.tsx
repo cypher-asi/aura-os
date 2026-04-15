@@ -1,14 +1,16 @@
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@cypher-asi/zui";
+import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import {
   CircleUserRound, Settings, Building2, Check,
-  ChevronRight, Server,
+  ChevronRight, Plus, Server,
   FolderOpen, Bot, GitCommitVertical,
 } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
+import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { projectWorkRoute, projectStatsRoute, projectTasksRoute, projectProcessRoute } from "../../utils/mobileNavigation";
 import { resolveProjectAgentPath } from "./mobile-shell-utils";
 import type { MobileShellState } from "./useMobileShellState";
@@ -52,13 +54,13 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
   const projectLauncherDescription = state.mobileTargetProject?.name ?? "Open your projects";
 
   const items = [
-    {
+    ...(!state.isPhoneLayout ? [{
       id: "organization",
       label: "Organization",
-      description: activeOrg?.name ?? "Choose active organization",
+      description: activeOrg?.name ?? "Teams & settings",
       icon: Building2,
       onSelect: () => setAccountOpen(true),
-    },
+    }] as const : []),
     {
       id: "projects",
       label: projectLauncherLabel,
@@ -86,13 +88,6 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
       description: "Your account and activity",
       icon: CircleUserRound,
       path: "/profile",
-    },
-    {
-      id: "account",
-      label: "Account settings",
-      description: "Team, host, and app settings",
-      icon: Settings,
-      onSelect: () => setAccountOpen(true),
     },
   ] as const;
 
@@ -138,65 +133,176 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
 
 export function AccountSheetContent() {
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
+  const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const { features } = useAuraCapabilities();
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
   const openSettings = useUIModalStore((s) => s.openSettings);
   const openHostSettings = useUIModalStore((s) => s.openHostSettings);
+  const { inputRef, initialFocusRef, autoFocus } = useModalInitialFocus<HTMLInputElement>();
   const orgs = useOrgStore((s) => s.orgs);
   const activeOrg = useOrgStore((s) => s.activeOrg);
   const switchOrg = useOrgStore((s) => s.switchOrg);
+  const createOrg = useOrgStore((s) => s.createOrg);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [teamName, setTeamName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const lastOrgSelectionRef = useRef<{ orgId: string | null; atMs: number }>({
+    orgId: null,
+    atMs: 0,
+  });
+
+  const handleOrgSelection = useCallback((orgId: string) => {
+    const now = Date.now();
+    if (
+      lastOrgSelectionRef.current.orgId === orgId &&
+      now - lastOrgSelectionRef.current.atMs < 400
+    ) {
+      return;
+    }
+
+    lastOrgSelectionRef.current = { orgId, atMs: now };
+    switchOrg(orgId);
+    closeDrawers();
+  }, [closeDrawers, switchOrg]);
+
+  async function handleCreateOrg() {
+    const trimmed = teamName.trim();
+    if (!trimmed) return;
+
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const created = await createOrg(trimmed);
+      switchOrg(created.org_id);
+      setCreateOpen(false);
+      setTeamName("");
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Could not create a team right now.");
+    } finally {
+      setCreating(false);
+    }
+  }
 
   return (
-    <div className={styles.mobileDrawerContent}>
-      <div className={styles.mobileDrawerBody}>
-        <section className={styles.mobileDrawerSectionBlock} aria-labelledby="mobile-team-switcher-title">
-          <div className={styles.mobileDrawerSectionHeaderRow}>
-            <div className={styles.mobileDrawerSectionEyebrow}>
-              <Building2 size={15} />
-              <span id="mobile-team-switcher-title">Organization</span>
+    <>
+      <div className={styles.mobileDrawerContent}>
+        <div className={styles.mobileDrawerBody}>
+          <section className={styles.mobileDrawerSectionBlock} aria-labelledby="mobile-team-switcher-title">
+            <div className={styles.mobileDrawerSectionHeaderRow}>
+              <div className={styles.mobileDrawerSectionEyebrow}>
+                <Building2 size={15} />
+                <span id="mobile-team-switcher-title">Organization</span>
+              </div>
+              <span className={styles.mobileDrawerSectionMeta}>
+                {activeOrg?.name ?? "No team selected"}
+              </span>
             </div>
-            <span className={styles.mobileDrawerSectionMeta}>
-              {activeOrg?.name ?? "No team selected"}
-            </span>
+            <div className={styles.mobileDrawerSectionDescription}>
+              Feed, leaderboard, projects, and integrations follow the active organization.
+            </div>
+            {orgs.length > 0 ? (
+              <div className={styles.mobileOrgList} role="list" aria-label="Organizations">
+                {orgs.map((org) => {
+                  const isActive = org.org_id === activeOrg?.org_id;
+                  return (
+                    <button
+                      key={org.org_id}
+                      type="button"
+                      role="listitem"
+                      className={`${styles.mobileOrgButton} ${isActive ? styles.mobileOrgButtonActive : ""}`}
+                      aria-pressed={isActive}
+                      onPointerUp={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleOrgSelection(org.org_id);
+                      }}
+                      onClick={() => handleOrgSelection(org.org_id)}
+                    >
+                      <span className={styles.mobileOrgButtonText}>
+                        <span className={styles.mobileOrgButtonName}>{org.name}</span>
+                        {isActive ? (
+                          <span className={styles.mobileOrgButtonMeta}>
+                            Current organization
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className={styles.mobileOrgButtonIcon}>
+                        {isActive ? <Check size={16} /> : <ChevronRight size={16} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.mobileDrawerEmptyState}>
+                <Text variant="muted" size="sm">
+                  Create your first team to unlock projects, agents, and mobile workspaces.
+                </Text>
+              </div>
+            )}
+          </section>
+          <div className={styles.mobileDrawerActions}>
+            <Button
+              variant={orgs.length === 0 ? "primary" : "ghost"}
+              size="sm"
+              icon={<Plus size={16} />}
+              className={styles.mobileDrawerAction}
+              onClick={() => setCreateOpen(true)}
+            >
+              {orgs.length === 0 ? "Create Team" : "New Team"}
+            </Button>
+            <Button variant="ghost" size="sm" icon={<Building2 size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openOrgSettings)}>Team settings</Button>
+            {features.hostRetargeting ? (
+              <Button variant="ghost" size="sm" icon={<Server size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openHostSettings)}>Host settings</Button>
+            ) : null}
+            <Button variant="ghost" size="sm" icon={<Settings size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openSettings)}>App settings</Button>
           </div>
-          <div className={styles.mobileDrawerSectionDescription}>
-            Feed, leaderboard, projects, and integrations follow the active organization.
-          </div>
-          <div className={styles.mobileOrgList} role="list" aria-label="Organizations">
-            {orgs.map((org) => {
-              const isActive = org.org_id === activeOrg?.org_id;
-              return (
-                <button
-                  key={org.org_id}
-                  type="button"
-                  role="listitem"
-                  className={`${styles.mobileOrgButton} ${isActive ? styles.mobileOrgButtonActive : ""}`}
-                  aria-pressed={isActive}
-                  onClick={() => openAfterDrawerClose(() => switchOrg(org.org_id))}
-                >
-                  <span className={styles.mobileOrgButtonText}>
-                    <span className={styles.mobileOrgButtonName}>{org.name}</span>
-                    <span className={styles.mobileOrgButtonMeta}>
-                      {isActive ? "Current organization" : "Switch to this organization"}
-                    </span>
-                  </span>
-                  <span className={styles.mobileOrgButtonIcon}>
-                    {isActive ? <Check size={16} /> : <ChevronRight size={16} />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-        <div className={styles.mobileDrawerActions}>
-          <Button variant="ghost" size="sm" icon={<Building2 size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openOrgSettings)}>Team settings</Button>
-          {features.hostRetargeting ? (
-            <Button variant="ghost" size="sm" icon={<Server size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openHostSettings)}>Host settings</Button>
-          ) : null}
-          <Button variant="ghost" size="sm" icon={<Settings size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openSettings)}>App settings</Button>
         </div>
       </div>
-    </div>
+      <Modal
+        isOpen={createOpen}
+        onClose={() => {
+          if (creating) return;
+          setCreateOpen(false);
+          setCreateError(null);
+        }}
+        title="Create Team"
+        size="sm"
+        initialFocusRef={initialFocusRef}
+        footer={(
+          <>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreateOrg} disabled={creating || !teamName.trim()}>
+              {creating ? "Creating..." : "Create Team"}
+            </Button>
+          </>
+        )}
+      >
+        <div className={styles.mobileCreateOrgModal}>
+          <Text variant="muted" size="sm">
+            Teams keep projects, agents, and mobile activity grouped under one active organization.
+          </Text>
+          <Input
+            ref={inputRef}
+            autoFocus={autoFocus}
+            value={teamName}
+            onChange={(event) => {
+              setTeamName(event.target.value);
+              setCreateError(null);
+            }}
+            placeholder="Team name"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void handleCreateOrg();
+              }
+            }}
+          />
+          {createError ? <Text variant="muted" size="sm">{createError}</Text> : null}
+        </div>
+      </Modal>
+    </>
   );
 }
 

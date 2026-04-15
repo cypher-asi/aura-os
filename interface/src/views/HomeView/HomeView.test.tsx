@@ -1,14 +1,18 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import type { Project } from "../../types";
 
 const orgState = {
   activeOrg: { id: "org-1" },
   isLoading: false,
+  orgs: [{ id: "org-1" }],
 };
 
 const projectsState = {
   projects: [] as Project[],
+  loadingProjects: false,
+  refreshProjects: vi.fn(),
 };
 
 const storageState = {
@@ -20,10 +24,14 @@ const storageState = {
 const mockGetMostRecentProject = vi.fn<(projects: Project[]) => Project | null>();
 
 vi.mock("@cypher-asi/zui", () => ({
-  PageEmptyState: ({ title, description }: { title: string; description: string }) => (
+  Button: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  ),
+  PageEmptyState: ({ title, description, actions }: { title: string; description: string; actions?: React.ReactNode }) => (
     <div data-testid="page-empty-state">
       <h2>{title}</h2>
       <p>{description}</p>
+      {actions}
     </div>
   ),
 }));
@@ -35,6 +43,17 @@ vi.mock("../../stores/org-store", () => ({
 vi.mock("../../stores/projects-list-store", () => ({
   useProjectsListStore: (selector: (state: typeof projectsState) => unknown) => selector(projectsState),
   getMostRecentProject: (projects: Project[]) => mockGetMostRecentProject(projects),
+}));
+
+const setAccountOpen = vi.fn();
+
+vi.mock("../../stores/mobile-drawer-store", () => ({
+  useMobileDrawerStore: (selector: (state: { setAccountOpen: typeof setAccountOpen }) => unknown) =>
+    selector({ setAccountOpen }),
+}));
+
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({ isMobileLayout: true }),
 }));
 
 vi.mock("../../utils/storage", () => ({
@@ -76,6 +95,7 @@ function renderHomeView() {
     <MemoryRouter initialEntries={["/projects"]}>
       <Routes>
         <Route path="/projects" element={<HomeView />} />
+        <Route path="/projects/organization" element={<div>organization-route</div>} />
         <Route path="/projects/:projectId/agent" element={<ProjectAgentRouteTarget />} />
         <Route path="/projects/:projectId/agents/:agentInstanceId" element={<ProjectAgentChatTarget />} />
       </Routes>
@@ -86,10 +106,14 @@ function renderHomeView() {
 beforeEach(() => {
   orgState.activeOrg = { id: "org-1" };
   orgState.isLoading = false;
+  orgState.orgs = [{ id: "org-1" }];
   projectsState.projects = [];
+  projectsState.loadingProjects = false;
+  projectsState.refreshProjects.mockReset();
   storageState.lastProject = null;
   storageState.lastAgentEntry = null;
   storageState.lastAgentByProject = {};
+  setAccountOpen.mockReset();
   mockGetMostRecentProject.mockReset();
   mockGetMostRecentProject.mockReturnValue(null);
 });
@@ -127,5 +151,23 @@ describe("HomeView", () => {
     expect(screen.getByTestId("page-empty-state")).toBeInTheDocument();
     expect(screen.getByText("Welcome to AURA")).toBeInTheDocument();
     expect(screen.getByText("Select a project from navigation to get started.")).toBeInTheDocument();
+  });
+
+  it("retries loading projects when an org is active but no projects are ready yet", () => {
+    renderHomeView();
+
+    expect(projectsState.refreshProjects).toHaveBeenCalledOnce();
+  });
+
+  it("routes mobile first-run CTA to the dedicated organization screen", async () => {
+    const user = userEvent.setup();
+    orgState.activeOrg = null;
+    orgState.orgs = [];
+
+    renderHomeView();
+
+    await user.click(screen.getByRole("button", { name: "Set Up Team" }));
+
+    expect(screen.getByText("organization-route")).toBeInTheDocument();
   });
 });

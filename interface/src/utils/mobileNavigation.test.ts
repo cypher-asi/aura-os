@@ -32,6 +32,11 @@ describe("getProjectIdFromPathname", () => {
     expect(getProjectIdFromPathname("/projects")).toBeNull();
     expect(getProjectIdFromPathname("/projects/")).toBeNull();
   });
+
+  it("returns null for reserved project shell paths", () => {
+    expect(getProjectIdFromPathname("/projects/organization")).toBeNull();
+    expect(getProjectIdFromPathname("/projects/settings")).toBeNull();
+  });
 });
 
 describe("getMobileProjectDestination", () => {
@@ -97,6 +102,10 @@ describe("getMobileShellMode", () => {
 
   it("returns global for /feed", () => {
     expect(getMobileShellMode("/feed", null, false)).toBe("global");
+  });
+
+  it("returns global for the mobile organization route", () => {
+    expect(getMobileShellMode("/projects/organization", null, false)).toBe("global");
   });
 
   it("returns global for /profile", () => {

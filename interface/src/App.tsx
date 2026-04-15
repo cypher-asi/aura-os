@@ -3,7 +3,9 @@ import { useEffect } from "react";
 import { useAuthStore } from "./stores/auth-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
+import { useAuraCapabilities } from "./hooks/use-aura-capabilities";
 import { HomeView } from "./views/HomeView";
+import { MobileOrganizationView } from "./views/MobileOrganizationView";
 import { ProjectLayout } from "./views/ProjectLayout";
 import { AgentChatView } from "./components/AgentChatView";
 import { SettingsView } from "./views/SettingsView";
@@ -37,6 +39,11 @@ function LastAppRedirect() {
   const lastAppId = getLastApp();
   const target = lastAppId ? apps.find((a) => a.id === lastAppId) : null;
   return <Navigate to={target?.basePath ?? DEFAULT_APP_PATH} replace />;
+}
+
+function MobileOrganizationRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileOrganizationView /> : <Navigate to="/projects" replace />;
 }
 
 export default function App() {
@@ -73,6 +80,7 @@ export default function App() {
             <Route index element={<LastAppRedirect />} />
 
             <Route path="projects" element={<HomeView />} />
+            <Route path="projects/organization" element={<MobileOrganizationRoute />} />
             <Route path="projects/settings" element={<SettingsView />} />
             <Route path="projects/:projectId" element={<ProjectLayout />}>
               <Route index element={<ProjectRootRedirectView />} />

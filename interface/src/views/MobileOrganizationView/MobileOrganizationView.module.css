@@ -1,0 +1,290 @@
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 10%, transparent) 0%, transparent 42%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg) 95%, black 5%) 0%,
+      var(--color-bg) 28%
+    );
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 32px;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heroEyebrow {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.title {
+  font-size: clamp(1.36rem, 4vw, 1.74rem);
+  font-weight: 700;
+  line-height: 1.04;
+  color: var(--color-text);
+}
+
+.description {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  max-width: 28rem;
+}
+
+.heroMetrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.heroMetric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+}
+
+.resumeSection {
+  gap: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sectionTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionHeading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sectionCopy {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.sectionMeta {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.resumeCard,
+.emptyWorkspaceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-primary) 14%, var(--color-bg-surface)) 0%,
+      color-mix(in srgb, var(--color-bg) 88%, var(--color-bg-surface)) 82%
+    );
+}
+
+.resumeEyebrow {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.resumeTitle,
+.emptyWorkspaceTitle {
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.resumeCopy,
+.emptyWorkspaceCopy {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.resumeMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resumeMetaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 76%, var(--color-bg-surface));
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.resumeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.projectList,
+.orgList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.projectButton,
+.orgButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-bg) 82%, var(--color-bg-surface));
+  color: inherit;
+  text-align: left;
+}
+
+.projectButton {
+  align-items: flex-start;
+}
+
+.orgButtonActive {
+  border-color: color-mix(in srgb, var(--color-primary) 46%, var(--color-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.orgButtonPending {
+  opacity: 0.72;
+}
+
+.orgInfo {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.projectInfo {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.projectTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.projectTitle,
+.orgName {
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.projectStatus {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.projectMeta,
+.orgMeta {
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.projectCta,
+.orgIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.actionButton {
+  justify-content: flex-start;
+}
+
+.footerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  opacity: 0.86;
+}
+
+.statusMessage {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+}

@@ -1,6 +1,6 @@
 import { Fragment, useCallback } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
-import { Drawer } from "@cypher-asi/zui";
+import { Button, Drawer, Text } from "@cypher-asi/zui";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
@@ -11,17 +11,23 @@ import { HostSettingsModal } from "../HostSettingsModal";
 import { MobileAgentLibraryView } from "../../apps/agents/MobileAgentLibraryView";
 import { MobileAgentDetailsView } from "../../apps/agents/MobileAgentDetailsView";
 import { projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useOrgStore } from "../../stores/org-store";
+import { useProjectsListStore } from "../../stores/projects-list-store";
+import { getHostDisplayLabel } from "../../lib/host-config";
 import { useMobileShellState } from "./useMobileShellState";
 import { blurActiveElement, resolveProjectAgentPath } from "./mobile-shell-utils";
 import { ProjectNavigationDrawerContent } from "./ProjectNavigationDrawer";
 import { MobileTopbar } from "./MobileTopbar";
 import { AppSwitcherContent, AccountSheetContent, PreviewSheetContent } from "./MobileDrawerContents";
+import { useShallow } from "zustand/react/shallow";
 import styles from "./MobileShell.module.css";
 
 export function MobileShell() {
   const state = useMobileShellState();
   const routeContent = useOutlet();
   const navigate = useNavigate();
+  const { features } = useAuraCapabilities();
   const { MainPanel, ResponsiveControls, PreviewPanel, PreviewHeader: PreviewHeaderComp } = state.activeApp;
   const ActiveProvider = state.activeApp.Provider ?? Fragment;
 
@@ -38,6 +44,21 @@ export function MobileShell() {
   const overlayDrawerOpen = useMobileDrawerStore(selectOverlayDrawerOpen);
   const hostSettingsOpen = useUIModalStore((s) => s.hostSettingsOpen);
   const closeHostSettings = useUIModalStore((s) => s.closeHostSettings);
+  const openHostSettings = useUIModalStore((s) => s.openHostSettings);
+  const { orgsError, membersError, integrationsError, refreshOrgs } = useOrgStore(
+    useShallow((s) => ({
+      orgsError: s.orgsError,
+      membersError: s.membersError,
+      integrationsError: s.integrationsError,
+      refreshOrgs: s.refreshOrgs,
+    })),
+  );
+  const { projectsError, refreshProjects } = useProjectsListStore(
+    useShallow((s) => ({
+      projectsError: s.projectsError,
+      refreshProjects: s.refreshProjects,
+    })),
+  );
   const mobileNavActiveId: MobileNavId | null = state.mobileDestination === "agent"
     || state.mobileDestination === "execution"
     || state.mobileDestination === "tasks"
@@ -56,6 +77,12 @@ export function MobileShell() {
     if (id === "process") { navigate(projectProcessRoute(state.mobileTargetProjectId)); return; }
     navigate(projectStatsRoute(state.mobileTargetProjectId));
   }, [state.mobileTargetProjectId, navigate]);
+  const connectionWarning = orgsError || projectsError || membersError || integrationsError;
+  const retryWorkspaceLoad = useCallback(() => {
+    void refreshOrgs();
+    void refreshProjects();
+  }, [refreshOrgs, refreshProjects]);
+  const hostLabel = getHostDisplayLabel();
 
   return (
     <>
@@ -63,6 +90,26 @@ export function MobileShell() {
         <div className={`${styles.mobileShell} ${overlayDrawerOpen ? styles.mobileShellDimmed : ""}`}>
           <MobileTopbar state={state} />
           <UpdateBanner />
+          {connectionWarning ? (
+            <div className={styles.mobileConnectionBanner} role="status" aria-live="polite">
+              <div className={styles.mobileConnectionCopy}>
+                <Text size="sm" weight="medium">Live workspace data could not load.</Text>
+                <Text size="sm">
+                  Aura is showing saved device data while it fails to reach {hostLabel}. Retry the load or update the host before trusting what you see here.
+                </Text>
+              </div>
+              <div className={styles.mobileConnectionActions}>
+                <Button variant="ghost" size="sm" onClick={() => void retryWorkspaceLoad()}>
+                  Retry
+                </Button>
+                {features.hostRetargeting ? (
+                  <Button variant="ghost" size="sm" onClick={openHostSettings}>
+                    Host settings
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <div className={styles.mobileMain}>
             {state.showProjectResponsiveControls && ResponsiveControls && <div className={styles.mobileResponsiveControls}><ResponsiveControls /></div>}
             {state.isStandaloneAgentLibraryRoot ? (
@@ -95,9 +142,11 @@ export function MobileShell() {
           </Drawer>
         )}
 
-        <Drawer side={state.isPhoneLayout ? "bottom" : "right"} isOpen={accountOpen} onClose={() => { blurActiveElement(); setAccountOpen(false); }} title="Account" className={state.isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet} showMinimizedBar={false} defaultSize={state.isPhoneLayout ? 320 : 360} maxSize={state.isPhoneLayout ? 420 : 440}>
-          <AccountSheetContent />
-        </Drawer>
+        {!state.isPhoneLayout ? (
+          <Drawer side="right" isOpen={accountOpen} onClose={() => { blurActiveElement(); setAccountOpen(false); }} title="Account" className={styles.mobileSideSheet} showMinimizedBar={false} defaultSize={360} maxSize={440}>
+            <AccountSheetContent />
+          </Drawer>
+        ) : null}
 
         <HostSettingsModal
           isOpen={hostSettingsOpen}
