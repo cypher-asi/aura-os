@@ -16,6 +16,20 @@ interface TaskListData {
   loading: boolean;
 }
 
+function upsertSpec(prev: Spec[], spec: Spec): Spec[] {
+  const next = prev.some((candidate) => candidate.spec_id === spec.spec_id)
+    ? prev.map((candidate) => (candidate.spec_id === spec.spec_id ? spec : candidate))
+    : [...prev, spec];
+  return next.sort(compareSpecs);
+}
+
+function upsertTask(prev: Task[], task: Task): Task[] {
+  const next = prev.some((candidate) => candidate.task_id === task.task_id)
+    ? prev.map((candidate) => (candidate.task_id === task.task_id ? task : candidate))
+    : [...prev, task];
+  return next.sort((a, b) => a.order_index - b.order_index);
+}
+
 export function useTaskListData(): TaskListData {
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
@@ -77,6 +91,14 @@ export function useTaskListData(): TaskListData {
 
   useEffect(() => {
     const unsubs = [
+      subscribe(EventType.SpecSaved, (e) => {
+        if (e.project_id !== projectId || !e.content.spec) return;
+        setLocalSpecs((prev) => upsertSpec(prev, e.content.spec));
+      }),
+      subscribe(EventType.TaskSaved, (e) => {
+        if (e.project_id !== projectId || !e.content.task) return;
+        setLocalTasks((prev) => upsertTask(prev, e.content.task));
+      }),
       subscribe(EventType.TaskStarted, (e) => {
         const { task_id } = e.content;
         if (task_id) {
@@ -131,7 +153,7 @@ export function useTaskListData(): TaskListData {
       subscribe(EventType.LoopFinished, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
     ];
     return () => unsubs.forEach((u) => u());
-  }, [subscribe, updateTaskStatus, refetchTasks]);
+  }, [projectId, subscribe, updateTaskStatus, refetchTasks]);
 
   const specs = useMemo(() => mergeById(localSpecs, storeSpecs, "spec_id").sort(compareSpecs), [localSpecs, storeSpecs]);
   const tasks = useMemo(() => mergeById(localTasks, storeTasks, "task_id"), [localTasks, storeTasks]);

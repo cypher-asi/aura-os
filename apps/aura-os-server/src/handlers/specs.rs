@@ -138,6 +138,12 @@ pub(crate) async fn create_spec(
         .await
         .map_err(|e| ApiError::internal(format!("creating spec: {e}")))?;
     let spec = Spec::try_from(created).map_err(ApiError::internal)?;
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "spec_saved",
+        "project_id": project_id.to_string(),
+        "spec": spec,
+        "spec_id": spec.spec_id.to_string(),
+    }));
     Ok(Json(spec))
 }
 

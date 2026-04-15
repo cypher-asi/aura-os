@@ -461,6 +461,12 @@ pub(crate) async fn create_task(
         .await
         .map_err(|e| ApiError::internal(format!("creating task: {e}")))?;
     let task = storage_task_to_task(created).map_err(ApiError::internal)?;
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "task_saved",
+        "project_id": project_id.to_string(),
+        "task": task,
+        "task_id": task.task_id.to_string(),
+    }));
     Ok(Json(task))
 }
 
