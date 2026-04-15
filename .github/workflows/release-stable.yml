@@ -73,6 +73,8 @@ jobs:
 
   build-app:
     env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
+      AURA_RELEASE_DIR: ../.aura-shared-target/release
       AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
       AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
       AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
@@ -165,7 +167,7 @@ jobs:
           if [ "${{ matrix.target }}" = "windows" ]; then
             binary_name="${binary_name}.exe"
           fi
-          cp "target/release/${binary_name}" "build-inputs/prebuilt-binaries/${binary_name}"
+          cp "$AURA_RELEASE_DIR/${binary_name}" "build-inputs/prebuilt-binaries/${binary_name}"
           cp -R interface/dist build-inputs/interface/dist
           tar -cf desktop-build-inputs.tar -C build-inputs .
 
@@ -179,6 +181,8 @@ jobs:
   package:
     needs: [build-sidecar, build-app]
     env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
+      AURA_RELEASE_DIR: ../.aura-shared-target/release
       MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
       MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
       MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
@@ -329,7 +333,7 @@ jobs:
               subprocess.run(["hdiutil", "detach", device], check=True)
           PY
 
-          rm -f target/release/rw.Aura*.dmg
+          rm -f "$AURA_RELEASE_DIR"/rw.Aura*.dmg
 
       - name: Prepare macOS signing inputs
         if: matrix.target == 'macos'
@@ -456,16 +460,16 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp target/release/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
-          cp target/release/*.app.tar.gz dist/ 2>/dev/null || true
-          cp -R target/release/*.app dist/ 2>/dev/null || true
-          cp target/release/*-setup*.exe dist/ 2>/dev/null || true
-          cp target/release/*.sig dist/ 2>/dev/null || true
-          cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
-          cp target/release/bundle/*/*.app.tar.gz dist/ 2>/dev/null || true
-          cp -R target/release/bundle/*/*.app dist/ 2>/dev/null || true
-          cp target/release/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
-          cp target/release/bundle/*/*.sig dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*.app.tar.gz dist/ 2>/dev/null || true
+          cp -R "$AURA_RELEASE_DIR"/*.app dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*-setup*.exe dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*.sig dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*.app.tar.gz dist/ 2>/dev/null || true
+          cp -R "$AURA_RELEASE_DIR"/bundle/*/*.app dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*.sig dist/ 2>/dev/null || true
           if [ "${{ matrix.target }}" = "macos" ]; then
             for bundle in dist/*.app.tar.gz; do
               [ -e "$bundle" ] || continue

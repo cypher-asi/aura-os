@@ -20,6 +20,15 @@ function sidecarBinaryName() {
   return process.platform === "win32" ? "aura-node.exe" : "aura-node";
 }
 
+function resolveCargoTargetDir(invocationDir) {
+  const explicit = process.env.CARGO_TARGET_DIR?.trim();
+  if (!explicit) {
+    return path.join(invocationDir, "target");
+  }
+
+  return path.resolve(invocationDir, explicit);
+}
+
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     stdio: "inherit",
@@ -33,6 +42,7 @@ function run(command, args, options = {}) {
 function main() {
   const root = repoRoot();
   const harnessDir = resolveHarnessDir(root);
+  const cargoTargetDir = resolveCargoTargetDir(harnessDir);
   const harnessManifest = path.join(harnessDir, "Cargo.toml");
   if (!fs.existsSync(harnessManifest)) {
     throw new Error(`aura-harness manifest not found at ${harnessManifest}`);
@@ -44,7 +54,7 @@ function main() {
   });
 
   const binaryName = sidecarBinaryName();
-  const builtBinary = path.join(harnessDir, "target", "release", binaryName);
+  const builtBinary = path.join(cargoTargetDir, "release", binaryName);
   if (!fs.existsSync(builtBinary)) {
     throw new Error(`built sidecar not found at ${builtBinary}`);
   }
@@ -61,6 +71,7 @@ function main() {
   console.log(JSON.stringify({
     ok: true,
     harnessDir,
+    cargoTargetDir,
     binaryName,
     builtBinary,
     targetBinary,

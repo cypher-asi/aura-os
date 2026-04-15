@@ -68,18 +68,21 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
-            binary: target/release/aura-os-desktop
+            binary: ../.aura-shared-target/release/aura-os-desktop
           - os: macos-latest
             target: macos-arm64
-            binary: target/release/aura-os-desktop
+            binary: ../.aura-shared-target/release/aura-os-desktop
           - os: macos-15-intel
             target: macos-x64
-            binary: target/release/aura-os-desktop
+            binary: ../.aura-shared-target/release/aura-os-desktop
           - os: windows-latest
             target: windows-x64
-            binary: target/release/aura-os-desktop.exe
+            binary: ../.aura-shared-target/release/aura-os-desktop.exe
 
     runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
+      AURA_RELEASE_DIR: ../.aura-shared-target/release
 
     steps:
       - uses: actions/checkout@v4
@@ -98,8 +101,8 @@ jobs:
         with:
           shared-key: desktop-${{ runner.os }}-${{ runner.arch }}
           workspaces: |
-            . -> target
-            ../aura-harness -> target
+            . -> ../.aura-shared-target
+            ../aura-harness -> ../.aura-shared-target
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -177,7 +180,7 @@ jobs:
               subprocess.run(["hdiutil", "detach", device], check=True)
           PY
 
-          rm -f target/release/rw.Aura*.dmg
+          rm -f "$AURA_RELEASE_DIR"/rw.Aura*.dmg
 
       - name: Prepare macOS signing inputs
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
@@ -306,16 +309,16 @@ jobs:
         shell: bash
         run: |
           mkdir -p packaged/${{ matrix.target }}
-          cp target/release/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp -R target/release/*.app packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/bundle/*/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp -R target/release/bundle/*/*.app packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/bundle/*/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
-          cp target/release/bundle/*/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp -R "$AURA_RELEASE_DIR"/*.app packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp -R "$AURA_RELEASE_DIR"/bundle/*/*.app packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp "$AURA_RELEASE_DIR"/bundle/*/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
           if [ "${{ matrix.target }}" = "macos-arm64" ] || [ "${{ matrix.target }}" = "macos-x64" ]; then
             arch_suffix="x86_64"
             if [ "${{ matrix.target }}" = "macos-arm64" ]; then
