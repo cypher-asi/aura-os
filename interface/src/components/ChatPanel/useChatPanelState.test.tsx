@@ -5,6 +5,9 @@ import { useChatPanelState } from "./useChatPanelState";
 const mockHandleScroll = vi.fn();
 const mockScrollToBottom = vi.fn();
 const mockScrollToBottomIfPinned = vi.fn();
+const mockCaptureAnchor = vi.fn();
+const mockRestoreAnchor = vi.fn();
+const mockOnContentHeightChange = vi.fn();
 const mockEnqueue = vi.fn();
 const mockChatUI = {
   selectedModel: "gpt-5.4",
@@ -16,12 +19,39 @@ let mockIsStreaming = false;
 let mockStreamMessages: Array<{ id: string }> = [];
 let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn> | null = null;
 
-vi.mock("../../hooks/use-scroll-anchor", () => ({
-  useScrollAnchor: () => ({
+vi.mock("../../hooks/use-scroll-anchor-v2", () => ({
+  useScrollAnchorV2: () => ({
     handleScroll: mockHandleScroll,
     scrollToBottom: mockScrollToBottom,
     scrollToBottomIfPinned: mockScrollToBottomIfPinned,
+    captureAnchor: mockCaptureAnchor,
+    restoreAnchor: mockRestoreAnchor,
+    onContentHeightChange: mockOnContentHeightChange,
     isAutoFollowing: true,
+  }),
+}));
+
+vi.mock("../../hooks/use-load-older-messages", () => ({
+  useLoadOlderMessages: () => ({
+    loadOlder: vi.fn(),
+    isLoadingOlder: false,
+    hasOlderMessages: false,
+  }),
+}));
+
+vi.mock("../../stores/chat-view-store", () => ({
+  useChatViewStore: {
+    getState: () => ({
+      incrementUnread: vi.fn(),
+      resetUnread: vi.fn(),
+    }),
+  },
+  useThreadView: () => ({
+    olderCursor: null,
+    newerCursor: null,
+    hasOlderMessages: false,
+    pinnedToBottom: true,
+    unreadCount: 0,
   }),
 }));
 

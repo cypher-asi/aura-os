@@ -15,7 +15,7 @@ export interface UseScrollAnchorV2Return {
   isAutoFollowing: boolean;
   captureAnchor: () => AnchorInfo | null;
   restoreAnchor: (anchor: AnchorInfo) => void;
-  onContentHeightChange: () => void;
+  onContentHeightChange: (options?: { immediate?: boolean }) => void;
 }
 
 function guardedScroll(
@@ -109,6 +109,15 @@ export function useScrollAnchorV2(
     [ref],
   );
 
+  const reconcileContent = useCallback(() => {
+    if (pinnedRef.current) {
+      doScrollToBottom();
+      return;
+    }
+    const anchor = currentAnchorRef.current;
+    if (anchor) restoreAnchor(anchor);
+  }, [doScrollToBottom, restoreAnchor]);
+
   const handleScroll = useCallback(() => {
     if (guardRef.current) return;
     const el = ref.current;
@@ -144,18 +153,25 @@ export function useScrollAnchorV2(
     doScrollToBottom();
   }, [doScrollToBottom]);
 
-  const onContentHeightChange = useCallback(() => {
-    if (contentChangeRafRef.current !== 0) return;
-    contentChangeRafRef.current = requestAnimationFrame(() => {
-      contentChangeRafRef.current = 0;
-      if (pinnedRef.current) {
-        doScrollToBottom();
+  const onContentHeightChange = useCallback(
+    (options?: { immediate?: boolean }) => {
+      if (options?.immediate) {
+        if (contentChangeRafRef.current !== 0) {
+          cancelAnimationFrame(contentChangeRafRef.current);
+          contentChangeRafRef.current = 0;
+        }
+        reconcileContent();
         return;
       }
-      const anchor = currentAnchorRef.current;
-      if (anchor) restoreAnchor(anchor);
-    });
-  }, [doScrollToBottom, restoreAnchor]);
+
+      if (contentChangeRafRef.current !== 0) return;
+      contentChangeRafRef.current = requestAnimationFrame(() => {
+        contentChangeRafRef.current = 0;
+        reconcileContent();
+      });
+    },
+    [reconcileContent],
+  );
 
   return {
     handleScroll,

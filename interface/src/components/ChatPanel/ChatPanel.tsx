@@ -101,6 +101,7 @@ export function ChatPanel({
     messages,
     scrollToBottom,
     heightCache,
+    onContentHeightChange,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,
@@ -243,6 +244,7 @@ export function ChatPanel({
                 onLoadOlder={loadOlder}
                 isLoadingOlder={isLoadingOlder}
                 hasOlderMessages={hasOlderMessages}
+                onContentHeightChange={onContentHeightChange}
               />
             </div>
           </div>

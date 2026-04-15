@@ -1,4 +1,12 @@
-import { type ReactNode, type RefObject, useCallback, useEffect, useRef } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
@@ -19,6 +27,7 @@ interface ChatMessageListProps {
   onLoadOlder?: () => void;
   isLoadingOlder?: boolean;
   hasOlderMessages?: boolean;
+  onContentHeightChange?: (options?: { immediate?: boolean }) => void;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -37,6 +46,7 @@ export function ChatMessageList({
   onLoadOlder,
   isLoadingOlder,
   hasOlderMessages,
+  onContentHeightChange,
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -83,16 +93,50 @@ export function ChatMessageList({
 
   const measureElementRef = useRef(virtualizer.measureElement);
   measureElementRef.current = virtualizer.measureElement;
+  const resizeObserversRef = useRef(new Map<string, ResizeObserver>());
+
+  const updateMeasuredHeight = useCallback(
+    (messageId: string, node: HTMLElement) => {
+      const nextHeight = node.getBoundingClientRect().height;
+      if (nextHeight <= 0) {
+        return;
+      }
+      const previousHeight = heightCache.getHeight(messageId);
+      heightCache.setHeight(messageId, nextHeight);
+      if (
+        previousHeight === undefined
+        || Math.abs(previousHeight - nextHeight) >= 1
+      ) {
+        onContentHeightChange?.();
+      }
+    },
+    [heightCache, onContentHeightChange],
+  );
 
   const makeMeasureRef = useCallback(
     (messageId: string) => (node: HTMLElement | null) => {
+      const existingObserver = resizeObserversRef.current.get(messageId);
+      if (!node) {
+        existingObserver?.disconnect();
+        resizeObserversRef.current.delete(messageId);
+        measureElementRef.current(node);
+        return;
+      }
+
       measureElementRef.current(node);
-      if (node) {
-        const h = node.getBoundingClientRect().height;
-        if (h > 0) heightCache.setHeight(messageId, h);
+      updateMeasuredHeight(messageId, node);
+
+      existingObserver?.disconnect();
+      if (typeof ResizeObserver !== "undefined") {
+        const observer = new ResizeObserver(() => {
+          measureElementRef.current(node);
+          updateMeasuredHeight(messageId, node);
+        });
+        observer.observe(node);
+        resizeObserversRef.current.set(messageId, observer);
       }
     },
-    [heightCache],
+    [updateMeasuredHeight],
   );
 
   const streamingBubbleRef = useRef<HTMLDivElement>(null);
@@ -118,6 +162,28 @@ export function ChatMessageList({
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
+  const layoutSignature = useMemo(
+    () => [
+      messages.length,
+      Math.round(totalSize),
+      nowStreaming ? 1 : 0,
+    ].join(":"),
+    [messages.length, nowStreaming, totalSize],
+  );
+
+  useLayoutEffect(() => {
+    if (!hasMessages) {
+      return;
+    }
+    onContentHeightChange?.({ immediate: true });
+  }, [hasMessages, layoutSignature, onContentHeightChange]);
+
+  useEffect(() => () => {
+    for (const observer of resizeObserversRef.current.values()) {
+      observer.disconnect();
+    }
+    resizeObserversRef.current.clear();
+  }, []);
 
   if (!hasMessages) {
     return <>{emptyState}</>;

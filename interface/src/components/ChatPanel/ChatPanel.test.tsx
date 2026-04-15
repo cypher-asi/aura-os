@@ -3,19 +3,16 @@ import type { ComponentProps } from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import type { DisplaySessionEvent } from "../../types/stream";
+import { useMessageStore } from "../../stores/message-store";
+import { useChatViewStore } from "../../stores/chat-view-store";
 
 const mockUseAuraCapabilities = vi.fn();
-const mockUseChatViewportPhase = vi.fn();
 const sampleHistoryMessages: DisplaySessionEvent[] = [
   { id: "msg-1", role: "user", content: "Hello" },
 ];
 
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
-}));
-
-vi.mock("./useChatViewportPhase", () => ({
-  useChatViewportPhase: () => mockUseChatViewportPhase(),
 }));
 
 vi.mock("../../hooks/stream/hooks", () => ({
@@ -83,10 +80,8 @@ vi.mock("./ChatPanel.module.css", () => ({
 describe("ChatPanel", () => {
   beforeEach(() => {
     mockUseAuraCapabilities.mockReset();
-    mockUseChatViewportPhase.mockReset();
-    mockUseChatViewportPhase.mockReturnValue({
-      isReady: true,
-    });
+    useMessageStore.setState({ messages: {}, orderedIds: {} });
+    useChatViewStore.setState({ threads: {} });
   });
 
   function renderPanel(overrides: Partial<ComponentProps<typeof ChatPanel>> = {}) {
@@ -182,34 +177,22 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
   });
 
-  it("keeps populated history visible while the scroll hook settles", () => {
+  it("keeps populated history visible once messages are available", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
-    mockUseChatViewportPhase.mockReturnValue({
-      isReady: false,
-    });
 
-    const { container } = renderPanel({
+    renderPanel({
       historyResolved: true,
       historyMessages: [...sampleHistoryMessages],
     });
-    const messageArea = container.querySelector(".messageArea");
-    const messageContent = container.querySelector(".messageContent");
-
-    expect(messageArea).not.toBeNull();
-    expect(messageContent?.className).toContain("messageContentSettling");
     expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
   });
 
-  it("does not hide an empty conversation while there is nothing to settle", () => {
+  it("does not hide an empty conversation while history is already resolved", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
-    mockUseChatViewportPhase.mockReturnValue({
-      isReady: false,
-    });
 
-    const { container } = renderPanel();
+    renderPanel();
 
-    expect(container.querySelector(".messageContentSettling")).toBeNull();
     expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
   });
 

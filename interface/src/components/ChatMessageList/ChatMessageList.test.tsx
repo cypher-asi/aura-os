@@ -1,6 +1,7 @@
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
 import { ChatMessageList } from "./ChatMessageList";
+import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 
 const mockMessageBubble = vi.fn();
 let mockVirtualItems = [
@@ -11,12 +12,13 @@ let mockVirtualItems = [
   },
 ];
 let mockTotalSize = 100;
+const mockMeasureElement = vi.fn();
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
     getVirtualItems: () => mockVirtualItems.slice(0, count),
     getTotalSize: () => mockTotalSize,
-    measureElement: vi.fn(),
+    measureElement: mockMeasureElement,
   }),
 }));
 
@@ -39,8 +41,18 @@ vi.mock("../../hooks/stream/store", () => ({
 }));
 
 describe("ChatMessageList", () => {
+  const heightCache: MessageHeightCache = {
+    getHeight: vi.fn(() => undefined),
+    setHeight: vi.fn(),
+    estimateHeight: vi.fn(() => 120),
+  };
+
   beforeEach(() => {
     mockMessageBubble.mockReset();
+    mockMeasureElement.mockReset();
+    vi.mocked(heightCache.getHeight).mockClear();
+    vi.mocked(heightCache.setHeight).mockClear();
+    vi.mocked(heightCache.estimateHeight).mockClear();
     mockVirtualItems = [
       {
         key: "row-0",
@@ -70,6 +82,7 @@ describe("ChatMessageList", () => {
         ]}
         streamKey="stream-1"
         scrollRef={scrollRef}
+        heightCache={heightCache}
       />,
     );
 
@@ -81,9 +94,9 @@ describe("ChatMessageList", () => {
     });
   });
 
-  it("reports layout readiness when messages have been measured", () => {
+  it("reconciles content height when the virtualized layout changes", () => {
     const scrollRef = { current: document.createElement("div") };
-    const onTailLayoutChange = vi.fn();
+    const onContentHeightChange = vi.fn();
 
     render(
       <ChatMessageList
@@ -93,37 +106,31 @@ describe("ChatMessageList", () => {
         ]}
         streamKey="stream-1"
         scrollRef={scrollRef}
-        onTailLayoutChange={onTailLayoutChange}
+        heightCache={heightCache}
+        onContentHeightChange={onContentHeightChange}
       />,
     );
 
-    expect(onTailLayoutChange).toHaveBeenCalledWith(true);
+    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
   });
 
-  it("does not block readiness when the viewport is reading older messages", () => {
-    mockVirtualItems = [
-      {
-        key: "row-0",
-        index: 0,
-        start: 0,
-      },
-    ];
-    mockTotalSize = 200;
+  it("shows a load older trigger when older history is available", () => {
     const scrollRef = { current: document.createElement("div") };
-    const onTailLayoutChange = vi.fn();
+    const onLoadOlder = vi.fn();
 
-    render(
+    const { getByRole } = render(
       <ChatMessageList
         messages={[
           { id: "message-1", role: "assistant", content: "Hello" } as any,
-          { id: "message-2", role: "assistant", content: "World" } as any,
         ]}
         streamKey="stream-1"
         scrollRef={scrollRef}
-        onTailLayoutChange={onTailLayoutChange}
+        heightCache={heightCache}
+        hasOlderMessages
+        onLoadOlder={onLoadOlder}
       />,
     );
 
-    expect(onTailLayoutChange).toHaveBeenCalledWith(true);
+    expect(getByRole("button", { name: "Load older messages" })).toBeInTheDocument();
   });
 });
