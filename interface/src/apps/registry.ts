@@ -19,8 +19,6 @@ import type { AuraApp } from "./types";
 type AppModuleLoader = () => Promise<AuraApp>;
 
 const EmptyComponent = () => null;
-const PassthroughChildren = ({ children }: { children?: ReactNode }) => children ?? null;
-
 function wrapLazyAppComponent<Props>(
   loadApp: AppModuleLoader,
   selectComponent: (app: AuraApp) => ComponentType<Props> | undefined,
@@ -70,11 +68,7 @@ function createAppDefinition(
       void loadAppOnce();
     },
     LeftPanel: wrapLazyAppComponent(loadAppOnce, (app) => app.LeftPanel),
-    MainPanel: wrapLazyAppComponent(
-      loadAppOnce,
-      (app) => app.MainPanel,
-      (props) => createElement(PassthroughChildren, props),
-    ) as AuraApp["MainPanel"],
+    MainPanel: wrapLazyAppComponent(loadAppOnce, (app) => app.MainPanel) as AuraApp["MainPanel"],
     ...(options?.hasDesktopLeftMenuPane
       ? {
           DesktopLeftMenuPane: wrapLazyAppComponent(
@@ -128,7 +122,6 @@ function createAppDefinition(
           Provider: wrapLazyAppComponent(
             loadAppOnce,
             (app) => app.Provider,
-            (props) => createElement(PassthroughChildren, props),
           ) as AuraApp["Provider"],
         }
       : {}),
