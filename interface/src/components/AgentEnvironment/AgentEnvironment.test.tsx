@@ -81,7 +81,7 @@ describe("AgentEnvironment", () => {
     expect(swarmApiMocks.remoteAgentAction).not.toHaveBeenCalled()
   })
 
-  it("shows success when recovery returns running status", async () => {
+  it("clears recovery notice when recovery returns running status", async () => {
     swarmApiMocks.recoverRemoteAgent.mockResolvedValueOnce({
       agent_id: "a1",
       status: "running",
@@ -102,10 +102,11 @@ describe("AgentEnvironment", () => {
     await user.click(await screen.findByRole("button", { name: "Recovery" }))
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Recovery completed. The machine is available again."),
-      ).toBeInTheDocument()
+      expect(swarmApiMocks.recoverRemoteAgent).toHaveBeenCalledWith("a1")
     })
+    expect(
+      screen.queryByText("Recovery completed. The machine is available again."),
+    ).not.toBeInTheDocument()
   })
 
   it("shows error notice when recovery API call fails", async () => {

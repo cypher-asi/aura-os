@@ -39,7 +39,6 @@ const PHASE_NOTICES: Record<string, RecoveryNotice> = {
   deleting: { tone: "info", message: "Deleting old machine..." },
   provisioning: { tone: "info", message: "Provisioning new machine..." },
   waiting_for_ready: { tone: "info", message: "Waiting for machine to come online..." },
-  ready: { tone: "success", message: "Recovery completed. The machine is available again." },
 }
 
 function getActionsForState(state: string): ActionDef[] {
@@ -121,7 +120,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
 
         if (c.phase === "ready") {
           setPendingRecovery(false)
-          setRecoveryNotice(PHASE_NOTICES.ready)
+          setRecoveryNotice(null)
           refreshState()
           return
         }
@@ -176,10 +175,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
 
           if (result.status === "running" || result.status === "idle") {
             setPendingRecovery(false)
-            setRecoveryNotice({
-              tone: "success",
-              message: "Recovery completed. The machine is available again.",
-            })
+            setRecoveryNotice(null)
             await refreshState()
           }
         } else {
