@@ -71,7 +71,11 @@ pub fn storage_session_to_session(
 }
 
 impl SessionService {
-    pub fn new(jwt_provider: Arc<dyn JwtProvider>, rollover_threshold: f64, model_context_window: u64) -> Self {
+    pub fn new(
+        jwt_provider: Arc<dyn JwtProvider>,
+        rollover_threshold: f64,
+        model_context_window: u64,
+    ) -> Self {
         Self {
             jwt_provider,
             storage_client: None,

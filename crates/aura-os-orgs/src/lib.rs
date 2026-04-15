@@ -346,7 +346,10 @@ mod tests {
             service.get_integration(&org_id, "integration-1").unwrap(),
             Some(integration.clone())
         );
-        assert_eq!(service.get_integration_secret("integration-1").unwrap(), None);
+        assert_eq!(
+            service.get_integration_secret("integration-1").unwrap(),
+            None
+        );
     }
 
     #[test]

@@ -19,7 +19,10 @@ pub struct TaskService {
 }
 
 impl TaskService {
-    pub fn new(jwt_provider: Arc<dyn JwtProvider>, storage_client: Option<Arc<StorageClient>>) -> Self {
+    pub fn new(
+        jwt_provider: Arc<dyn JwtProvider>,
+        storage_client: Option<Arc<StorageClient>>,
+    ) -> Self {
         Self {
             jwt_provider,
             storage_client,
@@ -36,7 +39,9 @@ impl TaskService {
     }
 
     fn get_jwt(&self) -> Result<String, TaskError> {
-        self.jwt_provider.get_jwt().ok_or(TaskError::NoActiveSession)
+        self.jwt_provider
+            .get_jwt()
+            .ok_or(TaskError::NoActiveSession)
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {

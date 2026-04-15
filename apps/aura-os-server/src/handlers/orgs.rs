@@ -405,10 +405,10 @@ pub(crate) async fn create_integration(
             .create_integration(&org_id, &jwt, &body)
             .await
             .map_err(map_integrations_error)?;
-        if let Err(error) = state.org_service.sync_integration_shadow(
-            &integration,
-            IntegrationSecretUpdate::Clear,
-        ) {
+        if let Err(error) = state
+            .org_service
+            .sync_integration_shadow(&integration, IntegrationSecretUpdate::Clear)
+        {
             warn!(
                 integration_id = %integration.integration_id,
                 error = %error,
@@ -458,10 +458,10 @@ pub(crate) async fn update_integration(
             .update_integration(&org_id, &integration_id, &jwt, &body)
             .await
             .map_err(map_integrations_error)?;
-        if let Err(error) = state.org_service.sync_integration_shadow(
-            &integration,
-            IntegrationSecretUpdate::Clear,
-        ) {
+        if let Err(error) = state
+            .org_service
+            .sync_integration_shadow(&integration, IntegrationSecretUpdate::Clear)
+        {
             warn!(
                 integration_id = %integration.integration_id,
                 error = %error,

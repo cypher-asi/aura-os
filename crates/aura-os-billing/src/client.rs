@@ -134,9 +134,18 @@ impl BillingClient {
     }
 
     async fn provision_account(&self, access_token: &str) -> Result<(), BillingError> {
-        for path in ["/v1/accounts", "/v1/accounts/register", "/v1/accounts/provision"] {
+        for path in [
+            "/v1/accounts",
+            "/v1/accounts/register",
+            "/v1/accounts/provision",
+        ] {
             let resp = self
-                .send_authed_json(Method::POST, path, access_token, Some(serde_json::json!({})))
+                .send_authed_json(
+                    Method::POST,
+                    path,
+                    access_token,
+                    Some(serde_json::json!({})),
+                )
                 .await?;
             let status = resp.status();
             if status.is_success() || status == StatusCode::CONFLICT {
@@ -236,8 +245,8 @@ mod tests {
     use axum::{
         extract::State,
         http::StatusCode as AxumStatusCode,
-        routing::{get, post},
         response::IntoResponse,
+        routing::{get, post},
         Json, Router,
     };
     use std::sync::Arc;

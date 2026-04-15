@@ -107,8 +107,8 @@ impl RocksStore {
     }
 
     pub fn put_cf_bytes(&self, cf_name: &str, key: &[u8], value: &[u8]) -> StoreResult<()> {
-        let key_str = String::from_utf8(key.to_vec())
-            .map_err(|e| StoreError::KeyEncoding(e.to_string()))?;
+        let key_str =
+            String::from_utf8(key.to_vec()).map_err(|e| StoreError::KeyEncoding(e.to_string()))?;
         self.with_cf_mut(cf_name, |cf| {
             cf.insert(key_str, value.to_vec());
             Ok(())
@@ -116,8 +116,8 @@ impl RocksStore {
     }
 
     pub fn get_cf_bytes(&self, cf_name: &str, key: &[u8]) -> StoreResult<Option<Vec<u8>>> {
-        let key_str = String::from_utf8(key.to_vec())
-            .map_err(|e| StoreError::KeyEncoding(e.to_string()))?;
+        let key_str =
+            String::from_utf8(key.to_vec()).map_err(|e| StoreError::KeyEncoding(e.to_string()))?;
         self.with_cf(cf_name, |cf| Ok(cf.get(&key_str).cloned()))
     }
 

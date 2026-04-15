@@ -79,10 +79,13 @@ pub(crate) async fn require_credits(
     let has_credits = result.is_ok();
     {
         let mut cache = state.credit_cache.lock().await;
-        cache.insert(jwt.to_string(), CreditCache {
-            last_check: Instant::now(),
-            has_credits,
-        });
+        cache.insert(
+            jwt.to_string(),
+            CreditCache {
+                last_check: Instant::now(),
+                has_credits,
+            },
+        );
     }
 
     result.map_err(billing_err)?;

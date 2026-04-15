@@ -18,6 +18,7 @@ use tokio::sync::broadcast;
 use tracing::{info, warn};
 
 use aura_os_agents::AgentService;
+use aura_os_core::JwtProvider;
 use aura_os_core::{
     Agent, AgentId, ArtifactType, Process, ProcessArtifact, ProcessArtifactId, ProcessEvent,
     ProcessEventId, ProcessEventStatus, ProcessId, ProcessNode, ProcessNodeConnection,
@@ -35,7 +36,6 @@ use aura_os_storage::{
     StorageClient, StorageError, StorageProcess, StorageProcessNode, StorageProcessNodeConnection,
     StorageProcessRun,
 };
-use aura_os_core::JwtProvider;
 use aura_os_tasks::TaskService;
 
 use crate::error::ProcessError;
