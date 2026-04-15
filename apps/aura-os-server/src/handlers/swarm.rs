@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use aura_os_core::HarnessMode;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
-use crate::handlers::agents::reprovision_remote_agent;
+use crate::handlers::agents::recover_remote_agent_pipeline;
 use crate::state::{AppState, AuthJwt};
 
 const VALID_LIFECYCLE_ACTIONS: &[&str] = &["hibernate", "stop", "restart", "wake", "start"];
@@ -24,9 +24,6 @@ pub(crate) struct RecoveryActionResponse {
     pub previous_vm_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vm_id: Option<String>,
-    pub vm_id_changed: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -196,27 +193,24 @@ pub(crate) async fn recover_remote_agent(
         return Err(ApiError::bad_request("agent is not a remote agent"));
     }
 
-    let reprovisioned = reprovision_remote_agent(&state, network, &jwt, &net_agent).await?;
+    let recovered = recover_remote_agent_pipeline(&state, network, &jwt, &net_agent).await?;
 
     let _ = state.event_broadcast.send(serde_json::json!({
         "type": "remote_agent_state_changed",
         "agent_id": agent_id,
-        "state": reprovisioned.status,
+        "state": recovered.status,
         "uptime_seconds": 0,
         "active_sessions": 0,
-        "error_message": reprovisioned.message,
         "action": "recover",
-        "vm_id": reprovisioned.agent.vm_id,
-        "previous_vm_id": reprovisioned.previous_vm_id,
-        "vm_id_changed": reprovisioned.vm_id_changed,
+        "phase": "ready",
+        "vm_id": recovered.agent.vm_id,
+        "previous_vm_id": recovered.previous_vm_id,
     }));
 
     Ok(Json(RecoveryActionResponse {
         agent_id,
-        status: reprovisioned.status,
-        previous_vm_id: reprovisioned.previous_vm_id,
-        vm_id: reprovisioned.agent.vm_id.clone(),
-        vm_id_changed: reprovisioned.vm_id_changed,
-        message: reprovisioned.message,
+        status: recovered.status,
+        previous_vm_id: recovered.previous_vm_id,
+        vm_id: recovered.agent.vm_id.clone(),
     }))
 }

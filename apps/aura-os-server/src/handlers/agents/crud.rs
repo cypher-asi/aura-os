@@ -136,11 +136,11 @@ pub(crate) struct ReprovisionedRemoteAgent {
     pub agent: Agent,
     pub status: String,
     pub previous_vm_id: Option<String>,
-    pub vm_id_changed: bool,
-    pub message: Option<String>,
 }
 
-pub(crate) async fn reprovision_remote_agent(
+/// Provision a brand-new Swarm machine for an agent (used by `create_agent`).
+/// Does NOT delete an existing machine first.
+pub(crate) async fn provision_remote_agent(
     state: &AppState,
     client: &NetworkClient,
     jwt: &str,
@@ -162,6 +162,150 @@ pub(crate) async fn reprovision_remote_agent(
     )
     .await?;
 
+    let agent = persist_vm_id(state, client, jwt, net_agent, &provisioned.vm_id).await?;
+
+    info!(
+        agent_id = %net_agent.id,
+        vm_id = %provisioned.vm_id,
+        "Swarm VM provisioned for new remote agent"
+    );
+
+    if !matches!(provisioned.status.as_str(), "running" | "idle") {
+        spawn_swarm_readiness_check(
+            client.http_client().clone(),
+            swarm_base_url.to_owned(),
+            jwt.to_string(),
+            provisioned.agent_id.clone(),
+            provisioned.vm_id.clone(),
+            net_agent.id.clone(),
+        );
+    }
+
+    Ok(ReprovisionedRemoteAgent {
+        agent,
+        status: provisioned.status,
+        previous_vm_id,
+    })
+}
+
+/// Recovery flow: delete the existing Swarm machine, provision a fresh one,
+/// and wait for it to become ready -- streaming progress via `event_broadcast`.
+pub(crate) async fn recover_remote_agent_pipeline(
+    state: &AppState,
+    client: &NetworkClient,
+    jwt: &str,
+    net_agent: &NetworkAgent,
+) -> ApiResult<ReprovisionedRemoteAgent> {
+    let previous_vm_id = net_agent.vm_id.clone();
+    let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {
+        ApiError::service_unavailable(
+            "swarm gateway is not configured (SWARM_BASE_URL); cannot create remote agent",
+        )
+    })?;
+
+    broadcast_recovery_phase(state, &net_agent.id, "deleting", None);
+
+    delete_swarm_agent(client.http_client(), swarm_base_url, jwt, &net_agent.id).await?;
+
+    broadcast_recovery_phase(state, &net_agent.id, "provisioning", None);
+
+    let provisioned = provision_swarm_agent(
+        client.http_client(),
+        swarm_base_url,
+        jwt,
+        &net_agent.id,
+        &net_agent.name,
+    )
+    .await?;
+
+    let agent = persist_vm_id(state, client, jwt, net_agent, &provisioned.vm_id).await?;
+
+    info!(
+        agent_id = %net_agent.id,
+        previous_vm_id = previous_vm_id.as_deref().unwrap_or("none"),
+        new_vm_id = %provisioned.vm_id,
+        "Swarm VM recovered for remote agent (delete + provision)"
+    );
+
+    if matches!(provisioned.status.as_str(), "running" | "idle") {
+        broadcast_recovery_phase(state, &net_agent.id, "ready", None);
+    } else {
+        broadcast_recovery_phase(state, &net_agent.id, "waiting_for_ready", None);
+
+        match wait_for_swarm_agent_ready_with_broadcast(
+            client.http_client(),
+            swarm_base_url,
+            jwt,
+            &provisioned.agent_id,
+            &net_agent.id,
+            &state.event_broadcast,
+        )
+        .await
+        {
+            Ok(()) => {
+                broadcast_recovery_phase(state, &net_agent.id, "ready", None);
+            }
+            Err(SwarmAgentReadyError::Timeout) => {
+                broadcast_recovery_phase(
+                    state,
+                    &net_agent.id,
+                    "error",
+                    Some("Machine is still starting up -- timed out waiting"),
+                );
+                return Err(ApiError::bad_gateway(
+                    "new machine provisioned but timed out waiting for ready state",
+                ));
+            }
+            Err(SwarmAgentReadyError::ErrorState) => {
+                broadcast_recovery_phase(
+                    state,
+                    &net_agent.id,
+                    "error",
+                    Some("New machine entered error state after provisioning"),
+                );
+                return Err(ApiError::bad_gateway(
+                    "new machine entered error state after provisioning",
+                ));
+            }
+            Err(SwarmAgentReadyError::Transport(msg)) => {
+                broadcast_recovery_phase(
+                    state,
+                    &net_agent.id,
+                    "error",
+                    Some(&format!("Lost contact with swarm gateway: {msg}")),
+                );
+                return Err(ApiError::bad_gateway(format!(
+                    "readiness check transport error: {msg}"
+                )));
+            }
+            Err(SwarmAgentReadyError::Parse(msg)) => {
+                broadcast_recovery_phase(
+                    state,
+                    &net_agent.id,
+                    "error",
+                    Some(&format!("Unexpected gateway response: {msg}")),
+                );
+                return Err(ApiError::bad_gateway(format!(
+                    "readiness check parse error: {msg}"
+                )));
+            }
+        }
+    }
+
+    Ok(ReprovisionedRemoteAgent {
+        agent,
+        status: "running".to_string(),
+        previous_vm_id,
+    })
+}
+
+async fn persist_vm_id(
+    state: &AppState,
+    client: &NetworkClient,
+    jwt: &str,
+    net_agent: &NetworkAgent,
+    vm_id: &str,
+) -> ApiResult<Agent> {
     let update_req = aura_os_network::UpdateAgentRequest {
         name: None,
         role: None,
@@ -171,7 +315,7 @@ pub(crate) async fn reprovision_remote_agent(
         icon: None,
         harness: None,
         machine_type: None,
-        vm_id: Some(provisioned.vm_id.clone()),
+        vm_id: Some(vm_id.to_string()),
     };
 
     let updated_net_agent = client
@@ -194,42 +338,53 @@ pub(crate) async fn reprovision_remote_agent(
         .apply_runtime_config(&mut agent)
         .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
     let _ = state.agent_service.save_agent_shadow(&agent);
+    Ok(agent)
+}
 
-    let vm_id_changed = previous_vm_id.as_deref() != agent.vm_id.as_deref();
-    let message = if !vm_id_changed {
-        Some(
-            "Swarm accepted the recovery request but kept the same machine mapping.".to_string(),
-        )
-    } else {
-        None
-    };
+async fn delete_swarm_agent(
+    http: &reqwest::Client,
+    swarm_base_url: &str,
+    jwt: &str,
+    agent_id: &str,
+) -> ApiResult<()> {
+    let url = format!("{}/v1/agents/{}", swarm_base_url, agent_id);
 
-    info!(
-        agent_id = %net_agent.id,
-        previous_vm_id = previous_vm_id.as_deref().unwrap_or("none"),
-        vm_id = %provisioned.vm_id,
-        vm_id_changed,
-        "Swarm VM provisioned for remote agent"
-    );
+    let resp = http
+        .delete(&url)
+        .header("Authorization", format!("Bearer {jwt}"))
+        .send()
+        .await
+        .map_err(|e| {
+            ApiError::bad_gateway(format!(
+                "swarm gateway unreachable during machine deletion: {e}"
+            ))
+        })?;
 
-    if !matches!(provisioned.status.as_str(), "running" | "idle") {
-        spawn_swarm_readiness_check(
-            client.http_client().clone(),
-            swarm_base_url.to_owned(),
-            jwt.to_string(),
-            provisioned.agent_id.clone(),
-            provisioned.vm_id.clone(),
-            net_agent.id.clone(),
-        );
+    if resp.status().is_success() || resp.status().as_u16() == 404 {
+        return Ok(());
     }
 
-    Ok(ReprovisionedRemoteAgent {
-        agent,
-        status: provisioned.status,
-        previous_vm_id,
-        vm_id_changed,
-        message,
+    let status = resp.status().as_u16();
+    let body = resp.text().await.unwrap_or_default();
+    Err(match status {
+        401 => ApiError::unauthorized("swarm gateway rejected auth token"),
+        _ => ApiError::bad_gateway(format!(
+            "swarm gateway returned {status} during machine deletion: {body}"
+        )),
     })
+}
+
+fn broadcast_recovery_phase(state: &AppState, agent_id: &str, phase: &str, error: Option<&str>) {
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "remote_agent_state_changed",
+        "agent_id": agent_id,
+        "state": if phase == "ready" { "running" } else if phase == "error" { "error" } else { "provisioning" },
+        "action": "recover",
+        "phase": phase,
+        "error_message": error,
+        "uptime_seconds": 0,
+        "active_sessions": 0,
+    }));
 }
 
 pub(crate) async fn create_agent(
@@ -285,7 +440,7 @@ pub(crate) async fn create_agent(
         == HarnessMode::Swarm;
 
     if is_remote {
-        let reprovisioned = reprovision_remote_agent(&state, client, &jwt, &net_agent).await?;
+        let reprovisioned = provision_remote_agent(&state, client, &jwt, &net_agent).await?;
         agent = reprovisioned.agent;
     }
 
@@ -486,6 +641,66 @@ async fn wait_for_swarm_agent_ready(
             }
             other => {
                 info!(agent_id = %agent_id, state = %other, "Waiting for remote agent provisioning");
+            }
+        }
+    }
+}
+
+/// Same as `wait_for_swarm_agent_ready` but broadcasts progress events so the
+/// frontend can show real-time recovery status over WebSocket.
+async fn wait_for_swarm_agent_ready_with_broadcast(
+    http: &reqwest::Client,
+    swarm_base_url: &str,
+    jwt: &str,
+    swarm_agent_id: &str,
+    aura_agent_id: &str,
+    broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+) -> Result<(), SwarmAgentReadyError> {
+    let url = format!("{}/v1/agents/{swarm_agent_id}/state", swarm_base_url);
+    let deadline = tokio::time::Instant::now() + SWARM_AGENT_READY_TIMEOUT;
+
+    loop {
+        tokio::time::sleep(SWARM_AGENT_READY_POLL_INTERVAL).await;
+
+        if tokio::time::Instant::now() >= deadline {
+            return Err(SwarmAgentReadyError::Timeout);
+        }
+
+        let resp = http
+            .get(&url)
+            .header("Authorization", format!("Bearer {jwt}"))
+            .send()
+            .await
+            .map_err(|e| SwarmAgentReadyError::Transport(e.to_string()))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            warn!(swarm_agent_id = %swarm_agent_id, status, body, "Swarm agent state check returned non-success");
+            continue;
+        }
+
+        let state = resp
+            .json::<SwarmAgentStateResponse>()
+            .await
+            .map_err(|e| SwarmAgentReadyError::Parse(e.to_string()))?;
+
+        match state.state.as_str() {
+            "running" | "idle" => return Ok(()),
+            "error" => {
+                return Err(SwarmAgentReadyError::ErrorState);
+            }
+            other => {
+                info!(swarm_agent_id = %swarm_agent_id, state = %other, "Waiting for recovered agent readiness");
+                let _ = broadcast.send(serde_json::json!({
+                    "type": "remote_agent_state_changed",
+                    "agent_id": aura_agent_id,
+                    "state": "provisioning",
+                    "action": "recover",
+                    "phase": "waiting_for_ready",
+                    "uptime_seconds": 0,
+                    "active_sessions": 0,
+                }));
             }
         }
     }

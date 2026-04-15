@@ -27,6 +27,13 @@ vi.mock("../../hooks/use-avatar-state", () => ({
   useAvatarState: () => ({ isLocal: false, status: "idle" }),
 }))
 
+const subscribeMock = vi.fn(() => vi.fn())
+
+vi.mock("../../stores/event-store/index", () => ({
+  useEventStore: (selector: (s: { subscribe: typeof subscribeMock }) => unknown) =>
+    selector({ subscribe: subscribeMock }),
+}))
+
 describe("AgentEnvironment", () => {
   beforeEach(() => {
     vi.useRealTimers()
@@ -41,10 +48,9 @@ describe("AgentEnvironment", () => {
     swarmApiMocks.remoteAgentAction.mockResolvedValue({ agent_id: "a1", status: "stopped" })
     swarmApiMocks.recoverRemoteAgent.mockResolvedValue({
       agent_id: "a1",
-      status: "provisioning",
+      status: "running",
       previous_vm_id: "old-vm",
       vm_id: "vm-2",
-      vm_id_changed: true,
     })
   })
 
@@ -73,62 +79,14 @@ describe("AgentEnvironment", () => {
       expect(swarmApiMocks.recoverRemoteAgent).toHaveBeenCalledWith("a1")
     })
     expect(swarmApiMocks.remoteAgentAction).not.toHaveBeenCalled()
-    expect((await screen.findAllByText("Recovery requested. Starting up...")).length).toBeGreaterThan(0)
   })
 
-  it("shows an explicit message when follow-up refresh returns error again", async () => {
-    swarmApiMocks.getRemoteAgentState
-      .mockResolvedValueOnce({
-        state: "error",
-        uptime_seconds: 0,
-        active_sessions: 0,
-        error_message: "Machine failed",
-        agent_id: "a1",
-      })
-      .mockResolvedValueOnce({
-        state: "error",
-        uptime_seconds: 0,
-        active_sessions: 0,
-        error_message: "Machine failed",
-        agent_id: "a1",
-      })
-
-    const originalSetTimeout = window.setTimeout
-    vi.spyOn(window, "setTimeout").mockImplementation((callback: TimerHandler, delay?: number) => {
-      if (delay === 2_000 && typeof callback === "function") {
-        callback()
-        return 0 as unknown as number
-      }
-      return originalSetTimeout(callback, delay)
-    })
-
-    const user = userEvent.setup()
-
-    render(<AgentEnvironment machineType="remote" agentId="a1" />)
-
-    await waitFor(() => {
-      expect(swarmApiMocks.getRemoteAgentState).toHaveBeenCalledWith("a1")
-    })
-
-    await user.click(screen.getByRole("button", { name: "Remote" }))
-    await user.click(await screen.findByRole("button", { name: "Manage" }))
-    await user.click(await screen.findByRole("button", { name: "Recovery" }))
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Recovery request succeeded, but the machine returned Error: Machine failed"),
-      ).toBeInTheDocument()
-    })
-  })
-
-  it("shows a warning when recovery keeps the same machine mapping", async () => {
+  it("shows success when recovery returns running status", async () => {
     swarmApiMocks.recoverRemoteAgent.mockResolvedValueOnce({
       agent_id: "a1",
-      status: "provisioning",
-      previous_vm_id: "same-vm",
-      vm_id: "same-vm",
-      vm_id_changed: false,
-      message: "Swarm accepted the recovery request but kept the same machine mapping.",
+      status: "running",
+      previous_vm_id: "old-vm",
+      vm_id: "vm-new",
     })
 
     const user = userEvent.setup()
@@ -145,8 +103,43 @@ describe("AgentEnvironment", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Swarm accepted the recovery request but kept the same machine mapping."),
+        screen.getByText("Recovery completed. The machine is available again."),
       ).toBeInTheDocument()
+    })
+  })
+
+  it("shows error notice when recovery API call fails", async () => {
+    swarmApiMocks.recoverRemoteAgent.mockRejectedValueOnce(
+      new Error("new machine entered error state after provisioning"),
+    )
+
+    const user = userEvent.setup()
+
+    render(<AgentEnvironment machineType="remote" agentId="a1" />)
+
+    await waitFor(() => {
+      expect(swarmApiMocks.getRemoteAgentState).toHaveBeenCalledWith("a1")
+    })
+
+    await user.click(screen.getByRole("button", { name: "Remote" }))
+    await user.click(await screen.findByRole("button", { name: "Manage" }))
+    await user.click(await screen.findByRole("button", { name: "Recovery" }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("new machine entered error state after provisioning"),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("subscribes to WS events for real-time recovery updates", async () => {
+    render(<AgentEnvironment machineType="remote" agentId="a1" />)
+
+    await waitFor(() => {
+      expect(subscribeMock).toHaveBeenCalledWith(
+        "remote_agent_state_changed",
+        expect.any(Function),
+      )
     })
   })
 })

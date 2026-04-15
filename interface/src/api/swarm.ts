@@ -12,8 +12,6 @@ export interface RecoveryActionResult {
   status: string
   previous_vm_id?: string | null
   vm_id?: string | null
-  vm_id_changed?: boolean
-  message?: string | null
 }
 
 export type LifecycleAction = "hibernate" | "stop" | "restart" | "wake" | "start"

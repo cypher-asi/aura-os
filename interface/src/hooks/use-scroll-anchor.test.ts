@@ -366,6 +366,66 @@ describe("useScrollAnchor", () => {
     expect(result.current.isReady).toBe(true);
   });
 
+  it("does not reveal from the timeout while a layout signal is still present", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const opts = {
+      ...DEFAULT_OPTIONS,
+      layoutState: { signature: "tail-pass-1", coversTail: true },
+    };
+    const { result } = renderHook(() => useScrollAnchor(ref, NULL_SENTINEL, opts));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+    expect(result.current.isReady).toBe(false);
+
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it("waits until the sentinel is inside the viewport before revealing", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const sentinel = document.createElement("div");
+    let sentinelTop = 900;
+    vi.spyOn(sentinel, "getBoundingClientRect").mockImplementation(() => ({
+      x: 0,
+      y: sentinelTop,
+      width: 0,
+      height: 0,
+      top: sentinelTop,
+      right: 0,
+      bottom: sentinelTop,
+      left: 0,
+      toJSON: () => ({}),
+    }));
+    vi.spyOn(el, "getBoundingClientRect").mockImplementation(() => ({
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 400,
+      top: 0,
+      right: 300,
+      bottom: 400,
+      left: 0,
+      toJSON: () => ({}),
+    }));
+    const sentinelRef = { current: sentinel };
+    const opts = {
+      ...DEFAULT_OPTIONS,
+      layoutState: { signature: "tail-settled", coversTail: true },
+    };
+    const { result } = renderHook(() => useScrollAnchor(ref, sentinelRef, opts));
+
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(false);
+
+    sentinelTop = 200;
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+  });
+
   it("keeps pinned to bottom during settling for small upward deltas", () => {
     const { el, result } = renderSettled();
 

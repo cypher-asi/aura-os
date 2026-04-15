@@ -226,6 +226,10 @@ export type AuraEvent = AuraEventBase & (
       uptime_seconds: number;
       active_sessions: number;
       error_message?: string;
+      action?: string;
+      phase?: string;
+      vm_id?: string;
+      previous_vm_id?: string;
     } }
 
   // ── Spec generation ────────────────────────────────────────

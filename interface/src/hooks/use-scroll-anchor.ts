@@ -37,6 +37,16 @@ function isSentinelBelowViewport(
   return sRect.top > cRect.bottom - INPUT_OVERLAY_PX;
 }
 
+function isContainerAtBottom(
+  container: HTMLElement,
+  sentinel: HTMLElement | null,
+): boolean {
+  if (sentinel) {
+    return !isSentinelBelowViewport(sentinel, container);
+  }
+  return container.scrollHeight - container.scrollTop - container.clientHeight < BOTTOM_THRESHOLD_PX;
+}
+
 /**
  * Manages scroll behaviour for a chat message container backed by a
  * virtualised list with dynamic row heights. Uses a sentinel element
@@ -140,7 +150,7 @@ export function useScrollAnchor(
     let prevHeight = el.scrollHeight;
     let prevLayoutSignature = layoutStateRef.current?.signature ?? null;
     let stableFrames = 0;
-    let sawMeasuredLayout = false;
+    let sawMeasuredLayout = layoutStateRef.current !== null;
     let waitingFrames = 0;
     let raf = 0;
 
@@ -164,12 +174,14 @@ export function useScrollAnchor(
       }
 
       const layout = layoutStateRef.current;
+      const sentinel = sentinelRef.current;
       const h = el.scrollHeight;
       const layoutSignature = layout?.signature ?? null;
       const hasLayoutSignal = layout !== null;
       const layoutChanged = layoutSignature !== prevLayoutSignature;
       const coversTail = layout?.coversTail ?? false;
       const heightChanged = h !== prevHeight;
+      const anchoredAtBottom = isContainerAtBottom(el, sentinel);
 
       prevLayoutSignature = layoutSignature;
 
@@ -179,7 +191,7 @@ export function useScrollAnchor(
           stableFrames = 0;
           waitingFrames = 0;
           scrollSentinelToEnd();
-        } else if (!coversTail) {
+        } else if (!coversTail || !anchoredAtBottom) {
           stableFrames = 0;
           waitingFrames = 0;
           scrollSentinelToEnd();
@@ -195,11 +207,6 @@ export function useScrollAnchor(
           reveal();
           return;
         }
-        if (!sawMeasuredLayout && coversTail && waitingFrames >= MAX_WAIT_FRAMES) {
-          reveal();
-          return;
-        }
-
         raf = requestAnimationFrame(poll);
         return;
       }
@@ -209,6 +216,10 @@ export function useScrollAnchor(
         prevHeight = h;
         scrollSentinelToEnd();
         sawMeasuredLayout = true;
+      } else if (!anchoredAtBottom) {
+        stableFrames = 0;
+        waitingFrames = 0;
+        scrollSentinelToEnd();
       } else if (sawMeasuredLayout) {
         stableFrames++;
       } else {
@@ -231,8 +242,8 @@ export function useScrollAnchor(
     const timeout = setTimeout(function checkReveal() {
       if (isReadyRef.current) return;
       const layout = layoutStateRef.current;
-      const canRevealFromTimeout = layout === null || layout.coversTail;
-      if (contentReadyRef.current && canRevealFromTimeout) {
+      const canRevealFromTimeout = layout === null;
+      if (contentReadyRef.current && canRevealFromTimeout && isContainerAtBottom(el, sentinelRef.current)) {
         reveal();
       } else {
         setTimeout(checkReveal, 200);

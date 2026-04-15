@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useEnvironmentInfo } from "../../hooks/use-environment-info"
 import { useAvatarState } from "../../hooks/use-avatar-state"
+import { useEventStore } from "../../stores/event-store/index"
+import { EventType } from "../../types/aura-events"
 import { api } from "../../api/client"
 import type { RemoteVmState } from "../../types"
 import type { LifecycleAction } from "../../api/swarm"
@@ -33,6 +35,13 @@ interface RecoveryNotice {
   message: string
 }
 
+const PHASE_NOTICES: Record<string, RecoveryNotice> = {
+  deleting: { tone: "info", message: "Deleting old machine..." },
+  provisioning: { tone: "info", message: "Provisioning new machine..." },
+  waiting_for_ready: { tone: "info", message: "Waiting for machine to come online..." },
+  ready: { tone: "success", message: "Recovery completed. The machine is available again." },
+}
+
 function getActionsForState(state: string): ActionDef[] {
   switch (state) {
     case "running":
@@ -57,17 +66,15 @@ function getActionsForState(state: string): ActionDef[] {
 }
 
 const POLL_INTERVAL = 15_000
-const RECOVERY_FOLLOWUP_DELAY_MS = 2_000
-const RECOVERY_FOLLOWUP_ATTEMPTS = 3
 
 export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps) {
   const [open, setOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const recoveryRefreshTimeoutRef = useRef<number | null>(null)
   const { data } = useEnvironmentInfo()
   const isLocal = machineType === "local"
   const isRemote = machineType === "remote" && !!agentId
+  const subscribe = useEventStore((s) => s.subscribe)
 
   const [vmState, setVmState] = useState<RemoteVmState | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -76,13 +83,6 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
   const [recoveryNotice, setRecoveryNotice] = useState<RecoveryNotice | null>(null)
   const [showActions, setShowActions] = useState(false)
   const avatarState = useAvatarState(agentId)
-
-  const clearRecoveryTimeout = useCallback(() => {
-    if (recoveryRefreshTimeoutRef.current !== null) {
-      window.clearTimeout(recoveryRefreshTimeoutRef.current)
-      recoveryRefreshTimeoutRef.current = null
-    }
-  }, [])
 
   const refreshState = useCallback(async () => {
     if (!isRemote) return null
@@ -102,58 +102,53 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
     return () => clearInterval(interval)
   }, [isRemote, agentId, refreshState])
 
-  useEffect(() => () => clearRecoveryTimeout(), [clearRecoveryTimeout])
+  useEffect(() => {
+    if (!isRemote || !agentId) return
 
-  const scheduleRecoveryFollowup = useCallback((remainingChecks: number) => {
-    clearRecoveryTimeout()
-    recoveryRefreshTimeoutRef.current = window.setTimeout(async () => {
-      const nextState = await refreshState()
+    const unsubscribe = subscribe(EventType.RemoteAgentStateChanged, (event) => {
+      const c = event.content
+      if (c?.agent_id !== agentId) return
 
-      if (!nextState) {
-        setPendingRecovery(false)
-        setRecoveryNotice({
-          tone: "warning",
-          message: "Recovery was requested. Waiting for the latest machine status...",
-        })
+      if (c.action === "recover" && c.phase) {
+        if (c.phase === "error") {
+          setPendingRecovery(false)
+          setRecoveryNotice({
+            tone: "error",
+            message: c.error_message ?? "Recovery failed.",
+          })
+          return
+        }
+
+        if (c.phase === "ready") {
+          setPendingRecovery(false)
+          setRecoveryNotice(PHASE_NOTICES.ready)
+          refreshState()
+          return
+        }
+
+        const notice = PHASE_NOTICES[c.phase]
+        if (notice) {
+          setRecoveryNotice(notice)
+        }
         return
       }
 
-      if (nextState.state === "error") {
-        setPendingRecovery(false)
-        setRecoveryNotice({
-          tone: "error",
-          message: nextState.error_message
-            ? `Recovery request succeeded, but the machine returned Error: ${nextState.error_message}`
-            : "Recovery request succeeded, but the machine is still reporting Error.",
-        })
-        return
-      }
+      setVmState((prev) => ({
+        state: c.state,
+        uptime_seconds: c.uptime_seconds ?? prev?.uptime_seconds ?? 0,
+        active_sessions: c.active_sessions ?? prev?.active_sessions ?? 0,
+        error_message: c.error_message,
+        endpoint: prev?.endpoint,
+        runtime_version: prev?.runtime_version,
+        isolation: prev?.isolation,
+        cpu_millicores: prev?.cpu_millicores,
+        memory_mb: prev?.memory_mb,
+        agent_id: prev?.agent_id ?? agentId,
+      }))
+    })
 
-      if (nextState.state === "running" || nextState.state === "idle") {
-        setPendingRecovery(false)
-        setRecoveryNotice({
-          tone: "success",
-          message: "Recovery completed. The machine is available again.",
-        })
-        return
-      }
-
-      if (remainingChecks > 1) {
-        setRecoveryNotice({
-          tone: "info",
-          message: "Recovery is still provisioning. Waiting for the machine to come online...",
-        })
-        scheduleRecoveryFollowup(remainingChecks - 1)
-        return
-      }
-
-      setPendingRecovery(false)
-      setRecoveryNotice({
-        tone: "warning",
-        message: "Recovery is still provisioning. Check back in a few seconds.",
-      })
-    }, RECOVERY_FOLLOWUP_DELAY_MS)
-  }, [clearRecoveryTimeout, refreshState])
+    return unsubscribe
+  }, [isRemote, agentId, subscribe, refreshState])
 
   const handleAction = useCallback(
     async (action: LifecycleAction | "recover") => {
@@ -162,29 +157,12 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
       setActionError(null)
       try {
         if (action === "recover") {
-          setRecoveryNotice({ tone: "info", message: "Submitting recovery request..." })
-          const result = await api.swarm.recoverRemoteAgent(agentId)
-          if (result.vm_id_changed === false) {
-            setPendingRecovery(false)
-            setRecoveryNotice({
-              tone: "warning",
-              message:
-                result.message ??
-                "Swarm accepted the recovery request but kept the same machine mapping.",
-            })
-            await refreshState()
-            return
-          }
-
           setPendingRecovery(true)
-          setRecoveryNotice({
-            tone: "info",
-            message: "Recovery requested. Starting up...",
-          })
+          setRecoveryNotice({ tone: "info", message: "Submitting recovery request..." })
           setVmState((current) => ({
-            state: result.status || "provisioning",
-            uptime_seconds: current?.uptime_seconds ?? 0,
-            active_sessions: current?.active_sessions ?? 0,
+            state: "provisioning",
+            uptime_seconds: 0,
+            active_sessions: 0,
             endpoint: current?.endpoint,
             runtime_version: current?.runtime_version,
             isolation: current?.isolation,
@@ -193,6 +171,9 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
             agent_id: current?.agent_id ?? agentId,
             error_message: undefined,
           }))
+
+          const result = await api.swarm.recoverRemoteAgent(agentId)
+
           if (result.status === "running" || result.status === "idle") {
             setPendingRecovery(false)
             setRecoveryNotice({
@@ -200,10 +181,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
               message: "Recovery completed. The machine is available again.",
             })
             await refreshState()
-            return
           }
-
-          scheduleRecoveryFollowup(RECOVERY_FOLLOWUP_ATTEMPTS)
         } else {
           setRecoveryNotice(null)
           await api.swarm.remoteAgentAction(agentId, action)
@@ -220,7 +198,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
         setActionLoading(null)
       }
     },
-    [agentId, actionLoading, pendingRecovery, refreshState, scheduleRecoveryFollowup],
+    [agentId, actionLoading, pendingRecovery, refreshState],
   )
 
   const handleMouseEnter = useCallback(() => {

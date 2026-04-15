@@ -146,15 +146,51 @@ async fn start_mock_network_get_with_update(
 }
 
 /// Starts a mock swarm gateway on a random port. Returns the base URL.
+/// Handles POST /v1/agents (provision) and DELETE /v1/agents/:id (delete).
 async fn start_mock_swarm(status_code: StatusCode, body: Value) -> String {
-    let app = Router::new().route(
-        "/v1/agents",
-        post(move || {
-            let b = body.clone();
-            let sc = status_code;
-            async move { (sc, Json(b)) }
-        }),
-    );
+    let app = Router::new()
+        .route(
+            "/v1/agents",
+            post(move || {
+                let b = body.clone();
+                let sc = status_code;
+                async move { (sc, Json(b)) }
+            }),
+        )
+        .route(
+            "/v1/agents/:agent_id",
+            axum::routing::delete(|Path(_id): Path<String>| async {
+                StatusCode::OK
+            }),
+        );
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+    format!("http://{}", addr)
+}
+
+/// Starts a mock swarm where DELETE returns one status and POST returns another.
+async fn start_mock_swarm_with_delete(
+    delete_status: StatusCode,
+    provision_status: StatusCode,
+    provision_body: Value,
+) -> String {
+    let app = Router::new()
+        .route(
+            "/v1/agents",
+            post(move || {
+                let b = provision_body.clone();
+                let sc = provision_status;
+                async move { (sc, Json(b)) }
+            }),
+        )
+        .route(
+            "/v1/agents/:agent_id",
+            axum::routing::delete(move |Path(_id): Path<String>| {
+                let sc = delete_status;
+                async move { sc }
+            }),
+        );
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move { axum::serve(listener, app).await.ok() });
@@ -326,7 +362,7 @@ async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
 }
 
 #[tokio::test]
-async fn recover_remote_agent_reprovisions_swarm_and_sets_vm_id() {
+async fn recover_remote_agent_deletes_and_reprovisions() {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
@@ -345,7 +381,7 @@ async fn recover_remote_agent_reprovisions_swarm_and_sets_vm_id() {
         StatusCode::OK,
         serde_json::json!({
             "agent_id": AGENT_UUID,
-            "status": "provisioning",
+            "status": "running",
             "pod_id": "pod-recovered-123"
         }),
     )
@@ -367,11 +403,9 @@ async fn recover_remote_agent_reprovisions_swarm_and_sets_vm_id() {
     assert_eq!(resp.status(), StatusCode::OK);
 
     let body = response_json(resp).await;
-    assert_eq!(body["status"], "provisioning");
+    assert_eq!(body["status"], "running");
     assert_eq!(body["previous_vm_id"], "old-vm");
     assert_eq!(body["vm_id"], "pod-recovered-123");
-    assert_eq!(body["vm_id_changed"], true);
-    assert!(body.get("message").is_none(), "message should be omitted when vm_id changes");
 
     let captured = update_capture.lock().await;
     let update_body = captured
@@ -384,7 +418,7 @@ async fn recover_remote_agent_reprovisions_swarm_and_sets_vm_id() {
 }
 
 #[tokio::test]
-async fn recover_remote_agent_reports_when_vm_mapping_does_not_change() {
+async fn recover_remote_agent_fails_when_delete_returns_error() {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
@@ -393,17 +427,69 @@ async fn recover_remote_agent_reports_when_vm_mapping_does_not_change() {
         Arc::new(tokio::sync::Mutex::new(None));
 
     let network_url = start_mock_network_get_with_update(
-        network_agent_json("remote", Some(AGENT_UUID)),
-        AGENT_UUID.to_string(),
+        network_agent_json("remote", Some("old-vm")),
+        "unused".to_string(),
         update_capture.clone(),
     )
     .await;
 
-    let swarm_url = start_mock_swarm(
+    let swarm_url = start_mock_swarm_with_delete(
+        StatusCode::INTERNAL_SERVER_ERROR,
         StatusCode::OK,
         serde_json::json!({
             "agent_id": AGENT_UUID,
-            "status": "provisioning"
+            "status": "running",
+            "pod_id": "pod-new"
+        }),
+    )
+    .await;
+
+    let app = build_app_with_swarm(
+        store,
+        db_dir.path().to_path_buf(),
+        &network_url,
+        Some(swarm_url),
+    );
+
+    let req = json_request(
+        "POST",
+        &format!("/api/agents/{AGENT_UUID}/remote_agent/recover"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
+
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "bad_gateway");
+    assert!(
+        update_capture.lock().await.is_none(),
+        "network update should not run when delete fails"
+    );
+}
+
+#[tokio::test]
+async fn recover_remote_agent_succeeds_when_delete_returns_404() {
+    let db_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    store_zero_auth_session(&store);
+
+    let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
+        Arc::new(tokio::sync::Mutex::new(None));
+
+    let network_url = start_mock_network_get_with_update(
+        network_agent_json("remote", Some("old-vm")),
+        "pod-new-123".to_string(),
+        update_capture.clone(),
+    )
+    .await;
+
+    let swarm_url = start_mock_swarm_with_delete(
+        StatusCode::NOT_FOUND,
+        StatusCode::OK,
+        serde_json::json!({
+            "agent_id": AGENT_UUID,
+            "status": "running",
+            "pod_id": "pod-new-123"
         }),
     )
     .await;
@@ -424,20 +510,12 @@ async fn recover_remote_agent_reports_when_vm_mapping_does_not_change() {
     assert_eq!(resp.status(), StatusCode::OK);
 
     let body = response_json(resp).await;
-    assert_eq!(body["status"], "provisioning");
-    assert_eq!(body["previous_vm_id"], AGENT_UUID);
-    assert_eq!(body["vm_id"], AGENT_UUID);
-    assert_eq!(body["vm_id_changed"], false);
-    assert_eq!(
-        body["message"],
-        "Swarm accepted the recovery request but kept the same machine mapping."
+    assert_eq!(body["status"], "running");
+    assert_eq!(body["vm_id"], "pod-new-123");
+    assert!(
+        update_capture.lock().await.is_some(),
+        "network update should have been called"
     );
-
-    let captured = update_capture.lock().await;
-    let update_body = captured
-        .as_ref()
-        .expect("network update should still have been called");
-    assert_eq!(update_body["vmId"], AGENT_UUID);
 }
 
 // ===========================================================================
@@ -519,7 +597,7 @@ async fn recover_remote_agent_rejects_local_agents() {
 }
 
 #[tokio::test]
-async fn recover_remote_agent_surfaces_swarm_errors() {
+async fn recover_remote_agent_surfaces_provision_errors_after_delete() {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
@@ -534,7 +612,8 @@ async fn recover_remote_agent_surfaces_swarm_errors() {
     )
     .await;
 
-    let swarm_url = start_mock_swarm(
+    let swarm_url = start_mock_swarm_with_delete(
+        StatusCode::OK,
         StatusCode::INTERNAL_SERVER_ERROR,
         serde_json::json!({"error": "internal"}),
     )
@@ -559,7 +638,7 @@ async fn recover_remote_agent_surfaces_swarm_errors() {
     assert_eq!(body["code"], "bad_gateway");
     assert!(
         update_capture.lock().await.is_none(),
-        "network update should not run on failure"
+        "network update should not run when provisioning fails"
     );
 }
 
