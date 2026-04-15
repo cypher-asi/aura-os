@@ -86,7 +86,31 @@ export function ChatPanel({
   onNewSession,
 }: ChatPanelProps) {
   const showLoadingState = isLoading;
-  const s = useChatPanelState({
+  const {
+    input,
+    setInput,
+    attachments,
+    setAttachments,
+    commands,
+    setCommands,
+    messageAreaRef,
+    scrollSentinelRef,
+    inputBarRef,
+    isMobileLayout,
+    handleScroll,
+    isAutoFollowing,
+    queue,
+    messages,
+    tailLayoutReady,
+    tailLayoutRevision,
+    scrollToBottom,
+    handleTailLayoutChange,
+    handleRemoveAttachment,
+    handleSend,
+    handleQueueEdit,
+    handleQueueMoveUp,
+    handleQueueRemove,
+  } = useChatPanelState({
     streamKey,
     onSend,
     adapterType,
@@ -97,17 +121,19 @@ export function ChatPanel({
   });
   const { isReady: chromeReady } = useChatViewportPhase({
     contentReady: historyResolved,
-    hasMessages: s.messages.length > 0,
-    tailLayoutReady: s.tailLayoutReady,
-    layoutRevision: s.tailLayoutRevision,
+    hasMessages: messages.length > 0,
+    tailLayoutReady,
+    layoutRevision: tailLayoutRevision,
     resetKey: scrollResetKey,
-    scrollToBottom: s.scrollToBottom,
-    containerRef: s.messageAreaRef,
-    sentinelRef: s.scrollSentinelRef,
+    scrollToBottom,
+    containerRef: messageAreaRef,
+    sentinelRef: scrollSentinelRef,
   });
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
-  const hideMessageContent = s.messages.length > 0 && !chromeReady;
+  const showSettlingState = messages.length > 0 && !chromeReady;
+  const showLoadingPlaceholder =
+    !errorMessage && messages.length === 0 && (showLoadingState || !historyResolved);
 
   useEffect(() => {
     initialHandoffReadyRef.current = false;
@@ -115,12 +141,12 @@ export function ChatPanel({
   }, [initialHandoff, scrollResetKey]);
 
   useEffect(() => {
-    if (s.isMobileLayout || !chromeReady || inputFocusReadyRef.current) {
+    if (isMobileLayout || !chromeReady || inputFocusReadyRef.current) {
       return;
     }
     inputFocusReadyRef.current = true;
-    requestAnimationFrame(() => s.inputBarRef.current?.focus());
-  }, [chromeReady, s.inputBarRef, s.isMobileLayout]);
+    requestAnimationFrame(() => inputBarRef.current?.focus());
+  }, [chromeReady, inputBarRef, isMobileLayout]);
 
   useEffect(() => {
     if (!initialHandoff || !chromeReady || initialHandoffReadyRef.current) {
@@ -135,7 +161,12 @@ export function ChatPanel({
       <AlertCircle size={40} />
       <Text variant="muted" size="sm">{errorMessage}</Text>
     </div>
-  ) : showLoadingState ? null : historyResolved ? (
+  ) : showLoadingPlaceholder ? (
+    <div className={styles.emptyState}>
+      <MessageSquare size={40} />
+      <Text variant="muted" size="sm">Loading conversation...</Text>
+    </div>
+  ) : historyResolved ? (
     <div className={styles.emptyState}>
       <MessageSquare size={40} />
       <Text variant="muted" size="sm">
@@ -146,7 +177,7 @@ export function ChatPanel({
 
   return (
     <div className={styles.container}>
-      {s.isMobileLayout && agentName ? (
+      {isMobileLayout && agentName ? (
         <div className={styles.projectAgentBar}>
           <div className={styles.projectAgentSummary}>
             {onMobileHeaderSummaryClick || mobileHeaderSummaryTo ? (
@@ -205,43 +236,43 @@ export function ChatPanel({
       <div className={styles.chatArea}>
         <div className={styles.messageAreaShell}>
           <div
-            className={`${styles.messageArea}${s.isAutoFollowing ? ` ${styles.messageAreaFollowing}` : ` ${styles.messageAreaReading}`}`}
-            ref={s.messageAreaRef}
-            onScroll={s.handleScroll}
+            className={`${styles.messageArea}${isAutoFollowing ? ` ${styles.messageAreaFollowing}` : ` ${styles.messageAreaReading}`}`}
+            ref={messageAreaRef}
+            onScroll={handleScroll}
           >
             <div
-              className={`${styles.messageContent}${hideMessageContent ? ` ${styles.messageContentSettling}` : ""}`}
-              aria-hidden={hideMessageContent}
+              className={`${styles.messageContent}${showSettlingState ? ` ${styles.messageContentSettling}` : ""}`}
+              aria-busy={showSettlingState}
             >
               <ChatMessageList
-                messages={s.messages}
+                messages={messages}
                 streamKey={streamKey}
-                scrollRef={s.messageAreaRef}
+                scrollRef={messageAreaRef}
                 emptyState={emptyState}
-                onTailLayoutChange={s.handleTailLayoutChange}
+                onTailLayoutChange={handleTailLayoutChange}
               />
-              <div ref={s.scrollSentinelRef} className={styles.scrollSentinel} />
+              <div ref={scrollSentinelRef} className={styles.scrollSentinel} />
             </div>
           </div>
-          <OverlayScrollbar scrollRef={s.messageAreaRef} />
+          <OverlayScrollbar scrollRef={messageAreaRef} />
         </div>
 
-        {s.queue.length > 0 && (
+        {queue.length > 0 && (
           <div className={styles.queueSection}>
             <MessageQueue
               streamKey={streamKey}
-              onEdit={s.handleQueueEdit}
-              onMoveUp={s.handleQueueMoveUp}
-              onRemove={s.handleQueueRemove}
+              onEdit={handleQueueEdit}
+              onMoveUp={handleQueueMoveUp}
+              onRemove={handleQueueRemove}
             />
           </div>
         )}
 
         <ChatInputBar
-          ref={s.inputBarRef}
-          input={s.input}
-          onInputChange={s.setInput}
-          onSend={s.handleSend}
+          ref={inputBarRef}
+          input={input}
+          onInputChange={setInput}
+          onSend={handleSend}
           onStop={onStop}
           streamKey={streamKey}
           adapterType={adapterType}
@@ -250,11 +281,11 @@ export function ChatPanel({
           machineType={machineType}
           templateAgentId={templateAgentId}
           agentId={agentId}
-          attachments={s.attachments}
-          onAttachmentsChange={s.setAttachments}
-          onRemoveAttachment={s.handleRemoveAttachment}
-          selectedCommands={s.commands}
-          onCommandsChange={s.setCommands}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
+          onRemoveAttachment={handleRemoveAttachment}
+          selectedCommands={commands}
+          onCommandsChange={setCommands}
           projects={projects}
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}

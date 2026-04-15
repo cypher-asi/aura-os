@@ -24,6 +24,37 @@ describe("useChatViewportPhase", () => {
       scrollHeight: { value: 1000, writable: true, configurable: true },
       scrollTop: { value: 600, writable: true, configurable: true },
       clientHeight: { value: 400, writable: true, configurable: true },
+      getBoundingClientRect: {
+        value: () => ({
+          top: 0,
+          bottom: 400,
+          left: 0,
+          right: 600,
+          width: 600,
+          height: 400,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }),
+      },
+    });
+    return el;
+  }
+
+  function makeSentinel(top: number) {
+    const el = document.createElement("div");
+    Object.defineProperty(el, "getBoundingClientRect", {
+      value: () => ({
+        top,
+        bottom: top,
+        left: 0,
+        right: 0,
+        width: 0,
+        height: 0,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      }),
     });
     return el;
   }
@@ -170,5 +201,29 @@ describe("useChatViewportPhase", () => {
 
     expect(result.current.isReady).toBe(true);
     expect(scrollToBottom).toHaveBeenCalledTimes(callCountAfterReveal);
+  });
+
+  it("fails open after repeated settle attempts when anchoring never stabilizes", () => {
+    const containerRef = { current: makeContainer() };
+    const sentinelRef = { current: makeSentinel(500) };
+    const scrollToBottom = vi.fn();
+
+    const { result } = renderHook(() => useChatViewportPhase({
+      contentReady: true,
+      hasMessages: true,
+      tailLayoutReady: true,
+      layoutRevision: 1,
+      resetKey: "chat-a",
+      scrollToBottom,
+      containerRef,
+      sentinelRef,
+    }));
+
+    expect(result.current.isReady).toBe(false);
+
+    act(() => flushRafs());
+
+    expect(result.current.isReady).toBe(true);
+    expect(scrollToBottom).toHaveBeenCalled();
   });
 });

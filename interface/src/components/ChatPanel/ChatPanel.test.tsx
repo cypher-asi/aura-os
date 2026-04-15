@@ -2,10 +2,13 @@ import { render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
+import type { DisplaySessionEvent } from "../../types/stream";
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseChatViewportPhase = vi.fn();
-const sampleHistoryMessages = [{ id: "msg-1", role: "user", content: "Hello" }] as const;
+const sampleHistoryMessages: DisplaySessionEvent[] = [
+  { id: "msg-1", role: "user", content: "Hello" },
+];
 
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
@@ -29,8 +32,18 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 }));
 
 vi.mock("../ChatMessageList", () => ({
-  ChatMessageList: ({ emptyState }: { emptyState?: React.ReactNode }) => (
-    <div data-testid="chat-message-list">{emptyState}</div>
+  ChatMessageList: ({
+    messages,
+    emptyState,
+  }: {
+    messages?: Array<{ id: string; content: string }>;
+    emptyState?: React.ReactNode;
+  }) => (
+    <div data-testid="chat-message-list">
+      {messages?.length
+        ? messages.map((message) => <div key={message.id}>{message.content}</div>)
+        : emptyState}
+    </div>
   ),
 }));
 
@@ -147,17 +160,16 @@ describe("ChatPanel", () => {
     expect(screen.queryByText("Remote agent chat")).not.toBeInTheDocument();
   });
 
-  it("keeps the shell visible while loading without showing a spinner", () => {
+  it("keeps the shell visible while showing a loading placeholder", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
     renderPanel({ isLoading: true, historyResolved: false });
 
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
-    expect(screen.queryByTestId("chat-loading-state")).not.toBeInTheDocument();
-    expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument();
+    expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
   });
 
-  it("does not show a second loading shell during a create-agent handoff", () => {
+  it("shows the same loading placeholder during a create-agent handoff", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
 
     renderPanel({
@@ -167,10 +179,10 @@ describe("ChatPanel", () => {
     });
 
     expect(screen.getByTestId("chat-input-bar")).toBeInTheDocument();
-    expect(screen.queryByTestId("chat-loading-state")).not.toBeInTheDocument();
+    expect(screen.getByText("Loading conversation...")).toBeInTheDocument();
   });
 
-  it("keeps the shell visible while hiding populated history until the scroll hook settles", () => {
+  it("keeps populated history visible while the scroll hook settles", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     mockUseChatViewportPhase.mockReturnValue({
       isReady: false,
@@ -178,13 +190,14 @@ describe("ChatPanel", () => {
 
     const { container } = renderPanel({
       historyResolved: true,
-      historyMessages: [...sampleHistoryMessages] as any,
+      historyMessages: [...sampleHistoryMessages],
     });
     const messageArea = container.querySelector(".messageArea");
     const messageContent = container.querySelector(".messageContent");
 
     expect(messageArea).not.toBeNull();
     expect(messageContent?.className).toContain("messageContentSettling");
+    expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(screen.getByTestId("chat-input-bar")).toHaveAttribute("data-visible", "true");
   });
 

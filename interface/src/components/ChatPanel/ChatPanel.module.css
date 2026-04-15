@@ -185,8 +185,9 @@
 }
 
 .messageContentSettling {
-  visibility: hidden;
+  opacity: 0.45;
   pointer-events: none;
+  transition: opacity 120ms ease-out;
 }
 
 .scrollSentinel {

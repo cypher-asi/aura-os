@@ -1,8 +1,10 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const PRE_REVEAL_SCROLL_FRAMES = 2;
+const MAX_SETTLE_SCROLL_FRAMES = 12;
 const BOTTOM_THRESHOLD_PX = 4;
 const INPUT_OVERLAY_PX = 140;
+const UNSET_READY_KEY = Symbol("unset-ready-key");
 
 function isSentinelBelowViewport(
   sentinel: HTMLElement,
@@ -49,35 +51,19 @@ export function useChatViewportPhase({
 }: UseChatViewportPhaseOptions): {
   isReady: boolean;
 } {
-  const [isReady, setIsReady] = useState(false);
-
-  useLayoutEffect(() => {
-    setIsReady(false);
-  }, [resetKey]);
+  const [readyKey, setReadyKey] = useState<unknown>(UNSET_READY_KEY);
+  const readyForCurrentKey = Object.is(readyKey, resetKey);
+  const isReady = hasMessages ? readyForCurrentKey : contentReady;
 
   useEffect(() => {
-    if (isReady) {
-      return;
-    }
-
-    if (!contentReady) {
-      setIsReady(false);
-      return;
-    }
-
-    if (!hasMessages) {
-      setIsReady(true);
-      return;
-    }
-
-    if (!tailLayoutReady) {
-      setIsReady(false);
+    if (readyForCurrentKey || !contentReady || !hasMessages || !tailLayoutReady) {
       return;
     }
 
     let cancelled = false;
     let raf = 0;
     let remainingWarmupFrames = PRE_REVEAL_SCROLL_FRAMES;
+    let settleAttempts = 0;
 
     const settle = () => {
       if (cancelled) {
@@ -87,13 +73,16 @@ export function useChatViewportPhase({
       scrollToBottom();
 
       const anchored = isAnchoredAtBottom(containerRef.current, sentinelRef.current);
-      if (remainingWarmupFrames > 0 || !anchored) {
+      const shouldContinueSettling =
+        remainingWarmupFrames > 0 || (!anchored && settleAttempts < MAX_SETTLE_SCROLL_FRAMES);
+      if (shouldContinueSettling) {
         remainingWarmupFrames = Math.max(0, remainingWarmupFrames - 1);
+        settleAttempts += 1;
         raf = requestAnimationFrame(settle);
         return;
       }
 
-      setIsReady(true);
+      setReadyKey(resetKey);
     };
 
     raf = requestAnimationFrame(settle);
@@ -108,8 +97,8 @@ export function useChatViewportPhase({
     containerRef,
     contentReady,
     hasMessages,
-    isReady,
     layoutRevision,
+    readyForCurrentKey,
     resetKey,
     scrollToBottom,
     sentinelRef,
