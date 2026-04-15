@@ -7,8 +7,8 @@ mod sessions;
 pub(crate) mod workspace_tools;
 
 pub(crate) use chat::{
-    list_agent_events, list_events, reset_agent_session, reset_instance_session,
-    send_agent_event_stream, send_event_stream,
+    list_agent_events, list_agent_events_paginated, list_events, reset_agent_session,
+    reset_instance_session, send_agent_event_stream, send_event_stream,
 };
 pub(crate) use crud::{
     create_agent, delete_agent, get_agent, list_agent_project_bindings, list_agents,

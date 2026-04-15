@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
+import { useScrollAnchorV2 } from "../../hooks/use-scroll-anchor-v2";
+import { useMessageHeightCache } from "../../hooks/use-message-height-cache";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
@@ -13,6 +14,8 @@ import type { GenerationMode } from "../../constants/models";
 import { availableModelsForAdapter } from "../../constants/models";
 import { useChatUI } from "../../stores/chat-ui-store";
 import { useConversationSnapshot } from "../../hooks/use-conversation-snapshot";
+import { useLoadOlderMessages } from "../../hooks/use-load-older-messages";
+import { useChatViewStore, useThreadView } from "../../stores/chat-view-store";
 
 export interface UseChatPanelStateOptions {
   streamKey: string;
@@ -30,6 +33,7 @@ export interface UseChatPanelStateOptions {
   scrollResetKey?: unknown;
   historyMessages?: DisplaySessionEvent[];
   selectedProjectId?: string;
+  agentId?: string;
 }
 
 export function useChatPanelState({
@@ -40,6 +44,7 @@ export function useChatPanelState({
   scrollResetKey,
   historyMessages,
   selectedProjectId,
+  agentId,
 }: UseChatPanelStateOptions) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -48,15 +53,13 @@ export function useChatPanelState({
   const chatUI = useChatUI(streamKey);
   const selectedModel = chatUI.selectedModel;
   const messageAreaRef = useRef<HTMLDivElement>(null);
-  const scrollSentinelRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { isMobileLayout } = useAuraCapabilities();
   const attachmentsRef = useRef(attachments);
   const { messages } = useConversationSnapshot(streamKey, historyMessages);
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
-  const [tailLayoutReady, setTailLayoutReady] = useState(messages.length === 0);
-  const [tailLayoutRevision, setTailLayoutRevision] = useState(0);
+  const heightCache = useMessageHeightCache();
 
   useEffect(() => {
     chatUI.init(streamKey, adapterType, defaultModel);
@@ -77,19 +80,45 @@ export function useChatPanelState({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  useEffect(() => {
-    setTailLayoutReady(messages.length === 0);
-    setTailLayoutRevision(0);
-  }, [messages.length === 0, scrollResetKey]);
-
   const {
     handleScroll,
     scrollToBottom,
     scrollToBottomIfPinned,
     isAutoFollowing,
-  } = useScrollAnchor(messageAreaRef, scrollSentinelRef, {
+    captureAnchor,
+    restoreAnchor,
+    onContentHeightChange,
+  } = useScrollAnchorV2(messageAreaRef, {
     resetKey: scrollResetKey,
   });
+
+  const { loadOlder, isLoadingOlder, hasOlderMessages } = useLoadOlderMessages({
+    threadKey: streamKey,
+    agentId,
+    captureAnchor,
+    restoreAnchor,
+  });
+
+  const threadView = useThreadView(streamKey);
+  const unreadCount = threadView.unreadCount;
+
+  const prevMessageCountRef = useRef(messages.length);
+  useEffect(() => {
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    if (messages.length > prevCount && !isAutoFollowing) {
+      const newCount = messages.length - prevCount;
+      for (let i = 0; i < newCount; i++) {
+        useChatViewStore.getState().incrementUnread(streamKey);
+      }
+    }
+  }, [messages.length, isAutoFollowing, streamKey]);
+
+  useEffect(() => {
+    if (isAutoFollowing) {
+      useChatViewStore.getState().resetUnread(streamKey);
+    }
+  }, [isAutoFollowing, streamKey]);
 
   useEffect(() => {
     chatUI.syncAvailableModels(streamKey, adapterType, defaultModel);
@@ -100,11 +129,6 @@ export function useChatPanelState({
     chatUI.syncAvailableModels,
     streamKey,
   ]);
-
-  const handleTailLayoutChange = useCallback((ready: boolean) => {
-    setTailLayoutReady(ready);
-    setTailLayoutRevision((prev) => prev + 1);
-  }, []);
 
   const handleRemoveAttachment = useCallback(
     (id: string) => setAttachments((prev) => prev.filter((a) => a.id !== id)),
@@ -247,7 +271,6 @@ export function useChatPanelState({
     commands,
     setCommands,
     messageAreaRef,
-    scrollSentinelRef,
     inputBarRef,
     isMobileLayout,
     handleScroll,
@@ -255,14 +278,19 @@ export function useChatPanelState({
     isStreaming,
     queue,
     messages,
-    tailLayoutReady,
-    tailLayoutRevision,
     scrollToBottom,
-    handleTailLayoutChange,
+    heightCache,
+    captureAnchor,
+    restoreAnchor,
+    onContentHeightChange,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,
     handleQueueMoveUp,
     handleQueueRemove,
+    loadOlder,
+    isLoadingOlder,
+    hasOlderMessages,
+    unreadCount,
   };
 }

@@ -6,6 +6,7 @@ import {
   chatHistoryQueryKeys,
   chatHistoryQueryOptions,
 } from "../queries/chat-history-queries";
+import { useMessageStore } from "./message-store";
 import type { SessionEvent } from "../types";
 import type { DisplaySessionEvent } from "../types/stream";
 
@@ -93,6 +94,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
             },
           },
         }));
+        useMessageStore.getState().setThread(key, data.events);
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : "Failed to fetch history";
@@ -124,6 +126,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       queryKey: chatHistoryQueryKeys.history(key),
       exact: true,
     });
+    useMessageStore.getState().clearThread(key);
     set((s) => {
       const entry = s.entries[key];
       if (!entry) return s;

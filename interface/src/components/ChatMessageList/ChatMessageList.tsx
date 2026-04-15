@@ -1,21 +1,24 @@
-import { type ReactNode, type RefObject, useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
 import type { DisplaySessionEvent } from "../../types/stream";
+import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 
 import { useStreamStore } from "../../hooks/stream/store";
 
 const MESSAGE_GAP = 12;
-const ESTIMATED_ROW_HEIGHT = 120;
 
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];
   streamKey: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyState?: ReactNode;
-  onTailLayoutChange?: (ready: boolean) => void;
+  heightCache: MessageHeightCache;
+  onLoadOlder?: () => void;
+  isLoadingOlder?: boolean;
+  hasOlderMessages?: boolean;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -30,7 +33,10 @@ export function ChatMessageList({
   streamKey,
   scrollRef,
   emptyState,
-  onTailLayoutChange,
+  heightCache,
+  onLoadOlder,
+  isLoadingOlder,
+  hasOlderMessages,
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -57,56 +63,61 @@ export function ChatMessageList({
     [messages],
   );
 
+  const estimateSize = useCallback(
+    (index: number) => {
+      const msg = messages[index];
+      if (!msg) return 120;
+      return heightCache.getHeight(msg.id) ?? heightCache.estimateHeight(msg);
+    },
+    [messages, heightCache],
+  );
+
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    estimateSize,
     getItemKey,
     overscan: 5,
     gap: MESSAGE_GAP,
   });
 
+  const measureElementRef = useRef(virtualizer.measureElement);
+  measureElementRef.current = virtualizer.measureElement;
+
+  const makeMeasureRef = useCallback(
+    (messageId: string) => (node: HTMLElement | null) => {
+      measureElementRef.current(node);
+      if (node) {
+        const h = node.getBoundingClientRect().height;
+        if (h > 0) heightCache.setHeight(messageId, h);
+      }
+    },
+    [heightCache],
+  );
+
+  const streamingBubbleRef = useRef<HTMLDivElement>(null);
+  const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
+  const prevStreamingRef = useRef(nowStreaming);
+
+  useEffect(() => {
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = nowStreaming;
+
+    if (wasStreaming && !nowStreaming && streamingBubbleRef.current) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg) {
+        const height = streamingBubbleRef.current.getBoundingClientRect().height;
+        if (height > 0) {
+          heightCache.setHeight(lastMsg.id, height);
+        }
+      }
+    }
+  }, [nowStreaming, messages, heightCache]);
+
   const hasMessages =
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const layoutReady = messages.length === 0 ? true : virtualItems.length > 0 || totalSize > 0;
-  const firstRenderedIndex = virtualItems[0]?.index ?? -1;
-  const lastRenderedIndex = virtualItems[virtualItems.length - 1]?.index ?? -1;
-  const prevTailLayoutKeyRef = useRef<string | null>(null);
-  const tailLayoutKey = useMemo(
-    () => [
-      layoutReady ? "ready" : "pending",
-      messages.length,
-      firstRenderedIndex,
-      lastRenderedIndex,
-      Math.round(totalSize),
-      activeToolCalls.length,
-      Boolean(streamingText),
-      Boolean(thinkingText),
-      isStreaming ? "streaming" : "idle",
-    ].join(":"),
-    [
-      activeToolCalls.length,
-      firstRenderedIndex,
-      isStreaming,
-      layoutReady,
-      lastRenderedIndex,
-      messages.length,
-      streamingText,
-      thinkingText,
-      totalSize,
-    ],
-  );
-
-  useLayoutEffect(() => {
-    const nextKey = hasMessages ? tailLayoutKey : "empty";
-    if (prevTailLayoutKeyRef.current === nextKey) {
-      return;
-    }
-    prevTailLayoutKeyRef.current = nextKey;
-    onTailLayoutChange?.(hasMessages ? layoutReady : true);
-  }, [hasMessages, layoutReady, onTailLayoutChange, tailLayoutKey]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;
@@ -114,35 +125,64 @@ export function ChatMessageList({
 
   return (
     <>
+      {hasOlderMessages && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
+          {isLoadingOlder ? (
+            <span style={{ color: "var(--color-text-muted)", fontSize: 13 }}>Loading...</span>
+          ) : (
+            <button
+              type="button"
+              onClick={onLoadOlder}
+              style={{
+                background: "none",
+                border: "1px solid var(--color-border)",
+                borderRadius: 6,
+                padding: "6px 16px",
+                color: "var(--color-text-secondary)",
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Load older messages
+            </button>
+          )}
+        </div>
+      )}
       <div style={{ position: "relative", height: totalSize, flexShrink: 0 }}>
-        {virtualItems.map((virtualRow) => (
-          <div
-            key={virtualRow.key}
-            data-index={virtualRow.index}
-            ref={virtualizer.measureElement}
-            style={{
-              display: "flex",
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              transform: `translateY(${virtualRow.start}px)`,
-            }}
-          >
-            <MessageBubble message={messages[virtualRow.index]} />
-          </div>
-        ))}
+        {virtualItems.map((virtualRow) => {
+          const msg = messages[virtualRow.index];
+          return (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              data-message-id={msg.id}
+              ref={makeMeasureRef(msg.id)}
+              style={{
+                display: "flex",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <MessageBubble message={msg} />
+            </div>
+          );
+        })}
       </div>
-      {(isStreaming || streamingText || thinkingText || activeToolCalls.length > 0) && (
-        <StreamingBubble
-          isStreaming={isStreaming}
-          text={streamingText}
-          toolCalls={activeToolCalls}
-          thinkingText={thinkingText}
-          thinkingDurationMs={thinkingDurationMs}
-          timeline={timeline}
-          progressText={progressText}
-        />
+      {nowStreaming && (
+        <div ref={streamingBubbleRef}>
+          <StreamingBubble
+            isStreaming={isStreaming}
+            text={streamingText}
+            toolCalls={activeToolCalls}
+            thinkingText={thinkingText}
+            thinkingDurationMs={thinkingDurationMs}
+            timeline={timeline}
+            progressText={progressText}
+          />
+        </div>
       )}
     </>
   );

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useStreamEvents } from "./stream/hooks";
+import { useMessageStore } from "../stores/message-store";
 import type { DisplaySessionEvent } from "../types/stream";
 
 function contentBlocksMatch(
@@ -45,32 +46,36 @@ function isPersistedVersionOfTempMessage(
   );
 }
 
-function combineHistoryAndStreamMessages(
-  historyMessages: DisplaySessionEvent[] | undefined,
+/**
+ * Merge stored (persisted) messages with ephemeral stream messages.
+ * Deduplicates by ID and filters temp messages that match a persisted version.
+ */
+function combineStoredAndStreamMessages(
+  storedMessages: DisplaySessionEvent[],
   streamMessages: DisplaySessionEvent[],
 ): DisplaySessionEvent[] {
-  if (!historyMessages || historyMessages.length === 0) {
+  if (storedMessages.length === 0) {
     return streamMessages;
   }
   if (streamMessages.length === 0) {
-    return historyMessages;
+    return storedMessages;
   }
 
-  const historyIds = new Set(historyMessages.map((message) => message.id));
-  const lastHistoryMessage = historyMessages[historyMessages.length - 1];
+  const storedIds = new Set(storedMessages.map((message) => message.id));
+  const lastStoredMessage = storedMessages[storedMessages.length - 1];
   const liveOnlyMessages = streamMessages.filter((message) => {
-    if (historyIds.has(message.id)) {
+    if (storedIds.has(message.id)) {
       return false;
     }
-    if (isPersistedVersionOfTempMessage(lastHistoryMessage, message)) {
+    if (isPersistedVersionOfTempMessage(lastStoredMessage, message)) {
       return false;
     }
     return true;
   });
   if (liveOnlyMessages.length === 0) {
-    return historyMessages;
+    return storedMessages;
   }
-  return [...historyMessages, ...liveOnlyMessages];
+  return [...storedMessages, ...liveOnlyMessages];
 }
 
 export function useConversationSnapshot(
@@ -79,11 +84,21 @@ export function useConversationSnapshot(
 ): {
   messages: DisplaySessionEvent[];
 } {
+  useEffect(() => {
+    if (historyMessages && historyMessages.length > 0) {
+      useMessageStore.getState().setThread(streamKey, historyMessages);
+    }
+  }, [streamKey, historyMessages]);
+
   const streamMessages = useStreamEvents(streamKey);
-  const messages = useMemo(
-    () => combineHistoryAndStreamMessages(historyMessages, streamMessages),
-    [historyMessages, streamMessages],
-  );
+
+  const messages = useMemo(() => {
+    const stored = useMessageStore.getState().getThreadMessages(streamKey);
+    if (stored.length > 0) {
+      return combineStoredAndStreamMessages(stored, streamMessages);
+    }
+    return combineStoredAndStreamMessages(historyMessages ?? [], streamMessages);
+  }, [streamKey, streamMessages, historyMessages]);
 
   return { messages };
 }

@@ -69,12 +69,14 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
                 <span key={i}>{block.text}</span>
               )
             ) : (
-              <img
-                key={i}
-                src={`data:${block.media_type};base64,${block.data}`}
-                alt=""
-                className={styles.messageImage}
-              />
+              <div key={i} className={styles.messageImageWrapper}>
+                <img
+                  src={`data:${block.media_type};base64,${block.data}`}
+                  alt=""
+                  className={styles.messageImage}
+                  loading="lazy"
+                />
+              </div>
             ),
           )}
         </div>

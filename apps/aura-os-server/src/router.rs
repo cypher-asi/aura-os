@@ -358,6 +358,10 @@ fn agent_routes() -> Router<AppState> {
             get(agents::list_agent_events),
         )
         .route(
+            "/api/agents/:agent_id/events/paginated",
+            get(agents::list_agent_events_paginated),
+        )
+        .route(
             "/api/agents/:agent_id/runtime/test",
             post(agents::test_agent_runtime),
         )

@@ -23,6 +23,12 @@ interface AgentEventsRequestOptions extends ApiRequestOptions {
   offset?: number;
 }
 
+export interface PaginatedEventsResponse {
+  events: SessionEvent[];
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
 export const agentTemplatesApi = {
   list: () => apiFetch<Agent[]>("/api/agents"),
   create: (data: {
@@ -75,6 +81,25 @@ export const agentTemplatesApi = {
     return apiFetch<SessionEvent[]>(`/api/agents/${agentId}/events${query}`, {
       signal: options?.signal,
     });
+  },
+  listEventsPaginated: (
+    agentId: AgentId,
+    options?: {
+      before?: string;
+      after?: string;
+      limit?: number;
+      signal?: AbortSignal;
+    },
+  ) => {
+    const params = new URLSearchParams();
+    if (options?.limit != null) params.set("limit", String(options.limit));
+    if (options?.before) params.set("before", options.before);
+    if (options?.after) params.set("after", options.after);
+    const query = params.size > 0 ? `?${params.toString()}` : "";
+    return apiFetch<PaginatedEventsResponse>(
+      `/api/agents/${agentId}/events/paginated${query}`,
+      { signal: options?.signal },
+    );
   },
   sendEventStream: sendAgentEventStream,
   resetSession: (agentId: AgentId) =>

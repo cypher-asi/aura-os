@@ -7,7 +7,6 @@ import { ChatInputBar } from "../ChatInputBar";
 import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { useChatPanelState } from "./useChatPanelState";
-import { useChatViewportPhase } from "./useChatViewportPhase";
 import type { ChatAttachment } from "../../api/streams";
 import type { Project } from "../../types";
 import type { GenerationMode } from "../../constants/models";
@@ -94,22 +93,23 @@ export function ChatPanel({
     commands,
     setCommands,
     messageAreaRef,
-    scrollSentinelRef,
     inputBarRef,
     isMobileLayout,
     handleScroll,
     isAutoFollowing,
     queue,
     messages,
-    tailLayoutReady,
-    tailLayoutRevision,
     scrollToBottom,
-    handleTailLayoutChange,
+    heightCache,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,
     handleQueueMoveUp,
     handleQueueRemove,
+    loadOlder,
+    isLoadingOlder,
+    hasOlderMessages,
+    unreadCount,
   } = useChatPanelState({
     streamKey,
     onSend,
@@ -118,22 +118,15 @@ export function ChatPanel({
     scrollResetKey,
     historyMessages,
     selectedProjectId,
+    agentId,
   });
-  const { isReady: chromeReady } = useChatViewportPhase({
-    contentReady: historyResolved,
-    hasMessages: messages.length > 0,
-    tailLayoutReady,
-    layoutRevision: tailLayoutRevision,
-    resetKey: scrollResetKey,
-    scrollToBottom,
-    containerRef: messageAreaRef,
-    sentinelRef: scrollSentinelRef,
-  });
+
   const initialHandoffReadyRef = useRef(false);
   const inputFocusReadyRef = useRef(false);
-  const showSettlingState = messages.length > 0 && !chromeReady;
   const showLoadingPlaceholder =
     !errorMessage && messages.length === 0 && (showLoadingState || !historyResolved);
+
+  const contentReady = historyResolved && !isLoading;
 
   useEffect(() => {
     initialHandoffReadyRef.current = false;
@@ -141,20 +134,20 @@ export function ChatPanel({
   }, [initialHandoff, scrollResetKey]);
 
   useEffect(() => {
-    if (isMobileLayout || !chromeReady || inputFocusReadyRef.current) {
+    if (isMobileLayout || !contentReady || inputFocusReadyRef.current) {
       return;
     }
     inputFocusReadyRef.current = true;
     requestAnimationFrame(() => inputBarRef.current?.focus());
-  }, [chromeReady, inputBarRef, isMobileLayout]);
+  }, [contentReady, inputBarRef, isMobileLayout]);
 
   useEffect(() => {
-    if (!initialHandoff || !chromeReady || initialHandoffReadyRef.current) {
+    if (!initialHandoff || !contentReady || initialHandoffReadyRef.current) {
       return;
     }
     initialHandoffReadyRef.current = true;
     onInitialHandoffReady?.();
-  }, [chromeReady, initialHandoff, onInitialHandoffReady]);
+  }, [contentReady, initialHandoff, onInitialHandoffReady]);
 
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
@@ -240,21 +233,29 @@ export function ChatPanel({
             ref={messageAreaRef}
             onScroll={handleScroll}
           >
-            <div
-              className={`${styles.messageContent}${showSettlingState ? ` ${styles.messageContentSettling}` : ""}`}
-              aria-busy={showSettlingState}
-            >
+            <div className={styles.messageContent}>
               <ChatMessageList
                 messages={messages}
                 streamKey={streamKey}
                 scrollRef={messageAreaRef}
                 emptyState={emptyState}
-                onTailLayoutChange={handleTailLayoutChange}
+                heightCache={heightCache}
+                onLoadOlder={loadOlder}
+                isLoadingOlder={isLoadingOlder}
+                hasOlderMessages={hasOlderMessages}
               />
-              <div ref={scrollSentinelRef} className={styles.scrollSentinel} />
             </div>
           </div>
           <OverlayScrollbar scrollRef={messageAreaRef} />
+          {!isAutoFollowing && unreadCount > 0 && (
+            <button
+              type="button"
+              className={styles.newMessagesPill}
+              onClick={scrollToBottom}
+            >
+              {unreadCount} new message{unreadCount !== 1 ? "s" : ""} ↓
+            </button>
+          )}
         </div>
 
         {queue.length > 0 && (

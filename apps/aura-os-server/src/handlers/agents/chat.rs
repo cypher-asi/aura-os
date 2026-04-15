@@ -9,7 +9,7 @@ use axum::Json;
 use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{error, info, warn};
 
 pub(crate) type SseStream =
@@ -832,6 +832,20 @@ pub(crate) struct AgentEventsQuery {
     pub offset: usize,
 }
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub(crate) struct PaginatedEventsQuery {
+    pub limit: Option<usize>,
+    pub before: Option<String>,
+    pub after: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct PaginatedEventsResponse {
+    pub events: Vec<SessionEvent>,
+    pub has_more: bool,
+    pub next_cursor: Option<String>,
+}
+
 fn normalize_agent_history_limit(limit: Option<usize>) -> Option<usize> {
     limit.map(|value| value.min(MAX_AGENT_HISTORY_WINDOW_LIMIT))
 }
@@ -1009,6 +1023,60 @@ pub(crate) async fn list_agent_events(
         query.limit,
         query.offset,
     )))
+}
+
+fn apply_cursor_filter(
+    messages: Vec<SessionEvent>,
+    before: Option<&str>,
+    after: Option<&str>,
+) -> Vec<SessionEvent> {
+    let mut result = messages;
+
+    if let Some(after_id) = after {
+        if let Some(pos) = result.iter().position(|m| m.event_id.to_string() == after_id) {
+            result = result[pos + 1..].to_vec();
+        }
+    }
+
+    if let Some(before_id) = before {
+        if let Some(pos) = result.iter().position(|m| m.event_id.to_string() == before_id) {
+            result = result[..pos].to_vec();
+        }
+    }
+
+    result
+}
+
+pub(crate) async fn list_agent_events_paginated(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(agent_id): Path<AgentId>,
+    Query(query): Query<PaginatedEventsQuery>,
+) -> ApiResult<Json<PaginatedEventsResponse>> {
+    let _ = state.require_storage_client()?;
+    let messages = aggregate_agent_events_from_storage_result(&state, &agent_id, &jwt)
+        .await
+        .map_err(map_storage_error)?;
+
+    let filtered = apply_cursor_filter(messages, query.before.as_deref(), query.after.as_deref());
+
+    let limit = normalize_agent_history_limit(query.limit).unwrap_or(50);
+
+    let has_more = filtered.len() > limit;
+    let start = filtered.len().saturating_sub(limit);
+    let result = filtered[start..].to_vec();
+
+    let next_cursor = if has_more {
+        result.first().map(|m| m.event_id.to_string())
+    } else {
+        None
+    };
+
+    Ok(Json(PaginatedEventsResponse {
+        events: result,
+        has_more,
+        next_cursor,
+    }))
 }
 
 pub(crate) async fn get_or_create_chat_session(
