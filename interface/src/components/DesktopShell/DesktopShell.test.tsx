@@ -384,8 +384,11 @@ describe("DesktopShell", () => {
     currentVisitedAppIds = new Set(["agents"]);
     const view = renderShell("/agents");
     const sidekickLane = screen.getByTestId("sidekick-lane");
+    const mainPanelHost = screen.getByTestId("main-panel").closest(".mainPanelHost");
 
     expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "agents");
+    expect(mainPanelHost).not.toBeNull();
+    expect(mainPanelHost).toHaveClass("mainPanelHostWithSidekick");
 
     currentActiveApp = mockProjectsApp;
     currentVisitedAppIds = new Set(["agents", "projects"]);
@@ -397,6 +400,8 @@ describe("DesktopShell", () => {
 
     expect(screen.getByTestId("sidekick-lane")).toBe(sidekickLane);
     expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "projects");
+    expect(screen.getByTestId("main-panel").closest(".mainPanelHost")).toBe(mainPanelHost);
+    expect(mainPanelHost).toHaveClass("mainPanelHostWithSidekick");
 
     currentActiveApp = mockAgentsApp;
     view.rerender(
@@ -407,6 +412,8 @@ describe("DesktopShell", () => {
 
     expect(screen.getByTestId("sidekick-lane")).toBe(sidekickLane);
     expect(screen.getByTestId("sidekick-panel")).toHaveAttribute("data-app", "agents");
+    expect(screen.getByTestId("main-panel").closest(".mainPanelHost")).toBe(mainPanelHost);
+    expect(mainPanelHost).toHaveClass("mainPanelHostWithSidekick");
   });
 
   it("keeps shared desktop left menu panes mounted across app switches", () => {

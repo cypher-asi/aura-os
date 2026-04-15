@@ -154,7 +154,6 @@ function PersistentSidekickLane({
           />
         ) : undefined
       }
-      className={styles.laneLeftBorder}
     >
       <div className={styles.sidekickPanels}>
         <div
@@ -353,7 +352,10 @@ export function DesktopShell() {
           </div>
 
           <ActiveProvider>
-            <div ref={mainPanelRef} className={styles.mainPanelHost}>
+            <div
+              ref={mainPanelRef}
+              className={`${styles.mainPanelHost}${!sidekickHostCollapsed ? ` ${styles.mainPanelHostWithSidekick}` : ""}`}
+            >
               <ErrorBoundary name="main">
                 <MainPanel>{routeContent}</MainPanel>
               </ErrorBoundary>
