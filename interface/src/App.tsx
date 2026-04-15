@@ -46,6 +46,10 @@ const ProjectStatsView = lazy(() => import("./views/ProjectStatsView").then((m) 
 
 const DEFAULT_APP_PATH = "/agents";
 
+function EmptyRoute() {
+  return null;
+}
+
 function LastAppRedirect() {
   const lastAppId = getLastApp();
   const targetPath = lastAppId ? LAST_APP_BASE_PATH[lastAppId] : undefined;
@@ -142,7 +146,7 @@ export default function App() {
 
               <Route path="feed" element={<ShellRoutePlaceholder title="Feed" />} />
               <Route path="profile" element={<ShellRoutePlaceholder title="Profile" />} />
-              <Route path="desktop" element={<ShellRoutePlaceholder title="Desktop" />} />
+              <Route path="desktop" element={<EmptyRoute />} />
             </Route>
           </Route>
         </Route>

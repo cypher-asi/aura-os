@@ -70,15 +70,13 @@ export function ChatMessageList({
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const coversTail = messages.length === 0
-    ? true
-    : (virtualItems[virtualItems.length - 1]?.index ?? -1) >= messages.length - 1;
+  const layoutReady = messages.length === 0 ? true : virtualItems.length > 0 || totalSize > 0;
   const firstRenderedIndex = virtualItems[0]?.index ?? -1;
   const lastRenderedIndex = virtualItems[virtualItems.length - 1]?.index ?? -1;
   const prevTailLayoutKeyRef = useRef<string | null>(null);
   const tailLayoutKey = useMemo(
     () => [
-      coversTail ? "tail" : "partial",
+      layoutReady ? "ready" : "pending",
       messages.length,
       firstRenderedIndex,
       lastRenderedIndex,
@@ -90,9 +88,9 @@ export function ChatMessageList({
     ].join(":"),
     [
       activeToolCalls.length,
-      coversTail,
       firstRenderedIndex,
       isStreaming,
+      layoutReady,
       lastRenderedIndex,
       messages.length,
       streamingText,
@@ -107,8 +105,8 @@ export function ChatMessageList({
       return;
     }
     prevTailLayoutKeyRef.current = nextKey;
-    onTailLayoutChange?.(hasMessages ? coversTail : true);
-  }, [coversTail, hasMessages, onTailLayoutChange, tailLayoutKey]);
+    onTailLayoutChange?.(hasMessages ? layoutReady : true);
+  }, [hasMessages, layoutReady, onTailLayoutChange, tailLayoutKey]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;

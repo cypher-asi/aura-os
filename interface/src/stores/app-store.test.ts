@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const { mockApps, mockSetTaskbarAppOrder } = vi.hoisted(() => ({
   mockApps: [
-    { id: "agents", basePath: "/agents", label: "Agents" },
-    { id: "projects", basePath: "/projects", label: "Projects" },
-    { id: "feed", basePath: "/feed", label: "Feed" },
+    { id: "agents", basePath: "/agents", label: "Agents", preload: vi.fn() },
+    { id: "projects", basePath: "/projects", label: "Projects", preload: vi.fn() },
+    { id: "feed", basePath: "/feed", label: "Feed", preload: vi.fn() },
   ],
   mockSetTaskbarAppOrder: vi.fn(),
 }));
@@ -19,6 +19,9 @@ import { getOrderedTaskbarApps, useAppStore, syncActiveApp } from "./app-store";
 
 beforeEach(() => {
   mockSetTaskbarAppOrder.mockReset();
+  for (const app of mockApps) {
+    app.preload.mockReset();
+  }
   useAppStore.setState({
     apps: mockApps,
     activeApp: mockApps[0],
@@ -41,6 +44,7 @@ describe("app-store", () => {
     it("switches activeApp when pathname matches a different app", () => {
       syncActiveApp("/projects/123");
       expect(useAppStore.getState().activeApp.id).toBe("projects");
+      expect(mockApps[1].preload).toHaveBeenCalledTimes(1);
     });
 
     it("does not re-set state when the app already matches", () => {
@@ -54,6 +58,7 @@ describe("app-store", () => {
       useAppStore.setState({ activeApp: mockApps[1] });
       syncActiveApp("/unknown-route");
       expect(useAppStore.getState().activeApp.id).toBe("agents");
+      expect(mockApps[0].preload).toHaveBeenCalledTimes(1);
     });
   });
 

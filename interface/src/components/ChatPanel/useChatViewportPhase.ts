@@ -56,6 +56,10 @@ export function useChatViewportPhase({
   }, [resetKey]);
 
   useEffect(() => {
+    if (isReady) {
+      return;
+    }
+
     if (!contentReady) {
       setIsReady(false);
       return;
@@ -104,6 +108,7 @@ export function useChatViewportPhase({
     containerRef,
     contentReady,
     hasMessages,
+    isReady,
     layoutRevision,
     scrollToBottom,
     sentinelRef,

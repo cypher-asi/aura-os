@@ -80,7 +80,7 @@ export function useChatPanelState({
   useEffect(() => {
     setTailLayoutReady(messages.length === 0);
     setTailLayoutRevision(0);
-  }, [messages.length, scrollResetKey]);
+  }, [messages.length === 0, scrollResetKey]);
 
   const {
     handleScroll,

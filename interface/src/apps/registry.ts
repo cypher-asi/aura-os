@@ -66,6 +66,9 @@ function createAppDefinition(
 
   return {
     ...metadata,
+    preload: () => {
+      void loadAppOnce();
+    },
     LeftPanel: wrapLazyAppComponent(loadAppOnce, (app) => app.LeftPanel),
     MainPanel: wrapLazyAppComponent(
       loadAppOnce,

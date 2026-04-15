@@ -131,4 +131,40 @@ describe("useChatViewportPhase", () => {
     act(() => flushRafs());
     expect(result.current.isReady).toBe(true);
   });
+
+  it("stays revealed after transient layout or history regressions", () => {
+    const containerRef = { current: makeContainer() };
+    const sentinelRef = { current: null };
+    const scrollToBottom = vi.fn(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 1000;
+      }
+    });
+
+    const { result, rerender } = renderHook(
+      (props: {
+        contentReady: boolean;
+        tailLayoutReady: boolean;
+        layoutRevision: number;
+      }) => useChatViewportPhase({
+        contentReady: props.contentReady,
+        hasMessages: true,
+        tailLayoutReady: props.tailLayoutReady,
+        layoutRevision: props.layoutRevision,
+        scrollToBottom,
+        containerRef,
+        sentinelRef,
+      }),
+      { initialProps: { contentReady: true, tailLayoutReady: true, layoutRevision: 1 } },
+    );
+
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+    const callCountAfterReveal = scrollToBottom.mock.calls.length;
+
+    rerender({ contentReady: false, tailLayoutReady: false, layoutRevision: 2 });
+
+    expect(result.current.isReady).toBe(true);
+    expect(scrollToBottom).toHaveBeenCalledTimes(callCountAfterReveal);
+  });
 });

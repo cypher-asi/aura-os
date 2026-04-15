@@ -19,6 +19,8 @@ export interface AuraApp {
   Provider?: ComponentType<{ children: ReactNode }>;
   /** Placeholder text shown in the sidebar search input when this app is active. */
   searchPlaceholder?: string;
+  /** Starts loading the app module without activating any optional prefetch side effects. */
+  preload?: () => void;
   /** Called on hover/focus of the nav rail item to warm caches before navigation. */
   onPrefetch?: () => void;
 }

@@ -14,7 +14,9 @@ interface AppState {
 function getInitialActiveApp(): AuraApp {
   if (typeof window === "undefined") return registeredApps[0];
   const pathname = window.location.pathname;
-  return registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
+  const initialApp = registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
+  initialApp.preload?.();
+  return initialApp;
 }
 
 function isPinnedTaskbarApp(app: AuraApp): boolean {
@@ -81,6 +83,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
  */
 export function syncActiveApp(pathname: string): void {
   const match = registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
+  match.preload?.();
   const current = useAppStore.getState().activeApp;
   if (current.id !== match.id) {
     useAppStore.setState({ activeApp: match });
