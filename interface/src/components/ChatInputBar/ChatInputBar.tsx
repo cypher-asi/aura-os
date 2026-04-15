@@ -287,7 +287,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
                 type="button"
                 className={styles.newSessionButton}
                 onClick={onNewSession}
-                title="Start new session (reset context)"
+                title="Start a new session and reset context."
                 aria-label="Start new session"
               >
                 <RotateCcw size={10} />
@@ -301,7 +301,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
               type="button"
               className={styles.newSessionButton}
               onClick={onNewSession}
-              title="Start new session (reset context)"
+              title="Start a new session and reset context."
               aria-label="Start new session"
             >
               <RotateCcw size={10} />
