@@ -139,6 +139,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
 
     const session = {
       user_id: "user-1",
+      network_user_id: "user-1",
+      profile_id: "profile-1",
       display_name: "Test User",
       profile_image: "",
       primary_zid: "0://test-user",

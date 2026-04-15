@@ -35,7 +35,9 @@ test("team settings integrations show clear sections and labeled fields", async 
 
   await page.goto("/projects");
   await page.getByRole("button", { name: "Switch team" }).click();
-  await page.getByRole("button", { name: "Team Settings" }).click();
+  const teamSwitcher = page.locator("body > div").last();
+  await expect(teamSwitcher.getByRole("button", { name: "Team Settings" })).toBeVisible();
+  await teamSwitcher.getByRole("button", { name: "Team Settings" }).click();
 
   const dialog = page.getByRole("dialog").filter({ hasText: "Team Settings" });
   await expect(dialog).toBeVisible();
@@ -54,19 +56,12 @@ test("team settings integrations show clear sections and labeled fields", async 
   await expect(dialog.getByText("GitHub Ops")).toBeVisible();
   await dialog.getByRole("button", { name: "Add Integration" }).click();
   await expect(dialog.getByText("New Integration")).toBeVisible();
-  await expect(dialog.getByText("Choose Provider")).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Anthropic" }).first()).toBeVisible();
+  await expect(dialog.getByText("Apps").first()).toBeVisible();
   await expect(dialog.getByRole("button", { name: "GitHub" }).first()).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Custom MCP Server" })).toBeVisible();
 
-  await dialog.getByRole("button", { name: "Anthropic" }).first().click();
-  await expect(dialog.getByLabel("New integration name")).toBeVisible();
-  await expect(dialog.getByLabel("New Anthropic API Key")).toBeVisible();
-  await expect(dialog.getByText("Advanced")).toBeVisible();
-  await dialog.getByText("Advanced").click();
-  await expect(dialog.getByLabel("New preferred model")).toBeVisible();
-
-  await dialog.getByRole("button", { name: "Change" }).click();
   await dialog.getByRole("button", { name: "GitHub" }).first().click();
+  await expect(dialog.getByLabel("New integration name")).toBeVisible();
   await expect(dialog.getByLabel("New GitHub Token")).toBeVisible();
   await expect(dialog.getByLabel("New preferred model")).toHaveCount(0);
 
