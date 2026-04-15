@@ -17,23 +17,7 @@ env:
   AURA_UPDATE_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
 jobs:
-  build:
-    env:
-      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
-      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
-      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
-      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
-      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
-      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
-      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
-      REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
-      AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
-      MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
-      MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
-      MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
-      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
-      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
-      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
+  build-sidecar:
     strategy:
       fail-fast: false
       matrix:
@@ -65,6 +49,71 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Restore sidecar Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-sidecar-${{ runner.os }}-${{ runner.arch }}
+          workspaces: |
+            ../aura-harness -> target
+
+      - name: Build bundled aura-node sidecar
+        run: node infra/scripts/release/prepare-desktop-sidecar.mjs
+
+      - name: Archive bundled sidecar
+        shell: bash
+        run: |
+          tar -cf desktop-sidecar.tar -C apps/aura-os-desktop/resources sidecar
+
+      - name: Upload sidecar artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
+          path: desktop-sidecar.tar
+          compression-level: 0
+
+  build-app:
+    env:
+      AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
+      AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
+      AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
+      AURA_ROUTER_URL: ${{ vars.AURA_ROUTER_URL }}
+      Z_BILLING_URL: ${{ vars.Z_BILLING_URL }}
+      ORBIT_BASE_URL: ${{ vars.ORBIT_BASE_URL }}
+      SWARM_BASE_URL: ${{ vars.SWARM_BASE_URL }}
+      REQUIRE_ZERO_PRO: ${{ vars.REQUIRE_ZERO_PRO }}
+      AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN: ${{ vars.AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            arch: x86_64
+          - os: macos-latest
+            target: macos
+            arch: aarch64
+          - os: macos-15-intel
+            target: macos
+            arch: x86_64
+          - os: windows-latest
+            target: windows
+            arch: x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore desktop Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-app-${{ runner.os }}-${{ runner.arch }}
+          workspaces: |
+            . -> target
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -85,7 +134,6 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            # Strip leading 'v' from tag
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           fi
 
@@ -95,12 +143,6 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
           rm -f apps/aura-os-desktop/Cargo.toml.bak
-
-      - name: Install cargo-packager
-        run: cargo install cargo-packager --locked
-
-      - name: Prepare bundled aura-node sidecar
-        run: node infra/scripts/release/prepare-desktop-sidecar.mjs
 
       - name: Build interface
         working-directory: interface
@@ -114,6 +156,146 @@ jobs:
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
         run: cargo build --release --package aura-os-desktop
+
+      - name: Archive desktop build inputs
+        shell: bash
+        run: |
+          mkdir -p build-inputs/prebuilt-binaries build-inputs/interface
+          binary_name="aura-os-desktop"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary_name="${binary_name}.exe"
+          fi
+          cp "target/release/${binary_name}" "build-inputs/prebuilt-binaries/${binary_name}"
+          cp -R interface/dist build-inputs/interface/dist
+          tar -cf desktop-build-inputs.tar -C build-inputs .
+
+      - name: Upload desktop build inputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
+          path: desktop-build-inputs.tar
+          compression-level: 0
+
+  package:
+    needs: [build-sidecar, build-app]
+    env:
+      MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
+      MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+      MACOS_DEVELOPER_TEAM_ID: ${{ secrets.MACOS_DEVELOPER_TEAM_ID }}
+      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
+      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
+      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            arch: x86_64
+          - os: macos-latest
+            target: macos
+            arch: aarch64
+          - os: macos-15-intel
+            target: macos
+            arch: x86_64
+          - os: windows-latest
+            target: windows
+            arch: x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Patch Cargo.toml version
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
+          rm -f apps/aura-os-desktop/Cargo.toml.bak
+
+      - name: Install cargo-packager
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-packager
+          version: 0.11.8
+
+      - name: Download sidecar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sidecar-${{ matrix.target }}-${{ matrix.arch }}
+          path: downloaded-sidecar
+
+      - name: Download desktop build inputs
+        uses: actions/download-artifact@v4
+        with:
+          name: build-inputs-${{ matrix.target }}-${{ matrix.arch }}
+          path: downloaded-build-inputs
+
+      - name: Restore packaged resources and prebuilt binary
+        shell: bash
+        run: |
+          rm -rf apps/aura-os-desktop/resources/sidecar interface/dist prebuilt-binaries
+          mkdir -p apps/aura-os-desktop/resources
+          tar -xf downloaded-sidecar/desktop-sidecar.tar -C apps/aura-os-desktop/resources
+          tar -xf downloaded-build-inputs/desktop-build-inputs.tar
+          test -d apps/aura-os-desktop/resources/sidecar
+          test -d interface/dist
+          binary_name="aura-os-desktop"
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            binary_name="${binary_name}.exe"
+          fi
+          test -f "prebuilt-binaries/${binary_name}"
+          if [ "${{ matrix.target }}" != "windows" ]; then
+            chmod 755 "prebuilt-binaries/${binary_name}"
+            chmod 755 apps/aura-os-desktop/resources/sidecar/aura-node
+          fi
+
+      - name: Inject prebuilt binaries dir into packager config
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
+          text = cargo_toml.read_text(encoding="utf-8")
+          binaries_line = 'binaries-dir = "../../prebuilt-binaries"'
+
+          if "binaries-dir =" in text:
+              text = re.sub(r'^binaries-dir = ".*"$', binaries_line, text, flags=re.MULTILINE)
+          else:
+              marker = "[package.metadata.packager]\n"
+              if marker not in text:
+                  raise SystemExit("Missing [package.metadata.packager] section in Cargo.toml")
+              text = text.replace(marker, marker + binaries_line + "\n", 1)
+
+          cargo_toml.write_text(text, encoding="utf-8")
+          PY
 
       - name: Clean stale macOS DMG mounts
         if: matrix.target == 'macos'
@@ -251,6 +433,18 @@ jobs:
         if: matrix.target == 'macos'
         run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
 
+      - name: Skip duplicate packager prebuild in CI
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
+          lines = cargo_toml.read_text(encoding="utf-8").splitlines()
+          filtered = [line for line in lines if not line.strip().startswith("before-packaging-command = ")]
+          cargo_toml.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+          PY
+
       - name: Package installer
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
@@ -325,7 +519,7 @@ jobs:
           path: dist/
 
   release:
-    needs: build
+    needs: package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -345,6 +539,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: installers-*
           path: all-artifacts
           merge-multiple: true
 
@@ -366,7 +561,7 @@ jobs:
           done
 
   publish-manifests:
-    needs: [build, release]
+    needs: [package, release]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -402,6 +597,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: installers-*
           path: all-artifacts
           merge-multiple: true
 

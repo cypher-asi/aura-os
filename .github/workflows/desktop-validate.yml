@@ -93,6 +93,14 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: desktop-${{ runner.os }}-${{ runner.arch }}
+          workspaces: |
+            . -> target
+            ../aura-harness -> target
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -132,7 +140,10 @@ jobs:
 
       - name: Install cargo-packager
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
-        run: cargo install cargo-packager --locked
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-packager
+          version: 0.11.8
 
       - name: Clean stale macOS DMG mounts
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
@@ -269,6 +280,19 @@ jobs:
       - name: Validate macOS packager manifest
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != '' && startsWith(matrix.target, 'macos-')
         run: cargo metadata --no-deps --manifest-path apps/aura-os-desktop/Cargo.toml > /dev/null
+
+      - name: Skip duplicate packager prebuild in CI
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          cargo_toml = Path("apps/aura-os-desktop/Cargo.toml")
+          lines = cargo_toml.read_text(encoding="utf-8").splitlines()
+          filtered = [line for line in lines if not line.strip().startswith("before-packaging-command = ")]
+          cargo_toml.write_text("\n".join(filtered) + "\n", encoding="utf-8")
+          PY
 
       - name: Package desktop artifact
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
