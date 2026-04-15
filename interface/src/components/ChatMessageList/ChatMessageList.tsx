@@ -96,6 +96,9 @@ export function ChatMessageList({
   const measureElementRef = useRef(virtualizer.measureElement);
   measureElementRef.current = virtualizer.measureElement;
   const resizeObserversRef = useRef(new Map<string, ResizeObserver>());
+  const streamingBubbleRef = useRef<HTMLDivElement>(null);
+  const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
+  const streamingBubbleHeightRef = useRef<number | null>(null);
 
   const updateMeasuredHeight = useCallback(
     (messageId: string, node: HTMLElement) => {
@@ -141,7 +144,45 @@ export function ChatMessageList({
     [updateMeasuredHeight],
   );
 
-  const streamingBubbleRef = useRef<HTMLDivElement>(null);
+  const updateStreamingBubbleHeight = useCallback(
+    (node: HTMLElement) => {
+      const nextHeight = node.getBoundingClientRect().height;
+      if (nextHeight <= 0) {
+        return;
+      }
+      const previousHeight = streamingBubbleHeightRef.current;
+      streamingBubbleHeightRef.current = nextHeight;
+      if (previousHeight === null || Math.abs(previousHeight - nextHeight) >= 1) {
+        onContentHeightChange?.();
+      }
+    },
+    [onContentHeightChange],
+  );
+
+  const setStreamingBubbleRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      streamingBubbleObserverRef.current?.disconnect();
+      streamingBubbleObserverRef.current = null;
+      streamingBubbleRef.current = node;
+
+      if (!node) {
+        streamingBubbleHeightRef.current = null;
+        return;
+      }
+
+      updateStreamingBubbleHeight(node);
+
+      if (typeof ResizeObserver !== "undefined") {
+        const observer = new ResizeObserver(() => {
+          updateStreamingBubbleHeight(node);
+        });
+        observer.observe(node);
+        streamingBubbleObserverRef.current = observer;
+      }
+    },
+    [updateStreamingBubbleHeight],
+  );
+
   const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
   const prevStreamingRef = useRef(nowStreaming);
 
@@ -186,6 +227,8 @@ export function ChatMessageList({
       observer.disconnect();
     }
     resizeObserversRef.current.clear();
+    streamingBubbleObserverRef.current?.disconnect();
+    streamingBubbleObserverRef.current = null;
   }, []);
 
   if (!hasMessages) {
@@ -241,7 +284,7 @@ export function ChatMessageList({
         })}
       </div>
       {nowStreaming && (
-        <div ref={streamingBubbleRef}>
+        <div ref={setStreamingBubbleRef}>
           <StreamingBubble
             isStreaming={isStreaming}
             text={streamingText}

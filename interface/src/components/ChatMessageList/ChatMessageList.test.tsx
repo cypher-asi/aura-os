@@ -1,9 +1,18 @@
-import { render } from "@testing-library/react";
-import { vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ChatMessageList } from "./ChatMessageList";
 import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 
 const mockMessageBubble = vi.fn();
+const mockStreamEntry = {
+  isStreaming: false,
+  streamingText: "",
+  thinkingText: "",
+  thinkingDurationMs: null as number | null,
+  activeToolCalls: [],
+  timeline: [],
+  progressText: "",
+};
 let mockVirtualItems = [
   {
     key: "row-0",
@@ -13,6 +22,43 @@ let mockVirtualItems = [
 ];
 let mockTotalSize = 100;
 const mockMeasureElement = vi.fn();
+let nextStreamingBubbleHeight = 0;
+
+class MockResizeObserver {
+  static instances: MockResizeObserver[] = [];
+
+  private readonly callback: ResizeObserverCallback;
+  private readonly elements = new Set<Element>();
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+    MockResizeObserver.instances.push(this);
+  }
+
+  observe = (element: Element) => {
+    this.elements.add(element);
+  };
+
+  unobserve = (element: Element) => {
+    this.elements.delete(element);
+  };
+
+  disconnect = () => {
+    this.elements.clear();
+  };
+
+  static reset() {
+    MockResizeObserver.instances = [];
+  }
+
+  static trigger(element: Element) {
+    for (const instance of MockResizeObserver.instances) {
+      if (instance.elements.has(element)) {
+        instance.callback([], instance as unknown as ResizeObserver);
+      }
+    }
+  }
+}
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
@@ -36,11 +82,15 @@ vi.mock("../StreamingBubble", () => ({
 vi.mock("../../hooks/stream/store", () => ({
   useStreamStore: (selector: (state: unknown) => unknown) =>
     selector({
-      entries: {},
+      entries: {
+        "stream-1": mockStreamEntry,
+      },
     }),
 }));
 
 describe("ChatMessageList", () => {
+  const originalResizeObserver = global.ResizeObserver;
+  let requestAnimationFrameSpy: ReturnType<typeof vi.spyOn>;
   const heightCache: MessageHeightCache = {
     getHeight: vi.fn(() => undefined),
     setHeight: vi.fn(),
@@ -50,9 +100,27 @@ describe("ChatMessageList", () => {
   beforeEach(() => {
     mockMessageBubble.mockReset();
     mockMeasureElement.mockReset();
+    MockResizeObserver.reset();
+    nextStreamingBubbleHeight = 0;
+    Object.assign(mockStreamEntry, {
+      isStreaming: false,
+      streamingText: "",
+      thinkingText: "",
+      thinkingDurationMs: null,
+      activeToolCalls: [],
+      timeline: [],
+      progressText: "",
+    });
     vi.mocked(heightCache.getHeight).mockClear();
     vi.mocked(heightCache.setHeight).mockClear();
     vi.mocked(heightCache.estimateHeight).mockClear();
+    global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+    requestAnimationFrameSpy = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
     mockVirtualItems = [
       {
         key: "row-0",
@@ -66,6 +134,11 @@ describe("ChatMessageList", () => {
       },
     ];
     mockTotalSize = 200;
+  });
+
+  afterEach(() => {
+    global.ResizeObserver = originalResizeObserver;
+    requestAnimationFrameSpy.mockRestore();
   });
 
   it("renders historical bubbles without passing an initial fade-in prop", () => {
@@ -135,5 +208,54 @@ describe("ChatMessageList", () => {
     );
 
     expect(getByRole("button", { name: "Load older messages" })).toBeInTheDocument();
+  });
+
+  it("reconciles content height when the streaming bubble grows", () => {
+    mockStreamEntry.isStreaming = true;
+    mockStreamEntry.streamingText = "partial output";
+
+    const scrollRef = { current: document.createElement("div") };
+    const onContentHeightChange = vi.fn();
+
+    render(
+      <ChatMessageList
+        messages={[
+          { id: "message-1", role: "assistant", content: "Hello" } as any,
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+        heightCache={heightCache}
+        onContentHeightChange={onContentHeightChange}
+      />,
+    );
+
+    const streamingBubbleContainer = screen.getByTestId("streaming-bubble").parentElement;
+    if (!streamingBubbleContainer) {
+      throw new Error("Expected streaming bubble container to be rendered");
+    }
+
+    Object.defineProperty(streamingBubbleContainer, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 300,
+        bottom: nextStreamingBubbleHeight,
+        width: 300,
+        height: nextStreamingBubbleHeight,
+        toJSON: () => ({}),
+      }),
+    });
+
+    onContentHeightChange.mockClear();
+    nextStreamingBubbleHeight = 180;
+
+    act(() => {
+      MockResizeObserver.trigger(streamingBubbleContainer);
+    });
+
+    expect(onContentHeightChange).toHaveBeenCalledTimes(1);
   });
 });
