@@ -4,8 +4,10 @@ import { useAvatarState } from "../../hooks/use-avatar-state"
 import { useEventStore } from "../../stores/event-store/index"
 import { EventType } from "../../types/aura-events"
 import { api } from "../../api/client"
+import { ApiClientError } from "../../api/core"
 import type { RemoteVmState } from "../../types"
 import type { LifecycleAction } from "../../api/swarm"
+import { getApiErrorMessage } from "../../utils/api-errors"
 import { VmStatusBadge } from "../VmStatusBadge"
 import styles from "./AgentEnvironment.module.css"
 
@@ -39,6 +41,19 @@ const PHASE_NOTICES: Record<string, RecoveryNotice> = {
   deleting: { tone: "info", message: "Deleting old machine..." },
   provisioning: { tone: "info", message: "Provisioning new machine..." },
   waiting_for_ready: { tone: "info", message: "Waiting for machine to come online..." },
+}
+
+function getRemoteStateErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    if (error.status === 404) {
+      return "Remote machine state is unavailable. This agent may no longer have an attached remote machine."
+    }
+    if (error.status === 401) {
+      return "Your session expired while loading this remote agent. Sign in again and retry."
+    }
+  }
+
+  return getApiErrorMessage(error)
 }
 
 function getActionsForState(state: string): ActionDef[] {
@@ -76,6 +91,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
   const subscribe = useEventStore((s) => s.subscribe)
 
   const [vmState, setVmState] = useState<RemoteVmState | null>(null)
+  const [remoteStateError, setRemoteStateError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingRecovery, setPendingRecovery] = useState(false)
@@ -88,8 +104,20 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
     try {
       const state = await api.swarm.getRemoteAgentState(agentId!)
       setVmState(state)
+      setRemoteStateError(null)
       return state
-    } catch {
+    } catch (error) {
+      const message = getRemoteStateErrorMessage(error)
+      setRemoteStateError(message)
+      setVmState((current) =>
+        current
+          ? {
+              ...current,
+              state: "error",
+              error_message: message,
+            }
+          : null,
+      )
       return null
     }
   }, [isRemote, agentId])
@@ -226,6 +254,9 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
     return () => document.removeEventListener("mousedown", onClickOutside)
   }, [open])
 
+  const remoteStatus = vmState?.state ?? (remoteStateError ? "error" : "running")
+  const remoteErrorMessage = remoteStateError ?? vmState?.error_message
+
   return (
     <div
       ref={wrapperRef}
@@ -238,7 +269,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
           className={styles.dot}
           data-status={
             isRemote
-              ? (vmState?.state ?? "running")
+              ? remoteStatus
               : (avatarState.isLocal ? "local" : (avatarState.status ?? "idle"))
           }
         />
@@ -247,35 +278,45 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
 
       {open && (
         <div className={styles.statusCard}>
-          {isRemote && vmState ? (
+          {isRemote ? (
             <>
               <div className={styles.statusRow}>
                 <span className={styles.statusLabel}>Status</span>
                 <span className={styles.statusValue}>
-                  <VmStatusBadge state={vmState.state} />
+                  <VmStatusBadge state={remoteStatus} />
                 </span>
               </div>
-              {vmState.endpoint && (
+              {remoteStateError && (
+                <div className={`${styles.recoveryNotice} ${styles.recoveryNoticeError}`}>
+                  <span className={styles.recoveryNoticeLabel}>Remote state</span>
+                  <span className={styles.recoveryNoticeMessage}>{remoteStateError}</span>
+                </div>
+              )}
+              {vmState?.endpoint && (
                 <div className={styles.statusRow}>
                   <span className={styles.statusLabel}>IP</span>
                   <span className={styles.statusValue}>{vmState.endpoint}</span>
                 </div>
               )}
-              <div className={styles.statusRow}>
-                <span className={styles.statusLabel}>Uptime</span>
-                <span className={styles.statusValue}>{formatUptime(vmState.uptime_seconds)}</span>
-              </div>
-              <div className={styles.statusRow}>
-                <span className={styles.statusLabel}>Sessions</span>
-                <span className={styles.statusValue}>{vmState.active_sessions}</span>
-              </div>
-              {vmState.runtime_version && (
+              {vmState && (
+                <div className={styles.statusRow}>
+                  <span className={styles.statusLabel}>Uptime</span>
+                  <span className={styles.statusValue}>{formatUptime(vmState.uptime_seconds)}</span>
+                </div>
+              )}
+              {vmState && (
+                <div className={styles.statusRow}>
+                  <span className={styles.statusLabel}>Sessions</span>
+                  <span className={styles.statusValue}>{vmState.active_sessions}</span>
+                </div>
+              )}
+              {vmState?.runtime_version && (
                 <div className={styles.statusRow}>
                   <span className={styles.statusLabel}>Runtime</span>
                   <span className={styles.statusValue}>{vmState.runtime_version}</span>
                 </div>
               )}
-              {(vmState.cpu_millicores || vmState.memory_mb) && (
+              {vmState && (vmState.cpu_millicores || vmState.memory_mb) && (
                 <div className={styles.statusRow}>
                   <span className={styles.statusLabel}>Resources</span>
                   <span className={styles.statusValue}>
@@ -285,7 +326,7 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
                   </span>
                 </div>
               )}
-              {vmState.isolation && (
+              {vmState?.isolation && (
                 <div className={styles.statusRow}>
                   <span className={styles.statusLabel}>Isolation</span>
                   <span className={styles.statusValue}>
@@ -293,25 +334,25 @@ export function AgentEnvironment({ machineType, agentId }: AgentEnvironmentProps
                   </span>
                 </div>
               )}
-              {vmState.agent_id && (
+              {vmState?.agent_id && (
                 <div className={styles.statusRow}>
                   <span className={styles.statusLabel}>Agent ID</span>
                   <span className={styles.statusValue}>{vmState.agent_id.slice(0, 12)}…</span>
                 </div>
               )}
-              {vmState.error_message && (
+              {remoteErrorMessage && !remoteStateError && (
                 <div className={styles.statusRow}>
                   <span className={styles.statusLabel}>Error</span>
-                  <span className={styles.statusValue}>{vmState.error_message}</span>
+                  <span className={styles.statusValue}>{remoteErrorMessage}</span>
                 </div>
               )}
-              {recoveryNotice && (
+              {recoveryNotice && !remoteStateError && (
                 <div className={`${styles.recoveryNotice} ${styles[`recoveryNotice${recoveryNotice.tone[0].toUpperCase()}${recoveryNotice.tone.slice(1)}`]}`}>
                   <span className={styles.recoveryNoticeLabel}>Recovery</span>
                   <span className={styles.recoveryNoticeMessage}>{recoveryNotice.message}</span>
                 </div>
               )}
-              {(() => {
+              {!remoteStateError && vmState && (() => {
                 const actions = getActionsForState(vmState.state)
                 if (actions.length === 0) {
                   if (vmState.state === "provisioning" || vmState.state === "stopping") {

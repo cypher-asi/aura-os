@@ -111,6 +111,18 @@ describe("profile-status-store", () => {
       ]);
       expect(mockApi.swarm.getRemoteAgentState).toHaveBeenCalledWith("r-poll-1");
     });
+
+    it("marks remote agents as error when polling fails", async () => {
+      mockApi.swarm.getRemoteAgentState.mockRejectedValue(new Error("missing remote state"));
+
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-error-1" },
+      ]);
+
+      await vi.waitFor(() => {
+        expect(useProfileStatusStore.getState().statuses["r-error-1"]).toBe("error");
+      });
+    });
   });
 
   describe("status updates via setState", () => {

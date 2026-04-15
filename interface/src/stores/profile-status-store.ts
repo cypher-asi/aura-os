@@ -70,7 +70,9 @@ function pollRemoteAgents() {
     api.swarm
       .getRemoteAgentState(agentId)
       .then((vm) => setStatus(agentId, vm.state))
-      .catch(() => {});
+      .catch(() => {
+        setStatus(agentId, "error");
+      });
   }
 }
 

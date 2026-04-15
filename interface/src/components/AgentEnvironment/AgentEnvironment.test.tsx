@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { ApiClientError } from "../../api/core"
 import { AgentEnvironment } from "./AgentEnvironment"
 
 const swarmApiMocks = vi.hoisted(() => ({
@@ -131,6 +132,33 @@ describe("AgentEnvironment", () => {
         screen.getByText("new machine entered error state after provisioning"),
       ).toBeInTheDocument()
     })
+  })
+
+  it("shows a visible message when remote state fetch returns 404", async () => {
+    swarmApiMocks.getRemoteAgentState.mockRejectedValueOnce(
+      new ApiClientError(404, {
+        error: "Not Found",
+        code: "not_found",
+        details: null,
+      }),
+    )
+
+    const user = userEvent.setup()
+
+    render(<AgentEnvironment machineType="remote" agentId="a1" />)
+
+    await waitFor(() => {
+      expect(swarmApiMocks.getRemoteAgentState).toHaveBeenCalledWith("a1")
+    })
+
+    await user.click(screen.getByRole("button", { name: "Remote" }))
+
+    expect(
+      await screen.findByText(
+        "Remote machine state is unavailable. This agent may no longer have an attached remote machine.",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Error")).toBeInTheDocument()
   })
 
   it("subscribes to WS events for real-time recovery updates", async () => {
