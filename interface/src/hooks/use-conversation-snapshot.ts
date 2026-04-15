@@ -29,26 +29,32 @@ function contentBlocksMatch(
   });
 }
 
-function isPersistedVersionOfTempMessage(
-  historyMessage: DisplaySessionEvent | undefined,
+function isOptimisticLocalMessage(message: DisplaySessionEvent): boolean {
+  return message.id.startsWith("temp-") || message.id.startsWith("stream-");
+}
+
+function messageContentMatches(
+  storedMessage: DisplaySessionEvent,
   streamMessage: DisplaySessionEvent,
 ): boolean {
-  if (!historyMessage) {
+  if (
+    storedMessage.role !== streamMessage.role ||
+    storedMessage.content !== streamMessage.content
+  ) {
     return false;
   }
 
-  return (
-    streamMessage.id.startsWith("temp-") &&
-    historyMessage.role === "user" &&
-    streamMessage.role === "user" &&
-    historyMessage.content === streamMessage.content &&
-    contentBlocksMatch(historyMessage.contentBlocks, streamMessage.contentBlocks)
-  );
+  if (!storedMessage.contentBlocks || !streamMessage.contentBlocks) {
+    return true;
+  }
+
+  return contentBlocksMatch(storedMessage.contentBlocks, streamMessage.contentBlocks);
 }
 
 /**
  * Merge stored (persisted) messages with ephemeral stream messages.
- * Deduplicates by ID and filters temp messages that match a persisted version.
+ * Deduplicates by ID and filters optimistic local messages that already have
+ * a persisted equivalent in history.
  */
 function combineStoredAndStreamMessages(
   storedMessages: DisplaySessionEvent[],
@@ -62,14 +68,27 @@ function combineStoredAndStreamMessages(
   }
 
   const storedIds = new Set(storedMessages.map((message) => message.id));
-  const lastStoredMessage = storedMessages[storedMessages.length - 1];
+  const matchedStoredIndexes = new Set<number>();
   const liveOnlyMessages = streamMessages.filter((message) => {
     if (storedIds.has(message.id)) {
       return false;
     }
-    if (isPersistedVersionOfTempMessage(lastStoredMessage, message)) {
-      return false;
+
+    if (!isOptimisticLocalMessage(message)) {
+      return true;
     }
+
+    for (let index = storedMessages.length - 1; index >= 0; index -= 1) {
+      if (matchedStoredIndexes.has(index)) {
+        continue;
+      }
+
+      if (messageContentMatches(storedMessages[index], message)) {
+        matchedStoredIndexes.add(index);
+        return false;
+      }
+    }
+
     return true;
   });
   if (liveOnlyMessages.length === 0) {

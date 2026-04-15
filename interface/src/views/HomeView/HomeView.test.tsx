@@ -9,6 +9,7 @@ const orgState = {
 
 const projectsState = {
   projects: [] as Project[],
+  loadingProjects: false,
 };
 
 const storageState = {
@@ -87,6 +88,7 @@ beforeEach(() => {
   orgState.activeOrg = { id: "org-1" };
   orgState.isLoading = false;
   projectsState.projects = [];
+  projectsState.loadingProjects = false;
   storageState.lastProject = null;
   storageState.lastAgentEntry = null;
   storageState.lastAgentByProject = {};
@@ -127,5 +129,13 @@ describe("HomeView", () => {
     expect(screen.getByTestId("page-empty-state")).toBeInTheDocument();
     expect(screen.getByText("Welcome to AURA")).toBeInTheDocument();
     expect(screen.getByText("Select a project from navigation to get started.")).toBeInTheDocument();
+  });
+
+  it("waits for project hydration before rendering the welcome empty state", () => {
+    projectsState.loadingProjects = true;
+
+    renderHomeView();
+
+    expect(screen.queryByTestId("page-empty-state")).not.toBeInTheDocument();
   });
 });

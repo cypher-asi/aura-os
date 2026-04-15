@@ -11,6 +11,7 @@ use aura_os_core::{
 
 use crate::dto::{CreateAgentInstanceRequest, UpdateAgentInstanceRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::projects_helpers::ensure_canonical_workspace_dir;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::conversions::{
@@ -126,6 +127,10 @@ pub(crate) async fn create_agent_instance(
             ));
         }
     };
+
+    if agent.machine_type == "local" {
+        ensure_canonical_workspace_dir(&state.data_dir, &project_id)?;
+    }
 
     let req = aura_os_storage::CreateProjectAgentRequest {
         agent_id: agent.agent_id.to_string(),

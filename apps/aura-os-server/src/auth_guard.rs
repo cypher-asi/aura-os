@@ -73,16 +73,10 @@ fn extract_request_token(req: &Request) -> Option<String> {
 
 /// Check the validation cache for a fresh session. Returns the session if
 /// cached and within the refresh TTL.
-fn get_cached_session(
-    state: &AppState,
-    jwt: &str,
-) -> Option<(ZeroAuthSession, Option<String>)> {
+fn get_cached_session(state: &AppState, jwt: &str) -> Option<(ZeroAuthSession, Option<String>)> {
     let entry = state.validation_cache.get(jwt)?;
     if entry.validated_at.elapsed() < AUTH_REFRESH_TTL {
-        Some((
-            entry.session.clone(),
-            entry.zero_pro_refresh_error.clone(),
-        ))
+        Some((entry.session.clone(), entry.zero_pro_refresh_error.clone()))
     } else {
         None
     }
@@ -137,10 +131,7 @@ async fn resolve_session_from_jwt(
                     user_id = %entry.session.user_id,
                     "zOS unreachable, using stale cached session"
                 );
-                Ok((
-                    entry.session.clone(),
-                    entry.zero_pro_refresh_error.clone(),
-                ))
+                Ok((entry.session.clone(), entry.zero_pro_refresh_error.clone()))
             } else {
                 Err(err)
             }
@@ -156,8 +147,8 @@ pub(crate) async fn require_verified_session(
     let token = extract_request_token(&req)
         .ok_or_else(|| ApiError::unauthorized("missing authorization token"))?;
     // POST /api/auth/validate skips the in-memory TTL cache so explicit refresh always hits zOS once.
-    let allow_validation_cache = !(req.method() == axum::http::Method::POST
-        && req.uri().path() == "/api/auth/validate");
+    let allow_validation_cache =
+        !(req.method() == axum::http::Method::POST && req.uri().path() == "/api/auth/validate");
     let (session, zero_pro_refresh_error) =
         resolve_session_from_jwt(&state, &token, allow_validation_cache).await?;
     persist_zero_auth_session(&state.store, &session);

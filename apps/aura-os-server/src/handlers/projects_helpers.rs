@@ -115,6 +115,20 @@ pub(crate) fn canonical_workspace_path(
     data_dir.join("workspaces").join(project_id.to_string())
 }
 
+pub(crate) fn ensure_canonical_workspace_dir(
+    data_dir: &std::path::Path,
+    project_id: &ProjectId,
+) -> ApiResult<PathBuf> {
+    let workspace_root = canonical_workspace_path(data_dir, project_id);
+    std::fs::create_dir_all(&workspace_root).map_err(|e| {
+        ApiError::internal(format!(
+            "failed to create workspace directory {}: {e}",
+            workspace_root.display()
+        ))
+    })?;
+    Ok(workspace_root)
+}
+
 pub(crate) fn slugify(name: &str) -> String {
     let s = name
         .trim()
@@ -363,5 +377,26 @@ pub(super) fn build_local_shadow(project_id: ProjectId, req: &CreateProjectReque
         orbit_base_url: req.orbit_base_url.clone(),
         orbit_owner: req.orbit_owner.clone(),
         orbit_repo: req.orbit_repo.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{canonical_workspace_path, ensure_canonical_workspace_dir};
+    use aura_os_core::ProjectId;
+
+    #[test]
+    fn ensure_canonical_workspace_dir_creates_the_managed_workspace() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let project_id = ProjectId::new();
+
+        let workspace_root =
+            ensure_canonical_workspace_dir(temp_dir.path(), &project_id).expect("workspace dir");
+
+        assert_eq!(
+            workspace_root,
+            canonical_workspace_path(temp_dir.path(), &project_id)
+        );
+        assert!(workspace_root.is_dir());
     }
 }

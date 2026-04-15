@@ -482,8 +482,8 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
 #[cfg(test)]
 mod tests {
     use super::{
-        default_update_channel, endpoint_for_channel_with_base, validate_base64_utf8,
-        load_persisted_channel, persist_channel, UpdateChannel,
+        default_update_channel, endpoint_for_channel_with_base, load_persisted_channel,
+        persist_channel, validate_base64_utf8, UpdateChannel,
     };
     use base64::Engine;
     use std::fs;

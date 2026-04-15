@@ -159,9 +159,7 @@ async fn start_mock_swarm(status_code: StatusCode, body: Value) -> String {
         )
         .route(
             "/v1/agents/:agent_id",
-            axum::routing::delete(|Path(_id): Path<String>| async {
-                StatusCode::OK
-            }),
+            axum::routing::delete(|Path(_id): Path<String>| async { StatusCode::OK }),
         );
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

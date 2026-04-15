@@ -10,8 +10,9 @@ use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
 use super::projects_helpers::{
-    build_local_shadow, canonical_workspace_path, ensure_local_shadow, normalize_project_workspace,
-    project_from_network, slugify, to_project_input, write_imported_files, ListProjectsQuery,
+    build_local_shadow, canonical_workspace_path, ensure_canonical_workspace_dir,
+    ensure_local_shadow, normalize_project_workspace, project_from_network, slugify,
+    to_project_input, write_imported_files, ListProjectsQuery,
 };
 
 pub(crate) async fn list_all_projects_from_network(
@@ -144,6 +145,8 @@ async fn create_project_impl(
         }
     }
 
+    ensure_canonical_workspace_dir(&state.data_dir, &project.project_id)?;
+
     Ok((StatusCode::CREATED, Json(project)))
 }
 
@@ -192,15 +195,7 @@ pub(crate) async fn create_imported_project(
     };
 
     let (status, Json(project)) = create_project_impl(&state, &local_req, None, &jwt).await?;
-    let workspace_root = canonical_workspace_path(&state.data_dir, &project.project_id);
-
-    tokio::fs::create_dir_all(&workspace_root)
-        .await
-        .map_err(|e| {
-            ApiError::internal(format!(
-                "failed to create imported workspace directory: {e}"
-            ))
-        })?;
+    let workspace_root = ensure_canonical_workspace_dir(&state.data_dir, &project.project_id)?;
     write_imported_files(&workspace_root, files).await?;
 
     Ok((status, Json(project)))

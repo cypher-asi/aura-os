@@ -8,7 +8,10 @@ import { useOrgStore } from "../../stores/org-store";
 import { getMostRecentProject, useProjectsListStore } from "../../stores/projects-list-store";
 
 export function HomeView() {
-  const projects = useProjectsListStore((s) => s.projects);
+  const { projects, loadingProjects } = useProjectsListStore((s) => ({
+    projects: s.projects,
+    loadingProjects: s.loadingProjects,
+  }));
   const { activeOrg, isLoading } = useOrgStore(
     useShallow((s) => ({ activeOrg: s.activeOrg, isLoading: s.isLoading })),
   );
@@ -29,6 +32,10 @@ export function HomeView() {
       ? projectAgentChatRoute(targetProject.project_id, lastAgentId)
       : projectAgentRoute(targetProject.project_id);
     return <Navigate to={targetPath} replace />;
+  }
+
+  if (loadingProjects && projects.length === 0) {
+    return null;
   }
 
   return (

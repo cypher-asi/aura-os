@@ -1033,13 +1033,19 @@ fn apply_cursor_filter(
     let mut result = messages;
 
     if let Some(after_id) = after {
-        if let Some(pos) = result.iter().position(|m| m.event_id.to_string() == after_id) {
+        if let Some(pos) = result
+            .iter()
+            .position(|m| m.event_id.to_string() == after_id)
+        {
             result = result[pos + 1..].to_vec();
         }
     }
 
     if let Some(before_id) = before {
-        if let Some(pos) = result.iter().position(|m| m.event_id.to_string() == before_id) {
+        if let Some(pos) = result
+            .iter()
+            .position(|m| m.event_id.to_string() == before_id)
+        {
             result = result[..pos].to_vec();
         }
     }

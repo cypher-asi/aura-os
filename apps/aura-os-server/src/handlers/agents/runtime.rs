@@ -1487,11 +1487,7 @@ fn emit_saved_artifact_events(
         _ => {}
     }
     let _ = broadcast_tx.send(event.clone());
-    emit_json_sse_event(
-        sse_tx,
-        saved_event,
-        event,
-    );
+    emit_json_sse_event(sse_tx, saved_event, event);
 }
 
 fn codex_inline_env(values: &HashMap<String, String>) -> String {
