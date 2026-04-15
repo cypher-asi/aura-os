@@ -21,15 +21,17 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
   const highlightedHtml = useHighlightedHtml(displayContent, "markdown");
 
   return (
-    <div className={fileStyles.card}>
-      <div className={fileStyles.header}>
+    <div className={`${fileStyles.card} ${fileStyles.specCard}`}>
+      <div className={`${fileStyles.header} ${fileStyles.specHeader}`}>
         <FileText size={14} className={fileStyles.fileIcon} />
         <span className={fileStyles.fileName}>{title}</span>
         <span className={fileStyles.badge}>Spec</span>
       </div>
       {content.trim() && (
         <>
-          <div className={`${fileStyles.codeArea} ${!expanded && needsCollapse ? fileStyles.collapsed : ""}`}>
+          <div
+            className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${!expanded && needsCollapse ? fileStyles.collapsed : ""}`}
+          >
             <pre>
               <code
                 className="hljs language-markdown"
@@ -40,7 +42,7 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
           {needsCollapse && (
             <button
               type="button"
-              className={fileStyles.toggleBtn}
+              className={`${fileStyles.toggleBtn} ${fileStyles.specToggleBtn}`}
               onClick={() => setExpanded(!expanded)}
             >
               {expanded ? "Show less" : `Show all ${lines.length} lines`}
