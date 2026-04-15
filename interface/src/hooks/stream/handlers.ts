@@ -28,6 +28,11 @@ interface FinalizeStreamOptions {
   message?: string;
 }
 
+const STREAM_TEXT_FLUSH_INTERVAL_MS = 48;
+const STREAM_TEXT_EARLY_FLUSH_INTERVAL_MS = 20;
+const STREAM_TEXT_EARLY_FLUSH_CHARS = 96;
+const STREAM_TEXT_EARLY_FLUSH_RE = /(?:\n|[.!?])\s*$/;
+
 /* ------------------------------------------------------------------ */
 /*  Pure helpers                                                       */
 /* ------------------------------------------------------------------ */
@@ -75,9 +80,67 @@ function normalizeStreamError(error: unknown): {
   };
 }
 
+function cancelPendingStreamFlush(refs: StreamRefs): void {
+  if (refs.flushTimeout.current !== null) {
+    clearTimeout(refs.flushTimeout.current);
+    refs.flushTimeout.current = null;
+  }
+  if (refs.raf.current !== null) {
+    cancelAnimationFrame(refs.raf.current);
+    refs.raf.current = null;
+  }
+}
+
+function flushStreamingText(refs: StreamRefs, setters: StreamSetters): void {
+  if (refs.flushTimeout.current !== null) {
+    clearTimeout(refs.flushTimeout.current);
+    refs.flushTimeout.current = null;
+  }
+  if (refs.raf.current !== null) return;
+
+  refs.raf.current = requestAnimationFrame(() => {
+    refs.raf.current = null;
+    refs.lastTextFlushAt.current = Date.now();
+    refs.displayedTextLength.current = refs.streamBuffer.current.length;
+    setters.setStreamingText(refs.streamBuffer.current);
+    setters.setTimeline([...refs.timeline.current]);
+  });
+}
+
+function scheduleStreamingTextFlush(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  lastDelta: string,
+): void {
+  if (refs.raf.current !== null || refs.flushTimeout.current !== null) return;
+
+  const pendingChars = refs.streamBuffer.current.length - refs.displayedTextLength.current;
+  if (pendingChars <= 0) return;
+
+  const shouldFlushEarly =
+    refs.displayedTextLength.current === 0
+    || pendingChars >= STREAM_TEXT_EARLY_FLUSH_CHARS
+    || STREAM_TEXT_EARLY_FLUSH_RE.test(lastDelta);
+  const targetIntervalMs = shouldFlushEarly
+    ? STREAM_TEXT_EARLY_FLUSH_INTERVAL_MS
+    : STREAM_TEXT_FLUSH_INTERVAL_MS;
+  const elapsedSinceLastFlush = refs.lastTextFlushAt.current === 0
+    ? 0
+    : Date.now() - refs.lastTextFlushAt.current;
+  const delayMs = Math.max(0, targetIntervalMs - elapsedSinceLastFlush);
+
+  refs.flushTimeout.current = setTimeout(() => {
+    refs.flushTimeout.current = null;
+    flushStreamingText(refs, setters);
+  }, delayMs);
+}
+
 export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): void {
+  cancelPendingStreamFlush(refs);
   setters.setStreamingText("");
   refs.streamBuffer.current = "";
+  refs.displayedTextLength.current = 0;
+  refs.lastTextFlushAt.current = 0;
   setters.setThinkingText("");
   refs.thinkingBuffer.current = "";
   refs.thinkingStart.current = null;
@@ -210,13 +273,7 @@ export function handleTextDelta(
     tl.push({ kind: "text", content: text, id: nextTimelineId() });
   }
 
-  if (refs.raf.current === null) {
-    refs.raf.current = requestAnimationFrame(() => {
-      refs.raf.current = null;
-      setters.setStreamingText(refs.streamBuffer.current);
-      setters.setTimeline([...refs.timeline.current]);
-    });
-  }
+  scheduleStreamingTextFlush(refs, setters, text);
 }
 
 export function handleToolCallStarted(
@@ -428,6 +485,7 @@ export function handleAssistantTurnBoundary(
 ): void {
   const hasBuffer = !!refs.streamBuffer.current;
   if (hasBuffer) {
+    cancelPendingStreamFlush(refs);
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
 
     const newToolCalls = refs.toolCalls.current.filter(
@@ -457,6 +515,8 @@ export function handleAssistantTurnBoundary(
     ]);
     setters.setStreamingText("");
     refs.streamBuffer.current = "";
+    refs.displayedTextLength.current = 0;
+    refs.lastTextFlushAt.current = 0;
     setters.setThinkingText("");
     refs.thinkingBuffer.current = "";
     refs.thinkingStart.current = null;
@@ -562,6 +622,7 @@ export function finalizeStream(
   closureIsStreaming: boolean,
   options?: FinalizeStreamOptions,
 ): void {
+  cancelPendingStreamFlush(refs);
   resolvePendingToolCalls(
     refs,
     setters,

@@ -36,6 +36,9 @@ function makeRefs(): StreamRefs {
     toolCalls: { current: [] },
     needsSeparator: { current: false },
     raf: { current: null },
+    flushTimeout: { current: null },
+    displayedTextLength: { current: 0 },
+    lastTextFlushAt: { current: 0 },
     thinkingRaf: { current: null },
     timeline: { current: [] },
     snapshottedToolCallIds: { current: new Set() },
@@ -68,6 +71,7 @@ describe("stream/handlers", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
     origRAF = globalThis.requestAnimationFrame;
     globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
       cb(0);
@@ -77,6 +81,7 @@ describe("stream/handlers", () => {
 
   afterEach(() => {
     globalThis.requestAnimationFrame = origRAF;
+    vi.useRealTimers();
   });
 
   describe("snapshotThinking", () => {
@@ -235,6 +240,32 @@ describe("stream/handlers", () => {
       handleTextDelta(refs, setters, null, "world");
 
       expect(refs.timeline.current).toHaveLength(1);
+    });
+
+    it("flushes visible text on a small timer cadence", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleTextDelta(refs, setters, null, "hello");
+      expect(setters.calls.setStreamingText).toBeUndefined();
+
+      vi.advanceTimersByTime(20);
+
+      expect(setters.calls.setStreamingText).toEqual(["hello"]);
+      expect(refs.displayedTextLength.current).toBe(5);
+    });
+
+    it("coalesces multiple deltas before the scheduled flush", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleTextDelta(refs, setters, null, "hello");
+      handleTextDelta(refs, setters, null, " world");
+
+      vi.advanceTimersByTime(20);
+
+      expect(setters.calls.setStreamingText).toEqual(["hello world"]);
+      expect(setters.calls.setTimeline).toHaveLength(1);
     });
   });
 

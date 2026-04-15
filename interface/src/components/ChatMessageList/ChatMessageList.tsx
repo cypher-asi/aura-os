@@ -103,8 +103,19 @@ export function ChatMessageList({
   const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
   const streamingBubbleHeightRef = useRef<number | null>(null);
   const lastStreamingBubbleHeightRef = useRef<number | null>(null);
+  const streamingBubbleHeightRafRef = useRef(0);
   const resizeSettleRafRef = useRef(0);
   const lastResizeSettleRef = useRef(0);
+
+  const scheduleStreamingBubbleHeightSync = useCallback(() => {
+    if (streamingBubbleHeightRafRef.current !== 0) {
+      return;
+    }
+    streamingBubbleHeightRafRef.current = requestAnimationFrame(() => {
+      streamingBubbleHeightRafRef.current = 0;
+      onContentHeightChange?.({ immediate: true });
+    });
+  }, [onContentHeightChange]);
 
   const updateMeasuredHeight = useCallback(
     (messageId: string, node: HTMLElement) => {
@@ -160,10 +171,10 @@ export function ChatMessageList({
       streamingBubbleHeightRef.current = nextHeight;
       lastStreamingBubbleHeightRef.current = nextHeight;
       if (previousHeight === null || Math.abs(previousHeight - nextHeight) >= 1) {
-        onContentHeightChange?.({ immediate: true });
+        scheduleStreamingBubbleHeightSync();
       }
     },
-    [onContentHeightChange],
+    [scheduleStreamingBubbleHeightSync],
   );
 
   const setStreamingBubbleRef = useCallback(
@@ -239,6 +250,10 @@ export function ChatMessageList({
     if (resizeSettleRafRef.current !== 0) {
       cancelAnimationFrame(resizeSettleRafRef.current);
       resizeSettleRafRef.current = 0;
+    }
+    if (streamingBubbleHeightRafRef.current !== 0) {
+      cancelAnimationFrame(streamingBubbleHeightRafRef.current);
+      streamingBubbleHeightRafRef.current = 0;
     }
   }, []);
 

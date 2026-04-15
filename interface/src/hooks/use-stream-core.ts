@@ -100,6 +100,10 @@ export function useStreamCore(resetDeps: unknown[]): StreamCoreResult {
 
   useLayoutEffect(() => {
     return () => {
+      if (meta.refs.flushTimeout.current !== null) {
+        clearTimeout(meta.refs.flushTimeout.current);
+        meta.refs.flushTimeout.current = null;
+      }
       if (meta.refs.raf.current !== null) {
         cancelAnimationFrame(meta.refs.raf.current);
         meta.refs.raf.current = null;
