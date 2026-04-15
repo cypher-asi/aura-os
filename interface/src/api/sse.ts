@@ -1,4 +1,5 @@
 import { authHeaders } from "../lib/auth-token";
+import { resolveApiUrl } from "../lib/host-config";
 import type { ApiError } from "../types";
 import { ApiClientError } from "./core";
 
@@ -9,6 +10,32 @@ export interface SSECallbacks<T extends string> {
 }
 
 const IDLE_TIMEOUT_MS = 90_000;
+const SSE_CONTENT_TYPE = "text/event-stream";
+
+function parseSSEFrame(frame: string): { eventType: string; data: string | null } {
+  let eventType = "";
+  const dataLines: string[] = [];
+
+  for (const rawLine of frame.split("\n")) {
+    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+    if (!line || line.startsWith(":")) continue;
+
+    if (line.startsWith("event:")) {
+      eventType = line.slice(6).trim();
+      continue;
+    }
+
+    if (line.startsWith("data:")) {
+      const value = line.slice(5);
+      dataLines.push(value.startsWith(" ") ? value.slice(1) : value);
+    }
+  }
+
+  return {
+    eventType: eventType || "message",
+    data: dataLines.length > 0 ? dataLines.join("\n") : null,
+  };
+}
 
 function parseApiErrorBody(text: string): ApiError | null {
   try {
@@ -34,7 +61,7 @@ export async function streamSSE<T extends string>(
 ): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await fetch(resolveApiUrl(url), {
       ...init,
       headers: { ...authHeaders(), ...(init.headers as Record<string, string>) },
       signal,
@@ -52,6 +79,17 @@ export async function streamSSE<T extends string>(
       ? new ApiClientError(response.status, body)
       : new Error(`SSE request failed (${response.status}): ${text}`);
     callbacks.onError?.(err);
+    return;
+  }
+
+  const contentType = response.headers.get("content-type");
+  if (contentType && !contentType.toLowerCase().includes(SSE_CONTENT_TYPE)) {
+    const text = await response.text().catch(() => "");
+    const preview = text.trim().slice(0, 200);
+    const suffix = preview ? `: ${preview}` : "";
+    callbacks.onError?.(
+      new Error(`Expected an SSE response but received ${contentType}${suffix}`),
+    );
     return;
   }
 
@@ -76,29 +114,18 @@ export async function streamSSE<T extends string>(
 
       buffer += decoder.decode(value, { stream: true });
 
-      const frames = buffer.split("\n\n");
+      const frames = buffer.split(/\r?\n\r?\n/);
       buffer = frames.pop() ?? "";
 
       for (const frame of frames) {
         if (!frame.trim()) continue;
+        const { eventType, data } = parseSSEFrame(frame);
+        if (!data) continue;
 
-        let eventType = "";
-        let data = "";
-
-        for (const line of frame.split("\n")) {
-          if (line.startsWith("event: ")) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith("data: ")) {
-            data = line.slice(6).trim();
-          }
-        }
-
-        if (eventType && data) {
-          try {
-            callbacks.onEvent(eventType as T, JSON.parse(data));
-          } catch {
-            callbacks.onEvent(eventType as T, data);
-          }
+        try {
+          callbacks.onEvent(eventType as T, JSON.parse(data));
+        } catch {
+          callbacks.onEvent(eventType as T, data);
         }
       }
     }
@@ -107,6 +134,18 @@ export async function streamSSE<T extends string>(
     callbacks.onError?.(err instanceof Error ? err : new Error(String(err)));
     reader.cancel().catch(() => {});
     return;
+  }
+
+  const trailingFrame = buffer.trim();
+  if (trailingFrame) {
+    const { eventType, data } = parseSSEFrame(trailingFrame);
+    if (data) {
+      try {
+        callbacks.onEvent(eventType as T, JSON.parse(data));
+      } catch {
+        callbacks.onEvent(eventType as T, data);
+      }
+    }
   }
 
   callbacks.onDone?.();

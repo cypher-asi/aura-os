@@ -193,6 +193,26 @@ describe("sendAgentEventStream", () => {
     expect(handler.onDone).toHaveBeenCalled();
   });
 
+  it("falls back to the tagged payload event type when the SSE event name is generic", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await sendAgentEventStream("a1", "hi", null, undefined, undefined, handler);
+
+    const sseCallbacks = streamSSE.mock.calls[0][2] as {
+      onEvent: (type: string, data: unknown) => void;
+    };
+
+    sseCallbacks.onEvent("message", { type: "text_delta", text: "word" });
+
+    expect(handler.onEvent).toHaveBeenCalledTimes(1);
+    const event = (handler.onEvent as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(event.type).toBe("text_delta");
+    expect(event.content.text).toBe("word");
+  });
+
   it("preserves transport errors for chat handlers", async () => {
     const handler: StreamEventHandler = {
       onEvent: vi.fn(),

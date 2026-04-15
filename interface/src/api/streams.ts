@@ -82,8 +82,17 @@ function createSSEHandler<E extends string>(
 function createChatStreamHandler(handler: StreamEventHandler): SSECallbacks<string> {
   return {
     onEvent(eventType: string, data: unknown) {
-      if (!isValidEventType(eventType)) return;
-      handler.onEvent(parseAuraEvent(eventType, data, {}));
+      const taggedType =
+        data && typeof data === "object" && "type" in data && typeof data.type === "string"
+          ? data.type
+          : null;
+      const resolvedType = isValidEventType(eventType)
+        ? eventType
+        : taggedType && isValidEventType(taggedType)
+          ? taggedType
+          : null;
+      if (!resolvedType) return;
+      handler.onEvent(parseAuraEvent(resolvedType, data, {}));
     },
     onError(err: Error) {
       handler.onError(err);

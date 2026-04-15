@@ -3,6 +3,26 @@ import { ApiClientError } from "./core";
 import { streamSSE } from "./sse";
 import type { SSECallbacks } from "./sse";
 
+function createStorageMock() {
+  const store = new Map<string, string>();
+  return {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+    get length() {
+      return store.size;
+    },
+  };
+}
+
 function makeReader(chunks: string[]) {
   let i = 0;
   const encoder = new TextEncoder();
@@ -20,6 +40,7 @@ function mockSSEFetch(
   status: number,
   chunks: string[],
   ok = status >= 200 && status < 300,
+  contentType = "text/event-stream",
 ) {
   const reader = makeReader(chunks);
   return {
@@ -27,6 +48,11 @@ function mockSSEFetch(
       ok,
       status,
       statusText: ok ? "OK" : "Error",
+      headers: {
+        get: vi.fn((name: string) =>
+          name.toLowerCase() === "content-type" ? contentType : null,
+        ),
+      },
       text: () => Promise.resolve(chunks.join("")),
       body: ok ? { getReader: () => reader } : null,
     }) as unknown as typeof globalThis.fetch,
@@ -36,8 +62,22 @@ function mockSSEFetch(
 
 describe("streamSSE", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  const HOST_STORAGE_KEY = "aura-host-origin";
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("parses SSE frames and calls onEvent", async () => {
     const { fetchFn } = mockSSEFetch(200, [
@@ -73,6 +113,57 @@ describe("streamSSE", () => {
 
     await streamSSE("/api/stream", {}, callbacks);
     expect(callbacks.onEvent).toHaveBeenCalledWith("delta", { text: "hi" });
+  });
+
+  it("supports CRLF-delimited frames and trailing unterminated buffers", async () => {
+    const { fetchFn } = mockSSEFetch(200, [
+      'event: delta\r\ndata: {"text":"hi"}\r\n\r\n',
+      'event: done\r\ndata: {"ok":true}',
+    ]);
+    globalThis.fetch = fetchFn;
+
+    const callbacks: SSECallbacks<"delta" | "done"> = {
+      onEvent: vi.fn(),
+      onDone: vi.fn(),
+    };
+
+    await streamSSE("/api/stream", {}, callbacks);
+
+    expect(callbacks.onEvent).toHaveBeenCalledTimes(2);
+    expect(callbacks.onEvent).toHaveBeenNthCalledWith(1, "delta", { text: "hi" });
+    expect(callbacks.onEvent).toHaveBeenNthCalledWith(2, "done", { ok: true });
+  });
+
+  it("joins multiple data lines using SSE semantics", async () => {
+    const { fetchFn } = mockSSEFetch(200, [
+      "event: info\ndata: first line\ndata: second line\n\n",
+    ]);
+    globalThis.fetch = fetchFn;
+
+    const callbacks: SSECallbacks<"info"> = {
+      onEvent: vi.fn(),
+      onDone: vi.fn(),
+    };
+
+    await streamSSE("/api/stream", {}, callbacks);
+
+    expect(callbacks.onEvent).toHaveBeenCalledWith("info", "first line\nsecond line");
+  });
+
+  it("parses data fields without a required space after the colon", async () => {
+    const { fetchFn } = mockSSEFetch(200, [
+      'event: delta\ndata:{"text":"hello"}\n\n',
+    ]);
+    globalThis.fetch = fetchFn;
+
+    const callbacks: SSECallbacks<"delta"> = {
+      onEvent: vi.fn(),
+      onDone: vi.fn(),
+    };
+
+    await streamSSE("/api/stream", {}, callbacks);
+
+    expect(callbacks.onEvent).toHaveBeenCalledWith("delta", { text: "hello" });
   });
 
   it("calls onError for non-ok response with JSON error body", async () => {
@@ -152,6 +243,11 @@ describe("streamSSE", () => {
       ok: true,
       status: 200,
       statusText: "OK",
+      headers: {
+        get: vi.fn((name: string) =>
+          name.toLowerCase() === "content-type" ? "text/event-stream" : null,
+        ),
+      },
       body: null,
     }) as unknown as typeof globalThis.fetch;
     globalThis.fetch = fetchFn;
@@ -164,6 +260,36 @@ describe("streamSSE", () => {
     await streamSSE("/api/stream", {}, callbacks);
     expect(callbacks.onError).toHaveBeenCalledOnce();
     expect((callbacks.onError as ReturnType<typeof vi.fn>).mock.calls[0][0].message).toBe("Response body is null");
+  });
+
+  it("calls onError when the response is not an SSE stream", async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: {
+        get: vi.fn((name: string) =>
+          name.toLowerCase() === "content-type" ? "text/html; charset=utf-8" : null,
+        ),
+      },
+      text: () => Promise.resolve("<!doctype html><html><body>not the api</body></html>"),
+      body: { getReader: () => makeReader([]) },
+    }) as unknown as typeof globalThis.fetch;
+    globalThis.fetch = fetchFn;
+
+    const callbacks: SSECallbacks<string> = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+      onDone: vi.fn(),
+    };
+
+    await streamSSE("/api/stream", {}, callbacks);
+
+    expect(callbacks.onError).toHaveBeenCalledOnce();
+    expect((callbacks.onError as ReturnType<typeof vi.fn>).mock.calls[0][0].message).toContain(
+      "Expected an SSE response but received text/html; charset=utf-8",
+    );
+    expect(callbacks.onDone).not.toHaveBeenCalled();
   });
 
   it("passes non-JSON data as string to onEvent", async () => {
@@ -216,6 +342,19 @@ describe("streamSSE", () => {
     expect(fetchFn).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("uses the configured host origin for SSE requests", async () => {
+    window.localStorage.setItem(HOST_STORAGE_KEY, "http://aura.test");
+    const { fetchFn } = mockSSEFetch(200, []);
+    globalThis.fetch = fetchFn;
+
+    await streamSSE("/api/stream", { method: "POST" }, { onEvent: vi.fn() });
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "http://aura.test/api/stream",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });
