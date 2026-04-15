@@ -13,21 +13,6 @@ on:
       - infra/scripts/release/desktop-ci-smoke.mjs
       - Cargo.lock
       - Cargo.toml
-  push:
-    branches:
-      - main
-      - codex/release-build-system
-    paths:
-      - .github/actions/**
-      - .github/workflows/desktop-validate.yml
-      - .github/workflows/release-nightly.yml
-      - .github/workflows/release-stable.yml
-      - apps/aura-os-desktop/**
-      - apps/aura-os-server/**
-      - interface/**
-      - infra/scripts/release/desktop-ci-smoke.mjs
-      - Cargo.lock
-      - Cargo.toml
   workflow_dispatch:
 
 permissions:
