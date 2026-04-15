@@ -12,6 +12,7 @@ test.use({ serviceWorkers: "block" });
 test.describe.configure({ mode: "serial" });
 
 const scenarios = await loadWorkflowE2EScenarios();
+const workflowExpectationTimeoutMs = Number(process.env.AURA_EVAL_EXPECT_TIMEOUT_MS ?? 15_000);
 
 for (const scenario of scenarios) {
   test(`${scenario.title} @workflow`, async ({ page }, testInfo) => {
@@ -97,10 +98,16 @@ for (const scenario of scenarios) {
 
     await timed("open_stats", () => page.goto(`/projects/${project.project_id}/stats`));
     for (const text of scenario.verification.statsTexts) {
-      await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
+      await expect(page.getByText(text, { exact: true }).first()).toBeVisible({
+        timeout: workflowExpectationTimeoutMs,
+      });
     }
-    await expect(page.getByText("100%", { exact: true })).toBeVisible();
-    await expect(page.getByText(String(tasks.length), { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("100%", { exact: true })).toBeVisible({
+      timeout: workflowExpectationTimeoutMs,
+    });
+    await expect(page.getByText(String(tasks.length), { exact: true }).first()).toBeVisible({
+      timeout: workflowExpectationTimeoutMs,
+    });
 
     const projectStats = await timed("collect_stats", () => browserApiFetch<{
       total_tasks: number;

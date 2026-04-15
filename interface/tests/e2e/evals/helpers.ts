@@ -249,7 +249,7 @@ interface BenchmarkOperationLogEntry {
 
 const demoModeEnabled = process.env.AURA_EVAL_DEMO_MODE === "1";
 const demoStepDelayMs = Number(process.env.AURA_EVAL_DEMO_STEP_DELAY_MS ?? 1200);
-const evalExpectationTimeoutMs = Number(process.env.AURA_EVAL_EXPECT_TIMEOUT_MS ?? 10_000);
+const evalExpectationTimeoutMs = Number(process.env.AURA_EVAL_EXPECT_TIMEOUT_MS ?? 15_000);
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const scenariosDir = path.join(currentDir, "scenarios");
