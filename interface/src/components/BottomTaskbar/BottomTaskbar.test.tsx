@@ -203,6 +203,7 @@ describe("BottomTaskbar", () => {
 
     expect(screen.getByRole("button", { name: "Expand apps" })).toBeInTheDocument();
     expect(screen.getByTestId("chevron-right")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show credits balance" })).toBeInTheDocument();
 
     const navRails = screen.getAllByTestId("app-nav-rail");
     const leftNavRail = navRails[0];
@@ -220,11 +221,40 @@ describe("BottomTaskbar", () => {
     render(<BottomTaskbar />);
 
     expect(screen.getByRole("button", { name: "Collapse apps" })).toBeInTheDocument();
-    expect(screen.getByTestId("chevron-left")).toBeInTheDocument();
 
     const navRails = screen.getAllByTestId("app-nav-rail");
     const leftNavRail = navRails[0];
     expect(leftNavRail).toHaveAttribute("data-include-ids", "null");
+  });
+
+  it("shows the credits balance inline from the right chevron", async () => {
+    const user = userEvent.setup();
+    render(<BottomTaskbar />);
+
+    expect(screen.queryByText("1,200 Z")).not.toBeInTheDocument();
+
+    const creditsToggle = screen.getByRole("button", { name: "Show credits balance" });
+    const creditsButton = screen.getByRole("button", { name: "Credits" });
+
+    expect(
+      creditsToggle.compareDocumentPosition(creditsButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await user.click(creditsToggle);
+
+    expect(screen.getByRole("button", { name: "Hide credits balance" })).toBeInTheDocument();
+    expect(screen.getByText("1,200 Z")).toBeInTheDocument();
+  });
+
+  it("hides the credits balance on a second right chevron click", async () => {
+    const user = userEvent.setup();
+    render(<BottomTaskbar />);
+
+    await user.click(screen.getByRole("button", { name: "Show credits balance" }));
+    await user.click(screen.getByRole("button", { name: "Hide credits balance" }));
+
+    expect(screen.getByRole("button", { name: "Show credits balance" })).toBeInTheDocument();
+    expect(screen.queryByText("1,200 Z")).not.toBeInTheDocument();
   });
 
   it("opens team settings from the taskbar shortcut", async () => {
@@ -244,7 +274,6 @@ describe("BottomTaskbar", () => {
     await user.click(screen.getByRole("button", { name: "Expand apps" }));
 
     expect(screen.getByRole("button", { name: "Collapse apps" })).toBeInTheDocument();
-    expect(screen.getByTestId("chevron-left")).toBeInTheDocument();
     expect(setTaskbarAppsCollapsed).toHaveBeenCalledWith(false);
 
     const navRails = screen.getAllByTestId("app-nav-rail");

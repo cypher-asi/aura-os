@@ -5,7 +5,9 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAppStore } from "../../stores/app-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { getTaskbarAppsCollapsed, setTaskbarAppsCollapsed } from "../../utils/storage";
+import { formatCredits } from "../../utils/format";
 import { AppNavRail, TaskbarIconButton, TASKBAR_ICON_SIZE } from "../AppNavRail";
+import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
 import { FavoriteAgentsStrip } from "./FavoriteAgentsStrip";
 import styles from "./BottomTaskbar.module.css";
 
@@ -27,7 +29,10 @@ export function BottomTaskbar() {
   const time = useClock();
   const navigate = useNavigate();
   const previousPath = useAppUIStore((s) => s.previousPath);
+  const { credits } = useCreditBalance();
   const [collapsed, setCollapsed] = useState(() => getTaskbarAppsCollapsed());
+  const [creditsExpanded, setCreditsExpanded] = useState(false);
+  const creditsLabel = credits !== null ? formatCredits(credits) : "---";
 
   const toggleAppsCollapsed = () => {
     setCollapsed((current) => {
@@ -78,6 +83,22 @@ export function BottomTaskbar() {
 
       <div className={styles.right}>
         <div className={styles.rightPrimary}>
+          {creditsExpanded ? (
+            <span className={styles.creditsSummary} aria-live="polite">
+              {creditsLabel}
+            </span>
+          ) : null}
+          <TaskbarIconButton
+            icon={
+              creditsExpanded ? (
+                <ChevronRight size={TASKBAR_CHEVRON_SIZE} />
+              ) : (
+                <ChevronLeft size={TASKBAR_CHEVRON_SIZE} />
+              )
+            }
+            onClick={() => setCreditsExpanded((current) => !current)}
+            aria-label={creditsExpanded ? "Hide credits balance" : "Show credits balance"}
+          />
           <TaskbarIconButton
             icon={<CreditCard size={TASKBAR_ICON_SIZE} />}
             title="Credits"

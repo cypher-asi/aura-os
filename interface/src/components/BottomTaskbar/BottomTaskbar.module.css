@@ -111,6 +111,21 @@
   gap: 4px;
 }
 
+.creditsSummary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--taskbar-item-size);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-surface-hover) 70%, transparent);
+  color: var(--color-text-secondary);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
 .clock {
   display: inline-flex;
   align-items: center;
