@@ -1,0 +1,854 @@
+{
+  "schemaVersion": 1,
+  "promptVersion": 1,
+  "generator": "anthropic",
+  "generationError": null,
+  "generatedAt": "2026-04-15T18:43:36.937Z",
+  "repo": "aura-os",
+  "channel": "nightly",
+  "version": "0.1.0-nightly.9e40e99",
+  "date": "2026-04-15",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
+  "lastIncludedSha": "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
+  "previousProcessedSha": null,
+  "commitShas": [
+    "5509bcd2ec8b00a10a83389832104f5f15ead590",
+    "6d76e47fbb251878c6534497acfaaf893791d8e7",
+    "116796ca91f8b611474ae064a63b248bc57caf0f",
+    "78ab4d25e06aa5a678f66bd67eafcbe6b8bc7aa8",
+    "fd625fd64f52f58d53fa154cdf41d5bd3c777f7b",
+    "1d74cc60a48632b98520ef566cfd66edff69328d",
+    "2828dc38355612749f9d06e617c8ccd5c8fc57ad",
+    "9557757d9eb2770b6921079bf25659d936de5f9f",
+    "75589e4e5e50113d21b7587b235e2a57162c10b9",
+    "fc15ffb2fd05d94af7c0b5121011345c387c160f",
+    "5dd83aefe30f468d9ae098d1ce5701a13cf5ea69",
+    "f6335a768f71f084f135c8b13489bf87b22ad1b3",
+    "80d9e3942f6ba9d196ecdd9e294052a11c7ab7f3",
+    "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9",
+    "7299fdd6262cfbc622274f96e571a7816ff91dde",
+    "032889cd17c430ba008f5ed8d5a95560d12e262c",
+    "2e8ecb8eaae05af54dbcafee03280ebbf3337a99",
+    "38e020c06497fba072c83c26d4259b27fdce66d0",
+    "9f34383527083ffac59a8d07a94538cda3d77095",
+    "9e40e99b0dff8228ec078cf76cbee06be9fc70b8"
+  ],
+  "rawCommitCount": 20,
+  "rawCommits": [
+    {
+      "sha": "5509bcd2ec8b00a10a83389832104f5f15ead590",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T17:20:18-07:00",
+      "subject": "Wait for the virtualized tail before revealing chat",
+      "body": "Feed a bottom-window layout signature from ChatMessageList into useScrollAnchor so the panel no longer reveals as soon as outer scrollHeight looks stable. The initial settle path now waits until the virtualized bottom range reaches the tail and stops changing before chrome becomes visible.\n\nThis keeps the existing active auto-follow behavior, but removes the visible post-reveal scroll correction on first open. It also adds focused hook coverage for tail reachability and ongoing bottom-window measurement churn.\n\nMade-with: Cursor",
+      "parents": [
+        "da9130619a046f610a1cd4498978ebab8e067964"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/hooks/use-scroll-anchor.test.ts",
+        "interface/src/hooks/use-scroll-anchor.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 199,
+        "deletions": 20
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6d76e47fbb251878c6534497acfaaf893791d8e7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T17:22:59-07:00",
+      "subject": "Apply rustfmt formatting across server handlers, billing, orgs, sessions, store, tasks, and link crates",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "5509bcd2ec8b00a10a83389832104f5f15ead590"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/orgs.rs",
+        "crates/aura-os-billing/src/client.rs",
+        "crates/aura-os-link/src/swarm_harness.rs",
+        "crates/aura-os-orgs/src/lib.rs",
+        "crates/aura-os-process/src/executor/run/mod.rs",
+        "crates/aura-os-sessions/src/lib.rs",
+        "crates/aura-os-store/src/store.rs",
+        "crates/aura-os-tasks/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 51,
+        "deletions": 27
+      },
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "116796ca91f8b611474ae064a63b248bc57caf0f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T17:23:13-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "6d76e47fbb251878c6534497acfaaf893791d8e7",
+        "f586e8e837e3bdd23d33d07a06c28a793b14820a"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 477,
+        "deletions": 49
+      },
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "78ab4d25e06aa5a678f66bd67eafcbe6b8bc7aa8",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T21:00:26-04:00",
+      "subject": "Remove dead agent editor system prompt props",
+      "body": "",
+      "parents": [
+        "116796ca91f8b611474ae064a63b248bc57caf0f"
+      ],
+      "files": [
+        "interface/src/components/AgentEditorModal/AgentEditorForm.tsx",
+        "interface/src/components/AgentEditorModal/AgentEditorModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 0,
+        "deletions": 6
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fd625fd64f52f58d53fa154cdf41d5bd3c777f7b",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T21:05:20-04:00",
+      "subject": "Stabilize eval shell expectations",
+      "body": "",
+      "parents": [
+        "78ab4d25e06aa5a678f66bd67eafcbe6b8bc7aa8"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/helpers.ts",
+        "interface/tests/e2e/evals/scenarios/core-browser-smoke.json",
+        "interface/tests/e2e/evals/workflow-e2e.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 13,
+        "deletions": 6
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1d74cc60a48632b98520ef566cfd66edff69328d",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T21:17:58-04:00",
+      "subject": "Run desktop validate only for PRs",
+      "body": "",
+      "parents": [
+        "fd625fd64f52f58d53fa154cdf41d5bd3c777f7b"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 15
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "2828dc38355612749f9d06e617c8ccd5c8fc57ad",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T21:33:22-04:00",
+      "subject": "Bump CI Node version to 22",
+      "body": "",
+      "parents": [
+        "1d74cc60a48632b98520ef566cfd66edff69328d"
+      ],
+      "files": [
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 12,
+        "deletions": 12
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "9557757d9eb2770b6921079bf25659d936de5f9f",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T21:39:20-04:00",
+      "subject": "Align CI Node version with local",
+      "body": "",
+      "parents": [
+        "2828dc38355612749f9d06e617c8ccd5c8fc57ad"
+      ],
+      "files": [
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 18,
+        "deletions": 18
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "75589e4e5e50113d21b7587b235e2a57162c10b9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T21:59:43-04:00",
+      "subject": "Preserve encoded updater public key",
+      "body": "",
+      "parents": [
+        "9557757d9eb2770b6921079bf25659d936de5f9f"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 8
+      },
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "fc15ffb2fd05d94af7c0b5121011345c387c160f",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T22:16:05-04:00",
+      "subject": "Stabilize workflow eval stats assertions",
+      "body": "",
+      "parents": [
+        "75589e4e5e50113d21b7587b235e2a57162c10b9"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/workflow-e2e.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 12
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5dd83aefe30f468d9ae098d1ce5701a13cf5ea69",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-14T22:32:06-04:00",
+      "subject": "Set up CI keychain for iOS signing",
+      "body": "",
+      "parents": [
+        "fc15ffb2fd05d94af7c0b5121011345c387c160f"
+      ],
+      "files": [
+        "interface/ios/fastlane/Fastfile"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 13,
+        "deletions": 0
+      },
+      "primaryArea": "iOS",
+      "areas": [
+        "iOS"
+      ]
+    },
+    {
+      "sha": "f6335a768f71f084f135c8b13489bf87b22ad1b3",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T00:02:31-04:00",
+      "subject": "Float desktop update banner above taskbar",
+      "body": "",
+      "parents": [
+        "5dd83aefe30f468d9ae098d1ce5701a13cf5ea69"
+      ],
+      "files": [
+        "interface/src/components/UpdateBanner/UpdateBanner.module.css",
+        "interface/src/components/UpdateBanner/UpdateBanner.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 23,
+        "deletions": 4
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "80d9e3942f6ba9d196ecdd9e294052a11c7ab7f3",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T00:54:17-04:00",
+      "subject": "Run iOS beta lane on main pushes",
+      "body": "",
+      "parents": [
+        "f6335a768f71f084f135c8b13489bf87b22ad1b3"
+      ],
+      "files": [
+        ".github/workflows/ios-mobile.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 4
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T02:00:16-04:00",
+      "subject": "Add dedicated mobile workspace shell",
+      "body": "",
+      "parents": [
+        "80d9e3942f6ba9d196ecdd9e294052a11c7ab7f3"
+      ],
+      "files": [
+        "docs/mobile-release-rubric.md",
+        "interface/src/App.tsx",
+        "interface/src/components/MobileShell/MobileDrawerContents.tsx",
+        "interface/src/components/MobileShell/MobileShell.module.css",
+        "interface/src/components/MobileShell/MobileShell.test.tsx",
+        "interface/src/components/MobileShell/MobileShell.tsx",
+        "interface/src/components/MobileShell/MobileTopbar.tsx",
+        "interface/src/components/MobileShell/useMobileShellState.ts",
+        "interface/src/stores/org-store.test.ts",
+        "interface/src/stores/org-store.ts",
+        "interface/src/stores/projects-list-store.test.ts",
+        "interface/src/stores/projects-list-store.ts",
+        "interface/src/utils/mobileNavigation.test.ts",
+        "interface/src/utils/mobileNavigation.ts",
+        "interface/src/views/HomeView/HomeView.test.tsx",
+        "interface/src/views/HomeView/HomeView.tsx",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.module.css",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.test.tsx",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.tsx",
+        "interface/src/views/MobileOrganizationView/index.ts"
+      ],
+      "stats": {
+        "fileCount": 20,
+        "insertions": 1764,
+        "deletions": 149
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Docs"
+      ]
+    },
+    {
+      "sha": "7299fdd6262cfbc622274f96e571a7816ff91dde",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T02:00:16-04:00",
+      "subject": "Refine mobile agent and project workflows",
+      "body": "",
+      "parents": [
+        "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.test.tsx",
+        "interface/src/apps/agents/AgentConversationRow/AgentConversationRow.tsx",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/AgentSelectorModal/useAgentSelectorData.ts",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/MobileShell/ProjectNavigationDrawer.tsx",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.module.css",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.test.tsx",
+        "interface/src/views/ProjectAgentSetupView/ProjectAgentSetupView.tsx",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.test.tsx",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.tsx"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 744,
+        "deletions": 221
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "032889cd17c430ba008f5ed8d5a95560d12e262c",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T02:00:16-04:00",
+      "subject": "Harden mobile and desktop regression coverage",
+      "body": "",
+      "parents": [
+        "7299fdd6262cfbc622274f96e571a7816ff91dde"
+      ],
+      "files": [
+        "interface/tests/e2e/desktop-visual.spec.ts",
+        "interface/tests/e2e/layout-capability.desktop.spec.ts",
+        "interface/tests/e2e/pwa-mobile-visual.spec.ts",
+        "interface/tests/e2e/pwa-mobile.spec.ts",
+        "interface/tests/e2e/responsive-unification.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 202,
+        "deletions": 112
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2e8ecb8eaae05af54dbcafee03280ebbf3337a99",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T11:58:11-04:00",
+      "subject": "Update mobile smoke eval contract",
+      "body": "",
+      "parents": [
+        "032889cd17c430ba008f5ed8d5a95560d12e262c"
+      ],
+      "files": [
+        "interface/tests/e2e/evals/scenarios/core-browser-smoke.json"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 12
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "38e020c06497fba072c83c26d4259b27fdce66d0",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T13:16:49-04:00",
+      "subject": "Polish mobile execution view",
+      "body": "",
+      "parents": [
+        "2e8ecb8eaae05af54dbcafee03280ebbf3337a99"
+      ],
+      "files": [
+        "interface/src/views/ProjectWorkView/ProjectWorkView.module.css",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.test.tsx",
+        "interface/src/views/ProjectWorkView/ProjectWorkView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 429,
+        "deletions": 94
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9f34383527083ffac59a8d07a94538cda3d77095",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T13:38:43-04:00",
+      "subject": "Fix desktop regression test coverage",
+      "body": "",
+      "parents": [
+        "38e020c06497fba072c83c26d4259b27fdce66d0"
+      ],
+      "files": [
+        "interface/tests/e2e/helpers/mockAuthenticatedApp.ts",
+        "interface/tests/e2e/team-settings-integrations.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 8,
+        "deletions": 11
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T14:10:28-04:00",
+      "subject": "Generate daily release changelogs",
+      "body": "",
+      "parents": [
+        "9f34383527083ffac59a8d07a94538cda3d77095"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release/generate-daily-changelog.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 741,
+        "deletions": 2
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    }
+  ],
+  "artifactSummaries": [
+    {
+      "file": "release-summary-linux-x86_64.json",
+      "channel": "nightly",
+      "version": "0.1.0-nightly.9e40e99",
+      "artifactCount": 4,
+      "artifacts": [
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_amd64.deb",
+          "platform": "linux",
+          "kind": "deb",
+          "sizeBytes": 24464956
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_amd64.deb.sig",
+          "platform": "linux",
+          "kind": "signature",
+          "sizeBytes": 456
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.AppImage",
+          "platform": "linux",
+          "kind": "appimage",
+          "sizeBytes": 92264952
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.AppImage.sig",
+          "platform": "linux",
+          "kind": "signature",
+          "sizeBytes": 464
+        }
+      ]
+    },
+    {
+      "file": "release-summary-macos-aarch64.json",
+      "channel": "nightly",
+      "version": "0.1.0-nightly.9e40e99",
+      "artifactCount": 4,
+      "artifacts": [
+        {
+          "name": "Aura_0.1.0-nightly.9e40e99_aarch64.dmg",
+          "platform": "macos",
+          "kind": "dmg",
+          "sizeBytes": 21127218
+        },
+        {
+          "name": "Aura_0.1.0-nightly.9e40e99_aarch64.dmg.sig",
+          "platform": "macos",
+          "kind": "signature",
+          "sizeBytes": 444
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_aarch64.app.tar.gz",
+          "platform": "macos",
+          "kind": "updater_bundle",
+          "sizeBytes": 20946428
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_aarch64.app.tar.gz.sig",
+          "platform": "other",
+          "kind": "signature",
+          "sizeBytes": 468
+        }
+      ]
+    },
+    {
+      "file": "release-summary-macos-x86_64.json",
+      "channel": "nightly",
+      "version": "0.1.0-nightly.9e40e99",
+      "artifactCount": 4,
+      "artifacts": [
+        {
+          "name": "Aura_0.1.0-nightly.9e40e99_x64.dmg",
+          "platform": "macos",
+          "kind": "dmg",
+          "sizeBytes": 22554565
+        },
+        {
+          "name": "Aura_0.1.0-nightly.9e40e99_x64.dmg.sig",
+          "platform": "macos",
+          "kind": "signature",
+          "sizeBytes": 440
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.app.tar.gz",
+          "platform": "macos",
+          "kind": "updater_bundle",
+          "sizeBytes": 22391720
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x86_64.app.tar.gz.sig",
+          "platform": "other",
+          "kind": "signature",
+          "sizeBytes": 468
+        }
+      ]
+    },
+    {
+      "file": "release-summary-windows-x86_64.json",
+      "channel": "nightly",
+      "version": "0.1.0-nightly.9e40e99",
+      "artifactCount": 2,
+      "artifacts": [
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x64-setup.exe",
+          "platform": "windows",
+          "kind": "installer",
+          "sizeBytes": 14785262
+        },
+        {
+          "name": "aura-os-desktop_0.1.0-nightly.9e40e99_x64-setup.exe.sig",
+          "platform": "windows",
+          "kind": "signature",
+          "sizeBytes": 460
+        }
+      ]
+    }
+  ],
+  "rendered": {
+    "date": "2026-04-15",
+    "repo": "aura-os",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.9e40e99",
+    "title": "Mobile Workspace Shell and Release Infrastructure Improvements",
+    "intro": "Major mobile experience overhaul with dedicated workspace shell, refined agent workflows, and enhanced release automation. This release focuses on making mobile navigation coherent while preserving desktop behavior.",
+    "sections": [
+      {
+        "title": "Mobile Experience",
+        "items": [
+          {
+            "text": "Added dedicated mobile workspace shell with organization hub, project navigation drawer, and mobile-optimized topbar",
+            "commit_shas": [
+              "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Refined mobile agent and project workflows with improved agent conversation rows and project navigation",
+            "commit_shas": [
+              "7299fdd6262cfbc622274f96e571a7816ff91dde"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Polished mobile execution view with redesigned layout, execution cards, and floating action controls",
+            "commit_shas": [
+              "38e020c06497fba072c83c26d4259b27fdce66d0"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Enhanced mobile and desktop regression test coverage with updated visual specs and layout capability tests",
+            "commit_shas": [
+              "032889cd17c430ba008f5ed8d5a95560d12e262c"
+            ],
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "title": "Interface Improvements",
+        "items": [
+          {
+            "text": "Fixed chat panel reveal timing by waiting for virtualized tail before showing chrome, eliminating visible scroll corrections",
+            "commit_shas": [
+              "5509bcd2ec8b00a10a83389832104f5f15ead590"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Improved desktop update banner positioning to float above taskbar",
+            "commit_shas": [
+              "f6335a768f71f084f135c8b13489bf87b22ad1b3"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Cleaned up agent editor by removing dead system prompt props",
+            "commit_shas": [
+              "78ab4d25e06aa5a678f66bd67eafcbe6b8bc7aa8"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "title": "Release Infrastructure",
+        "items": [
+          {
+            "text": "Added automated daily changelog generation for both nightly and stable releases",
+            "commit_shas": [
+              "9e40e99b0dff8228ec078cf76cbee06be9fc70b8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Upgraded CI Node version from 22 to 25 across all workflows to align with local development",
+            "commit_shas": [
+              "2828dc38355612749f9d06e617c8ccd5c8fc57ad",
+              "9557757d9eb2770b6921079bf25659d936de5f9f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Configured desktop validation to run only for pull requests, optimizing CI resource usage",
+            "commit_shas": [
+              "1d74cc60a48632b98520ef566cfd66edff69328d"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Set up iOS beta lane to run on main branch pushes for continuous mobile testing",
+            "commit_shas": [
+              "80d9e3942f6ba9d196ecdd9e294052a11c7ab7f3"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "title": "Platform Updates",
+        "items": [
+          {
+            "text": "Enhanced Desktop updater security by preserving encoded public key for signature validation",
+            "commit_shas": [
+              "75589e4e5e50113d21b7587b235e2a57162c10b9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Configured iOS CI keychain setup for proper code signing in automated builds",
+            "commit_shas": [
+              "5dd83aefe30f468d9ae098d1ce5701a13cf5ea69"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Applied rustfmt formatting across server handlers, billing, orgs, sessions, and related crates",
+            "commit_shas": [
+              "6d76e47fbb251878c6534497acfaaf893791d8e7"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      }
+    ],
+    "highlights": [
+      "Mobile workspace shell provides coherent navigation without breaking desktop flows",
+      "Chat panel timing improvements eliminate visible scroll corrections on first open",
+      "Automated changelog generation now included in release pipeline"
+    ],
+    "raw_commit_count": 20
+  }
+}
