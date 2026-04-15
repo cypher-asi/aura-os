@@ -893,7 +893,9 @@ async fn stream_codex_project_turn(
                 }),
             );
             emit_saved_artifact_events(
+                &state.event_broadcast,
                 sse_tx,
+                project_id,
                 &tool_name,
                 tool_result.is_error,
                 &tool_result.result,
@@ -1100,7 +1102,9 @@ async fn stream_claude_project_turn(
                 }),
             );
             emit_saved_artifact_events(
+                &state.event_broadcast,
                 sse_tx,
+                project_id,
                 &tool_name,
                 tool_result.is_error,
                 &tool_result.result,
@@ -1435,7 +1439,9 @@ fn emit_json_sse_event(
 }
 
 fn emit_saved_artifact_events(
+    broadcast_tx: &broadcast::Sender<serde_json::Value>,
     sse_tx: &mpsc::UnboundedSender<Result<Event, Infallible>>,
+    project_id: &str,
     tool_name: &str,
     is_error: bool,
     result: &str,
@@ -1454,10 +1460,37 @@ fn emit_saved_artifact_events(
     };
     let payload_key = tool.saved_payload_key.as_deref().unwrap_or("result");
     let payload = value.get(payload_key).cloned().unwrap_or(value);
+    let mut event = serde_json::json!({
+        "type": saved_event,
+        "project_id": project_id,
+        payload_key: payload,
+    });
+    match saved_event {
+        "spec_saved" => {
+            if let Some(spec_id) = event
+                .get(payload_key)
+                .and_then(|value| value.get("spec_id"))
+                .and_then(Value::as_str)
+            {
+                event["spec_id"] = Value::String(spec_id.to_string());
+            }
+        }
+        "task_saved" => {
+            if let Some(task_id) = event
+                .get(payload_key)
+                .and_then(|value| value.get("task_id"))
+                .and_then(Value::as_str)
+            {
+                event["task_id"] = Value::String(task_id.to_string());
+            }
+        }
+        _ => {}
+    }
+    let _ = broadcast_tx.send(event.clone());
     emit_json_sse_event(
         sse_tx,
         saved_event,
-        serde_json::json!({ payload_key: payload }),
+        event,
     );
 }
 
