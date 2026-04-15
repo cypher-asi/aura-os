@@ -266,49 +266,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         <span className={styles.orbitWrap}>
           <OrbitStatusIndicator project={selectedProject} />
         </span>
-        {contextUtilization != null && contextUtilization > 0 ? (
-          <>
-            <span className={styles.infoDivider} aria-hidden="true">·</span>
-            <span
-              className={
-                styles.contextIndicator +
-                (contextUtilization >= 0.9
-                  ? ` ${styles.contextDanger}`
-                  : contextUtilization >= 0.7
-                    ? ` ${styles.contextWarning}`
-                    : "")
-              }
-              title={`Context window ${Math.round(contextUtilization * 100)}% used`}
-            >
-              {Math.round(contextUtilization * 100)}%
-            </span>
-            {onNewSession ? (
-              <button
-                type="button"
-                className={styles.newSessionButton}
-                onClick={onNewSession}
-                title="Start a new session and reset context."
-                aria-label="Start new session"
-              >
-                <RotateCcw size={10} />
-              </button>
-            ) : null}
-          </>
-        ) : onNewSession ? (
-          <>
-            <span className={styles.infoDivider} aria-hidden="true">·</span>
-            <button
-              type="button"
-              className={styles.newSessionButton}
-              onClick={onNewSession}
-              title="Start a new session and reset context."
-              aria-label="Start new session"
-            >
-              <RotateCcw size={10} />
-            </button>
-          </>
-        ) : null}
-        {selectedProject ? <span className={styles.infoDivider} aria-hidden="true">·</span> : null}
+        <span className={styles.infoDivider} aria-hidden="true">·</span>
         <button
           type="button"
           className={styles.commandsTrigger}
@@ -347,6 +305,44 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
             </div>
           )}
         </div>
+        {contextUtilization != null && contextUtilization > 0 ? (
+          <>
+            <span
+              className={
+                styles.contextIndicator +
+                (contextUtilization >= 0.9
+                  ? ` ${styles.contextDanger}`
+                  : contextUtilization >= 0.7
+                    ? ` ${styles.contextWarning}`
+                    : "")
+              }
+              title={`Context window ${Math.round(contextUtilization * 100)}% used`}
+            >
+              {Math.round(contextUtilization * 100)}%
+            </span>
+            {onNewSession ? (
+              <button
+                type="button"
+                className={styles.newSessionButton}
+                onClick={onNewSession}
+                title="Start a new session and reset context."
+                aria-label="Start new session"
+              >
+                <RotateCcw size={10} />
+              </button>
+            ) : null}
+          </>
+        ) : onNewSession ? (
+          <button
+            type="button"
+            className={styles.newSessionButton}
+            onClick={onNewSession}
+            title="Start a new session and reset context."
+            aria-label="Start new session"
+          >
+            <RotateCcw size={10} />
+          </button>
+        ) : null}
         <div className={styles.modelMenuWrap} ref={modelMenuRef}>
           <button
             type="button"
