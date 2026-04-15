@@ -104,7 +104,7 @@ jobs:
             /tmp/aura-ios-validate/Build/Products/**/*.app
 
   ship-ios:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: macos-latest
     env:
       FASTLANE_SKIP_UPDATE_CHECK: "1"
@@ -115,13 +115,13 @@ jobs:
       IOS_APPLE_ID: ${{ secrets.IOS_APPLE_ID }}
       IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
       IOS_BUILD_NUMBER: ${{ github.run_number }}
-      IOS_CHANGELOG: ${{ inputs.changelog }}
+      IOS_CHANGELOG: ${{ github.event_name == 'workflow_dispatch' && inputs.changelog || '' }}
       IOS_DEVELOPER_TEAM_ID: ${{ secrets.IOS_DEVELOPER_TEAM_ID }}
       IOS_MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.IOS_MATCH_GIT_BASIC_AUTHORIZATION }}
       IOS_MATCH_GIT_BRANCH: ${{ secrets.IOS_MATCH_GIT_BRANCH }}
       IOS_MATCH_GIT_PRIVATE_KEY: ${{ secrets.IOS_MATCH_GIT_PRIVATE_KEY }}
       IOS_MATCH_GIT_URL: ${{ secrets.IOS_MATCH_GIT_URL }}
-      IOS_SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review && '1' || '0' }}
+      IOS_SUBMIT_FOR_REVIEW: ${{ github.event_name == 'workflow_dispatch' && inputs.submit_for_review && '1' || '0' }}
       MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
       VITE_IOS_DEFAULT_HOST: ${{ vars.VITE_IOS_DEFAULT_HOST }}
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
@@ -159,7 +159,7 @@ jobs:
       - name: Upload build with fastlane
         timeout-minutes: 30
         working-directory: interface/ios
-        run: bundle exec fastlane ios ${{ inputs.lane }}
+        run: bundle exec fastlane ios ${{ github.event_name == 'workflow_dispatch' && inputs.lane || 'beta' }}
 
       - name: Summarize iOS release outputs
         run: |
