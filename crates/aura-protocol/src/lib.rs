@@ -92,6 +92,12 @@ pub struct SessionInit {
     /// Organization UUID for X-Aura-Org-Id billing header.
     #[serde(default)]
     pub aura_org_id: Option<String>,
+    /// Project UUID for X-Aura-Project-Id billing header. Distinct from
+    /// `project_id` (which the harness uses for domain tool routing) so that
+    /// the aura-router can attribute LLM usage to the correct project even
+    /// when `project_id` is not set or points at a different scope.
+    #[serde(default)]
+    pub aura_project_id: Option<String>,
     /// Harness-level agent ID for per-agent skill lookup.
     /// Set by the caller (e.g. aura-os) so the harness can resolve which
     /// skills are installed for this agent.

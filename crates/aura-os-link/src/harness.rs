@@ -30,6 +30,8 @@ pub struct SessionConfig {
     pub aura_session_id: Option<String>,
     /// Org UUID for X-Aura-Org-Id billing header.
     pub aura_org_id: Option<String>,
+    /// Project UUID for X-Aura-Project-Id billing header.
+    pub aura_project_id: Option<String>,
     /// Optional per-session provider override for Aura BYOK.
     pub provider_config: Option<SessionProviderConfig>,
 }
