@@ -127,7 +127,10 @@
 
 .sidekickBody [class*="label"] {
   text-align: left;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: #ffffff;
 }
 
 .sidekickBody [class*="iconSpacer"] {
@@ -139,7 +142,8 @@
   padding-right: var(--space-3, 12px);
   height: 30px;
   min-height: 30px;
-  font-size: 13px;
+  font-size: 12px;
+  color: #ffffff;
 }
 
 .sidekickBody [class*="itemContent"]:focus-visible,
@@ -147,9 +151,13 @@
   outline: none;
 }
 
-/* Parent (collapsible) items: white text */
-.sidekickBody [class*="itemContent"][aria-expanded] [class*="label"] {
-  color: #ffffff;
+/* Parent (collapsible) items: match Projects LeftMenu header color.
+   Use aria-expanded="true"/"false" explicitly because leaf items also get
+   aria-expanded="false" from the underlying Item component, which would
+   otherwise match a bare [aria-expanded] selector and turn leaves gray. */
+.sidekickBody [class*="itemContent"][aria-expanded="true"] [class*="label"],
+.sidekickBody [class*="item"]:has(> [class*="children"]) > [class*="itemContent"] [class*="label"] {
+  color: var(--color-text-secondary);
 }
 
 /* Child items: same padding as parent, leafSpacer aligns text with parent label */

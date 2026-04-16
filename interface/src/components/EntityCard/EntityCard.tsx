@@ -43,6 +43,8 @@ export function EntityCard({
   stats,
   footer,
 }: EntityCardProps) {
+  const hasNameAction = Boolean(nameAction);
+
   return (
     <div className={styles.cardContainer}>
       <div className={styles.card}>
@@ -63,7 +65,12 @@ export function EntityCard({
             <span className={styles.displayName}>{name}</span>
             {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
           </div>
-          {nameAction && <div className={styles.nameAction}>{nameAction}</div>}
+          <div
+            className={`${styles.nameAction} ${!hasNameAction ? styles.nameActionPlaceholder : ""}`}
+            aria-hidden={!hasNameAction}
+          >
+            {nameAction}
+          </div>
         </div>
 
         {children && <div className={styles.body}>{children}</div>}
