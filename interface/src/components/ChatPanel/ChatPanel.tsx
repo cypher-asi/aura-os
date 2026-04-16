@@ -97,6 +97,7 @@ export function ChatPanel({
     isMobileLayout,
     handleScroll,
     isAutoFollowing,
+    isStreaming,
     queue,
     messages,
     scrollToBottom,
@@ -242,6 +243,14 @@ export function ChatPanel({
     initialHandoffReadyRef.current = true;
     onInitialHandoffReady?.();
   }, [initialHandoff, onInitialHandoffReady, threadReady]);
+
+  const isThreadEmpty =
+    historyResolved &&
+    !errorMessage &&
+    messages.length === 0 &&
+    !isStreaming &&
+    queue.length === 0 &&
+    !shouldHideThreadForInitialReveal;
 
   const emptyState = errorMessage ? (
     <div className={styles.emptyState}>
@@ -389,6 +398,7 @@ export function ChatPanel({
           selectedProjectId={selectedProjectId}
           onProjectChange={onProjectChange}
           isVisible
+          isCentered={isThreadEmpty}
           contextUtilization={contextUtilization}
           onNewSession={onNewSession}
         />

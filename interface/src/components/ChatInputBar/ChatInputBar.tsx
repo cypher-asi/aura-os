@@ -49,6 +49,7 @@ interface Props {
   selectedProjectId?: string;
   onProjectChange?: (projectId: string) => void;
   isVisible?: boolean;
+  isCentered?: boolean;
   contextUtilization?: number;
   onNewSession?: () => void;
 }
@@ -75,6 +76,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   selectedCommands = [], onCommandsChange,
   projects = [], selectedProjectId, onProjectChange,
   isVisible = true,
+  isCentered = false,
   contextUtilization, onNewSession,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
@@ -223,9 +225,10 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
 
   return (
     <div
-      className={`${styles.inputWrapper}${isVisible ? "" : ` ${styles.inputWrapperHidden}`}`}
+      className={`${styles.inputWrapper}${isVisible ? "" : ` ${styles.inputWrapperHidden}`}${isCentered ? ` ${styles.inputWrapperCentered}` : ""}`}
       aria-hidden={isVisible ? undefined : true}
       data-visible={isVisible ? "true" : "false"}
+      data-centered={isCentered ? "true" : "false"}
     >
       <div
         className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}`}

@@ -59,7 +59,7 @@ vi.mock("../ChatMessageList", () => ({
 
 vi.mock("../ChatInputBar", () => ({
   ChatInputBar: forwardRef(function MockChatInputBar(
-    { isVisible }: { isVisible?: boolean },
+    { isVisible, isCentered }: { isVisible?: boolean; isCentered?: boolean },
     ref: ForwardedRef<{ focus: () => void }>,
   ) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -72,6 +72,7 @@ vi.mock("../ChatInputBar", () => ({
         ref={textareaRef}
         data-testid="chat-input-bar"
         data-visible={isVisible ? "true" : "false"}
+        data-centered={isCentered ? "true" : "false"}
       />
     );
   }),
@@ -367,5 +368,45 @@ describe("ChatPanel", () => {
     renderPanel({ historyResolved: true, isLoading: false });
 
     expect(screen.queryByText("Start chatting with Coca.")).not.toBeInTheDocument();
+  });
+
+  it("centers the input when the thread is empty and history is resolved", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({ historyResolved: true, isLoading: false });
+
+    expect(getInputBar()).toHaveAttribute("data-centered", "true");
+  });
+
+  it("docks the input at the bottom once messages are present", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({
+      historyResolved: true,
+      isLoading: false,
+      historyMessages: [...sampleHistoryMessages],
+    });
+
+    expect(getInputBar()).toHaveAttribute("data-centered", "false");
+  });
+
+  it("does not center the input while history is still loading", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({ isLoading: true, historyResolved: false });
+
+    expect(getInputBar()).toHaveAttribute("data-centered", "false");
+  });
+
+  it("does not center the input when an error is shown", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+
+    renderPanel({
+      historyResolved: true,
+      isLoading: false,
+      errorMessage: "History failed",
+    });
+
+    expect(getInputBar()).toHaveAttribute("data-centered", "false");
   });
 });
