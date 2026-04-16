@@ -183,9 +183,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
-          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
-          NIGHTLY="${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}"
+          RUN_SEQ="${{ github.run_number }}"
+          RUN_ATTEMPT="${{ github.run_attempt }}"
+          NIGHTLY="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
           echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
 
       - name: Patch Cargo.toml version
@@ -288,9 +288,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
-          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
-          NIGHTLY="${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}"
+          RUN_SEQ="${{ github.run_number }}"
+          RUN_ATTEMPT="${{ github.run_attempt }}"
+          NIGHTLY="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
           echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
 
       - name: Patch Cargo.toml version
@@ -592,9 +592,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
-          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
-          echo "version=${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          RUN_SEQ="${{ github.run_number }}"
+          RUN_ATTEMPT="${{ github.run_attempt }}"
+          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -661,9 +661,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
-          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
-          echo "version=${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          RUN_SEQ="${{ github.run_number }}"
+          RUN_ATTEMPT="${{ github.run_attempt }}"
+          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
