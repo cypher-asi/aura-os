@@ -4,7 +4,8 @@ use serde_json::json;
 use aura_os_core::ToolDomain;
 
 use super::helpers::{
-    network_delete, network_get, network_post, network_put, require_network, require_str,
+    local_delete, local_post, local_put, network_delete, network_get, network_post, network_put,
+    require_network, require_str,
 };
 use super::{SuperAgentContext, SuperAgentTool, ToolResult};
 use crate::SuperAgentError;
@@ -135,7 +136,6 @@ impl SuperAgentTool for CreateSpecTool {
         input: serde_json::Value,
         ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
-        let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let title = require_str(&input, "title")?;
         let body = json!({
@@ -143,13 +143,16 @@ impl SuperAgentTool for CreateSpecTool {
             "markdown_contents": input.get("markdown_contents").and_then(|value| value.as_str()),
             "order_index": input.get("order_index").and_then(|value| value.as_i64()),
         });
-        network_post(
-            network,
-            &format!("/api/projects/{project_id}/specs"),
-            &ctx.jwt,
-            &body,
-        )
-        .await
+        let path = format!("/api/projects/{project_id}/specs");
+
+        // Route through the local aura-os-server when configured so the
+        // server can mirror the spec to `<workspace_root>/spec/<slug>.md`.
+        if let Some(base) = ctx.local_server_base_url.as_deref() {
+            return local_post(base, &ctx.local_http_client, &path, &ctx.jwt, &body).await;
+        }
+
+        let network = require_network(ctx)?;
+        network_post(network, &path, &ctx.jwt, &body).await
     }
 }
 
@@ -190,7 +193,6 @@ impl SuperAgentTool for UpdateSpecTool {
         input: serde_json::Value,
         ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
-        let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
         let body = json!({
@@ -198,13 +200,14 @@ impl SuperAgentTool for UpdateSpecTool {
             "markdown_contents": input.get("markdown_contents").and_then(|value| value.as_str()),
             "order_index": input.get("order_index").and_then(|value| value.as_i64()),
         });
-        network_put(
-            network,
-            &format!("/api/projects/{project_id}/specs/{spec_id}"),
-            &ctx.jwt,
-            &body,
-        )
-        .await
+        let path = format!("/api/projects/{project_id}/specs/{spec_id}");
+
+        if let Some(base) = ctx.local_server_base_url.as_deref() {
+            return local_put(base, &ctx.local_http_client, &path, &ctx.jwt, &body).await;
+        }
+
+        let network = require_network(ctx)?;
+        network_put(network, &path, &ctx.jwt, &body).await
     }
 }
 
@@ -242,15 +245,16 @@ impl SuperAgentTool for DeleteSpecTool {
         input: serde_json::Value,
         ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
-        let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
-        network_delete(
-            network,
-            &format!("/api/projects/{project_id}/specs/{spec_id}"),
-            &ctx.jwt,
-        )
-        .await
+        let path = format!("/api/projects/{project_id}/specs/{spec_id}");
+
+        if let Some(base) = ctx.local_server_base_url.as_deref() {
+            return local_delete(base, &ctx.local_http_client, &path, &ctx.jwt).await;
+        }
+
+        let network = require_network(ctx)?;
+        network_delete(network, &path, &ctx.jwt).await
     }
 }
 

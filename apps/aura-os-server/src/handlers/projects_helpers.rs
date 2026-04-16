@@ -188,7 +188,7 @@ pub(crate) async fn resolve_agent_instance_workspace_path(
     None
 }
 
-async fn resolve_project_tool_workspace_path(
+pub(crate) async fn resolve_project_tool_workspace_path(
     state: &AppState,
     project_id: &ProjectId,
     harness_mode: HarnessMode,

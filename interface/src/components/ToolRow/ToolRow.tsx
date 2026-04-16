@@ -1,4 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const COLLAPSE_ANIM_MS = 120;
+
+type BodyPhase = "open" | "closing" | "closed";
 import { Check, ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { TOOL_LABELS, FILE_OPS, COMMAND_OPS } from "../../constants/tools";
@@ -33,9 +37,9 @@ function buildInputDisplay(entry: ToolCallEntry): Record<string, unknown> {
   };
 }
 
-function renderGenericBody(entry: ToolCallEntry, pendingMessage?: string) {
+function renderGenericBody(entry: ToolCallEntry, pendingMessage?: string, closingClass = "") {
   return (
-    <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+    <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
       <div className={toolStyles.toolBody}>
         <div className={toolStyles.section}>
           <div className={toolStyles.sectionLabel}>Input</div>
@@ -75,17 +79,42 @@ export function ToolCallBlock({
   const isFileOp = FILE_OPS.has(entry.name);
   const isCommand = COMMAND_OPS.has(entry.name);
   const autoExpand = isFileOp || isCommand ? false : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
-  const [expanded, setExpanded] = useState(autoExpand);
+  const [phase, setPhase] = useState<BodyPhase>(autoExpand ? "open" : "closed");
+  const closeTimerRef = useRef<number | null>(null);
   const wasPendingRef = useRef(entry.pending);
   const label = TOOL_LABELS[entry.name] || entry.name;
+  const expanded = phase === "open";
+  const bodyMounted = phase !== "closed";
+  const isClosing = phase === "closing";
   const inputSummary = (entry.started && (isSpec || isTask)) ? "" : summarizeInput(entry.name, entry.input);
+
+  const openBody = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setPhase("open");
+  }, []);
+
+  const closeBody = useCallback(() => {
+    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+    setPhase((p) => (p === "open" ? "closing" : p));
+    closeTimerRef.current = window.setTimeout(() => {
+      setPhase("closed");
+      closeTimerRef.current = null;
+    }, COLLAPSE_ANIM_MS);
+  }, []);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (wasPendingRef.current && !entry.pending) {
-      setExpanded(false);
+      closeBody();
     }
     wasPendingRef.current = entry.pending;
-  }, [entry.pending]);
+  }, [entry.pending, closeBody]);
 
   const stateClass = entry.pending
     ? toolStyles.taskActive
@@ -94,11 +123,14 @@ export function ToolCallBlock({
       : toolStyles.taskDone;
 
   const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
+  const hasSpecTitle = isSpec && typeof entry.input.title === "string" && (entry.input.title as string).length > 0;
   const showGeneratingHint = entry.pending && !hasPartialContent;
+
+  const closingClass = isClosing ? toolStyles.toolBodyCollapsing : "";
 
   const renderBody = () => {
     if (entry.pending) {
-      if (hasPartialContent) {
+      if (isSpec && (hasPartialContent || hasSpecTitle)) {
         return (
           <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
             <div className={toolStyles.toolBody}>
@@ -107,23 +139,23 @@ export function ToolCallBlock({
           </div>
         );
       }
-      if (!expanded) return null;
-      return renderGenericBody(entry, "Waiting for the tool result.");
+      if (!bodyMounted) return null;
+      return renderGenericBody(entry, "Waiting for the tool result.", closingClass);
     }
     if (isTask) {
-      if (!expanded) return null;
+      if (!bodyMounted) return null;
       return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${toolStyles.noMaxHeight}`}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${toolStyles.noMaxHeight} ${closingClass}`}>
           <div className={toolStyles.toolBody}>
             <TaskCreatedIndicator entry={entry} />
           </div>
         </div>
       );
     }
-    if (!expanded) return null;
+    if (!bodyMounted) return null;
     if (isFileOp) {
       return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
           <div className={toolStyles.toolBody}>
             <FilePreviewCard entry={entry} />
           </div>
@@ -132,7 +164,7 @@ export function ToolCallBlock({
     }
     if (isCommand) {
       return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
           <div className={toolStyles.toolBody}>
             <CommandPreviewCard entry={entry} />
           </div>
@@ -141,7 +173,7 @@ export function ToolCallBlock({
     }
     if (isSpec) {
       return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
           <div className={toolStyles.toolBody}>
             <SpecPreviewCard entry={entry} />
           </div>
@@ -151,21 +183,21 @@ export function ToolCallBlock({
     const SuperAgentCard = getSuperAgentCardRenderer(entry.name);
     if (SuperAgentCard && !entry.pending && entry.result) {
       return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
           <div className={toolStyles.toolBody}>
             <SuperAgentCard entry={entry} />
           </div>
         </div>
       );
     }
-    return renderGenericBody(entry);
+    return renderGenericBody(entry, undefined, closingClass);
   };
 
   return (
     <div className={`${toolStyles.toolBlock} ${stateClass}`}>
       <button
         className={toolStyles.toolHeader}
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => (expanded ? closeBody() : openBody())}
         type="button"
       >
         <span className={toolStyles.taskCheck}>

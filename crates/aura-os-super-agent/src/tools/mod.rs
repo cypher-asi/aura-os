@@ -70,6 +70,13 @@ pub struct SuperAgentContext {
     pub orbit_client: Option<Arc<OrbitClient>>,
     pub store: Arc<RocksStore>,
     pub event_broadcast: broadcast::Sender<serde_json::Value>,
+    /// Base URL (no trailing slash) of the aura-os-server instance running in
+    /// this process. When set, tools that need server-side side-effects
+    /// (e.g. spec disk mirrors) should POST/PUT/DELETE here instead of going
+    /// directly to the remote router via `network_client`.
+    pub local_server_base_url: Option<String>,
+    /// HTTP client reused for local-server calls. Shared with `SuperAgentService`.
+    pub local_http_client: reqwest::Client,
 }
 
 pub struct ToolRegistry {

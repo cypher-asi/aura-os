@@ -49,6 +49,8 @@ mod tests {
             storage_client: None,
             store: store.clone(),
             event_broadcast: tx,
+            local_server_base_url: None,
+            local_http_client: reqwest::Client::new(),
         }
     }
 

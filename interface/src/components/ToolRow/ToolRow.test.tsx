@@ -43,7 +43,7 @@ describe("ToolCallBlock", () => {
         />,
       );
 
-      expect(screen.getByText("My spec")).toBeInTheDocument();
+      expect(screen.getByText("my-spec.md")).toBeInTheDocument();
       expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
     });
 
@@ -62,6 +62,21 @@ describe("ToolCallBlock", () => {
       expect(screen.getByText("Generating…")).toBeInTheDocument();
     });
 
+    it("renders an empty SpecPreviewCard with filename once the title streams in", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "update_spec",
+            started: true,
+            pending: true,
+            input: { title: "Hello World Website" },
+          })}
+        />,
+      );
+
+      expect(screen.getByText("hello-world-website.md")).toBeInTheDocument();
+    });
+
     it("renders SpecPreviewCard when update_spec is completed", () => {
       render(
         <ToolCallBlock
@@ -78,8 +93,7 @@ describe("ToolCallBlock", () => {
         />,
       );
 
-      expect(screen.getByText("Done spec")).toBeInTheDocument();
-      expect(screen.getByText("Spec")).toBeInTheDocument();
+      expect(screen.getByText("done-spec.md")).toBeInTheDocument();
     });
   });
 
@@ -99,7 +113,7 @@ describe("ToolCallBlock", () => {
         />,
       );
 
-      expect(screen.getByText("New spec")).toBeInTheDocument();
+      expect(screen.getByText("new-spec.md")).toBeInTheDocument();
       expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
     });
 
@@ -120,7 +134,7 @@ describe("ToolCallBlock", () => {
         />,
       );
 
-      expect(screen.getByText("Spec")).toBeInTheDocument();
+      expect(screen.getByText("in-progress-spec.md")).toBeInTheDocument();
 
       const completedEntry = {
         ...entry,
@@ -136,7 +150,7 @@ describe("ToolCallBlock", () => {
       );
 
       await waitFor(() => {
-        expect(screen.queryByText("Spec")).not.toBeInTheDocument();
+        expect(screen.queryByText("in-progress-spec.md")).not.toBeInTheDocument();
       });
     });
   });

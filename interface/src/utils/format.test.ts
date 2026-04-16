@@ -11,7 +11,43 @@ import {
   formatResult,
   formatRelativeTime,
   formatChatTime,
+  slugifyTitle,
+  specFilename,
 } from "./format";
+
+describe("slugifyTitle", () => {
+  it("lowercases and replaces spaces with dashes", () => {
+    expect(slugifyTitle("Hello World Website")).toBe("hello-world-website");
+  });
+
+  it("collapses consecutive non-alphanumeric characters into a single dash", () => {
+    expect(slugifyTitle("Spec!!  with   weird___chars")).toBe("spec-with-weird-chars");
+  });
+
+  it("strips leading and trailing dashes", () => {
+    expect(slugifyTitle("  --Trim me--  ")).toBe("trim-me");
+  });
+
+  it("strips diacritics from accented characters", () => {
+    expect(slugifyTitle("Café résumé naïveté")).toBe("cafe-resume-naivete");
+  });
+
+  it("falls back to 'spec' for empty or slug-less input", () => {
+    expect(slugifyTitle("")).toBe("spec");
+    expect(slugifyTitle("???")).toBe("spec");
+    expect(slugifyTitle("   ")).toBe("spec");
+  });
+});
+
+describe("specFilename", () => {
+  it("appends .md to the slugified title", () => {
+    expect(specFilename("Hello World Website")).toBe("hello-world-website.md");
+  });
+
+  it("uses the spec fallback for empty titles", () => {
+    expect(specFilename("")).toBe("spec.md");
+  });
+});
 
 describe("formatTime", () => {
   it("formats a date as HH:MM:SS", () => {

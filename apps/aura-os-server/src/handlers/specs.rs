@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::path::Path as StdPath;
 
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderValue;
@@ -8,14 +9,47 @@ use axum::Json;
 use serde::Deserialize;
 use std::time::Duration;
 use tokio_stream::StreamExt;
-use tracing::info;
+use tracing::{info, warn};
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec, SpecId};
 use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 
-use super::projects_helpers::project_tool_session_config;
+use super::projects_helpers::{project_tool_session_config, resolve_project_tool_workspace_path};
+use super::spec_disk::{mirror_spec_to_disk, remove_spec_from_disk};
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+
+/// Resolve a local filesystem workspace root for disk-mirroring a spec.
+/// Scopes to a specific agent instance when one is supplied, otherwise falls
+/// back to the project's `local` machine workspace so aura-os-server-driven
+/// calls still land on disk.
+async fn resolve_spec_workspace(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_instance_id: Option<AgentInstanceId>,
+) -> Option<String> {
+    resolve_project_tool_workspace_path(state, project_id, HarnessMode::Local, agent_instance_id)
+        .await
+}
+
+async fn mirror_spec_best_effort(
+    workspace_root: &str,
+    old_title: Option<&str>,
+    new_title: &str,
+    markdown: &str,
+) {
+    match mirror_spec_to_disk(
+        StdPath::new(workspace_root),
+        old_title,
+        new_title,
+        markdown,
+    )
+    .await
+    {
+        Ok(path) => info!(path = %path.display(), "spec mirrored to disk"),
+        Err(err) => warn!(workspace = %workspace_root, %err, "failed to mirror spec to disk"),
+    }
+}
 
 const SPEC_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const SPEC_RESULT_POLL_TIMEOUT: Duration = Duration::from_secs(5);
@@ -121,9 +155,11 @@ pub(crate) async fn create_spec(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
+    Query(params): Query<SpecQueryParams>,
     Json(req): Json<CreateSpecBody>,
 ) -> ApiResult<Json<Spec>> {
     let storage = state.require_storage_client()?;
+    let markdown_for_disk = req.markdown_contents.clone();
     let created = storage
         .create_spec(
             &project_id.to_string(),
@@ -138,6 +174,14 @@ pub(crate) async fn create_spec(
         .await
         .map_err(|e| ApiError::internal(format!("creating spec: {e}")))?;
     let spec = Spec::try_from(created).map_err(ApiError::internal)?;
+
+    if let Some(workspace_root) =
+        resolve_spec_workspace(&state, &project_id, params.agent_instance_id).await
+    {
+        let markdown = markdown_for_disk.unwrap_or_default();
+        mirror_spec_best_effort(&workspace_root, None, &spec.title, &markdown).await;
+    }
+
     let _ = state.event_broadcast.send(serde_json::json!({
         "type": "spec_saved",
         "project_id": project_id.to_string(),
@@ -232,10 +276,20 @@ pub(crate) struct UpdateSpecBody {
 pub(crate) async fn update_spec(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((_project_id, spec_id)): Path<(ProjectId, SpecId)>,
+    Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
+    Query(params): Query<SpecQueryParams>,
     Json(req): Json<UpdateSpecBody>,
 ) -> ApiResult<Json<Spec>> {
     let storage = state.require_storage_client()?;
+
+    let old_title = storage
+        .get_spec(&spec_id.to_string(), &jwt)
+        .await
+        .ok()
+        .and_then(|s| Spec::try_from(s).ok())
+        .map(|s| s.title);
+
+    let markdown_for_disk = req.markdown_contents.clone();
     storage
         .update_spec(
             &spec_id.to_string(),
@@ -268,15 +322,41 @@ pub(crate) async fn update_spec(
                 _ => ApiError::internal(format!("fetching updated spec: {e}")),
             })?;
     let spec = Spec::try_from(storage_spec).map_err(ApiError::internal)?;
+
+    if let Some(workspace_root) =
+        resolve_spec_workspace(&state, &project_id, params.agent_instance_id).await
+    {
+        // Prefer the markdown from the update payload (the caller's intent);
+        // fall back to the authoritative stored value so the file contents are
+        // still rewritten on a pure rename.
+        let markdown = markdown_for_disk.unwrap_or_else(|| spec.markdown_contents.clone());
+        mirror_spec_best_effort(
+            &workspace_root,
+            old_title.as_deref(),
+            &spec.title,
+            &markdown,
+        )
+        .await;
+    }
+
     Ok(Json(spec))
 }
 
 pub(crate) async fn delete_spec(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    Path((_project_id, spec_id)): Path<(ProjectId, SpecId)>,
+    Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
+    Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<axum::http::StatusCode> {
     let storage = state.require_storage_client()?;
+
+    let old_title = storage
+        .get_spec(&spec_id.to_string(), &jwt)
+        .await
+        .ok()
+        .and_then(|s| Spec::try_from(s).ok())
+        .map(|s| s.title);
+
     storage
         .delete_spec(&spec_id.to_string(), &jwt)
         .await
@@ -286,6 +366,16 @@ pub(crate) async fn delete_spec(
             }
             _ => ApiError::internal(format!("deleting spec: {e}")),
         })?;
+
+    if let (Some(title), Some(workspace_root)) = (
+        old_title,
+        resolve_spec_workspace(&state, &project_id, params.agent_instance_id).await,
+    ) {
+        if let Err(err) = remove_spec_from_disk(StdPath::new(&workspace_root), &title).await {
+            warn!(%err, workspace = %workspace_root, "failed to remove spec from disk");
+        }
+    }
+
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 

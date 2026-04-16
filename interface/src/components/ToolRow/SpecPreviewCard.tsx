@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
+import { specFilename } from "../../utils/format";
 import fileStyles from "../FilePreviewCard/FilePreviewCard.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 
@@ -9,7 +10,8 @@ const COLLAPSED_SPEC_LINES = 20;
 
 export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
   const [expanded, setExpanded] = useState(false);
-  const title = (entry.input.title as string) || "Untitled spec";
+  const title = (entry.input.title as string) || "";
+  const filename = specFilename(title);
   const content = (entry.input.markdown_contents as string) || "";
   const lines = content.split("\n");
   const needsCollapse = lines.length > COLLAPSED_SPEC_LINES;
@@ -19,15 +21,17 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
       : content;
 
   const highlightedHtml = useHighlightedHtml(displayContent, "markdown");
+  const showSpinner = !content.trim() && entry.pending;
 
   return (
     <div className={`${fileStyles.card} ${fileStyles.specCard}`}>
       <div className={`${fileStyles.header} ${fileStyles.specHeader}`}>
         <FileText size={14} className={fileStyles.fileIcon} />
-        <span className={fileStyles.fileName}>{title}</span>
-        <span className={fileStyles.badge}>Spec</span>
+        <span className={fileStyles.fileName} title={title || filename}>
+          {filename}
+        </span>
       </div>
-      {content.trim() && (
+      {content.trim() ? (
         <>
           <div
             className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${!expanded && needsCollapse ? fileStyles.collapsed : ""}`}
@@ -49,7 +53,13 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
             </button>
           )}
         </>
-      )}
+      ) : showSpinner ? (
+        <div className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.pendingCodeArea}`}>
+          <div className={fileStyles.pendingOverlay}>
+            <div className={fileStyles.spinner} />
+          </div>
+        </div>
+      ) : null}
       {entry.isError && entry.result && (
         <div className={toolStyles.inlineError}>
           {entry.result.slice(0, 200)}

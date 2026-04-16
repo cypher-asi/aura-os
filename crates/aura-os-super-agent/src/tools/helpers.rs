@@ -153,3 +153,84 @@ pub async fn network_delete(
         is_error: false,
     })
 }
+
+// ---------------------------------------------------------------------------
+// Local-server helpers (route through aura-os-server when configured, e.g. so
+// the server can perform side-effects like mirroring specs to disk).
+// ---------------------------------------------------------------------------
+
+async fn parse_response(resp: reqwest::Response) -> Result<ToolResult, SuperAgentError> {
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Ok(ToolResult {
+            content: json!({ "error": body, "status": status.as_u16() }),
+            is_error: true,
+        });
+    }
+    let text = resp.text().await.unwrap_or_default();
+    if text.trim().is_empty() {
+        return Ok(ToolResult {
+            content: json!({ "ok": true }),
+            is_error: false,
+        });
+    }
+    let body: serde_json::Value = serde_json::from_str(&text)
+        .unwrap_or_else(|_| json!({ "raw": text }));
+    Ok(ToolResult {
+        content: body,
+        is_error: false,
+    })
+}
+
+pub async fn local_post(
+    base_url: &str,
+    client: &reqwest::Client,
+    path: &str,
+    jwt: &str,
+    body: &serde_json::Value,
+) -> Result<ToolResult, SuperAgentError> {
+    let url = format!("{}{}", base_url, path);
+    let resp = client
+        .post(&url)
+        .bearer_auth(jwt)
+        .json(body)
+        .send()
+        .await
+        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+    parse_response(resp).await
+}
+
+pub async fn local_put(
+    base_url: &str,
+    client: &reqwest::Client,
+    path: &str,
+    jwt: &str,
+    body: &serde_json::Value,
+) -> Result<ToolResult, SuperAgentError> {
+    let url = format!("{}{}", base_url, path);
+    let resp = client
+        .put(&url)
+        .bearer_auth(jwt)
+        .json(body)
+        .send()
+        .await
+        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+    parse_response(resp).await
+}
+
+pub async fn local_delete(
+    base_url: &str,
+    client: &reqwest::Client,
+    path: &str,
+    jwt: &str,
+) -> Result<ToolResult, SuperAgentError> {
+    let url = format!("{}{}", base_url, path);
+    let resp = client
+        .delete(&url)
+        .bearer_auth(jwt)
+        .send()
+        .await
+        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+    parse_response(resp).await
+}

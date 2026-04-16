@@ -330,24 +330,32 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
 
     let router_url = std::env::var("AURA_ROUTER_URL")
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
-    let super_agent_service = Arc::new(SuperAgentService::new(
-        router_url,
-        domain.project_service.clone(),
-        domain.agent_service.clone(),
-        domain.agent_instance_service.clone(),
-        domain.task_service.clone(),
-        domain.session_service.clone(),
-        core.org_service.clone(),
-        core.billing_client.clone(),
-        automaton_client.clone(),
-        network_client.clone(),
-        storage_client.clone(),
-        orbit_client.clone(),
-        store.clone(),
-        event_broadcast.clone(),
-        domain.local_harness.clone(),
-        data_dir.clone(),
-    ));
+    let local_server_base_url = std::env::var("AURA_SERVER_BASE_URL").ok().or_else(|| {
+        let host = std::env::var("AURA_SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let port = std::env::var("AURA_SERVER_PORT").unwrap_or_else(|_| "3100".to_string());
+        Some(format!("http://{host}:{port}"))
+    });
+    let super_agent_service = Arc::new(
+        SuperAgentService::new(
+            router_url,
+            domain.project_service.clone(),
+            domain.agent_service.clone(),
+            domain.agent_instance_service.clone(),
+            domain.task_service.clone(),
+            domain.session_service.clone(),
+            core.org_service.clone(),
+            core.billing_client.clone(),
+            automaton_client.clone(),
+            network_client.clone(),
+            storage_client.clone(),
+            orbit_client.clone(),
+            store.clone(),
+            event_broadcast.clone(),
+            domain.local_harness.clone(),
+            data_dir.clone(),
+        )
+        .with_local_server_base_url(local_server_base_url.unwrap_or_default()),
+    );
 
     // Spawn scheduled process execution.
     super_agent_service.spawn_scheduler();

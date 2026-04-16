@@ -62,6 +62,30 @@ export function toBullets(text: string): string {
   return out.join("\n");
 }
 
+/**
+ * Turn a free-form spec title into a kebab-case slug suitable for use as a
+ * filename stem. Strips diacritics, collapses non-alphanumeric runs to a
+ * single `-`, trims leading/trailing dashes, and falls back to `"spec"` when
+ * the title is empty or slug-less.
+ */
+export function slugifyTitle(title: string): string {
+  const normalized = (title ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "spec";
+}
+
+/**
+ * Compose the on-disk filename (`<slug>.md`) that mirrors a spec written to
+ * the project's `spec/` folder. Frontend and backend slug logic must agree.
+ */
+export function specFilename(title: string): string {
+  return `${slugifyTitle(title)}.md`;
+}
+
 export function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 10_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";

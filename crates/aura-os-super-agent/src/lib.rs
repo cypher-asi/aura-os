@@ -56,6 +56,10 @@ pub struct SuperAgentService {
     orbit_client: Option<Arc<OrbitClient>>,
     store: Arc<RocksStore>,
     event_broadcast: broadcast::Sender<serde_json::Value>,
+    /// Base URL of the locally running aura-os-server. Tools that need
+    /// server-side side-effects (e.g. mirroring specs to disk) should route
+    /// through this URL instead of the remote `router_url` / storage.
+    local_server_base_url: Option<String>,
 }
 
 impl SuperAgentService {
@@ -116,7 +120,27 @@ impl SuperAgentService {
             orbit_client,
             store,
             event_broadcast,
+            local_server_base_url: None,
         }
+    }
+
+    /// Wire in the base URL of the local aura-os-server so tool calls that
+    /// need local side-effects (disk mirrors, etc.) can route through it.
+    pub fn with_local_server_base_url(mut self, url: impl Into<String>) -> Self {
+        let raw: String = url.into();
+        let trimmed = raw.trim().trim_end_matches('/').to_string();
+        self.local_server_base_url = if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        };
+        self
+    }
+
+    pub fn set_local_server_base_url(&mut self, url: Option<String>) {
+        self.local_server_base_url = url
+            .map(|v| v.trim().trim_end_matches('/').to_string())
+            .filter(|v| !v.is_empty());
     }
 
     pub fn spawn_scheduler(self: &Arc<Self>) {
@@ -154,6 +178,8 @@ impl SuperAgentService {
             orbit_client: self.orbit_client.clone(),
             store: self.store.clone(),
             event_broadcast: self.event_broadcast.clone(),
+            local_server_base_url: self.local_server_base_url.clone(),
+            local_http_client: self.http_client.clone(),
         }
     }
 }
