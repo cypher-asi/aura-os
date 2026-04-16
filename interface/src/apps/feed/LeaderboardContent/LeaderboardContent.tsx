@@ -54,10 +54,6 @@ export function LeaderboardContent() {
                   <span className={styles.metaValue} title={`$${user.estimatedCostUsd.toFixed(4)}`}>
                     {formatCurrency(user.estimatedCostUsd)}
                   </span>
-                  <span className={styles.metaSep}>·</span>
-                  <span className={styles.metaValue}>
-                    {user.eventCount.toLocaleString()} events
-                  </span>
                 </div>
               </div>
             );

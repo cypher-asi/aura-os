@@ -82,7 +82,6 @@ export function LeaderboardSidekick() {
       stats={[
         { value: formatTokens(user.tokens), label: "Tokens" },
         { value: formatCurrency(user.estimatedCostUsd), label: "Cost" },
-        { value: user.eventCount.toLocaleString(), label: "Events" },
       ]}
       footer="CYPHER-ASI // AURA"
     />
