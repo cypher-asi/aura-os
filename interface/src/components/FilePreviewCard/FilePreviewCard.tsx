@@ -11,13 +11,24 @@ interface FilePreviewCardProps {
   entry: ToolCallEntry;
 }
 
-function DiffView({ oldText, newText, language }: { oldText: string; newText: string; language?: string }) {
+function DiffView({
+  oldText,
+  newText,
+  language,
+  streaming,
+}: {
+  oldText: string;
+  newText: string;
+  language?: string;
+  streaming?: boolean;
+}) {
   const oldLines = oldText.split("\n");
   const newLines = newText.split("\n");
   const oldHighlighted = useHighlightedHtml(oldText, language);
   const newHighlighted = useHighlightedHtml(newText, language);
   const oldHtmlLines = oldHighlighted.split("\n");
   const newHtmlLines = newHighlighted.split("\n");
+  const hasAny = oldText.length > 0 || newText.length > 0;
 
   return (
     <div className={styles.diffArea}>
@@ -31,24 +42,40 @@ function DiffView({ oldText, newText, language }: { oldText: string; newText: st
           />
         </div>
       ))}
-      {newLines.map((_line, i) => (
-        <div key={`new-${i}`} className={`${styles.diffLine} ${styles.diffAdded}`}>
-          <span className={styles.lineNum}>{i + 1}</span>
-          <span className={styles.diffPrefix}>+</span>
-          <span
-            className={styles.diffContent}
-            dangerouslySetInnerHTML={{ __html: newHtmlLines[i] ?? "" }}
-          />
-        </div>
-      ))}
+      {newLines.map((_line, i) => {
+        const isLast = i === newLines.length - 1;
+        return (
+          <div key={`new-${i}`} className={`${styles.diffLine} ${styles.diffAdded}`}>
+            <span className={styles.lineNum}>{i + 1}</span>
+            <span className={styles.diffPrefix}>+</span>
+            <span
+              className={styles.diffContent}
+              dangerouslySetInnerHTML={{ __html: newHtmlLines[i] ?? "" }}
+            />
+            {streaming && isLast && hasAny && (
+              <span className={styles.streamCaret} aria-hidden="true" />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function CodeView({ content, language }: { content: string; language?: string }) {
+function CodeView({
+  content,
+  language,
+  streaming,
+  allowCollapse = true,
+}: {
+  content: string;
+  language?: string;
+  streaming?: boolean;
+  allowCollapse?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const lines = content.split("\n");
-  const needsCollapse = lines.length > COLLAPSED_LINE_LIMIT;
+  const needsCollapse = allowCollapse && lines.length > COLLAPSED_LINE_LIMIT;
   const displayContent = !expanded && needsCollapse
     ? lines.slice(0, COLLAPSED_LINE_LIMIT).join("\n")
     : content;
@@ -61,15 +88,21 @@ function CodeView({ content, language }: { content: string; language?: string })
     <>
       <div className={`${styles.codeArea} ${!expanded && needsCollapse ? styles.collapsed : ""}`}>
         <div className={styles.codeLines}>
-          {displayLines.map((_line, i) => (
-            <div key={i} className={styles.codeLine}>
-              <span className={styles.lineNum}>{i + 1}</span>
-              <span
-                className={styles.codeContent}
-                dangerouslySetInnerHTML={{ __html: htmlLines[i] ?? "" }}
-              />
-            </div>
-          ))}
+          {displayLines.map((_line, i) => {
+            const isLast = i === displayLines.length - 1;
+            return (
+              <div key={i} className={styles.codeLine}>
+                <span className={styles.lineNum}>{i + 1}</span>
+                <span
+                  className={styles.codeContent}
+                  dangerouslySetInnerHTML={{ __html: htmlLines[i] ?? "" }}
+                />
+                {streaming && isLast && (
+                  <span className={styles.streamCaret} aria-hidden="true" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
       {needsCollapse && (
@@ -82,16 +115,6 @@ function CodeView({ content, language }: { content: string; language?: string })
         </button>
       )}
     </>
-  );
-}
-
-function PendingSpinner() {
-  return (
-    <div className={`${styles.codeArea} ${styles.pendingCodeArea}`}>
-      <div className={styles.pendingOverlay}>
-        <div className={styles.spinner} />
-      </div>
-    </div>
   );
 }
 
@@ -123,16 +146,27 @@ export function FilePreviewCard({ entry }: FilePreviewCardProps) {
       return null;
     }
     if (isEdit) {
-      if (!oldText && !newText && entry.pending) return <PendingSpinner />;
-      return <DiffView oldText={oldText} newText={newText} language={lang} />;
+      return (
+        <DiffView
+          oldText={oldText}
+          newText={newText}
+          language={lang}
+          streaming={entry.pending}
+        />
+      );
     }
     if (isWrite) {
-      if (!writeContent && entry.pending) return <PendingSpinner />;
-      return <CodeView content={writeContent} language={lang} />;
+      return (
+        <CodeView
+          content={writeContent}
+          language={lang}
+          streaming={entry.pending}
+          allowCollapse={!entry.pending}
+        />
+      );
     }
     if (isRead) {
       if (entry.result) return <CodeView content={entry.result} language={lang} />;
-      if (entry.pending) return <PendingSpinner />;
       return null;
     }
     return null;

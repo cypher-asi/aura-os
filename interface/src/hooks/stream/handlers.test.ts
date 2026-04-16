@@ -355,6 +355,41 @@ describe("stream/handlers", () => {
 
       expect(setters.calls.setStreamingText).toContain("# Draft spec");
     });
+
+    it("prefers current thinking text as the initial spec preview", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      refs.thinkingBuffer.current = "Thinking draft";
+      refs.streamBuffer.current = "Visible text draft";
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
+
+      expect(refs.toolCalls.current[0].input).toEqual({
+        draft_preview: "Visible text draft",
+      });
+    });
+
+    it("seeds empty path/content for write_file so the preview can render", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "write_file" });
+
+      expect(refs.toolCalls.current[0].input).toEqual({ path: "", content: "" });
+    });
+
+    it("seeds empty path/old_text/new_text for edit_file", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "edit_file" });
+
+      expect(refs.toolCalls.current[0].input).toEqual({
+        path: "",
+        old_text: "",
+        new_text: "",
+      });
+    });
   });
 
   describe("handleToolCall", () => {
@@ -426,6 +461,51 @@ describe("stream/handlers", () => {
       });
     });
 
+    it("supports incremental snapshot growth for write_file content", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "write_file" });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "write_file",
+        input: { path: "src/a.ts", content: "export const x" },
+      });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "write_file",
+        input: { content: "export const x = 1;" },
+      });
+
+      expect(refs.toolCalls.current[0].input).toEqual({
+        path: "src/a.ts",
+        content: "export const x = 1;",
+      });
+    });
+
+    it("supports incremental snapshot growth for edit_file new_text", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "edit_file" });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "edit_file",
+        input: { path: "a.ts", old_text: "foo", new_text: "ba" },
+      });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "edit_file",
+        input: { new_text: "bar" },
+      });
+
+      expect(refs.toolCalls.current[0].input).toEqual({
+        path: "a.ts",
+        old_text: "foo",
+        new_text: "bar",
+      });
+    });
+
     it("creates a pending started entry when snapshot arrives before started event", () => {
       const refs = makeRefs();
       const setters = makeSetters();
@@ -445,6 +525,19 @@ describe("stream/handlers", () => {
       });
       expect(refs.timeline.current).toHaveLength(1);
       expect(refs.timeline.current[0]).toMatchObject({ kind: "tool", toolCallId: "tc2" });
+    });
+  });
+
+  describe("handleThinkingDelta", () => {
+    it("does not seed pending spec previews from thinking text", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
+      handleThinkingDelta(refs, setters, "# Draft");
+      handleThinkingDelta(refs, setters, " spec body");
+
+      expect(refs.toolCalls.current[0].input).toEqual({});
     });
   });
 

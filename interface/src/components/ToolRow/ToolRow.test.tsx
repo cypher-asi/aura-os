@@ -47,8 +47,8 @@ describe("ToolCallBlock", () => {
       expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
     });
 
-    it("renders Generating… when update_spec is started with no markdown_contents yet", () => {
-      render(
+    it("renders the live SpecPreviewCard without a Generating… hint while pending and empty", () => {
+      const { container } = render(
         <ToolCallBlock
           entry={makeEntry({
             name: "update_spec",
@@ -59,7 +59,11 @@ describe("ToolCallBlock", () => {
         />,
       );
 
-      expect(screen.getByText("Generating…")).toBeInTheDocument();
+      // The header no longer shows a generic "Generating…" placeholder for
+      // spec tools — the live preview card body conveys the streaming state.
+      expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
+      expect(container.querySelector(".codeArea")).not.toBeNull();
+      expect(container.querySelector(".streamCaret")).not.toBeNull();
     });
 
     it("renders an empty SpecPreviewCard with filename once the title streams in", () => {
@@ -258,8 +262,8 @@ describe("ToolCallBlock", () => {
       expect(screen.getByText("Delete")).toBeInTheDocument();
     });
 
-    it("still shows Generating… for a file op that has no path yet", () => {
-      render(
+    it("renders the live FilePreviewCard without a Generating… hint for a file op with no path yet", () => {
+      const { container } = render(
         <ToolCallBlock
           entry={makeEntry({
             name: "write_file",
@@ -270,7 +274,11 @@ describe("ToolCallBlock", () => {
         />,
       );
 
-      expect(screen.getByText("Generating…")).toBeInTheDocument();
+      // File-op previews stream their real content as it arrives, so no
+      // separate "Generating…" hint is needed in the header.
+      expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
+      expect(container.querySelector(".codeArea")).not.toBeNull();
+      expect(container.querySelector(".streamCaret")).not.toBeNull();
     });
   });
 

@@ -7,7 +7,7 @@
 }
 
 .specCard {
-  background: #000;
+  background: transparent;
 }
 
 .header {
@@ -20,7 +20,7 @@
 }
 
 .specHeader {
-  background: #000;
+  background: transparent;
 }
 
 .fileIcon {
@@ -58,7 +58,7 @@
 }
 
 .specCodeArea {
-  background: #000;
+  background: transparent;
 }
 
 /*
@@ -183,30 +183,22 @@
   border-left: 3px solid rgba(87, 171, 90, 0.4);
 }
 
-/* Pending overlay */
-.pendingOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
+/*
+ * Thin blinking caret rendered after the last streamed line while a tool
+ * call is still pending. Replaces the old "pending overlay + spinner"
+ * affordance so the card shows real content streaming in rather than a
+ * loading indicator.
+ */
+.streamCaret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--color-text, #ddd);
+  animation: streamCaretBlink 1s steps(2, end) infinite;
 }
 
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.pendingCodeArea {
-  min-height: 40px;
-  position: relative;
+@keyframes streamCaretBlink {
+  to { opacity: 0; }
 }

@@ -415,14 +415,28 @@ export function handleToolCallStarted(
   info: ToolCallStartedInfo,
 ): void {
   const isSpecTool = info.name === "create_spec" || info.name === "update_spec";
+  const isWriteFile = info.name === "write_file";
+  const isEditFile = info.name === "edit_file";
   if (isSpecTool && refs.streamBuffer.current) {
     flushStreamingText(refs, setters);
   }
-  const draftPreview = isSpecTool ? refs.streamBuffer.current.trim() : "";
+
+  let initialInput: Record<string, unknown> = {};
+  if (isSpecTool) {
+    const draftPreview = refs.streamBuffer.current.trim();
+    if (draftPreview) initialInput = { draft_preview: draftPreview };
+  } else if (isWriteFile) {
+    // Seed the fields the FilePreviewCard reads so it can render an empty
+    // code area immediately; partial snapshots will then fill it in live.
+    initialInput = { path: "", content: "" };
+  } else if (isEditFile) {
+    initialInput = { path: "", old_text: "", new_text: "" };
+  }
+
   const entry: ToolCallEntry = {
     id: info.id,
     name: info.name,
-    input: draftPreview ? { draft_preview: draftPreview } : {},
+    input: initialInput,
     pending: true,
     started: true,
   };

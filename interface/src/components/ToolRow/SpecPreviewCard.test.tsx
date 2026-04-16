@@ -116,8 +116,23 @@ describe("SpecPreviewCard", () => {
     expect(container.textContent).not.toContain("Draft preview");
   });
 
-  it("renders the spinner while pending and empty", () => {
+  it("renders an empty code area (no spinner) while pending and empty", () => {
     const { container } = render(<SpecPreviewCard entry={makeEntry({ input: {} })} />);
-    expect(container.querySelector(".spinner")).not.toBeNull();
+    expect(container.querySelector(".spinner")).toBeNull();
+    expect(container.querySelector(".codeArea")).not.toBeNull();
+    expect(container.querySelector(".streamCaret")).not.toBeNull();
+  });
+
+  it("does not render a blinking caret once the tool call has completed", () => {
+    const { container } = render(
+      <SpecPreviewCard
+        entry={makeEntry({
+          pending: false,
+          started: false,
+          input: { markdown_contents: "# Done" },
+        })}
+      />,
+    );
+    expect(container.querySelector(".streamCaret")).toBeNull();
   });
 });

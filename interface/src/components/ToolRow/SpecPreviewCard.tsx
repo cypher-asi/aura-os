@@ -13,7 +13,6 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
   const draftPreview = (entry.input.draft_preview as string) || "";
   const content = toolContent || draftPreview;
   const highlightedHtml = useHighlightedHtml(content, "markdown");
-  const showSpinner = !content.trim() && entry.pending;
 
   const codeAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -32,25 +31,18 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
           {filename}
         </span>
       </div>
-      {content.trim() ? (
-        <div
-          ref={codeAreaRef}
-          className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.specCodeAreaFixed}`}
-        >
-          <pre>
-            <code
-              className="hljs language-markdown"
-              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-            />
-          </pre>
-        </div>
-      ) : showSpinner ? (
-        <div className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.specCodeAreaFixed} ${fileStyles.pendingCodeArea}`}>
-          <div className={fileStyles.pendingOverlay}>
-            <div className={fileStyles.spinner} />
-          </div>
-        </div>
-      ) : null}
+      <div
+        ref={codeAreaRef}
+        className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.specCodeAreaFixed}`}
+      >
+        <pre>
+          <code
+            className="hljs language-markdown"
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+          {entry.pending && <span className={fileStyles.streamCaret} aria-hidden="true" />}
+        </pre>
+      </div>
       {entry.isError && entry.result && (
         <div className={toolStyles.inlineError}>
           {entry.result.slice(0, 200)}

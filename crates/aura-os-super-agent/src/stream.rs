@@ -84,9 +84,15 @@ use types::*;
 const SNAPSHOT_THROTTLE_MS: u128 = 50;
 
 /// Tool names whose arguments we stream live to the client via
-/// `tool_call_snapshot`. Right now this is limited to spec tools because
-/// their `markdown_contents` field is the primary use case for live preview.
-const STREAMING_TOOL_NAMES: &[&str] = &["create_spec", "update_spec"];
+/// `tool_call_snapshot`. The UI's preview cards rely on these snapshots to
+/// render in real time rather than showing a spinner while the model finishes
+/// emitting the full JSON.
+const STREAMING_TOOL_NAMES: &[&str] = &[
+    "create_spec",
+    "update_spec",
+    "write_file",
+    "edit_file",
+];
 
 fn is_streaming_tool(name: &str) -> bool {
     STREAMING_TOOL_NAMES.contains(&name)
@@ -106,6 +112,58 @@ fn build_partial_spec_input(input_json: &str) -> Option<Value> {
         obj.insert("markdown_contents".into(), Value::String(m));
     }
     Some(Value::Object(obj))
+}
+
+/// Extract partial input fields for file-modification tools while the LLM is
+/// still streaming the tool-use JSON. The UI uses these to render
+/// `FilePreviewCard` live instead of a spinner.
+///
+/// - `write_file` → `path`, `content`
+/// - `edit_file`  → `path`, `old_text`, `new_text`
+///
+/// Returns `None` when none of the relevant keys have appeared yet.
+fn build_partial_file_input(tool_name: &str, input_json: &str) -> Option<Value> {
+    let path = extract_partial_string_field(input_json, "path");
+
+    let mut obj = Map::new();
+    let mut any = false;
+    if let Some(p) = path {
+        obj.insert("path".into(), Value::String(p));
+        any = true;
+    }
+
+    match tool_name {
+        "write_file" => {
+            if let Some(c) = extract_partial_string_field(input_json, "content") {
+                obj.insert("content".into(), Value::String(c));
+                any = true;
+            }
+        }
+        "edit_file" => {
+            if let Some(o) = extract_partial_string_field(input_json, "old_text") {
+                obj.insert("old_text".into(), Value::String(o));
+                any = true;
+            }
+            if let Some(n) = extract_partial_string_field(input_json, "new_text") {
+                obj.insert("new_text".into(), Value::String(n));
+                any = true;
+            }
+        }
+        _ => {}
+    }
+
+    if any { Some(Value::Object(obj)) } else { None }
+}
+
+/// Dispatch to the right partial-input builder based on the in-flight tool
+/// name. Returns `None` for unknown tools or when nothing can be extracted
+/// yet.
+fn build_partial_tool_input(tool_name: &str, input_json: &str) -> Option<Value> {
+    match tool_name {
+        "create_spec" | "update_spec" => build_partial_spec_input(input_json),
+        "write_file" | "edit_file" => build_partial_file_input(tool_name, input_json),
+        _ => None,
+    }
 }
 
 const DEFAULT_MAX_TOOL_TURNS: usize = 25;
@@ -476,8 +534,10 @@ impl SuperAgentStream {
                                                     }
                                                 };
                                                 if should_emit {
-                                                    if let Some(input) =
-                                                        build_partial_spec_input(&acc.input_json)
+                                                    if let Some(input) = build_partial_tool_input(
+                                                        &acc.name,
+                                                        &acc.input_json,
+                                                    )
                                                     {
                                                         self.emit(
                                                             HarnessOutbound::ToolCallSnapshot(
@@ -673,11 +733,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn is_streaming_tool_recognises_spec_tools() {
+    fn is_streaming_tool_recognises_spec_and_file_tools() {
         assert!(is_streaming_tool("create_spec"));
         assert!(is_streaming_tool("update_spec"));
+        assert!(is_streaming_tool("write_file"));
+        assert!(is_streaming_tool("edit_file"));
         assert!(!is_streaming_tool("run_command"));
         assert!(!is_streaming_tool("create_task"));
+        assert!(!is_streaming_tool("read_file"));
     }
 
     #[test]
@@ -703,5 +766,67 @@ mod tests {
             v["markdown_contents"],
             Value::String("# H\n\nsome".into())
         );
+    }
+
+    #[test]
+    fn build_partial_file_input_returns_none_when_no_known_keys() {
+        assert!(build_partial_file_input("write_file", "{\"other\":\"x\"").is_none());
+        assert!(build_partial_file_input("edit_file", "{").is_none());
+    }
+
+    #[test]
+    fn build_partial_file_input_extracts_write_file_path_only() {
+        let v = build_partial_file_input("write_file", "{\"path\":\"src/a.ts\"").unwrap();
+        assert_eq!(v["path"], Value::String("src/a.ts".into()));
+        assert!(v.get("content").is_none());
+    }
+
+    #[test]
+    fn build_partial_file_input_extracts_partial_write_content() {
+        let v = build_partial_file_input(
+            "write_file",
+            "{\"path\":\"src/a.ts\",\"content\":\"export const x = 1;\\nexport const y",
+        )
+        .unwrap();
+        assert_eq!(v["path"], Value::String("src/a.ts".into()));
+        assert_eq!(
+            v["content"],
+            Value::String("export const x = 1;\nexport const y".into())
+        );
+    }
+
+    #[test]
+    fn build_partial_file_input_extracts_partial_edit_fields() {
+        let v = build_partial_file_input(
+            "edit_file",
+            "{\"path\":\"a.ts\",\"old_text\":\"foo\",\"new_text\":\"ba",
+        )
+        .unwrap();
+        assert_eq!(v["path"], Value::String("a.ts".into()));
+        assert_eq!(v["old_text"], Value::String("foo".into()));
+        assert_eq!(v["new_text"], Value::String("ba".into()));
+    }
+
+    #[test]
+    fn build_partial_file_input_ignores_edit_fields_for_write_file() {
+        let v = build_partial_file_input(
+            "write_file",
+            "{\"path\":\"a.ts\",\"old_text\":\"foo\",\"new_text\":\"bar\",\"content\":\"hi",
+        )
+        .unwrap();
+        assert_eq!(v["content"], Value::String("hi".into()));
+        assert!(v.get("old_text").is_none());
+        assert!(v.get("new_text").is_none());
+    }
+
+    #[test]
+    fn build_partial_tool_input_dispatches_by_name() {
+        let spec = build_partial_tool_input("create_spec", "{\"title\":\"S\"").unwrap();
+        assert_eq!(spec["title"], Value::String("S".into()));
+
+        let file = build_partial_tool_input("write_file", "{\"path\":\"p\"").unwrap();
+        assert_eq!(file["path"], Value::String("p".into()));
+
+        assert!(build_partial_tool_input("run_command", "{\"cmd\":\"x\"").is_none());
     }
 }

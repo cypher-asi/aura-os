@@ -92,9 +92,12 @@ export function ToolCallBlock({
       ? toolStyles.taskError
       : toolStyles.taskDone;
 
-  const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
-  const hasFilePath = isFileOp && typeof entry.input.path === "string" && (entry.input.path as string).length > 0;
-  const showGeneratingHint = entry.pending && !hasPartialContent && !hasFilePath && !hasTaskTitle;
+  // Spec and file-op tools now stream their real content into the preview
+  // card body, so the header no longer needs a separate "Generating…" hint
+  // for them. Keep the hint as a fallback for other pending tools (tasks,
+  // generic/custom tools) that have no live preview yet.
+  const showGeneratingHint =
+    entry.pending && !isSpec && !isFileOp && !hasTaskTitle && !inputSummary;
 
   const SuperAgentCard = getSuperAgentCardRenderer(entry.name);
 
