@@ -60,28 +60,39 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [projectId]);
 
+  const handleArchive = useCallback(async () => {
+    if (!displayProject) {
+      return;
+    }
+
+    try {
+      await api.archiveProject(displayProject.project_id);
+      navigate("/tasks");
+    } catch {
+      /* handled by caller */
+    }
+  }, [displayProject, navigate]);
+
+  const navigateToExecution = useCallback(() => {
+    if (!displayProject) {
+      return;
+    }
+
+    navigate(`/projects/${displayProject.project_id}/execution`);
+  }, [displayProject, navigate]);
+
   useEffect(() => {
     if (!displayProject) {
       unregister();
       return;
     }
 
-    const handleArchive = async () => {
-      try {
-        await api.archiveProject(displayProject.project_id);
-        navigate("/tasks");
-      } catch {
-        /* handled by caller */
-      }
-    };
-
     register({
       project: displayProject,
       setProject: setProjectSafe,
       message: "",
       handleArchive,
-      navigateToExecution: () =>
-        navigate(`/projects/${displayProject.project_id}/execution`),
+      navigateToExecution,
       initialSpecs,
       initialTasks,
     });
@@ -89,7 +100,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     return () => {
       unregister();
     };
-  }, [displayProject, initialSpecs, initialTasks, navigate, register, setProjectSafe, unregister]);
+  }, [displayProject, handleArchive, initialSpecs, initialTasks, navigateToExecution, register, setProjectSafe, unregister]);
 
   return <>{children}</>;
 }

@@ -25,6 +25,9 @@ interface ProjectLayoutData {
   projects: Project[];
 }
 
+const EMPTY_SPECS: Spec[] = [];
+const EMPTY_TASKS: Task[] = [];
+
 export function useProjectLayoutData(): ProjectLayoutData {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -53,8 +56,8 @@ export function useProjectLayoutData(): ProjectLayoutData {
   });
 
   const displayProject = layoutQuery.data?.project ?? cachedProject;
-  const initialSpecs = layoutQuery.data?.specs ?? [];
-  const initialTasks = layoutQuery.data?.tasks ?? [];
+  const initialSpecs = layoutQuery.data?.specs ?? EMPTY_SPECS;
+  const initialTasks = layoutQuery.data?.tasks ?? EMPTY_TASKS;
   const loading = Boolean(projectId) && layoutQuery.isPending && !displayProject;
 
   const setProjectSafe = useCallback((update: SetStateAction<Project>) => {
@@ -128,25 +131,37 @@ export function useProjectLayoutData(): ProjectLayoutData {
     }
   }, [projectId, queryClient, streamingId]);
 
+  const handleArchive = useCallback(async () => {
+    if (!displayProject) {
+      return;
+    }
+
+    try {
+      await api.archiveProject(displayProject.project_id);
+      await queryClient.invalidateQueries({ queryKey: projectQueryKeys.root });
+      navigate("/projects");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to archive");
+    }
+  }, [displayProject, navigate, queryClient]);
+
+  const navigateToExecution = useCallback(() => {
+    if (!displayProject) {
+      return;
+    }
+
+    navigate(`/projects/${displayProject.project_id}/execution`);
+  }, [displayProject, navigate]);
+
   useEffect(() => {
     if (!displayProject) { unregister(); return; }
-
-    const handleArchive = async () => {
-      try {
-        await api.archiveProject(displayProject.project_id);
-        await queryClient.invalidateQueries({ queryKey: projectQueryKeys.root });
-        navigate("/projects");
-      } catch (err) {
-        setMessage(err instanceof Error ? err.message : "Failed to archive");
-      }
-    };
 
     register({
       project: displayProject,
       setProject: setProjectSafe,
       message,
       handleArchive,
-      navigateToExecution: () => navigate(`/projects/${displayProject.project_id}/execution`),
+      navigateToExecution,
       initialSpecs,
       initialTasks,
     });
@@ -157,10 +172,10 @@ export function useProjectLayoutData(): ProjectLayoutData {
     initialSpecs,
     initialTasks,
     message,
-    navigate,
-    queryClient,
     register,
     setProjectSafe,
+    handleArchive,
+    navigateToExecution,
     unregister,
   ]);
 
