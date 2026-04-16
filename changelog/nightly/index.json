@@ -1,10 +1,28 @@
 [
   {
+    "date": "2026-04-16",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.269.1",
+    "title": "Desktop Release Infrastructure Improvements",
+    "intro": "Today's nightly focused on strengthening the desktop release pipeline with build optimizations, versioning fixes, and enhanced changelog generation capabilities.",
+    "entryCount": 2,
+    "highlights": [
+      "Build time optimizations with sccache integration",
+      "Consistent nightly versioning across all platforms",
+      "Enhanced desktop updater with manual check support"
+    ],
+    "rawCommitCount": 6,
+    "generatedAt": "2026-04-16T07:39:00.122Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
+    "path": "history/2026-04-16.json"
+  },
+  {
     "date": "2026-04-15",
     "channel": "nightly",
     "version": "0.1.0-nightly.507df13",
     "title": "Mobile Workspace Shell and Chat Performance Overhaul",
     "intro": "Today's release introduces a dedicated mobile workspace shell with streamlined navigation and rebuilds the chat system with bottom-anchored virtualization to eliminate scroll jank. We've also enhanced release infrastructure with automated changelog generation and improved CI reliability.",
+    "entryCount": 0,
     "highlights": [
       "Mobile workspace shell with streamlined navigation and agent workflows",
       "Bottom-anchored chat virtualization eliminates scroll jank",
