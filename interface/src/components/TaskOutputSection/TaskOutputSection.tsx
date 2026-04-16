@@ -171,7 +171,7 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
   const taskOutput = externalTaskOutput ?? hydratedOutput;
 
   const hasLiveContent =
-    isStreaming || !!streamingText || !!thinkingText || !!progressText || activeToolCalls.length > 0;
+    !!streamingText || !!thinkingText || !!progressText || activeToolCalls.length > 0;
   const hasStreamContent = events.length > 0 || hasLiveContent;
   const hasFallback = !hasStreamContent && !!fallbackText;
   const hasContent = hasStreamContent || hasFallback;
@@ -235,7 +235,11 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
           />
         )}
         {events.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            isStreaming={isStreaming && msg.id.startsWith("stream-")}
+          />
         ))}
         {hasLiveContent && (
           <StreamingBubble

@@ -22,20 +22,25 @@ export function getStreamSafeContent(text: string, isStreaming: boolean): string
   return safe;
 }
 
-const TRAILING_EMPHASIS_RE = /(?:^|\s)(\*{1,3}|_{1,3})(\S[^*_]*)$/;
-
 function trimTrailingEmphasis(text: string): string {
-  const match = text.match(TRAILING_EMPHASIS_RE);
-  if (!match) return text;
-
-  const marker = match[1];
-  const afterMarker = match[2];
-
-  const closingIdx = afterMarker.indexOf(marker);
-  if (closingIdx === -1) {
-    return text.slice(0, match.index! + (match[0].length - match[1].length - match[2].length));
+  const trailingClosedMatch = /(^|[\s([{>])(\*{1,3}|_{1,3})(\S(?:[\s\S]*?\S)?)\2$/.exec(text);
+  if (trailingClosedMatch) {
+    const prefix = trailingClosedMatch[1];
+    const content = trailingClosedMatch[3];
+    return text.slice(0, trailingClosedMatch.index) + prefix + content;
   }
-  return text;
+
+  const trailingOpenMatch = /(^|[\s([{>])(\*{1,3}|_{1,3})(\S[\s\S]*)$/.exec(text);
+  if (!trailingOpenMatch) return text;
+
+  const prefix = trailingOpenMatch[1];
+  const marker = trailingOpenMatch[2];
+  const content = trailingOpenMatch[3];
+  if (content.includes(marker)) {
+    return text;
+  }
+
+  return text.slice(0, trailingOpenMatch.index) + prefix + content;
 }
 
 function trimUnclosedCodeFence(text: string): string {

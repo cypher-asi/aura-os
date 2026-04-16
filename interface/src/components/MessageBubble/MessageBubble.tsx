@@ -11,6 +11,7 @@ import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 
 interface Props {
   message: DisplaySessionEvent;
+  isStreaming?: boolean;
 }
 
 const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
@@ -43,7 +44,7 @@ function FileAttachmentBlock({ text }: { text: string }) {
   );
 }
 
-export const MessageBubble = memo(function MessageBubble({ message }: Props) {
+export const MessageBubble = memo(function MessageBubble({ message, isStreaming = false }: Props) {
   const openBuyCredits = useUIModalStore((state) => state.openBuyCredits);
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
@@ -99,6 +100,7 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
             thinkingText={message.thinkingText}
             thinkingDurationMs={message.thinkingDurationMs}
             artifactRefs={message.artifactRefs}
+            isStreaming={isStreaming}
           />
         </div>
       );
@@ -123,6 +125,7 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
               thinkingText={message.thinkingText}
               thinkingDurationMs={message.thinkingDurationMs}
               artifactRefs={message.artifactRefs}
+              isStreaming={isStreaming}
             />
           </div>
         )}

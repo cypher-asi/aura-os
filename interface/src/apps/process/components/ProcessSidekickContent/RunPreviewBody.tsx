@@ -99,7 +99,7 @@ function ProcessNodeLiveOutput({
   activeToolCalls: ToolCallEntry[];
   timeline: TimelineItem[];
 }) {
-  const hasLive = isStreaming || streamingText || thinkingText || activeToolCalls.length > 0 || timeline.length > 0;
+  const hasLive = !!streamingText || !!thinkingText || activeToolCalls.length > 0 || timeline.length > 0;
   const hasContent = hasLive || events.length > 0;
 
   if (!hasContent) {
@@ -113,7 +113,11 @@ function ProcessNodeLiveOutput({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {events.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            isStreaming={isStreaming && msg.id.startsWith("stream-")}
+          />
       ))}
       {hasLive && (
         <StreamingBubble

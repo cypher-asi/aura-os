@@ -15,18 +15,22 @@ describe("getStreamSafeContent", () => {
   });
 
   describe("trailing emphasis", () => {
-    it("trims unclosed single asterisk emphasis", () => {
+    it("keeps unclosed single asterisk emphasis content as plain text", () => {
       const result = getStreamSafeContent("hello *world", true);
-      expect(result).not.toContain("*world");
+      expect(result).toBe("hello world");
     });
 
-    it("trims unclosed double asterisk emphasis", () => {
+    it("keeps unclosed double asterisk emphasis content as plain text", () => {
       const result = getStreamSafeContent("hello **bold text", true);
-      expect(result).not.toContain("**bold");
+      expect(result).toBe("hello bold text");
     });
 
     it("keeps closed emphasis intact", () => {
       expect(getStreamSafeContent("hello *world* end", true)).toBe("hello *world* end");
+    });
+
+    it("keeps trailing closed emphasis content plain until streaming ends", () => {
+      expect(getStreamSafeContent("hello **world**", true)).toBe("hello world");
     });
   });
 
@@ -88,7 +92,7 @@ describe("useStreamSafeContent", () => {
     const { result } = renderHook(() =>
       useStreamSafeContent("hello *world", true),
     );
-    expect(result.current).not.toContain("*world");
+    expect(result.current).toBe("hello world");
   });
 
   it("returns full content when not streaming", () => {

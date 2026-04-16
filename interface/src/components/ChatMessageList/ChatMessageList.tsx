@@ -322,7 +322,10 @@ export function ChatMessageList({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <MessageBubble message={msg} />
+              <MessageBubble
+                message={msg}
+                isStreaming={isStreaming && msg.id.startsWith("stream-")}
+              />
             </div>
           );
         })}
