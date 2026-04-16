@@ -488,34 +488,20 @@ function AuthFields({
       <label className={styles.label}>Credentials</label>
       <div className={styles.choiceGrid} role="radiogroup" aria-label="Credentials">
         {adapterType === "aura_harness" ? (
-          <>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={authSource === "aura_managed"}
-              className={`${styles.choiceCard} ${authSource === "aura_managed" ? styles.choiceCardActive : ""}`}
-              onClick={() => setAuthSource("aura_managed")}
-            >
-              <span className={styles.choiceTitle}>
-                Managed by Aura
-              </span>
-              <span className={styles.choiceBody}>
-                Aura provides the credentials and billing for this runtime path.
-              </span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={authSource === "org_integration"}
-              className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
-              onClick={() => setAuthSource("org_integration")}
-            >
-              <span className={styles.choiceTitle}>
-                {connectionLabel}
-              </span>
-              <span className={styles.choiceBody}>{connectionHint}</span>
-            </button>
-          </>
+          <button
+            type="button"
+            role="radio"
+            aria-checked
+            className={`${styles.choiceCard} ${styles.choiceCardActive}`}
+            onClick={() => setAuthSource("aura_managed")}
+          >
+            <span className={styles.choiceTitle}>
+              AURA Proxy
+            </span>
+            <span className={styles.choiceBody}>
+              Aura routes hosted model traffic through AURA Proxy and handles credentials and billing.
+            </span>
+          </button>
         ) : (
           <>
             <button
