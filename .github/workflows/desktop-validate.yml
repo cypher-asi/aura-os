@@ -77,7 +77,7 @@ jobs:
             target: windows-x64
             binary: ../.aura-shared-target/release/aura-os-desktop.exe
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -104,12 +104,19 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
         continue-on-error: true
 
-      - name: Enable sccache
+      - name: Configure sccache backend
         if: steps.sccache.outcome == 'success'
         shell: bash
+        env:
+          DEPOT_CACHE_TOKEN: ${{ secrets.DEPOT_CACHE_TOKEN }}
         run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+          if [ -n "$DEPOT_CACHE_TOKEN" ]; then
+            echo "SCCACHE_WEBDAV_ENDPOINT=https://cache.depot.dev" >> "$GITHUB_ENV"
+            echo "SCCACHE_WEBDAV_TOKEN=$DEPOT_CACHE_TOKEN" >> "$GITHUB_ENV"
+          else
+            echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          fi
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -131,6 +138,7 @@ jobs:
           AURA_DESKTOP_BINARY: ${{ matrix.binary }}
           AURA_DESKTOP_SMOKE_LOG_DIR: desktop-smoke-logs/${{ matrix.target }}
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+          AURA_CARGO_TIMINGS: ${{ (matrix.target == 'windows-x64' || matrix.target == 'macos-x64') && '1' || '' }}
         run: node scripts/ci/verify-desktop.mjs --smoke --binary "${{ matrix.binary }}"
 
       - name: Show sccache stats
@@ -138,6 +146,14 @@ jobs:
         shell: bash
         run: |
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
+
+      - name: Upload Cargo timings
+        if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-timings-desktop-validate-${{ matrix.target }}
+          path: ../.aura-shared-target/cargo-timings
+          if-no-files-found: warn
 
       - name: Install cargo-packager
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
