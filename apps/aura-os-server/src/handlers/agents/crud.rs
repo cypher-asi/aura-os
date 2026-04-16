@@ -84,7 +84,7 @@ fn build_runtime_config(
     );
 
     match (adapter_type.as_str(), auth_source.as_str()) {
-        ("aura_harness", "aura_managed" | "org_integration") => {}
+        ("aura_harness", "aura_managed") => {}
         (
             "claude_code" | "codex" | "gemini_cli" | "opencode",
             "local_cli_auth" | "org_integration",
@@ -926,6 +926,21 @@ mod tests {
 
         assert_eq!(config.auth_source, "local_cli_auth");
         assert_eq!(config.integration_id, None);
+    }
+
+    #[test]
+    fn aura_harness_rejects_org_integration_auth() {
+        let error = build_runtime_config(
+            Some("aura_harness".to_string()),
+            Some("local_host".to_string()),
+            Some("org_integration".to_string()),
+            Some("int-anthropic".to_string()),
+            Some("claude-opus-4-6".to_string()),
+            Some("local".to_string()),
+        )
+        .expect_err("aura_harness org integration should fail");
+
+        assert!(format!("{error:?}").contains("does not support auth source"));
     }
 
     #[test]

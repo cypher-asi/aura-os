@@ -59,8 +59,8 @@ interface AgentEditorFormResult {
 }
 
 function defaultAuthSource(adapterType: string, integrationId?: string | null): string {
-  if (integrationId?.trim()) return "org_integration";
   if (adapterType === "aura_harness") return "aura_managed";
+  if (integrationId?.trim()) return "org_integration";
   return "local_cli_auth";
 }
 
@@ -157,6 +157,20 @@ export function useAgentEditorForm(
   }, [isOpen, agent, isMobileLayout]);
 
   useEffect(() => {
+    if (adapterType !== "aura_harness") {
+      return;
+    }
+
+    if (authSource !== "aura_managed") {
+      setAuthSource("aura_managed");
+    }
+
+    if (integrationId) {
+      setIntegrationId("");
+    }
+  }, [adapterType, authSource, integrationId]);
+
+  useEffect(() => {
     if (!restrictCreateToAuraRuntimes) {
       return;
     }
@@ -227,7 +241,7 @@ export function useAgentEditorForm(
     }
 
     const allowedAuthSources = adapterType === "aura_harness"
-      ? ["aura_managed", "org_integration"]
+      ? ["aura_managed"]
       : [
           ...(supportsLocalCliAuth(adapterType) ? ["local_cli_auth"] : []),
           ...(supportsOrgIntegrationAuth(adapterType) ? ["org_integration"] : []),

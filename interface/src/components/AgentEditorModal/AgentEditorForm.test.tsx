@@ -103,6 +103,7 @@ describe("AgentEditorForm", () => {
 
     expect(screen.queryByRole("button", { name: "Use organization connection instead" })).not.toBeInTheDocument();
     expect(screen.queryByText("Primary Anthropic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anthropic API")).not.toBeInTheDocument();
   });
 
   it("shows runtime and credential controls for non-default setups", () => {
@@ -110,9 +111,9 @@ describe("AgentEditorForm", () => {
       <AgentEditorForm
         {...makeProps({
           restrictCreateToAuraRuntimes: false,
-          adapterType: "codex",
+          adapterType: "aura_harness",
           environment: "local_host",
-          authSource: "local_cli_auth",
+          authSource: "aura_managed",
           showAdvancedRuntime: true,
         })}
       />,
@@ -120,6 +121,6 @@ describe("AgentEditorForm", () => {
 
     expect(screen.getByText("Credentials")).toBeInTheDocument();
     expect(screen.getByText("Runs On")).toBeInTheDocument();
-    expect(screen.getByText("Codex")).toBeInTheDocument();
+    expect(screen.getByText("AURA Proxy")).toBeInTheDocument();
   });
 });
