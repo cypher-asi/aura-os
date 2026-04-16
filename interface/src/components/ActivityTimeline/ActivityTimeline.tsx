@@ -17,6 +17,7 @@ interface ActivityTimelineProps {
   thinkingDurationMs?: number | null;
   toolCalls?: ToolCallEntry[];
   isStreaming: boolean;
+  defaultThinkingExpanded?: boolean;
 }
 
 interface RenderedItem {
@@ -31,6 +32,7 @@ export function ActivityTimeline({
   thinkingDurationMs,
   toolCalls,
   isStreaming,
+  defaultThinkingExpanded,
 }: ActivityTimelineProps) {
   const toolCallMap = useMemo(() => {
     const map = new Map<string, ToolCallEntry>();
@@ -53,6 +55,7 @@ export function ActivityTimeline({
             text={thinkingText}
             isStreaming={isStreaming}
             durationMs={thinkingDurationMs}
+            defaultExpanded={defaultThinkingExpanded}
           />
         ),
       });

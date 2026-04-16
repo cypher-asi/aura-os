@@ -102,7 +102,6 @@ export function ChatMessageList({
   const streamingBubbleRef = useRef<HTMLDivElement>(null);
   const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
   const streamingBubbleHeightRef = useRef<number | null>(null);
-  const lastStreamingBubbleHeightRef = useRef<number | null>(null);
   const streamingBubbleHeightRafRef = useRef(0);
   const resizeSettleRafRef = useRef(0);
   const lastResizeSettleRef = useRef(0);
@@ -169,7 +168,6 @@ export function ChatMessageList({
       }
       const previousHeight = streamingBubbleHeightRef.current;
       streamingBubbleHeightRef.current = nextHeight;
-      lastStreamingBubbleHeightRef.current = nextHeight;
       if (previousHeight === null || Math.abs(previousHeight - nextHeight) >= 1) {
         scheduleStreamingBubbleHeightSync();
       }
@@ -203,22 +201,23 @@ export function ChatMessageList({
 
   const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
   const prevStreamingRef = useRef(nowStreaming);
+  const justFinalizedIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
+  // Detect the streaming -> not streaming transition during render so the
+  // MessageBubble rendered below picks up `initialThinkingExpanded` on the
+  // same pass it mounts. Mark the last message as "just finalized" so its
+  // ThinkingRow mounts already expanded, matching the StreamingBubble it
+  // replaces. The ThinkingRow's own deferred-collapse effect handles
+  // shrinking afterwards as a single clean layout change — so we no longer
+  // need to stuff the streaming bubble height into the virtualizer cache.
+  {
     const wasStreaming = prevStreamingRef.current;
-    prevStreamingRef.current = nowStreaming;
-
     if (wasStreaming && !nowStreaming) {
       const lastMsg = messages[messages.length - 1];
-      const height = lastStreamingBubbleHeightRef.current;
-      if (lastMsg) {
-        if (height && height > 0) {
-          heightCache.setHeight(lastMsg.id, height);
-          onContentHeightChange?.({ immediate: true });
-        }
-      }
+      justFinalizedIdRef.current = lastMsg ? lastMsg.id : null;
     }
-  }, [nowStreaming, messages, heightCache, onContentHeightChange]);
+    prevStreamingRef.current = nowStreaming;
+  }
 
   const hasMessages =
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
@@ -325,6 +324,7 @@ export function ChatMessageList({
               <MessageBubble
                 message={msg}
                 isStreaming={isStreaming && msg.id.startsWith("stream-")}
+                initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
               />
             </div>
           );

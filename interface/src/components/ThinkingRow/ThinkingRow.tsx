@@ -7,17 +7,31 @@ interface ThinkingRowProps {
   text: string;
   isStreaming: boolean;
   durationMs?: number | null;
+  defaultExpanded?: boolean;
 }
 
-export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps) {
-  const [expanded, setExpanded] = useState(isStreaming);
+export function ThinkingRow({ text, isStreaming, durationMs, defaultExpanded }: ThinkingRowProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded ?? isStreaming);
 
   useEffect(() => {
     if (isStreaming) {
       setExpanded(true);
-    } else {
-      setExpanded(false);
+      return;
     }
+    // Defer collapse by two RAFs so the just-finalized bubble paints and
+    // measures at its expanded height first. This makes the
+    // StreamingBubble -> MessageBubble swap a visual no-op and turns the
+    // subsequent collapse into a single clean layout change.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setExpanded(false);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
   }, [isStreaming]);
 
   const durationLabel = isStreaming

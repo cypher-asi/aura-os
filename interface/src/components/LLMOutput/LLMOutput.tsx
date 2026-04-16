@@ -46,6 +46,7 @@ export interface LLMOutputProps {
   artifactRefs?: ArtifactRef[];
   isStreaming?: boolean;
   className?: string;
+  defaultThinkingExpanded?: boolean;
 }
 
 export function LLMOutput({
@@ -57,6 +58,7 @@ export function LLMOutput({
   artifactRefs,
   isStreaming = false,
   className,
+  defaultThinkingExpanded,
 }: LLMOutputProps) {
   const hasContent = content && content.trim().length > 0;
   const hasToolCalls = toolCalls && toolCalls.length > 0;
@@ -85,6 +87,7 @@ export function LLMOutput({
           thinkingDurationMs={thinkingDurationMs}
           toolCalls={toolCalls}
           isStreaming={isStreaming}
+          defaultThinkingExpanded={defaultThinkingExpanded}
         />
       ) : (
         <div className={styles.fallbackStack}>
@@ -93,6 +96,7 @@ export function LLMOutput({
               text={thinkingText}
               isStreaming={isStreaming}
               durationMs={thinkingDurationMs}
+              defaultExpanded={defaultThinkingExpanded}
             />
           )}
           {hasToolCalls && toolCalls && (

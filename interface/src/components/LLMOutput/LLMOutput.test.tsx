@@ -19,6 +19,17 @@ describe("LLMOutput", () => {
     expect(screen.getByText(/Thought/)).toBeInTheDocument();
   });
 
+  it("renders thinking content expanded initially when defaultThinkingExpanded is true", () => {
+    render(
+      <LLMOutput
+        content=""
+        thinkingText="Considering options..."
+        defaultThinkingExpanded
+      />,
+    );
+    expect(screen.getByText("Considering options...")).toBeInTheDocument();
+  });
+
   it("renders tool calls via ToolCallsList when no timeline", () => {
     const toolCalls: ToolCallEntry[] = [
       { id: "t1", name: "read_file", input: { path: "foo.ts" }, pending: false },

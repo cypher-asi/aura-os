@@ -164,11 +164,13 @@ describe("ChatMessageList", () => {
     );
 
     expect(mockMessageBubble).toHaveBeenCalledTimes(1);
-    expect(mockMessageBubble.mock.calls[0][0]).toEqual({
-      message: expect.objectContaining({
-        id: "message-1",
+    expect(mockMessageBubble.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        message: expect.objectContaining({ id: "message-1" }),
+        isStreaming: false,
+        initialThinkingExpanded: false,
       }),
-    });
+    );
   });
 
   it("reconciles content height when the virtualized layout changes", () => {
@@ -300,10 +302,10 @@ describe("ChatMessageList", () => {
     });
 
     expect(onContentHeightChange).toHaveBeenCalledTimes(1);
-    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
+    expect(onContentHeightChange).toHaveBeenCalledWith();
   });
 
-  it("reuses the final streaming bubble height for the saved assistant row", () => {
+  it("marks the just-finalized message as expanded without stuffing the streaming bubble height into the cache", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
 
@@ -349,7 +351,7 @@ describe("ChatMessageList", () => {
     });
 
     vi.mocked(heightCache.setHeight).mockClear();
-    onContentHeightChange.mockClear();
+    mockMessageBubble.mockClear();
     Object.assign(mockStreamEntry, {
       isStreaming: false,
       streamingText: "",
@@ -370,7 +372,20 @@ describe("ChatMessageList", () => {
       );
     });
 
-    expect(heightCache.setHeight).toHaveBeenCalledWith("message-2", 212);
-    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
+    expect(heightCache.setHeight).not.toHaveBeenCalledWith("message-2", 212);
+
+    const finalizedCall = mockMessageBubble.mock.calls.find(
+      (call) => call[0].message.id === "message-2",
+    );
+    expect(finalizedCall?.[0]).toEqual(
+      expect.objectContaining({ initialThinkingExpanded: true }),
+    );
+
+    const historicalCall = mockMessageBubble.mock.calls.find(
+      (call) => call[0].message.id === "message-1",
+    );
+    expect(historicalCall?.[0]).toEqual(
+      expect.objectContaining({ initialThinkingExpanded: false }),
+    );
   });
 });
