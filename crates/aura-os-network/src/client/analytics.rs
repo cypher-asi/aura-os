@@ -1,3 +1,5 @@
+use tracing::{info, warn};
+
 use crate::error::NetworkError;
 use crate::types::*;
 
@@ -61,8 +63,29 @@ impl NetworkClient {
         &self,
         jwt: &str,
     ) -> Result<Option<PlatformStats>, NetworkError> {
-        self.get_authed(&format!("{}/api/stats", self.base_url), jwt)
+        // Fetch raw body so we can log the exact keys the remote aura-network
+        // service returns. This helps catch key-name mismatches (e.g. the
+        // remote emitting `projectCount` while we expect `projectsCreated`)
+        // that silently decode to 0 via `#[serde(default)]`.
+        let url = format!("{}/api/stats", self.base_url);
+        let resp = self.http.get(&url).bearer_auth(jwt).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(NetworkError::Server {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        let body = resp
+            .text()
             .await
+            .map_err(|e| NetworkError::Deserialize(e.to_string()))?;
+        info!(%url, body = %body, "platform_stats raw response");
+        serde_json::from_str::<Option<PlatformStats>>(&body).map_err(|e| {
+            warn!(%url, error = %e, "platform_stats deserialization failed");
+            NetworkError::Deserialize(e.to_string())
+        })
     }
 
     pub async fn report_usage(

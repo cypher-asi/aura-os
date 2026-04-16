@@ -476,21 +476,55 @@ pub struct PlatformStats {
     pub id: Option<String>,
     #[serde(default)]
     pub date: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "daily_active_users", alias = "dau")]
     pub daily_active_users: i32,
-    #[serde(default)]
+    #[serde(default, alias = "total_users", alias = "user_count", alias = "userCount")]
     pub total_users: i32,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "new_signups",
+        alias = "new_users",
+        alias = "newUsers",
+        alias = "signups"
+    )]
     pub new_signups: i32,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "projects_created",
+        alias = "project_count",
+        alias = "projectCount",
+        alias = "projects_count",
+        alias = "projectsCount",
+        alias = "total_projects",
+        alias = "totalProjects",
+        alias = "projects"
+    )]
     pub projects_created: i32,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "total_input_tokens",
+        alias = "input_tokens",
+        alias = "inputTokens"
+    )]
     pub total_input_tokens: i64,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "total_output_tokens",
+        alias = "output_tokens",
+        alias = "outputTokens"
+    )]
     pub total_output_tokens: i64,
-    #[serde(default)]
+    #[serde(
+        default,
+        alias = "total_revenue_usd",
+        alias = "revenue_usd",
+        alias = "revenueUsd",
+        alias = "total_revenue",
+        alias = "totalRevenue",
+        alias = "revenue"
+    )]
     pub total_revenue_usd: f64,
-    #[serde(default)]
+    #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
 }
 
