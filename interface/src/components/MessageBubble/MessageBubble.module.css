@@ -97,6 +97,13 @@
   color: #ffffff;
 }
 
+/* Assistant bubble that carries only tool calls -- strip the vertical
+   padding so consecutive tool-only bubbles stack tightly as a single
+   checklist rather than floating in their own 16px padding boxes. */
+.bubbleAssistantCompact {
+  padding: 0;
+}
+
 .fallbackStack {
   display: flex;
   flex-direction: column;
