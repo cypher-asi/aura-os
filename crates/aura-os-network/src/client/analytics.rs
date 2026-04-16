@@ -1,4 +1,4 @@
-use tracing::{info, warn};
+use tracing::{debug, warn};
 
 use crate::error::NetworkError;
 use crate::types::*;
@@ -81,7 +81,7 @@ impl NetworkClient {
             .text()
             .await
             .map_err(|e| NetworkError::Deserialize(e.to_string()))?;
-        info!(%url, body = %body, "platform_stats raw response");
+        debug!(%url, body = %body, "platform_stats raw response");
         serde_json::from_str::<Option<PlatformStats>>(&body).map_err(|e| {
             warn!(%url, error = %e, "platform_stats deserialization failed");
             NetworkError::Deserialize(e.to_string())

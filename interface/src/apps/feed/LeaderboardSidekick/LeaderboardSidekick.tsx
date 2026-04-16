@@ -53,9 +53,9 @@ export function LeaderboardSidekick() {
           <StatTile value={platformStats.total_users.toLocaleString()} label="Total Users" />
           <StatTile value={platformStats.daily_active_users.toLocaleString()} label="DAU" />
           <StatTile value={platformStats.new_signups.toLocaleString()} label="New Signups" />
-          <StatTile value={platformStats.projects_created.toLocaleString()} label="Projects" />
+          <StatTile value={platformStats.projects_created.toLocaleString()} label="Total Projects" />
           <StatTile value={formatTokens(platformStats.total_input_tokens + platformStats.total_output_tokens)} label="Total Tokens" />
-          <StatTile value={formatCurrency(platformStats.total_revenue_usd)} label="Revenue" />
+          <StatTile value={formatCurrency(platformStats.total_revenue_usd)} label="Total Revenue" />
         </div>
       </div>
     );

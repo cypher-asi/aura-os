@@ -485,7 +485,11 @@ pub struct PlatformStats {
         alias = "new_signups",
         alias = "new_users",
         alias = "newUsers",
-        alias = "signups"
+        alias = "signups",
+        alias = "newSignupsToday",
+        alias = "new_signups_today",
+        alias = "signups_today",
+        alias = "signupsToday"
     )]
     pub new_signups: i32,
     #[serde(
@@ -521,7 +525,13 @@ pub struct PlatformStats {
         alias = "revenueUsd",
         alias = "total_revenue",
         alias = "totalRevenue",
-        alias = "revenue"
+        alias = "revenue",
+        alias = "totalCostUsd",
+        alias = "total_cost_usd",
+        alias = "cost_usd",
+        alias = "costUsd",
+        alias = "total_cost",
+        alias = "totalCost"
     )]
     pub total_revenue_usd: f64,
     #[serde(default, alias = "created_at")]
