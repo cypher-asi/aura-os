@@ -79,7 +79,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libatomic1
+          sudo apt-get install -y build-essential clang pkg-config libatomic1
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -178,7 +178,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -310,7 +310,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Install Node.js
         uses: actions/setup-node@v4
