@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { useProjectActions } from "../../stores/project-action-store";
+import { useStreamStore } from "../../hooks/stream/store";
 import type { ProjectStatsData } from "../../api/projects";
 
 interface StatsDashboardData {
@@ -65,46 +66,60 @@ export function useStatsDashboardData(): StatsDashboardData {
   const projectId = ctx?.project.project_id ?? null;
   const [stats, setStats] = useState<ProjectStatsData | null>(null);
   const [loading, setLoading] = useState(() => Boolean(projectId));
+  const cancelTokenRef = useRef({ cancelled: false });
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchStats = useCallback(() => {
+    cancelTokenRef.current.cancelled = true;
+    const token = { cancelled: false };
+    cancelTokenRef.current = token;
 
     if (!projectId) {
-      queueMicrotask(() => {
-        if (!cancelled) {
-          setStats(null);
-          setLoading(false);
-        }
-      });
-      return () => { cancelled = true; };
+      setStats(null);
+      setLoading(false);
+      return;
     }
 
-    queueMicrotask(() => {
-      if (!cancelled) {
-        setLoading(true);
-      }
-    });
-
+    setLoading(true);
     void api
       .getProjectStats(projectId)
       .then((nextStats) => {
-        if (!cancelled) {
+        if (!token.cancelled) {
           setStats(normalizeProjectStats(nextStats));
         }
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!token.cancelled) {
           setStats(null);
         }
       })
       .finally(() => {
-        if (!cancelled) {
+        if (!token.cancelled) {
           setLoading(false);
         }
       });
-
-    return () => { cancelled = true; };
   }, [projectId]);
+
+  useEffect(() => {
+    fetchStats();
+    return () => {
+      cancelTokenRef.current.cancelled = true;
+    };
+  }, [fetchStats]);
+
+  // Refetch whenever any chat stream transitions from streaming to idle.
+  // Tokens/cost are populated on the backend after the LLM turn completes,
+  // so tracking the rising edge of "stream just ended" keeps the grid in
+  // sync without polling.
+  const isAnyStreaming = useStreamStore((state) =>
+    Object.values(state.entries).some((entry) => entry.isStreaming),
+  );
+  const wasStreamingRef = useRef(isAnyStreaming);
+  useEffect(() => {
+    if (wasStreamingRef.current && !isAnyStreaming) {
+      fetchStats();
+    }
+    wasStreamingRef.current = isAnyStreaming;
+  }, [isAnyStreaming, fetchStats]);
 
   return { stats, loading };
 }

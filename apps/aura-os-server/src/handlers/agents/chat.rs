@@ -1640,11 +1640,8 @@ pub(crate) async fn send_agent_event_stream(
         conversation_messages,
         project_id: body.project_id.clone(),
         // Billing headers that aura-router uses to attribute usage per
-        // project / org / session. The harness forwards these as
-        // X-Aura-Project-Id / X-Aura-Org-Id / X-Aura-Session-Id on every
-        // /v1/messages call; without them, aura-network's per-project
-        // usage aggregation stays empty.
-        aura_project_id: body.project_id.clone(),
+        // org / session. The harness forwards these as X-Aura-Org-Id /
+        // X-Aura-Session-Id on every /v1/messages call.
         aura_org_id: agent.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
@@ -1770,14 +1767,11 @@ pub(crate) async fn send_event_stream(
         model: model.clone(),
         token: Some(jwt),
         conversation_messages,
-        project_id: Some(pid_str.clone()),
+        project_id: Some(pid_str),
         project_path,
         // Billing headers that aura-router uses to attribute usage per
-        // project / org / session. The harness forwards these as
-        // X-Aura-Project-Id / X-Aura-Org-Id / X-Aura-Session-Id on every
-        // /v1/messages call; without them, aura-network's per-project
-        // usage aggregation stays empty.
-        aura_project_id: Some(pid_str),
+        // org / session. The harness forwards these as X-Aura-Org-Id /
+        // X-Aura-Session-Id on every /v1/messages call.
         aura_org_id: instance.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
