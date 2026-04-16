@@ -49,6 +49,8 @@ jobs:
   desktop-smoke:
     if: github.event_name != 'push'
     env:
+      CARGO_TARGET_DIR: ../.aura-shared-target
+      AURA_RELEASE_DIR: ../.aura-shared-target/release
       AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
       AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
       AURA_INTEGRATIONS_URL: ${{ vars.AURA_INTEGRATIONS_URL }}
@@ -76,9 +78,6 @@ jobs:
             binary: ../.aura-shared-target/release/aura-os-desktop.exe
 
     runs-on: ${{ matrix.os }}
-    env:
-      CARGO_TARGET_DIR: ../.aura-shared-target
-      AURA_RELEASE_DIR: ../.aura-shared-target/release
 
     steps:
       - uses: actions/checkout@v4
