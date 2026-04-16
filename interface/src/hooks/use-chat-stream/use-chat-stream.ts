@@ -67,7 +67,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       const controller = new AbortController();
       abortRef.current = controller;
       const handler = buildStreamHandler({
-        projectId, agentInstanceId, refs, setters, abortRef, coreKey: core.key,
+        projectId, agentInstanceId, selectedModel, refs, setters, abortRef, coreKey: core.key,
         setProgressText: core.setProgressText, sidekickRef, projectCtxRef,
         pendingSpecIdsRef, pendingTaskIdsRef,
       });

@@ -39,6 +39,16 @@ describe("loopApi", () => {
     );
   });
 
+  it("startLoop includes explicit model override when provided", async () => {
+    const fetchMock = mockFetch(200, loopStatus);
+    globalThis.fetch = fetchMock;
+    await loopApi.startLoop("p1" as string, "ai1", "aura-gpt-4.1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/loop/start?agent_instance_id=ai1&model=aura-gpt-4.1",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("pauseLoop sends POST without query param", async () => {
     const fetchMock = mockFetch(204, null);
     globalThis.fetch = fetchMock;
