@@ -29,6 +29,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const viewTask = useSidekickStore((s) => s.viewTask);
   const removeSpec = useSidekickStore((s) => s.removeSpec);
   const removeTask = useSidekickStore((s) => s.removeTask);
+  const pushSpec = useSidekickStore((s) => s.pushSpec);
   const pushTask = useSidekickStore((s) => s.pushTask);
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
@@ -157,9 +158,10 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       removeSpec(spec.spec_id);
       api.deleteSpec(projectId, spec.spec_id).catch((err) => {
         console.error("Failed to delete spec", err);
+        pushSpec(spec);
       });
     },
-    [menu, closeMenu, projectId, removeTask, removeSpec, pushTask],
+    [menu, closeMenu, projectId, removeTask, removeSpec, pushTask, pushSpec],
   );
 
   const isEmpty = tasks.length === 0;

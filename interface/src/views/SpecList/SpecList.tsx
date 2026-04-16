@@ -169,14 +169,13 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
       const target = menu?.item;
       closeMenu();
       if (!target || actionId !== "delete" || !projectId) return;
-      const specId = target.spec_id;
-      sidekickRef.current.removeSpec(specId);
-      api.deleteSpec(projectId, specId).catch((err) => {
+      sidekickRef.current.removeSpec(target.spec_id);
+      api.deleteSpec(projectId, target.spec_id).catch((err) => {
         console.error("Failed to delete spec", err);
-        fetchSpecs();
+        sidekickRef.current.pushSpec(target);
       });
     },
-    [menu, closeMenu, projectId, fetchSpecs],
+    [menu, closeMenu, projectId],
   );
 
   const isEmpty = mergedSpecs.length === 0;

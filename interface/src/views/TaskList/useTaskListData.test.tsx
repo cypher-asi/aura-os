@@ -8,9 +8,12 @@ const subscribeMap = new Map<string, Set<SubscribeCallback>>();
 const sidekickState = {
   specs: [],
   tasks: [],
+  deletedSpecIds: [] as string[],
+  deletedTaskIds: [] as string[],
   streamingAgentInstanceId: null as string | null,
   patchTask: vi.fn(),
   updatePreviewTask: vi.fn(),
+  clearDeletedTasks: vi.fn(),
 };
 
 function subscribe(type: string, cb: SubscribeCallback): () => void {
@@ -63,9 +66,12 @@ describe("useTaskListData", () => {
     subscribeMap.clear();
     sidekickState.specs = [];
     sidekickState.tasks = [];
+    sidekickState.deletedSpecIds = [];
+    sidekickState.deletedTaskIds = [];
     sidekickState.streamingAgentInstanceId = null;
     sidekickState.patchTask.mockClear();
     sidekickState.updatePreviewTask.mockClear();
+    sidekickState.clearDeletedTasks.mockClear();
   });
 
   it("updates tasks immediately on TaskSaved websocket events", () => {

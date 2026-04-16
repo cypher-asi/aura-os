@@ -37,6 +37,8 @@ export function useTaskListData(): TaskListData {
   const connected = useEventStore((s) => s.connected);
   const storeSpecs = useSidekickStore((s) => s.specs);
   const storeTasks = useSidekickStore((s) => s.tasks);
+  const deletedSpecIds = useSidekickStore((s) => s.deletedSpecIds);
+  const deletedTaskIds = useSidekickStore((s) => s.deletedTaskIds);
   const loopActive = useLoopActive(projectId);
   const [liveTaskIds, setLiveTaskIds] = useState<Set<string>>(() => new Set());
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
@@ -67,6 +69,7 @@ export function useTaskListData(): TaskListData {
     if (!pid) return;
     api.listTasks(pid).then((t) => {
       setLocalTasks(t.sort((a, b) => a.order_index - b.order_index));
+      sidekickRef.current.clearDeletedTasks();
     }).catch(console.error);
   }, []);
 
@@ -155,8 +158,18 @@ export function useTaskListData(): TaskListData {
     return () => unsubs.forEach((u) => u());
   }, [projectId, subscribe, updateTaskStatus, refetchTasks]);
 
-  const specs = useMemo(() => mergeById(localSpecs, storeSpecs, "spec_id").sort(compareSpecs), [localSpecs, storeSpecs]);
-  const tasks = useMemo(() => mergeById(localTasks, storeTasks, "task_id"), [localTasks, storeTasks]);
+  const specs = useMemo(() => {
+    const merged = mergeById(localSpecs, storeSpecs, "spec_id").sort(compareSpecs);
+    if (deletedSpecIds.length === 0) return merged;
+    const deleted = new Set(deletedSpecIds);
+    return merged.filter((s) => !deleted.has(s.spec_id));
+  }, [localSpecs, storeSpecs, deletedSpecIds]);
+  const tasks = useMemo(() => {
+    const merged = mergeById(localTasks, storeTasks, "task_id");
+    if (deletedTaskIds.length === 0) return merged;
+    const deleted = new Set(deletedTaskIds);
+    return merged.filter((t) => !deleted.has(t.task_id));
+  }, [localTasks, storeTasks, deletedTaskIds]);
 
   return { specs, tasks, liveTaskIds, loopActive, loading };
 }

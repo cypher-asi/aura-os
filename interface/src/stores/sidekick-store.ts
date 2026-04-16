@@ -30,6 +30,7 @@ interface SidekickState extends SidekickSliceState<SidekickTab, PreviewItem> {
   specs: Spec[];
   tasks: Task[];
   deletedSpecIds: string[];
+  deletedTaskIds: string[];
   streamingAgentInstanceId: string | null;
 
   viewSpec: (spec: Spec) => void;
@@ -43,6 +44,7 @@ interface SidekickState extends SidekickSliceState<SidekickTab, PreviewItem> {
   clearDeletedSpecs: () => void;
   pushTask: (task: Task) => void;
   removeTask: (taskId: string) => void;
+  clearDeletedTasks: () => void;
   clearGeneratedArtifacts: () => void;
   setStreamingAgentInstanceId: (id: string | null) => void;
   notifyAgentInstanceUpdate: (instance: AgentInstance) => void;
@@ -89,6 +91,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   specs: [],
   tasks: [],
   deletedSpecIds: [],
+  deletedTaskIds: [],
   streamingAgentInstanceId: null,
 
   setActiveTab: (tab) => {
@@ -134,7 +137,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 
   pushSpec: (spec) => {
-    const { specs, previewItem, previewHistory } = get();
+    const { specs, deletedSpecIds, previewItem, previewHistory } = get();
     const exists = specs.some((s) => s.spec_id === spec.spec_id);
     const next = exists
       ? specs.map((s) => (s.spec_id === spec.spec_id ? spec : s))
@@ -144,8 +147,12 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
       newPreview = { kind: "spec", spec };
     }
     const newHistory = patchSpecInHistory(previewHistory, spec.spec_id, spec);
+    const nextDeleted = deletedSpecIds.includes(spec.spec_id)
+      ? deletedSpecIds.filter((id) => id !== spec.spec_id)
+      : deletedSpecIds;
     set({
       specs: next.sort(compareSpecs),
+      deletedSpecIds: nextDeleted,
       previewItem: newPreview,
       previewHistory: newHistory,
     });
@@ -168,7 +175,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 
   pushTask: (task) => {
-    const { tasks, previewItem, previewHistory } = get();
+    const { tasks, deletedTaskIds, previewItem, previewHistory } = get();
     const exists = tasks.some((t) => t.task_id === task.task_id);
     const next = exists
       ? tasks.map((t) => (t.task_id === task.task_id ? task : t))
@@ -178,16 +185,31 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
       newPreview = { kind: "task", task };
     }
     const newHistory = patchTaskInHistory(previewHistory, task.task_id, task);
+    const nextDeleted = deletedTaskIds.includes(task.task_id)
+      ? deletedTaskIds.filter((id) => id !== task.task_id)
+      : deletedTaskIds;
     set({
       tasks: next.sort((a, b) => a.order_index - b.order_index),
+      deletedTaskIds: nextDeleted,
       previewItem: newPreview,
       previewHistory: newHistory,
     });
   },
 
   removeTask: (taskId) => {
-    const { tasks } = get();
-    set({ tasks: tasks.filter((t) => t.task_id !== taskId) });
+    const { tasks, deletedTaskIds } = get();
+    set({
+      tasks: tasks.filter((t) => t.task_id !== taskId),
+      deletedTaskIds: deletedTaskIds.includes(taskId)
+        ? deletedTaskIds
+        : [...deletedTaskIds, taskId],
+    });
+  },
+
+  clearDeletedTasks: () => {
+    const { deletedTaskIds } = get();
+    if (deletedTaskIds.length === 0) return;
+    set({ deletedTaskIds: [] });
   },
 
   clearGeneratedArtifacts: () => {

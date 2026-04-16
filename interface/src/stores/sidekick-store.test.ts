@@ -213,6 +213,27 @@ describe("sidekick-store", () => {
       expect(useSidekickStore.getState().tasks).toHaveLength(0);
     });
 
+    it("removeTask tracks the id in deletedTaskIds", () => {
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      useSidekickStore.getState().removeTask("t1");
+      expect(useSidekickStore.getState().deletedTaskIds).toContain("t1");
+    });
+
+    it("clearDeletedTasks empties the list", () => {
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      useSidekickStore.getState().removeTask("t1");
+      useSidekickStore.getState().clearDeletedTasks();
+      expect(useSidekickStore.getState().deletedTaskIds).toEqual([]);
+    });
+
+    it("pushTask clears the id from deletedTaskIds", () => {
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      useSidekickStore.getState().removeTask("t1");
+      useSidekickStore.getState().pushTask(makeTask("t1", 0));
+      expect(useSidekickStore.getState().deletedTaskIds).not.toContain("t1");
+      expect(useSidekickStore.getState().tasks).toHaveLength(1);
+    });
+
     it("patchTask updates task fields", () => {
       useSidekickStore.getState().pushTask(makeTask("t1", 0));
       useSidekickStore.getState().patchTask("t1", { status: "completed" });
