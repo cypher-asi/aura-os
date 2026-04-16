@@ -172,6 +172,13 @@ pub(crate) async fn post_update_install(
     }
 }
 
+pub(crate) async fn post_update_check(
+    AxumState(state): AxumState<UpdateState>,
+) -> Json<serde_json::Value> {
+    crate::updater::trigger_recheck(state);
+    Json(serde_json::json!({ "ok": true }))
+}
+
 #[derive(serde::Deserialize)]
 pub(crate) struct SetChannelRequest {
     channel: UpdateChannel,

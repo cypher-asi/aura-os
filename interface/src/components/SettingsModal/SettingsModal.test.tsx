@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockLogout = vi.fn();
 const mockHandleChannelChange = vi.fn();
 const mockHandleInstallUpdate = vi.fn();
+const mockHandleCheckForUpdates = vi.fn();
 const mockOpen = vi.fn();
 
 function buildSettingsData() {
@@ -17,6 +18,7 @@ function buildSettingsData() {
     showUpdater: true,
     privacyPolicyUrl: "https://example.com/privacy",
     supportUrl: "https://example.com/support",
+    handleCheckForUpdates: mockHandleCheckForUpdates,
     handleChannelChange: mockHandleChannelChange,
     handleInstallUpdate: mockHandleInstallUpdate,
   };
@@ -96,5 +98,13 @@ describe("SettingsModal", () => {
 
     expect(screen.queryByText("Updates")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Install update/i })).not.toBeInTheDocument();
+  });
+
+  it("renders a manual update check action", async () => {
+    const user = userEvent.setup();
+    render(<SettingsModal isOpen onClose={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /Check for updates/i }));
+    expect(mockHandleCheckForUpdates).toHaveBeenCalled();
   });
 });

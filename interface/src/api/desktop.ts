@@ -78,6 +78,10 @@ export const desktopApi = {
     apiFetch<{ ok: boolean; error?: string }>("/api/update-install", {
       method: "POST",
     }),
+  checkForUpdates: () =>
+    apiFetch<{ ok: boolean; error?: string }>("/api/update-check", {
+      method: "POST",
+    }),
   setUpdateChannel: (channel: DesktopUpdateChannel) =>
     apiFetch<{ ok: boolean; channel: DesktopUpdateChannel; error?: string }>("/api/update-channel", {
       method: "POST",

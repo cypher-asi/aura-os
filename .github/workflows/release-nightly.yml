@@ -153,10 +153,10 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          NIGHTLY="${BASE}-nightly.${SHORT_SHA}"
+          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
+          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
+          NIGHTLY="${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}"
           echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
-          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Patch Cargo.toml version
         shell: bash
@@ -252,10 +252,10 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          NIGHTLY="${BASE}-nightly.${SHORT_SHA}"
+          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
+          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
+          NIGHTLY="${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}"
           echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
-          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Patch Cargo.toml version
         shell: bash
@@ -556,8 +556,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "version=${BASE}-nightly.${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
+          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
+          echo "version=${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -624,8 +625,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "version=${BASE}-nightly.${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
+          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
+          echo "version=${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -737,8 +739,9 @@ jobs:
         shell: bash
         run: |
           BASE=$(grep '^version' repo/apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          SHORT_SHA=$(printf '%s' "${{ github.sha }}" | cut -c1-7)
-          echo "version=${BASE}-nightly.${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          RUN_SEQ=$(printf '%010d' "${{ github.run_number }}")
+          RUN_ATTEMPT=$(printf '%02d' "${{ github.run_attempt }}")
+          echo "version=${BASE}-nightly.z${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4

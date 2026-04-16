@@ -13,6 +13,7 @@ interface SettingsData {
   showUpdater: boolean;
   privacyPolicyUrl: string | null;
   supportUrl: string | null;
+  handleCheckForUpdates: () => Promise<void>;
   handleChannelChange: (ch: "stable" | "nightly") => Promise<void>;
   handleInstallUpdate: () => Promise<void>;
 }
@@ -88,6 +89,21 @@ export function useSettingsData(isOpen: boolean): SettingsData {
     }
   }, [refreshUpdateStatus]);
 
+  const handleCheckForUpdates = useCallback(async () => {
+    try {
+      const response = await api.checkForUpdates();
+      if (!response.ok) {
+        throw new Error(response.error || "failed to trigger update check");
+      }
+      await refreshUpdateStatus();
+      window.setTimeout(() => {
+        void refreshUpdateStatus().catch(console.error);
+      }, 1500);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [refreshUpdateStatus]);
+
   return {
     loading,
     updateChannel,
@@ -97,6 +113,7 @@ export function useSettingsData(isOpen: boolean): SettingsData {
     showUpdater: !!features.nativeUpdater && showUpdater,
     privacyPolicyUrl: getPrivacyPolicyUrl(),
     supportUrl: getSupportUrl(),
+    handleCheckForUpdates,
     handleChannelChange,
     handleInstallUpdate,
   };
