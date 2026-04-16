@@ -1,6 +1,14 @@
 import type { ProjectId, SpecId, TaskId, TaskStatus, Task, BuildStepRecord, TestStepRecord } from "../types";
 import { apiFetch } from "./core";
 
+function runTaskQuery(agentInstanceId?: string, model?: string | null): string {
+  const params = new URLSearchParams();
+  if (agentInstanceId) params.set("agent_instance_id", agentInstanceId);
+  if (model?.trim()) params.set("model", model.trim());
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export const tasksApi = {
   listTasks: (projectId: ProjectId) =>
     apiFetch<Task[]>(`/api/projects/${projectId}/tasks`),
@@ -29,8 +37,13 @@ export const tasksApi = {
     apiFetch<Task>(`/api/projects/${projectId}/tasks/${taskId}/retry`, {
       method: "POST",
     }),
-  runTask: (projectId: ProjectId, taskId: TaskId, agentInstanceId?: string) => {
-    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+  runTask: (
+    projectId: ProjectId,
+    taskId: TaskId,
+    agentInstanceId?: string,
+    model?: string | null,
+  ) => {
+    const params = runTaskQuery(agentInstanceId, model);
     return apiFetch<void>(`/api/projects/${projectId}/tasks/${taskId}/run${params}`, {
       method: "POST",
     });

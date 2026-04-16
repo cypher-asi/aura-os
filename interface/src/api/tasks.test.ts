@@ -96,6 +96,16 @@ describe("tasksApi", () => {
     );
   });
 
+  it("runTask includes explicit model override when provided", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await tasksApi.runTask("p1" as string, "t1" as string, "ai1", "aura-o4-mini");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/tasks/t1/run?agent_instance_id=ai1&model=aura-o4-mini",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("getTaskOutput fetches output", async () => {
     const output = { output: "build succeeded", build_steps: [], test_steps: [] };
     const fetchMock = mockFetch(200, output);
