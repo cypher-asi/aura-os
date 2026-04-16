@@ -13,6 +13,10 @@ import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
 import type { ExplorerNode } from "@cypher-asi/zui";
+import {
+  SidekickItemContextMenu,
+  useSidekickItemContextMenu,
+} from "../../components/SidekickItemContextMenu";
 
 export function SpecList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectActions();
@@ -152,6 +156,29 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     [explorerData, searchQuery],
   );
 
+  const resolveMenuSpec = useCallback(
+    (nodeId: string) => specById.get(nodeId) ?? null,
+    [specById],
+  );
+  const { menu, menuRef, handleContextMenu, closeMenu } = useSidekickItemContextMenu({
+    resolveItem: resolveMenuSpec,
+  });
+
+  const handleMenuAction = useCallback(
+    (actionId: string) => {
+      const target = menu?.item;
+      closeMenu();
+      if (!target || actionId !== "delete" || !projectId) return;
+      const specId = target.spec_id;
+      sidekickRef.current.removeSpec(specId);
+      api.deleteSpec(projectId, specId).catch((err) => {
+        console.error("Failed to delete spec", err);
+        fetchSpecs();
+      });
+    },
+    [menu, closeMenu, projectId, fetchSpecs],
+  );
+
   const isEmpty = mergedSpecs.length === 0;
   const showEmpty = useDelayedEmpty(isEmpty, loading, streamingAgentInstanceId ? 800 : 0);
 
@@ -162,15 +189,25 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
 
   return (
     <>
-      <Explorer
-        data={filteredData}
-        expandOnSelect
-        enableDragDrop={false}
-        enableMultiSelect={false}
-        defaultExpandedIds={defaultExpandedIds}
-        defaultSelectedIds={defaultSelectedIds}
-        onSelect={handleSelect}
-      />
+      <div onContextMenu={handleContextMenu}>
+        <Explorer
+          data={filteredData}
+          expandOnSelect
+          enableDragDrop={false}
+          enableMultiSelect={false}
+          defaultExpandedIds={defaultExpandedIds}
+          defaultSelectedIds={defaultSelectedIds}
+          onSelect={handleSelect}
+        />
+      </div>
+      {menu && (
+        <SidekickItemContextMenu
+          x={menu.x}
+          y={menu.y}
+          menuRef={menuRef}
+          onAction={handleMenuAction}
+        />
+      )}
     </>
   );
 }

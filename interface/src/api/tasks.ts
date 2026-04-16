@@ -11,6 +11,8 @@ export const tasksApi = {
     }),
   listTasksBySpec: (projectId: ProjectId, specId: SpecId) =>
     apiFetch<Task[]>(`/api/projects/${projectId}/specs/${specId}/tasks`),
+  deleteTask: (projectId: ProjectId, taskId: TaskId) =>
+    apiFetch<void>(`/api/projects/${projectId}/tasks/${taskId}`, { method: "DELETE" }),
   transitionTask: (
     projectId: ProjectId,
     taskId: TaskId,

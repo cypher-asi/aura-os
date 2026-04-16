@@ -146,6 +146,16 @@ describe("projectsApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/projects/p1/specs/s1", expect.any(Object));
   });
 
+  it("deleteSpec sends DELETE", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await projectsApi.deleteSpec("p1" as string, "s1" as string);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/specs/s1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
   it("generateSpecs sends POST", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;

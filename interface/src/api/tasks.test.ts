@@ -14,7 +14,17 @@ function mockFetch(status: number, body: unknown) {
 
 describe("tasksApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      configurable: true,
+    });
+  });
   afterEach(() => { globalThis.fetch = originalFetch; });
 
   it("listTasks fetches by projectId", async () => {
@@ -73,6 +83,16 @@ describe("tasksApi", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/projects/p1/tasks/t1/run?agent_instance_id=ai1",
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("deleteTask sends DELETE", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await tasksApi.deleteTask("p1" as string, "t1" as string);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/tasks/t1",
+      expect.objectContaining({ method: "DELETE" }),
     );
   });
 

@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import type { Task } from "../../types";
+import { useCallback, useMemo } from "react";
+import type { Spec, Task } from "../../types";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { titleSortKey } from "../../utils/collections";
@@ -7,16 +7,31 @@ import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
 import { useSidekickStore } from "../../stores/sidekick-store";
+import { useProjectActions } from "../../stores/project-action-store";
+import { api } from "../../api/client";
 import { useTaskListData } from "./useTaskListData";
 import styles from "../aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
+import {
+  SidekickItemContextMenu,
+  useSidekickItemContextMenu,
+} from "../../components/SidekickItemContextMenu";
+
+type TaskMenuTarget =
+  | { kind: "task"; task: Task }
+  | { kind: "spec"; spec: Spec };
 
 export function TaskList({ searchQuery }: { searchQuery: string }) {
   const { specs, tasks, liveTaskIds, loopActive, loading } = useTaskListData();
   const previewItem = useSidekickStore((s) => s.previewItem);
   const streamingAgentInstanceId = useSidekickStore((s) => s.streamingAgentInstanceId);
   const viewTask = useSidekickStore((s) => s.viewTask);
+  const removeSpec = useSidekickStore((s) => s.removeSpec);
+  const removeTask = useSidekickStore((s) => s.removeTask);
+  const pushTask = useSidekickStore((s) => s.pushTask);
+  const ctx = useProjectActions();
+  const projectId = ctx?.project.project_id;
 
   const specMap = useMemo(() => new Map(specs.map((s) => [s.spec_id, s])), [specs]);
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.task_id, t])), [tasks]);
@@ -110,6 +125,43 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     [explorerData, searchQuery],
   );
 
+  const resolveMenuTarget = useCallback(
+    (nodeId: string): TaskMenuTarget | null => {
+      const task = taskMap.get(nodeId);
+      if (task) return { kind: "task", task };
+      const spec = specMap.get(nodeId);
+      if (spec) return { kind: "spec", spec };
+      return null;
+    },
+    [taskMap, specMap],
+  );
+  const { menu, menuRef, handleContextMenu, closeMenu } = useSidekickItemContextMenu({
+    resolveItem: resolveMenuTarget,
+  });
+
+  const handleMenuAction = useCallback(
+    (actionId: string) => {
+      const target = menu?.item;
+      closeMenu();
+      if (!target || actionId !== "delete" || !projectId) return;
+      if (target.kind === "task") {
+        const { task } = target;
+        removeTask(task.task_id);
+        api.deleteTask(projectId, task.task_id).catch((err) => {
+          console.error("Failed to delete task", err);
+          pushTask(task);
+        });
+        return;
+      }
+      const { spec } = target;
+      removeSpec(spec.spec_id);
+      api.deleteSpec(projectId, spec.spec_id).catch((err) => {
+        console.error("Failed to delete spec", err);
+      });
+    },
+    [menu, closeMenu, projectId, removeTask, removeSpec, pushTask],
+  );
+
   const isEmpty = tasks.length === 0;
   const showEmpty = useDelayedEmpty(isEmpty, loading, streamingAgentInstanceId ? 800 : 0);
 
@@ -120,21 +172,31 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
   return (
     <>
-      <Explorer
-        data={filteredData}
-        className={styles.taskExplorer}
-        expandOnSelect
-        enableDragDrop={false}
-        enableMultiSelect={false}
-        defaultExpandedIds={defaultExpandedIds}
-        defaultSelectedIds={defaultSelectedIds}
-        onSelect={(ids) => {
-          const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
-          if (!id) return;
-          const task = taskMap.get(id);
-          if (task) viewTask(task);
-        }}
-      />
+      <div onContextMenu={handleContextMenu}>
+        <Explorer
+          data={filteredData}
+          className={styles.taskExplorer}
+          expandOnSelect
+          enableDragDrop={false}
+          enableMultiSelect={false}
+          defaultExpandedIds={defaultExpandedIds}
+          defaultSelectedIds={defaultSelectedIds}
+          onSelect={(ids) => {
+            const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
+            if (!id) return;
+            const task = taskMap.get(id);
+            if (task) viewTask(task);
+          }}
+        />
+      </div>
+      {menu && (
+        <SidekickItemContextMenu
+          x={menu.x}
+          y={menu.y}
+          menuRef={menuRef}
+          onAction={handleMenuAction}
+        />
+      )}
     </>
   );
 }

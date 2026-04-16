@@ -110,6 +110,8 @@ export const projectsApi = {
     apiFetch<Spec[]>(`/api/projects/${projectId}/specs`),
   getSpec: (projectId: ProjectId, specId: SpecId) =>
     apiFetch<Spec>(`/api/projects/${projectId}/specs/${specId}`),
+  deleteSpec: (projectId: ProjectId, specId: SpecId) =>
+    apiFetch<void>(`/api/projects/${projectId}/specs/${specId}`, { method: "DELETE" }),
   generateSpecs: (projectId: ProjectId, agentInstanceId?: string | null) => {
     const params = agentInstanceId ? `?agent_instance_id=${encodeURIComponent(agentInstanceId)}` : "";
     return apiFetch<Spec[]>(`/api/projects/${projectId}/specs/generate${params}`, {
