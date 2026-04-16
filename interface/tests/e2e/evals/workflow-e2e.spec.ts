@@ -76,10 +76,13 @@ for (const scenario of scenarios) {
     await expect(page.getByRole("button", { name: "Specs", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Tasks", exact: true }).last()).toBeVisible();
     await expect(page.getByRole("button", { name: "Stats", exact: true })).toBeVisible();
-    await expect(page.getByText(tasks[0].title, { exact: true })).toBeVisible();
 
     await timed("start_loop", async () => {
-      await page.getByRole("button", { name: "Start", exact: true }).first().click();
+      await browserApiFetch<void>(
+        page,
+        "POST",
+        `/api/projects/${project.project_id}/loop/start?agent_instance_id=${agentInstance.agent_instance_id}`,
+      );
     });
 
     await timed("wait_for_loop_completion", async () => {

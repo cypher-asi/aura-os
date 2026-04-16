@@ -1,6 +1,9 @@
 name: Desktop Validate
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     paths:
       - .github/actions/**
@@ -36,7 +39,15 @@ env:
   IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
 
 jobs:
+  desktop-validate-noop:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip duplicate push validation
+        run: echo "Desktop Validate is PR-only. Release Nightly covers push-to-main desktop validation."
+
   desktop-smoke:
+    if: github.event_name != 'push'
     env:
       AURA_NETWORK_URL: ${{ vars.AURA_NETWORK_URL }}
       AURA_STORAGE_URL: ${{ vars.AURA_STORAGE_URL }}
