@@ -156,6 +156,18 @@ impl AutomatonClient {
         Ok(())
     }
 
+    /// Resume a paused automaton.
+    pub async fn resume(&self, automaton_id: &str) -> anyhow::Result<()> {
+        let url = format!("{}/automaton/{automaton_id}/resume", self.http_base);
+        let resp = self.apply_auth(self.http.post(&url)).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("POST resume returned {status}: {body}");
+        }
+        Ok(())
+    }
+
     /// Get the status of an automaton.
     pub async fn status(&self, automaton_id: &str) -> anyhow::Result<serde_json::Value> {
         let url = format!("{}/automaton/{automaton_id}/status", self.http_base);

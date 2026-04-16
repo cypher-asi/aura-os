@@ -10,6 +10,7 @@ import type { SessionEvent, ChatContentBlock } from "../../types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {
   DisplayContentBlockUnion,
+  DisplaySessionEvent,
   ToolCallEntry,
   TimelineItem,
   StreamRefs,

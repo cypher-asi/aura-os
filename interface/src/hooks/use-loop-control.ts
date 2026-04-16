@@ -59,6 +59,10 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
         if (!isForProject(e)) return;
         setLoopPaused(true);
       }),
+      subscribe(EventType.LoopResumed, (e) => {
+        if (!isForProject(e)) return;
+        setLoopPaused(false);
+      }),
       subscribe(EventType.LoopStopped, (e) => {
         if (!isForProject(e)) return;
         setLoopRunning(false);
@@ -76,6 +80,14 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
   const handleStart = useCallback(async () => {
     if (!projectId) return;
     setError("");
+    if (loopPaused) {
+      try {
+        await api.resumeLoop(projectId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to resume loop");
+      }
+      return;
+    }
     try {
       await api.startLoop(projectId);
       setLoopRunning(true);
@@ -83,13 +95,12 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start loop");
     }
-  }, [projectId]);
+  }, [projectId, loopPaused]);
 
   const handlePause = useCallback(async () => {
     if (!projectId) return;
     try {
       await api.pauseLoop(projectId);
-      setLoopPaused(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to pause loop");
     }
@@ -99,8 +110,6 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
     if (!projectId) return;
     try {
       await api.stopLoop(projectId);
-      setLoopRunning(false);
-      setLoopPaused(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to stop loop");
     }

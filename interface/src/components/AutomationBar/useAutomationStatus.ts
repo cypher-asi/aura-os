@@ -101,6 +101,16 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   else if (running) status = "active";
 
   const handleStart = useCallback(async () => {
+    if (paused) {
+      try {
+        const res = await api.resumeLoop(projectId, agentInstanceId);
+        if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
+        setPaused(false);
+      } catch (err) {
+        console.error("Failed to resume loop", err);
+      }
+      return;
+    }
     try {
       setStarting(true);
       const res = await api.startLoop(projectId, agentInstanceId);
@@ -111,22 +121,22 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Failed to start loop", err);
     }
-  }, [projectId, agentInstanceId]);
+  }, [projectId, agentInstanceId, paused]);
 
   const handlePause = useCallback(async () => {
-    try { await api.pauseLoop(projectId); } catch (err) { console.error("Failed to pause loop", err); }
-  }, [projectId]);
+    try { await api.pauseLoop(projectId, agentInstanceId); } catch (err) { console.error("Failed to pause loop", err); }
+  }, [projectId, agentInstanceId]);
 
   const handleStop = useCallback(() => { setConfirmStop(true); }, []);
 
   const handleStopConfirm = useCallback(async () => {
     setConfirmStop(false);
     try {
-      const res = await api.stopLoop(projectId);
+      const res = await api.stopLoop(projectId, agentInstanceId);
       setActiveAgents(res.active_agent_instances ?? []);
       setPaused(false); setStarting(false);
     } catch (err) { console.error("Failed to stop loop", err); }
-  }, [projectId]);
+  }, [projectId, agentInstanceId]);
 
   return {
     status, agentCount: activeAgents.length,

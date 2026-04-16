@@ -58,7 +58,10 @@ async function bridgeLoopToolResult(
     case "start_dev_loop": {
       try {
         const status = await api.getLoopStatus(projectId);
-        if ((status.active_agent_instances?.length ?? 0) > 0) return;
+        if ((status.active_agent_instances?.length ?? 0) > 0) {
+          if (status.paused) await api.resumeLoop(projectId, agentInstanceId);
+          return;
+        }
         await api.startLoop(projectId, agentInstanceId);
       } catch {
         /* ignore; automation bar / WS will reflect server state */
@@ -70,6 +73,9 @@ async function bridgeLoopToolResult(
       break;
     case "stop_dev_loop":
       api.stopLoop(projectId, agentInstanceId).catch(() => {});
+      break;
+    case "resume_dev_loop":
+      api.resumeLoop(projectId, agentInstanceId).catch(() => {});
       break;
   }
 }

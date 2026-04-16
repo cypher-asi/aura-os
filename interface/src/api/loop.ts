@@ -29,6 +29,12 @@ export const loopApi = {
       method: "POST",
     });
   },
+  resumeLoop: (projectId: ProjectId, agentInstanceId?: string) => {
+    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+    return apiFetch<LoopStatusResponse>(`/api/projects/${projectId}/loop/resume${params}`, {
+      method: "POST",
+    });
+  },
   getLoopStatus: (projectId: ProjectId) =>
     apiFetch<LoopStatusResponse>(`/api/projects/${projectId}/loop/status`),
 };

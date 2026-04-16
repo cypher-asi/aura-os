@@ -645,6 +645,10 @@ fn system_routes() -> Router<AppState> {
             post(dev_loop::stop_loop),
         )
         .route(
+            "/api/projects/:project_id/loop/resume",
+            post(dev_loop::resume_loop),
+        )
+        .route(
             "/api/projects/:project_id/loop/status",
             get(dev_loop::get_loop_status),
         )

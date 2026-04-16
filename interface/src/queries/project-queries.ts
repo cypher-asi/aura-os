@@ -13,10 +13,10 @@ function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => a.order_index - b.order_index);
 }
 
-function upsertById<T extends Record<string, unknown>>(
+function upsertById<T, K extends keyof T>(
   items: T[],
   item: T,
-  idKey: keyof T,
+  idKey: K,
 ): T[] {
   const next = [...items];
   const index = next.findIndex((candidate) => candidate[idKey] === item[idKey]);

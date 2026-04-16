@@ -1102,6 +1102,20 @@ fn forward_automaton_events(params: ForwardParams) {
                             );
                             break;
                         }
+                        "paused" => {
+                            let mut reg = automaton_registry.lock().await;
+                            if let Some(entry) = reg.get_mut(&agent_instance_id) {
+                                entry.paused = true;
+                            }
+                            Some("loop_paused")
+                        }
+                        "resumed" => {
+                            let mut reg = automaton_registry.lock().await;
+                            if let Some(entry) = reg.get_mut(&agent_instance_id) {
+                                entry.paused = false;
+                            }
+                            Some("loop_resumed")
+                        }
                         _ => map_passthrough_event_type(event_type),
                     };
 
@@ -1588,6 +1602,7 @@ pub(crate) async fn start_loop(
                 automaton_id: automaton_id.clone(),
                 project_id,
                 harness_base_url: automaton_client.base_url().to_string(),
+                paused: false,
             },
         );
     }
@@ -1625,6 +1640,7 @@ pub(crate) async fn pause_loop(
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
+    let mut paused_count = 0usize;
     for (aiid, automaton_id) in &targets {
         let base_url = {
             let reg = state.automaton_registry.lock().await;
@@ -1635,6 +1651,14 @@ pub(crate) async fn pause_loop(
         let client = aura_os_link::AutomatonClient::new(&base_url);
         if let Err(e) = client.pause(automaton_id).await {
             warn!(automaton_id, error = %e, "Failed to pause automaton");
+            continue;
+        }
+        paused_count += 1;
+        {
+            let mut reg = state.automaton_registry.lock().await;
+            if let Some(entry) = reg.get_mut(aiid) {
+                entry.paused = true;
+            }
         }
         emit_domain_event(
             &state.event_broadcast,
@@ -1654,6 +1678,10 @@ pub(crate) async fn pause_loop(
         }
     }
 
+    if paused_count == 0 {
+        return Err(ApiError::bad_gateway("failed to pause any automaton"));
+    }
+
     let active_agent_instances = active_instances(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
@@ -1671,29 +1699,32 @@ pub(crate) async fn stop_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    let mut reg = state.automaton_registry.lock().await;
-    let targets: Vec<(AgentInstanceId, String)> = reg
+    let reg = state.automaton_registry.lock().await;
+    let targets: Vec<(AgentInstanceId, String, String)> = reg
         .iter()
         .filter(|(_, a)| a.project_id == project_id)
         .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
-        .map(|(aiid, a)| (*aiid, a.automaton_id.clone()))
+        .map(|(aiid, a)| (*aiid, a.automaton_id.clone(), a.harness_base_url.clone()))
         .collect();
 
     if targets.is_empty() {
         drop(reg);
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
+    drop(reg);
 
-    for (aiid, automaton_id) in &targets {
-        let base_url = reg
-            .get(aiid)
-            .map(|a| a.harness_base_url.clone())
-            .unwrap_or_else(|| state.automaton_client.base_url().to_string());
-        let client = aura_os_link::AutomatonClient::new(&base_url);
+    let mut stopped_count = 0usize;
+    for (aiid, automaton_id, base_url) in &targets {
+        let client = aura_os_link::AutomatonClient::new(base_url);
         if let Err(e) = client.stop(automaton_id).await {
             warn!(automaton_id, error = %e, "Failed to stop automaton");
+            continue;
         }
-        reg.remove(aiid);
+        stopped_count += 1;
+        {
+            let mut reg = state.automaton_registry.lock().await;
+            reg.remove(aiid);
+        }
         emit_domain_event(
             &state.event_broadcast,
             "loop_stopped",
@@ -1712,12 +1743,11 @@ pub(crate) async fn stop_loop(
         }
     }
 
-    let remaining: Vec<AgentInstanceId> = reg
-        .iter()
-        .filter(|(_, a)| a.project_id == project_id)
-        .map(|(aiid, _)| *aiid)
-        .collect();
-    drop(reg);
+    if stopped_count == 0 {
+        return Err(ApiError::bad_gateway("failed to stop any automaton"));
+    }
+
+    let remaining = active_instances(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
         running: !remaining.is_empty(),
@@ -1728,15 +1758,90 @@ pub(crate) async fn stop_loop(
     }))
 }
 
+pub(crate) async fn resume_loop(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(project_id): Path<ProjectId>,
+    Query(params): Query<LoopQueryParams>,
+) -> ApiResult<Json<LoopStatusResponse>> {
+    let reg = state.automaton_registry.lock().await;
+    let targets: Vec<(AgentInstanceId, String, String)> = reg
+        .iter()
+        .filter(|(_, a)| a.project_id == project_id && a.paused)
+        .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
+        .map(|(aiid, a)| (*aiid, a.automaton_id.clone(), a.harness_base_url.clone()))
+        .collect();
+    drop(reg);
+
+    if targets.is_empty() {
+        return Err(ApiError::bad_request("no matching paused dev loop found"));
+    }
+
+    let mut resumed_count = 0usize;
+    for (aiid, automaton_id, base_url) in &targets {
+        let client = aura_os_link::AutomatonClient::new(base_url);
+        if let Err(e) = client.resume(automaton_id).await {
+            warn!(automaton_id, error = %e, "Failed to resume automaton");
+            continue;
+        }
+        resumed_count += 1;
+        {
+            let mut reg = state.automaton_registry.lock().await;
+            if let Some(entry) = reg.get_mut(aiid) {
+                entry.paused = false;
+            }
+        }
+        emit_domain_event(
+            &state.event_broadcast,
+            "loop_resumed",
+            project_id,
+            *aiid,
+            serde_json::json!({}),
+        );
+        {
+            let ev = serde_json::json!({"type": "loop_resumed", "project_id": project_id.to_string(), "agent_instance_id": aiid.to_string()});
+            let sc = state.storage_client.clone();
+            let j: Option<String> = Some(jwt.clone());
+            let p = project_id.to_string();
+            tokio::spawn(async move {
+                persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &ev).await;
+            });
+        }
+    }
+
+    if resumed_count == 0 {
+        return Err(ApiError::bad_gateway("failed to resume any automaton"));
+    }
+
+    let active_agent_instances = active_instances(&state, project_id).await;
+
+    Ok(Json(LoopStatusResponse {
+        running: true,
+        paused: false,
+        project_id: Some(project_id),
+        agent_instance_id: params.agent_instance_id,
+        active_agent_instances: Some(active_agent_instances),
+    }))
+}
+
 pub(crate) async fn get_loop_status(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    let active = active_instances(&state, project_id).await;
+    let reg = state.automaton_registry.lock().await;
+    let active: Vec<AgentInstanceId> = reg
+        .iter()
+        .filter(|(_, a)| a.project_id == project_id)
+        .map(|(aiid, _)| *aiid)
+        .collect();
+    let any_paused = reg
+        .iter()
+        .any(|(_, a)| a.project_id == project_id && a.paused);
+    drop(reg);
 
     Ok(Json(LoopStatusResponse {
         running: !active.is_empty(),
-        paused: false,
+        paused: any_paused,
         project_id: Some(project_id),
         agent_instance_id: None,
         active_agent_instances: Some(active),
