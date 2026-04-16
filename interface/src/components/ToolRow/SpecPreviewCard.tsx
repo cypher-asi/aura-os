@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
@@ -6,22 +6,21 @@ import { specFilename } from "../../utils/format";
 import fileStyles from "../FilePreviewCard/FilePreviewCard.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 
-const COLLAPSED_SPEC_LINES = 20;
-
 export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
-  const [expanded, setExpanded] = useState(false);
   const title = (entry.input.title as string) || "";
   const filename = specFilename(title);
   const content = (entry.input.markdown_contents as string) || "";
-  const lines = content.split("\n");
-  const needsCollapse = lines.length > COLLAPSED_SPEC_LINES;
-  const displayContent =
-    !expanded && needsCollapse
-      ? lines.slice(0, COLLAPSED_SPEC_LINES).join("\n")
-      : content;
-
-  const highlightedHtml = useHighlightedHtml(displayContent, "markdown");
+  const highlightedHtml = useHighlightedHtml(content, "markdown");
   const showSpinner = !content.trim() && entry.pending;
+
+  const codeAreaRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!entry.pending) return;
+    const el = codeAreaRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [highlightedHtml, entry.pending]);
 
   return (
     <div className={`${fileStyles.card} ${fileStyles.specCard}`}>
@@ -32,29 +31,19 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
         </span>
       </div>
       {content.trim() ? (
-        <>
-          <div
-            className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${!expanded && needsCollapse ? fileStyles.collapsed : ""}`}
-          >
-            <pre>
-              <code
-                className="hljs language-markdown"
-                dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-              />
-            </pre>
-          </div>
-          {needsCollapse && (
-            <button
-              type="button"
-              className={`${fileStyles.toggleBtn} ${fileStyles.specToggleBtn}`}
-              onClick={() => setExpanded(!expanded)}
-            >
-              {expanded ? "Show less" : `Show all ${lines.length} lines`}
-            </button>
-          )}
-        </>
+        <div
+          ref={codeAreaRef}
+          className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.specCodeAreaFixed}`}
+        >
+          <pre>
+            <code
+              className="hljs language-markdown"
+              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            />
+          </pre>
+        </div>
       ) : showSpinner ? (
-        <div className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.pendingCodeArea}`}>
+        <div className={`${fileStyles.codeArea} ${fileStyles.specCodeArea} ${fileStyles.specCodeAreaFixed} ${fileStyles.pendingCodeArea}`}>
           <div className={fileStyles.pendingOverlay}>
             <div className={fileStyles.spinner} />
           </div>

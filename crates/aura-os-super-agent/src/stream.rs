@@ -61,20 +61,52 @@ mod types {
 }
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use reqwest::Client;
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use tokio::sync::broadcast;
 use tracing::{info, warn};
 
 use aura_os_link::{
     AssistantMessageEnd, AssistantMessageStart, ErrorMsg, FilesChanged, HarnessOutbound,
-    SessionUsage, TextDelta, ThinkingDelta, ToolResultMsg, ToolUseStart,
+    SessionUsage, TextDelta, ThinkingDelta, ToolCallSnapshot, ToolResultMsg, ToolUseStart,
 };
 
+use crate::partial_json::extract_partial_string_field;
 use crate::tools::{SuperAgentContext, ToolRegistry};
 use types::*;
+
+/// Minimum gap between `tool_call_snapshot` emissions for a single in-flight
+/// tool use. Prevents flooding the SSE channel while still keeping the UI
+/// visibly responsive as `markdown_contents` streams in.
+const SNAPSHOT_THROTTLE_MS: u128 = 50;
+
+/// Tool names whose arguments we stream live to the client via
+/// `tool_call_snapshot`. Right now this is limited to spec tools because
+/// their `markdown_contents` field is the primary use case for live preview.
+const STREAMING_TOOL_NAMES: &[&str] = &["create_spec", "update_spec"];
+
+fn is_streaming_tool(name: &str) -> bool {
+    STREAMING_TOOL_NAMES.contains(&name)
+}
+
+fn build_partial_spec_input(input_json: &str) -> Option<Value> {
+    let title = extract_partial_string_field(input_json, "title");
+    let markdown = extract_partial_string_field(input_json, "markdown_contents");
+    if title.is_none() && markdown.is_none() {
+        return None;
+    }
+    let mut obj = Map::new();
+    if let Some(t) = title {
+        obj.insert("title".into(), Value::String(t));
+    }
+    if let Some(m) = markdown {
+        obj.insert("markdown_contents".into(), Value::String(m));
+    }
+    Some(Value::Object(obj))
+}
 
 const DEFAULT_MAX_TOOL_TURNS: usize = 25;
 const DEFAULT_MAX_TOKENS: u32 = 16_384;
@@ -95,6 +127,7 @@ struct ToolUseAccumulator {
     id: String,
     name: String,
     input_json: String,
+    last_snapshot_emit: Option<Instant>,
 }
 
 // ---------------------------------------------------------------------------
@@ -403,6 +436,7 @@ impl SuperAgentStream {
                                         id,
                                         name,
                                         input_json: String::new(),
+                                        last_snapshot_emit: None,
                                     });
                                 }
                                 "thinking" => {}
@@ -432,6 +466,32 @@ impl SuperAgentStream {
                                     if let Some(ref pj) = delta.partial_json {
                                         if let Some(acc) = tool_accumulators.last_mut() {
                                             acc.input_json.push_str(pj);
+                                            if is_streaming_tool(&acc.name) {
+                                                let now = Instant::now();
+                                                let should_emit = match acc.last_snapshot_emit {
+                                                    None => true,
+                                                    Some(t) => {
+                                                        now.duration_since(t).as_millis()
+                                                            >= SNAPSHOT_THROTTLE_MS
+                                                    }
+                                                };
+                                                if should_emit {
+                                                    if let Some(input) =
+                                                        build_partial_spec_input(&acc.input_json)
+                                                    {
+                                                        self.emit(
+                                                            HarnessOutbound::ToolCallSnapshot(
+                                                                ToolCallSnapshot {
+                                                                    id: acc.id.clone(),
+                                                                    name: acc.name.clone(),
+                                                                    input,
+                                                                },
+                                                            ),
+                                                        );
+                                                        acc.last_snapshot_emit = Some(now);
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -453,6 +513,15 @@ impl SuperAgentStream {
                                 if let Some(acc) = tool_accumulators.last() {
                                     let input: Value =
                                         serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
+                                    if is_streaming_tool(&acc.name) {
+                                        self.emit(HarnessOutbound::ToolCallSnapshot(
+                                            ToolCallSnapshot {
+                                                id: acc.id.clone(),
+                                                name: acc.name.clone(),
+                                                input: input.clone(),
+                                            },
+                                        ));
+                                    }
                                     assistant_content_blocks.push(json!({
                                         "type": "tool_use",
                                         "id": acc.id,
@@ -596,5 +665,43 @@ impl SuperAgentStream {
         }
 
         Ok((stop_reason, usage))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_streaming_tool_recognises_spec_tools() {
+        assert!(is_streaming_tool("create_spec"));
+        assert!(is_streaming_tool("update_spec"));
+        assert!(!is_streaming_tool("run_command"));
+        assert!(!is_streaming_tool("create_task"));
+    }
+
+    #[test]
+    fn build_partial_spec_input_returns_none_when_key_absent() {
+        assert!(build_partial_spec_input("{\"other\":\"x\"").is_none());
+    }
+
+    #[test]
+    fn build_partial_spec_input_extracts_title_only() {
+        let v = build_partial_spec_input("{\"title\":\"Hello\"").unwrap();
+        assert_eq!(v["title"], Value::String("Hello".into()));
+        assert!(v.get("markdown_contents").is_none());
+    }
+
+    #[test]
+    fn build_partial_spec_input_extracts_partial_markdown() {
+        let v = build_partial_spec_input(
+            "{\"title\":\"T\",\"markdown_contents\":\"# H\\n\\nsome",
+        )
+        .unwrap();
+        assert_eq!(v["title"], Value::String("T".into()));
+        assert_eq!(
+            v["markdown_contents"],
+            Value::String("# H\n\nsome".into())
+        );
     }
 }

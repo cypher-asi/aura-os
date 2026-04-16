@@ -61,6 +61,17 @@
   background: #000;
 }
 
+/*
+ * Fixed-height spec preview viewport (~3 lines). Content is pinned to the
+ * bottom while streaming (see SpecPreviewCard's useEffect) so the most
+ * recently written lines are always visible, like a rolling terminal tail.
+ */
+.specCodeAreaFixed {
+  height: calc(1.5em * 3 + 16px);
+  max-height: calc(1.5em * 3 + 16px);
+  overflow: auto;
+}
+
 .codeLines {
   padding: 6px 0;
   font-family: var(--font-mono, monospace);
@@ -112,10 +123,6 @@
   font-size: 11px;
   cursor: pointer;
   text-align: center;
-}
-
-.specToggleBtn {
-  background: #000;
 }
 
 .toggleBtn:hover {
