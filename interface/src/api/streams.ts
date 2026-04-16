@@ -5,6 +5,7 @@ import type {
 } from "../types";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType, isValidEventType, parseAuraEvent } from "../types/aura-events";
+import { handleEngineEvent } from "../stores/event-store/engine-event-handlers";
 import type { SSECallbacks } from "./sse";
 import { streamSSE } from "./sse";
 
@@ -92,7 +93,11 @@ function createChatStreamHandler(handler: StreamEventHandler): SSECallbacks<stri
           ? taggedType
           : null;
       if (!resolvedType) return;
-      handler.onEvent(parseAuraEvent(resolvedType, data, {}));
+      const event = parseAuraEvent(resolvedType, data, {});
+      if (resolvedType === EventType.SpecSaved || resolvedType === EventType.TaskSaved) {
+        handleEngineEvent(event);
+      }
+      handler.onEvent(event);
     },
     onError(err: Error) {
       handler.onError(err);

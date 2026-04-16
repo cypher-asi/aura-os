@@ -35,6 +35,10 @@ export function useMobileTasks(projectId: string): MobileTasksData {
   }, [tasks]);
 
   useEffect(() => {
+    setTasks(sortByOrder(ctx?.initialTasks ?? []));
+  }, [ctx?.initialTasks]);
+
+  useEffect(() => {
     let cancelled = false;
     void api.listTasks(projectId).then((nextTasks) => {
       if (!cancelled) setTasks(sortByOrder(nextTasks));
@@ -47,6 +51,15 @@ export function useMobileTasks(projectId: string): MobileTasksData {
       setTasks((prev) => prev.map((t) => (t.task_id === taskId ? { ...t, status } : t)));
 
     const unsubs = [
+      subscribe(EventType.TaskSaved, (e) => {
+        const task = e.content.task;
+        if (e.project_id !== projectId || !task) return;
+        setTasks((prev) => sortByOrder(
+          prev.some((candidate) => candidate.task_id === task.task_id)
+            ? prev.map((candidate) => candidate.task_id === task.task_id ? task : candidate)
+            : [...prev, task],
+        ));
+      }),
       subscribe(EventType.TaskStarted, (e) => {
         const { task_id } = e.content;
         if (task_id) {
@@ -72,7 +85,7 @@ export function useMobileTasks(projectId: string): MobileTasksData {
       subscribe(EventType.LoopFinished, () => setLiveTaskIds(new Set())),
     ];
     return () => unsubs.forEach((u) => u());
-  }, [subscribe]);
+  }, [projectId, subscribe]);
 
   return { tasks, tasksBySpec, liveTaskIds, loopActive };
 }

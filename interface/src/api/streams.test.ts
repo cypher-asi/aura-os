@@ -10,12 +10,18 @@ import type {
   StreamEventHandler,
 } from "./streams";
 import * as sseModule from "./sse";
+import { handleEngineEvent } from "../stores/event-store/engine-event-handlers";
 
 vi.mock("./sse", () => ({
   streamSSE: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../stores/event-store/engine-event-handlers", () => ({
+  handleEngineEvent: vi.fn(),
+}));
+
 const streamSSE = sseModule.streamSSE as ReturnType<typeof vi.fn>;
+const mockedHandleEngineEvent = vi.mocked(handleEngineEvent);
 
 describe("generateSpecsStream", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -211,6 +217,35 @@ describe("sendAgentEventStream", () => {
     const event = (handler.onEvent as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(event.type).toBe("text_delta");
     expect(event.content.text).toBe("word");
+  });
+
+  it("forwards task_saved events into the shared engine store", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await sendAgentEventStream("a1", "hi", null, undefined, undefined, handler);
+
+    const sseCallbacks = streamSSE.mock.calls[0][2] as {
+      onEvent: (type: string, data: unknown) => void;
+    };
+
+    sseCallbacks.onEvent("message", {
+      type: "task_saved",
+      project_id: "p1",
+      task: { task_id: "task-1", title: "Realtime task" },
+      task_id: "task-1",
+    });
+
+    expect(mockedHandleEngineEvent).toHaveBeenCalledTimes(1);
+    expect(mockedHandleEngineEvent.mock.calls[0]?.[0]).toMatchObject({
+      type: "task_saved",
+      project_id: "p1",
+      content: expect.objectContaining({
+        task_id: "task-1",
+      }),
+    });
   });
 
   it("preserves transport errors for chat handlers", async () => {
