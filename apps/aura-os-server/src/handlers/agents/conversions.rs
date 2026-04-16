@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
+use tracing::warn;
 
 use aura_os_core::parse_dt;
 use aura_os_core::{
@@ -235,9 +236,16 @@ pub fn events_to_session_history(
                     .filter(|s| !s.is_empty())
                     .map(String::from);
 
+                // Deserialize per-block so a single malformed or newly-introduced
+                // block variant does not nuke the entire turn. Previously a strict
+                // `serde_json::from_value::<Vec<ChatContentBlock>>(..).ok()` would
+                // silently return `None` on any mismatch and, combined with the
+                // empty-content check below, drop the whole assistant turn — which
+                // is exactly how tool-heavy turns were disappearing on reopen.
                 let content_blocks: Option<Vec<ChatContentBlock>> = content
                     .and_then(|c| c.get("content_blocks"))
-                    .and_then(|v| serde_json::from_value(v.clone()).ok())
+                    .and_then(|v| v.as_array().cloned())
+                    .map(|raw_blocks| deserialize_content_blocks(&event.id, raw_blocks))
                     .map(sanitize_assistant_content_blocks)
                     .filter(|blocks| !blocks.is_empty());
 
@@ -284,6 +292,38 @@ pub fn events_to_session_history(
     messages
 }
 
+/// Deserialize a stored `content_blocks` JSON array per-entry so that one
+/// malformed or unknown variant does not discard the whole vector.
+///
+/// Anything that fails to deserialize into a known `ChatContentBlock` variant
+/// is logged and skipped. This is strictly more forgiving than
+/// `serde_json::from_value::<Vec<ChatContentBlock>>`, which is all-or-nothing.
+fn deserialize_content_blocks(
+    event_id: &str,
+    raw_blocks: Vec<serde_json::Value>,
+) -> Vec<ChatContentBlock> {
+    let mut blocks = Vec::with_capacity(raw_blocks.len());
+    for (idx, raw) in raw_blocks.into_iter().enumerate() {
+        match serde_json::from_value::<ChatContentBlock>(raw.clone()) {
+            Ok(block) => blocks.push(block),
+            Err(error) => {
+                let block_type = raw
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("<unknown>");
+                warn!(
+                    %event_id,
+                    block_index = idx,
+                    block_type,
+                    %error,
+                    "skipping unparseable chat content block while reconstructing assistant turn"
+                );
+            }
+        }
+    }
+    blocks
+}
+
 fn sanitize_assistant_content_blocks(blocks: Vec<ChatContentBlock>) -> Vec<ChatContentBlock> {
     let mut suppressed_tool_use_ids = HashSet::new();
     let mut sanitized = Vec::with_capacity(blocks.len());
@@ -324,7 +364,90 @@ fn is_incomplete_write_tool_use(name: &str, input: &serde_json::Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::events_to_session_history;
+    use aura_os_core::ChatContentBlock;
     use aura_os_storage::StorageSessionEvent;
+
+    #[test]
+    fn events_to_session_history_preserves_tool_only_assistant_turns() {
+        // Regression: tool-only turns (no visible text) used to be dropped on
+        // reopen, so the LLM saw user messages but no assistant context.
+        let events = vec![StorageSessionEvent {
+            id: "evt-1".to_string(),
+            session_id: Some("session-1".to_string()),
+            user_id: None,
+            agent_id: None,
+            sender: None,
+            project_id: Some("project-1".to_string()),
+            org_id: None,
+            event_type: Some("assistant_message_end".to_string()),
+            content: Some(serde_json::json!({
+                "text": "",
+                "thinking": null,
+                "content_blocks": [
+                    {
+                        "type": "tool_use",
+                        "id": "tool-1",
+                        "name": "create_spec",
+                        "input": { "title": "hello" },
+                    },
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "tool-1",
+                        "content": "ok",
+                        "is_error": false,
+                    }
+                ]
+            })),
+            created_at: Some("2026-01-01T00:00:00Z".to_string()),
+        }];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 1, "tool-only assistant turn must survive");
+        let blocks = history[0]
+            .content_blocks
+            .as_ref()
+            .expect("content_blocks preserved");
+        assert_eq!(blocks.len(), 2, "both tool_use and tool_result kept");
+        assert!(matches!(blocks[0], ChatContentBlock::ToolUse { .. }));
+        assert!(matches!(blocks[1], ChatContentBlock::ToolResult { .. }));
+    }
+
+    #[test]
+    fn events_to_session_history_tolerates_unknown_block_types() {
+        // Regression: a single unknown/malformed block used to fail the whole
+        // Vec<ChatContentBlock> deserialize and silently drop the turn.
+        let events = vec![StorageSessionEvent {
+            id: "evt-1".to_string(),
+            session_id: Some("session-1".to_string()),
+            user_id: None,
+            agent_id: None,
+            sender: None,
+            project_id: Some("project-1".to_string()),
+            org_id: None,
+            event_type: Some("assistant_message_end".to_string()),
+            content: Some(serde_json::json!({
+                "text": "",
+                "thinking": null,
+                "content_blocks": [
+                    { "type": "text", "text": "hello" },
+                    { "type": "future_variant_we_dont_know_about", "foo": 1 },
+                    {
+                        "type": "tool_use",
+                        "id": "tool-1",
+                        "name": "create_spec",
+                        "input": { "title": "hi" },
+                    }
+                ]
+            })),
+            created_at: Some("2026-01-01T00:00:00Z".to_string()),
+        }];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+        assert_eq!(history.len(), 1);
+        let blocks = history[0].content_blocks.as_ref().unwrap();
+        assert_eq!(blocks.len(), 2, "known blocks survive, unknown is skipped");
+    }
 
     #[test]
     fn events_to_session_history_skips_incomplete_write_only_turns() {

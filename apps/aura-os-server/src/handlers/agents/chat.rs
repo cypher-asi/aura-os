@@ -181,6 +181,8 @@ pub(crate) fn spawn_chat_persist_task(
         let mut message_id = String::new();
         let mut seq: u32 = 0;
         let mut last_tool_use_id = String::new();
+        let mut persisted_events: u32 = 0;
+        let mut end_persisted = false;
 
         let persist = |event_type: &str, content: serde_json::Value| {
             let ctx = ctx.clone();
@@ -193,20 +195,25 @@ pub(crate) fn spawn_chat_persist_task(
                     sender: Some("agent".to_string()),
                     project_id: Some(ctx.project_id.clone()),
                     org_id: None,
-                    event_type,
+                    event_type: event_type.clone(),
                     content: Some(content),
                 };
-                if let Err(e) = ctx
+                match ctx
                     .storage
                     .create_event(&ctx.session_id, &ctx.jwt, &req)
                     .await
                 {
-                    error!(
-                        error = %e,
-                        session_id = %ctx.session_id,
-                        project_agent_id = %ctx.project_agent_id,
-                        "Failed to persist chat event"
-                    );
+                    Ok(_) => true,
+                    Err(e) => {
+                        error!(
+                            error = %e,
+                            session_id = %ctx.session_id,
+                            project_agent_id = %ctx.project_agent_id,
+                            event_type = %event_type,
+                            "Failed to persist chat event"
+                        );
+                        false
+                    }
                 }
             }
         };
@@ -219,19 +226,22 @@ pub(crate) fn spawn_chat_persist_task(
                         HarnessOutbound::SessionReady(_) => {}
                         HarnessOutbound::AssistantMessageStart(ref start) => {
                             message_id = start.message_id.clone();
-                            persist(
+                            if persist(
                                 "assistant_message_start",
                                 serde_json::json!({
                                     "message_id": &start.message_id,
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                         }
                         HarnessOutbound::TextDelta(ref delta) => {
                             full_text.push_str(&delta.text);
                             text_segment.push_str(&delta.text);
-                            persist(
+                            if persist(
                                 "text_delta",
                                 serde_json::json!({
                                     "message_id": &message_id,
@@ -239,11 +249,14 @@ pub(crate) fn spawn_chat_persist_task(
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                         }
                         HarnessOutbound::ThinkingDelta(ref delta) => {
                             thinking_buf.push_str(&delta.thinking);
-                            persist(
+                            if persist(
                                 "thinking_delta",
                                 serde_json::json!({
                                     "message_id": &message_id,
@@ -251,7 +264,10 @@ pub(crate) fn spawn_chat_persist_task(
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                         }
                         HarnessOutbound::ToolUseStart(ref tool) => {
                             if !text_segment.is_empty() {
@@ -267,7 +283,7 @@ pub(crate) fn spawn_chat_persist_task(
                                 "name": &tool.name,
                                 "input": serde_json::Value::Null
                             }));
-                            persist(
+                            if persist(
                                 "tool_use_start",
                                 serde_json::json!({
                                     "message_id": &message_id,
@@ -276,7 +292,10 @@ pub(crate) fn spawn_chat_persist_task(
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                         }
                         HarnessOutbound::ToolCallSnapshot(ref snap) => {
                             if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
@@ -292,7 +311,7 @@ pub(crate) fn spawn_chat_persist_task(
                                     "input": &snap.input,
                                 }));
                             }
-                            persist(
+                            if persist(
                                 "tool_call_snapshot",
                                 serde_json::json!({
                                     "message_id": &message_id,
@@ -302,16 +321,33 @@ pub(crate) fn spawn_chat_persist_task(
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                         }
                         HarnessOutbound::ToolResult(ref result) => {
+                            // Fill in any tool_use block that still has a null
+                            // input. Non-streaming tools never emit a snapshot,
+                            // so without this recovery the persisted tool_use
+                            // block would round-trip with `input: null` and be
+                            // rejected by the LLM on replay.
+                            if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
+                                b.get("type").and_then(|t| t.as_str()) == Some("tool_use")
+                                    && b.get("id").and_then(|i| i.as_str()) == Some(&last_tool_use_id)
+                            }) {
+                                if block.get("input") == Some(&serde_json::Value::Null) {
+                                    block["input"] = serde_json::json!({});
+                                }
+                            }
+
                             content_blocks.push(serde_json::json!({
                                 "type": "tool_result",
                                 "tool_use_id": &last_tool_use_id,
                                 "content": &result.result,
                                 "is_error": result.is_error
                             }));
-                            persist(
+                            if persist(
                                 "tool_result",
                                 serde_json::json!({
                                     "message_id": &message_id,
@@ -322,7 +358,10 @@ pub(crate) fn spawn_chat_persist_task(
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                         }
                         HarnessOutbound::AssistantMessageEnd(ref end) => {
                             if !text_segment.is_empty() {
@@ -330,21 +369,30 @@ pub(crate) fn spawn_chat_persist_task(
                                     "type": "text", "text": &text_segment
                                 }));
                             }
-                            persist("assistant_message_end", serde_json::json!({
+                            if persist("assistant_message_end", serde_json::json!({
                                 "message_id": &end.message_id,
                                 "text": &full_text,
-                                "thinking": if thinking_buf.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(thinking_buf) },
+                                "thinking": if thinking_buf.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(thinking_buf.clone()) },
                                 "content_blocks": &content_blocks,
                                 "usage": &end.usage,
                                 "files_changed": &end.files_changed,
                                 "stop_reason": &end.stop_reason,
                                 "seq": seq,
-                            })).await;
-                            info!(session_id = %ctx.session_id, "Persisted assistant turn events");
+                            })).await {
+                                persisted_events += 1;
+                                end_persisted = true;
+                            }
+                            info!(
+                                session_id = %ctx.session_id,
+                                persisted_events,
+                                content_blocks = content_blocks.len(),
+                                stop_reason = %end.stop_reason,
+                                "Persisted assistant turn events"
+                            );
                             break;
                         }
                         HarnessOutbound::Error(ref err) => {
-                            persist(
+                            if persist(
                                 "error",
                                 serde_json::json!({
                                     "message_id": &message_id,
@@ -354,7 +402,10 @@ pub(crate) fn spawn_chat_persist_task(
                                     "seq": seq,
                                 }),
                             )
-                            .await;
+                            .await
+                            {
+                                persisted_events += 1;
+                            }
                             break;
                         }
                         HarnessOutbound::GenerationStart(_)
@@ -366,15 +417,69 @@ pub(crate) fn spawn_chat_persist_task(
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    error!(
+                    // Previously we aborted the turn on lag, which meant a
+                    // single slow storage write could cause us to lose the
+                    // terminating `assistant_message_end` and therefore the
+                    // entire assistant turn on reopen. Log and keep draining
+                    // — we still have the accumulated `content_blocks` and
+                    // will synthesize an end event at the close of the stream
+                    // if needed.
+                    warn!(
                         session_id = %ctx.session_id,
                         project_agent_id = %ctx.project_agent_id,
                         skipped = n,
-                        "Chat persistence receiver lagged; aborting this turn persistence to avoid partial replay"
+                        "Chat persistence receiver lagged; continuing to drain so the assistant_message_end is not lost"
                     );
-                    break;
+                    continue;
                 }
             }
+        }
+
+        // Safety net: the broadcast channel closed before the harness emitted
+        // `assistant_message_end` (e.g. the stream task panicked, the client
+        // disconnected mid-turn, or a provider-side hard error). Synthesize a
+        // terminating event from whatever we have accumulated so the LLM can
+        // see at least a partial record of this turn on the next reopen.
+        if !end_persisted
+            && (!full_text.is_empty() || !content_blocks.is_empty() || !thinking_buf.is_empty())
+        {
+            if !text_segment.is_empty() {
+                content_blocks.push(serde_json::json!({
+                    "type": "text", "text": &text_segment
+                }));
+            }
+            let end_payload = serde_json::json!({
+                "message_id": if message_id.is_empty() {
+                    serde_json::Value::Null
+                } else {
+                    serde_json::Value::String(message_id.clone())
+                },
+                "text": &full_text,
+                "thinking": if thinking_buf.is_empty() {
+                    serde_json::Value::Null
+                } else {
+                    serde_json::Value::String(thinking_buf)
+                },
+                "content_blocks": &content_blocks,
+                "usage": serde_json::Value::Null,
+                "files_changed": {
+                    "created": [],
+                    "modified": [],
+                    "deleted": [],
+                },
+                "stop_reason": "aborted",
+                "seq": seq + 1,
+                "synthesized": true,
+            });
+            if persist("assistant_message_end", end_payload).await {
+                persisted_events += 1;
+            }
+            warn!(
+                session_id = %ctx.session_id,
+                persisted_events,
+                content_blocks = content_blocks.len(),
+                "Synthesized assistant_message_end after broadcast channel closed early"
+            );
         }
     });
 }
@@ -571,15 +676,76 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
                 ChatRole::Assistant => "assistant",
                 _ => return None,
             };
-            if m.content.is_empty() {
+
+            // The harness `ConversationMessage` shape is flat text, so we need
+            // to render tool_use / tool_result blocks textually for the LLM to
+            // see them on cold start. Previously a tool-only assistant turn
+            // (empty `content`, populated `content_blocks`) was filtered out
+            // here, causing the model to lose all prior tool context after the
+            // app was reopened.
+            let rendered = render_conversation_text(&m.content, m.content_blocks.as_deref());
+            if rendered.is_empty() {
                 return None;
             }
+
             Some(ConversationMessage {
                 role: role.to_string(),
-                content: m.content.clone(),
+                content: rendered,
             })
         })
         .collect()
+}
+
+/// Render a message into the flat-text shape the harness expects.
+///
+/// Preserves the plain-text content when present; additionally serializes any
+/// `tool_use` / `tool_result` / `thinking` / `image` blocks as compact
+/// annotations so the model retains awareness of prior tool activity when
+/// loading history on a cold start.
+fn render_conversation_text(text: &str, blocks: Option<&[ChatContentBlock]>) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if !text.is_empty() {
+        parts.push(text.to_string());
+    }
+
+    if let Some(blocks) = blocks {
+        for block in blocks {
+            match block {
+                ChatContentBlock::Text { text } if !text.is_empty() => {
+                    // Already captured via the top-level `content` string in
+                    // most cases, but include when `text` was empty there.
+                    if parts.iter().any(|p| p == text) {
+                        continue;
+                    }
+                    parts.push(text.clone());
+                }
+                ChatContentBlock::ToolUse { name, input, .. } => {
+                    let input_preview = serde_json::to_string(input)
+                        .unwrap_or_else(|_| "{}".to_string());
+                    parts.push(format!("[tool_use {name} input={input_preview}]"));
+                }
+                ChatContentBlock::ToolResult {
+                    content, is_error, ..
+                } => {
+                    let label = if is_error.unwrap_or(false) {
+                        "tool_error"
+                    } else {
+                        "tool_result"
+                    };
+                    parts.push(format!("[{label} {content}]"));
+                }
+                ChatContentBlock::TaskRef { title, .. } => {
+                    parts.push(format!("[task_ref {title}]"));
+                }
+                ChatContentBlock::SpecRef { title, .. } => {
+                    parts.push(format!("[spec_ref {title}]"));
+                }
+                ChatContentBlock::Image { .. } | ChatContentBlock::Text { .. } => {}
+            }
+        }
+    }
+
+    parts.join("\n")
 }
 
 /// Reconstruct conversation history in Claude API format from stored
@@ -1473,6 +1639,14 @@ pub(crate) async fn send_agent_event_stream(
         token: Some(jwt.clone()),
         conversation_messages,
         project_id: body.project_id.clone(),
+        // Billing headers that aura-router uses to attribute usage per
+        // project / org / session. The harness forwards these as
+        // X-Aura-Project-Id / X-Aura-Org-Id / X-Aura-Session-Id on every
+        // /v1/messages call; without them, aura-network's per-project
+        // usage aggregation stays empty.
+        aura_project_id: body.project_id.clone(),
+        aura_org_id: agent.org_id.as_ref().map(|o| o.to_string()),
+        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
         installed_tools,
         installed_integrations,
@@ -1596,8 +1770,16 @@ pub(crate) async fn send_event_stream(
         model: model.clone(),
         token: Some(jwt),
         conversation_messages,
-        project_id: Some(pid_str),
+        project_id: Some(pid_str.clone()),
         project_path,
+        // Billing headers that aura-router uses to attribute usage per
+        // project / org / session. The harness forwards these as
+        // X-Aura-Project-Id / X-Aura-Org-Id / X-Aura-Session-Id on every
+        // /v1/messages call; without them, aura-network's per-project
+        // usage aggregation stays empty.
+        aura_project_id: Some(pid_str),
+        aura_org_id: instance.org_id.as_ref().map(|o| o.to_string()),
+        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
         provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
         installed_tools,
         installed_integrations,
@@ -1660,6 +1842,7 @@ fn build_project_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aura_os_core::{parse_dt, SessionEventId};
     use aura_os_storage::StorageSession;
 
     fn storage_session(
@@ -1743,5 +1926,96 @@ mod tests {
         let selected = latest_storage_session(&[older, newer]).map(|session| session.id.clone());
 
         assert_eq!(selected.as_deref(), Some("newer"));
+    }
+
+    fn assistant_event(
+        content: &str,
+        blocks: Option<Vec<ChatContentBlock>>,
+    ) -> SessionEvent {
+        SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::nil(),
+            project_id: ProjectId::nil(),
+            role: ChatRole::Assistant,
+            content: content.to_string(),
+            content_blocks: blocks,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: parse_dt(&None),
+        }
+    }
+
+    #[test]
+    fn conversation_history_renders_tool_only_assistant_turn_to_text() {
+        // Regression: on app reopen, a tool-only assistant turn (empty
+        // `content`, populated `content_blocks`) used to be filtered out of
+        // the harness conversation history, so the model lost all memory of
+        // prior tool calls.
+        let user = SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::nil(),
+            project_id: ProjectId::nil(),
+            role: ChatRole::User,
+            content: "make a spec".into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: parse_dt(&None),
+        };
+        let assistant = assistant_event(
+            "",
+            Some(vec![
+                ChatContentBlock::ToolUse {
+                    id: "tool-1".into(),
+                    name: "create_spec".into(),
+                    input: serde_json::json!({ "title": "hello" }),
+                },
+                ChatContentBlock::ToolResult {
+                    tool_use_id: "tool-1".into(),
+                    content: "spec-123".into(),
+                    is_error: Some(false),
+                },
+            ]),
+        );
+
+        let history = session_events_to_conversation_history(&[user, assistant]);
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].role, "user");
+        assert_eq!(history[1].role, "assistant");
+        assert!(
+            history[1].content.contains("tool_use create_spec"),
+            "assistant turn must carry tool call into LLM context, got: {}",
+            history[1].content
+        );
+        assert!(
+            history[1].content.contains("tool_result spec-123"),
+            "assistant turn must carry tool result into LLM context, got: {}",
+            history[1].content
+        );
+    }
+
+    #[test]
+    fn conversation_history_preserves_text_plus_tool_turns() {
+        let assistant = assistant_event(
+            "Sure, creating now.",
+            Some(vec![ChatContentBlock::ToolUse {
+                id: "tool-1".into(),
+                name: "create_spec".into(),
+                input: serde_json::json!({ "title": "hello" }),
+            }]),
+        );
+
+        let history = session_events_to_conversation_history(&[assistant]);
+        assert_eq!(history.len(), 1);
+        assert!(history[0].content.starts_with("Sure, creating now."));
+        assert!(history[0].content.contains("tool_use create_spec"));
+    }
+
+    #[test]
+    fn conversation_history_drops_fully_empty_assistant_turns() {
+        let empty = assistant_event("", None);
+        let history = session_events_to_conversation_history(&[empty]);
+        assert!(history.is_empty());
     }
 }
