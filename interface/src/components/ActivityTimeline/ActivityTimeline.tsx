@@ -62,7 +62,12 @@ export function ActivityTimeline({
       items.push({
         key: item.id,
         kind: "tool",
-        node: <ToolCallBlock entry={entry} defaultExpanded={entry.pending} />,
+        node: (
+          <ToolCallBlock
+            entry={entry}
+            defaultExpanded={entry.pending && entry.name !== "create_task"}
+          />
+        ),
       });
     } else {
       const normalized = normalizeLooseStrongEmphasis(

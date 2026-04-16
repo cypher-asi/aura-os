@@ -9,14 +9,13 @@ export function CookingIndicator({
   label = "Cooking...",
   hidden = false,
 }: CookingIndicatorProps) {
+  if (hidden) {
+    return null;
+  }
+
   return (
-    <div
-      className={`${styles.cookingIndicator}${hidden ? ` ${styles.cookingIndicatorHidden}` : ""}`}
-      aria-hidden={hidden}
-    >
-      <span className={`${styles.cookingText}${hidden ? ` ${styles.cookingTextHidden}` : ""}`}>
-        {label}
-      </span>
+    <div className={styles.cookingIndicator}>
+      <span className={styles.cookingText}>{label}</span>
     </div>
   );
 }

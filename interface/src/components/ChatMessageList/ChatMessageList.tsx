@@ -113,7 +113,7 @@ export function ChatMessageList({
     }
     streamingBubbleHeightRafRef.current = requestAnimationFrame(() => {
       streamingBubbleHeightRafRef.current = 0;
-      onContentHeightChange?.({ immediate: true });
+      onContentHeightChange?.();
     });
   }, [onContentHeightChange]);
 
