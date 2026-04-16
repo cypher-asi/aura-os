@@ -99,6 +99,18 @@ jobs:
             . -> ../.aura-shared-target
             ../aura-harness -> ../.aura-shared-target
 
+      - name: Set up sccache
+        id: sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+        continue-on-error: true
+
+      - name: Enable sccache
+        if: steps.sccache.outcome == 'success'
+        shell: bash
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -120,6 +132,12 @@ jobs:
           AURA_DESKTOP_SMOKE_LOG_DIR: desktop-smoke-logs/${{ matrix.target }}
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
         run: node scripts/ci/verify-desktop.mjs --smoke --binary "${{ matrix.binary }}"
+
+      - name: Show sccache stats
+        if: always() && steps.sccache.outcome == 'success'
+        shell: bash
+        run: |
+          "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
 
       - name: Install cargo-packager
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
