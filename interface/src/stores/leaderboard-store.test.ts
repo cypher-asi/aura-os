@@ -18,13 +18,6 @@ const { mockApi } = vi.hoisted(() => ({
 
 vi.mock("../api/client", () => ({ api: mockApi }));
 
-vi.mock("./org-store", () => ({
-  useOrgStore: {
-    getState: () => ({ activeOrg: null }),
-    subscribe: vi.fn(() => vi.fn()),
-  },
-}));
-
 import { useLeaderboardStore } from "./leaderboard-store";
 
 const sampleEntry: LeaderboardEntry = {
@@ -40,7 +33,6 @@ const sampleEntry: LeaderboardEntry = {
 beforeEach(() => {
   useLeaderboardStore.setState({
     period: "all",
-    filter: "everything",
     selectedUserId: null,
     entries: [],
     loading: true,
@@ -54,10 +46,6 @@ describe("leaderboard-store", () => {
       expect(useLeaderboardStore.getState().period).toBe("all");
     });
 
-    it("defaults filter to everything", () => {
-      expect(useLeaderboardStore.getState().filter).toBe("everything");
-    });
-
     it("has no selectedUserId", () => {
       expect(useLeaderboardStore.getState().selectedUserId).toBeNull();
     });
@@ -68,13 +56,6 @@ describe("leaderboard-store", () => {
 
     it("has empty entries", () => {
       expect(useLeaderboardStore.getState().entries).toEqual([]);
-    });
-  });
-
-  describe("setFilter", () => {
-    it("updates the filter", () => {
-      useLeaderboardStore.getState().setFilter("my-agents");
-      expect(useLeaderboardStore.getState().filter).toBe("my-agents");
     });
   });
 

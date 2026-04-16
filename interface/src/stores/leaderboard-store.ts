@@ -4,9 +4,6 @@ import { api } from "../api/client";
 
 export type TimePeriod = "all" | "month" | "week" | "day";
 
-export type { LeaderboardFilter } from "../types/filters";
-import type { LeaderboardFilter } from "../types/filters";
-
 export interface LeaderboardUser {
   id: string;
   name: string;
@@ -17,7 +14,6 @@ export interface LeaderboardUser {
   estimatedCostUsd: number;
   eventCount: number;
 }
-import { useOrgStore } from "./org-store";
 import { useEventStore } from "./event-store";
 import { EventType } from "../types/aura-events";
 
@@ -25,13 +21,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 interface LeaderboardState {
   period: TimePeriod;
-  filter: LeaderboardFilter;
   selectedUserId: string | null;
   entries: LeaderboardUser[];
   loading: boolean;
 
   setPeriod: (p: TimePeriod) => void;
-  setFilter: (f: LeaderboardFilter) => void;
   selectUser: (id: string | null) => void;
   fetchEntries: () => Promise<void>;
   init: () => void;
@@ -42,7 +36,6 @@ let _fetchId = 0;
 
 export const useLeaderboardStore = create<LeaderboardState>()((set, get) => ({
   period: "all",
-  filter: "everything",
   selectedUserId: null,
   entries: [],
   loading: true,
@@ -52,19 +45,14 @@ export const useLeaderboardStore = create<LeaderboardState>()((set, get) => ({
     if (_initialized) get().fetchEntries();
   },
 
-  setFilter: (f) => {
-    set({ filter: f });
-  },
-
   selectUser: (id) => set({ selectedUserId: id }),
 
   fetchEntries: async () => {
     const id = ++_fetchId;
     set({ loading: true });
     const { period } = get();
-    const orgId = useOrgStore.getState().activeOrg?.org_id;
     try {
-      const data = await api.leaderboard.get(period, orgId);
+      const data = await api.leaderboard.get(period);
       if (id !== _fetchId) return;
       set({
         entries: data.map((e) => ({
@@ -97,15 +85,6 @@ export const useLeaderboardStore = create<LeaderboardState>()((set, get) => ({
     get().fetchEntries();
   },
 }));
-
-let _prevOrgId: string | null = null;
-useOrgStore.subscribe((state) => {
-  if (!_initialized) return;
-  const orgId = state.activeOrg?.org_id ?? null;
-  if (orgId === _prevOrgId) return;
-  _prevOrgId = orgId;
-  useLeaderboardStore.getState().fetchEntries();
-});
 
 let _refreshInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -140,8 +119,6 @@ export function useLeaderboard() {
     useShallow((s) => ({
       period: s.period,
       setPeriod: s.setPeriod,
-      filter: s.filter,
-      setFilter: s.setFilter,
       selectedUserId: s.selectedUserId,
       selectUser: s.selectUser,
       entries: s.entries,

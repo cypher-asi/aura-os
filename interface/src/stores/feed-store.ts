@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { useAuthStore } from "./auth-store";
 import { useEventStore } from "./event-store";
 import { useFollowStore } from "./follow-store";
+import { useOrgStore } from "./org-store";
 import {
   createEventCommentsSlice,
   setupCommentLoadingSubscription,
@@ -112,6 +113,7 @@ export interface FeedEvent {
   summary?: string;
   eventType: string;
   profileId: string;
+  orgId: string | null;
   commentCount: number;
 }
 
@@ -158,6 +160,7 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
     summary,
     eventType: net.event_type,
     profileId: net.profile_id,
+    orgId: net.org_id ?? null,
     commentCount: net.comment_count ?? 0,
   };
 }
@@ -165,7 +168,8 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
 function applyFilter(
   events: FeedEvent[],
   filter: FeedFilter,
-  followedNames?: Set<string>,
+  followedNames: Set<string> | undefined,
+  activeOrgId: string | null,
 ): FeedEvent[] {
   switch (filter) {
     case "my-agents":
@@ -174,6 +178,8 @@ function applyFilter(
       if (!followedNames || followedNames.size === 0) return [];
       return events.filter((e) => followedNames.has(e.profileId));
     case "organization":
+      if (!activeOrgId) return [];
+      return events.filter((e) => e.orgId === activeOrgId);
     case "everything":
     default:
       return events;
@@ -218,6 +224,7 @@ function handleGitPushed(event: AuraEvent, set: FeedSetter): void {
     summary: c.summary,
     eventType: "push",
     profileId: "",
+    orgId: null,
     commentCount: 0,
   };
   if (_seenIds.has(feedEvent.id)) return;
@@ -372,9 +379,10 @@ export function useFeedFilteredEvents(): FeedEvent[] {
   const events = useFeedEvents();
   const filter = useFeedStore((s) => s.filter);
   const follows = useFollowStore((s) => s.follows);
+  const activeOrgId = useOrgStore((s) => s.activeOrg?.org_id ?? null);
 
   const followedNames = new Set(follows.map((f) => f.target_profile_id));
-  return applyFilter(events, filter, followedNames);
+  return applyFilter(events, filter, followedNames, activeOrgId);
 }
 
 export function useFeedCommitActivity(): Record<string, number> {
