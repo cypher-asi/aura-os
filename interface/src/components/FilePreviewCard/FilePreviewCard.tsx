@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileCode, FileText } from "lucide-react";
+import { FileCode, FileText, FileX } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { langFromPath } from "../../ide/lang";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
@@ -85,6 +85,16 @@ function CodeView({ content, language }: { content: string; language?: string })
   );
 }
 
+function PendingSpinner() {
+  return (
+    <div className={`${styles.codeArea} ${styles.pendingCodeArea}`}>
+      <div className={styles.pendingOverlay}>
+        <div className={styles.spinner} />
+      </div>
+    </div>
+  );
+}
+
 export function FilePreviewCard({ entry }: FilePreviewCardProps) {
   const path = (entry.input.path as string) || "";
   const lang = langFromPath(path);
@@ -93,36 +103,49 @@ export function FilePreviewCard({ entry }: FilePreviewCardProps) {
   const isEdit = entry.name === "edit_file";
   const isWrite = entry.name === "write_file";
   const isRead = entry.name === "read_file";
+  const isDelete = entry.name === "delete_file";
 
-  const badgeLabel = isEdit ? "Edit" : isWrite ? "Write" : "Read";
-  const Icon = isEdit || isWrite ? FileCode : FileText;
+  const badgeLabel = isEdit
+    ? "Edit"
+    : isWrite
+      ? "Write"
+      : isDelete
+        ? "Delete"
+        : "Read";
+  const Icon = isDelete ? FileX : isEdit || isWrite ? FileCode : FileText;
+
+  const oldText = (entry.input.old_text as string) || "";
+  const newText = (entry.input.new_text as string) || "";
+  const writeContent = (entry.input.content as string) || "";
+
+  const renderBody = () => {
+    if (isDelete) {
+      return null;
+    }
+    if (isEdit) {
+      if (!oldText && !newText && entry.pending) return <PendingSpinner />;
+      return <DiffView oldText={oldText} newText={newText} language={lang} />;
+    }
+    if (isWrite) {
+      if (!writeContent && entry.pending) return <PendingSpinner />;
+      return <CodeView content={writeContent} language={lang} />;
+    }
+    if (isRead) {
+      if (entry.result) return <CodeView content={entry.result} language={lang} />;
+      if (entry.pending) return <PendingSpinner />;
+      return null;
+    }
+    return null;
+  };
 
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <Icon size={14} className={styles.fileIcon} />
-        <span className={styles.fileName} title={path}>{fileName}</span>
+        <span className={styles.fileName} title={path}>{fileName || "…"}</span>
         <span className={styles.badge}>{badgeLabel}</span>
       </div>
-      {isEdit ? (
-        <DiffView
-          oldText={(entry.input.old_text as string) || ""}
-          newText={(entry.input.new_text as string) || ""}
-          language={lang}
-        />
-      ) : isWrite ? (
-        <CodeView content={(entry.input.content as string) || ""} language={lang} />
-      ) : isRead && entry.result ? (
-        <CodeView content={entry.result} language={lang} />
-      ) : (
-        !entry.pending ? null : (
-          <div className={`${styles.codeArea} ${styles.pendingCodeArea}`}>
-            <div className={styles.pendingOverlay}>
-              <div className={styles.spinner} />
-            </div>
-          </div>
-        )
-      )}
+      {renderBody()}
     </div>
   );
 }

@@ -135,5 +135,5 @@ export const TOOL_PHASE_LABELS: Record<string, string> = {
   send_to_agent: "Sending message to agent...",
 };
 
-export const FILE_OPS = new Set(["write_file", "edit_file", "read_file"]);
+export const FILE_OPS = new Set(["write_file", "edit_file", "read_file", "delete_file"]);
 export const COMMAND_OPS = new Set(["run_command"]);

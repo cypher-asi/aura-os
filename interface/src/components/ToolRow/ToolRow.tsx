@@ -124,7 +124,8 @@ export function ToolCallBlock({
 
   const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
   const hasSpecTitle = isSpec && typeof entry.input.title === "string" && (entry.input.title as string).length > 0;
-  const showGeneratingHint = entry.pending && !hasPartialContent;
+  const hasFilePath = isFileOp && typeof entry.input.path === "string" && (entry.input.path as string).length > 0;
+  const showGeneratingHint = entry.pending && !hasPartialContent && !hasFilePath;
 
   const closingClass = isClosing ? toolStyles.toolBodyCollapsing : "";
 
@@ -135,6 +136,15 @@ export function ToolCallBlock({
           <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
             <div className={toolStyles.toolBody}>
               <SpecPreviewCard entry={entry} />
+            </div>
+          </div>
+        );
+      }
+      if (isFileOp) {
+        return (
+          <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+            <div className={toolStyles.toolBody}>
+              <FilePreviewCard entry={entry} />
             </div>
           </div>
         );

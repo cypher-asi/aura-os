@@ -155,6 +155,77 @@ describe("ToolCallBlock", () => {
     });
   });
 
+  describe("file-op streaming preview", () => {
+    it("renders FilePreviewCard for a pending write_file with partial content", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "write_file",
+            started: true,
+            pending: true,
+            input: {
+              path: "src/hello.ts",
+              content: "export const hello = 1;",
+            },
+          })}
+        />,
+      );
+
+      expect(screen.getByText("hello.ts")).toBeInTheDocument();
+      expect(screen.getByText("Write")).toBeInTheDocument();
+      expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
+      expect(screen.queryByText("Waiting for the tool result.")).not.toBeInTheDocument();
+    });
+
+    it("renders FilePreviewCard for a pending edit_file even before old_text/new_text stream in", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "edit_file",
+            started: true,
+            pending: true,
+            input: { path: "src/app.tsx" },
+          })}
+        />,
+      );
+
+      expect(screen.getByText("app.tsx")).toBeInTheDocument();
+      expect(screen.getByText("Edit")).toBeInTheDocument();
+      expect(screen.queryByText("Waiting for the tool result.")).not.toBeInTheDocument();
+    });
+
+    it("renders FilePreviewCard for a pending delete_file", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "delete_file",
+            started: true,
+            pending: true,
+            input: { path: "old/stale.txt" },
+          })}
+        />,
+      );
+
+      expect(screen.getByText("stale.txt")).toBeInTheDocument();
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+    });
+
+    it("still shows Generating… for a file op that has no path yet", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "write_file",
+            started: true,
+            pending: true,
+            input: {},
+          })}
+        />,
+      );
+
+      expect(screen.getByText("Generating…")).toBeInTheDocument();
+    });
+  });
+
   describe("non-spec tools unchanged", () => {
     it("shows Generating… for a non-spec tool in started state", () => {
       render(
