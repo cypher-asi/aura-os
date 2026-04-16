@@ -4,15 +4,12 @@ import { INSUFFICIENT_CREDITS_EVENT } from "../api/client";
 interface UIModalState {
   orgSettingsOpen: boolean;
   orgInitialSection: "billing" | undefined;
-  settingsOpen: boolean;
   buyCreditsOpen: boolean;
   hostSettingsOpen: boolean;
 
   openOrgSettings: () => void;
   closeOrgSettings: () => void;
   openOrgBilling: () => void;
-  openSettings: () => void;
-  closeSettings: () => void;
   openBuyCredits: () => void;
   closeBuyCredits: () => void;
   openHostSettings: () => void;
@@ -22,15 +19,12 @@ interface UIModalState {
 export const useUIModalStore = create<UIModalState>()((set) => ({
   orgSettingsOpen: false,
   orgInitialSection: undefined,
-  settingsOpen: false,
   buyCreditsOpen: false,
   hostSettingsOpen: false,
 
   openOrgSettings: () => set({ orgSettingsOpen: true }),
   closeOrgSettings: () => set({ orgSettingsOpen: false, orgInitialSection: undefined }),
   openOrgBilling: () => set({ orgSettingsOpen: true, orgInitialSection: "billing" }),
-  openSettings: () => set({ settingsOpen: true }),
-  closeSettings: () => set({ settingsOpen: false }),
   openBuyCredits: () => set({ buyCreditsOpen: true }),
   closeBuyCredits: () => set({ buyCreditsOpen: false }),
   openHostSettings: () => set({ hostSettingsOpen: true }),

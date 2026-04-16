@@ -1,11 +1,12 @@
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
-import { Settings, Users, Mail, CreditCard } from "lucide-react";
+import { Settings, Users, Mail, CreditCard, LogOut } from "lucide-react";
 import { OrgSettingsGeneral } from "../OrgSettingsGeneral";
 import { OrgSettingsMembers } from "../OrgSettingsMembers";
 import { OrgSettingsInvites } from "../OrgSettingsInvites";
 import { OrgSettingsBilling } from "../OrgSettingsBilling";
 import { OrgSettingsIntegrations } from "../OrgSettingsIntegrations";
+import { useAuth } from "../../stores/auth-store";
 import { useOrgSettingsData } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
 
@@ -56,6 +57,7 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
 
 export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const data = useOrgSettingsData(isOpen, initialSection);
+  const { logout } = useAuth();
 
   if (!data.activeOrg) {
     return (
@@ -83,6 +85,17 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
             <span>Team settings</span>
           </div>
           <Navigator items={NAV_ITEMS} value={data.section} onChange={(id) => data.setSection(id as Section)} />
+          <div className={styles.navFooter}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<LogOut size={14} />}
+              className={styles.logoutButton}
+              onClick={() => { void logout(); }}
+            >
+              Logout
+            </Button>
+          </div>
         </div>
         <div className={styles.settingsContent}>
           <OrgSettingsContent data={data} />

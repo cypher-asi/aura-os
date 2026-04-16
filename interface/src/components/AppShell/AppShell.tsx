@@ -16,9 +16,6 @@ const BuyCreditsModal = lazy(() =>
 const OrgSettingsPanel = lazy(() =>
   import("../OrgSettingsPanel").then((module) => ({ default: module.OrgSettingsPanel })),
 );
-const SettingsModal = lazy(() =>
-  import("../SettingsModal").then((module) => ({ default: module.SettingsModal })),
-);
 const NewProjectModal = lazy(() =>
   import("../NewProjectModal").then((module) => ({ default: module.NewProjectModal })),
 );
@@ -65,15 +62,12 @@ function LazyModalBoundary({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const {
     orgSettingsOpen, orgInitialSection, closeOrgSettings,
-    settingsOpen, closeSettings,
     buyCreditsOpen, closeBuyCredits, openOrgBilling,
   } = useUIModalStore(
     useShallow((s) => ({
       orgSettingsOpen: s.orgSettingsOpen,
       orgInitialSection: s.orgInitialSection,
       closeOrgSettings: s.closeOrgSettings,
-      settingsOpen: s.settingsOpen,
-      closeSettings: s.closeSettings,
       buyCreditsOpen: s.buyCreditsOpen,
       closeBuyCredits: s.closeBuyCredits,
       openOrgBilling: s.openOrgBilling,
@@ -100,11 +94,6 @@ function AppContent() {
             onClose={closeBuyCredits}
             onOpenBilling={openOrgBilling}
           />
-        </LazyModalBoundary>
-      ) : null}
-      {settingsOpen ? (
-        <LazyModalBoundary>
-          <SettingsModal isOpen={settingsOpen} onClose={closeSettings} />
         </LazyModalBoundary>
       ) : null}
       <ProjectCreationModalHost />

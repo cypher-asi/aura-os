@@ -7,7 +7,6 @@ import {
   ChevronRight,
   FolderKanban,
   Plus,
-  Settings,
   Sparkles,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -36,7 +35,6 @@ export function MobileOrganizationView() {
   const switchOrg = useOrgStore((s) => s.switchOrg);
   const createOrg = useOrgStore((s) => s.createOrg);
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
-  const openSettings = useUIModalStore((s) => s.openSettings);
   const {
     projects,
     agentsByProject,
@@ -291,15 +289,6 @@ export function MobileOrganizationView() {
                 onClick={openOrgSettings}
               >
                 Team settings
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Settings size={16} />}
-                className={styles.actionButton}
-                onClick={openSettings}
-              >
-                App settings
               </Button>
             </div>
           </section>

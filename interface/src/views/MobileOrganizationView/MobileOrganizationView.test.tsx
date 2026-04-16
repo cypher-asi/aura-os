@@ -16,7 +16,6 @@ const createOrg = vi.fn(async (name: string) => ({
 }));
 const openOrgSettings = vi.fn();
 const openHostSettings = vi.fn();
-const openSettings = vi.fn();
 
 const orgs = [
   {
@@ -166,11 +165,9 @@ vi.mock("../../stores/ui-modal-store", () => ({
   useUIModalStore: (selector: (state: {
     openOrgSettings: typeof openOrgSettings;
     openHostSettings: typeof openHostSettings;
-    openSettings: typeof openSettings;
   }) => unknown) => selector({
     openOrgSettings,
     openHostSettings,
-    openSettings,
   }),
 }));
 

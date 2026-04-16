@@ -62,8 +62,10 @@ vi.mock("../../stores/org-store", () => ({
   useOrgStore: (sel: (s: typeof mockOrgStore) => unknown) => sel(mockOrgStore),
 }));
 
+const mockLogout = vi.fn();
+
 vi.mock("../../stores/auth-store", () => ({
-  useAuth: () => ({ user: { user_id: "u1" } }),
+  useAuth: () => ({ user: { user_id: "u1" }, logout: mockLogout }),
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
@@ -213,6 +215,17 @@ describe("OrgSettingsPanel", () => {
       expect(mockApis.orgs.listInvites).toHaveBeenCalledWith("org-1");
       expect(mockApis.orgs.getBilling).toHaveBeenCalledWith("org-1");
     });
+  });
+
+  it("renders a persistent Logout button and calls logout on click", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const logoutButton = screen.getByRole("button", { name: /logout/i });
+    expect(logoutButton).toBeInTheDocument();
+
+    await user.click(logoutButton);
+    expect(mockLogout).toHaveBeenCalledOnce();
   });
 
   describe("when no org available", () => {

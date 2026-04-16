@@ -102,12 +102,10 @@ vi.mock("../../stores/mobile-drawer-store", () => ({
 vi.mock("../../stores/ui-modal-store", () => ({
   useUIModalStore: (selector?: (state: {
     openOrgSettings: ReturnType<typeof vi.fn>;
-    openSettings: ReturnType<typeof vi.fn>;
     openHostSettings: ReturnType<typeof vi.fn>;
   }) => unknown) => {
     const state = {
       openOrgSettings: vi.fn(),
-      openSettings: vi.fn(),
       openHostSettings: vi.fn(),
     };
     return selector ? selector(state) : state;

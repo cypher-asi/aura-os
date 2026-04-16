@@ -36,6 +36,17 @@
   color: var(--color-text-muted);
 }
 
+.navFooter {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.logoutButton {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 /* ── Right content area ── */
 
 .settingsContent {

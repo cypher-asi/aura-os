@@ -10,8 +10,7 @@ import {
   requiresExplicitHostOrigin,
 } from "../../lib/host-config";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import styles from "../SettingsModal/SettingsModal.module.css";
-import mobileStyles from "./HostSettingsModal.module.css";
+import styles from "./HostSettingsModal.module.css";
 
 export function HostSettingsModal({
   isOpen,
@@ -111,11 +110,11 @@ export function HostSettingsModal({
       headerActions={isMobileLayout ? <Button variant="ghost" size="sm" onClick={onClose}>Done</Button> : undefined}
       size={isMobileLayout ? "full" : "sm"}
       fullHeight={isMobileLayout}
-      className={isMobileLayout ? mobileStyles.mobileModal : undefined}
-      contentClassName={isMobileLayout ? mobileStyles.mobileContent : undefined}
+      className={isMobileLayout ? styles.mobileModal : undefined}
+      contentClassName={isMobileLayout ? styles.mobileContent : undefined}
       footer={mobileFooter}
     >
-      <div className={isMobileLayout ? mobileStyles.mobileStack : styles.content}>
+      <div className={isMobileLayout ? styles.mobileStack : styles.content}>
         <Text variant="muted" size="sm">
           {nativeHostRequired
             ? defaultHostOrigin
@@ -126,21 +125,21 @@ export function HostSettingsModal({
 
         {isMobileLayout ? (
           <>
-            <section className={mobileStyles.mobileSection}>
-              <div className={mobileStyles.mobileSectionHeader}>
+            <section className={styles.mobileSection}>
+              <div className={styles.mobileSectionHeader}>
                 <Text size="sm" weight="medium">Current target</Text>
                 <Text size="xs" variant="muted">{status.replace(/_/g, " ")}</Text>
               </div>
-              <Text size="sm" className={mobileStyles.mobileMono}>{hostLabel}</Text>
+              <Text size="sm" className={styles.mobileMono}>{hostLabel}</Text>
               {defaultHostOrigin ? (
-                <div className={mobileStyles.mobileMetaRow}>
+                <div className={styles.mobileMetaRow}>
                   <Text size="xs" variant="muted">Build default</Text>
-                  <Text size="sm" className={mobileStyles.mobileMono}>{defaultHostOrigin}</Text>
+                  <Text size="sm" className={styles.mobileMono}>{defaultHostOrigin}</Text>
                 </div>
               ) : null}
             </section>
 
-            <section className={mobileStyles.mobileSection}>
+            <section className={styles.mobileSection}>
               <Text size="sm" weight="medium">Custom host</Text>
               <Text size="xs" variant="muted">
                 {nativeHostRequired

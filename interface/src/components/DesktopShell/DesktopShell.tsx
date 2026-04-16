@@ -11,7 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
-import { PanelRight, Server, Settings } from "lucide-react";
+import { PanelRight, Server } from "lucide-react";
 import { Lane, type LaneResizeControls } from "../Lane";
 import { BottomTaskbar } from "../BottomTaskbar";
 import { OrgSelector } from "../OrgSelector";
@@ -177,12 +177,11 @@ export function DesktopShell() {
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
   const toggleSidekick = useAppUIStore((s) => s.toggleSidekick);
-  const { hostSettingsOpen, openHostSettings, closeHostSettings, openSettings } = useUIModalStore(
+  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore(
     useShallow((s) => ({
       hostSettingsOpen: s.hostSettingsOpen,
       openHostSettings: s.openHostSettings,
       closeHostSettings: s.closeHostSettings,
-      openSettings: s.openSettings,
     })),
   );
   const routeContent = useOutlet();
@@ -327,15 +326,6 @@ export function DesktopShell() {
                   onClick={openHostSettings}
                 />
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
-                icon={<Settings size={16} />}
-                aria-label="Open app settings"
-                title="Open app settings"
-                onClick={openSettings}
-              />
               <Button
                 variant="ghost"
                 size="sm"

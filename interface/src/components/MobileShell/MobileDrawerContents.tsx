@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import {
-  CircleUserRound, Settings, Building2, Check,
+  CircleUserRound, Building2, Check,
   ChevronRight, Plus, Server,
   FolderOpen, Bot, GitCommitVertical,
 } from "lucide-react";
@@ -136,7 +136,6 @@ export function AccountSheetContent() {
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const { features } = useAuraCapabilities();
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
-  const openSettings = useUIModalStore((s) => s.openSettings);
   const openHostSettings = useUIModalStore((s) => s.openHostSettings);
   const { inputRef, initialFocusRef, autoFocus } = useModalInitialFocus<HTMLInputElement>();
   const orgs = useOrgStore((s) => s.orgs);
@@ -256,7 +255,6 @@ export function AccountSheetContent() {
             {features.hostRetargeting ? (
               <Button variant="ghost" size="sm" icon={<Server size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openHostSettings)}>Host settings</Button>
             ) : null}
-            <Button variant="ghost" size="sm" icon={<Settings size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openSettings)}>App settings</Button>
           </div>
         </div>
       </div>

@@ -5,7 +5,6 @@ beforeEach(() => {
   useUIModalStore.setState({
     orgSettingsOpen: false,
     orgInitialSection: undefined,
-    settingsOpen: false,
     buyCreditsOpen: false,
     hostSettingsOpen: false,
   });
@@ -16,7 +15,6 @@ describe("ui-modal-store", () => {
     it("all modals are closed", () => {
       const s = useUIModalStore.getState();
       expect(s.orgSettingsOpen).toBe(false);
-      expect(s.settingsOpen).toBe(false);
       expect(s.buyCreditsOpen).toBe(false);
       expect(s.hostSettingsOpen).toBe(false);
     });
@@ -41,19 +39,6 @@ describe("ui-modal-store", () => {
       useUIModalStore.getState().openOrgBilling();
       expect(useUIModalStore.getState().orgSettingsOpen).toBe(true);
       expect(useUIModalStore.getState().orgInitialSection).toBe("billing");
-    });
-  });
-
-  describe("openSettings / closeSettings", () => {
-    it("opens settings", () => {
-      useUIModalStore.getState().openSettings();
-      expect(useUIModalStore.getState().settingsOpen).toBe(true);
-    });
-
-    it("closes settings", () => {
-      useUIModalStore.setState({ settingsOpen: true });
-      useUIModalStore.getState().closeSettings();
-      expect(useUIModalStore.getState().settingsOpen).toBe(false);
     });
   });
 
