@@ -56,6 +56,7 @@ fn resolve_git_repo_url(project: Option<&aura_os_core::Project>) -> Option<Strin
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct LoopQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
+    pub model: Option<String>,
 }
 
 /// Broadcast a synthetic domain event as JSON on the global event channel.
@@ -546,6 +547,17 @@ fn preferred_automaton_model(instance: &aura_os_core::AgentInstance) -> Option<S
         .default_model
         .clone()
         .or_else(|| instance.model.clone())
+}
+
+fn requested_automaton_model(
+    requested_model: Option<&str>,
+    instance: &aura_os_core::AgentInstance,
+) -> Option<String> {
+    requested_model
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .or_else(|| preferred_automaton_model(instance))
 }
 
 async fn close_automaton_session(
@@ -1284,7 +1296,7 @@ pub(crate) async fn start_loop(
                 "looking up agent instance {agent_instance_id}: {other}"
             )),
         })?;
-    let selected_model = preferred_automaton_model(&agent_instance);
+    let selected_model = requested_automaton_model(params.model.as_deref(), &agent_instance);
     info!(
         %project_id, %agent_instance_id,
         agent_id = %agent_instance.agent_id,
@@ -1913,7 +1925,7 @@ pub(crate) async fn run_single_task(
                 "looking up agent instance {agent_instance_id}: {other}"
             )),
         })?;
-    let selected_model = preferred_automaton_model(&agent_instance);
+    let selected_model = requested_automaton_model(params.model.as_deref(), &agent_instance);
     let machine_type = agent_instance.machine_type.clone();
     let swarm_agent_id = Some(agent_instance.agent_id.to_string());
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
@@ -2116,7 +2128,7 @@ mod tests {
     use super::{
         classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
         extract_run_command, extract_turn_usage, is_work_event_type, map_passthrough_event_type,
-        preferred_automaton_model, VerificationStepKind,
+        preferred_automaton_model, requested_automaton_model, VerificationStepKind,
     };
     use aura_os_core::{AgentInstance, AgentStatus};
     use chrono::Utc;
@@ -2336,6 +2348,18 @@ mod tests {
         assert_eq!(
             preferred_automaton_model(&instance).as_deref(),
             Some("aura-o4-mini")
+        );
+    }
+
+    #[test]
+    fn requested_model_override_beats_agent_defaults() {
+        let mut instance = make_agent_instance("Builder");
+        instance.default_model = Some("aura-gpt-4.1".to_string());
+        instance.model = Some("aura-o4-mini".to_string());
+
+        assert_eq!(
+            requested_automaton_model(Some("aura-claude-sonnet-4-6"), &instance).as_deref(),
+            Some("aura-claude-sonnet-4-6")
         );
     }
 }

@@ -9,28 +9,36 @@ export interface LoopStatusResponse {
   active_agent_instances?: string[];
 }
 
+function loopQuery(agentInstanceId?: string, model?: string | null): string {
+  const params = new URLSearchParams();
+  if (agentInstanceId) params.set("agent_instance_id", agentInstanceId);
+  if (model?.trim()) params.set("model", model.trim());
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export const loopApi = {
-  startLoop: (projectId: ProjectId, agentInstanceId?: string) => {
-    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+  startLoop: (projectId: ProjectId, agentInstanceId?: string, model?: string | null) => {
+    const params = loopQuery(agentInstanceId, model);
     return apiFetch<LoopStatusResponse>(
       `/api/projects/${projectId}/loop/start${params}`,
       { method: "POST" },
     );
   },
   pauseLoop: (projectId: ProjectId, agentInstanceId?: string) => {
-    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+    const params = loopQuery(agentInstanceId);
     return apiFetch<void>(`/api/projects/${projectId}/loop/pause${params}`, {
       method: "POST",
     });
   },
   stopLoop: (projectId: ProjectId, agentInstanceId?: string) => {
-    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+    const params = loopQuery(agentInstanceId);
     return apiFetch<LoopStatusResponse>(`/api/projects/${projectId}/loop/stop${params}`, {
       method: "POST",
     });
   },
   resumeLoop: (projectId: ProjectId, agentInstanceId?: string) => {
-    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+    const params = loopQuery(agentInstanceId);
     return apiFetch<LoopStatusResponse>(`/api/projects/${projectId}/loop/resume${params}`, {
       method: "POST",
     });
