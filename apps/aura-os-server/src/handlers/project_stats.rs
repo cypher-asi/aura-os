@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
-use tracing::warn;
+use tracing::{debug, warn};
 
 use aura_os_core::ProjectId;
 use aura_os_storage::ProjectStats;
@@ -75,7 +75,28 @@ pub(crate) async fn get_project_stats(
         if net.has_internal_token() {
             match net.get_project_usage(&project_id.to_string(), None).await {
                 Ok(usage) => {
-                    resp.total_tokens = usage.total_tokens;
+                    debug!(
+                        %project_id,
+                        total_tokens = usage.total_tokens,
+                        total_input_tokens = usage.total_input_tokens,
+                        total_output_tokens = usage.total_output_tokens,
+                        total_cost_usd = usage.total_cost_usd,
+                        "aura-network project usage fetched"
+                    );
+                    // Some aura-network deployments return `totalTokens = 0`
+                    // while still emitting non-zero `totalInputTokens` /
+                    // `totalOutputTokens` / `totalCostUsd`, because the
+                    // aggregate column isn't always populated. Fall back to
+                    // the component columns so the UI stays consistent with
+                    // cost instead of showing $0.11 alongside 0 tokens.
+                    let summed = usage
+                        .total_input_tokens
+                        .saturating_add(usage.total_output_tokens);
+                    resp.total_tokens = if usage.total_tokens > 0 {
+                        usage.total_tokens
+                    } else {
+                        summed
+                    };
                     resp.estimated_cost_usd = usage.total_cost_usd;
                 }
                 Err(error) => {
