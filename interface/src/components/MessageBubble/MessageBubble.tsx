@@ -116,19 +116,17 @@ export const MessageBubble = memo(function MessageBubble({
   const renderAssistantContent = () => {
     if (!isInsufficientCreditsError) {
       return (
-        <div className={styles.markdown}>
-          <LLMOutput
-            content={message.content}
-            timeline={message.timeline}
-            toolCalls={message.toolCalls}
-            thinkingText={message.thinkingText}
-            thinkingDurationMs={message.thinkingDurationMs}
-            artifactRefs={message.artifactRefs}
-            isStreaming={isStreaming}
-            defaultThinkingExpanded={initialThinkingExpanded}
-            defaultActivitiesExpanded={initialActivitiesExpanded}
-          />
-        </div>
+        <LLMOutput
+          content={message.content}
+          timeline={message.timeline}
+          toolCalls={message.toolCalls}
+          thinkingText={message.thinkingText}
+          thinkingDurationMs={message.thinkingDurationMs}
+          artifactRefs={message.artifactRefs}
+          isStreaming={isStreaming}
+          defaultThinkingExpanded={initialThinkingExpanded}
+          defaultActivitiesExpanded={initialActivitiesExpanded}
+        />
       );
     }
 
