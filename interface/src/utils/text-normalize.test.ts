@@ -184,4 +184,27 @@ describe("normalizeLooseStrongEmphasis", () => {
     const text = "Use `** Overview**` literally";
     expect(normalizeLooseStrongEmphasis(text)).toBe(text);
   });
+
+  it("repairs trailing whitespace before closing strong marker", () => {
+    const text = "creating tasks for **02: Cat Page **";
+    expect(normalizeLooseStrongEmphasis(text)).toBe(
+      "creating tasks for **02: Cat Page**",
+    );
+  });
+
+  it("repairs trailing whitespace before closing underscore marker", () => {
+    expect(normalizeLooseStrongEmphasis("hello __Title __ end")).toBe(
+      "hello __Title__ end",
+    );
+  });
+
+  it("leaves well-formed strong emphasis untouched", () => {
+    const text = "this is **bold** text";
+    expect(normalizeLooseStrongEmphasis(text)).toBe(text);
+  });
+
+  it("leaves nested inline emphasis untouched", () => {
+    const text = "**a _b_ c**";
+    expect(normalizeLooseStrongEmphasis(text)).toBe(text);
+  });
 });

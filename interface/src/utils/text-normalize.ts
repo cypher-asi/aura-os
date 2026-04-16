@@ -132,12 +132,15 @@ export function flattenListIndentation(text: string): string {
     .join("");
 }
 
-const LOOSE_STRONG_EMPHASIS_RE = /(\*\*|__)([ \t]+)([^\n]*?\S)([ \t]*)(\1)/g;
+const LOOSE_STRONG_EMPHASIS_RE = /(\*\*|__)([ \t]*)(\S[^\n]*?\S|\S)([ \t]*)(\1)/g;
 
 /**
  * Repair common malformed strong emphasis from model output like
- * `** Overview**` or `__ title __` so markdown renders as intended.
- * Leaves fenced and inline code untouched.
+ * `** Overview**`, `__ title __`, or `**Title **` so markdown renders
+ * as intended. CommonMark rejects emphasis whose closing marker is
+ * preceded by whitespace (not a right-flanking delimiter run), so the
+ * model's stray trailing space leaves the asterisks rendering literally.
+ * Leaves well-formed `**bold**` spans and fenced/inline code untouched.
  */
 export function normalizeLooseStrongEmphasis(text: string): string {
   return splitByCodeFences(text)
@@ -149,8 +152,10 @@ export function normalizeLooseStrongEmphasis(text: string): string {
             ? inlineSeg.content
             : inlineSeg.content.replace(
                 LOOSE_STRONG_EMPHASIS_RE,
-                (_match, marker: string, _leadingWs: string, content: string, _trailingWs: string, closing: string) =>
-                  `${marker}${content.trim()}${closing}`,
+                (match: string, marker: string, leadingWs: string, content: string, trailingWs: string, closing: string) =>
+                  leadingWs.length > 0 || trailingWs.length > 0
+                    ? `${marker}${content.trim()}${closing}`
+                    : match,
               ),
         )
         .join("");
