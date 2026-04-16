@@ -7,23 +7,40 @@ export interface ModelOption {
   mode: GenerationMode;
 }
 
-export const AVAILABLE_MODELS: ModelOption[] = [
-  // Chat – Anthropic
-  { id: "claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
-  { id: "claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
-  { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5", tier: "haiku", mode: "chat" },
+export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
+  { id: "aura-claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
+  { id: "aura-claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
+  { id: "aura-claude-haiku-4-5", label: "Haiku 4.5", tier: "haiku", mode: "chat" },
+  { id: "aura-gpt-4.1", label: "GPT-4.1", tier: "gpt", mode: "chat" },
+  { id: "aura-o3", label: "o3", tier: "gpt", mode: "chat" },
+  { id: "aura-o4-mini", label: "o4 Mini", tier: "gpt", mode: "chat" },
+];
 
-  // Chat – OpenAI
-  { id: "gpt-4.1", label: "GPT-4.1", tier: "gpt", mode: "chat" },
-  { id: "o3", label: "o3", tier: "gpt", mode: "chat" },
-  { id: "o4-mini", label: "o4 Mini", tier: "gpt", mode: "chat" },
-
-  // Image generation
+export const IMAGE_MODELS: ModelOption[] = [
   { id: "gpt-image-1", label: "GPT Image 1", tier: "image", mode: "image" },
   { id: "dall-e-3", label: "DALL-E 3", tier: "image", mode: "image" },
   { id: "dall-e-2", label: "DALL-E 2", tier: "image", mode: "image" },
   { id: "gemini-nano-banana", label: "Gemini Flash Image", tier: "image", mode: "image" },
 ];
+
+export const AVAILABLE_MODELS: ModelOption[] = [
+  ...AURA_MANAGED_CHAT_MODELS,
+  ...IMAGE_MODELS,
+];
+
+const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
+  "claude-opus-4-6": "aura-claude-opus-4-6",
+  "claude-sonnet-4-6": "aura-claude-sonnet-4-6",
+  "claude-haiku-4-5-20251001": "aura-claude-haiku-4-5",
+  "gpt-4.1": "aura-gpt-4.1",
+  o3: "aura-o3",
+  "o4-mini": "aura-o4-mini",
+};
+
+function normalizeManagedModelId(modelId?: string | null): string | null {
+  if (!modelId) return null;
+  return LEGACY_AURA_MODEL_IDS[modelId] ?? modelId;
+}
 
 export const DEFAULT_MODEL = AVAILABLE_MODELS[0];
 export const CODEX_MODELS: ModelOption[] = [
@@ -63,7 +80,8 @@ export function getDefaultModelForMode(mode: GenerationMode): ModelOption {
 }
 
 export function getModelMode(modelId: string): GenerationMode {
-  return AVAILABLE_MODELS.find((m) => m.id === modelId)?.mode ?? "chat";
+  const normalized = normalizeManagedModelId(modelId);
+  return AVAILABLE_MODELS.find((m) => m.id === normalized)?.mode ?? "chat";
 }
 
 function storageKey(adapterType?: string): string {
@@ -90,8 +108,9 @@ export function defaultModelForAdapter(
   explicitDefault?: string | null,
 ): string {
   const models = availableModelsForAdapter(adapterType);
-  if (explicitDefault && explicitDefault.trim()) {
-    return explicitDefault;
+  const normalizedExplicit = normalizeManagedModelId(explicitDefault?.trim());
+  if (normalizedExplicit) {
+    return normalizedExplicit;
   }
   return models[0]?.id ?? DEFAULT_MODEL.id;
 }
@@ -102,7 +121,7 @@ export function loadPersistedModel(
 ): string {
   try {
     const models = availableModelsForAdapter(adapterType);
-    const stored = localStorage.getItem(storageKey(adapterType));
+    const stored = normalizeManagedModelId(localStorage.getItem(storageKey(adapterType)));
     if (stored && models.some((m) => m.id === stored)) return stored;
   } catch {
     // localStorage may be unavailable
@@ -131,11 +150,13 @@ export function modelLabel(
   adapterType?: string,
   explicitDefault?: string | null,
 ): string {
+  const normalizedModelId = normalizeManagedModelId(modelId);
+  const normalizedDefault = normalizeManagedModelId(explicitDefault);
   const models = availableModelsForAdapter(adapterType);
   return (
-    models.find((m) => m.id === modelId)?.label ??
-    models.find((m) => m.id === explicitDefault)?.label ??
-    explicitDefault ??
+    models.find((m) => m.id === normalizedModelId)?.label ??
+    models.find((m) => m.id === normalizedDefault)?.label ??
+    normalizedDefault ??
     DEFAULT_MODEL.label
   );
 }

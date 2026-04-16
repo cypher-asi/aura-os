@@ -154,7 +154,7 @@ describe("ChatInputBar", () => {
     expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
 
     await user.click(screen.getByText("Sonnet 4.6"));
-    expect(mockSetSelectedModel).toHaveBeenCalledWith("test-stream", "claude-sonnet-4-6", undefined);
+    expect(mockSetSelectedModel).toHaveBeenCalledWith("test-stream", "aura-claude-sonnet-4-6", undefined);
   });
 
   it("shows a fixed codex model without opening a dropdown", async () => {
