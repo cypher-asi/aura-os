@@ -144,6 +144,48 @@ mod tests {
         }
     }
 
+    #[test]
+    fn streaming_tools_opt_into_eager_input_streaming() {
+        let registry = ToolRegistry::with_all_tools();
+        let tools = registry.list_tools();
+        let defs = registry.tool_definitions(&tools);
+
+        // The spec tools are the ones registered in the super-agent registry
+        // whose arguments we stream via `input_json_delta`; file tools live
+        // in adapter-provided registries outside this crate but share the
+        // `is_streaming_tool_name` list.
+        for name in ["create_spec", "update_spec"] {
+            let def = defs
+                .iter()
+                .find(|d| d["name"].as_str() == Some(name))
+                .unwrap_or_else(|| panic!("missing tool def for '{name}'"));
+            assert_eq!(
+                def["eager_input_streaming"].as_bool(),
+                Some(true),
+                "tool '{name}' must opt into fine-grained tool streaming"
+            );
+        }
+
+        let non_streaming = defs
+            .iter()
+            .find(|d| d["name"].as_str() == Some("create_task"))
+            .expect("expected create_task def");
+        assert!(
+            non_streaming.get("eager_input_streaming").is_none(),
+            "non-streaming tools should not carry eager_input_streaming"
+        );
+    }
+
+    #[test]
+    fn is_streaming_tool_name_covers_spec_and_file_tools() {
+        assert!(super::super::is_streaming_tool_name("create_spec"));
+        assert!(super::super::is_streaming_tool_name("update_spec"));
+        assert!(super::super::is_streaming_tool_name("write_file"));
+        assert!(super::super::is_streaming_tool_name("edit_file"));
+        assert!(!super::super::is_streaming_tool_name("create_task"));
+        assert!(!super::super::is_streaming_tool_name("read_file"));
+    }
+
     // -----------------------------------------------------------------------
     // Network-required tools return graceful errors when offline
     // -----------------------------------------------------------------------

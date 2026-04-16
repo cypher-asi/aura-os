@@ -239,12 +239,31 @@ impl ToolRegistry {
         tools
             .iter()
             .map(|t| {
-                serde_json::json!({
+                let mut def = serde_json::json!({
                     "name": t.name(),
                     "description": t.description(),
                     "input_schema": t.parameters_schema(),
-                })
+                });
+                // Opt the tool into Anthropic's fine-grained tool streaming
+                // (`input_json_delta`) so the UI can render `markdown_contents`
+                // / file `content` character-by-character in the preview card
+                // rather than in one batch at the end of the turn.
+                if is_streaming_tool_name(t.name()) {
+                    def["eager_input_streaming"] = serde_json::Value::Bool(true);
+                }
+                def
             })
             .collect()
     }
+}
+
+/// Tool names that should stream their JSON arguments to the client via
+/// `input_json_delta` / `tool_call_snapshot`. Must stay in sync with the
+/// list in `crate::stream` (the stream module uses the same names to
+/// decide whether to emit snapshots).
+pub(crate) fn is_streaming_tool_name(name: &str) -> bool {
+    matches!(
+        name,
+        "create_spec" | "update_spec" | "write_file" | "edit_file"
+    )
 }

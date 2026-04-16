@@ -83,19 +83,12 @@ use types::*;
 /// visibly responsive as `markdown_contents` streams in.
 const SNAPSHOT_THROTTLE_MS: u128 = 50;
 
-/// Tool names whose arguments we stream live to the client via
-/// `tool_call_snapshot`. The UI's preview cards rely on these snapshots to
-/// render in real time rather than showing a spinner while the model finishes
-/// emitting the full JSON.
-const STREAMING_TOOL_NAMES: &[&str] = &[
-    "create_spec",
-    "update_spec",
-    "write_file",
-    "edit_file",
-];
-
+/// Whether the harness should emit throttled `tool_call_snapshot` events for
+/// a given tool name. Delegates to [`crate::tools::is_streaming_tool_name`]
+/// so the streaming set and the `eager_input_streaming` tool-definition flag
+/// stay in sync with each other.
 fn is_streaming_tool(name: &str) -> bool {
-    STREAMING_TOOL_NAMES.contains(&name)
+    crate::tools::is_streaming_tool_name(name)
 }
 
 fn build_partial_spec_input(input_json: &str) -> Option<Value> {
@@ -305,6 +298,13 @@ impl SuperAgentStream {
                 .http
                 .post(format!("{}/v1/messages", self.router_url))
                 .bearer_auth(&self.ctx.jwt)
+                // Opt into Anthropic's fine-grained tool streaming so
+                // `input_json_delta` chunks arrive as raw partial strings
+                // (enabling live `markdown_contents` / file-content previews
+                // in the UI) instead of being buffered until the full tool
+                // block completes. Pairs with `eager_input_streaming: true`
+                // on the spec/file tool definitions.
+                .header("anthropic-beta", "fine-grained-tool-streaming-2025-05-14")
                 .json(&req)
                 .send()
                 .await
