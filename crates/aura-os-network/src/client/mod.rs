@@ -24,6 +24,7 @@ use crate::types::*;
 pub struct NetworkClient {
     pub(crate) http: Client,
     pub(crate) base_url: String,
+    pub(crate) internal_token: Option<String>,
 }
 
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
@@ -48,11 +49,19 @@ impl NetworkClient {
             .filter(|s| !s.is_empty())?;
 
         let base_url = base_url.trim_end_matches('/').to_string();
-        info!(%base_url, "aura-network client configured");
+        let internal_token = env::var("AURA_NETWORK_INTERNAL_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty());
+        info!(
+            %base_url,
+            has_internal_token = internal_token.is_some(),
+            "aura-network client configured"
+        );
 
         Some(Self {
             http: build_http_client(),
             base_url,
+            internal_token,
         })
     }
 
@@ -61,11 +70,25 @@ impl NetworkClient {
         Self {
             http: build_http_client(),
             base_url: base_url.trim_end_matches('/').to_string(),
+            internal_token: None,
+        }
+    }
+
+    /// Create a `NetworkClient` with an explicit base URL and shared internal token.
+    pub fn with_base_url_and_token(base_url: &str, internal_token: &str) -> Self {
+        Self {
+            http: build_http_client(),
+            base_url: base_url.trim_end_matches('/').to_string(),
+            internal_token: Some(internal_token.to_string()),
         }
     }
 
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    pub fn has_internal_token(&self) -> bool {
+        self.internal_token.is_some()
     }
 
     /// Access the underlying HTTP client for making custom requests
@@ -243,6 +266,47 @@ impl NetworkClient {
                 last_err = Some(err);
             } else {
                 return Err(err);
+            }
+        }
+        Err(last_err.unwrap())
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal HTTP helpers (X-Internal-Token auth, service-to-service)
+    // -----------------------------------------------------------------------
+
+    pub(crate) fn internal_token(&self) -> Result<&str, NetworkError> {
+        self.internal_token.as_deref().ok_or_else(|| {
+            NetworkError::Validation("AURA_NETWORK_INTERNAL_TOKEN not configured".into())
+        })
+    }
+
+    pub(crate) async fn get_internal<T: serde::de::DeserializeOwned>(
+        &self,
+        url: &str,
+    ) -> Result<T, NetworkError> {
+        let token = self.internal_token()?;
+        let mut last_err = None;
+        for attempt in 0..=TRANSIENT_RETRY_COUNT {
+            if attempt > 0 {
+                tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
+            }
+            let resp = self
+                .http
+                .get(url)
+                .header("x-internal-token", token)
+                .send()
+                .await?;
+            match self.handle_response(resp).await {
+                Ok(v) => return Ok(v),
+                Err(e) if e.is_transient() => {
+                    warn!(
+                        %url, attempt, error = %e,
+                        "transient upstream error, retrying"
+                    );
+                    last_err = Some(e);
+                }
+                Err(e) => return Err(e),
             }
         }
         Err(last_err.unwrap())

@@ -1,6 +1,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
+use tracing::warn;
 
 use aura_os_core::ProjectId;
 use aura_os_storage::ProjectStats;
@@ -63,5 +64,26 @@ pub(crate) async fn get_project_stats(
         .get_project_stats(&project_id.to_string(), &jwt)
         .await
         .map_err(map_storage_error)?;
-    Ok(Json(ProjectStatsResponse::from(stats)))
+    let mut resp = ProjectStatsResponse::from(stats);
+
+    // aura-storage's /api/stats endpoint historically reports 0 tokens/cost for
+    // interactive chat turns because only the automaton dev-loop calls
+    // `report_usage`. aura-router already tracks per-project usage on every
+    // proxied LLM call, so when an internal token is available we overlay the
+    // authoritative numbers from aura-network's internal endpoint.
+    if let Some(net) = state.network_client.as_ref() {
+        if net.has_internal_token() {
+            match net.get_project_usage(&project_id.to_string(), None).await {
+                Ok(usage) => {
+                    resp.total_tokens = usage.total_tokens;
+                    resp.estimated_cost_usd = usage.total_cost_usd;
+                }
+                Err(error) => {
+                    warn!(%project_id, %error, "aura-network project usage fetch failed; using storage values");
+                }
+            }
+        }
+    }
+
+    Ok(Json(resp))
 }

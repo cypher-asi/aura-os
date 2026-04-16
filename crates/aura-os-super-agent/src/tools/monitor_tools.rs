@@ -153,7 +153,12 @@ impl SuperAgentTool for GetProjectCostTool {
         json!({
             "type": "object",
             "properties": {
-                "project_id": { "type": "string", "description": "Project ID" }
+                "project_id": { "type": "string", "description": "Project ID" },
+                "period": {
+                    "type": "string",
+                    "description": "Aggregation window: day, week, or month. Omit for all-time.",
+                    "enum": ["day", "week", "month"]
+                }
             },
             "required": ["project_id"]
         })
@@ -162,16 +167,35 @@ impl SuperAgentTool for GetProjectCostTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        _ctx: &SuperAgentContext,
+        ctx: &SuperAgentContext,
     ) -> Result<ToolResult, SuperAgentError> {
-        let project_id = input["project_id"]
-            .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+        let project_id = require_str(&input, "project_id")?;
+        let period = input.get("period").and_then(|v| v.as_str());
+
+        let network = require_network(ctx)?;
+        if !network.has_internal_token() {
+            return Ok(ToolResult {
+                content: json!({
+                    "project_id": project_id,
+                    "message": "Per-project cost tracking requires AURA_NETWORK_INTERNAL_TOKEN. Use get_credit_balance for organization-level credit info."
+                }),
+                is_error: false,
+            });
+        }
+
+        let usage = network
+            .get_project_usage(project_id, period)
+            .await
+            .map_err(|e| tool_err("get_project_cost", e))?;
 
         Ok(ToolResult {
             content: json!({
                 "project_id": project_id,
-                "message": "Per-project cost tracking is not yet available. Use get_credit_balance for organization-level credit info."
+                "period": period.unwrap_or("all-time"),
+                "total_input_tokens": usage.total_input_tokens,
+                "total_output_tokens": usage.total_output_tokens,
+                "total_tokens": usage.total_tokens,
+                "total_cost_usd": usage.total_cost_usd,
             }),
             is_error: false,
         })

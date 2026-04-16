@@ -88,6 +88,25 @@ impl NetworkClient {
         })
     }
 
+    /// Query per-project token usage and cost via the internal-auth endpoint.
+    ///
+    /// Data is populated upstream by aura-router on every proxied LLM call
+    /// (via `POST /internal/usage`). Requires `AURA_NETWORK_INTERNAL_TOKEN`.
+    pub async fn get_project_usage(
+        &self,
+        project_id: &str,
+        period: Option<&str>,
+    ) -> Result<ProjectUsage, NetworkError> {
+        let mut url = format!(
+            "{}/internal/projects/{}/usage",
+            self.base_url, project_id
+        );
+        if let Some(p) = period {
+            url.push_str(&format!("?period={p}"));
+        }
+        self.get_internal(&url).await
+    }
+
     pub async fn report_usage(
         &self,
         req: &crate::types::ReportUsageRequest,
