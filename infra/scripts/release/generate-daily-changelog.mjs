@@ -32,9 +32,13 @@ const version = args.version ? String(args.version) : null;
 const releaseUrl = String(args["release-url"] || "");
 const timeZone = String(args.timezone || process.env.CHANGELOG_TIMEZONE || "America/New_York");
 const repoName = String(args.repo || path.basename(repoDir));
-const promptVersion = 1;
+const promptVersion = 2;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim() || "";
 const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-20250514";
+const BATCH_WINDOW_MINUTES = 120;
+const SOFT_BATCH_WINDOW_MINUTES = 45;
+const MAX_BATCH_SPAN_MINUTES = 180;
+const MAX_BATCH_COMMITS = 8;
 
 if (!fs.existsSync(repoDir)) {
   console.error(`repo directory not found: ${repoDir}`);
@@ -95,6 +99,11 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+function intersect(a, b) {
+  const bSet = new Set(b);
+  return a.filter((value) => bSet.has(value));
+}
+
 function inferAreas(files) {
   const counts = new Map();
   const bump = (name) => counts.set(name, (counts.get(name) || 0) + 1);
@@ -123,6 +132,20 @@ function cleanSubject(subject) {
   return sanitizeText(subject)
     .replace(/^(feat|fix|chore|refactor|docs|test|ci|build)(\(.+?\))?:\s*/i, "")
     .replace(/\.$/, "");
+}
+
+function extractKeywords(value) {
+  return unique(
+    cleanSubject(value)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .filter((token) => token.length >= 4),
+  );
+}
+
+function fileGroup(file) {
+  const parts = file.split("/");
+  return parts.slice(0, Math.min(parts.length, 3)).join("/");
 }
 
 function collectCommit(sha) {
@@ -168,6 +191,10 @@ function collectCommit(sha) {
       insertions,
       deletions,
     },
+    committedAtMs: Date.parse(sanitizeText(meta[3])),
+    cleanSubject: cleanSubject(meta[4]),
+    keywords: extractKeywords(meta[4]),
+    fileGroups: unique(files.map(fileGroup)),
     primaryArea: areaInfo.primary,
     areas: areaInfo.areas,
   };
@@ -233,37 +260,120 @@ function summarizeAreas(commits) {
     .map(([area, count]) => ({ area, count }));
 }
 
-function buildDeterministicFallback({ dateKey, commits, repo, channel: currentChannel, currentVersion }) {
-  const grouped = new Map();
-  for (const commit of commits) {
-    const key = commit.primaryArea;
-    grouped.set(key, [...(grouped.get(key) || []), commit]);
+function formatTimeLabel(date, tz) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function commitRelatedness(a, b) {
+  let score = 0;
+  if (a.primaryArea === b.primaryArea) score += 3;
+  score += intersect(a.areas, b.areas).length;
+  score += intersect(a.fileGroups, b.fileGroups).length * 2;
+  score += intersect(a.keywords, b.keywords).length;
+  if (a.author.email && a.author.email === b.author.email) score += 0.5;
+  return score;
+}
+
+function batchRelatedness(batch, commit) {
+  const lastCommit = batch.commits[batch.commits.length - 1];
+  const dominantArea = batch.areaSummary[0]?.area;
+  let score = commitRelatedness(lastCommit, commit);
+  if (dominantArea && commit.areas.includes(dominantArea)) score += 1;
+  if (batch.fileGroups.some((group) => commit.fileGroups.includes(group))) score += 2;
+  return score;
+}
+
+function batchCommits(commits, tz) {
+  const sorted = [...commits].sort((a, b) => a.committedAtMs - b.committedAtMs);
+  const batches = [];
+
+  for (const commit of sorted) {
+    const lastBatch = batches[batches.length - 1];
+    if (!lastBatch) {
+      batches.push({
+        commits: [commit],
+        startedAtMs: commit.committedAtMs,
+        endedAtMs: commit.committedAtMs,
+        fileGroups: [...commit.fileGroups],
+        areaSummary: summarizeAreas([commit]),
+      });
+      continue;
+    }
+
+    const minutesSinceLast = (commit.committedAtMs - lastBatch.endedAtMs) / 60000;
+    const batchSpanMinutes = (commit.committedAtMs - lastBatch.startedAtMs) / 60000;
+    const relatedness = batchRelatedness(lastBatch, commit);
+    const shouldMerge = (
+      lastBatch.commits.length < MAX_BATCH_COMMITS &&
+      batchSpanMinutes <= MAX_BATCH_SPAN_MINUTES &&
+      (
+        (minutesSinceLast <= SOFT_BATCH_WINDOW_MINUTES && relatedness >= 1) ||
+        (minutesSinceLast <= BATCH_WINDOW_MINUTES && relatedness >= 3)
+      )
+    );
+
+    if (shouldMerge) {
+      lastBatch.commits.push(commit);
+      lastBatch.endedAtMs = commit.committedAtMs;
+      lastBatch.fileGroups = unique([...lastBatch.fileGroups, ...commit.fileGroups]);
+      lastBatch.areaSummary = summarizeAreas(lastBatch.commits);
+      continue;
+    }
+
+    batches.push({
+      commits: [commit],
+      startedAtMs: commit.committedAtMs,
+      endedAtMs: commit.committedAtMs,
+      fileGroups: [...commit.fileGroups],
+      areaSummary: summarizeAreas([commit]),
+    });
   }
 
-  const orderedGroups = [...grouped.entries()]
-    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
-    .slice(0, 4);
+  return batches.map((batch, index) => ({
+    id: `entry-${index + 1}`,
+    time_label: formatTimeLabel(new Date(batch.startedAtMs), tz),
+    started_at: new Date(batch.startedAtMs).toISOString(),
+    ended_at: new Date(batch.endedAtMs).toISOString(),
+    area_summary: batch.areaSummary,
+    commits: batch.commits,
+  }));
+}
 
-  const sections = orderedGroups.map(([title, group]) => ({
-    title,
-    items: unique(group.map((commit) => cleanSubject(commit.subject)))
-      .slice(0, 5)
-      .map((text) => {
-        const source = group.find((commit) => cleanSubject(commit.subject) === text);
+function buildDeterministicFallback({ dateKey, commits, repo, channel: currentChannel, currentVersion, batches, tz }) {
+  const entries = batches.map((batch) => {
+    const topAreas = batch.area_summary.map(({ area }) => area).slice(0, 2);
+    const title = topAreas.length > 1
+      ? `${topAreas[0]} and ${topAreas[1]} updates`
+      : `${topAreas[0] || "Product"} updates`;
+    const subjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 3);
+    const summary = subjects.length > 1
+      ? `${subjects[0]}. ${subjects[1]}.`
+      : `${subjects[0] || `${batch.commits.length} related updates shipped.`}`;
+
+    return {
+      time_label: batch.time_label,
+      started_at: batch.started_at,
+      ended_at: batch.ended_at,
+      title,
+      summary,
+      items: subjects.map((text) => {
+        const source = batch.commits.find((commit) => commit.cleanSubject === text);
         return {
           text,
           commit_shas: source ? [source.sha] : [],
           confidence: "medium",
         };
       }),
-  })).filter((section) => section.items.length > 0);
+    };
+  });
 
-  const topAreas = orderedGroups.map(([title]) => title);
-  const title = topAreas.length > 1
-    ? `${topAreas[0]} and ${topAreas[1]} updates`
-    : `${topAreas[0] || "Daily"} updates`;
-  const intro = `This ${currentChannel} update for ${repo} bundles ${commits.length} landed commit${commits.length === 1 ? "" : "s"} into one daily changelog entry${currentVersion ? ` for \`${currentVersion}\`` : ""}.`;
-  const highlights = sections.flatMap((section) => section.items.map((item) => item.text)).slice(0, 3);
+  const title = `${entries.length} update${entries.length === 1 ? "" : "s"} shipped`;
+  const intro = `This ${currentChannel} timeline for ${repo} groups ${commits.length} landed commit${commits.length === 1 ? "" : "s"} into ${entries.length} update${entries.length === 1 ? "" : "s"} on ${formatDateInTimeZone(new Date(`${dateKey}T12:00:00Z`), tz)}${currentVersion ? ` for \`${currentVersion}\`` : ""}.`;
+  const highlights = entries.map((entry) => entry.title).slice(0, 4);
 
   return {
     date: dateKey,
@@ -272,7 +382,7 @@ function buildDeterministicFallback({ dateKey, commits, repo, channel: currentCh
     version: currentVersion,
     title,
     intro,
-    sections,
+    entries,
     highlights,
     raw_commit_count: commits.length,
   };
@@ -290,29 +400,42 @@ function validateRenderedEntry(candidate, commitShas) {
   if (typeof candidate.intro !== "string" || !candidate.intro.trim()) {
     throw new Error("intro must be a non-empty string");
   }
-  if (!Array.isArray(candidate.sections) || candidate.sections.length === 0) {
-    throw new Error("sections must be a non-empty array");
+  if (!Array.isArray(candidate.entries) || candidate.entries.length === 0) {
+    throw new Error("entries must be a non-empty array");
   }
 
-  const sections = candidate.sections.map((section) => {
-    if (!section || typeof section !== "object") {
-      throw new Error("section must be an object");
+  const entries = candidate.entries.map((entry) => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error("entry must be an object");
     }
-    if (typeof section.title !== "string" || !section.title.trim()) {
-      throw new Error("section.title must be a non-empty string");
+    if (typeof entry.title !== "string" || !entry.title.trim()) {
+      throw new Error("entry.title must be a non-empty string");
     }
-    if (!Array.isArray(section.items) || section.items.length === 0) {
-      throw new Error("section.items must be a non-empty array");
+    if (typeof entry.summary !== "string" || !entry.summary.trim()) {
+      throw new Error("entry.summary must be a non-empty string");
+    }
+    if (!Array.isArray(entry.items) || entry.items.length === 0) {
+      throw new Error("entry.items must be a non-empty array");
+    }
+    if (typeof entry.time_label !== "string" || !entry.time_label.trim()) {
+      throw new Error("entry.time_label must be a non-empty string");
+    }
+    if (typeof entry.started_at !== "string" || !entry.started_at.trim()) {
+      throw new Error("entry.started_at must be a non-empty string");
     }
 
     return {
-      title: section.title.trim(),
-      items: section.items.map((item) => {
+      time_label: entry.time_label.trim(),
+      started_at: entry.started_at.trim(),
+      ended_at: entry.ended_at ? String(entry.ended_at).trim() : entry.started_at.trim(),
+      title: entry.title.trim(),
+      summary: entry.summary.trim(),
+      items: entry.items.map((item) => {
         if (!item || typeof item !== "object") {
-          throw new Error("section item must be an object");
+          throw new Error("entry item must be an object");
         }
         if (typeof item.text !== "string" || !item.text.trim()) {
-          throw new Error("section item text must be a non-empty string");
+          throw new Error("entry item text must be a non-empty string");
         }
         const shas = Array.isArray(item.commit_shas)
           ? item.commit_shas.map((sha) => String(sha)).filter((sha) => validShas.has(sha))
@@ -324,10 +447,10 @@ function validateRenderedEntry(candidate, commitShas) {
         };
       }).filter((item) => item.text),
     };
-  }).filter((section) => section.items.length > 0);
+  }).filter((entry) => entry.items.length > 0);
 
-  if (sections.length === 0) {
-    throw new Error("No valid sections returned");
+  if (entries.length === 0) {
+    throw new Error("No valid entries returned");
   }
 
   return {
@@ -337,7 +460,7 @@ function validateRenderedEntry(candidate, commitShas) {
     version: candidate.version ? String(candidate.version) : null,
     title: candidate.title.trim(),
     intro: candidate.intro.trim(),
-    sections,
+    entries,
     highlights: Array.isArray(candidate.highlights)
       ? candidate.highlights.map((value) => String(value).trim()).filter(Boolean).slice(0, 5)
       : [],
@@ -347,14 +470,16 @@ function validateRenderedEntry(candidate, commitShas) {
 
 async function generateWithAnthropic(bundle) {
   const systemPrompt = [
-    "You are writing a polished daily product changelog entry for Aura.",
-    "Aim for release-sized editorial notes with a strong title, a short intro, grouped sections, and concise outcome-oriented bullets.",
-    "Use the release metadata, commit history, file-level context, and selected diff excerpts to produce a user-facing changelog entry.",
+    "You are writing a polished daily product changelog timeline for Aura.",
+    "Aim for a day page with multiple time-stamped headline entries rather than one giant headline.",
+    "Use the release metadata, batched commit history, file-level context, and selected diff excerpts to produce user-facing timeline entries.",
     "Write like a product editor, not like a git log summarizer.",
     "Focus on meaningful product, developer-experience, release, reliability, and platform changes.",
     "Prefer concrete user-visible or operator-visible outcomes over implementation details.",
+    "Each timeline entry should correspond to one batched theme and time window.",
+    "Do not merge work that is far apart in time just because it shares a topic.",
     "Use commit messages and diffs together; do not rely on commit titles alone.",
-    "Merge related commits into a single stronger bullet when they contribute to the same outcome.",
+    "Merge related commits inside a batch into stronger outcome-oriented bullets.",
     "It is good for one bullet to cite multiple commit SHAs when the work spans several commits.",
     "Do not mirror one commit per bullet unless the change is truly distinct and important.",
     "Do not reuse commit-title phrasing when a clearer outcome-oriented sentence is possible.",
@@ -367,21 +492,21 @@ async function generateWithAnthropic(bundle) {
   ].join(" ");
 
   const userPrompt = [
-    "Create a daily changelog entry for Aura from the following release bundle.",
+    "Create a daily changelog timeline for Aura from the following release bundle.",
     "",
     "Target audience:",
     "- users checking what changed today",
     "- internal team members scanning release progress",
     "",
     "Desired style:",
-    "- one strong title",
-    "- one short intro paragraph",
-    "- 2 to 5 sections",
-    "- each section should contain 2 to 6 concise bullets",
-    "- bullets should be specific and meaningful",
-    "- if there are important release or reliability changes, include them",
+    "- one compact day title",
+    "- one short day intro paragraph",
+    "- 2 to 6 time-stamped timeline entries",
+    "- each timeline entry should have a headline, short summary, and 1 to 4 concise bullets",
+    "- entries should be specific and meaningful",
+    "- if there are important release or reliability changes, include them as their own timeline entries",
     "- write like an editorial product changelog, not a cleaned-up commit dump",
-    "- use coherent release themes, polished phrasing, and compact but meaningful sections",
+    "- use coherent release themes, polished phrasing, and compact but meaningful entries",
     "",
     "JSON schema:",
     "{",
@@ -391,10 +516,14 @@ async function generateWithAnthropic(bundle) {
     '  "version": "string|null",',
     '  "title": "string",',
     '  "intro": "string",',
-    '  "sections": [',
+    '  "entries": [',
     "    {",
-    '      "title": "string",',
-    '      "items": [',
+    '      "time_label": "string",',
+    '      "started_at": "ISO-8601 string",',
+    '      "ended_at": "ISO-8601 string",',
+      '      "title": "string",',
+    '      "summary": "string",',
+      '      "items": [',
     "        {",
     '          "text": "string",',
     '          "commit_shas": ["string"],',
@@ -413,6 +542,8 @@ async function generateWithAnthropic(bundle) {
     "- Prefer fewer, stronger bullets over many weak ones.",
     "- A bullet may cite multiple commit SHAs when several commits combine into one shipped outcome.",
     "- Prefer summarizing the combined effect of related work over listing commit-by-commit changes.",
+    "- Keep each timeline entry faithful to its provided batch and time window.",
+    "- Do not merge two distant batches into one headline just because they share a topic.",
     "- Do not repeat raw commit titles or conventional-commit phrasing unless the exact wording is genuinely the clearest option.",
     "- Exclude merge commits and low-signal maintenance unless they materially affected shipping, reliability, or user experience.",
     "- Do not mention tests, formatting, or internal cleanup unless they clearly improved user-facing behavior or release confidence.",
@@ -493,9 +624,10 @@ function renderMarkdown(doc) {
 
   lines.push("", doc.rendered.intro, "");
 
-  for (const section of doc.rendered.sections) {
-    lines.push(`## ${section.title}`, "");
-    for (const item of section.items) {
+  for (const entry of doc.rendered.entries) {
+    lines.push(`## ${entry.time_label} — ${entry.title}`, "");
+    lines.push(entry.summary, "");
+    for (const item of entry.items) {
       const suffix = item.commit_shas.length ? ` (${item.commit_shas.map((sha) => `\`${sha.slice(0, 7)}\``).join(", ")})` : "";
       lines.push(`- ${item.text}${suffix}`);
     }
@@ -565,6 +697,7 @@ if (allCommits.length === 0) {
 
 const allCommitShas = allCommits.map((commit) => commit.sha);
 const sortedAreas = summarizeAreas(allCommits);
+const timeBatches = batchCommits(allCommits, timeZone);
 const selectedCommitExcerpts = [...allCommits]
   .sort((a, b) => scoreCommit(b) - scoreCommit(a))
   .slice(0, 8)
@@ -596,15 +729,23 @@ const bundle = {
   total_daily_commit_count: allCommits.length,
   aggregate_stats: aggregateStats,
   top_areas: sortedAreas,
-  commits: allCommits.map((commit) => ({
-    sha: commit.sha,
-    committed_at: commit.committedAt,
-    subject: commit.subject,
-    body: commit.body,
-    primary_area: commit.primaryArea,
-    areas: commit.areas,
-    files: commit.files.slice(0, 20),
-    stats: commit.stats,
+  batches: timeBatches.map((batch) => ({
+    id: batch.id,
+    time_label: batch.time_label,
+    started_at: batch.started_at,
+    ended_at: batch.ended_at,
+    commit_count: batch.commits.length,
+    top_areas: batch.area_summary,
+    commits: batch.commits.map((commit) => ({
+      sha: commit.sha,
+      committed_at: commit.committedAt,
+      subject: commit.subject,
+      body: commit.body,
+      primary_area: commit.primaryArea,
+      areas: commit.areas,
+      files: commit.files.slice(0, 20),
+      stats: commit.stats,
+    })),
   })),
   selected_patch_excerpts: selectedCommitExcerpts,
   release_artifacts: artifactSummaries,
@@ -631,6 +772,8 @@ if (!rendered) {
     repo: repoName,
     channel,
     currentVersion: version,
+    batches: timeBatches,
+    tz: timeZone,
   });
 }
 
@@ -650,6 +793,7 @@ const doc = {
   commitShas: allCommitShas,
   rawCommitCount: allCommits.length,
   rawCommits: allCommits,
+  batchCount: timeBatches.length,
   artifactSummaries,
   rendered,
 };
@@ -675,6 +819,7 @@ const indexEntries = fs.readdirSync(historyDir)
       version: entry.version,
       title: entry.rendered?.title || "",
       intro: entry.rendered?.intro || "",
+      entryCount: Array.isArray(entry.rendered?.entries) ? entry.rendered.entries.length : 0,
       highlights: Array.isArray(entry.rendered?.highlights) ? entry.rendered.highlights : [],
       rawCommitCount: entry.rawCommitCount || 0,
       generatedAt: entry.generatedAt,

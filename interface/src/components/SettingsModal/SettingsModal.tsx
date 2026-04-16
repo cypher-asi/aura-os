@@ -27,6 +27,7 @@ export function SettingsModal({
     showUpdater,
     privacyPolicyUrl,
     supportUrl,
+    handleCheckForUpdates,
     handleChannelChange,
     handleInstallUpdate,
   } =
@@ -97,6 +98,18 @@ export function SettingsModal({
                 )}
 
                 <div className={styles.updateActions}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void handleCheckForUpdates()}
+                    disabled={
+                      updateState?.status === "checking" ||
+                      updateState?.status === "downloading" ||
+                      updateState?.status === "installing"
+                    }
+                  >
+                    Check for updates
+                  </Button>
                   <Button
                     variant="secondary"
                     size="sm"

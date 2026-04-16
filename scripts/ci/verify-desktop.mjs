@@ -19,7 +19,13 @@ assertDesktopRuntime({ requireHarness: true });
 run("npm", ["ci"], { cwd: interfaceDir });
 run("node", ["infra/scripts/release/prepare-desktop-sidecar.mjs"], { cwd: repoRoot });
 run("npm", ["run", "build"], { cwd: interfaceDir });
-run("cargo", ["build", "--release", "--package", "aura-os-desktop"], {
+const cargoArgs = ["build", "--release", "--package", "aura-os-desktop"];
+
+if (process.env.AURA_CARGO_TIMINGS === "1") {
+  cargoArgs.push("--timings");
+}
+
+run("cargo", cargoArgs, {
   cwd: repoRoot,
   env: {
     ...process.env,

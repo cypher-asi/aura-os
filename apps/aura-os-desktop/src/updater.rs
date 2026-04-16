@@ -454,6 +454,8 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
         return;
     }
 
+    set_status(&state.status, UpdateStatus::Checking);
+
     tokio::spawn(async move {
         let channel = *state.channel.read().expect("updater channel lock poisoned");
         let status = Arc::clone(&state.status);

@@ -956,6 +956,10 @@ fn spawn_server(
                     axum_post(handlers::post_update_install).with_state(update_state.clone()),
                 )
                 .route(
+                    "/api/update-check",
+                    axum_post(handlers::post_update_check).with_state(update_state.clone()),
+                )
+                .route(
                     "/api/update-channel",
                     axum_post(handlers::post_update_channel).with_state(update_state.clone()),
                 )

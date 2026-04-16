@@ -90,6 +90,7 @@ vi.mock("../../stores/ui-modal-store", () => ({
     hostSettingsOpen: false,
     openHostSettings: vi.fn(),
     closeHostSettings: vi.fn(),
+    openSettings: vi.fn(),
   }),
 }));
 

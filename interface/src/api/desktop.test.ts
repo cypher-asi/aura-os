@@ -164,6 +164,16 @@ describe("desktopApi", () => {
     );
   });
 
+  it("checkForUpdates sends POST /api/update-check", async () => {
+    const fetchMock = mockFetch(200, { ok: true });
+    globalThis.fetch = fetchMock;
+    await desktopApi.checkForUpdates();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/update-check",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("setUpdateChannel sends POST with channel", async () => {
     const fetchMock = mockFetch(200, { ok: true, channel: "nightly" });
     globalThis.fetch = fetchMock;
