@@ -60,4 +60,74 @@ describe("LLMOutput", () => {
     const { container } = render(<LLMOutput content="test" className="custom" />);
     expect(container.firstChild).toHaveClass("custom");
   });
+
+  it("keeps finalized list/delete/get tools collapsed in a just-finalized bubble", () => {
+    const toolCalls: ToolCallEntry[] = [
+      {
+        id: "t1",
+        name: "list_specs",
+        input: { project_id: "p1" },
+        pending: false,
+        result: '{"ok":true,"specs":[{"title":"01: Hello World"}]}',
+      },
+      {
+        id: "t2",
+        name: "delete_spec",
+        input: { spec_id: "abc" },
+        pending: false,
+        result: '{"ok":true}',
+      },
+    ];
+    const timeline: TimelineItem[] = [
+      { kind: "tool", toolCallId: "t1", id: "tl1" },
+      { kind: "tool", toolCallId: "t2", id: "tl2" },
+    ];
+    render(
+      <LLMOutput
+        content=""
+        timeline={timeline}
+        toolCalls={toolCalls}
+        defaultActivitiesExpanded
+      />,
+    );
+
+    const headers = screen.getAllByRole("button");
+    for (const header of headers) {
+      expect(header).toHaveAttribute("aria-expanded", "false");
+    }
+  });
+
+  it("auto-expands create_spec and write_file so live preview stays visible after finalize", () => {
+    const toolCalls: ToolCallEntry[] = [
+      {
+        id: "s1",
+        name: "create_spec",
+        input: { title: "Hello", markdown_contents: "# Hi" },
+        pending: false,
+      },
+      {
+        id: "w1",
+        name: "write_file",
+        input: { path: "src/a.ts", content: "export {}" },
+        pending: false,
+      },
+    ];
+    const timeline: TimelineItem[] = [
+      { kind: "tool", toolCallId: "s1", id: "tl1" },
+      { kind: "tool", toolCallId: "w1", id: "tl2" },
+    ];
+    render(
+      <LLMOutput
+        content=""
+        timeline={timeline}
+        toolCalls={toolCalls}
+        defaultActivitiesExpanded
+      />,
+    );
+
+    const headers = screen.getAllByRole("button");
+    for (const header of headers) {
+      expect(header).toHaveAttribute("aria-expanded", "true");
+    }
+  });
 });
