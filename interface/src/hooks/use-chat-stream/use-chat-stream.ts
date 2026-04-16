@@ -32,6 +32,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const { refs, setters, abortRef } = core;
   const pendingSpecIdsRef = useRef<string[]>([]);
   const pendingTaskIdsRef = useRef<string[]>([]);
+  const nextSendStartsNewSessionRef = useRef(false);
 
   useEffect(() => () => {
     if (!getIsStreaming(core.key)) sidekickRef.current.setStreamingAgentInstanceId(null);
@@ -80,7 +81,20 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
             : trimmed;
           await generate3dStream(imgUrl, trimmed, handler, controller.signal, projectId);
         } else {
-          await api.sendEventStream(projectId, agentInstanceId, userMsg.content, action, selectedModel, attachments, handler, controller.signal, commands);
+          const shouldStartNewSession = nextSendStartsNewSessionRef.current;
+          nextSendStartsNewSessionRef.current = false;
+          await api.sendEventStream(
+            projectId,
+            agentInstanceId,
+            userMsg.content,
+            action,
+            selectedModel,
+            attachments,
+            handler,
+            controller.signal,
+            commands,
+            shouldStartNewSession,
+          );
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -111,5 +125,13 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
     }
   }, [projectId, agentInstanceId, core.baseStopStreaming]);
 
-  return { streamKey: core.key, sendMessage, stopStreaming, resetEvents: core.resetEvents };
+  return {
+    streamKey: core.key,
+    sendMessage,
+    stopStreaming,
+    resetEvents: core.resetEvents,
+    markNextSendAsNewSession: () => {
+      nextSendStartsNewSessionRef.current = true;
+    },
+  };
 }

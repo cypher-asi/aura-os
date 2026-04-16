@@ -32,6 +32,7 @@ type ChatHistoryState = {
   ) => Promise<void>;
   prefetchHistory: (key: string, fetchFn: () => Promise<SessionEvent[]>) => void;
   invalidateHistory: (key: string) => void;
+  clearHistory: (key: string) => void;
 };
 
 const HISTORY_TTL_MS = 30_000;
@@ -137,6 +138,26 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         },
       };
     });
+  },
+
+  clearHistory: (key): void => {
+    void queryClient.removeQueries({
+      queryKey: chatHistoryQueryKeys.history(key),
+      exact: true,
+    });
+    useMessageStore.getState().clearThread(key);
+    set((s) => ({
+      entries: {
+        ...s.entries,
+        [key]: {
+          events: EMPTY_EVENTS,
+          status: "ready",
+          fetchedAt: Date.now(),
+          error: null,
+          lastMessageAt: null,
+        },
+      },
+    }));
   },
 }));
 

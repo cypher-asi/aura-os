@@ -1,6 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
+import { EventType } from "../types/aura-events";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -91,28 +92,33 @@ describe("useAgentChatStream", () => {
   it("calls onTaskSaved callback", async () => {
     const onTaskSaved = vi.fn();
     vi.mocked(api.agents.sendEventStream).mockImplementation(
-      async (_id, _content, _action, _model, _attachments, callbacks) => {
-        callbacks?.onTaskSaved?.({
-          task_id: "t-1",
-          project_id: "p-1",
-          spec_id: "s-1",
-          title: "Test",
-          description: "",
-          status: "pending",
-          order_index: 0,
-          dependency_ids: [],
-          parent_task_id: null,
-          assigned_agent_instance_id: null,
-          completed_by_agent_instance_id: null,
-          session_id: null,
-          execution_notes: "",
-          files_changed: [],
-          live_output: "",
-          total_input_tokens: 0,
-          total_output_tokens: 0,
-          created_at: "",
-          updated_at: "",
-        });
+      async (_id, _content, _action, _model, _attachments, handler) => {
+        handler?.onEvent({
+          type: EventType.TaskSaved,
+          content: {
+            task: {
+              task_id: "t-1",
+              project_id: "p-1",
+              spec_id: "s-1",
+              title: "Test",
+              description: "",
+              status: "pending",
+              order_index: 0,
+              dependency_ids: [],
+              parent_task_id: null,
+              assigned_agent_instance_id: null,
+              completed_by_agent_instance_id: null,
+              session_id: null,
+              execution_notes: "",
+              files_changed: [],
+              live_output: "",
+              total_input_tokens: 0,
+              total_output_tokens: 0,
+              created_at: "",
+              updated_at: "",
+            },
+          },
+        } as any);
       },
     );
 
@@ -142,5 +148,47 @@ describe("useAgentChatStream", () => {
     const entry = useStreamStore.getState().entries[result.current.streamKey];
     const errorMsgs = entry.events.filter((m) => m.content.includes("Error"));
     expect(errorMsgs).toHaveLength(0);
+  });
+
+  it("marks only the next send as a new session", async () => {
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    act(() => {
+      result.current.markNextSendAsNewSession();
+    });
+
+    await act(async () => {
+      await result.current.sendMessage("first");
+      await result.current.sendMessage("second");
+    });
+
+    expect(api.agents.sendEventStream).toHaveBeenNthCalledWith(
+      1,
+      "agent-1",
+      "first",
+      null,
+      undefined,
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      undefined,
+      undefined,
+      true,
+    );
+    expect(api.agents.sendEventStream).toHaveBeenNthCalledWith(
+      2,
+      "agent-1",
+      "second",
+      null,
+      undefined,
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      undefined,
+      undefined,
+      false,
+    );
   });
 });

@@ -62,28 +62,31 @@ async fn resolve_chat_session(
     jwt: &str,
     project_agent_id: &str,
     project_id: &str,
+    force_new: bool,
 ) -> Option<String> {
-    match storage.list_sessions(project_agent_id, jwt).await {
-        Ok(sessions) => {
-            for session in sessions.iter().rev() {
-                match storage.list_events(&session.id, jwt, Some(1), None).await {
-                    Ok(_) => return Some(session.id.clone()),
-                    Err(e) => {
-                        tracing::debug!(
-                            session_id = %session.id,
-                            error = %e,
-                            "Skipping stale session during resolution"
-                        );
+    if !force_new {
+        match storage.list_sessions(project_agent_id, jwt).await {
+            Ok(sessions) => {
+                for session in sessions.iter().rev() {
+                    match storage.list_events(&session.id, jwt, Some(1), None).await {
+                        Ok(_) => return Some(session.id.clone()),
+                        Err(e) => {
+                            tracing::debug!(
+                                session_id = %session.id,
+                                error = %e,
+                                "Skipping stale session during resolution"
+                            );
+                        }
                     }
                 }
             }
-        }
-        Err(e) => {
-            warn!(
-                %project_agent_id,
-                error = %e,
-                "Failed to list sessions for chat resolution"
-            );
+            Err(e) => {
+                warn!(
+                    %project_agent_id,
+                    error = %e,
+                    "Failed to list sessions for chat resolution"
+                );
+            }
         }
     }
     let req = aura_os_storage::CreateSessionRequest {
@@ -422,12 +425,13 @@ async fn setup_project_chat_persistence(
     project_id: &ProjectId,
     agent_instance_id: &AgentInstanceId,
     jwt: &str,
+    force_new: bool,
 ) -> Option<ChatPersistCtx> {
     let storage = state.storage_client.as_ref()?.clone();
     let jwt = jwt.to_string();
     let pai = agent_instance_id.to_string();
     let pid = project_id.to_string();
-    let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
+    let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid, force_new).await?;
     Some(ChatPersistCtx {
         storage,
         jwt,
@@ -442,6 +446,7 @@ pub(crate) async fn setup_agent_chat_persistence(
     agent_id: &AgentId,
     _agent_name: &str,
     jwt: &str,
+    force_new: bool,
 ) -> Option<ChatPersistCtx> {
     let storage = match state.storage_client.as_ref() {
         Some(s) => s.clone(),
@@ -469,7 +474,7 @@ pub(crate) async fn setup_agent_chat_persistence(
         return None;
     };
 
-    let session_id = match resolve_chat_session(&storage, &jwt, &pai, &pid).await {
+    let session_id = match resolve_chat_session(&storage, &jwt, &pai, &pid, force_new).await {
         Some(sid) => sid,
         None => {
             warn!(%agent_id, %pai, %pid, "agent chat persistence: failed to resolve/create chat session");
@@ -528,7 +533,7 @@ async fn remove_live_session(state: &AppState, key: &str) {
 
 pub(crate) async fn reset_agent_session(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<StatusCode> {
     let session_key = format!("agent:{agent_id}");
@@ -539,17 +544,20 @@ pub(crate) async fn reset_agent_session(
         let mut cache = state.super_agent_messages.lock().await;
         cache.remove(&sa_key);
     }
+    let _ = setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true).await;
     info!(%agent_id, "Agent chat session reset");
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub(crate) async fn reset_instance_session(
     State(state): State<AppState>,
-    AuthJwt(_jwt): AuthJwt,
-    Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<StatusCode> {
     let session_key = format!("instance:{agent_instance_id}");
     remove_live_session(&state, &session_key).await;
+    let _ =
+        setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, true).await;
     info!(%agent_instance_id, "Instance chat session reset");
     Ok(StatusCode::NO_CONTENT)
 }
@@ -753,78 +761,6 @@ async fn find_matching_project_agents(
     matched
 }
 
-async fn collect_session_events(
-    storage: &aura_os_storage::StorageClient,
-    jwt: &str,
-    sessions: &[aura_os_storage::StorageSession],
-) -> EventCollectOutcome {
-    const PAGE_SIZE: u32 = 500;
-
-    let mut messages = Vec::new();
-    let mut failed_sessions = 0usize;
-    let mut first_error: Option<aura_os_storage::StorageError> = None;
-
-    for session in sessions {
-        let mut all_events: Vec<aura_os_storage::StorageSessionEvent> = Vec::new();
-        let mut offset: u32 = 0;
-        let mut failed = false;
-
-        loop {
-            match storage
-                .list_events(&session.id, jwt, Some(PAGE_SIZE), Some(offset))
-                .await
-            {
-                Ok(page) => {
-                    let page_len = page.len() as u32;
-                    all_events.extend(page);
-                    if page_len < PAGE_SIZE {
-                        break;
-                    }
-                    offset += page_len;
-                }
-                Err(e) => {
-                    if all_events.is_empty() {
-                        failed = true;
-                        failed_sessions += 1;
-                        warn!(session_id = %session.id, error = %e, "Failed to list session events");
-                        if first_error.is_none() {
-                            first_error = Some(e);
-                        }
-                    } else {
-                        warn!(session_id = %session.id, %offset, error = %e, "Pagination error listing session events, using partial results");
-                    }
-                    break;
-                }
-            }
-        }
-
-        if !failed {
-            let pai = session.project_agent_id.as_deref().unwrap_or_default();
-            let pid = session.project_id.as_deref().unwrap_or_default();
-            messages.extend(events_to_session_history(&all_events, pai, pid));
-        }
-    }
-    EventCollectOutcome {
-        messages,
-        total_sessions: sessions.len(),
-        failed_sessions,
-        first_error,
-    }
-}
-
-struct EventCollectOutcome {
-    messages: Vec<SessionEvent>,
-    total_sessions: usize,
-    failed_sessions: usize,
-    first_error: Option<aura_os_storage::StorageError>,
-}
-
-impl EventCollectOutcome {
-    fn all_failed(&self) -> bool {
-        self.total_sessions > 0 && self.failed_sessions == self.total_sessions
-    }
-}
-
 #[derive(Debug, Clone, Copy, Deserialize, Default)]
 pub(crate) struct AgentEventsQuery {
     pub limit: Option<usize>,
@@ -923,13 +859,30 @@ async fn fetch_all_sessions(
     }
 }
 
-async fn aggregate_agent_events_from_storage_result(
+fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> &str {
+    session
+        .started_at
+        .as_deref()
+        .or(session.created_at.as_deref())
+        .or(session.updated_at.as_deref())
+        .unwrap_or("")
+}
+
+fn latest_storage_session(
+    sessions: &[aura_os_storage::StorageSession],
+) -> Option<&aura_os_storage::StorageSession> {
+    sessions
+        .iter()
+        .max_by(|left, right| storage_session_sort_key(left).cmp(storage_session_sort_key(right)))
+}
+
+async fn load_latest_agent_events_from_storage_result(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     let Some(ref storage) = state.storage_client else {
-        warn!(%agent_id, "aggregate events: no storage client available");
+        warn!(%agent_id, "latest agent events: no storage client available");
         return Ok(Vec::new());
     };
     let agent_id_str = agent_id.to_string();
@@ -937,7 +890,7 @@ async fn aggregate_agent_events_from_storage_result(
     if matching.is_empty() {
         info!(
             %agent_id,
-            "aggregate events: no matching project agents found — returning empty history"
+            "latest agent events: no matching project agents found — returning empty history"
         );
         return Ok(Vec::new());
     }
@@ -947,7 +900,7 @@ async fn aggregate_agent_events_from_storage_result(
         matched_agents = matching.len(),
         sessions = sessions_outcome.sessions.len(),
         failed_agents = sessions_outcome.failed_agents,
-        "aggregate events: sessions fetched"
+        "latest agent events: sessions fetched"
     );
 
     if sessions_outcome.all_failed() {
@@ -956,17 +909,16 @@ async fn aggregate_agent_events_from_storage_result(
         }
     }
 
-    let mut message_outcome =
-        collect_session_events(storage, &jwt, &sessions_outcome.sessions).await;
-    if message_outcome.all_failed() {
-        if let Some(err) = message_outcome.first_error {
-            return Err(err);
-        }
-    }
-    message_outcome
-        .messages
-        .sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    Ok(message_outcome.messages)
+    let Some(session) = latest_storage_session(&sessions_outcome.sessions) else {
+        return Ok(Vec::new());
+    };
+
+    let storage_events = storage.list_events(&session.id, jwt, None, None).await?;
+    Ok(events_to_session_history(
+        &storage_events,
+        session.project_agent_id.as_deref().unwrap_or_default(),
+        session.project_id.as_deref().unwrap_or_default(),
+    ))
 }
 
 async fn load_project_session_history(
@@ -980,29 +932,27 @@ async fn load_project_session_history(
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await?;
-    let mut outcome = collect_session_events(storage, &jwt, &sessions).await;
-    if outcome.all_failed() {
-        if let Some(err) = outcome.first_error {
-            return Err(err);
-        }
-    }
-    outcome
-        .messages
-        .sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    Ok(outcome.messages)
+    let Some(session) = latest_storage_session(&sessions) else {
+        return Ok(Vec::new());
+    };
+    let storage_events = storage.list_events(&session.id, &jwt, None, None).await?;
+    Ok(events_to_session_history(
+        &storage_events,
+        &agent_instance_id.to_string(),
+        session.project_id.as_deref().unwrap_or_default(),
+    ))
 }
 
-/// Aggregate agent-level messages from aura-storage (all project-agents for
-/// this agent_id -> sessions -> messages).
-pub(crate) async fn aggregate_agent_events_from_storage(
+/// Load the latest persisted session for this standalone agent.
+pub(crate) async fn load_latest_agent_events_from_storage(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
 ) -> Vec<SessionEvent> {
-    match aggregate_agent_events_from_storage_result(state, agent_id, jwt).await {
+    match load_latest_agent_events_from_storage_result(state, agent_id, jwt).await {
         Ok(messages) => messages,
         Err(e) => {
-            warn!(error = %e, %agent_id, "failed to aggregate agent messages from storage");
+            warn!(error = %e, %agent_id, "failed to load latest agent messages from storage");
             Vec::new()
         }
     }
@@ -1015,7 +965,7 @@ pub(crate) async fn list_agent_events(
     Query(query): Query<AgentEventsQuery>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let _ = state.require_storage_client()?;
-    let messages = aggregate_agent_events_from_storage_result(&state, &agent_id, &jwt)
+    let messages = load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt)
         .await
         .map_err(map_storage_error)?;
     Ok(Json(slice_recent_agent_events(
@@ -1060,7 +1010,7 @@ pub(crate) async fn list_agent_events_paginated(
     Query(query): Query<PaginatedEventsQuery>,
 ) -> ApiResult<Json<PaginatedEventsResponse>> {
     let _ = state.require_storage_client()?;
-    let messages = aggregate_agent_events_from_storage_result(&state, &agent_id, &jwt)
+    let messages = load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt)
         .await
         .map_err(map_storage_error)?;
 
@@ -1336,18 +1286,26 @@ async fn handle_super_agent_stream(
     let tool_defs = sas.tool_registry.tool_definitions(&domain_tools);
 
     let session_key = format!("super_agent:{agent_id}");
+    let force_new = body.new_session.unwrap_or(false);
+    if force_new {
+        remove_live_session(state, &session_key).await;
+        let mut cache = state.super_agent_messages.lock().await;
+        cache.remove(&session_key);
+    }
 
     // Load conversation history: prefer in-memory cache (full Claude API
     // format with tool blocks), fall back to storage-based reconstruction
     // for cold starts (e.g. after server restart).
-    let conversation_history: Vec<serde_json::Value> = {
+    let conversation_history: Vec<serde_json::Value> = if force_new {
+        Vec::new()
+    } else {
         let cache = state.super_agent_messages.lock().await;
         if let Some(cached) = cache.get(&session_key) {
             info!(%agent_id, cached_messages = cached.len(), "super agent: loaded conversation from in-memory cache");
             cached.clone()
         } else {
             drop(cache);
-            let stored = aggregate_agent_events_from_storage(state, &agent_id, jwt).await;
+            let stored = load_latest_agent_events_from_storage(state, &agent_id, jwt).await;
             if stored.is_empty() {
                 Vec::new()
             } else {
@@ -1359,7 +1317,8 @@ async fn handle_super_agent_stream(
         }
     };
 
-    let persist_ctx = setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt).await;
+    let persist_ctx =
+        setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt, force_new).await;
     if persist_ctx.is_none() {
         warn!(%agent_id, "super agent chat: persistence context unavailable");
     }
@@ -1457,7 +1416,9 @@ pub(crate) async fn send_agent_event_stream(
         return send_external_agent_event_stream(&state, &jwt, &agent, body).await;
     }
 
-    let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name, &jwt).await;
+    let force_new = body.new_session.unwrap_or(false);
+    let persist_ctx =
+        setup_agent_chat_persistence(&state, &agent_id, &agent.name, &jwt, force_new).await;
     if persist_ctx.is_none() {
         error!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
     } else {
@@ -1465,7 +1426,6 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let session_key = format!("agent:{agent_id}");
-    let force_new = body.new_session.unwrap_or(false);
     if force_new {
         remove_live_session(&state, &session_key).await;
         let sa_key = format!("super_agent:{agent_id}");
@@ -1478,7 +1438,7 @@ pub(crate) async fn send_agent_event_stream(
     let conversation_messages = if force_new {
         None
     } else if !has_live_session(&state, &session_key).await {
-        let stored = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
+        let stored = load_latest_agent_events_from_storage(&state, &agent_id, &jwt).await;
         if stored.is_empty() {
             None
         } else {
@@ -1538,23 +1498,10 @@ pub(crate) async fn list_events(
     AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
-    let storage = state.require_storage_client()?;
-
-    let sessions = storage
-        .list_sessions(&agent_instance_id.to_string(), &jwt)
+    let messages = load_project_session_history(&state, &agent_instance_id, &jwt)
         .await
         .map_err(map_storage_error)?;
-
-    let mut outcome = collect_session_events(&storage, &jwt, &sessions).await;
-    if outcome.all_failed() {
-        if let Some(err) = outcome.first_error {
-            return Err(map_storage_error(err));
-        }
-    }
-    outcome
-        .messages
-        .sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    Ok(Json(outcome.messages))
+    Ok(Json(messages))
 }
 
 pub(crate) async fn send_event_stream(
@@ -1571,11 +1518,11 @@ pub(crate) async fn send_event_stream(
     require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
-    let persist_ctx =
-        setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt).await;
-
     let session_key = format!("instance:{agent_instance_id}");
     let force_new = body.new_session.unwrap_or(false);
+    let persist_ctx =
+        setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt, force_new)
+            .await;
     if force_new {
         remove_live_session(&state, &session_key).await;
     }
@@ -1713,6 +1660,31 @@ fn build_project_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aura_os_storage::StorageSession;
+
+    fn storage_session(
+        id: &str,
+        started_at: Option<&str>,
+        created_at: Option<&str>,
+    ) -> StorageSession {
+        StorageSession {
+            id: id.to_string(),
+            project_agent_id: None,
+            project_id: None,
+            org_id: None,
+            model: None,
+            status: None,
+            context_usage_estimate: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            summary_of_previous_context: None,
+            tasks_worked_count: None,
+            ended_at: None,
+            started_at: started_at.map(str::to_string),
+            created_at: created_at.map(str::to_string),
+            updated_at: None,
+        }
+    }
 
     #[test]
     fn maps_swarm_configuration_errors_to_service_unavailable() {
@@ -1751,5 +1723,25 @@ mod tests {
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(body.0.code, "service_unavailable");
+    }
+
+    #[test]
+    fn latest_storage_session_prefers_newest_started_at() {
+        let older = storage_session("older", Some("2026-04-14T10:00:00Z"), None);
+        let newer = storage_session("newer", Some("2026-04-15T10:00:00Z"), None);
+
+        let selected = latest_storage_session(&[older, newer]).map(|session| session.id.clone());
+
+        assert_eq!(selected.as_deref(), Some("newer"));
+    }
+
+    #[test]
+    fn latest_storage_session_falls_back_to_created_at() {
+        let older = storage_session("older", None, Some("2026-04-14T10:00:00Z"));
+        let newer = storage_session("newer", None, Some("2026-04-15T10:00:00Z"));
+
+        let selected = latest_storage_session(&[older, newer]).map(|session| session.id.clone());
+
+        assert_eq!(selected.as_deref(), Some("newer"));
     }
 }

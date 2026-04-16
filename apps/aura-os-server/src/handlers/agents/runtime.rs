@@ -121,7 +121,8 @@ pub(crate) async fn send_external_agent_event_stream(
 
     let integration = resolve_integration(state, agent, jwt).await?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
-    let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
+    let persist_ctx =
+        setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt, false).await;
     if let Some(ref ctx) = persist_ctx {
         super::chat::persist_user_message(ctx, &body.content, &None);
     }
@@ -189,7 +190,8 @@ async fn send_external_project_agent_event_stream(
         .ok_or_else(|| ApiError::bad_request("External project chat requires a project id"))?;
     let integration = resolve_integration(state, agent, jwt).await?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
-    let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
+    let persist_ctx =
+        setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt, false).await;
     if let Some(ref ctx) = persist_ctx {
         super::chat::persist_user_message(ctx, &body.content, &None);
     }

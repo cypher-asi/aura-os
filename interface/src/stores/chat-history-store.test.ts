@@ -106,6 +106,22 @@ describe("chat-history-store", () => {
     });
   });
 
+  describe("clearHistory", () => {
+    it("replaces cached events with an empty ready entry", async () => {
+      const fetchFn = makeFetchFn([makeMsg("m1")]);
+      await useChatHistoryStore.getState().fetchHistory("k7", fetchFn);
+
+      useChatHistoryStore.getState().clearHistory("k7");
+
+      expect(useChatHistoryStore.getState().entries["k7"]).toMatchObject({
+        events: [],
+        status: "ready",
+        error: null,
+        lastMessageAt: null,
+      });
+    });
+  });
+
   describe("key helpers", () => {
     it("agentHistoryKey", () => {
       expect(agentHistoryKey("a1")).toBe("agent:a1");

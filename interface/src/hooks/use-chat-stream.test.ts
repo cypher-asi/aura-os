@@ -186,4 +186,46 @@ describe("useChatStream", () => {
 
     expect(mockSetStreamingAgentInstanceId).toHaveBeenCalledWith(null);
   });
+
+  it("marks only the next project send as a new session", async () => {
+    const { result } = renderHook(() =>
+      useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
+    );
+
+    act(() => {
+      result.current.markNextSendAsNewSession();
+    });
+
+    await act(async () => {
+      await result.current.sendMessage("first");
+      await result.current.sendMessage("second");
+    });
+
+    expect(api.sendEventStream).toHaveBeenNthCalledWith(
+      1,
+      "p-1",
+      "ai-1",
+      "first",
+      null,
+      undefined,
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      undefined,
+      true,
+    );
+    expect(api.sendEventStream).toHaveBeenNthCalledWith(
+      2,
+      "p-1",
+      "ai-1",
+      "second",
+      null,
+      undefined,
+      undefined,
+      expect.any(Object),
+      expect.any(AbortSignal),
+      undefined,
+      false,
+    );
+  });
 });

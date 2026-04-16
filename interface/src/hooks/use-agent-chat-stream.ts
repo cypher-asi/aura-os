@@ -45,11 +45,13 @@ interface UseAgentChatStreamResult {
   ) => Promise<void>;
   stopStreaming: () => void;
   resetEvents: (msgs: DisplaySessionEvent[], options?: { allowWhileStreaming?: boolean }) => void;
+  markNextSendAsNewSession: () => void;
 }
 
 export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAgentChatStreamOptions): UseAgentChatStreamResult {
   const core = useStreamCore([agentId]);
   const { refs, setters, abortRef } = core;
+  const nextSendStartsNewSessionRef = useRef(false);
 
   const onSpecSavedRef = useRef(onSpecSaved);
   useEffect(() => { onSpecSavedRef.current = onSpecSaved; }, [onSpecSaved]);
@@ -183,6 +185,8 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             : trimmed;
           await generate3dStream(imgUrl, trimmed, handler, controller.signal, projectId);
         } else {
+          const shouldStartNewSession = nextSendStartsNewSessionRef.current;
+          nextSendStartsNewSessionRef.current = false;
           await api.agents.sendEventStream(
             agentId,
             userMsg.content,
@@ -193,6 +197,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             controller.signal,
             commands,
             projectId,
+            shouldStartNewSession,
           );
         }
       } catch (err: unknown) {
@@ -214,5 +219,8 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
     sendMessage,
     stopStreaming: core.baseStopStreaming,
     resetEvents: core.resetEvents,
+    markNextSendAsNewSession: () => {
+      nextSendStartsNewSessionRef.current = true;
+    },
   };
 }

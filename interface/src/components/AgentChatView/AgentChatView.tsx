@@ -11,7 +11,11 @@ import { useDelayedLoading } from "../../hooks/use-delayed-loading";
 import { useAgentChatMeta } from "../../hooks/use-agent-chat-meta";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import { ChatPanel } from "../ChatPanel";
-import { projectChatHistoryKey, agentHistoryKey } from "../../stores/chat-history-store";
+import {
+  projectChatHistoryKey,
+  agentHistoryKey,
+  useChatHistoryStore,
+} from "../../stores/chat-history-store";
 import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { queryClient } from "../../lib/query-client";
@@ -195,7 +199,7 @@ function StandaloneAgentChatPanel({
   useEffect(() => {
     setSelectedProjectId(loadPersistedProject(agentId));
   }, [agentId]);
-  const { streamKey, sendMessage, stopStreaming, resetEvents } = useAgentChatStream({ agentId });
+  const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } = useAgentChatStream({ agentId });
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } = useAgentChatMeta(
     "agent",
     { agentId },
@@ -238,9 +242,11 @@ function StandaloneAgentChatPanel({
 
   const handleNewSession = useCallback(() => {
     api.agents.resetSession(agentId).catch(() => {});
+    useChatHistoryStore.getState().clearHistory(historyKey);
+    markNextSendAsNewSession();
     useContextUsageStore.getState().clearContextUtilization(streamKey);
     resetEvents([], { allowWhileStreaming: true });
-  }, [agentId, streamKey, resetEvents]);
+  }, [agentId, historyKey, markNextSendAsNewSession, streamKey, resetEvents]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -305,7 +311,7 @@ function ProjectAgentChatPanel({
   const currentProject = useProjectsListStore(useShallow(selectCurrentProject(projectId)));
   const projectAgents = useProjectsListStore((state) => state.agentsByProject[projectId] ?? EMPTY_AGENT_INSTANCES);
   const setAgentsByProject = useProjectsListStore((state) => state.setAgentsByProject);
-  const { streamKey, sendMessage, stopStreaming, resetEvents } = useChatStream({
+  const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } = useChatStream({
     projectId,
     agentInstanceId,
   });
@@ -340,9 +346,11 @@ function ProjectAgentChatPanel({
 
   const handleNewSession = useCallback(() => {
     api.resetInstanceSession(projectId, agentInstanceId).catch(() => {});
+    useChatHistoryStore.getState().clearHistory(historyKey);
+    markNextSendAsNewSession();
     useContextUsageStore.getState().clearContextUtilization(streamKey);
     resetEvents([], { allowWhileStreaming: true });
-  }, [projectId, agentInstanceId, streamKey, resetEvents]);
+  }, [projectId, agentInstanceId, historyKey, markNextSendAsNewSession, streamKey, resetEvents]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
     historyKey,
