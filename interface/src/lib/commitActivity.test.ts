@@ -9,7 +9,6 @@ function toHourKey(timestamp: string): string {
 describe("commitActivity", () => {
   it("falls back to commitIds when expanded commit metadata is missing", () => {
     const event = {
-      postType: "push",
       timestamp: "2025-06-01T12:00:00Z",
       commits: [],
       commitIds: ["a1", "b2", "c3"],
@@ -21,19 +20,36 @@ describe("commitActivity", () => {
     });
   });
 
-  it("ignores non-push events and push events without any commit data", () => {
+  it("counts events with commit data regardless of post type", () => {
+    const postEvent = {
+      timestamp: "2025-06-01T12:00:00Z",
+      commits: [{ sha: "abc" }],
+      commitIds: ["abc"],
+    };
+    const otherEvent = {
+      timestamp: "2025-06-01T14:00:00Z",
+      commits: [],
+      commitIds: ["x1", "x2"],
+    };
+
+    const activity = buildCommitActivityFromEvents([postEvent, otherEvent]);
+
+    expect(activity).toEqual({
+      [toHourKey(postEvent.timestamp)]: 1,
+      [toHourKey(otherEvent.timestamp)]: 2,
+    });
+  });
+
+  it("ignores events without any commit data", () => {
     const activity = buildCommitActivityFromEvents([
       {
-        postType: "post",
-        timestamp: "2025-06-01T12:00:00Z",
-        commits: [{ sha: "abc" }],
-        commitIds: ["abc"],
-      },
-      {
-        postType: "push",
         timestamp: "2025-06-01T13:00:00Z",
         commits: [],
         commitIds: [],
+      },
+      {
+        timestamp: "2025-06-01T14:00:00Z",
+        commits: [],
       },
     ]);
 

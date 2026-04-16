@@ -1,12 +1,10 @@
 interface CommitActivityEvent {
-  postType: string;
   timestamp: string;
   commits: Array<unknown>;
   commitIds?: string[];
 }
 
 export function getCommitCount(event: CommitActivityEvent): number {
-  if (event.postType !== "push") return 0;
   if (event.commits.length > 0) return event.commits.length;
   return event.commitIds?.length ?? 0;
 }
