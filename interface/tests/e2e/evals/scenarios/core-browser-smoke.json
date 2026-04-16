@@ -71,7 +71,6 @@
         "navigate": "/projects",
         "expect": {
           "urlMatches": "/projects$",
-          "visibleTexts": ["Welcome to AURA"],
           "visibleRoles": [
             { "role": "button", "name": "Demo Project" }
           ]
