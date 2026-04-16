@@ -13,6 +13,7 @@ interface Props {
   message: DisplaySessionEvent;
   isStreaming?: boolean;
   initialThinkingExpanded?: boolean;
+  initialActivitiesExpanded?: boolean;
 }
 
 const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
@@ -49,6 +50,7 @@ export const MessageBubble = memo(function MessageBubble({
   message,
   isStreaming = false,
   initialThinkingExpanded,
+  initialActivitiesExpanded,
 }: Props) {
   const openBuyCredits = useUIModalStore((state) => state.openBuyCredits);
   const hasContent = message.content && message.content.trim().length > 0;
@@ -107,6 +109,7 @@ export const MessageBubble = memo(function MessageBubble({
             artifactRefs={message.artifactRefs}
             isStreaming={isStreaming}
             defaultThinkingExpanded={initialThinkingExpanded}
+            defaultActivitiesExpanded={initialActivitiesExpanded}
           />
         </div>
       );
@@ -133,6 +136,7 @@ export const MessageBubble = memo(function MessageBubble({
               artifactRefs={message.artifactRefs}
               isStreaming={isStreaming}
               defaultThinkingExpanded={initialThinkingExpanded}
+              defaultActivitiesExpanded={initialActivitiesExpanded}
             />
           </div>
         )}

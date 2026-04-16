@@ -1,74 +1,62 @@
-import { act, render } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ThinkingRow } from "./ThinkingRow";
 
+vi.mock("./ThinkingRow.module.css", () => ({
+  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
 describe("ThinkingRow", () => {
-  let rafCallbacks: Array<FrameRequestCallback>;
-  let rafSpy: ReturnType<typeof vi.spyOn>;
-  let cancelRafSpy: ReturnType<typeof vi.spyOn>;
+  const getWrap = (container: HTMLElement) =>
+    container.querySelector("[aria-hidden]") as HTMLElement | null;
 
-  beforeEach(() => {
-    rafCallbacks = [];
-    rafSpy = vi
-      .spyOn(globalThis, "requestAnimationFrame")
-      .mockImplementation((cb: FrameRequestCallback) => {
-        rafCallbacks.push(cb);
-        return rafCallbacks.length;
-      });
-    cancelRafSpy = vi
-      .spyOn(globalThis, "cancelAnimationFrame")
-      .mockImplementation((id: number) => {
-        rafCallbacks[id - 1] = () => {};
-      });
-  });
+  const isVisible = (container: HTMLElement) =>
+    getWrap(container)?.getAttribute("aria-hidden") === "false";
 
-  afterEach(() => {
-    rafSpy.mockRestore();
-    cancelRafSpy.mockRestore();
-  });
-
-  const flushNextRaf = () => {
-    const next = rafCallbacks.shift();
-    if (next) {
-      act(() => {
-        next(performance.now());
-      });
-    }
-  };
-
-  it("renders thinking content expanded when defaultExpanded is true, then collapses after two RAFs", () => {
-    const { queryByText, getByText } = render(
-      <ThinkingRow
-        text="Considering options"
-        isStreaming={false}
-        defaultExpanded
-      />,
+  it("stays expanded when streaming finishes (no auto-collapse)", () => {
+    const { container, rerender } = render(
+      <ThinkingRow text="Considering options" isStreaming defaultExpanded />,
     );
+    expect(isVisible(container)).toBe(true);
 
-    expect(getByText("Considering options")).toBeInTheDocument();
-
-    flushNextRaf();
-    expect(queryByText("Considering options")).toBeInTheDocument();
-
-    flushNextRaf();
-    expect(queryByText("Considering options")).not.toBeInTheDocument();
+    rerender(
+      <ThinkingRow text="Considering options" isStreaming={false} defaultExpanded />,
+    );
+    expect(isVisible(container)).toBe(true);
   });
 
-  it("renders collapsed from frame 0 for historical (non-streaming, no default) messages", () => {
-    const { queryByText } = render(
+  it("is collapsed from frame 0 for historical (non-streaming, no default) rows", () => {
+    const { container } = render(
       <ThinkingRow text="Considering options" isStreaming={false} />,
     );
-    expect(queryByText("Considering options")).not.toBeInTheDocument();
+    expect(isVisible(container)).toBe(false);
   });
 
   it("stays expanded while streaming", () => {
-    const { getByText } = render(
+    const { container } = render(
       <ThinkingRow text="Considering options" isStreaming />,
     );
-    expect(getByText("Considering options")).toBeInTheDocument();
+    expect(isVisible(container)).toBe(true);
+  });
 
-    flushNextRaf();
-    flushNextRaf();
-    expect(getByText("Considering options")).toBeInTheDocument();
+  it("toggles expansion when the label is clicked", () => {
+    const { container, getByRole } = render(
+      <ThinkingRow text="Considering options" isStreaming={false} />,
+    );
+
+    expect(isVisible(container)).toBe(false);
+    fireEvent.click(getByRole("button"));
+    expect(isVisible(container)).toBe(true);
+    fireEvent.click(getByRole("button"));
+    expect(isVisible(container)).toBe(false);
+  });
+
+  it("keeps the thinking content node mounted even while collapsed", () => {
+    const { getByText } = render(
+      <ThinkingRow text="Hidden but mounted" isStreaming={false} />,
+    );
+    // Node stays in DOM so the grid-template-rows transition can animate
+    // the wrapper height from 0fr <-> 1fr without measuring the content.
+    expect(getByText("Hidden but mounted")).toBeInTheDocument();
   });
 });

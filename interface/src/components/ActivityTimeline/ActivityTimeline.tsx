@@ -18,6 +18,7 @@ interface ActivityTimelineProps {
   toolCalls?: ToolCallEntry[];
   isStreaming: boolean;
   defaultThinkingExpanded?: boolean;
+  defaultActivitiesExpanded?: boolean;
 }
 
 interface RenderedItem {
@@ -33,6 +34,7 @@ export function ActivityTimeline({
   toolCalls,
   isStreaming,
   defaultThinkingExpanded,
+  defaultActivitiesExpanded,
 }: ActivityTimelineProps) {
   const toolCallMap = useMemo(() => {
     const map = new Map<string, ToolCallEntry>();
@@ -62,13 +64,20 @@ export function ActivityTimeline({
     } else if (item.kind === "tool") {
       const entry = toolCallMap.get(item.toolCallId);
       if (!entry) continue;
+      // Just-finalized bubbles (defaultActivitiesExpanded=true) mirror what
+      // the StreamingBubble was showing so the swap is a visual no-op. For
+      // live streaming we expand only pending non-task tools. Historical
+      // bubbles default to collapsed.
+      const defaultToolExpanded = defaultActivitiesExpanded
+        ? entry.name !== "create_task"
+        : entry.pending && entry.name !== "create_task";
       items.push({
         key: item.id,
         kind: "tool",
         node: (
           <ToolCallBlock
             entry={entry}
-            defaultExpanded={entry.pending && entry.name !== "create_task"}
+            defaultExpanded={defaultToolExpanded}
           />
         ),
       });

@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
-const COLLAPSE_ANIM_MS = 120;
-
-type BodyPhase = "open" | "closing" | "closed";
 import { Check, ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { TOOL_LABELS, FILE_OPS, COMMAND_OPS } from "../../constants/tools";
@@ -37,33 +34,31 @@ function buildInputDisplay(entry: ToolCallEntry): Record<string, unknown> {
   };
 }
 
-function renderGenericBody(entry: ToolCallEntry, pendingMessage?: string, closingClass = "") {
+function renderGenericBody(entry: ToolCallEntry, pendingMessage?: string) {
   return (
-    <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
-      <div className={toolStyles.toolBody}>
+    <>
+      <div className={toolStyles.section}>
+        <div className={toolStyles.sectionLabel}>Input</div>
+        <pre className={toolStyles.json}>
+          {JSON.stringify(buildInputDisplay(entry), null, 2)}
+        </pre>
+      </div>
+      {pendingMessage ? (
         <div className={toolStyles.section}>
-          <div className={toolStyles.sectionLabel}>Input</div>
-          <pre className={toolStyles.json}>
-            {JSON.stringify(buildInputDisplay(entry), null, 2)}
+          <div className={toolStyles.sectionLabel}>Status</div>
+          <pre className={toolStyles.json}>{pendingMessage}</pre>
+        </div>
+      ) : entry.result != null ? (
+        <div className={toolStyles.section}>
+          <div className={toolStyles.sectionLabel}>
+            {entry.isError ? "Error" : "Result"}
+          </div>
+          <pre className={`${toolStyles.json} ${entry.isError ? toolStyles.errorText : ""}`}>
+            {formatResult(entry.result)}
           </pre>
         </div>
-        {pendingMessage ? (
-          <div className={toolStyles.section}>
-            <div className={toolStyles.sectionLabel}>Status</div>
-            <pre className={toolStyles.json}>{pendingMessage}</pre>
-          </div>
-        ) : entry.result != null ? (
-          <div className={toolStyles.section}>
-            <div className={toolStyles.sectionLabel}>
-              {entry.isError ? "Error" : "Result"}
-            </div>
-            <pre className={`${toolStyles.json} ${entry.isError ? toolStyles.errorText : ""}`}>
-              {formatResult(entry.result)}
-            </pre>
-          </div>
-        ) : null}
-      </div>
-    </div>
+      ) : null}
+    </>
   );
 }
 
@@ -78,43 +73,17 @@ export function ToolCallBlock({
   const isTask = entry.name === "create_task";
   const isFileOp = FILE_OPS.has(entry.name);
   const isCommand = COMMAND_OPS.has(entry.name);
-  const autoExpand = isFileOp || isCommand ? false : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
-  const [phase, setPhase] = useState<BodyPhase>(autoExpand ? "open" : "closed");
-  const closeTimerRef = useRef<number | null>(null);
-  const wasPendingRef = useRef(entry.pending);
+  // Note: for pending file/command tools the body is force-rendered below
+  // regardless of `expanded` (to show the live preview card), so we can keep
+  // the initial expanded flag consistent with specs for the non-forced case.
+  const initialExpanded = isFileOp || isCommand
+    ? (defaultExpanded ?? false)
+    : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
+  const [expanded, setExpanded] = useState(initialExpanded);
   const label = TOOL_LABELS[entry.name] || entry.name;
-  const expanded = phase === "open";
-  const bodyMounted = phase !== "closed";
-  const isClosing = phase === "closing";
   const inputSummary = (entry.started && (isSpec || isTask)) ? "" : summarizeInput(entry.name, entry.input);
 
-  const openBody = useCallback(() => {
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-    setPhase("open");
-  }, []);
-
-  const closeBody = useCallback(() => {
-    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
-    setPhase((p) => (p === "open" ? "closing" : p));
-    closeTimerRef.current = window.setTimeout(() => {
-      setPhase("closed");
-      closeTimerRef.current = null;
-    }, COLLAPSE_ANIM_MS);
-  }, []);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
-  }, []);
-
-  useEffect(() => {
-    if (wasPendingRef.current && !entry.pending) {
-      closeBody();
-    }
-    wasPendingRef.current = entry.pending;
-  }, [entry.pending, closeBody]);
+  const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   const stateClass = entry.pending
     ? toolStyles.taskActive
@@ -126,88 +95,53 @@ export function ToolCallBlock({
   const hasFilePath = isFileOp && typeof entry.input.path === "string" && (entry.input.path as string).length > 0;
   const showGeneratingHint = entry.pending && !hasPartialContent && !hasFilePath;
 
-  const closingClass = isClosing ? toolStyles.toolBodyCollapsing : "";
+  const SuperAgentCard = getSuperAgentCardRenderer(entry.name);
 
-  const renderBody = () => {
+  // Body stays mounted at all times; collapse/expand is done purely via a
+  // CSS grid-template-rows transition on `.toolBodyWrap`. This lets the
+  // ResizeObserver-driven pin-to-bottom correction track the height change
+  // frame-by-frame during the transition, avoiding the one-frame shrink
+  // that previously produced a visible upward blink.
+  const renderInnerBody = () => {
     if (entry.pending) {
-      if (isSpec) {
-        return (
-          <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
-            <div className={toolStyles.toolBody}>
-              <SpecPreviewCard entry={entry} />
-            </div>
-          </div>
-        );
-      }
-      if (isFileOp) {
-        return (
-          <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
-            <div className={toolStyles.toolBody}>
-              <FilePreviewCard entry={entry} />
-            </div>
-          </div>
-        );
-      }
-      if (!bodyMounted) return null;
-      return renderGenericBody(entry, "Waiting for the tool result.", closingClass);
+      if (isSpec) return <SpecPreviewCard entry={entry} />;
+      if (isFileOp) return <FilePreviewCard entry={entry} />;
+      return renderGenericBody(entry, "Waiting for the tool result.");
     }
     if (isTask) {
-      if (!bodyMounted) return null;
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${toolStyles.noMaxHeight} ${closingClass}`}>
-          <div className={toolStyles.toolBody}>
-            <TaskCreatedIndicator entry={entry} />
-          </div>
-        </div>
-      );
+      return <TaskCreatedIndicator entry={entry} />;
     }
-    if (!bodyMounted) return null;
-    if (isFileOp) {
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
-          <div className={toolStyles.toolBody}>
-            <FilePreviewCard entry={entry} />
-          </div>
-        </div>
-      );
+    if (isFileOp) return <FilePreviewCard entry={entry} />;
+    if (isCommand) return <CommandPreviewCard entry={entry} />;
+    if (isSpec) return <SpecPreviewCard entry={entry} />;
+    if (SuperAgentCard && entry.result) {
+      return <SuperAgentCard entry={entry} />;
     }
-    if (isCommand) {
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
-          <div className={toolStyles.toolBody}>
-            <CommandPreviewCard entry={entry} />
-          </div>
-        </div>
-      );
-    }
-    if (isSpec) {
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
-          <div className={toolStyles.toolBody}>
-            <SpecPreviewCard entry={entry} />
-          </div>
-        </div>
-      );
-    }
-    const SuperAgentCard = getSuperAgentCardRenderer(entry.name);
-    if (SuperAgentCard && !entry.pending && entry.result) {
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded} ${closingClass}`}>
-          <div className={toolStyles.toolBody}>
-            <SuperAgentCard entry={entry} />
-          </div>
-        </div>
-      );
-    }
-    return renderGenericBody(entry, undefined, closingClass);
+    return renderGenericBody(entry);
   };
+
+  // Certain pending live-previews (spec / file-op) must be visible regardless
+  // of the user's current expanded state so the streaming UX isn't broken.
+  // Once the tool completes, the regular expanded toggle takes over.
+  const forceBodyVisible = entry.pending && (isSpec || isFileOp);
+  const bodyVisible = forceBodyVisible || expanded;
+  const isTaskBody = isTask && !entry.pending;
+
+  const wrapClass = [
+    toolStyles.toolBodyWrap,
+    bodyVisible ? toolStyles.toolBodyExpanded : "",
+    isTaskBody ? toolStyles.noMaxHeight : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={`${toolStyles.toolBlock} ${stateClass}`}>
       <button
         className={toolStyles.toolHeader}
-        onClick={() => (expanded ? closeBody() : openBody())}
+        onClick={toggle}
         type="button"
+        aria-expanded={bodyVisible}
       >
         <span className={toolStyles.taskCheck}>
           {!entry.pending && !entry.isError && <Check size={12} strokeWidth={2.5} />}
@@ -222,11 +156,15 @@ export function ToolCallBlock({
         ) : inputSummary ? (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>
         ) : null}
-        <span className={`${toolStyles.toolChevron} ${expanded ? toolStyles.toolChevronExpanded : ""}`}>
+        <span className={`${toolStyles.toolChevron} ${bodyVisible ? toolStyles.toolChevronExpanded : ""}`}>
           <ChevronRight size={12} />
         </span>
       </button>
-      {renderBody()}
+      <div className={wrapClass} aria-hidden={!bodyVisible}>
+        <div className={toolStyles.toolBody}>
+          {renderInnerBody()}
+        </div>
+      </div>
     </div>
   );
 }

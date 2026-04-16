@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ToolCallEntry } from "../../types/stream";
 
 vi.mock("./ToolCallBlock.module.css", () => ({
@@ -133,7 +133,7 @@ describe("ToolCallBlock", () => {
       expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
     });
 
-    it("collapses the detail view when a running action completes", async () => {
+    it("keeps the detail view visible when a running action completes (no auto-collapse)", async () => {
       const entry = makeEntry({
         name: "create_spec",
         started: true,
@@ -165,9 +165,41 @@ describe("ToolCallBlock", () => {
         />,
       );
 
+      // With auto-collapse on pending->done removed, the spec preview stays
+      // visible until the user explicitly toggles the row closed. The
+      // wrapper is expanded (grid-template-rows: 1fr) via the
+      // .toolBodyExpanded class rather than unmounted.
       await waitFor(() => {
-        expect(screen.queryByText("in-progress-spec.md")).not.toBeInTheDocument();
+        expect(screen.getByText("in-progress-spec.md")).toBeInTheDocument();
       });
+      const wrap = document.querySelector(".toolBodyWrap");
+      expect(wrap?.className).toContain("toolBodyExpanded");
+    });
+
+    it("collapses the detail view on user click via aria-expanded toggle", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "create_spec",
+            started: false,
+            pending: false,
+            input: {
+              title: "Done spec",
+              markdown_contents: "# Final",
+            },
+          })}
+          defaultExpanded
+        />,
+      );
+
+      const header = screen.getByRole("button");
+      expect(header).toHaveAttribute("aria-expanded", "true");
+
+      fireEvent.click(header);
+      expect(header).toHaveAttribute("aria-expanded", "false");
+
+      fireEvent.click(header);
+      expect(header).toHaveAttribute("aria-expanded", "true");
     });
   });
 

@@ -102,19 +102,8 @@ export function ChatMessageList({
   const streamingBubbleRef = useRef<HTMLDivElement>(null);
   const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
   const streamingBubbleHeightRef = useRef<number | null>(null);
-  const streamingBubbleHeightRafRef = useRef(0);
   const resizeSettleRafRef = useRef(0);
   const lastResizeSettleRef = useRef(0);
-
-  const scheduleStreamingBubbleHeightSync = useCallback(() => {
-    if (streamingBubbleHeightRafRef.current !== 0) {
-      return;
-    }
-    streamingBubbleHeightRafRef.current = requestAnimationFrame(() => {
-      streamingBubbleHeightRafRef.current = 0;
-      onContentHeightChange?.();
-    });
-  }, [onContentHeightChange]);
 
   const updateMeasuredHeight = useCallback(
     (messageId: string, node: HTMLElement) => {
@@ -128,7 +117,12 @@ export function ChatMessageList({
         previousHeight === undefined
         || Math.abs(previousHeight - nextHeight) >= 1
       ) {
-        onContentHeightChange?.();
+        // Run the pinned-scroll correction synchronously inside the
+        // ResizeObserver callback (before paint). Deferring via rAF leaves
+        // one frame where the new layout is painted against the old
+        // scrollTop, which shows up as a visible jank/blink when the user
+        // toggles a tool/spec body while pinned to bottom.
+        onContentHeightChange?.({ immediate: true });
       }
     },
     [heightCache, onContentHeightChange],
@@ -169,10 +163,10 @@ export function ChatMessageList({
       const previousHeight = streamingBubbleHeightRef.current;
       streamingBubbleHeightRef.current = nextHeight;
       if (previousHeight === null || Math.abs(previousHeight - nextHeight) >= 1) {
-        scheduleStreamingBubbleHeightSync();
+        onContentHeightChange?.({ immediate: true });
       }
     },
-    [scheduleStreamingBubbleHeightSync],
+    [onContentHeightChange],
   );
 
   const setStreamingBubbleRef = useCallback(
@@ -250,10 +244,6 @@ export function ChatMessageList({
       cancelAnimationFrame(resizeSettleRafRef.current);
       resizeSettleRafRef.current = 0;
     }
-    if (streamingBubbleHeightRafRef.current !== 0) {
-      cancelAnimationFrame(streamingBubbleHeightRafRef.current);
-      streamingBubbleHeightRafRef.current = 0;
-    }
   }, []);
 
   useEffect(() => {
@@ -325,6 +315,7 @@ export function ChatMessageList({
                 message={msg}
                 isStreaming={isStreaming && msg.id.startsWith("stream-")}
                 initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
+                initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
               />
             </div>
           );

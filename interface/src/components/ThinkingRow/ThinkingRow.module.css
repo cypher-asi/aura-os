@@ -42,6 +42,29 @@
   100% { background-position: -100% 0; }
 }
 
+/*
+  Height-animated expand/collapse. The wrapper uses the grid-template-rows
+  1fr <-> 0fr technique so the content can shrink smoothly without needing
+  explicit heights. Pin-to-bottom scroll correction (driven by the
+  ResizeObserver in ChatMessageList) tracks each intermediate height before
+  paint, so the collapse appears as a gentle slide instead of a one-frame
+  blink.
+*/
+.thinkingContentWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 160ms ease;
+}
+
+.thinkingContentWrap > * {
+  min-height: 0;
+}
+
+.thinkingContentWrapExpanded {
+  grid-template-rows: 1fr;
+}
+
 .thinkingContent {
   font-size: 13px;
   line-height: 1.6;

@@ -169,6 +169,7 @@ describe("ChatMessageList", () => {
         message: expect.objectContaining({ id: "message-1" }),
         isStreaming: false,
         initialThinkingExpanded: false,
+        initialActivitiesExpanded: false,
       }),
     );
   });
@@ -302,7 +303,7 @@ describe("ChatMessageList", () => {
     });
 
     expect(onContentHeightChange).toHaveBeenCalledTimes(1);
-    expect(onContentHeightChange).toHaveBeenCalledWith();
+    expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
   });
 
   it("marks the just-finalized message as expanded without stuffing the streaming bubble height into the cache", () => {
@@ -378,14 +379,20 @@ describe("ChatMessageList", () => {
       (call) => call[0].message.id === "message-2",
     );
     expect(finalizedCall?.[0]).toEqual(
-      expect.objectContaining({ initialThinkingExpanded: true }),
+      expect.objectContaining({
+        initialThinkingExpanded: true,
+        initialActivitiesExpanded: true,
+      }),
     );
 
     const historicalCall = mockMessageBubble.mock.calls.find(
       (call) => call[0].message.id === "message-1",
     );
     expect(historicalCall?.[0]).toEqual(
-      expect.objectContaining({ initialThinkingExpanded: false }),
+      expect.objectContaining({
+        initialThinkingExpanded: false,
+        initialActivitiesExpanded: false,
+      }),
     );
   });
 });

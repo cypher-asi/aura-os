@@ -47,6 +47,7 @@ export interface LLMOutputProps {
   isStreaming?: boolean;
   className?: string;
   defaultThinkingExpanded?: boolean;
+  defaultActivitiesExpanded?: boolean;
 }
 
 export function LLMOutput({
@@ -59,6 +60,7 @@ export function LLMOutput({
   isStreaming = false,
   className,
   defaultThinkingExpanded,
+  defaultActivitiesExpanded,
 }: LLMOutputProps) {
   const hasContent = content && content.trim().length > 0;
   const hasToolCalls = toolCalls && toolCalls.length > 0;
@@ -88,6 +90,7 @@ export function LLMOutput({
           toolCalls={toolCalls}
           isStreaming={isStreaming}
           defaultThinkingExpanded={defaultThinkingExpanded}
+          defaultActivitiesExpanded={defaultActivitiesExpanded}
         />
       ) : (
         <div className={styles.fallbackStack}>
