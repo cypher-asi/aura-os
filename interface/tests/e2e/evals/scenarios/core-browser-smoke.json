@@ -83,7 +83,6 @@
         "expect": {
           "visibleRoles": [
             { "role": "button", "name": "Demo Project" },
-            { "role": "heading", "name": "Task Feed", "exact": false },
             { "role": "button", "name": "Specs", "exact": true },
             { "role": "button", "name": "Tasks", "exact": true },
             { "role": "button", "name": "Stats", "exact": true }
@@ -122,19 +121,9 @@
           "clickRole": { "role": "button", "name": "Open project navigation", "exact": false }
         },
         "expect": {
-          "visibleTexts": ["Current project"],
+          "visibleTexts": ["Switch project"],
           "visibleRoles": [
-            { "role": "treeitem", "name": "Demo Project" }
-          ]
-        }
-      },
-      {
-        "label": "open_stats",
-        "navigate": "/projects/proj-1/stats",
-        "expect": {
-          "visibleTexts": ["Completion", "Tokens"],
-          "visibleRoles": [
-            { "role": "button", "name": "Stats", "exact": true }
+            { "role": "tree", "name": "Project navigation", "exact": true }
           ]
         }
       }

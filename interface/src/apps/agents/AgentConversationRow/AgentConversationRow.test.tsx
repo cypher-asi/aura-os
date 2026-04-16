@@ -64,7 +64,7 @@ describe("AgentConversationRow", () => {
       />,
     );
 
-    expect(screen.getAllByText("Architect")).toHaveLength(2);
+    expect(screen.getAllByText("Architect")).toHaveLength(1);
     expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
     expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
   });

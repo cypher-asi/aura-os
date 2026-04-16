@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { act, forwardRef, useImperativeHandle, useLayoutEffect, useRef, type ComponentProps, type ForwardedRef } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { ChatPanel } from "./ChatPanel";
 import type { DisplaySessionEvent } from "../../types/stream";
@@ -169,26 +170,26 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Open skills and runtime")).toBeInTheDocument();
   });
 
-  it("can present a switch-style summary affordance on mobile", () => {
+  it("can present a project-count summary affordance on mobile", () => {
     mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
-    const onSwitch = vi.fn();
 
     render(
-      <ChatPanel
-        streamKey="stream-1"
-        onSend={vi.fn()}
-        onStop={vi.fn()}
-        agentName="Coca"
-        machineType="remote"
-        onMobileHeaderSummaryClick={onSwitch}
-        mobileHeaderSummaryHint="Switch active agent · 2 in project"
-        mobileHeaderSummaryLabel="Switch active project agent from Coca"
-        mobileHeaderSummaryKind="switch"
-      />,
+      <MemoryRouter>
+        <ChatPanel
+          streamKey="stream-1"
+          onSend={vi.fn()}
+          onStop={vi.fn()}
+          agentName="Coca"
+          machineType="remote"
+          mobileHeaderSummaryTo="/projects/proj-1/agents/agent-inst-1/details"
+          mobileHeaderSummaryHint="2 agents in project"
+          mobileHeaderSummaryLabel="Open details for Coca"
+        />
+      </MemoryRouter>,
     );
 
-    expect(screen.getByRole("button", { name: "Switch active project agent from Coca" })).toBeInTheDocument();
-    expect(screen.getByText("Switch active agent · 2 in project")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open details for Coca" })).toBeInTheDocument();
+    expect(screen.getByText("2 agents in project")).toBeInTheDocument();
   });
 
   it("does not show the inline agent header on desktop", () => {

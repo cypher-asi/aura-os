@@ -119,6 +119,35 @@
   padding-bottom: calc(68px + env(safe-area-inset-bottom));
 }
 
+.mobileConnectionBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 12px 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, #f5a524 44%, var(--color-border));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, #f5a524 12%, var(--color-bg-surface)) 0%,
+      color-mix(in srgb, var(--color-bg) 94%, var(--color-bg-surface)) 100%
+    );
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.18);
+}
+
+.mobileConnectionCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobileConnectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .mobileResponsiveControls {
   flex-shrink: 0;
   max-height: min(25vh, 176px);
@@ -290,6 +319,17 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.mobileDrawerHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobileDrawerHeaderActionButton {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mobileDrawerHeaderTitle {
@@ -547,8 +587,25 @@
   line-height: 1.35;
 }
 
+.mobileProjectAgentActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobileProjectAgentActionButton {
+  width: 100%;
+  justify-content: center;
+}
+
 .mobileDrawerEmptyState {
   padding: var(--space-4) var(--space-2);
+}
+
+.mobileCreateOrgModal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .mobileAppSwitcherList {

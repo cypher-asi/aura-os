@@ -12,7 +12,10 @@ interface OrgState {
   members: OrgMember[];
   integrations: OrgIntegration[];
   isLoading: boolean;
-  switchOrg: (orgId: string) => void;
+  orgsError: string | null;
+  membersError: string | null;
+  integrationsError: string | null;
+  switchOrg: (org: Org | string) => void;
   refreshOrgs: () => Promise<void>;
   refreshMembers: () => Promise<void>;
   refreshIntegrations: () => Promise<void>;
@@ -55,13 +58,17 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
   members: [],
   integrations: [],
   isLoading: true,
+  orgsError: null,
+  membersError: null,
+  integrationsError: null,
 
   refreshOrgs: async () => {
     const user = useAuthStore.getState().user;
     if (!user) {
-      set({ isLoading: false });
+      set({ isLoading: false, orgsError: null });
       return;
     }
+    set({ orgsError: null });
     try {
       const list = await api.orgs.list();
       const savedId = localStorage.getItem(ACTIVE_ORG_KEY);
@@ -79,8 +86,14 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
       if (selected) {
         localStorage.setItem(ACTIVE_ORG_KEY, selected.org_id);
       }
+      set({ orgsError: null });
     } catch (err) {
       console.error("Failed to load orgs", err);
+      set({
+        orgsError: err instanceof Error
+          ? err.message
+          : "Could not load organizations from the current host.",
+      });
     } finally {
       set({ isLoading: false });
     }
@@ -89,41 +102,55 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
   refreshMembers: async () => {
     const { activeOrg } = get();
     if (!activeOrg) {
-      set({ members: [] });
+      set({ members: [], membersError: null });
       return;
     }
+    set({ membersError: null });
     try {
       const m = await api.orgs.listMembers(activeOrg.org_id);
-      set({ members: m });
+      set({ members: m, membersError: null });
     } catch (err) {
       console.error("Failed to load members", err);
+      set({
+        membersError: err instanceof Error
+          ? err.message
+          : "Could not load organization members from the current host.",
+      });
     }
   },
 
   refreshIntegrations: async () => {
     const { activeOrg } = get();
     if (!activeOrg) {
-      set({ integrations: [] });
+      set({ integrations: [], integrationsError: null });
       return;
     }
+    set({ integrationsError: null });
     try {
       const integrations = await api.orgs.listIntegrations(activeOrg.org_id);
-      set({ integrations });
+      set({ integrations, integrationsError: null });
     } catch (err) {
       console.error("Failed to load integrations", err);
+      set({
+        integrationsError: err instanceof Error
+          ? err.message
+          : "Could not load organization integrations from the current host.",
+      });
     }
   },
 
-  switchOrg: (orgId: string) => {
+  switchOrg: (orgSelection: Org | string) => {
     const { orgs } = get();
-    const org = orgs.find((o) => o.org_id === orgId);
+    const org = typeof orgSelection === "string"
+      ? orgs.find((candidate) => candidate.org_id === orgSelection)
+      : orgSelection;
     if (org) {
       set((state) => ({
         activeOrg: org,
-        members: state.activeOrg?.org_id === orgId ? state.members : [],
-        integrations: state.activeOrg?.org_id === orgId ? state.integrations : [],
+        members: state.activeOrg?.org_id === org.org_id ? state.members : [],
+        integrations: state.activeOrg?.org_id === org.org_id ? state.integrations : [],
       }));
-      localStorage.setItem(ACTIVE_ORG_KEY, orgId);
+      localStorage.setItem(ACTIVE_ORG_KEY, org.org_id);
     }
   },
 
@@ -154,7 +181,16 @@ useAuthStore.subscribe((state) => {
       await useOrgStore.getState().refreshOrgs();
     })();
   } else {
-    useOrgStore.setState({ orgs: [], activeOrg: null, members: [], integrations: [], isLoading: false });
+    useOrgStore.setState({
+      orgs: [],
+      activeOrg: null,
+      members: [],
+      integrations: [],
+      isLoading: false,
+      orgsError: null,
+      membersError: null,
+      integrationsError: null,
+    });
   }
 });
 
@@ -194,6 +230,9 @@ export function useOrg() {
       members: s.members,
       integrations: s.integrations,
       isLoading: s.isLoading,
+      orgsError: s.orgsError,
+      membersError: s.membersError,
+      integrationsError: s.integrationsError,
       switchOrg: s.switchOrg,
       refreshOrgs: s.refreshOrgs,
       refreshMembers: s.refreshMembers,

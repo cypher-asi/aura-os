@@ -4,6 +4,8 @@ import { useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
+import { useAuraCapabilities } from "./hooks/use-aura-capabilities";
+import { MobileOrganizationView } from "./views/MobileOrganizationView";
 import { LoginView } from "./views/LoginView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
@@ -63,6 +65,11 @@ function ShellOutletSuspense() {
   );
 }
 
+function MobileOrganizationRoute() {
+  const { isMobileLayout } = useAuraCapabilities();
+  return isMobileLayout ? <MobileOrganizationView /> : <Navigate to="/projects" replace />;
+}
+
 export default function App() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
 
@@ -113,6 +120,7 @@ export default function App() {
               <Route index element={<LastAppRedirect />} />
 
               <Route path="projects" element={<HomeView />} />
+              <Route path="projects/organization" element={<MobileOrganizationRoute />} />
               <Route path="projects/settings" element={<SettingsView />} />
               <Route path="projects/:projectId" element={<ProjectLayout />}>
                 <Route index element={<ProjectRootRedirectView />} />

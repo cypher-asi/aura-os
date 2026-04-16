@@ -14,10 +14,9 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
   const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
   const showStandaloneAgentLibraryCreate = state.isStandaloneAgentLibraryRoot;
   const showAccountAction =
-    !state.isProjectAgentChatRoute
-    && !state.isProjectAgentManagementRoute
-    && !state.isStandaloneAgentLibraryRoot
-    && !state.isStandaloneAgentDetailRoute;
+    !state.isStandaloneAgentLibraryRoot
+    && !state.isStandaloneAgentDetailRoute
+    && !state.isMobileOrganizationRoute;
 
   return (
     <Topbar
@@ -60,11 +59,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
       }
       title={
         <span className={styles.mobileTopbarTitle}>
-          {state.showProjectTitle && state.showProjectBack ? (
-            <span className={styles.mobileTopbarTitleButton} aria-label={state.currentProject?.name ?? "Project"}>
-              <span className={styles.mobileTopbarTitleText}>{state.currentProject?.name ?? "Project"}</span>
-            </span>
-          ) : state.showProjectTitle ? (
+          {state.showProjectTitle ? (
             <button
               type="button"
               className={styles.mobileProjectTitleButton}
@@ -112,7 +107,20 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
             />
           ) : null}
           {showAccountAction ? (
-            <Button variant="ghost" size="sm" iconOnly icon={<CircleUserRound size={20} />} aria-label="Open account" onClick={() => setAccountOpen(true)} />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<CircleUserRound size={20} />}
+              aria-label="Open account"
+              onClick={() => {
+                if (state.isPhoneLayout) {
+                  navigate("/projects/organization");
+                  return;
+                }
+                setAccountOpen(true);
+              }}
+            />
           ) : null}
         </div>
       }

@@ -2,14 +2,20 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Project, AgentInstance } from "../types";
 import { queryClient } from "../lib/query-client";
 
-const { mockApi, mockSessionStorage } = vi.hoisted(() => {
+const { mockApi, mockSessionStorage, mockLocalStorage, mockOrgStoreState } = vi.hoisted(() => {
   const mockSessionStorage: Record<string, string> = {};
+  const mockLocalStorage: Record<string, string> = {};
+  const mockOrgStoreState: { activeOrg: { org_id: string } | null } = {
+    activeOrg: null,
+  };
   return {
     mockApi: {
       listProjects: vi.fn().mockResolvedValue([]),
       listAgentInstances: vi.fn().mockResolvedValue([]),
     },
     mockSessionStorage,
+    mockLocalStorage,
+    mockOrgStoreState,
   };
 });
 
@@ -17,7 +23,7 @@ vi.mock("../api/client", () => ({ api: mockApi }));
 
 vi.mock("./org-store", () => ({
   useOrgStore: {
-    getState: () => ({ activeOrg: null }),
+    getState: () => mockOrgStoreState,
     subscribe: vi.fn(() => vi.fn()),
     setState: vi.fn(),
   },
@@ -35,12 +41,10 @@ vi.stubGlobal("sessionStorage", {
   removeItem: (key: string) => { delete mockSessionStorage[key]; },
 });
 
-const localStorageStore: Record<string, string> = {};
-
 vi.stubGlobal("localStorage", {
-  getItem: vi.fn((key: string) => localStorageStore[key] ?? null),
-  setItem: vi.fn((key: string, val: string) => { localStorageStore[key] = val; }),
-  removeItem: vi.fn((key: string) => { delete localStorageStore[key]; }),
+  getItem: vi.fn((key: string) => mockLocalStorage[key] ?? null),
+  setItem: vi.fn((key: string, val: string) => { mockLocalStorage[key] = val; }),
+  removeItem: vi.fn((key: string) => { delete mockLocalStorage[key]; }),
 });
 
 import {
@@ -49,6 +53,7 @@ import {
   useProjectsListStore,
   getRecentProjects,
   getMostRecentProject,
+  deriveOrgScopedProjectsState,
 } from "./projects-list-store";
 
 function makeProject(id: string, updatedAt: string): Project {
@@ -97,17 +102,62 @@ beforeEach(() => {
   queryClient.clear();
   useProjectsListStore.setState({
     projects: [],
+    projectsOrgId: null,
     loadingProjects: true,
+    projectsError: null,
     agentsByProject: {},
     loadingAgentsByProject: {},
     newProjectModalOpen: false,
   });
+  mockOrgStoreState.activeOrg = null;
   for (const key of Object.keys(mockSessionStorage)) delete mockSessionStorage[key];
-  for (const key of Object.keys(localStorageStore)) delete localStorageStore[key];
+  for (const key of Object.keys(mockLocalStorage)) delete mockLocalStorage[key];
   vi.clearAllMocks();
 });
 
 describe("projects-list-store", () => {
+  describe("deriveOrgScopedProjectsState", () => {
+    it("recovers an org-scoped snapshot from the all-project cache", () => {
+      const orgProject = makeProject("p1", "2025-06-01T00:00:00Z");
+      const otherProject = { ...makeProject("p2", "2025-06-02T00:00:00Z"), org_id: "org-2" };
+      const orgAgent = makeAgentInstance({ project_id: orgProject.project_id });
+      const otherAgent = makeAgentInstance({
+        agent_instance_id: "ai2",
+        project_id: otherProject.project_id,
+      });
+
+      expect(
+        deriveOrgScopedProjectsState(
+          {
+            projects: [orgProject, otherProject],
+            agentsByProject: {
+              [orgProject.project_id]: [orgAgent],
+              [otherProject.project_id]: [otherAgent],
+            },
+          },
+          "org-1",
+        ),
+      ).toEqual({
+        projects: [orgProject],
+        agentsByProject: {
+          [orgProject.project_id]: [orgAgent],
+        },
+      });
+    });
+
+    it("returns null when the fallback cache has no projects for the active org", () => {
+      expect(
+        deriveOrgScopedProjectsState(
+          {
+            projects: [{ ...makeProject("p2", "2025-06-02T00:00:00Z"), org_id: "org-2" }],
+            agentsByProject: {},
+          },
+          "org-1",
+        ),
+      ).toBeNull();
+    });
+  });
+
   describe("initial state", () => {
     it("has empty projects", () => {
       expect(useProjectsListStore.getState().projects).toEqual([]);
@@ -115,6 +165,10 @@ describe("projects-list-store", () => {
 
     it("is loading projects", () => {
       expect(useProjectsListStore.getState().loadingProjects).toBe(true);
+    });
+
+    it("starts without a projects load error", () => {
+      expect(useProjectsListStore.getState().projectsError).toBeNull();
     });
 
     it("modal is closed", () => {
@@ -139,7 +193,7 @@ describe("projects-list-store", () => {
     });
 
     it("applies a saved local order and appends new projects", () => {
-      localStorageStore["aura-project-order:all"] = JSON.stringify(["p2", "p1"]);
+      mockLocalStorage["aura-project-order:all"] = JSON.stringify(["p2", "p1"]);
 
       const p1 = makeProject("p1", "2025-06-01T00:00:00Z");
       const p2 = makeProject("p2", "2025-06-02T00:00:00Z");
@@ -180,10 +234,12 @@ describe("projects-list-store", () => {
     it("loads and deduplicates projects", async () => {
       const p = makeProject("p1", "2025-06-01T00:00:00Z");
       mockApi.listProjects.mockResolvedValue([p, p]);
+      mockOrgStoreState.activeOrg = { org_id: "org-1" };
 
       await useProjectsListStore.getState().refreshProjects();
 
       expect(useProjectsListStore.getState().projects).toHaveLength(1);
+      expect(useProjectsListStore.getState().projectsOrgId).toBe("org-1");
       expect(useProjectsListStore.getState().loadingProjects).toBe(false);
     });
 
@@ -193,6 +249,7 @@ describe("projects-list-store", () => {
       await useProjectsListStore.getState().refreshProjects();
 
       expect(useProjectsListStore.getState().loadingProjects).toBe(false);
+      expect(useProjectsListStore.getState().projectsError).toBe("fail");
     });
 
     it("refetches even when a cached project list is still fresh", async () => {
@@ -206,11 +263,37 @@ describe("projects-list-store", () => {
       queryClient.setQueryData(["projects", "list", "all"], [cachedProject]);
       useProjectsListStore.setState({ projects: [cachedProject], loadingProjects: false });
       mockApi.listProjects.mockResolvedValue([renamedProject]);
+      mockOrgStoreState.activeOrg = { org_id: "org-1" };
 
       await useProjectsListStore.getState().refreshProjects();
 
       expect(mockApi.listProjects).toHaveBeenCalledTimes(1);
       expect(useProjectsListStore.getState().projects).toEqual([renamedProject]);
+    });
+  });
+
+  describe("org ownership", () => {
+    it("adopts the active org when setting projects for the first time", () => {
+      mockOrgStoreState.activeOrg = { org_id: "org-1" };
+
+      useProjectsListStore.getState().setProjects([makeProject("p1", "2025-06-01T00:00:00Z")]);
+
+      expect(useProjectsListStore.getState().projectsOrgId).toBe("org-1");
+    });
+
+    it("preserves the org ownership of the current project slice during local updates", () => {
+      useProjectsListStore.setState({
+        projects: [makeProject("p1", "2025-06-01T00:00:00Z")],
+        projectsOrgId: "org-1",
+      });
+      mockOrgStoreState.activeOrg = { org_id: "org-2" };
+
+      useProjectsListStore.getState().setProjects((previous) => [
+        ...previous,
+        { ...makeProject("p2", "2025-06-02T00:00:00Z"), org_id: "org-1" },
+      ]);
+
+      expect(useProjectsListStore.getState().projectsOrgId).toBe("org-1");
     });
   });
 

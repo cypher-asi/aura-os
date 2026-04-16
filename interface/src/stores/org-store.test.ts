@@ -82,6 +82,9 @@ beforeEach(() => {
     members: [],
     integrations: [],
     isLoading: true,
+    orgsError: null,
+    membersError: null,
+    integrationsError: null,
   });
   for (const key of Object.keys(mockLocalStorage)) delete mockLocalStorage[key];
   vi.clearAllMocks();
@@ -105,6 +108,12 @@ describe("org-store", () => {
 
     it("starts loading", () => {
       expect(useOrgStore.getState().isLoading).toBe(true);
+    });
+
+    it("starts without load errors", () => {
+      expect(useOrgStore.getState().orgsError).toBeNull();
+      expect(useOrgStore.getState().membersError).toBeNull();
+      expect(useOrgStore.getState().integrationsError).toBeNull();
     });
   });
 
@@ -152,6 +161,7 @@ describe("org-store", () => {
       await useOrgStore.getState().refreshOrgs();
 
       expect(useOrgStore.getState().isLoading).toBe(false);
+      expect(useOrgStore.getState().orgsError).toBe("fail");
     });
   });
 
@@ -203,6 +213,15 @@ describe("org-store", () => {
       useOrgStore.getState().switchOrg("nonexistent");
 
       expect(useOrgStore.getState().activeOrg).toEqual(org1);
+    });
+
+    it("switches activeOrg when given a concrete org object", () => {
+      useOrgStore.setState({ orgs: [org1], activeOrg: org1 });
+
+      useOrgStore.getState().switchOrg(org2);
+
+      expect(useOrgStore.getState().activeOrg).toEqual(org2);
+      expect(mockLocalStorage["aura-active-org"]).toBe("org-2");
     });
   });
 

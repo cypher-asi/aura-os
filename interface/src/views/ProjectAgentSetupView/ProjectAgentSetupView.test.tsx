@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { render, screen, waitFor } from "../../test/render";
@@ -10,6 +11,8 @@ const mockCreateAgent = vi.fn();
 const mockCreateAgentInstance = vi.fn();
 const mockListAgents = vi.fn();
 const mockGetRemoteAgentState = vi.fn();
+const mockSetLastAgent = vi.fn();
+const mockSetLastProject = vi.fn();
 
 const mockProjectsState = {
   projects: [
@@ -37,16 +40,12 @@ vi.mock("@cypher-asi/zui", () => ({
       {children}
     </button>
   ),
-  Input: ({ "aria-label": ariaLabel, value, onChange, placeholder, name, autoComplete }: React.InputHTMLAttributes<HTMLInputElement>) => (
+  Input: React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>((props, ref) => (
     <input
-      aria-label={ariaLabel}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      name={name}
-      autoComplete={autoComplete}
+      ref={ref}
+      {...props}
     />
-  ),
+  )),
   Spinner: () => <div>Loading…</div>,
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
@@ -100,6 +99,11 @@ vi.mock("../../components/Avatar", () => ({
   Avatar: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
+vi.mock("../../utils/storage", () => ({
+  setLastAgent: (...args: unknown[]) => mockSetLastAgent(...args),
+  setLastProject: (...args: unknown[]) => mockSetLastProject(...args),
+}));
+
 vi.mock("./ProjectAgentSetupView.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
@@ -138,9 +142,11 @@ describe("ProjectAgentSetupView", () => {
       { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
     );
 
-    expect(screen.getByText("Create Aura Swarm Agent")).toBeInTheDocument();
-    expect(screen.getByText("Aura-managed billing")).toBeInTheDocument();
+    expect(screen.getByText("Name your remote agent")).toBeInTheDocument();
+    expect(screen.getByText("Managed by Aura")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /Use organization connection/i })).not.toBeInTheDocument();
+    expect(mockListAgents).not.toHaveBeenCalled();
   });
 
   it("submits an Aura-managed swarm create payload", async () => {
@@ -155,8 +161,9 @@ describe("ProjectAgentSetupView", () => {
     );
 
     await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+    await user.click(screen.getByRole("button", { name: "Create Agent" }));
 
     await waitFor(() => {
       expect(mockCreateAgent).toHaveBeenCalledWith(expect.objectContaining({
@@ -184,11 +191,34 @@ describe("ProjectAgentSetupView", () => {
     );
 
     await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+    await user.click(screen.getByRole("button", { name: "Create Agent" }));
 
     await waitFor(() => {
       expect(screen.getByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
+    });
+  });
+
+  it("persists the created agent as the current project agent before handing off to chat", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Agent chat</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.type(screen.getByLabelText("Role"), "Engineer");
+    await user.click(screen.getByRole("button", { name: "Create Agent" }));
+
+    await waitFor(() => {
+      expect(mockSetLastProject).toHaveBeenCalledWith("proj-1");
+      expect(mockSetLastAgent).toHaveBeenCalledWith("proj-1", "agent-inst-9");
     });
   });
 
@@ -208,8 +238,9 @@ describe("ProjectAgentSetupView", () => {
     );
 
     await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+    await user.click(screen.getByRole("button", { name: "Create Agent" }));
 
     await waitFor(() => {
       expect(mockGetRemoteAgentState).toHaveBeenCalledWith("agent-9");
@@ -225,6 +256,95 @@ describe("ProjectAgentSetupView", () => {
     });
   });
 
+  it("submits from the role field when mobile users press Enter", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Agent chat</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.type(screen.getByLabelText("Role"), "Engineer");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect(mockCreateAgent).toHaveBeenCalledWith(expect.objectContaining({
+        name: "Atlas",
+        role: "Engineer",
+      }));
+    });
+  });
+
+  it("reveals and focuses the role field when mobile users continue from name", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    const nameInput = screen.getByLabelText("Name");
+    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
+
+    await user.click(nameInput);
+    await user.type(nameInput, "Atlas{Enter}");
+
+    await waitFor(() => {
+      const roleInput = screen.getByLabelText("Role");
+      expect(roleInput).toBeInTheDocument();
+      expect(roleInput).toHaveFocus();
+    });
+  });
+
+  it("lets mobile users edit the name after moving to the role step", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    const nameInput = screen.getByLabelText("Name");
+
+    await user.type(nameInput, "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText("Atlas")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
+  });
+
+  it("keeps the role step focused on the summary card and role field", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Atlas");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Role")).toBeInTheDocument();
+    expect(screen.getByText("Agent name")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
   it("blocks mobile create when the name contains spaces", async () => {
     const user = userEvent.setup();
 
@@ -236,9 +356,63 @@ describe("ProjectAgentSetupView", () => {
     );
 
     await user.type(screen.getByLabelText("Name"), "Atlas Scout");
-    await user.click(screen.getByRole("button", { name: "Create & Add Agent" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
 
     expect(screen.getByText("Use only letters, numbers, hyphens, or underscores")).toBeInTheDocument();
     expect(mockCreateAgent).not.toHaveBeenCalled();
+  });
+
+  it("does not surface attach-existing loading errors on the create flow", async () => {
+    mockListAgents.mockRejectedValue(new Error("Load failed"));
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("Load failed")).not.toBeInTheDocument();
+    });
+    expect(mockListAgents).not.toHaveBeenCalled();
+  });
+
+  it("limits attach-existing candidates to remote agents in the active org", async () => {
+    mockListAgents.mockResolvedValue([
+      {
+        agent_id: "agent-1",
+        org_id: "org-1",
+        name: "Local teammate",
+        role: "Engineer",
+        machine_type: "local",
+      },
+      {
+        agent_id: "agent-2",
+        org_id: "org-2",
+        name: "Foreign remote",
+        role: "Analyst",
+        machine_type: "remote",
+      },
+      {
+        agent_id: "agent-3",
+        org_id: "org-1",
+        name: "Org remote",
+        role: "Researcher",
+        machine_type: "remote",
+      },
+    ]);
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/existing" element={<ProjectAgentSetupView mode="existing" />} />
+        <Route path="/projects/:projectId/agents/create" element={<div>Create fallback</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/existing"] } },
+    );
+
+    expect(await screen.findByRole("button", { name: /Org remote/i })).toBeInTheDocument();
+    expect(screen.queryByText("Foreign remote")).not.toBeInTheDocument();
+    expect(screen.queryByText("Local teammate")).not.toBeInTheDocument();
   });
 });

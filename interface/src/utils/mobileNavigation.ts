@@ -1,5 +1,6 @@
 export type MobileProjectDestination = "agent" | "execution" | "tasks" | "stats" | "process" | "skills" | "feed" | null;
 export type MobileShellMode = "global" | "project";
+const RESERVED_PROJECT_PATHS = new Set(["organization", "settings"]);
 
 function matchProjectPath(pathname: string) {
   return pathname.match(/^\/projects\/([^/]+)(?:\/(.*))?$/);
@@ -7,7 +8,11 @@ function matchProjectPath(pathname: string) {
 
 export function getProjectIdFromPathname(pathname: string): string | null {
   const match = matchProjectPath(pathname);
-  return match?.[1] ?? null;
+  const projectId = match?.[1] ?? null;
+  if (projectId && RESERVED_PROJECT_PATHS.has(projectId)) {
+    return null;
+  }
+  return projectId;
 }
 
 export function getProjectAgentInstanceIdFromPathname(pathname: string): string | null {
@@ -64,6 +69,7 @@ export function getMobileShellMode(
 ): MobileShellMode {
   if (
     pathname === "/projects"
+    || pathname.startsWith("/projects/organization")
     || pathname.startsWith("/feed")
     || pathname.startsWith("/profile")
   ) {

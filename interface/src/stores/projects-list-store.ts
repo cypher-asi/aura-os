@@ -20,8 +20,8 @@ function getActiveOrgId(): string | undefined {
   return useOrgStore.getState().activeOrg?.org_id;
 }
 
-function syncProjectsQueryCache(projects: Project[]): void {
-  queryClient.setQueryData(projectQueryKeys.list(getActiveOrgId()), dedupeProjects(projects));
+function syncProjectsQueryCache(projects: Project[], orgId: string | null | undefined = getActiveOrgId()): void {
+  queryClient.setQueryData(projectQueryKeys.list(orgId ?? undefined), dedupeProjects(projects));
 }
 
 function syncAgentsQueryCache(agentsByProject: Record<string, AgentInstance[]>): void {
@@ -72,7 +72,9 @@ function getOrderedProjectsForOrg(
 
 interface ProjectsListState {
   projects: Project[];
+  projectsOrgId: string | null;
   loadingProjects: boolean;
+  projectsError: string | null;
   agentsByProject: Record<string, AgentInstance[]>;
   loadingAgentsByProject: Record<string, boolean>;
   newProjectModalOpen: boolean;
@@ -96,6 +98,30 @@ type PersistedProjectsListState = {
   agentsByProject: Record<string, AgentInstance[]>;
 };
 
+export function deriveOrgScopedProjectsState(
+  cached: PersistedProjectsListState | null,
+  orgId: string | null,
+): PersistedProjectsListState | null {
+  if (!cached || !orgId) {
+    return null;
+  }
+
+  const projects = cached.projects.filter((project) => project.org_id === orgId);
+  if (projects.length === 0) {
+    return null;
+  }
+
+  const projectIds = new Set(projects.map((project) => project.project_id));
+  const agentsByProject = Object.fromEntries(
+    Object.entries(cached.agentsByProject).filter(([projectId]) => projectIds.has(projectId)),
+  );
+
+  return {
+    projects,
+    agentsByProject,
+  };
+}
+
 function projectsStateKey(orgId: string | null): string {
   return `state:${orgId ?? "all"}`;
 }
@@ -105,12 +131,23 @@ async function hydratePersistedProjectsState(orgId: string | null): Promise<void
     BROWSER_DB_STORES.projects,
     projectsStateKey(orgId),
   );
-  if (!cached) {
+  const fallbackAllProjects = await browserDbGet<PersistedProjectsListState>(
+    BROWSER_DB_STORES.projects,
+    projectsStateKey(null),
+  );
+  const fallbackOrgProjects = deriveOrgScopedProjectsState(fallbackAllProjects, orgId);
+  const hydrated =
+    cached && (cached.projects.length > 0 || !fallbackOrgProjects)
+      ? cached
+      : fallbackOrgProjects;
+
+  if (!hydrated) {
     return;
   }
   useProjectsListStore.setState({
-    projects: getOrderedProjectsForOrg(cached.projects, orgId),
-    agentsByProject: cached.agentsByProject,
+    projects: getOrderedProjectsForOrg(hydrated.projects, orgId),
+    projectsOrgId: orgId,
+    agentsByProject: hydrated.agentsByProject,
     loadingProjects: false,
   });
 }
@@ -120,7 +157,9 @@ const agentRefreshRequestIds: Record<string, number> = {};
 
 export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
   projects: [],
+  projectsOrgId: null,
   loadingProjects: true,
+  projectsError: null,
   agentsByProject: {},
   loadingAgentsByProject: {},
   newProjectModalOpen:
@@ -128,49 +167,59 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     window.sessionStorage.getItem(NEW_PROJECT_MODAL_STORAGE_KEY) === "1",
 
   setProjects: (updater) => {
-    const orgId = getActiveOrgId() ?? null;
     set((state) => ({
       projects: (() => {
+        const orgId = state.projectsOrgId ?? getActiveOrgId() ?? null;
         const nextProjects =
           typeof updater === "function" ? updater(state.projects) : updater;
         const orderedProjects = getOrderedProjectsForOrg(nextProjects, orgId);
-        syncProjectsQueryCache(orderedProjects);
+        syncProjectsQueryCache(orderedProjects, orgId);
         return orderedProjects;
       })(),
+      projectsOrgId: state.projectsOrgId ?? getActiveOrgId() ?? null,
     }));
   },
 
   saveProjectOrder: (orderedIds) => {
-    const orgId = getActiveOrgId() ?? null;
     set((state) => {
+      const orgId = state.projectsOrgId ?? getActiveOrgId() ?? null;
       const normalizedOrderedIds = normalizeProjectOrderIds(
         state.projects.map((project) => project.project_id),
         orderedIds,
       );
       const nextProjects = applyProjectOrder(state.projects, normalizedOrderedIds);
       setProjectOrder(orgId, normalizedOrderedIds);
-      syncProjectsQueryCache(nextProjects);
-      return { projects: nextProjects };
+      syncProjectsQueryCache(nextProjects, orgId);
+      return { projects: nextProjects, projectsOrgId: orgId };
     });
   },
 
   refreshProjects: async () => {
     const requestId = ++refreshRequestId;
-    const orgId = getActiveOrgId() ?? null;
-    set({ loadingProjects: true });
+    const requestedOrgId = getActiveOrgId() ?? null;
+    set({ loadingProjects: true, projectsError: null });
     try {
       const nextProjects = await queryClient.fetchQuery(
         {
-          ...projectsQueryOptions(orgId ?? undefined),
+          ...projectsQueryOptions(requestedOrgId ?? undefined),
           staleTime: 0,
         },
       );
       if (refreshRequestId === requestId) {
-        set({ projects: getOrderedProjectsForOrg(nextProjects, orgId) });
+        set({
+          projects: getOrderedProjectsForOrg(nextProjects, requestedOrgId),
+          projectsOrgId: requestedOrgId,
+          projectsError: null,
+        });
       }
     } catch (error) {
       if (refreshRequestId === requestId) {
         console.error("Failed to load projects", error);
+        set({
+          projectsError: error instanceof Error
+            ? error.message
+            : "Could not load projects from the current host.",
+        });
       }
     }
     if (refreshRequestId === requestId) {
@@ -352,7 +401,14 @@ useOrgStore.subscribe((state) => {
   }
   _queuedAgentPrefetchIds = [];
   queryClient.removeQueries({ queryKey: projectQueryKeys.root });
-  useProjectsListStore.setState({ agentsByProject: {}, loadingAgentsByProject: {} });
+  useProjectsListStore.setState({
+    projects: [],
+    projectsOrgId: null,
+    agentsByProject: {},
+    loadingAgentsByProject: {},
+    loadingProjects: true,
+    projectsError: null,
+  });
   _knownProjectIds = new Set();
   void (async () => {
     await hydratePersistedProjectsState(orgId);
@@ -378,7 +434,9 @@ useAuthStore.subscribe((state) => {
     _knownProjectIds = new Set();
     useProjectsListStore.setState({
       projects: [],
+      projectsOrgId: null,
       loadingProjects: false,
+      projectsError: null,
       agentsByProject: {},
       loadingAgentsByProject: {},
     });
@@ -392,9 +450,18 @@ useAuthStore.subscribe((state) => {
 });
 
 useProjectsListStore.subscribe((state) => {
+  const snapshotOrgId = state.projectsOrgId;
+  const hasOrgMismatch =
+    snapshotOrgId != null
+      && state.projects.some((project) => project.org_id !== snapshotOrgId);
+
+  if (hasOrgMismatch) {
+    return;
+  }
+
   void browserDbSet(
     BROWSER_DB_STORES.projects,
-    projectsStateKey(getActiveOrgId() ?? null),
+    projectsStateKey(snapshotOrgId),
     {
       projects: state.projects,
       agentsByProject: state.agentsByProject,

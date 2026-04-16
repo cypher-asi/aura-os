@@ -87,6 +87,15 @@ def app_store_api_key
   )
 end
 
+def setup_ci_signing_environment!
+  return unless is_ci
+
+  # fastlane recommends setup_ci on GitHub Actions so match/build_app use a
+  # temporary unlocked keychain instead of whatever the runner session happens
+  # to expose by default.
+  setup_ci
+end
+
 def booted_simulator_id
   devices = JSON.parse(`xcrun simctl list devices booted --json`)
   devices.fetch("devices", {}).values.flatten.find { |device| device["state"] == "Booted" }&.fetch("udid", nil)
@@ -183,12 +192,14 @@ platform :ios do
   desc "Create or refresh App Store signing assets in the match repo"
   lane :bootstrap_signing do
     ensure_app_store_release_requirements!
+    setup_ci_signing_environment!
     sync_signing!(api_key: app_store_api_key, readonly: false)
   end
 
   desc "Build and upload an internal TestFlight build"
   lane :beta do
     ensure_app_store_release_requirements!
+    setup_ci_signing_environment!
     api_key = app_store_api_key
     sync_signing!(api_key: api_key, readonly: is_ci)
     build_store_archive
@@ -204,6 +215,7 @@ platform :ios do
   desc "Build and upload an App Store candidate; optionally submit it for review"
   lane :release do
     ensure_app_store_release_requirements!
+    setup_ci_signing_environment!
     api_key = app_store_api_key
     sync_signing!(api_key: api_key, readonly: is_ci)
     build_store_archive
@@ -231,6 +243,7 @@ platform :ios do
   desc "Build a signed IPA for GitHub distribution without TestFlight/App Store upload"
   lane :github_release do
     ensure_app_store_release_requirements!
+    setup_ci_signing_environment!
     api_key = app_store_api_key
     sync_signing!(api_key: api_key, readonly: is_ci)
     build_store_archive

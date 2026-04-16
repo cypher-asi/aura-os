@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { Button, Input, Spinner, Text } from "@cypher-asi/zui";
 import { ArrowLeft, Cloud, Sparkles } from "lucide-react";
@@ -7,7 +7,6 @@ import { Avatar } from "../../components/Avatar";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { getAgentNameValidationMessage } from "../../lib/agentNameValidation";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
-import { useProjectActions } from "../../stores/project-action-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useOrgStore } from "../../stores/org-store";
 import { queryClient } from "../../lib/query-client";
@@ -15,6 +14,7 @@ import { projectQueryKeys } from "../../queries/project-queries";
 import type { Agent, AgentInstance } from "../../types";
 import { createAgentChatHandoffState } from "../../utils/chat-handoff";
 import { projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
+import { setLastAgent, setLastProject } from "../../utils/storage";
 import styles from "./ProjectAgentSetupView.module.css";
 
 const EMPTY_PROJECT_AGENTS: AgentInstance[] = [];
@@ -79,43 +79,109 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
   const navigate = useNavigate();
   const { isMobileLayout } = useAuraCapabilities();
   const { setAgentsByProject } = useProjectsList();
-  const ctx = useProjectActions();
   const activeOrg = useOrgStore((state) => state.activeOrg);
-  const projects = useProjectsListStore((state) => state.projects);
   const agentsByProject = useProjectsListStore((state) => state.agentsByProject);
   const assignedProjectAgents = useMemo(
     () => (projectId ? agentsByProject[projectId] ?? EMPTY_PROJECT_AGENTS : EMPTY_PROJECT_AGENTS),
     [agentsByProject, projectId],
   );
 
-  const currentProject = ctx?.project
-    ?? projects.find((project) => project.project_id === projectId)
-    ?? null;
   const primaryProjectAgent = assignedProjectAgents[0] ?? null;
 
   const [availableAgents, setAvailableAgents] = useState<Agent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  const [hasResolvedExistingAgents, setHasResolvedExistingAgents] = useState(mode !== "existing");
   const [agentsError, setAgentsError] = useState<string | null>(null);
   const [attachingId, setAttachingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [isRoleStep, setIsRoleStep] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const roleInputRef = useRef<HTMLInputElement>(null);
+  const nameInputId = useId();
+  const roleInputId = useId();
   const assignedAgentIds = useMemo(
     () => new Set(assignedProjectAgents.map((agent) => agent.agent_id)),
     [assignedProjectAgents],
   );
+  const focusInput = useCallback((input: HTMLInputElement | null) => {
+    if (!input) return;
+
+    const moveFocus = () => {
+      input.focus();
+      const caret = input.value.length;
+      try {
+        input.setSelectionRange(caret, caret);
+      } catch {
+        // Ignore input types that do not support selection ranges.
+      }
+    };
+
+    moveFocus();
+
+    if (document.activeElement !== input) {
+      window.requestAnimationFrame(moveFocus);
+      window.setTimeout(moveFocus, 0);
+    }
+  }, []);
+  useEffect(() => {
+    if (isRoleStep) {
+      focusInput(roleInputRef.current);
+      return;
+    }
+
+    focusInput(nameInputRef.current);
+  }, [focusInput, isRoleStep]);
+  const advanceToRoleStep = useCallback(() => {
+    const validationMessage = getAgentNameValidationMessage(name);
+    if (validationMessage) {
+      setFormError(validationMessage);
+      return;
+    }
+
+    setIsRoleStep(true);
+  }, [name]);
+  const flowTitle = isRoleStep ? "Give it a clear role" : "Name your remote agent";
+  const flowDescription = isRoleStep
+    ? "Add a short role so teammates know when to bring this agent in."
+    : "Pick a short name you can recognize quickly when you are working on the go.";
+  const updateName = useCallback((value: string) => {
+    setName(value);
+    setFormError(null);
+  }, []);
+  const updateRole = useCallback((value: string) => {
+    setRole(value);
+    setFormError(null);
+  }, []);
+  const handleNameInput = useCallback((event: ChangeEvent<HTMLInputElement> | FormEvent<HTMLInputElement>) => {
+    updateName(event.currentTarget.value);
+  }, [updateName]);
+  const handleRoleInput = useCallback((event: ChangeEvent<HTMLInputElement> | FormEvent<HTMLInputElement>) => {
+    updateRole(event.currentTarget.value);
+  }, [updateRole]);
 
   useEffect(() => {
     if (!projectId) return;
+    if (mode !== "existing") {
+      setLoadingAgents(false);
+      setHasResolvedExistingAgents(true);
+      setAgentsError(null);
+      setAvailableAgents([]);
+      return;
+    }
+
     let cancelled = false;
     setLoadingAgents(true);
+    setHasResolvedExistingAgents(false);
     setAgentsError(null);
 
     void api.agents.list()
       .then((agents) => {
         if (cancelled) return;
         const visibleRemoteAgents = agents.filter((agent) => (
+          agent.org_id === activeOrg?.org_id &&
           agent.machine_type === "remote" &&
           !assignedAgentIds.has(agent.agent_id)
         ));
@@ -128,16 +194,19 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
       .finally(() => {
         if (!cancelled) {
           setLoadingAgents(false);
+          setHasResolvedExistingAgents(true);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [assignedAgentIds, projectId]);
+  }, [activeOrg?.org_id, assignedAgentIds, mode, projectId]);
 
   const finishAttach = useCallback((instance: AgentInstance) => {
     upsertProjectAgent(instance, setAgentsByProject);
+    setLastProject(instance.project_id);
+    setLastAgent(instance.project_id, instance.agent_instance_id);
     queryClient.setQueryData(
       projectQueryKeys.agentInstance(instance.project_id, instance.agent_instance_id),
       instance,
@@ -203,29 +272,22 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
     return <Navigate to={projectRootPath(projectId)} replace />;
   }
 
-  if (mode === "existing" && !loadingAgents && availableAgents.length === 0) {
+  if (mode === "existing" && hasResolvedExistingAgents && !loadingAgents && availableAgents.length === 0) {
     return <Navigate to={projectAgentCreateRoute(projectId)} replace />;
   }
 
   return (
     <div className={styles.root}>
-      <header className={styles.header}>
-        <div className={styles.sectionLabel}>Project Agent</div>
-        <Text size="lg" weight="medium">
-          {mode === "existing"
-            ? "Choose Existing Agent"
-            : "Create Aura Swarm Agent"}
-        </Text>
-        <Text size="sm" variant="muted">
-          {mode === "existing"
-            ? (currentProject
-              ? `Attach another remote Aura agent to ${currentProject.name}.`
-              : "Attach another remote Aura agent to this project.")
-            : (currentProject
-              ? `Create a new Aura swarm agent for ${currentProject.name}.`
-              : "Create a new Aura swarm agent for this project.")}
-        </Text>
-      </header>
+      {mode === "existing" ? (
+        <header className={styles.header}>
+          <Text size="lg" weight="medium">
+            Add Existing Agent
+          </Text>
+          <Text size="sm" variant="muted">
+            Attach a shared remote agent that is not already in this project.
+          </Text>
+        </header>
+      ) : null}
 
       {primaryProjectAgent && mode === "existing" ? (
         <section className={styles.contextSection}>
@@ -258,8 +320,8 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
               <ArrowLeft size={14} aria-hidden="true" />
               <span>Back to create</span>
             </button>
-            <Text size="sm" weight="medium">Available remote agents</Text>
-            <Text size="xs" variant="muted">Only remote agents that are not already attached appear here.</Text>
+            <Text size="sm" weight="medium">Available Remote Agents</Text>
+            <Text size="xs" variant="muted">Only agents that are not already attached appear here.</Text>
           </div>
           <div className={styles.agentList}>
             {availableAgents.map((agent) => (
@@ -288,11 +350,16 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
       {mode === "create" ? (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <Text size="sm" weight="medium">
-              New Aura swarm agent
+            <div className={styles.flowEyebrow}>
+              <span>{isRoleStep ? "Step 2 of 2" : "Step 1 of 2"}</span>
+              <span aria-hidden="true">·</span>
+              <span>{isRoleStep ? "Role" : "Name"}</span>
+            </div>
+            <Text size="lg" weight="medium">
+              {flowTitle}
             </Text>
-            <Text size="xs" variant="muted">
-              Create a remote Aura agent that uses Aura-managed credentials and billing.
+            <Text size="sm" variant="muted">
+              {flowDescription}
             </Text>
           </div>
 
@@ -304,41 +371,108 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
 
           <>
               <div className={styles.formGrid}>
-                <label className={styles.field}>
-                  <span className={styles.label}>Name</span>
-                  <Input
-                    aria-label="Name"
-                    name="agent-name"
-                    autoComplete="off"
-                    value={name}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                      setFormError(null);
-                    }}
-                    placeholder="e.g. Atlas…"
-                  />
-                </label>
+                {!isRoleStep ? (
+                  <div className={styles.field}>
+                    <label className={styles.label} htmlFor={nameInputId}>Name</label>
+                    <Input
+                      id={nameInputId}
+                      ref={nameInputRef}
+                      aria-label="Name"
+                      name="agent-name"
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      autoFocus
+                      enterKeyHint="next"
+                      inputMode="text"
+                      spellCheck={false}
+                      value={name}
+                      onChange={handleNameInput}
+                      onInput={handleNameInput}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter") {
+                          return;
+                        }
+                        event.preventDefault();
+                        advanceToRoleStep();
+                      }}
+                      placeholder="e.g. Atlas…"
+                    />
+                  </div>
+                ) : null}
 
-                <label className={styles.field}>
-                  <span className={styles.label}>Role</span>
-                  <Input
-                    aria-label="Role"
-                    name="agent-role"
-                    autoComplete="off"
-                    value={role}
-                    onChange={(event) => setRole(event.target.value)}
-                    placeholder="e.g. Senior Developer…"
-                  />
-                </label>
+                {isRoleStep ? (
+                  <div className={styles.summaryCard}>
+                    <div className={styles.summaryHeader}>
+                      <Sparkles size={15} aria-hidden="true" />
+                      <Text size="xs" weight="medium" variant="muted">Agent name</Text>
+                    </div>
+                    <div className={styles.summaryValue}>{name}</div>
+                    <button
+                      type="button"
+                      className={styles.summaryAction}
+                      onClick={() => {
+                        setIsRoleStep(false);
+                      }}
+                    >
+                      <ArrowLeft size={14} aria-hidden="true" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+                ) : null}
+
+                {isRoleStep ? (
+                  <div
+                    className={styles.field}
+                    onClick={(event) => {
+                      if (event.target instanceof HTMLInputElement) {
+                        return;
+                      }
+                      focusInput(roleInputRef.current);
+                    }}
+                  >
+                    <label
+                      className={styles.label}
+                      htmlFor={roleInputId}
+                      onClick={() => focusInput(roleInputRef.current)}
+                    >
+                      Role
+                    </label>
+                    <Input
+                      id={roleInputId}
+                      ref={roleInputRef}
+                      aria-label="Role"
+                      name="agent-role"
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      enterKeyHint="done"
+                      inputMode="text"
+                      spellCheck={false}
+                      value={role}
+                      onChange={handleRoleInput}
+                      onInput={handleRoleInput}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter") {
+                          return;
+                        }
+                        event.preventDefault();
+                        void handleCreate();
+                      }}
+                      placeholder="e.g. Senior Developer…"
+                    />
+                  </div>
+                ) : null}
               </div>
 
-              <div className={styles.inlineSetupSummary}>
-                <Sparkles size={15} aria-hidden="true" />
-                <span>Aura swarm agent</span>
-                <span aria-hidden="true">·</span>
-                <span><Cloud size={14} aria-hidden="true" /> Aura Swarm</span>
-                <span aria-hidden="true">·</span>
-                <span>Aura-managed billing</span>
+              <div className={styles.setupSummaryCard}>
+                <div className={styles.setupSummaryHeader}>
+                  <Cloud size={15} aria-hidden="true" />
+                  <span>Managed by Aura</span>
+                </div>
+                <div className={styles.setupSummaryCopy}>
+                  Runs remotely with Aura-managed credentials, runtime, and billing.
+                </div>
               </div>
           </>
 
@@ -349,11 +483,11 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
             </div>
             <Button
               variant="primary"
-              onClick={handleCreate}
-              disabled={creating || Boolean(attachingId)}
+              onClick={isRoleStep ? handleCreate : advanceToRoleStep}
+              disabled={creating || Boolean(attachingId) || (!isRoleStep && name.trim().length === 0)}
               className={styles.createButton}
             >
-              {creating ? "Creating agent…" : "Create & Add Agent"}
+              {creating ? "Creating Agent…" : isRoleStep ? "Create Agent" : "Next"}
             </Button>
           </div>
         </section>
