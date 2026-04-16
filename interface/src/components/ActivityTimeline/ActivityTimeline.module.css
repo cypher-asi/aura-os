@@ -12,9 +12,9 @@
   margin-top: 4px;
 }
 
-/* Grouped tool calls — slightly tighter than default gap */
+/* Grouped tool calls — flush stack so rows read as a dense checklist */
 .toolGroup {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
 }

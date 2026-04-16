@@ -274,15 +274,31 @@ describe("ToolCallBlock", () => {
     });
   });
 
-  describe("non-spec tools unchanged", () => {
-    it("shows Generating… for a non-spec tool in started state", () => {
+  describe("create_task header summary", () => {
+    it("shows the streamed title instead of Generating… once input.title arrives", () => {
       render(
         <ToolCallBlock
           entry={makeEntry({
             name: "create_task",
             started: true,
             pending: true,
-            input: { title: "Some task" },
+            input: { title: "Set up Dolphin page" },
+          })}
+        />,
+      );
+
+      expect(screen.getByText("Set up Dolphin page")).toBeInTheDocument();
+      expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
+    });
+
+    it("shows Generating… for a pending create_task before the title arrives", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "create_task",
+            started: true,
+            pending: true,
+            input: {},
           })}
         />,
       );
@@ -290,6 +306,44 @@ describe("ToolCallBlock", () => {
       expect(screen.getByText("Generating…")).toBeInTheDocument();
     });
 
+    it("renders the task title in the expanded body for a completed create_task", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "create_task",
+            started: false,
+            pending: false,
+            input: { title: "Ship onboarding flow" },
+          })}
+          defaultExpanded
+        />,
+      );
+
+      expect(screen.getAllByText("Ship onboarding flow").length).toBeGreaterThan(0);
+    });
+
+    it("renders title and description in the expanded body when both are present", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "create_task",
+            started: false,
+            pending: false,
+            input: {
+              title: "Add dark mode",
+              description: "Wire the theme toggle into settings",
+            },
+          })}
+          defaultExpanded
+        />,
+      );
+
+      expect(screen.getAllByText("Add dark mode").length).toBeGreaterThan(0);
+      expect(screen.getByText("Wire the theme toggle into settings")).toBeInTheDocument();
+    });
+  });
+
+  describe("non-spec tools unchanged", () => {
     it("shows pending input details when a non-spec action is expanded", () => {
       render(
         <ToolCallBlock

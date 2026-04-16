@@ -34,7 +34,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 3px 0;
+  padding: 2px 0;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -223,7 +223,6 @@
   color: var(--color-text-secondary);
   font-size: 11px;
   margin-top: 2px;
-  padding-left: 20px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

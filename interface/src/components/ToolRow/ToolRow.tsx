@@ -81,7 +81,8 @@ export function ToolCallBlock({
     : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
   const [expanded, setExpanded] = useState(initialExpanded);
   const label = TOOL_LABELS[entry.name] || entry.name;
-  const inputSummary = (entry.started && (isSpec || isTask)) ? "" : summarizeInput(entry.name, entry.input);
+  const hasTaskTitle = isTask && typeof entry.input.title === "string" && (entry.input.title as string).length > 0;
+  const inputSummary = entry.started && isSpec ? "" : summarizeInput(entry.name, entry.input);
 
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
@@ -93,7 +94,7 @@ export function ToolCallBlock({
 
   const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
   const hasFilePath = isFileOp && typeof entry.input.path === "string" && (entry.input.path as string).length > 0;
-  const showGeneratingHint = entry.pending && !hasPartialContent && !hasFilePath;
+  const showGeneratingHint = entry.pending && !hasPartialContent && !hasFilePath && !hasTaskTitle;
 
   const SuperAgentCard = getSuperAgentCardRenderer(entry.name);
 
