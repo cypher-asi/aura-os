@@ -147,12 +147,22 @@ jobs:
         run: |
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
 
+      - name: Stage Cargo timings
+        if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')
+        shell: bash
+        run: |
+          rm -rf cargo-timings-upload
+          if [ -d ../.aura-shared-target/cargo-timings ]; then
+            mkdir -p cargo-timings-upload
+            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
+          fi
+
       - name: Upload Cargo timings
         if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')
         uses: actions/upload-artifact@v4
         with:
           name: cargo-timings-desktop-validate-${{ matrix.target }}
-          path: ../.aura-shared-target/cargo-timings
+          path: cargo-timings-upload
           if-no-files-found: warn
 
       - name: Install cargo-packager

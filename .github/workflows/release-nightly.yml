@@ -235,12 +235,22 @@ jobs:
         run: |
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
 
+      - name: Stage Cargo timings
+        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
+        shell: bash
+        run: |
+          rm -rf cargo-timings-upload
+          if [ -d ../.aura-shared-target/cargo-timings ]; then
+            mkdir -p cargo-timings-upload
+            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
+          fi
+
       - name: Upload Cargo timings
         if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
         uses: actions/upload-artifact@v4
         with:
           name: cargo-timings-nightly-build-app-${{ matrix.target }}-${{ matrix.arch }}
-          path: ../.aura-shared-target/cargo-timings
+          path: cargo-timings-upload
           if-no-files-found: warn
 
       - name: Archive desktop build inputs
