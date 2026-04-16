@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, ApiClientError } from "../api/client";
+import { api } from "../api/client";
 import { queryClient } from "../lib/query-client";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../queries/project-queries";
 import { useChatHandoffStore } from "../stores/chat-handoff-store";
 import { clearLastAgentIf } from "../utils/storage";
+import { getApiErrorDetails, getApiErrorMessage } from "../utils/api-errors";
 import {
   createAgentChatHandoffState,
   projectAgentHandoffTarget,
@@ -181,13 +182,9 @@ export function useProjectListActions() {
       await refreshProjects();
     } catch (err) {
       console.error("Failed to delete project", err);
-      const message =
-        err instanceof ApiClientError
-          ? err.body.error
-          : err instanceof Error
-            ? err.message
-            : "Failed to delete project.";
-      setDeleteError(message);
+      const message = getApiErrorMessage(err);
+      const details = getApiErrorDetails(err);
+      setDeleteError(details ? `${message} ${details}` : message);
     } finally {
       setDeleteLoading(false);
     }
@@ -220,13 +217,9 @@ export function useProjectListActions() {
       void refreshProjectAgents(pid);
     } catch (err) {
       console.error("Failed to delete agent instance", err);
-      const message =
-        err instanceof ApiClientError
-          ? err.body.error
-          : err instanceof Error
-            ? err.message
-            : "Failed to remove agent.";
-      setDeleteAgentError(message);
+      const message = getApiErrorMessage(err);
+      const details = getApiErrorDetails(err);
+      setDeleteAgentError(details ? `${message} ${details}` : message);
       if (prevAgents) {
         setAgentsByProject((prev) => ({ ...prev, [pid]: prevAgents }));
       }

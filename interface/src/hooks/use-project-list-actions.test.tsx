@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
+import { ApiClientError } from "../api/core";
 import { useProjectListActions } from "./use-project-list-actions";
 import { CREATE_AGENT_CHAT_HANDOFF } from "../utils/chat-handoff";
 
@@ -78,10 +79,13 @@ vi.mock("../api/client", () => ({
     }),
   },
   ApiClientError: class extends Error {
-    body: { error: string };
-    constructor(msg: string) {
-      super(msg);
-      this.body = { error: msg };
+    status: number;
+    body: { error: string; code: string; details: string | null };
+    constructor(status: number, body: { error: string; code: string; details: string | null }) {
+      super(body.error);
+      this.name = "ApiClientError";
+      this.status = status;
+      this.body = body;
     }
   },
 }));
@@ -260,6 +264,89 @@ describe("useProjectListActions", () => {
     expect(updater).toBeTypeOf("function");
     const nextState = updater?.(mockAgentsByProject);
     expect(nextState?.["p-2"]?.[0]?.status).toBe("archived");
+  });
+
+  it("surfaces the unwrapped conflict message when deleting a project with agents", async () => {
+    const nestedBody = JSON.stringify({
+      error: {
+        code: "BAD_REQUEST",
+        message:
+          "Bad request: Cannot delete project with existing project agents. Delete all project agents first.",
+      },
+    });
+    (api.deleteProject as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new ApiClientError(400, { error: nestedBody, code: "network_error", details: null }),
+    );
+
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    act(() => {
+      result.current.setDeleteTarget({
+        project_id: "p-1",
+        org_id: "o-1",
+        name: "My Project",
+        description: "",
+        current_status: "active",
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleDelete();
+    });
+
+    expect(result.current.deleteError).toBe(
+      "Cannot delete project with existing project agents. Delete all project agents first.",
+    );
+  });
+
+  it("surfaces the unwrapped conflict message when deleting an agent instance", async () => {
+    mockAgentsByProject = {
+      "p-1": [
+        { agent_instance_id: "ai-1", project_id: "p-1", status: "idle" },
+      ],
+    };
+    const nestedBody = JSON.stringify({
+      error: {
+        code: "BAD_REQUEST",
+        message: "Bad request: Cannot remove agent instance while it is running.",
+      },
+    });
+    (api.deleteAgentInstance as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new ApiClientError(400, { error: nestedBody, code: "storage_error", details: null }),
+    );
+
+    const { result } = renderHook(() => useProjectListActions(), { wrapper });
+
+    act(() => {
+      result.current.setDeleteAgentTarget({
+        agent_instance_id: "ai-1",
+        project_id: "p-1",
+        agent_id: "a-1",
+        name: "Runner",
+        role: "dev",
+        personality: "",
+        system_prompt: "",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "",
+        updated_at: "",
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleDeleteAgent();
+    });
+
+    expect(result.current.deleteAgentError).toBe(
+      "Cannot remove agent instance while it is running.",
+    );
   });
 
   it("handleProjectSaved updates the projects list", () => {

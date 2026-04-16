@@ -3,6 +3,7 @@ import { processApi } from "../../../../api/process";
 import { api } from "../../../../api/client";
 import { LAST_PROCESS_ID_KEY, useProcessStore } from "../../stores/process-store";
 import type { Project } from "../../../../types";
+import { getApiErrorDetails, getApiErrorMessage } from "../../../../utils/api-errors";
 import type { CtxMenuState, ProcessRecord, ProjectRecord, RenameTargetExt } from "./process-list-types";
 
 export function useProcessContextMenu(
@@ -88,9 +89,9 @@ export function useDeleteProjectHandler(
       setDeleteProjectTarget(null);
       await refreshProjects();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to delete project.";
-      setDeleteProjectError(message);
+      const message = getApiErrorMessage(error);
+      const details = getApiErrorDetails(error);
+      setDeleteProjectError(details ? `${message} ${details}` : message);
     } finally {
       setDeleteProjectLoading(false);
     }
