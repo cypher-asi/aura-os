@@ -129,10 +129,23 @@
 
 @keyframes fadeSlideIn {
   from {
+    opacity: 0;
     transform: translateY(-4px);
   }
   to {
+    opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }
 
@@ -142,6 +155,11 @@
 
 .toolBodyExpanded {
   animation: fadeSlideIn 0.15s ease-out;
+}
+
+.toolBodyCollapsing {
+  animation: fadeSlideOut 0.12s ease-in forwards;
+  pointer-events: none;
 }
 
 .toolBody {
