@@ -56,7 +56,6 @@ impl HarnessLink for LocalHarness {
                 aura_agent_id: config.agent_id.clone(),
                 aura_session_id: config.aura_session_id,
                 aura_org_id: config.aura_org_id,
-                aura_project_id: config.aura_project_id,
                 agent_id: config.agent_id,
                 provider_config: config.provider_config,
             })))
