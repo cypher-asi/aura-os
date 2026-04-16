@@ -64,8 +64,10 @@
 .sidekickPaneHeader {
   display: flex;
   align-items: center;
-  padding: var(--space-2, 8px) var(--space-3, 12px);
-  min-height: 36px;
+  padding: 0 var(--space-3, 12px);
+  height: var(--control-height-sm, 32px);
+  min-height: var(--control-height-sm, 32px);
+  box-sizing: border-box;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
 }

@@ -71,9 +71,13 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 }));
 
 const mockNavigate = vi.fn();
+let mockParams: { projectId?: string; agentInstanceId?: string } = {
+  projectId: "proj-1",
+  agentInstanceId: "agent-inst-1",
+};
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
-  useParams: () => ({ projectId: "proj-1", agentInstanceId: "agent-inst-1" }),
+  useParams: () => mockParams,
 }));
 
 vi.mock("../../hooks/use-terminal-target", () => ({
@@ -146,6 +150,7 @@ beforeEach(() => {
   mockSidekick.showInfo = false;
   linkedWorkspace = true;
   addTerminal.mockClear();
+  mockParams = { projectId: "proj-1", agentInstanceId: "agent-inst-1" };
 });
 
 describe("SidekickHeader", () => {
@@ -239,10 +244,18 @@ describe("SidekickTaskbar", () => {
 });
 
 describe("SidekickContent", () => {
-  it("shows empty state when no project context", () => {
+  it("shows empty state when no project context and not on a project route", () => {
     projectCtx = null;
+    mockParams = {};
     render(<SidekickContent />);
     expect(screen.getByText("Select a project to get started")).toBeInTheDocument();
+  });
+
+  it("renders nothing while project context is still loading on a project route", () => {
+    projectCtx = null;
+    const { container } = render(<SidekickContent />);
+    expect(screen.queryByText("Select a project to get started")).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders task list for tasks tab", () => {

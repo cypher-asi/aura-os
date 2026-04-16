@@ -76,6 +76,7 @@ export function SidekickContent() {
   }, [activeTab]);
 
   if (!ctx) {
+    if (routeProjectId) return null;
     return <EmptyState>Select a project to get started</EmptyState>;
   }
 
