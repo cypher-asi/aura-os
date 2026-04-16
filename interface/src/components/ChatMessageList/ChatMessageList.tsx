@@ -16,7 +16,7 @@ import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 import { useStreamStore } from "../../hooks/stream/store";
 import { useChatResizeSession } from "../ChatPanel/chat-resize-session-context";
 
-const MESSAGE_GAP = 6;
+const MESSAGE_GAP = 2;
 
 interface ChatMessageListProps {
   messages: DisplaySessionEvent[];

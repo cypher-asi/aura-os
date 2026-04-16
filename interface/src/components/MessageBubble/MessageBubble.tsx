@@ -60,15 +60,21 @@ export const MessageBubble = memo(function MessageBubble({
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
   const hasTimeline = message.timeline && message.timeline.length > 0;
   const isInsufficientCreditsError = message.displayVariant === "insufficientCreditsError";
-  // A tool-only assistant bubble holds no prose/thinking/artifacts -- it is
-  // just a slice of the agent's tool-use loop. Drop the bubble padding for
-  // these so consecutive tool-only bubbles stack as a tight checklist
-  // instead of each row floating in its own 28px gap.
+  // Models sometimes emit an empty text block right before a tool_use; that
+  // still leaves contentBlocks non-empty but nothing renderable, so ignore
+  // whitespace-only text blocks when deciding if the bubble carries prose.
+  const hasRenderableBlocks = (message.contentBlocks ?? []).some(
+    (b) => b.type === "image" || (b.type === "text" && b.text.trim().length > 0),
+  );
+  // A tool-only assistant bubble holds no prose/thinking -- it is just a
+  // slice of the agent's tool-use loop. Drop the bubble padding for these
+  // so consecutive tool-only bubbles stack as a tight checklist instead of
+  // each row floating in its own 16px padding box.
   const isAssistantToolOnly =
     message.role === "assistant"
     && !isInsufficientCreditsError
     && !hasContent
-    && !hasContentBlocks
+    && !hasRenderableBlocks
     && !hasThinking
     && (hasToolCalls || hasTimeline);
 
