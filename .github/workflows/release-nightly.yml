@@ -83,6 +83,12 @@ jobs:
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
 
+      - name: Install Linux runner dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libatomic1
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -176,6 +182,12 @@ jobs:
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -185,12 +197,6 @@ jobs:
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Compute nightly version
         id: version
@@ -308,6 +314,12 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.94.1
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -315,12 +327,6 @@ jobs:
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Compute nightly version
         id: version

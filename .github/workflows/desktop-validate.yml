@@ -118,18 +118,18 @@ jobs:
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libatomic1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
 
       - name: Run desktop validation entrypoint
         env:
