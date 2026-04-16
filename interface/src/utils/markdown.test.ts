@@ -13,6 +13,10 @@ describe("getStreamSafeContent", () => {
     expect(getStreamSafeContent("**bold** text", true)).toBe("**bold** text");
   });
 
+  it("keeps trailing closed strong emphasis unchanged during streaming", () => {
+    expect(getStreamSafeContent("Hello **world**", true)).toBe("Hello **world**");
+  });
+
   it("trims unclosed fenced code block during streaming", () => {
     const input = "Hello\n\n```typescript\nconst x = 1;";
     expect(getStreamSafeContent(input, true)).toBe("Hello");

@@ -23,13 +23,6 @@ export function getStreamSafeContent(text: string, isStreaming: boolean): string
 }
 
 function trimTrailingEmphasis(text: string): string {
-  const trailingClosedMatch = /(^|[\s([{>])(\*{1,3}|_{1,3})(\S(?:[\s\S]*?\S)?)\2$/.exec(text);
-  if (trailingClosedMatch) {
-    const prefix = trailingClosedMatch[1];
-    const content = trailingClosedMatch[3];
-    return text.slice(0, trailingClosedMatch.index) + prefix + content;
-  }
-
   const trailingOpenMatch = /(^|[\s([{>])(\*{1,3}|_{1,3})(\S[\s\S]*)$/.exec(text);
   if (!trailingOpenMatch) return text;
 

@@ -29,8 +29,8 @@ describe("getStreamSafeContent", () => {
       expect(getStreamSafeContent("hello *world* end", true)).toBe("hello *world* end");
     });
 
-    it("keeps trailing closed emphasis content plain until streaming ends", () => {
-      expect(getStreamSafeContent("hello **world**", true)).toBe("hello world");
+    it("keeps trailing closed emphasis formatted while streaming", () => {
+      expect(getStreamSafeContent("hello **world**", true)).toBe("hello **world**");
     });
   });
 
