@@ -77,7 +77,7 @@ function CompactEnvironmentPicker({
           onClick={() => setEnvironment("swarm_microvm")}
         >
           <Cloud size={14} />
-          Swarm
+          Remote
         </button>
         <button
           type="button"

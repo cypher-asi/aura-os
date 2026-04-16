@@ -56,7 +56,7 @@ describe("AgentEditorForm", () => {
     render(<AgentEditorForm {...makeProps()} />);
 
     expect(screen.getByText("Environment")).toBeInTheDocument();
-    expect(screen.getByText("Swarm")).toBeInTheDocument();
+    expect(screen.getByText("Remote")).toBeInTheDocument();
     expect(screen.getByText("Local")).toBeInTheDocument();
     expect(screen.queryByText("Default Model")).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
@@ -73,7 +73,7 @@ describe("AgentEditorForm", () => {
     );
 
     expect(screen.getByText("Environment")).toBeInTheDocument();
-    expect(screen.getByText("Swarm")).toBeInTheDocument();
+    expect(screen.getByText("Remote")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change runtime or credentials" })).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
   });
