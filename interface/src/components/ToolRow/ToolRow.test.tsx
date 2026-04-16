@@ -98,6 +98,22 @@ describe("ToolCallBlock", () => {
   });
 
   describe("create_spec still works", () => {
+    it("renders SpecPreviewCard immediately for pending create_spec even without a title", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "create_spec",
+            started: true,
+            pending: true,
+            input: {},
+          })}
+        />,
+      );
+
+      expect(screen.getByText("spec.md")).toBeInTheDocument();
+      expect(screen.queryByText("Waiting for the tool result.")).not.toBeInTheDocument();
+    });
+
     it("renders SpecPreviewCard when create_spec is started with partial markdown_contents", () => {
       render(
         <ToolCallBlock

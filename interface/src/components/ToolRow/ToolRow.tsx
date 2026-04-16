@@ -123,7 +123,6 @@ export function ToolCallBlock({
       : toolStyles.taskDone;
 
   const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
-  const hasSpecTitle = isSpec && typeof entry.input.title === "string" && (entry.input.title as string).length > 0;
   const hasFilePath = isFileOp && typeof entry.input.path === "string" && (entry.input.path as string).length > 0;
   const showGeneratingHint = entry.pending && !hasPartialContent && !hasFilePath;
 
@@ -131,7 +130,7 @@ export function ToolCallBlock({
 
   const renderBody = () => {
     if (entry.pending) {
-      if (isSpec && (hasPartialContent || hasSpecTitle)) {
+      if (isSpec) {
         return (
           <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
             <div className={toolStyles.toolBody}>
