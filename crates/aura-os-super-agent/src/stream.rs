@@ -67,7 +67,7 @@ use reqwest::Client;
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 use tokio::sync::broadcast;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use aura_os_link::{
     AssistantMessageEnd, AssistantMessageStart, ErrorMsg, FilesChanged, HarnessOutbound,
@@ -294,6 +294,26 @@ impl SuperAgentStream {
                 stream: true,
             };
 
+            // One-time log of which tools were sent with eager_input_streaming
+            // enabled — helps diagnose whether the router/proxy strips the flag
+            // before the request reaches Anthropic.
+            let eager_tools: Vec<&str> = self
+                .tool_defs
+                .iter()
+                .filter(|t| {
+                    t.get("eager_input_streaming")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                })
+                .filter_map(|t| t.get("name").and_then(|v| v.as_str()))
+                .collect();
+            info!(
+                model = %self.model,
+                eager_input_streaming_tools = ?eager_tools,
+                total_tools = self.tool_defs.len(),
+                "sending /v1/messages request"
+            );
+
             let resp = match self
                 .http
                 .post(format!("{}/v1/messages", self.router_url))
@@ -486,6 +506,12 @@ impl SuperAgentStream {
                                 "tool_use" => {
                                     let id = block.id.clone().unwrap_or_default();
                                     let name = block.name.clone().unwrap_or_default();
+                                    info!(
+                                        tool = %name,
+                                        tool_id = %id,
+                                        streaming = is_streaming_tool(&name),
+                                        "tool_use block started"
+                                    );
                                     self.emit(HarnessOutbound::ToolUseStart(ToolUseStart {
                                         id: id.clone(),
                                         name: name.clone(),
@@ -524,6 +550,12 @@ impl SuperAgentStream {
                                     if let Some(ref pj) = delta.partial_json {
                                         if let Some(acc) = tool_accumulators.last_mut() {
                                             acc.input_json.push_str(pj);
+                                            debug!(
+                                                tool = %acc.name,
+                                                delta_len = pj.len(),
+                                                total_len = acc.input_json.len(),
+                                                "input_json_delta received"
+                                            );
                                             if is_streaming_tool(&acc.name) {
                                                 let now = Instant::now();
                                                 let should_emit = match acc.last_snapshot_emit {
@@ -539,6 +571,22 @@ impl SuperAgentStream {
                                                         &acc.input_json,
                                                     )
                                                     {
+                                                        let md_len = input
+                                                            .get("markdown_contents")
+                                                            .and_then(|v| v.as_str())
+                                                            .map(|s| s.len())
+                                                            .unwrap_or(0);
+                                                        let content_len = input
+                                                            .get("content")
+                                                            .and_then(|v| v.as_str())
+                                                            .map(|s| s.len())
+                                                            .unwrap_or(0);
+                                                        debug!(
+                                                            tool = %acc.name,
+                                                            markdown_len = md_len,
+                                                            content_len,
+                                                            "emitting ToolCallSnapshot"
+                                                        );
                                                         self.emit(
                                                             HarnessOutbound::ToolCallSnapshot(
                                                                 ToolCallSnapshot {
@@ -571,6 +619,13 @@ impl SuperAgentStream {
                             }
                             Some("tool_use") => {
                                 if let Some(acc) = tool_accumulators.last() {
+                                    info!(
+                                        tool = %acc.name,
+                                        tool_id = %acc.id,
+                                        input_bytes = acc.input_json.len(),
+                                        snapshots_mid_stream = acc.last_snapshot_emit.is_some(),
+                                        "tool_use block completed"
+                                    );
                                     let input: Value =
                                         serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
                                     if is_streaming_tool(&acc.name) {
