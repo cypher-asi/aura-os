@@ -331,6 +331,30 @@ describe("stream/handlers", () => {
       expect(refs.timeline.current).toHaveLength(1);
       expect(refs.timeline.current[0]).toMatchObject({ kind: "tool", toolCallId: "tc1" });
     });
+
+    it("captures the streamed assistant draft as draft_preview for spec tools", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      refs.streamBuffer.current = "# Draft spec\n\nBody text";
+      refs.displayedTextLength.current = refs.streamBuffer.current.length;
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
+
+      expect(refs.toolCalls.current[0].input).toEqual({
+        draft_preview: "# Draft spec\n\nBody text",
+      });
+    });
+
+    it("flushes any pending streamed text before starting a spec tool", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      refs.streamBuffer.current = "# Draft spec";
+      refs.displayedTextLength.current = 0;
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
+
+      expect(setters.calls.setStreamingText).toContain("# Draft spec");
+    });
   });
 
   describe("handleToolCall", () => {

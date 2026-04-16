@@ -27,6 +27,20 @@ function makeEntry(overrides: Partial<ToolCallEntry> = {}): ToolCallEntry {
 }
 
 describe("SpecPreviewCard", () => {
+  it("renders draft_preview while real markdown_contents is still empty", () => {
+    const { container, getByText } = render(
+      <SpecPreviewCard
+        entry={makeEntry({
+          input: { draft_preview: "# Draft from assistant stream" },
+        })}
+      />,
+    );
+
+    expect(getByText("spec.md")).toBeInTheDocument();
+    expect(container.querySelector(".spinner")).toBeNull();
+    expect(container.textContent).toContain("Draft from assistant stream");
+  });
+
   it("pins the code area to the bottom when markdown grows while pending", () => {
     const entry = makeEntry({
       input: { title: "Demo", markdown_contents: "# Line 1" },
@@ -76,6 +90,30 @@ describe("SpecPreviewCard", () => {
     );
 
     expect(codeArea.scrollTop).toBe(120);
+  });
+
+  it("switches from draft_preview to real markdown_contents once it arrives", () => {
+    const entry = makeEntry({
+      input: { draft_preview: "# Draft preview" },
+    });
+    const { container, rerender } = render(<SpecPreviewCard entry={entry} />);
+
+    expect(container.textContent).toContain("Draft preview");
+
+    rerender(
+      <SpecPreviewCard
+        entry={{
+          ...entry,
+          input: {
+            draft_preview: "# Draft preview",
+            markdown_contents: "# Final markdown",
+          },
+        }}
+      />,
+    );
+
+    expect(container.textContent).toContain("Final markdown");
+    expect(container.textContent).not.toContain("Draft preview");
   });
 
   it("renders the spinner while pending and empty", () => {

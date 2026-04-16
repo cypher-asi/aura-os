@@ -9,7 +9,9 @@ import toolStyles from "./ToolCallBlock.module.css";
 export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
   const title = (entry.input.title as string) || "";
   const filename = specFilename(title);
-  const content = (entry.input.markdown_contents as string) || "";
+  const toolContent = (entry.input.markdown_contents as string) || "";
+  const draftPreview = (entry.input.draft_preview as string) || "";
+  const content = toolContent || draftPreview;
   const highlightedHtml = useHighlightedHtml(content, "markdown");
   const showSpinner = !content.trim() && entry.pending;
 

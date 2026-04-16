@@ -414,10 +414,15 @@ export function handleToolCallStarted(
   setters: StreamSetters,
   info: ToolCallStartedInfo,
 ): void {
+  const isSpecTool = info.name === "create_spec" || info.name === "update_spec";
+  if (isSpecTool && refs.streamBuffer.current) {
+    flushStreamingText(refs, setters);
+  }
+  const draftPreview = isSpecTool ? refs.streamBuffer.current.trim() : "";
   const entry: ToolCallEntry = {
     id: info.id,
     name: info.name,
-    input: {},
+    input: draftPreview ? { draft_preview: draftPreview } : {},
     pending: true,
     started: true,
   };
