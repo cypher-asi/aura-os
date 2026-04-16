@@ -43,7 +43,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -142,7 +142,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -290,7 +290,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -735,7 +735,7 @@ jobs:
       - name: Generate preview changelog
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/New_York
+          CHANGELOG_TIMEZONE: America/Los_Angeles
         run: |
           node infra/scripts/release/generate-daily-changelog.mjs \
             --repo-dir . \
@@ -876,7 +876,7 @@ jobs:
       - name: Generate nightly changelog
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/New_York
+          CHANGELOG_TIMEZONE: America/Los_Angeles
         run: |
           node repo/infra/scripts/release/generate-daily-changelog.mjs \
             --repo-dir repo \
