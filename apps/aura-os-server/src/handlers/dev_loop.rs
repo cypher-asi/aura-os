@@ -494,7 +494,7 @@ async fn create_automaton_session(
         .get_instance(&project_id, &agent_instance_id)
         .await
         .ok()
-        .and_then(|instance| instance.model);
+        .and_then(|instance| preferred_automaton_model(&instance));
     let user_id = jwt
         .and_then(|j| state.validation_cache.get(j))
         .map(|entry| entry.session.user_id.clone());
@@ -539,6 +539,13 @@ async fn build_usage_reporting_context(
         model: model.unwrap_or_else(|| "claude-opus-4-6".to_string()),
         org_id,
     })
+}
+
+fn preferred_automaton_model(instance: &aura_os_core::AgentInstance) -> Option<String> {
+    instance
+        .default_model
+        .clone()
+        .or_else(|| instance.model.clone())
 }
 
 async fn close_automaton_session(
@@ -1265,19 +1272,10 @@ pub(crate) async fn start_loop(
     let jwt = Some(jwt);
     let project = state.project_service.get_project(&project_id).ok();
     let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
-    let (machine_type, swarm_agent_id) = state
+    let agent_instance = state
         .agent_instance_service
         .get_instance(&project_id, &agent_instance_id)
         .await
-        .map(|inst| {
-            info!(
-                %project_id, %agent_instance_id,
-                agent_id = %inst.agent_id,
-                machine_type = %inst.machine_type,
-                "Resolved agent instance for loop start"
-            );
-            (inst.machine_type, Some(inst.agent_id.to_string()))
-        })
         .map_err(|e| match e {
             aura_os_agents::AgentError::NotFound => {
                 ApiError::not_found(format!("agent instance {agent_instance_id} not found"))
@@ -1286,6 +1284,16 @@ pub(crate) async fn start_loop(
                 "looking up agent instance {agent_instance_id}: {other}"
             )),
         })?;
+    let selected_model = preferred_automaton_model(&agent_instance);
+    info!(
+        %project_id, %agent_instance_id,
+        agent_id = %agent_instance.agent_id,
+        machine_type = %agent_instance.machine_type,
+        selected_model = selected_model.as_deref().unwrap_or("default"),
+        "Resolved agent instance for loop start"
+    );
+    let machine_type = agent_instance.machine_type.clone();
+    let swarm_agent_id = Some(agent_instance.agent_id.to_string());
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
     let automaton_client = automaton_client_for_mode(
         &state,
@@ -1304,12 +1312,7 @@ pub(crate) async fn start_loop(
         project_id,
         agent_instance_id,
         project.as_ref().map(|project| project.org_id.to_string()),
-        state
-            .agent_instance_service
-            .get_instance(&project_id, &agent_instance_id)
-            .await
-            .ok()
-            .and_then(|instance| instance.model),
+        selected_model.clone(),
         jwt.as_deref(),
     )
     .await;
@@ -1360,7 +1363,7 @@ pub(crate) async fn start_loop(
     let start_params = AutomatonStartParams {
         project_id: project_id.to_string(),
         auth_token: jwt,
-        model: None,
+        model: selected_model,
         workspace_root: Some(project_path),
         task_id: None,
         git_repo_url: resolve_git_repo_url(project.as_ref()),
@@ -1898,11 +1901,10 @@ pub(crate) async fn run_single_task(
     let jwt = Some(jwt);
     let project = state.project_service.get_project(&project_id).ok();
     let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
-    let (machine_type, swarm_agent_id) = state
+    let agent_instance = state
         .agent_instance_service
         .get_instance(&project_id, &agent_instance_id)
         .await
-        .map(|inst| (inst.machine_type, Some(inst.agent_id.to_string())))
         .map_err(|e| match e {
             aura_os_agents::AgentError::NotFound => {
                 ApiError::not_found(format!("agent instance {agent_instance_id} not found"))
@@ -1911,6 +1913,9 @@ pub(crate) async fn run_single_task(
                 "looking up agent instance {agent_instance_id}: {other}"
             )),
         })?;
+    let selected_model = preferred_automaton_model(&agent_instance);
+    let machine_type = agent_instance.machine_type.clone();
+    let swarm_agent_id = Some(agent_instance.agent_id.to_string());
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
     let automaton_client = automaton_client_for_mode(
         &state,
@@ -1943,12 +1948,7 @@ pub(crate) async fn run_single_task(
         project_id,
         agent_instance_id,
         project.as_ref().map(|project| project.org_id.to_string()),
-        state
-            .agent_instance_service
-            .get_instance(&project_id, &agent_instance_id)
-            .await
-            .ok()
-            .and_then(|instance| instance.model),
+        selected_model.clone(),
         jwt.as_deref(),
     )
     .await;
@@ -1980,7 +1980,7 @@ pub(crate) async fn run_single_task(
         .start(AutomatonStartParams {
             project_id: project_id.to_string(),
             auth_token: jwt,
-            model: None,
+            model: selected_model,
             workspace_root: Some(project_path),
             task_id: Some(task_id.to_string()),
             git_repo_url: resolve_git_repo_url(project.as_ref()),
@@ -2116,8 +2116,41 @@ mod tests {
     use super::{
         classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
         extract_run_command, extract_turn_usage, is_work_event_type, map_passthrough_event_type,
-        VerificationStepKind,
+        preferred_automaton_model, VerificationStepKind,
     };
+    use aura_os_core::{AgentInstance, AgentStatus};
+    use chrono::Utc;
+
+    fn make_agent_instance(name: &str) -> AgentInstance {
+        let now = Utc::now();
+        AgentInstance {
+            agent_instance_id: aura_os_core::AgentInstanceId::new(),
+            project_id: aura_os_core::ProjectId::new(),
+            agent_id: aura_os_core::AgentId::new(),
+            org_id: None,
+            name: name.to_string(),
+            role: String::new(),
+            personality: String::new(),
+            system_prompt: String::new(),
+            skills: vec![],
+            icon: None,
+            machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "aura_managed".into(),
+            integration_id: None,
+            default_model: None,
+            workspace_path: None,
+            status: AgentStatus::Idle,
+            current_task_id: None,
+            current_session_id: None,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            model: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
 
     #[test]
     fn extracts_run_command_shell_string() {
@@ -2281,5 +2314,28 @@ mod tests {
 
         assert!((exact - versioned).abs() < 1e-9);
         assert!((exact - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn prefers_agent_default_model_for_automaton_runs() {
+        let mut instance = make_agent_instance("Builder");
+        instance.default_model = Some("aura-gpt-4.1".to_string());
+        instance.model = Some("aura-claude-sonnet-4-6".to_string());
+
+        assert_eq!(
+            preferred_automaton_model(&instance).as_deref(),
+            Some("aura-gpt-4.1")
+        );
+    }
+
+    #[test]
+    fn falls_back_to_last_used_model_when_no_default_is_set() {
+        let mut instance = make_agent_instance("Builder");
+        instance.model = Some("aura-o4-mini".to_string());
+
+        assert_eq!(
+            preferred_automaton_model(&instance).as_deref(),
+            Some("aura-o4-mini")
+        );
     }
 }
