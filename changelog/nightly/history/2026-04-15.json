@@ -3,14 +3,14 @@
   "promptVersion": 1,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-15T20:54:22.027Z",
+  "generatedAt": "2026-04-16T03:09:54.417Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.fb677ae",
+  "version": "0.1.0-nightly.507df13",
   "date": "2026-04-15",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "fb677ae6781e6a7b6359ad3de7c945e80fde4b93",
-  "previousProcessedSha": "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
+  "lastIncludedSha": "507df1348032f8f4734809bd21c86df8d5a7af9e",
+  "previousProcessedSha": "fb677ae6781e6a7b6359ad3de7c945e80fde4b93",
   "commitShas": [
     "5509bcd2ec8b00a10a83389832104f5f15ead590",
     "6d76e47fbb251878c6534497acfaaf893791d8e7",
@@ -34,9 +34,74 @@
     "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
     "b9dc017cb28758381d31cfc3bbf30794d659ab8b",
     "805f16f35178699feae9d062d565ae11ef07173a",
-    "fb677ae6781e6a7b6359ad3de7c945e80fde4b93"
+    "fb677ae6781e6a7b6359ad3de7c945e80fde4b93",
+    "a4c565cfbe297976cf7c50cfe80d059a0a2eb48b",
+    "f78feb37aa973bd5e323cb6bad3a6811f90b2506",
+    "104decbc0146ff2c19a043ad50796f2288ab7a3a",
+    "4420877cd6c129d25f7052cab7ed7421c69268a9",
+    "52b462bf157ffa9e5825216bad0614edc5aef7e3",
+    "8012ff74eeb0c1e3ff7a8d9f9bff9928dffc9baf",
+    "2504d90a2c34edb7072d81e929d9d202fae1875e",
+    "390f870a8b6a51e1b8f051947b3fc240172c843d",
+    "507ded6781f291afde079c987949d8dbd2ee8732",
+    "ad0f2fc773a929b5c4f8541b83f234b514cdb886",
+    "5bbcbbf1557d2d87ca3285151e8f8edca8151124",
+    "0ee6c3f2015fc220df4e1690aa29718a427d89cd",
+    "9e42ae27d366e0900297c624f30e9a933e18b88a",
+    "a8429c8a8d8b365bfb55a650d9b85a95b9f9a548",
+    "4482c6e0fb5143fcebe03d8a7db46db6329a560c",
+    "9660a367d4c7e7fedc7fde53b80f4224c9b16a36",
+    "ca3bb34c4a55492e119e99c5a9d04fb9b3a514d7",
+    "5216f1a4f2bc57e8456df76d2cf43e3de11b3fb4",
+    "1df6b7723c773bebea5ee3da9e36823aca1cc5ff",
+    "51198a5a476c3f45ad6fa3e1cb55cacdead4a2b3",
+    "c24e8d531ef0fc8dbf3cdf22ffecd3a197873ea9",
+    "8ae3568c7e78b74300f4d2d95495d590077dd36a",
+    "f775dc3a85fc57acc7e57a7842b67e01c65e44df",
+    "1dd068b44c3cf48c3fddeb011fe98047a8974cba",
+    "35ae8e96e28c162975357b0d5d2ee0a337419745",
+    "f9a8e79e3e4dcd04f1685c408e6bc84a33c79eb5",
+    "2a6a1ef43d31f3dd6d6d6305a8212a9a0560efeb",
+    "1493fab1a1bfa6d2eeb888568678499d87bd6772",
+    "8281d980a2769edc217de06acfd14e78beb6f8eb",
+    "13d0259fe50775acc89622b746e6613bcaf27427",
+    "252ee4a587debcd1c51fde150143e417df11d03f",
+    "7f473c2eeeb619f133e957742e6ac46e161915f7",
+    "f0ec065e9bc4d988e573c3c756b586cc54e4f71c",
+    "361280322b48507b2ce1a79f5a8bbf465cd81c0e",
+    "628255122fda4111cd83e59b906f0a0a0a2e038c",
+    "c9a4df1f7dadd07cd80fe7d98770876c53602b6a",
+    "18133006c3c112ad06f494ad3235df7f19acf303",
+    "abf100b5209656b0cb3f7f99ce61174c2ddb5bde",
+    "6dee31ca27144bb8e018a507bd486c11fba2adb1",
+    "aab4e3680c88f237582bcf475d1ae329ba5bb7b2",
+    "e65a30b458292059ab7a3f54d01c366a66fc0a34",
+    "2ce53e226f25968d2c2244fa22b45df086de94e9",
+    "472f74a42e0c7d3bffd67f350dae2c8908eebac9",
+    "85940f51ed7eeca990f13abfa9cfc609eb503271",
+    "7b5f711b78d31ae85a3f570f9b3b2038ae94092a",
+    "d9b3ab21f0df1f0d059c88cd3e5903913238d0b3",
+    "50b89fd14981b2220a698de495670e37b0bd77f9",
+    "d3d25fe0aee8aea9375843ecf55ab0cbe095b844",
+    "90cee2f6e1c387de44040a412051b5cf426f80c2",
+    "8ff07feb7ccb5a1ad00215abb40cdfc890ed36b8",
+    "e1cc2fb455074e31dd1aa27356afbb5d617bf45e",
+    "389d733037cf6bc371a087969d074a6534fc436b",
+    "1decfaed6e4780c4e904e0b5c3075bfe742d9f6e",
+    "d30eced3ecdcdc15f178cd5ccd6a47d16bc3d71c",
+    "7923b609859626ba9d9b0f98d135633202992a49",
+    "2043151d5462ed6f275b8db60782daf57ce2be87",
+    "e4fe2e1a0fdbf74f4906f9987027e5cd54e81a0b",
+    "be0cec96e58f9d956dbc3e82271bbe418973eb8a",
+    "421894c6fe0ed109b891b798ba82ed926c989e45",
+    "e787b96d7a0c5a601d8fca32e608c4b19e12eb2d",
+    "e499b14129b4dcd7943a1fb5ac0afaa5bda90447",
+    "b7e46899e2a243aedcab31bfa8f0440da7278285",
+    "9852b4fc14ab271ac40d204f2c2ec2925393afb5",
+    "3449d745012fa591bf8976194a8b0aa6416ad9e1",
+    "507df1348032f8f4734809bd21c86df8d5a7af9e"
   ],
-  "rawCommitCount": 23,
+  "rawCommitCount": 88,
   "rawCommits": [
     {
       "sha": "5509bcd2ec8b00a10a83389832104f5f15ead590",
@@ -675,35 +740,1975 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "a4c565cfbe297976cf7c50cfe80d059a0a2eb48b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T17:30:30-07:00",
+      "subject": "Refactor machine recovery to always delete then reprovision",
+      "body": "The old recovery flow called the same idempotent POST /v1/agents\nendpoint used for initial provisioning, which often resulted in the\nswarm keeping the same machine mapping. This made recovery ineffective.\n\nThe new flow enforces an explicit two-step sequence with no fallbacks:\n1. DELETE /v1/agents/:id - tear down the existing machine (404 = OK)\n2. POST /v1/agents - provision a fresh machine\n3. Poll until ready (inline, not background-spawned)\n\nEach phase broadcasts real-time progress over WebSocket so the frontend\ncan show granular status updates (deleting, provisioning, waiting,\nready, error) instead of relying on timed polling follow-ups.\n\nBackend:\n- Add delete_swarm_agent() helper with 404-is-OK semantics\n- Split old reprovision_remote_agent into provision_remote_agent (for\n  create) and recover_remote_agent_pipeline (delete+provision+wait)\n- Extract persist_vm_id() to reduce duplication\n- Add wait_for_swarm_agent_ready_with_broadcast() for recovery path\n- Remove vm_id_changed and message fields from response/struct\n- broadcast_recovery_phase() emits typed WS events at each step\n\nFrontend:\n- AgentEnvironment subscribes to RemoteAgentStateChanged WS events\n  with action=recover for real-time phase-driven recovery notices\n- Remove polling follow-up logic (RECOVERY_FOLLOWUP_DELAY_MS, etc.)\n- Remove vm_id_changed/message handling from API types and UI\n- Extend RemoteAgentStateChanged event type with action/phase fields\n\nTests:\n- Mock swarm DELETE endpoint in all recovery tests\n- Replace same-mapping test with delete-failure and 404-success tests\n- Update frontend tests for WS-driven recovery flow\n\nMade-with: Cursor",
+      "parents": [
+        "116796ca91f8b611474ae064a63b248bc57caf0f"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/crud.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/handlers/swarm.rs",
+        "apps/aura-os-server/tests/agent_create_test.rs",
+        "interface/src/api/swarm.ts",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.test.tsx",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/hooks/use-scroll-anchor.test.ts",
+        "interface/src/hooks/use-scroll-anchor.ts",
+        "interface/src/types/aura-events.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 545,
+        "deletions": 213
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f78feb37aa973bd5e323cb6bad3a6811f90b2506",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T17:32:02-07:00",
+      "subject": "Hide chat viewport until first reveal completes",
+      "body": "Add a solid veil over the message viewport while the initial chat settle path is still running, so long histories cannot flash visible text even if virtualization or final scroll correction does one last internal pass before reveal.\n\nThis keeps the shell mounted for measurement, leaves the input and queue gating unchanged, and adds focused panel coverage for the veil lifecycle.\n\nMade-with: Cursor",
+      "parents": [
+        "a4c565cfbe297976cf7c50cfe80d059a0a2eb48b"
+      ],
+      "files": [
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 34,
+        "deletions": 0
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "104decbc0146ff2c19a043ad50796f2288ab7a3a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T17:34:31-07:00",
+      "subject": "Clear recovery notice on success instead of showing it",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "f78feb37aa973bd5e323cb6bad3a6811f90b2506"
+      ],
+      "files": [
+        "interface/src/components/AgentEnvironment/AgentEnvironment.test.tsx",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 7,
+        "deletions": 10
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4420877cd6c129d25f7052cab7ed7421c69268a9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T18:25:12-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "104decbc0146ff2c19a043ad50796f2288ab7a3a",
+        "fd625fd64f52f58d53fa154cdf41d5bd3c777f7b"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 13,
+        "deletions": 12
+      },
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "52b462bf157ffa9e5825216bad0614edc5aef7e3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T18:35:42-07:00",
+      "subject": "Refactor first-open agent chat reveal flow",
+      "body": "Extract conversation snapshot and viewport phase ownership out of the scroll hook so the first visible frame is driven by explicit data, layout, and reveal state instead of the old settling heuristics. The chat list now reports semantic tail-layout readiness, while useScrollAnchor is reduced to active bottom pinning and follow behavior.\n\nAlso gate the standalone agent index redirect on agent-list readiness so the route does not briefly choose the wrong empty/redirect branch during first load, and add focused tests for the new viewport phase and simplified scroll contract.\n\nMade-with: Cursor",
+      "parents": [
+        "4420877cd6c129d25f7052cab7ed7421c69268a9"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.test.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/hooks/use-scroll-anchor.test.ts",
+        "interface/src/hooks/use-scroll-anchor.ts"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 554,
+        "deletions": 1269
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8012ff74eeb0c1e3ff7a8d9f9bff9928dffc9baf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T19:43:34-07:00",
+      "subject": "Speed up shared desktop Cargo rebuilds",
+      "body": "Move aura-os desktop and release workflows onto a shared Cargo target directory so the desktop app and harness sidecar can reuse compiled artifacts. Also strip dev and test debug info to shorten default local feedback loops without changing release builds.\n\nMade-with: Cursor",
+      "parents": [
+        "52b462bf157ffa9e5825216bad0614edc5aef7e3"
+      ],
+      "files": [
+        ".cargo/config.toml",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "Cargo.toml",
+        "infra/scripts/release/prepare-desktop-sidecar.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 72,
+        "deletions": 42
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Other"
+      ]
+    },
+    {
+      "sha": "2504d90a2c34edb7072d81e929d9d202fae1875e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T19:56:39-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "8012ff74eeb0c1e3ff7a8d9f9bff9928dffc9baf",
+        "fc15ffb2fd05d94af7c0b5121011345c387c160f"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 37,
+        "deletions": 53
+      },
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "390f870a8b6a51e1b8f051947b3fc240172c843d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T20:07:56-07:00",
+      "subject": "Align CI and local runtime parity on latest toolchains.",
+      "body": "Move workflow validation into shared repo scripts and pin the current Node, Rust, Java, and Ruby versions so local checks fail the same way as GitHub Actions.\n\nMade-with: Cursor",
+      "parents": [
+        "2504d90a2c34edb7072d81e929d9d202fae1875e"
+      ],
+      "files": [
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        ".nvmrc",
+        "README.md",
+        "rust-toolchain.toml",
+        "scripts/ci/check-runtime.mjs",
+        "scripts/ci/lib/utils.mjs",
+        "scripts/ci/lib/versions.mjs",
+        "scripts/ci/verify-android.mjs",
+        "scripts/ci/verify-desktop.mjs",
+        "scripts/ci/verify-evals.mjs",
+        "scripts/ci/verify-ios.mjs"
+      ],
+      "stats": {
+        "fileCount": 17,
+        "insertions": 544,
+        "deletions": 153
+      },
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "507ded6781f291afde079c987949d8dbd2ee8732",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T20:12:26-07:00",
+      "subject": "Split shell dependencies into lazy interface chunks.",
+      "body": "Keep startup JS small by loading app surfaces, modal chrome, and desktop window UI only when the active flow needs them, while preserving the existing perf guardrails.\n\nMade-with: Cursor",
+      "parents": [
+        "390f870a8b6a51e1b8f051947b3fc240172c843d"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.tsx",
+        "interface/src/apps/agents/AgentMainPanel/AgentMainPanel.tsx",
+        "interface/src/apps/process/ProcessIndexRedirect.tsx",
+        "interface/src/apps/registry.ts",
+        "interface/src/components/AppNavRail/AppNavRail.test.tsx",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/MobileShell/MobileShell.tsx",
+        "interface/src/stores/auth-store.test.ts",
+        "interface/src/stores/auth-store.ts",
+        "interface/src/utils/storage.ts",
+        "interface/src/views/LoginView/LoginView.tsx",
+        "interface/vite.config.ts"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 615,
+        "deletions": 128
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "ad0f2fc773a929b5c4f8541b83f234b514cdb886",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T20:13:17-07:00",
+      "subject": "Optimize startup, auth, and loading performance.",
+      "body": "Reduce eager shell imports, remove duplicate auth validation work, defer noncritical realtime startup, and add measurable interface performance guardrails so the app stays fast as the codebase grows.\n\nMade-with: Cursor",
+      "parents": [
+        "507ded6781f291afde079c987949d8dbd2ee8732"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-server/src/auth_guard.rs",
+        "apps/aura-os-server/src/handlers/agents/conversions.rs",
+        "apps/aura-os-server/src/handlers/agents/instances.rs",
+        "apps/aura-os-server/src/handlers/auth.rs",
+        "apps/aura-os-server/src/handlers/users.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/network_bridge.rs",
+        "apps/aura-os-server/src/router.rs",
+        "apps/aura-os-server/src/state.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "interface/docs/perf-instrumentation.md",
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/perf/budgets.json",
+        "interface/playwright.config.ts",
+        "interface/scripts/check-bundle-budgets.mjs",
+        "interface/src/App.tsx",
+        "interface/src/apps/agents/AgentIndexRedirect/AgentIndexRedirect.module.css",
+        "interface/src/apps/agents/AgentList/AgentList.module.css",
+        "interface/src/apps/agents/AgentList/AgentList.test.tsx",
+        "interface/src/apps/agents/AgentList/AgentList.tsx",
+        "interface/src/apps/agents/AgentsApp.ts",
+        "interface/src/apps/agents/stores/agent-store.test.ts",
+        "interface/src/apps/agents/stores/agent-store.ts",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ProjectList/ProjectList.module.css",
+        "interface/src/components/ProjectList/project-list-explorer-node.tsx",
+        "interface/src/components/RequireAuth/RequireAuth.module.css",
+        "interface/src/components/RequireAuth/RequireAuth.tsx",
+        "interface/src/components/RouteFallback/RouteFallback.module.css",
+        "interface/src/components/RouteFallback/RouteFallback.tsx",
+        "interface/src/components/ShellRoutePlaceholder/ShellRoutePlaceholder.tsx",
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css",
+        "interface/src/lib/perf/startup-perf.ts",
+        "interface/src/lib/perf/web-vitals-lite.ts",
+        "interface/src/main.tsx",
+        "interface/src/stores/authenticated-realtime.ts",
+        "interface/src/stores/event-store.test.tsx",
+        "interface/src/stores/event-store/event-store.ts",
+        "interface/src/stores/event-store/index.ts",
+        "interface/src/stores/follow-store.ts",
+        "interface/src/stores/profile-status-store.ts",
+        "interface/src/stores/projects-list-store.ts",
+        "interface/src/utils/last-app-path.ts",
+        "interface/tests/e2e/perf/load-budgets.ts",
+        "interface/tests/e2e/perf/startup-perf.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 49,
+        "insertions": 1131,
+        "deletions": 228
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "5bbcbbf1557d2d87ca3285151e8f8edca8151124",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T20:16:49-07:00",
+      "subject": "Show credits balance from the desktop taskbar.",
+      "body": "Add a right-side chevron beside the credits shortcut so users can reveal their current Z balance without opening the credits modal.\n\nMade-with: Cursor",
+      "parents": [
+        "ad0f2fc773a929b5c4f8541b83f234b514cdb886"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 67,
+        "deletions": 2
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0ee6c3f2015fc220df4e1690aa29718a427d89cd",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T20:21:41-07:00",
+      "subject": "Display context utilization in chat input bar and support session reset.",
+      "body": "The AURA proxy router returns context_utilization on each assistant_message_end SSE event. This change extracts that value and displays it as a percentage in the ChatInputBar info bar, with color warnings at 70%% and 90%% thresholds. A new session button lets users clear the context by destroying the server-side chat session and wiping the local message list. The backend gains reset-session endpoints for both standalone agents and project agent instances, plus a new_session flag on SendChatRequest that skips loading stored conversation history so the next message starts with a clean context window.\n\nMade-with: Cursor",
+      "parents": [
+        "5bbcbbf1557d2d87ca3285151e8f8edca8151124"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/router.rs",
+        "interface/src/api/agents.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/stores/context-usage-store.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 220,
+        "deletions": 8
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "9e42ae27d366e0900297c624f30e9a933e18b88a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:00:35-07:00",
+      "subject": "Fix chat paste handling while conversations settle.",
+      "body": "Preserve mixed clipboard text in the composer and keep the input usable before the viewport reveal finishes.\n\nMade-with: Cursor",
+      "parents": [
+        "0ee6c3f2015fc220df4e1690aa29718a427d89cd"
+      ],
+      "files": [
+        "interface/src/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 105,
+        "deletions": 10
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a8429c8a8d8b365bfb55a650d9b85a95b9f9a548",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:04:36-07:00",
+      "subject": "Match right credits chevron expansion to the taskbar pattern.",
+      "body": "Place the revealed Z balance between the right chevron and credits icon so the chevron shifts outward the same way the left taskbar control does.\n\nMade-with: Cursor",
+      "parents": [
+        "9e42ae27d366e0900297c624f30e9a933e18b88a"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 23,
+        "deletions": 22
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4482c6e0fb5143fcebe03d8a7db46db6329a560c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:07:27-07:00",
+      "subject": "Wire context utilization and session reset into desktop agent windows.",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "a8429c8a8d8b365bfb55a650d9b85a95b9f9a548"
+      ],
+      "files": [
+        "interface/src/components/AgentWindow/AgentWindow.tsx",
+        "interface/src/hooks/use-agent-chat-window.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 13,
+        "deletions": 0
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9660a367d4c7e7fedc7fde53b80f4224c9b16a36",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:14:03-07:00",
+      "subject": "Fix chat lane readiness and desktop shell startup.",
+      "body": "Keep the chat lane revealed after its first successful layout so scrolling history and sending follow-ups no longer collapse the panel, and preload the route-matched app while restoring the real desktop outlet instead of the web placeholder.\n\nMade-with: Cursor",
+      "parents": [
+        "4482c6e0fb5143fcebe03d8a7db46db6329a560c"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/apps/registry.ts",
+        "interface/src/apps/types.ts",
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.test.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.ts",
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 120,
+        "deletions": 21
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ca3bb34c4a55492e119e99c5a9d04fb9b3a514d7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:18:23-07:00",
+      "subject": "Fix duplicate project panel fallback rendering.",
+      "body": "Stop rendering route children through the lazy main-panel and provider fallbacks so Projects no longer appears once before the app shell resolves and then again inside the loaded shell.\n\nMade-with: Cursor",
+      "parents": [
+        "9660a367d4c7e7fedc7fde53b80f4224c9b16a36"
+      ],
+      "files": [
+        "interface/src/apps/registry.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 8
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5216f1a4f2bc57e8456df76d2cf43e3de11b3fb4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:42:03-07:00",
+      "subject": "Remove shell route fallbacks and dev double-mounting.",
+      "body": "Drop visible suspense fallbacks from the shell route path and stop wrapping the root in StrictMode so Projects no longer flashes placeholder states or mounts twice during startup.\n\nMade-with: Cursor",
+      "parents": [
+        "ca3bb34c4a55492e119e99c5a9d04fb9b3a514d7"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/components/MobileShell/MobileShell.tsx",
+        "interface/src/components/RouteFallback/RouteFallback.module.css",
+        "interface/src/components/RouteFallback/RouteFallback.tsx",
+        "interface/src/main.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 10,
+        "deletions": 41
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1df6b7723c773bebea5ee3da9e36823aca1cc5ff",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:44:39-07:00",
+      "subject": "Drop redundant Ctx label from context utilization indicator.",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "5216f1a4f2bc57e8456df76d2cf43e3de11b3fb4"
+      ],
+      "files": [
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "51198a5a476c3f45ad6fa3e1cb55cacdead4a2b3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:45:04-07:00",
+      "subject": "Update reset context button tooltip text.",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "1df6b7723c773bebea5ee3da9e36823aca1cc5ff"
+      ],
+      "files": [
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c24e8d531ef0fc8dbf3cdf22ffecd3a197873ea9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:45:33-07:00",
+      "subject": "Keep desktop agent chat chrome stable during switches.",
+      "body": "Move the main-panel background and right-edge divider onto the persistent desktop host so agent changes only swap content, and add coverage that the host stays mounted across sidekick content swaps.\n\nMade-with: Cursor",
+      "parents": [
+        "51198a5a476c3f45ad6fa3e1cb55cacdead4a2b3"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 17,
+        "deletions": 6
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8ae3568c7e78b74300f4d2d95495d590077dd36a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T21:57:25-07:00",
+      "subject": "Keep agent chat pinned during history loads.",
+      "body": "Reset the viewport settle cycle for newly loaded histories, hide populated transcripts until the bottom anchor settles, and re-anchor idle sends to avoid scroll jank.\n\nMade-with: Cursor",
+      "parents": [
+        "c24e8d531ef0fc8dbf3cdf22ffecd3a197873ea9"
+      ],
+      "files": [
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.test.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 31,
+        "deletions": 47
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f775dc3a85fc57acc7e57a7842b67e01c65e44df",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:09:16-07:00",
+      "subject": "Default tasks sidekick to the tasks panel.",
+      "body": "Switch the shared sidekick to the tasks tab when entering the Tasks app so it no longer inherits the terminal section, and cover the app-store transition with a focused test.\n\nMade-with: Cursor",
+      "parents": [
+        "8ae3568c7e78b74300f4d2d95495d590077dd36a"
+      ],
+      "files": [
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 32,
+        "deletions": 7
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1dd068b44c3cf48c3fddeb011fe98047a8974cba",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:14:21-07:00",
+      "subject": "Keep desktop launches pinned to the desktop workspace.",
+      "body": "Restore the desktop background by preventing the shell surface from painting over it.\n\nMade-with: Cursor",
+      "parents": [
+        "f775dc3a85fc57acc7e57a7842b67e01c65e44df"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts",
+        "interface/src/utils/last-app-path.test.ts",
+        "interface/src/utils/last-app-path.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 96,
+        "deletions": 14
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "35ae8e96e28c162975357b0d5d2ee0a337419745",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:23:21-07:00",
+      "subject": "Harden standalone agent SSE parsing.",
+      "body": "Handle real-world SSE framing and fall back to tagged payload event types so standalone agent replies keep streaming even when the transport uses generic event names or incomplete frame delimiters.\n\nMade-with: Cursor",
+      "parents": [
+        "1dd068b44c3cf48c3fddeb011fe98047a8974cba"
+      ],
+      "files": [
+        "interface/src/api/sse.test.ts",
+        "interface/src/api/sse.ts",
+        "interface/src/api/streams.test.ts",
+        "interface/src/api/streams.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 230,
+        "deletions": 23
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f9a8e79e3e4dcd04f1685c408e6bc84a33c79eb5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:26:58-07:00",
+      "subject": "Restore last app startup routing.",
+      "body": "Stop forcing desktop-capable launches to /desktop so the app reopens where the user left off.\n\nMade-with: Cursor",
+      "parents": [
+        "35ae8e96e28c162975357b0d5d2ee0a337419745"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts",
+        "interface/src/utils/last-app-path.test.ts",
+        "interface/src/utils/last-app-path.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 9,
+        "deletions": 52
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2a6a1ef43d31f3dd6d6d6305a8212a9a0560efeb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:30:35-07:00",
+      "subject": "Fix chat messages hidden by unbounded viewport settling loop.",
+      "body": "The scroll-anchor settling loop could spin indefinitely without reaching the bottom, keeping chromeReady false and the message content area stuck at visibility:hidden. Cap settle attempts at 12 frames so the content always reveals, and replace visibility:hidden with a translucent opacity so messages stay visible even during settling.\n\nMade-with: Cursor",
+      "parents": [
+        "f9a8e79e3e4dcd04f1685c408e6bc84a33c79eb5"
+      ],
+      "files": [
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatViewportPhase.test.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 161,
+        "deletions": 72
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1493fab1a1bfa6d2eeb888568678499d87bd6772",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:33:28-07:00",
+      "subject": "Keep stream events visible until history catches up.",
+      "body": "The hydrateToStream:false path cleared stream events as soon as historyLastMessageAt changed, but the server may not have persisted the assistant reply yet. Guard the clear with a message-count check so live stream data stays visible until history actually covers it.\n\nMade-with: Cursor",
+      "parents": [
+        "2a6a1ef43d31f3dd6d6d6305a8212a9a0560efeb"
+      ],
+      "files": [
+        "interface/src/hooks/use-chat-history-sync.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 10,
+        "deletions": 1
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8281d980a2769edc217de06acfd14e78beb6f8eb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:34:42-07:00",
+      "subject": "Surface remote state fetch errors in AgentEnvironment UI",
+      "body": "Previously, 404 and other fetch failures were silently swallowed, leaving the status card blank. Now the component shows a descriptive message and the profile-status-store marks failed agents as error.\n\nMade-with: Cursor",
+      "parents": [
+        "1493fab1a1bfa6d2eeb888568678499d87bd6772"
+      ],
+      "files": [
+        "interface/src/components/AgentEnvironment/AgentEnvironment.test.tsx",
+        "interface/src/components/AgentEnvironment/AgentEnvironment.tsx",
+        "interface/src/stores/profile-status-store.test.ts",
+        "interface/src/stores/profile-status-store.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 105,
+        "deletions": 22
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "13d0259fe50775acc89622b746e6613bcaf27427",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-14T22:55:31-07:00",
+      "subject": "Rebuild chat layout as bottom-anchored virtualized architecture",
+      "body": "Replace the render-then-fix-scroll approach with anchor-based scroll\nreconciliation that eliminates all visible jank:\n\n- Anchor-based scroll manager tracks message ID + viewport offset instead\n  of naive scrollTop = scrollHeight, corrects via delta in useLayoutEffect\n- Persistent height cache with type-based estimates feeds the virtualizer\n  so initial layout is stable without a settling loop\n- Normalized message store (Map by ID + ordered IDs per thread) replaces\n  flat event arrays, with a separate view model for pagination/unread state\n- Cursor-based pagination endpoint on the backend enables load older\n  with anchor-preserving prepend on the frontend\n- Floating new messages pill when user is scrolled up\n- Media space reservation via aspect-ratio placeholders prevents late\n  layout shifts from images\n- StreamingBubble height handoff pre-seeds the cache when stream ends,\n  preventing jumps on the streaming-to-persisted row transition\n\nDeletes useChatViewportPhase (RAF settle loop + opacity hack) and the\nsentinel-based useScrollAnchor in favor of the new architecture.\n\nMade-with: Cursor",
+      "parents": [
+        "8281d980a2769edc217de06acfd14e78beb6f8eb"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/agents/mod.rs",
+        "apps/aura-os-server/src/router.rs",
+        "interface/src/api/agents.ts",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/ChatPanel/useChatViewportPhase.ts",
+        "interface/src/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/hooks/use-load-older-messages.ts",
+        "interface/src/hooks/use-message-height-cache.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.ts",
+        "interface/src/hooks/use-scroll-anchor.ts",
+        "interface/src/stores/chat-history-store.ts",
+        "interface/src/stores/chat-view-store.ts",
+        "interface/src/stores/message-store.ts"
+      ],
+      "stats": {
+        "fileCount": 19,
+        "insertions": 991,
+        "deletions": 519
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "252ee4a587debcd1c51fde150143e417df11d03f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T09:28:20-07:00",
+      "subject": "Fix chat bottom anchoring during initial history load",
+      "body": "Wire the virtualized chat list back into scroll-anchor reconciliation so\ninitial history hydration and later row remeasurement keep the viewport\npinned to the latest message without a visible re-scroll.\n\n- propagate content-height changes from ChatMessageList into\n  useScrollAnchorV2 and allow immediate reconciliation before paint\n- add row ResizeObserver support so late height changes preserve the\n  current anchor instead of leaving the viewport at a stale offset\n- reconnect ChatPanel to the reconciliation callback that Phase 1 added\n  but never actually used\n- replace stale tests for the deleted viewport-phase and old scroll hook\n  with coverage for the current bottom-anchor architecture\n\nThis fixes the main gap from the original plan: chats can now settle at\nthe bottom as history and measurements arrive instead of rendering in an\nold position and correcting later.\n\nMade-with: Cursor",
+      "parents": [
+        "13d0259fe50775acc89622b746e6613bcaf27427"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/components/ChatPanel/useChatViewportPhase.test.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.ts",
+        "interface/src/hooks/use-scroll-anchor.test.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 250,
+        "deletions": 529
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7f473c2eeeb619f133e957742e6ac46e161915f7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T09:41:56-07:00",
+      "subject": "Hide first-load chat history until bottom anchor is primed",
+      "body": "Prevent uncached chat history from appearing at the wrong scroll position\nbefore the initial bottom-anchor pass finishes.\n\n- add a first-load reveal gate in ChatPanel that keeps cold-load threads\n  visually hidden while the initial bottom alignment is prepared\n- reveal the thread only after ChatMessageList completes its first\n  immediate content-height reconciliation\n- keep the thread mounted during priming so measurement and virtualization\n  still work correctly\n- preserve the fast path for warm revisits where history is already ready\n  on first render\n- add tests covering cold-load hidden reveal and unchanged warm-load\n  behavior\n\nThis fixes the remaining first-load jank where content would appear and\nthen scroll down into place.\n\nMade-with: Cursor",
+      "parents": [
+        "252ee4a587debcd1c51fde150143e417df11d03f"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 169,
+        "deletions": 17
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f0ec065e9bc4d988e573c3c756b586cc54e4f71c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T09:42:27-07:00",
+      "subject": "Move context indicator to the left of model selector in input bar",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "7f473c2eeeb619f133e957742e6ac46e161915f7"
+      ],
+      "files": [
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 39,
+        "deletions": 43
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "361280322b48507b2ce1a79f5a8bbf465cd81c0e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T09:43:02-07:00",
+      "subject": "Replace installed skill action with overflow menu",
+      "body": "Use the more-actions menu for installed skills so destructive actions are\nless visually noisy while keeping install affordances direct. This also\nremoves the source badge to make room for the new action layout.\n\nMade-with: Cursor",
+      "parents": [
+        "f0ec065e9bc4d988e573c3c756b586cc54e4f71c"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/SkillsTab.module.css",
+        "interface/src/apps/agents/AgentInfoPanel/SkillsTab.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 34,
+        "deletions": 20
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "628255122fda4111cd83e59b906f0a0a0a2e038c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T09:56:27-07:00",
+      "subject": "Remove agent empty-state prompts and loading copy",
+      "body": "Drop the remaining empty-chat and loading-copy placeholders so empty\nagent chats render blank and cold-load priming stays visually quiet.\nThis keeps the first-load reveal/fade behavior while removing the extra\ntext and icon prompts from both route and desktop agent chat surfaces.\n\nMade-with: Cursor",
+      "parents": [
+        "361280322b48507b2ce1a79f5a8bbf465cd81c0e"
+      ],
+      "files": [
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/hooks/use-agent-chat-window.test.ts",
+        "interface/src/hooks/use-agent-chat-window.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 180,
+        "deletions": 33
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "c9a4df1f7dadd07cd80fe7d98770876c53602b6a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T10:36:33-07:00",
+      "subject": "Update chat composer placeholder copy.",
+      "body": "Refresh the chat input prompt to ask what the user wants to create, and align unit and e2e tests with the new composer wording.\n\nMade-with: Cursor",
+      "parents": [
+        "628255122fda4111cd83e59b906f0a0a0a2e038c"
+      ],
+      "files": [
+        "interface/src/components/ChatInputBar/ChatInputBar.test.tsx",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/tests/e2e/desktop-visual.spec.ts",
+        "interface/tests/e2e/layout-capability.desktop.spec.ts",
+        "interface/tests/e2e/pwa-mobile-visual.spec.ts",
+        "interface/tests/e2e/pwa-mobile.spec.ts",
+        "interface/tests/e2e/responsive-unification.spec.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 23,
+        "deletions": 23
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "18133006c3c112ad06f494ad3235df7f19acf303",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T10:36:59-07:00",
+      "subject": "Use black background for spec previews",
+      "body": "Give create and update spec cards a solid black surface so markdown content stays legible without changing other preview cards.\n\nMade-with: Cursor",
+      "parents": [
+        "c9a4df1f7dadd07cd80fe7d98770876c53602b6a"
+      ],
+      "files": [
+        "interface/src/components/FilePreviewCard/FilePreviewCard.module.css",
+        "interface/src/components/ToolRow/SpecPreviewCard.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 22,
+        "deletions": 4
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "abf100b5209656b0cb3f7f99ce61174c2ddb5bde",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T10:37:36-07:00",
+      "subject": "Keep agent chat pinned during streaming output",
+      "body": "Observe live streaming bubble height changes so the chat keeps following new content in real time while preserving the existing behavior of stopping auto-scroll once the user scrolls up.\n\nMade-with: Cursor",
+      "parents": [
+        "18133006c3c112ad06f494ad3235df7f19acf303"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 170,
+        "deletions": 5
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6dee31ca27144bb8e018a507bd486c11fba2adb1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T10:55:28-07:00",
+      "subject": "Stabilize streamed chat scroll behavior",
+      "body": "Keep the chat viewport from fighting browser anchoring and duplicate height reconciliation while streamed output is growing. Reserve the streaming phase indicator so thinking-to-text transitions no longer cause the message list to jerk during live updates.\n\nMade-with: Cursor",
+      "parents": [
+        "abf100b5209656b0cb3f7f99ce61174c2ddb5bde"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/CookingIndicator/CookingIndicator.module.css",
+        "interface/src/components/CookingIndicator/CookingIndicator.tsx",
+        "interface/src/components/LLMOutput/LLMStreamOutput.tsx",
+        "interface/src/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 36,
+        "deletions": 21
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "aab4e3680c88f237582bcf475d1ae329ba5bb7b2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T11:08:42-07:00",
+      "subject": "Stream sidekick specs and tasks as they are created.",
+      "body": "Broadcast spec and task creation over the shared event socket so the sidekick updates before an LLM run finishes, while keeping the final refetch as a reconciliation fallback.\n\nMade-with: Cursor",
+      "parents": [
+        "6dee31ca27144bb8e018a507bd486c11fba2adb1"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/specs.rs",
+        "apps/aura-os-server/src/handlers/tasks.rs",
+        "interface/src/views/TaskList/useTaskListData.test.tsx",
+        "interface/src/views/TaskList/useTaskListData.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 218,
+        "deletions": 1
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e65a30b458292059ab7a3f54d01c366a66fc0a34",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:09:25-07:00",
+      "subject": "Broadcast runtime spec/task saves to sidekick websockets.",
+      "body": "Mirror saved artifact events from runtime tool results onto the shared event bus so Specs and Tasks update in the sidekick even when create_spec or create_task runs through the runtime bridge instead of the REST handlers.\n\nMade-with: Cursor",
+      "parents": [
+        "aab4e3680c88f237582bcf475d1ae329ba5bb7b2"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/runtime.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 34,
+        "deletions": 1
+      },
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "2ce53e226f25968d2c2244fa22b45df086de94e9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:15:00-07:00",
+      "subject": "Persist websocket artifact saves in the sidekick store.",
+      "body": "Handle spec_saved and task_saved in the global event store so sidekick tabs stay current even when the Specs or Tasks pane is not mounted while artifacts are being created.\n\nMade-with: Cursor",
+      "parents": [
+        "e65a30b458292059ab7a3f54d01c366a66fc0a34"
+      ],
+      "files": [
+        "interface/src/stores/event-store.test.tsx",
+        "interface/src/stores/event-store/engine-event-handlers.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 39,
+        "deletions": 0
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "472f74a42e0c7d3bffd67f350dae2c8908eebac9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:15:03-07:00",
+      "subject": "Show automation progress in the sidekick Run button.",
+      "body": "Reuse the existing loop status so the sidekick Run tab reflects when dev task automation is starting or active instead of always showing a static play icon.\n\nMade-with: Cursor",
+      "parents": [
+        "2ce53e226f25968d2c2244fa22b45df086de94e9"
+      ],
+      "files": [
+        "interface/src/components/Sidekick/Sidekick.module.css",
+        "interface/src/components/SidekickTaskbar/SidekickTaskbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 32,
+        "deletions": 13
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "85940f51ed7eeca990f13abfa9cfc609eb503271",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:15:51-07:00",
+      "subject": "Improve chat height estimates for rich content",
+      "body": "Start new chat rows closer to their final rendered size so tool-heavy, markdown-heavy, thinking, artifact, and image messages do not appear low and then jump upward after measurement. Add focused coverage for complex assistant output and image-heavy user messages.\n\nMade-with: Cursor",
+      "parents": [
+        "472f74a42e0c7d3bffd67f350dae2c8908eebac9"
+      ],
+      "files": [
+        "interface/src/hooks/use-message-height-cache.test.ts",
+        "interface/src/hooks/use-message-height-cache.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 173,
+        "deletions": 17
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7b5f711b78d31ae85a3f570f9b3b2038ae94092a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:21:13-07:00",
+      "subject": "Restore the last in-app route on shell reload.",
+      "body": "Persist the full non-desktop path so Aura can reopen the user’s previous deep-link target instead of only falling back to the last app, and document the new feedback requirements reference.\n\nMade-with: Cursor",
+      "parents": [
+        "85940f51ed7eeca990f13abfa9cfc609eb503271"
+      ],
+      "files": [
+        "docs/README.md",
+        "docs/feedback-system-requirements.md",
+        "interface/src/App.tsx",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/stores/app-ui-store.ts",
+        "interface/src/utils/last-app-path.test.ts",
+        "interface/src/utils/last-app-path.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 346,
+        "deletions": 14
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Docs"
+      ]
+    },
+    {
+      "sha": "d9b3ab21f0df1f0d059c88cd3e5903913238d0b3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:25:28-07:00",
+      "subject": "Smooth chat streaming handoff transitions",
+      "body": "Keep live streaming output pinned in place by reconciling streaming bubble height immediately and carrying that measured height into the saved assistant row. Remove the extra post-stream bottom scroll so the end-of-turn handoff does not snap down after the final message lands.\n\nMade-with: Cursor",
+      "parents": [
+        "7b5f711b78d31ae85a3f570f9b3b2038ae94092a"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.test.tsx",
+        "interface/src/components/ChatPanel/useChatPanelState.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 105,
+        "deletions": 10
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "50b89fd14981b2220a698de495670e37b0bd77f9",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T13:33:18-07:00",
+      "subject": "Load the desktop shell on the saved route.",
+      "body": "Persist the last valid shell route into native desktop state so startup and dev-server handoff can open the correct path immediately instead of flashing the default app first.\n\nMade-with: Cursor",
+      "parents": [
+        "d9b3ab21f0df1f0d059c88cd3e5903913238d0b3"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/handlers.rs",
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-desktop/src/route_state.rs",
+        "interface/src/api/desktop.test.ts",
+        "interface/src/api/desktop.ts",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/stores/app-ui-store.ts",
+        "interface/src/utils/last-app-path.test.ts",
+        "interface/src/utils/last-app-path.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 432,
+        "deletions": 31
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "d3d25fe0aee8aea9375843ecf55ab0cbe095b844",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T15:04:01-07:00",
+      "subject": "Deduplicate assistant stream handoff messages.",
+      "body": "Replace the synthetic assistant boundary placeholder with the persisted message_end event so new-agent chats do not briefly show the same reply twice.\n\nMade-with: Cursor",
+      "parents": [
+        "50b89fd14981b2220a698de495670e37b0bd77f9"
+      ],
+      "files": [
+        "interface/src/hooks/chat-stream-integration.test.ts",
+        "interface/src/hooks/stream/handlers.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 81,
+        "deletions": 15
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "90cee2f6e1c387de44040a412051b5cf426f80c2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T15:38:31-07:00",
+      "subject": "Update project startup flow and transient chat rendering.",
+      "body": "Ensure new projects and local agent instances provision their workspace directories, avoid empty-state flashes while project data is still hydrating, and deduplicate optimistic chat rows that briefly render twice before persisted history catches up.\n\nMade-with: Cursor",
+      "parents": [
+        "d3d25fe0aee8aea9375843ecf55ab0cbe095b844"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater.rs",
+        "apps/aura-os-server/src/auth_guard.rs",
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/agents/instances.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "apps/aura-os-server/src/handlers/projects.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers.rs",
+        "apps/aura-os-server/tests/agent_create_test.rs",
+        "interface/src/hooks/use-conversation-snapshot.test.ts",
+        "interface/src/hooks/use-conversation-snapshot.ts",
+        "interface/src/views/HomeView/HomeView.test.tsx",
+        "interface/src/views/HomeView/HomeView.tsx",
+        "interface/src/views/ProjectRootRedirectView/ProjectRootRedirectView.test.tsx",
+        "interface/src/views/ProjectRootRedirectView/ProjectRootRedirectView.tsx"
+      ],
+      "stats": {
+        "fileCount": 14,
+        "insertions": 274,
+        "deletions": 52
+      },
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface",
+        "Desktop"
+      ]
+    },
+    {
+      "sha": "8ff07feb7ccb5a1ad00215abb40cdfc890ed36b8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T15:49:53-07:00",
+      "subject": "Stabilize sidekick chat lane resizing.",
+      "body": "Treat sidekick width changes as a resize session so the chat preserves one scroll invariant and remeasures once after the drag settles instead of fighting layout on every wrapped row.\n\nMade-with: Cursor",
+      "parents": [
+        "90cee2f6e1c387de44040a412051b5cf426f80c2"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/chat-resize-session-context.ts",
+        "interface/src/components/ChatPanel/useChatPanelState.ts",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/Lane/Lane.tsx",
+        "interface/src/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 253,
+        "deletions": 8
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e1cc2fb455074e31dd1aa27356afbb5d617bf45e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T15:53:58-07:00",
+      "subject": "Stream spec and task creation updates in real time.",
+      "body": "Process-linked runs now emit saved-artifact events as each spec/task is persisted, and the UI merges those events plus optimistic task placeholders so new work appears immediately instead of after the full run completes.\n\nMade-with: Cursor",
+      "parents": [
+        "8ff07feb7ccb5a1ad00215abb40cdfc890ed36b8"
+      ],
+      "files": [
+        "crates/aura-os-process/src/executor/run/execute_run.rs",
+        "crates/aura-os-process/src/executor/run/integration.rs",
+        "crates/aura-os-process/src/executor/run/mod.rs",
+        "interface/src/apps/tasks/components/AddTaskForm/AddTaskForm.tsx",
+        "interface/src/apps/tasks/hooks/useKanbanData.ts",
+        "interface/src/apps/tasks/stores/kanban-store.test.ts",
+        "interface/src/apps/tasks/stores/kanban-store.ts",
+        "interface/src/queries/project-queries.test.ts",
+        "interface/src/queries/project-queries.ts",
+        "interface/src/views/ProjectLayout/useProjectLayoutData.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 396,
+        "deletions": 18
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "389d733037cf6bc371a087969d074a6534fc436b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T16:01:00-07:00",
+      "subject": "Smooth live text streaming.",
+      "body": "Buffer streamed text on a short cadence so the UI updates in steadier batches, reducing janky jumps while still flushing quickly at natural boundaries.\n\nMade-with: Cursor",
+      "parents": [
+        "e1cc2fb455074e31dd1aa27356afbb5d617bf45e"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.ts",
+        "interface/src/hooks/stream/store.ts",
+        "interface/src/hooks/use-stream-core.ts",
+        "interface/src/types/stream.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 126,
+        "deletions": 9
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "1decfaed6e4780c4e904e0b5c3075bfe742d9f6e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T16:45:05-07:00",
+      "subject": "Refine streamed text to reveal one word at a time.",
+      "body": "Pace assistant output through a hybrid word-by-word scheduler so streaming feels smoother, catches up under backlog, and still flushes full content at terminal boundaries.\n\nMade-with: Cursor",
+      "parents": [
+        "389d733037cf6bc371a087969d074a6534fc436b"
+      ],
+      "files": [
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 256,
+        "deletions": 54
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "d30eced3ecdcdc15f178cd5ccd6a47d16bc3d71c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T17:20:28-07:00",
+      "subject": "Stabilize streamed output handoff.",
+      "body": "Keep placeholder assistant messages on the streaming-safe render path and avoid rendering an empty live bubble after text has already settled, so streamed content no longer jumps or briefly misformats at completion.\n\nMade-with: Cursor",
+      "parents": [
+        "1decfaed6e4780c4e904e0b5c3075bfe742d9f6e"
+      ],
+      "files": [
+        "interface/src/apps/process/components/ProcessSidekickContent/RunPreviewBody.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/TaskOutputSection/TaskOutputSection.test.tsx",
+        "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
+        "interface/src/hooks/use-stream-safe-content.test.ts",
+        "interface/src/hooks/use-stream-safe-content.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 148,
+        "deletions": 21
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7923b609859626ba9d9b0f98d135633202992a49",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T17:26:24-07:00",
+      "subject": "Forward streamed task and spec events into the shared store.",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "d30eced3ecdcdc15f178cd5ccd6a47d16bc3d71c"
+      ],
+      "files": [
+        "interface/src/api/streams.test.ts",
+        "interface/src/api/streams.ts",
+        "interface/src/views/ProjectWorkView/useMobileTasks.test.tsx",
+        "interface/src/views/ProjectWorkView/useMobileTasks.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 141,
+        "deletions": 2
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2043151d5462ed6f275b8db60782daf57ce2be87",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T17:36:50-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "Made-with: Cursor\n\n# Conflicts:\n#\tinterface/src/App.tsx\n#\tinterface/src/components/AgentChatView/AgentChatView.tsx\n#\tinterface/src/components/ChatPanel/ChatPanel.test.tsx\n#\tinterface/src/views/HomeView/HomeView.test.tsx\n#\tinterface/src/views/HomeView/HomeView.tsx\n#\tinterface/tests/e2e/pwa-mobile-visual.spec.ts",
+      "parents": [
+        "7923b609859626ba9d9b0f98d135633202992a49",
+        "fb677ae6781e6a7b6359ad3de7c945e80fde4b93"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 3944,
+        "deletions": 614
+      },
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "e4fe2e1a0fdbf74f4906f9987027e5cd54e81a0b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T17:39:08-07:00",
+      "subject": "Reduce chat layout jumps during task generation.",
+      "body": "Keep pending task tool calls compact and avoid forcing hidden or rapidly resizing streaming UI to reserve space, so the conversation stays steadier while generated items stream in.\n\nMade-with: Cursor",
+      "parents": [
+        "2043151d5462ed6f275b8db60782daf57ce2be87"
+      ],
+      "files": [
+        "interface/src/components/ActivityTimeline/ActivityTimeline.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/CookingIndicator/CookingIndicator.module.css",
+        "interface/src/components/CookingIndicator/CookingIndicator.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 13,
+        "deletions": 17
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "be0cec96e58f9d956dbc3e82271bbe418973eb8a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T17:41:57-07:00",
+      "subject": "Preserve completed bold text during streaming.",
+      "body": "Keep closed emphasis markers intact in stream-safe content so markdown styling does not flip between plain and bold as text reveals word by word.\n\nMade-with: Cursor",
+      "parents": [
+        "e4fe2e1a0fdbf74f4906f9987027e5cd54e81a0b"
+      ],
+      "files": [
+        "interface/src/hooks/use-stream-safe-content.test.ts",
+        "interface/src/hooks/use-stream-safe-content.ts",
+        "interface/src/utils/markdown.test.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 6,
+        "deletions": 9
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "421894c6fe0ed109b891b798ba82ed926c989e45",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T18:04:21-07:00",
+      "subject": "Stabilize empty project view initialization.",
+      "body": "Keep project route registration and redirect subscriptions referentially stable so newly created projects do not trip the project-view update-depth guard.\n\nMade-with: Cursor",
+      "parents": [
+        "be0cec96e58f9d956dbc3e82271bbe418973eb8a"
+      ],
+      "files": [
+        "interface/src/apps/tasks/components/TasksProvider/TasksProvider.tsx",
+        "interface/src/views/ProjectLayout/useProjectLayoutData.ts",
+        "interface/src/views/ProjectRootRedirectView/ProjectRootRedirectView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 60,
+        "deletions": 31
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e787b96d7a0c5a601d8fca32e608c4b19e12eb2d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T18:06:24-07:00",
+      "subject": "Support resuming paused dev loops.",
+      "body": "Track paused automata in the server and route resume-aware loop controls through the client so existing automation can continue cleanly instead of restarting or desynchronizing UI state.\n\nMade-with: Cursor",
+      "parents": [
+        "421894c6fe0ed109b891b798ba82ed926c989e45"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/router.rs",
+        "apps/aura-os-server/src/state.rs",
+        "crates/aura-os-link/src/automaton_client.rs",
+        "interface/src/api/loop.ts",
+        "interface/src/components/AutomationBar/useAutomationStatus.ts",
+        "interface/src/hooks/stream/handlers.ts",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-loop-control.ts",
+        "interface/src/queries/project-queries.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 183,
+        "deletions": 29
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "e499b14129b4dcd7943a1fb5ac0afaa5bda90447",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T18:17:58-07:00",
+      "subject": "Ignore root-level Rust build directories.",
+      "body": "Prevent generated target-* artifacts from being committed so local test outputs do not bloat future pushes.\n\nMade-with: Cursor",
+      "parents": [
+        "e787b96d7a0c5a601d8fca32e608c4b19e12eb2d"
+      ],
+      "files": [
+        ".gitignore"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "b7e46899e2a243aedcab31bfa8f0440da7278285",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T21:56:28-04:00",
+      "subject": "Fix CI sidecar, Android toolchain, and smoke flake",
+      "body": "",
+      "parents": [
+        "e499b14129b4dcd7943a1fb5ac0afaa5bda90447"
+      ],
+      "files": [
+        ".github/workflows/android-mobile.yml",
+        "infra/scripts/release/prepare-desktop-sidecar.mjs",
+        "interface/tests/e2e/evals/scenarios/core-browser-smoke.json"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 34,
+        "deletions": 6
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9852b4fc14ab271ac40d204f2c2ec2925393afb5",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T22:03:55-04:00",
+      "subject": "Remove flaky workflow UI dependency and align CI parity",
+      "body": "",
+      "parents": [
+        "b7e46899e2a243aedcab31bfa8f0440da7278285"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        "interface/tests/e2e/evals/workflow-e2e.spec.ts",
+        "scripts/ci/lib/versions.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 17,
+        "deletions": 3
+      },
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "3449d745012fa591bf8976194a8b0aa6416ad9e1",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T22:05:50-04:00",
+      "subject": "Align mobile nightly Android job with Java 21",
+      "body": "",
+      "parents": [
+        "9852b4fc14ab271ac40d204f2c2ec2925393afb5"
+      ],
+      "files": [
+        ".github/workflows/release-mobile-nightly.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "507df1348032f8f4734809bd21c86df8d5a7af9e",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-15T22:39:55-04:00",
+      "subject": "Prune nightly release assets before upload",
+      "body": "",
+      "parents": [
+        "3449d745012fa591bf8976194a8b0aa6416ad9e1"
+      ],
+      "files": [
+        ".github/workflows/release-nightly.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 17,
+        "deletions": 0
+      },
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.fb677ae",
+      "version": "0.1.0-nightly.507df13",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 24464866
+          "sizeBytes": 24642030
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 456
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92264952
+          "sizeBytes": 92375544
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 464
@@ -713,29 +2718,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.fb677ae",
+      "version": "0.1.0-nightly.507df13",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.fb677ae_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.507df13_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21126900
+          "sizeBytes": 21326739
         },
         {
-          "name": "Aura_0.1.0-nightly.fb677ae_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.507df13_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 444
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 20946111
+          "sizeBytes": 21127834
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 468
@@ -745,29 +2750,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.fb677ae",
+      "version": "0.1.0-nightly.507df13",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.fb677ae_x64.dmg",
+          "name": "Aura_0.1.0-nightly.507df13_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 22555003
+          "sizeBytes": 22708751
         },
         {
-          "name": "Aura_0.1.0-nightly.fb677ae_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.507df13_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 22391474
+          "sizeBytes": 22548674
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 468
@@ -777,17 +2782,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.fb677ae",
+      "version": "0.1.0-nightly.507df13",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 14786616
+          "sizeBytes": 14858008
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.fb677ae_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.507df13_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -799,59 +2804,102 @@
     "date": "2026-04-15",
     "repo": "aura-os",
     "channel": "nightly",
-    "version": "0.1.0-nightly.fb677ae",
-    "title": "Mobile Workspace Shell and Release Infrastructure Improvements",
-    "intro": "Today's release introduces a dedicated mobile workspace shell with improved navigation and agent workflows, alongside significant release infrastructure enhancements including automated changelog generation.",
+    "version": "0.1.0-nightly.507df13",
+    "title": "Mobile Workspace Shell and Chat Performance Overhaul",
+    "intro": "Today's release introduces a dedicated mobile workspace shell with streamlined navigation and rebuilds the chat system with bottom-anchored virtualization to eliminate scroll jank. We've also enhanced release infrastructure with automated changelog generation and improved CI reliability.",
     "sections": [
       {
         "title": "Mobile Experience",
         "items": [
           {
-            "text": "Introduced dedicated mobile workspace shell with organization hub, project navigation drawer, and streamlined mobile-first layouts",
+            "text": "Added dedicated mobile workspace shell with organization switching, project navigation drawer, and streamlined agent workflows optimized for on-the-go work",
             "commit_shas": [
-              "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Refined mobile agent and project workflows with improved agent selection, conversation handling, and project setup flows",
-            "commit_shas": [
+              "0f05d0f5194e6aa523d18e5e15e38b7ef2e1a7d9",
               "7299fdd6262cfbc622274f96e571a7816ff91dde"
             ],
             "confidence": "high"
           },
           {
-            "text": "Polished mobile execution view with redesigned task controls, execution summaries, and action buttons optimized for touch interaction",
+            "text": "Refined mobile agent and project workflows with improved agent selection, project setup flows, and execution view layouts for mobile devices",
             "commit_shas": [
-              "38e020c06497fba072c83c26d4259b27fdce66d0"
+              "38e020c06497fba072c83c26d4259b27fdce66d0",
+              "032889cd17c430ba008f5ed8d5a95560d12e262c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Enhanced mobile regression test coverage with visual validation and responsive layout checks",
+            "commit_shas": [
+              "032889cd17c430ba008f5ed8d5a95560d12e262c"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "title": "Chat System Performance",
+        "items": [
+          {
+            "text": "Rebuilt chat layout with bottom-anchored virtualized architecture that eliminates visible scroll jank during history loads and streaming",
+            "commit_shas": [
+              "13d0259fe50775acc89622b746e6613bcaf27427",
+              "252ee4a587debcd1c51fde150143e417df11d03f"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Implemented smooth streaming text reveal with word-by-word pacing and improved height estimation for rich content messages",
+            "commit_shas": [
+              "389d733037cf6bc371a087969d074a6534fc436b",
+              "1decfaed6e4780c4e904e0b5c3075bfe742d9f6e",
+              "85940f51ed7eeca990f13abfa9cfc609eb503271"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added context utilization display in chat input bar with session reset capability and real-time streaming of spec and task creation updates",
+            "commit_shas": [
+              "0ee6c3f2015fc220df4e1690aa29718a427d89cd",
+              "aab4e3680c88f237582bcf475d1ae329ba5bb7b2",
+              "e1cc2fb455074e31dd1aa27356afbb5d617bf45e"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stabilized chat viewport during sidekick resizing and improved streaming handoff transitions to prevent layout jumps",
+            "commit_shas": [
+              "8ff07feb7ccb5a1ad00215abb40cdfc890ed36b8",
+              "d3d25fe0aee8aea9375843ecf55ab0cbe095b844"
             ],
             "confidence": "high"
           }
         ]
       },
       {
-        "title": "Interface Improvements",
+        "title": "Performance and Infrastructure",
         "items": [
           {
-            "text": "Fixed chat panel reveal timing by waiting for virtualized message list to reach tail before showing chrome, eliminating visible scroll corrections on first open",
+            "text": "Optimized startup performance with lazy shell imports, reduced auth validation overhead, and added bundle size budgets with performance guardrails",
             "commit_shas": [
-              "5509bcd2ec8b00a10a83389832104f5f15ead590"
+              "ad0f2fc773a929b5c4f8541b83f234b514cdb886",
+              "507ded6781f291afde079c987949d8dbd2ee8732"
             ],
             "confidence": "high"
           },
           {
-            "text": "Positioned desktop update banner to float above taskbar for better visibility",
+            "text": "Improved desktop route persistence and shell loading to restore the last valid route on startup instead of defaulting to the home app",
             "commit_shas": [
-              "f6335a768f71f084f135c8b13489bf87b22ad1b3"
+              "50b89fd14981b2220a698de495670e37b0bd77f9",
+              "7b5f711b78d31ae85a3f570f9b3b2038ae94092a"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Cleaned up agent editor interface by removing unused system prompt properties",
+            "text": "Enhanced agent recovery flow with explicit delete-then-provision sequence and real-time WebSocket progress updates",
             "commit_shas": [
-              "78ab4d25e06aa5a678f66bd67eafcbe6b8bc7aa8"
+              "a4c565cfbe297976cf7c50cfe80d059a0a2eb48b"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -859,70 +2907,27 @@
         "title": "Release Infrastructure",
         "items": [
           {
-            "text": "Added automated daily changelog generation for both nightly and stable releases using AI-powered commit analysis",
+            "text": "Added automated daily changelog generation with AI-powered release notes for both nightly and stable channels",
             "commit_shas": [
               "9e40e99b0dff8228ec078cf76cbee06be9fc70b8",
-              "805f16f35178699feae9d062d565ae11ef07173a",
-              "fb677ae6781e6a7b6359ad3de7c945e80fde4b93"
+              "805f16f35178699feae9d062d565ae11ef07173a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Upgraded CI Node version to 25 across all workflows to align with local development environment",
+            "text": "Upgraded CI toolchain to Node 22, Java 21, and improved Cargo build caching with shared target directories for faster desktop rebuilds",
             "commit_shas": [
               "2828dc38355612749f9d06e617c8ccd5c8fc57ad",
-              "9557757d9eb2770b6921079bf25659d936de5f9f"
+              "9557757d9eb2770b6921079bf25659d936de5f9f",
+              "8012ff74eeb0c1e3ff7a8d9f9bff9928dffc9baf"
             ],
             "confidence": "high"
           },
           {
-            "text": "Optimized desktop validation workflow to run only on pull requests, reducing unnecessary CI overhead",
+            "text": "Aligned CI and local runtime parity with pinned toolchain versions and improved iOS beta deployment automation",
             "commit_shas": [
-              "1d74cc60a48632b98520ef566cfd66edff69328d"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Configured iOS beta lane to run on main branch pushes for continuous mobile testing",
-            "commit_shas": [
+              "390f870a8b6a51e1b8f051947b3fc240172c843d",
               "80d9e3942f6ba9d196ecdd9e294052a11c7ab7f3"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "title": "Platform & Testing",
-        "items": [
-          {
-            "text": "Enhanced mobile and desktop regression test coverage with improved assertions and visual validation",
-            "commit_shas": [
-              "032889cd17c430ba008f5ed8d5a95560d12e262c",
-              "9f34383527083ffac59a8d07a94538cda3d77095"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Stabilized evaluation test expectations for shell interactions and workflow statistics",
-            "commit_shas": [
-              "fd625fd64f52f58d53fa154cdf41d5bd3c777f7b",
-              "fc15ffb2fd05d94af7c0b5121011345c387c160f",
-              "2e8ecb8eaae05af54dbcafee03280ebbf3337a99",
-              "b9dc017cb28758381d31cfc3bbf30794d659ab8b"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Set up CI keychain configuration for iOS code signing in automated builds",
-            "commit_shas": [
-              "5dd83aefe30f468d9ae098d1ce5701a13cf5ea69"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Preserved encoded updater public key in Desktop application for secure update verification",
-            "commit_shas": [
-              "75589e4e5e50113d21b7587b235e2a57162c10b9"
             ],
             "confidence": "medium"
           }
@@ -930,10 +2935,11 @@
       }
     ],
     "highlights": [
-      "New mobile workspace shell with dedicated organization and project navigation",
-      "Automated changelog generation for release transparency",
-      "Improved chat panel timing eliminates scroll corrections"
+      "Mobile workspace shell with streamlined navigation and agent workflows",
+      "Bottom-anchored chat virtualization eliminates scroll jank",
+      "Automated AI-powered changelog generation for releases",
+      "Significant startup performance improvements with lazy loading"
     ],
-    "raw_commit_count": 23
+    "raw_commit_count": 65
   }
 }
