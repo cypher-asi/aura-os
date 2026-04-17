@@ -32,6 +32,21 @@ pub(crate) struct ProjectStatsResponse {
 
 impl From<ProjectStats> for ProjectStatsResponse {
     fn from(s: ProjectStats) -> Self {
+        // Some aura-storage deployments leave the aggregate `total_tokens`
+        // column at 0 while still populating `total_input_tokens` /
+        // `total_output_tokens` (and `estimated_cost_usd`). Fall back to the
+        // component columns so the UI stays consistent with the displayed
+        // cost instead of showing 0 tokens next to $0.11.
+        let summed_storage_tokens = s
+            .total_input_tokens
+            .unwrap_or(0)
+            .saturating_add(s.total_output_tokens.unwrap_or(0));
+        let total_tokens = if s.total_tokens > 0 {
+            s.total_tokens
+        } else {
+            summed_storage_tokens
+        };
+
         Self {
             total_tasks: s.total_tasks,
             pending_tasks: s.pending_tasks,
@@ -41,7 +56,7 @@ impl From<ProjectStats> for ProjectStatsResponse {
             done_tasks: s.done_tasks,
             failed_tasks: s.failed_tasks,
             completion_percentage: s.completion_percentage,
-            total_tokens: s.total_tokens,
+            total_tokens,
             total_events: s.total_events,
             total_agents: s.total_agents,
             total_sessions: s.total_sessions,
@@ -64,6 +79,14 @@ pub(crate) async fn get_project_stats(
         .get_project_stats(&project_id.to_string(), &jwt)
         .await
         .map_err(map_storage_error)?;
+    info!(
+        %project_id,
+        storage_total_tokens = stats.total_tokens,
+        storage_total_input_tokens = ?stats.total_input_tokens,
+        storage_total_output_tokens = ?stats.total_output_tokens,
+        storage_estimated_cost_usd = stats.estimated_cost_usd,
+        "aura-storage project stats fetched"
+    );
     let mut resp = ProjectStatsResponse::from(stats);
 
     // aura-storage's /api/stats endpoint historically reports 0 tokens/cost for

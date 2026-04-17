@@ -395,6 +395,13 @@ pub struct ProjectStats {
     pub completion_percentage: f64,
     #[serde(default)]
     pub total_tokens: u64,
+    /// Sum of input tokens across all sessions. Some aura-storage deployments
+    /// populate this (and `total_output_tokens`) alongside a zero or stale
+    /// `total_tokens`; read them too so callers can fall back when needed.
+    #[serde(default)]
+    pub total_input_tokens: Option<u64>,
+    #[serde(default)]
+    pub total_output_tokens: Option<u64>,
     #[serde(default)]
     pub total_events: u64,
     #[serde(default)]
