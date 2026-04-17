@@ -97,6 +97,35 @@ function combineStoredAndStreamMessages(
   return [...storedMessages, ...liveOnlyMessages];
 }
 
+function chooseBaseMessages(
+  storedMessages: DisplaySessionEvent[],
+  historyMessages: DisplaySessionEvent[],
+): DisplaySessionEvent[] {
+  if (storedMessages.length === 0) {
+    return historyMessages;
+  }
+  if (historyMessages.length === 0) {
+    return storedMessages;
+  }
+
+  const historyIds = new Set(historyMessages.map((message) => message.id));
+  const storedIds = new Set(storedMessages.map((message) => message.id));
+
+  const historyContainsStored = storedMessages.every((message) => historyIds.has(message.id));
+  if (historyContainsStored && historyMessages.length >= storedMessages.length) {
+    return historyMessages;
+  }
+
+  const storedContainsHistory = historyMessages.every((message) => storedIds.has(message.id));
+  if (storedContainsHistory && storedMessages.length > historyMessages.length) {
+    return storedMessages;
+  }
+
+  return historyMessages.length >= storedMessages.length
+    ? historyMessages
+    : storedMessages;
+}
+
 export function useConversationSnapshot(
   streamKey: string,
   historyMessages?: DisplaySessionEvent[],
@@ -113,10 +142,8 @@ export function useConversationSnapshot(
 
   const messages = useMemo(() => {
     const stored = useMessageStore.getState().getThreadMessages(streamKey);
-    if (stored.length > 0) {
-      return combineStoredAndStreamMessages(stored, streamMessages);
-    }
-    return combineStoredAndStreamMessages(historyMessages ?? [], streamMessages);
+    const baseMessages = chooseBaseMessages(stored, historyMessages ?? []);
+    return combineStoredAndStreamMessages(baseMessages, streamMessages);
   }, [streamKey, streamMessages, historyMessages]);
 
   return { messages };

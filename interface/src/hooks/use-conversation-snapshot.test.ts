@@ -64,4 +64,25 @@ describe("useConversationSnapshot", () => {
 
     expect(result.current.messages).toEqual(historyMessages);
   });
+
+  it("prefers fresher persisted history over a stale stored thread snapshot", () => {
+    const streamKey = "thread-3";
+    const staleStoredMessages: DisplaySessionEvent[] = [
+      { id: "evt-user-1", role: "user", content: "hi" },
+      { id: "evt-assistant-1", role: "assistant", content: "hello" },
+    ];
+    const historyMessages: DisplaySessionEvent[] = [
+      ...staleStoredMessages,
+      { id: "evt-user-2", role: "user", content: "create a spec for me?" },
+      { id: "evt-assistant-2", role: "assistant", content: "Absolutely — I can create a spec." },
+    ];
+
+    useMessageStore.getState().setThread(streamKey, staleStoredMessages);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, historyMessages),
+    );
+
+    expect(result.current.messages).toEqual(historyMessages);
+  });
 });
