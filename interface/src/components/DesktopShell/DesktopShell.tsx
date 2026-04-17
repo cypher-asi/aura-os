@@ -313,7 +313,7 @@ export function DesktopShell() {
           className={`titlebar-drag ${styles.topbarAlignRail} ${isDesktop ? styles.topbarBlur : ""}`}
           onDoubleClick={() => windowCommand("maximize")}
           icon={<OrgSelector variant="icon" />}
-          title={<span className="titlebar-center"><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></span>}
+          title={<span className="titlebar-center" style={{ userSelect: "none" }}><img src="/AURA_logo_text_mark.png" alt="AURA" draggable={false} style={{ height: 11, display: "block", userSelect: "none", pointerEvents: "none" }} /></span>}
           actions={(
             <div className={styles.titleActions} onDoubleClick={(e) => e.stopPropagation()}>
               {features.hostRetargeting && (
