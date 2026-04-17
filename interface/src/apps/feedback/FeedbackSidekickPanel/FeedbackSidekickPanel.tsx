@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, MessageSquare } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { Avatar } from "../../../components/Avatar";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import {
   useAddFeedbackComment,
   useFeedback,
@@ -18,6 +19,7 @@ export function FeedbackSidekickPanel() {
   const addComment = useAddFeedbackComment();
   const [draft, setDraft] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const commentListRef = useRef<HTMLDivElement>(null);
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -55,31 +57,34 @@ export function FeedbackSidekickPanel() {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.commentList}>
-        {comments.length === 0 ? (
-          <EmptyState>No comments yet</EmptyState>
-        ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className={styles.commentItem}>
-              <Avatar
-                avatarUrl={comment.author.avatarUrl}
-                name={comment.author.name}
-                type={comment.author.type}
-                size={28}
-                className={styles.commentAvatar}
-              />
-              <div className={styles.commentContent}>
-                <div className={styles.commentHeader}>
-                  <span className={styles.commentAuthor}>{comment.author.name}</span>
-                  <span className={styles.commentTime}>
-                    {timeAgo(comment.createdAt)}
-                  </span>
+      <div className={styles.commentListShell}>
+        <div ref={commentListRef} className={styles.commentList}>
+          {comments.length === 0 ? (
+            <EmptyState>No comments yet</EmptyState>
+          ) : (
+            comments.map((comment) => (
+              <div key={comment.id} className={styles.commentItem}>
+                <Avatar
+                  avatarUrl={comment.author.avatarUrl}
+                  name={comment.author.name}
+                  type={comment.author.type}
+                  size={28}
+                  className={styles.commentAvatar}
+                />
+                <div className={styles.commentContent}>
+                  <div className={styles.commentHeader}>
+                    <span className={styles.commentAuthor}>{comment.author.name}</span>
+                    <span className={styles.commentTime}>
+                      {timeAgo(comment.createdAt)}
+                    </span>
+                  </div>
+                  <span className={styles.commentText}>{comment.text}</span>
                 </div>
-                <span className={styles.commentText}>{comment.text}</span>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
+        <OverlayScrollbar scrollRef={commentListRef} />
       </div>
 
       <div className={styles.inputArea}>

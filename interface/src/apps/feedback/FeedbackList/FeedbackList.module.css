@@ -1,23 +1,24 @@
-.list {
+.root {
+  position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   height: 100%;
-  overflow-y: auto;
 }
 
-.section {
+.list {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: var(--space-2);
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding-top: 8px;
+  scrollbar-width: none;
 }
 
-.sectionHeader {
-  font-size: var(--font-size-xs, 11px);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: var(--space-3) var(--space-3) var(--space-1);
+.list::-webkit-scrollbar {
+  display: none;
 }
 
 .list [class*="itemContent"] {

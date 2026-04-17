@@ -1,6 +1,8 @@
+import { useRef } from "react";
 import { MessageSquare } from "lucide-react";
 import { Lane } from "../../../components/Lane";
 import { EmptyState } from "../../../components/EmptyState";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import {
   useFeedback,
@@ -14,11 +16,12 @@ export function FeedbackMainPanel() {
   const { isMobileLayout } = useAuraCapabilities();
   const { sort, setSort, selectedId, selectItem, castVote } = useFeedback();
   const sortedItems = useSortedFeedbackItems();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
     <Lane flex>
       <div className={styles.container}>
-        <div className={styles.scrollArea}>
+        <div ref={scrollRef} className={styles.scrollArea}>
           {isMobileLayout ? (
             <div className={styles.mobileFilterBar} aria-label="Feedback filters">
               {FEEDBACK_SORT_FILTERS.map((option) => {
@@ -58,6 +61,7 @@ export function FeedbackMainPanel() {
             </div>
           )}
         </div>
+        <OverlayScrollbar scrollRef={scrollRef} />
       </div>
     </Lane>
   );

@@ -45,6 +45,11 @@
   padding: var(--space-4) var(--space-5);
   width: 100%;
   box-sizing: border-box;
+  scrollbar-width: none;
+}
+
+.scrollArea::-webkit-scrollbar {
+  display: none;
 }
 
 .commitGridWrapper {

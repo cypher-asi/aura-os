@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
+import { FolderSection } from "../../../components/FolderSection";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton/ProjectsPlusButton";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useFeedback } from "../../../stores/feedback-store";
@@ -18,6 +20,8 @@ import styles from "./FeedbackList.module.css";
 const ALL_CATEGORY_ID = "__all_categories__";
 const ALL_STATUS_ID = "__all_statuses__";
 
+type SectionId = "trending" | "type" | "status";
+
 export function FeedbackList() {
   const {
     sort,
@@ -29,6 +33,12 @@ export function FeedbackList() {
   } = useFeedback();
   const { setAction } = useSidebarSearch("feedback");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState<Record<SectionId, boolean>>({
+    trending: true,
+    type: true,
+    status: true,
+  });
 
   useEffect(() => {
     setAction(
@@ -40,6 +50,10 @@ export function FeedbackList() {
     );
     return () => setAction("feedback", null);
   }, [setAction]);
+
+  const toggleSection = useCallback((id: SectionId) => {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
 
   const sortData: ExplorerNode[] = useMemo(
     () =>
@@ -113,37 +127,49 @@ export function FeedbackList() {
 
   return (
     <>
-      <div className={styles.list}>
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>Trending</div>
-          <Explorer
-            data={sortData}
-            enableDragDrop={false}
-            enableMultiSelect={false}
-            defaultSelectedIds={sortSelectedIds}
-            onSelect={handleSortSelect}
-          />
+      <div className={styles.root}>
+        <div ref={scrollRef} className={styles.list}>
+          <FolderSection
+            label="Trending"
+            expanded={expanded.trending}
+            onToggle={() => toggleSection("trending")}
+          >
+            <Explorer
+              data={sortData}
+              enableDragDrop={false}
+              enableMultiSelect={false}
+              defaultSelectedIds={sortSelectedIds}
+              onSelect={handleSortSelect}
+            />
+          </FolderSection>
+          <FolderSection
+            label="Type"
+            expanded={expanded.type}
+            onToggle={() => toggleSection("type")}
+          >
+            <Explorer
+              data={categoryData}
+              enableDragDrop={false}
+              enableMultiSelect={false}
+              defaultSelectedIds={categorySelectedIds}
+              onSelect={handleCategorySelect}
+            />
+          </FolderSection>
+          <FolderSection
+            label="Status"
+            expanded={expanded.status}
+            onToggle={() => toggleSection("status")}
+          >
+            <Explorer
+              data={statusData}
+              enableDragDrop={false}
+              enableMultiSelect={false}
+              defaultSelectedIds={statusSelectedIds}
+              onSelect={handleStatusSelect}
+            />
+          </FolderSection>
         </div>
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>Type</div>
-          <Explorer
-            data={categoryData}
-            enableDragDrop={false}
-            enableMultiSelect={false}
-            defaultSelectedIds={categorySelectedIds}
-            onSelect={handleCategorySelect}
-          />
-        </div>
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>Status</div>
-          <Explorer
-            data={statusData}
-            enableDragDrop={false}
-            enableMultiSelect={false}
-            defaultSelectedIds={statusSelectedIds}
-            onSelect={handleStatusSelect}
-          />
-        </div>
+        <OverlayScrollbar scrollRef={scrollRef} />
       </div>
       <NewFeedbackModal
         isOpen={isModalOpen}

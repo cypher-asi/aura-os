@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Bot, User, MessageSquare, Send } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { EntityCard } from "../../../components/EntityCard";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { Avatar } from "../../../components/Avatar";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { LeaderboardSidekick } from "../LeaderboardSidekick";
 import { useFeed } from "../../../stores/feed-store";
 import { useAuth } from "../../../stores/auth-store";
@@ -76,6 +77,7 @@ function ProfilePanel() {
 function CommentsPanel() {
   const { selectedEventId, getCommentsForEvent, addComment, selectProfile } = useFeed();
   const [draft, setDraft] = useState("");
+  const commentListRef = useRef<HTMLDivElement>(null);
 
   if (!selectedEventId) return null;
 
@@ -101,36 +103,39 @@ function CommentsPanel() {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.commentList}>
-        {comments.length === 0 ? (
-          <EmptyState>No comments yet</EmptyState>
-        ) : (
-          comments.map((c) => (
-            <div key={c.id} className={styles.commentItem}>
-              <Avatar
-                avatarUrl={c.author.avatarUrl}
-                name={c.author.name}
-                type={c.author.type}
-                size={28}
-                status={c.author.status}
-                className={`${styles.commentAvatar} ${styles.commentAvatarClickable}`}
-                onClick={() => handleAuthorClick(c.author)}
-              />
-              <div className={styles.commentContent}>
-                <div className={styles.commentHeader}>
-                  <span
-                    className={`${styles.commentAuthor} ${styles.commentAuthorClickable}`}
-                    onClick={() => handleAuthorClick(c.author)}
-                  >
-                    {c.author.name}
-                  </span>
-                  <span className={styles.commentTime}>{timeAgo(c.timestamp)}</span>
+      <div className={styles.commentListShell}>
+        <div ref={commentListRef} className={styles.commentList}>
+          {comments.length === 0 ? (
+            <EmptyState>No comments yet</EmptyState>
+          ) : (
+            comments.map((c) => (
+              <div key={c.id} className={styles.commentItem}>
+                <Avatar
+                  avatarUrl={c.author.avatarUrl}
+                  name={c.author.name}
+                  type={c.author.type}
+                  size={28}
+                  status={c.author.status}
+                  className={`${styles.commentAvatar} ${styles.commentAvatarClickable}`}
+                  onClick={() => handleAuthorClick(c.author)}
+                />
+                <div className={styles.commentContent}>
+                  <div className={styles.commentHeader}>
+                    <span
+                      className={`${styles.commentAuthor} ${styles.commentAuthorClickable}`}
+                      onClick={() => handleAuthorClick(c.author)}
+                    >
+                      {c.author.name}
+                    </span>
+                    <span className={styles.commentTime}>{timeAgo(c.timestamp)}</span>
+                  </div>
+                  <span className={styles.commentText}>{c.text}</span>
                 </div>
-                <span className={styles.commentText}>{c.text}</span>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
+        <OverlayScrollbar scrollRef={commentListRef} />
       </div>
 
       <div className={styles.inputArea}>

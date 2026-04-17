@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../../components/Lane";
 import { CommitGrid } from "../../../components/CommitGrid";
 import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { FEED_FILTERS } from "../feed-filters";
 import { LeaderboardContent } from "../LeaderboardContent";
@@ -17,11 +18,12 @@ export function FeedMainPanel() {
   const { filter, setFilter, filteredEvents, commitActivity, selectedEventId, selectEvent, selectProfile, getCommentsForEvent } = useFeed();
 
   const isLeaderboard = filter === "leaderboard";
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
     <Lane flex>
       <div className={styles.container}>
-        <div className={styles.scrollArea}>
+        <div ref={scrollRef} className={styles.scrollArea}>
           {isMobileLayout ? (
             <div className={styles.mobileFilterBar} aria-label="Feed filters">
               {FEED_FILTERS.map((feedFilter) => {
@@ -67,6 +69,7 @@ export function FeedMainPanel() {
             </>
           )}
         </div>
+        <OverlayScrollbar scrollRef={scrollRef} />
       </div>
     </Lane>
   );
