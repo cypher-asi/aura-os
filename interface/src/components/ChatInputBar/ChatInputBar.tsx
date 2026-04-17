@@ -82,7 +82,6 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   const isStreaming = useIsStreaming(streamKey);
   const chatUI = useChatUI(streamKey);
   const selectedModel = chatUI.selectedModel;
-  const availableModels = availableModelsForAdapter(adapterType);
   const onModelChange = useCallback((model: string) => {
     chatUI.setSelectedModel(streamKey, model, adapterType);
   }, [chatUI.setSelectedModel, streamKey, adapterType]);
@@ -172,7 +171,14 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     : selectedCommands.some((c) => c.id === "generate_3d")
       ? "3d"
       : "chat";
-  const modelsForMode = getModelsForMode(generationMode);
+  // In chat mode, let the adapter (codex/gemini/opencode/cursor/default) drive
+  // the available model list. In image/3d mode, use the mode-filtered model
+  // list which is the same across adapters (adapter-specific models are
+  // chat-only today).
+  const modelsForMode =
+    generationMode === "chat"
+      ? availableModelsForAdapter(adapterType)
+      : getModelsForMode(generationMode);
 
   const excludeIds = new Set(selectedCommands.map((c) => c.id));
 
@@ -181,8 +187,13 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     if (isGenerationCommand(cmd.id)) {
       next = [...selectedCommands.filter((c) => !isGenerationCommand(c.id)), cmd];
       const mode = cmd.id === "generate_image" ? "image" : "3d";
-      const defaultForMode = getDefaultModelForMode(mode);
-      onModelChange(defaultForMode.id);
+      // Only switch models when the target mode actually has selectable models.
+      // 3D generation has no user-selectable model, so we leave the current
+      // selection untouched to avoid clobbering the user's chat model.
+      if (getModelsForMode(mode).length > 0) {
+        const defaultForMode = getDefaultModelForMode(mode);
+        onModelChange(defaultForMode.id);
+      }
     } else {
       next = [...selectedCommands, cmd];
     }
@@ -352,31 +363,33 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
             <RotateCcw size={10} />
           </button>
         ) : null}
-        <div className={styles.modelMenuWrap} ref={modelMenuRef}>
-          <button
-            type="button"
-            className={styles.modelButton}
-            onClick={availableModels.length > 1 ? () => setModelMenuOpen((v) => !v) : undefined}
-            style={availableModels.length > 1 ? undefined : { cursor: "default" }}
-          >
-            {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
-            {availableModels.length > 1 && <ChevronDown size={10} />}
-          </button>
-          {modelMenuOpen && availableModels.length > 1 && (
-            <div className={styles.modelMenu}>
-              {modelsForMode.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
-                  onClick={() => { onModelChange(m.id); setModelMenuOpen(false); }}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {modelsForMode.length > 0 && (
+          <div className={styles.modelMenuWrap} ref={modelMenuRef}>
+            <button
+              type="button"
+              className={styles.modelButton}
+              onClick={modelsForMode.length > 1 ? () => setModelMenuOpen((v) => !v) : undefined}
+              style={modelsForMode.length > 1 ? undefined : { cursor: "default" }}
+            >
+              {modelLabel(selectedModel ?? "", adapterType, defaultModel)}
+              {modelsForMode.length > 1 && <ChevronDown size={10} />}
+            </button>
+            {modelMenuOpen && modelsForMode.length > 1 && (
+              <div className={styles.modelMenu}>
+                {modelsForMode.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                    onClick={() => { onModelChange(m.id); setModelMenuOpen(false); }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -38,7 +38,7 @@ const STATUSES: &[&str] = &[
 
 /// Canonical product values. Extend this list (and the matching UI enum) when
 /// onboarding a new product.
-const PRODUCTS: &[&str] = &["aura", "the_grid", "wilder_world", "z_chain"];
+const PRODUCTS: &[&str] = &["aura", "the_grid", "wilder_world", "z_chain", "zero"];
 
 const DEFAULT_PRODUCT: &str = "aura";
 

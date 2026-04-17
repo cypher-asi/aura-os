@@ -5,7 +5,7 @@ import { FolderSection } from "../../../components/FolderSection";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton/ProjectsPlusButton";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
-import { useFeedback } from "../../../stores/feedback-store";
+import { useFeedback, useFeedbackStore } from "../../../stores/feedback-store";
 import type {
   FeedbackCategory,
   FeedbackProduct,
@@ -20,7 +20,6 @@ import {
   FEEDBACK_SORT_FILTERS,
   FEEDBACK_STATUS_FILTERS,
 } from "../feedback-filters";
-import { NewFeedbackModal } from "../NewFeedbackModal";
 import styles from "./FeedbackList.module.css";
 
 const ALL_CATEGORY_ID = "__all_categories__";
@@ -40,7 +39,7 @@ export function FeedbackList() {
     setProductFilter,
   } = useFeedback();
   const { setAction } = useSidebarSearch("feedback");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const openComposer = useFeedbackStore((s) => s.openComposer);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<Record<SectionId, boolean>>({
     product: false,
@@ -53,20 +52,16 @@ export function FeedbackList() {
     setAction(
       "feedback",
       <ProjectsPlusButton
-        onClick={() => setIsModalOpen(true)}
-        title="New Feedback"
+        onClick={openComposer}
+        title="New Idea"
       />,
     );
     return () => setAction("feedback", null);
-  }, [setAction]);
+  }, [setAction, openComposer]);
 
   const toggleSection = useCallback((id: SectionId) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
-
-  // Stable callback so the Modal's focus effect doesn't re-fire on every
-  // keystroke inside the composer.
-  const handleModalClose = useCallback(() => setIsModalOpen(false), []);
 
   const productData: ExplorerNode[] = useMemo(
     () =>
@@ -159,68 +154,62 @@ export function FeedbackList() {
   );
 
   return (
-    <>
-      <div className={styles.root}>
-        <div ref={scrollRef} className={styles.list}>
-          <FolderSection
-            label="Product"
-            expanded={expanded.product}
-            onToggle={() => toggleSection("product")}
-          >
-            <Explorer
-              data={productData}
-              enableDragDrop={false}
-              enableMultiSelect={false}
-              defaultSelectedIds={productSelectedIds}
-              onSelect={handleProductSelect}
-            />
-          </FolderSection>
-          <FolderSection
-            label="Trending"
-            expanded={expanded.trending}
-            onToggle={() => toggleSection("trending")}
-          >
-            <Explorer
-              data={sortData}
-              enableDragDrop={false}
-              enableMultiSelect={false}
-              defaultSelectedIds={sortSelectedIds}
-              onSelect={handleSortSelect}
-            />
-          </FolderSection>
-          <FolderSection
-            label="Type"
-            expanded={expanded.type}
-            onToggle={() => toggleSection("type")}
-          >
-            <Explorer
-              data={categoryData}
-              enableDragDrop={false}
-              enableMultiSelect={false}
-              defaultSelectedIds={categorySelectedIds}
-              onSelect={handleCategorySelect}
-            />
-          </FolderSection>
-          <FolderSection
-            label="Status"
-            expanded={expanded.status}
-            onToggle={() => toggleSection("status")}
-          >
-            <Explorer
-              data={statusData}
-              enableDragDrop={false}
-              enableMultiSelect={false}
-              defaultSelectedIds={statusSelectedIds}
-              onSelect={handleStatusSelect}
-            />
-          </FolderSection>
-        </div>
-        <OverlayScrollbar scrollRef={scrollRef} />
+    <div className={styles.root}>
+      <div ref={scrollRef} className={styles.list}>
+        <FolderSection
+          label="Product"
+          expanded={expanded.product}
+          onToggle={() => toggleSection("product")}
+        >
+          <Explorer
+            data={productData}
+            enableDragDrop={false}
+            enableMultiSelect={false}
+            defaultSelectedIds={productSelectedIds}
+            onSelect={handleProductSelect}
+          />
+        </FolderSection>
+        <FolderSection
+          label="Trending"
+          expanded={expanded.trending}
+          onToggle={() => toggleSection("trending")}
+        >
+          <Explorer
+            data={sortData}
+            enableDragDrop={false}
+            enableMultiSelect={false}
+            defaultSelectedIds={sortSelectedIds}
+            onSelect={handleSortSelect}
+          />
+        </FolderSection>
+        <FolderSection
+          label="Type"
+          expanded={expanded.type}
+          onToggle={() => toggleSection("type")}
+        >
+          <Explorer
+            data={categoryData}
+            enableDragDrop={false}
+            enableMultiSelect={false}
+            defaultSelectedIds={categorySelectedIds}
+            onSelect={handleCategorySelect}
+          />
+        </FolderSection>
+        <FolderSection
+          label="Status"
+          expanded={expanded.status}
+          onToggle={() => toggleSection("status")}
+        >
+          <Explorer
+            data={statusData}
+            enableDragDrop={false}
+            enableMultiSelect={false}
+            defaultSelectedIds={statusSelectedIds}
+            onSelect={handleStatusSelect}
+          />
+        </FolderSection>
       </div>
-      <NewFeedbackModal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-      />
-    </>
+      <OverlayScrollbar scrollRef={scrollRef} />
+    </div>
   );
 }

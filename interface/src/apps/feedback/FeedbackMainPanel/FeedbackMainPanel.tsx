@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { MessageSquare } from "lucide-react";
+import { Lightbulb, MessageSquare } from "lucide-react";
 import { Lane } from "../../../components/Lane";
 import { EmptyState } from "../../../components/EmptyState";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
@@ -11,12 +11,13 @@ import {
 } from "../../../stores/feedback-store";
 import { FEEDBACK_SORT_FILTERS } from "../feedback-filters";
 import { FeedbackItemCard } from "../FeedbackItemCard";
+import { NewFeedbackModal } from "../NewFeedbackModal";
 import styles from "./FeedbackMainPanel.module.css";
 
-function emptyMessage(isLoading: boolean, loadError: string | null): string {
-  if (isLoading) return "Loading feedback...";
+function emptyMessage(isPending: boolean, loadError: string | null): string {
+  if (isPending) return "Loading feedback...";
   if (loadError) return `Could not load feedback: ${loadError}`;
-  return "No feedback yet. Use the + button to post the first one.";
+  return "No feedback yet. Use the New Idea button to post the first one.";
 }
 
 export function FeedbackMainPanel() {
@@ -29,14 +30,35 @@ export function FeedbackMainPanel() {
     selectItem,
     castVote,
     isLoading,
+    hasLoaded,
     loadError,
+    isComposerOpen,
+    openComposer,
+    closeComposer,
   } = useFeedback();
+  // Treat "not yet bootstrapped" the same as "currently loading" so the
+  // initial render shows "Loading feedback..." directly instead of first
+  // flashing the "No feedback yet" empty-state before the bootstrap effect
+  // has a chance to flip isLoading on.
+  const isPending = isLoading || !hasLoaded;
   const sortedItems = useSortedFeedbackItems();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
     <Lane flex>
       <div className={styles.container}>
+        <div className={styles.feedHeader}>
+          <button
+            type="button"
+            className={styles.newIdeaButton}
+            onClick={openComposer}
+            aria-label="New Idea"
+            title="Post a new idea"
+          >
+            <Lightbulb size={14} aria-hidden="true" />
+            <span>New Idea</span>
+          </button>
+        </div>
         <div ref={scrollRef} className={styles.scrollArea}>
           {isMobileLayout ? (
             <div className={styles.mobileFilterBar} aria-label="Feedback filters">
@@ -60,7 +82,7 @@ export function FeedbackMainPanel() {
           {sortedItems.length === 0 ? (
             <div className={styles.emptyWrapper}>
               <EmptyState icon={<MessageSquare size={32} />}>
-                {emptyMessage(isLoading, loadError)}
+                {emptyMessage(isPending, loadError)}
               </EmptyState>
             </div>
           ) : (
@@ -79,6 +101,7 @@ export function FeedbackMainPanel() {
         </div>
         <OverlayScrollbar scrollRef={scrollRef} />
       </div>
+      <NewFeedbackModal isOpen={isComposerOpen} onClose={closeComposer} />
     </Lane>
   );
 }

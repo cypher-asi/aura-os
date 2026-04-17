@@ -21,7 +21,12 @@ export type FeedbackSort =
 
 export type ViewerVote = "up" | "down" | "none";
 
-export type FeedbackProduct = "aura" | "the_grid" | "wilder_world" | "z_chain";
+export type FeedbackProduct =
+  | "aura"
+  | "the_grid"
+  | "wilder_world"
+  | "z_chain"
+  | "zero";
 
 /** Product the Aura OS shell tags new feedback with unless the user picks another. */
 export const DEFAULT_FEEDBACK_PRODUCT: FeedbackProduct = "aura";
@@ -102,9 +107,10 @@ export const FEEDBACK_PRODUCT_OPTIONS: ReadonlyArray<{
   label: string;
 }> = [
   { value: "aura", label: "AURA" },
-  { value: "the_grid", label: "The Grid" },
+  { value: "the_grid", label: "The GRID" },
   { value: "wilder_world", label: "Wilder World" },
   { value: "z_chain", label: "Z Chain" },
+  { value: "zero", label: "ZERO" },
 ];
 
 export function categoryLabel(category: FeedbackCategory): string {

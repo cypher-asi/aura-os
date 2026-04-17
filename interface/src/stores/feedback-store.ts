@@ -32,8 +32,16 @@ interface FeedbackState {
   productFilter: FeedbackProduct;
   selectedId: string | null;
   isLoading: boolean;
+  /** True after the first successful bootstrap load so re-mounting the
+   *  feedback app (e.g. navigating away and back) doesn't flash the loading
+   *  empty-state again on cached data. */
+  hasLoaded: boolean;
   loadError: string | null;
   isSubmitting: boolean;
+  /** Whether the New Feedback / New Idea composer modal is currently open.
+   *  Lifted into the store so multiple trigger buttons (sidebar plus button,
+   *  feed header "New Idea" button, etc.) all drive the same modal instance. */
+  isComposerOpen: boolean;
   composerError: string | null;
   /** item IDs for which we've already fetched comments at least once. */
   commentsLoadedFor: Set<string>;
@@ -51,6 +59,8 @@ interface FeedbackActions {
   castVote: (id: string, vote: ViewerVote) => void;
   setStatus: (id: string, status: FeedbackStatus) => void;
   addComment: (itemId: string, text: string) => void;
+  openComposer: () => void;
+  closeComposer: () => void;
   resetComposerError: () => void;
 }
 
@@ -139,10 +149,13 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
   sort: "latest",
   categoryFilter: null,
   statusFilter: null,
+  productFilter: DEFAULT_FEEDBACK_PRODUCT,
   selectedId: null,
   isLoading: false,
+  hasLoaded: false,
   loadError: null,
   isSubmitting: false,
+  isComposerOpen: false,
   composerError: null,
   commentsLoadedFor: new Set<string>(),
 
@@ -159,16 +172,27 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
     }
   },
 
+  openComposer: () => set({ isComposerOpen: true }),
+
+  closeComposer: () => {
+    // Only allow close when not mid-submit; the modal's own handler enforces
+    // this too, but guarding here keeps the store state consistent if the
+    // close is triggered from an external source.
+    if (get().isSubmitting) return;
+    set({ isComposerOpen: false });
+  },
+
   resetComposerError: () => set({ composerError: null }),
 
   loadItems: async () => {
     set({ isLoading: true, loadError: null });
     try {
       const dtos = await api.feedback.list();
-      set({ items: dtos.map(dtoToItem), isLoading: false });
+      set({ items: dtos.map(dtoToItem), isLoading: false, hasLoaded: true });
     } catch (err) {
       set({
         isLoading: false,
+        hasLoaded: true,
         loadError: err instanceof Error ? err.message : "Failed to load feedback.",
       });
     }
@@ -384,8 +408,12 @@ export function useFeedback() {
       selectedId: s.selectedId,
       selectItem: s.selectItem,
       isLoading: s.isLoading,
+      hasLoaded: s.hasLoaded,
       loadError: s.loadError,
       isSubmitting: s.isSubmitting,
+      isComposerOpen: s.isComposerOpen,
+      openComposer: s.openComposer,
+      closeComposer: s.closeComposer,
       composerError: s.composerError,
       createFeedback: s.createFeedback,
       castVote: s.castVote,
@@ -433,10 +461,15 @@ export function useAddFeedbackComment(): (itemId: string, text: string) => void 
 /**
  * Bootstraps the feedback list on mount. Call once from a component that
  * lives for the lifetime of the Feedback app (e.g. the main panel).
+ *
+ * Idempotent across mounts: the initial bootstrap runs at most once per
+ * session so navigating away from and back to the Feedback app reuses the
+ * cached list instead of re-flashing the loading state.
  */
 export function useFeedbackBootstrap(): void {
-  const loadItems = useFeedbackStore((s) => s.loadItems);
   useEffect(() => {
+    const { hasLoaded, isLoading, loadItems } = useFeedbackStore.getState();
+    if (hasLoaded || isLoading) return;
     void loadItems();
-  }, [loadItems]);
+  }, []);
 }

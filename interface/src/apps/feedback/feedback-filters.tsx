@@ -3,6 +3,7 @@ import {
   Box,
   Bug,
   CheckCircle2,
+  Circle,
   CircleDashed,
   CircleDot,
   Clock,
@@ -74,7 +75,8 @@ export const FEEDBACK_PRODUCT_FILTERS: ReadonlyArray<{
   icon: ReactNode;
 }> = [
   { id: "aura", label: "AURA", icon: <Box size={14} /> },
-  { id: "the_grid", label: "The Grid", icon: <Grid3x3 size={14} /> },
+  { id: "the_grid", label: "The GRID", icon: <Grid3x3 size={14} /> },
   { id: "wilder_world", label: "Wilder World", icon: <Gem size={14} /> },
   { id: "z_chain", label: "Z Chain", icon: <LinkIcon size={14} /> },
+  { id: "zero", label: "ZERO", icon: <Circle size={14} /> },
 ];
