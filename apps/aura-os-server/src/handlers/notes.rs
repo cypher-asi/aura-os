@@ -10,6 +10,7 @@ use std::path::{Component, Path, PathBuf};
 use std::time::SystemTime;
 
 use aura_os_core::ProjectId;
+use aura_os_projects::ProjectService;
 use axum::extract::{Path as AxumPath, Query, State};
 use axum::Json;
 use chrono::{DateTime, Utc};
@@ -20,26 +21,133 @@ use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthSession};
 
 const TITLE_PROBE_BYTES: usize = 2048;
+const PROJECT_ID_MARKER: &str = ".project-id";
 
 // ---------------------------------------------------------------------------
 // Path helpers & safety
 // ---------------------------------------------------------------------------
 
-/// Root directory on disk for a project's notes.
-pub(crate) fn notes_root(data_dir: &Path, project_id: &ProjectId) -> PathBuf {
-    data_dir.join("notes").join(project_id.to_string())
+/// Resolve a project's notes root to a human-friendly slug-based folder under
+/// `<data_dir>/notes/`.
+///
+/// A `.project-id` marker file inside each folder binds that folder to a
+/// specific `ProjectId` so lookups stay stable even when the project's name
+/// changes. When no folder is bound yet, the first available slug
+/// (`base`, `base-2`, `base-3`, …) is chosen, a one-time migration moves an
+/// existing legacy `<uuid>/` folder to the new name, and the marker is written.
+///
+/// Falls back to the legacy `<project_id>/` path if the project record can't
+/// be loaded, so reads keep working even for deleted/unknown projects.
+fn resolve_notes_root(
+    data_dir: &Path,
+    project_service: &ProjectService,
+    project_id: &ProjectId,
+) -> ApiResult<PathBuf> {
+    let notes_dir = data_dir.join("notes");
+    std::fs::create_dir_all(&notes_dir).map_err(|e| {
+        ApiError::internal(format!(
+            "failed to create notes directory {}: {e}",
+            notes_dir.display()
+        ))
+    })?;
+
+    let legacy = notes_dir.join(project_id.to_string());
+
+    // 1) Honour an existing `.project-id` marker that claims this project.
+    if let Some(bound) = find_bound_folder(&notes_dir, project_id) {
+        return Ok(bound);
+    }
+
+    // 2) Fall back to the legacy UUID-named folder if the project is gone or
+    //    the service can't be queried. This keeps reads working for
+    //    orphaned data.
+    let project_name = match project_service.get_project(project_id) {
+        Ok(p) => p.name,
+        Err(_) => {
+            std::fs::create_dir_all(&legacy).map_err(|e| {
+                ApiError::internal(format!(
+                    "failed to create notes directory {}: {e}",
+                    legacy.display()
+                ))
+            })?;
+            return Ok(legacy);
+        }
+    };
+
+    // 3) Pick the first available slug (with numeric suffix on collision).
+    let base = slug_stem(&project_name);
+    let mut candidate = notes_dir.join(&base);
+    let mut counter = 2u32;
+    while candidate.exists() {
+        candidate = notes_dir.join(format!("{base}-{counter}"));
+        counter += 1;
+        if counter > 10_000 {
+            break;
+        }
+    }
+
+    // 4) One-time migration: if a legacy `<uuid>/` folder exists, rename it
+    //    into the chosen slug folder so the user's data follows along.
+    if legacy.exists() && !candidate.exists() {
+        if let Err(err) = std::fs::rename(&legacy, &candidate) {
+            warn!(
+                from = %legacy.display(),
+                to = %candidate.display(),
+                %err,
+                "failed to migrate legacy notes folder; creating fresh",
+            );
+            std::fs::create_dir_all(&candidate).map_err(|e| {
+                ApiError::internal(format!(
+                    "failed to create notes directory {}: {e}",
+                    candidate.display()
+                ))
+            })?;
+        }
+    } else {
+        std::fs::create_dir_all(&candidate).map_err(|e| {
+            ApiError::internal(format!(
+                "failed to create notes directory {}: {e}",
+                candidate.display()
+            ))
+        })?;
+    }
+
+    // 5) Persist the binding so future resolutions skip straight to step 1.
+    let marker = candidate.join(PROJECT_ID_MARKER);
+    if let Err(err) = std::fs::write(&marker, project_id.to_string()) {
+        warn!(path = %marker.display(), %err, "failed to write project-id marker");
+    }
+
+    Ok(candidate)
+}
+
+/// Scan `notes_dir/*/.project-id` looking for a folder already bound to this
+/// project. Returns the bound folder on match.
+fn find_bound_folder(notes_dir: &Path, project_id: &ProjectId) -> Option<PathBuf> {
+    let entries = std::fs::read_dir(notes_dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let marker = path.join(PROJECT_ID_MARKER);
+        let Ok(contents) = std::fs::read_to_string(&marker) else {
+            continue;
+        };
+        if contents.trim() == project_id.to_string() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 /// Ensure the notes root exists and return it.
-fn ensure_notes_root(data_dir: &Path, project_id: &ProjectId) -> ApiResult<PathBuf> {
-    let root = notes_root(data_dir, project_id);
-    std::fs::create_dir_all(&root).map_err(|e| {
-        ApiError::internal(format!(
-            "failed to create notes directory {}: {e}",
-            root.display()
-        ))
-    })?;
-    Ok(root)
+fn ensure_notes_root(
+    data_dir: &Path,
+    project_service: &ProjectService,
+    project_id: &ProjectId,
+) -> ApiResult<PathBuf> {
+    resolve_notes_root(data_dir, project_service, project_id)
 }
 
 /// Validate a caller-supplied relative path and return it joined onto `root`.
@@ -295,7 +403,7 @@ fn walk_notes(root: &Path, current: &Path) -> Vec<TreeNode> {
     let mut out = Vec::new();
     for entry in items {
         let name = entry.file_name().to_string_lossy().into_owned();
-        if name.starts_with('.') || name.ends_with(".comments.json") {
+        if name.starts_with('.') || name.ends_with(".comments.json") || name == PROJECT_ID_MARKER {
             continue;
         }
         let path = entry.path();
@@ -350,7 +458,7 @@ pub(crate) async fn list_tree(
     AuthSession(_session): AuthSession,
     AxumPath(project_id): AxumPath<ProjectId>,
 ) -> ApiResult<Json<TreeResponse>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let root_for_walk = root.clone();
     let nodes =
         tokio::task::spawn_blocking(move || walk_notes(&root_for_walk, &root_for_walk))
@@ -390,7 +498,7 @@ pub(crate) async fn read_note(
     AxumPath(project_id): AxumPath<ProjectId>,
     Query(query): Query<PathQuery>,
 ) -> ApiResult<Json<ReadResponse>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let abs = resolve_rel_path(&root, &query.path)?;
     if !abs.is_file() {
         return Err(ApiError::not_found(format!("note not found: {}", query.path)));
@@ -425,6 +533,10 @@ pub(crate) struct WriteRequest {
 pub(crate) struct WriteResponse {
     pub ok: bool,
     pub title: String,
+    #[serde(rename = "relPath")]
+    pub rel_path: String,
+    #[serde(rename = "absPath")]
+    pub abs_path: String,
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
     #[serde(rename = "wordCount")]
@@ -437,7 +549,7 @@ pub(crate) async fn write_note(
     AxumPath(project_id): AxumPath<ProjectId>,
     Json(req): Json<WriteRequest>,
 ) -> ApiResult<Json<WriteResponse>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let abs = resolve_rel_path(&root, &req.path)?;
     if abs.extension().and_then(|s| s.to_str()) != Some("md") {
         return Err(ApiError::bad_request("only .md notes can be written"));
@@ -466,12 +578,78 @@ pub(crate) async fn write_note(
         .map_err(|e| ApiError::internal(format!("failed to rename tmp file: {e}")))?;
     debug!(path = %abs.display(), "wrote note");
 
+    // Keep the `.md` filename in sync with the first-line title.
+    let final_abs = match maybe_rename_for_title(&abs, &title).await {
+        Ok(next) => next,
+        Err(err) => {
+            warn!(path = %abs.display(), %err, "failed to rename note file after write");
+            abs
+        }
+    };
+
     Ok(Json(WriteResponse {
         ok: true,
         title,
+        rel_path: rel_of(&root, &final_abs),
+        abs_path: to_forward_slashes(&final_abs),
         updated_at: now,
         word_count: word_count_of(&body),
     }))
+}
+
+/// If `title` slugifies to a different stem than the current filename,
+/// rename the `.md` file (and its `.comments.json` sidecar) to match,
+/// using `unique_path` to avoid clobbering an existing sibling.
+/// Empty titles or a no-op slug leave the filename unchanged.
+async fn maybe_rename_for_title(current: &Path, title: &str) -> std::io::Result<PathBuf> {
+    let trimmed = title.trim();
+    if trimmed.is_empty() {
+        return Ok(current.to_path_buf());
+    }
+    let new_stem = slug_stem(trimmed);
+    if new_stem.is_empty() || new_stem == "untitled" {
+        return Ok(current.to_path_buf());
+    }
+    let current_stem = current
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
+    if current_stem == new_stem {
+        return Ok(current.to_path_buf());
+    }
+    let parent = current.parent().unwrap_or_else(|| Path::new(""));
+    let desired = parent.join(format!("{new_stem}.md"));
+    let target = if desired == current {
+        return Ok(current.to_path_buf());
+    } else {
+        unique_path(desired)
+    };
+
+    tokio::fs::rename(current, &target).await?;
+
+    // Carry the comments sidecar along if present.
+    let current_name = current
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let old_sidecar = current.with_file_name(format!("{current_name}.comments.json"));
+    if old_sidecar.exists() {
+        let target_name = target
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let new_sidecar = target.with_file_name(format!("{target_name}.comments.json"));
+        if let Err(err) = tokio::fs::rename(&old_sidecar, &new_sidecar).await {
+            warn!(
+                from = %old_sidecar.display(),
+                to = %new_sidecar.display(),
+                %err,
+                "failed to move comments sidecar during note rename",
+            );
+        }
+    }
+
+    Ok(target)
 }
 
 #[derive(Debug, Deserialize)]
@@ -504,7 +682,7 @@ pub(crate) async fn create_entry(
     AxumPath(project_id): AxumPath<ProjectId>,
     Json(req): Json<CreateRequest>,
 ) -> ApiResult<Json<CreateResponse>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let parent = resolve_rel_path(&root, &req.parent_path)?;
     tokio::fs::create_dir_all(&parent)
         .await
@@ -599,7 +777,7 @@ pub(crate) async fn rename_entry(
     AxumPath(project_id): AxumPath<ProjectId>,
     Json(req): Json<RenameRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let from = resolve_rel_path(&root, &req.from)?;
     let to = resolve_rel_path(&root, &req.to)?;
     if !from.exists() {
@@ -637,7 +815,7 @@ pub(crate) async fn delete_entry(
     AxumPath(project_id): AxumPath<ProjectId>,
     Json(req): Json<DeleteRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let target = resolve_rel_path(&root, &req.path)?;
     if !target.exists() {
         return Err(ApiError::not_found(format!("not found: {}", req.path)));
@@ -718,7 +896,7 @@ pub(crate) async fn list_comments(
     AxumPath(project_id): AxumPath<ProjectId>,
     Query(query): Query<PathQuery>,
 ) -> ApiResult<Json<Vec<NoteComment>>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let note_abs = resolve_rel_path(&root, &query.path)?;
     if !note_abs.is_file() {
         return Err(ApiError::not_found(format!("note not found: {}", query.path)));
@@ -741,7 +919,7 @@ pub(crate) async fn add_comment(
     AxumPath(project_id): AxumPath<ProjectId>,
     Json(req): Json<AddCommentRequest>,
 ) -> ApiResult<Json<NoteComment>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let note_abs = resolve_rel_path(&root, &req.path)?;
     if !note_abs.is_file() {
         return Err(ApiError::not_found(format!("note not found: {}", req.path)));
@@ -784,7 +962,7 @@ pub(crate) async fn delete_comment(
     AxumPath(project_id): AxumPath<ProjectId>,
     Json(req): Json<DeleteCommentRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let root = ensure_notes_root(&state.data_dir, &project_id)?;
+    let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let note_abs = resolve_rel_path(&root, &req.path)?;
     if !note_abs.is_file() {
         return Err(ApiError::not_found(format!("note not found: {}", req.path)));
@@ -910,5 +1088,83 @@ mod tests {
         std::fs::write(&first, "").unwrap();
         let next = unique_path(first.clone());
         assert_eq!(next.file_name().unwrap().to_string_lossy(), "note-2.md");
+    }
+
+    #[test]
+    fn walk_skips_project_id_marker() {
+        let (_tmp, root) = setup();
+        std::fs::write(root.join(PROJECT_ID_MARKER), "abc-123").unwrap();
+        std::fs::write(root.join("kept.md"), "# Kept").unwrap();
+        let nodes = walk_notes(&root, &root);
+        assert_eq!(nodes.len(), 1);
+        match &nodes[0] {
+            TreeNode::Note { title, .. } => assert_eq!(title, "Kept"),
+            _ => panic!("expected note"),
+        }
+    }
+
+    #[tokio::test]
+    async fn maybe_rename_for_title_renames_matching_stem() {
+        let (_tmp, root) = setup();
+        let original = root.join("untitled.md");
+        std::fs::write(&original, "# Hello").unwrap();
+        let next = maybe_rename_for_title(&original, "Hello world")
+            .await
+            .unwrap();
+        assert_eq!(next.file_name().unwrap().to_string_lossy(), "hello-world.md");
+        assert!(next.exists());
+        assert!(!original.exists());
+    }
+
+    #[tokio::test]
+    async fn maybe_rename_for_title_moves_comments_sidecar() {
+        let (_tmp, root) = setup();
+        let original = root.join("untitled.md");
+        std::fs::write(&original, "# Hello").unwrap();
+        let sidecar = root.join("untitled.md.comments.json");
+        std::fs::write(&sidecar, "{\"comments\":[]}").unwrap();
+
+        let next = maybe_rename_for_title(&original, "Hello world")
+            .await
+            .unwrap();
+        assert!(next.exists());
+        assert!(!sidecar.exists());
+        let moved = root.join("hello-world.md.comments.json");
+        assert!(moved.exists());
+    }
+
+    #[tokio::test]
+    async fn maybe_rename_for_title_no_op_when_stem_matches() {
+        let (_tmp, root) = setup();
+        let original = root.join("hello-world.md");
+        std::fs::write(&original, "# Hello world").unwrap();
+        let next = maybe_rename_for_title(&original, "Hello world")
+            .await
+            .unwrap();
+        assert_eq!(next, original);
+        assert!(next.exists());
+    }
+
+    #[tokio::test]
+    async fn maybe_rename_for_title_adds_suffix_on_collision() {
+        let (_tmp, root) = setup();
+        std::fs::write(root.join("hello-world.md"), "# Existing").unwrap();
+        let original = root.join("untitled.md");
+        std::fs::write(&original, "# Hello world").unwrap();
+        let next = maybe_rename_for_title(&original, "Hello world")
+            .await
+            .unwrap();
+        assert_eq!(next.file_name().unwrap().to_string_lossy(), "hello-world-2.md");
+        assert!(next.exists());
+        assert!(!original.exists());
+    }
+
+    #[tokio::test]
+    async fn maybe_rename_for_title_skips_empty_title() {
+        let (_tmp, root) = setup();
+        let original = root.join("untitled.md");
+        std::fs::write(&original, "").unwrap();
+        let next = maybe_rename_for_title(&original, "   ").await.unwrap();
+        assert_eq!(next, original);
     }
 }

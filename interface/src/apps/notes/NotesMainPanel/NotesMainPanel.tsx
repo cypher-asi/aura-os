@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
@@ -59,6 +59,7 @@ function rejoinFrontmatter(frontmatter: string, body: string): string {
 }
 
 export function NotesMainPanel() {
+  const navigate = useNavigate();
   const params = useParams<{ projectId: string; notePath: string }>();
   const note = useActiveNote();
   const activeKey = useActiveNoteKey();
@@ -79,10 +80,38 @@ export function NotesMainPanel() {
     }
   }, [params.projectId, params.notePath, activeKey, selectNote]);
 
+  // When an autosave rename changes the note's path server-side, quietly
+  // rewrite the URL so deep-links stay accurate without polluting history.
+  useEffect(() => {
+    if (!activeKey || !params.projectId || !params.notePath) return;
+    const decoded = decodeURIComponent(params.notePath);
+    if (
+      activeKey.projectId === params.projectId &&
+      activeKey.relPath !== decoded
+    ) {
+      navigate(
+        `/notes/${activeKey.projectId}/${encodeURIComponent(activeKey.relPath)}`,
+        { replace: true },
+      );
+    }
+  }, [activeKey, params.projectId, params.notePath, navigate]);
+
   const { frontmatter, body } = useMemo(() => {
     if (!note) return { frontmatter: "", body: "" };
     return parseMdFrontmatter(note.content);
   }, [note]);
+
+  // Ref-latched snapshots so the (stable) editor's onUpdate closure always
+  // dispatches against the current active note, even after an autosave
+  // rename has changed the relPath under us.
+  const activeKeyRef = useRef(activeKey);
+  const frontmatterRef = useRef(frontmatter);
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
+  useEffect(() => {
+    frontmatterRef.current = frontmatter;
+  }, [frontmatter]);
 
   const editor = useEditor(
     {
@@ -104,12 +133,13 @@ export function NotesMainPanel() {
       ],
       content: body,
       onUpdate: ({ editor: ed }) => {
-        if (!activeKey) return;
+        const current = activeKeyRef.current;
+        if (!current) return;
         const md = (ed.storage as unknown as {
           markdown: { getMarkdown: () => string };
         }).markdown.getMarkdown();
-        const joined = rejoinFrontmatter(frontmatter, md);
-        updateContent(activeKey.projectId, activeKey.relPath, joined);
+        const joined = rejoinFrontmatter(frontmatterRef.current, md);
+        updateContent(current.projectId, current.relPath, joined);
       },
       editorProps: {
         attributes: {
@@ -118,7 +148,11 @@ export function NotesMainPanel() {
         },
       },
     },
-    [activeKey?.projectId, activeKey?.relPath],
+    // Re-init on project change only. Note renames (caused by autosave
+    // syncing filename to the first-line title) just swap relPath without
+    // changing content, so we keep the same editor instance to preserve the
+    // caret/selection.
+    [activeKey?.projectId],
   );
 
   useEffect(() => {
@@ -126,6 +160,13 @@ export function NotesMainPanel() {
     const key = `${activeKey.projectId}::${activeKey.relPath}`;
     if (lastSyncedKey.current === key) return;
     lastSyncedKey.current = key;
+    const currentMd = (editor.storage as unknown as {
+      markdown: { getMarkdown: () => string };
+    }).markdown.getMarkdown();
+    // Skip setContent when the body is already in sync (e.g. we're only
+    // reacting to an autosave rename, not a genuine note switch). setContent
+    // clears the selection, which would otherwise be jarring mid-typing.
+    if (currentMd.trim() === body.trim()) return;
     editor.commands.setContent(body, { emitUpdate: false });
   }, [editor, note, activeKey, body]);
 

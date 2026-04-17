@@ -41,6 +41,10 @@ export interface NotesReadResponse {
 export interface NotesWriteResponse {
   ok: boolean;
   title: string;
+  /** Server-authoritative relative path after any title-driven rename. */
+  relPath: string;
+  /** Server-authoritative absolute path after any title-driven rename. */
+  absPath: string;
   updatedAt: string;
   wordCount: number;
 }

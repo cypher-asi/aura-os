@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, FolderOpen, MessageSquare } from "lucide-react";
+import { ArrowUp, MessageSquare } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { Avatar } from "../../../components/Avatar";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
@@ -100,7 +100,6 @@ function NotesInfoPanel() {
             onClick={() => void revealInFolder(note.absPath)}
             title="Open containing folder"
           >
-            <FolderOpen size={12} aria-hidden="true" />
             {note.absPath}
           </button>
         </div>

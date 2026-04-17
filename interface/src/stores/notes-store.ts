@@ -271,23 +271,49 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
     if (!entry || !entry.dirty) return;
     try {
       const res = await api.notes.write(projectId, relPath, entry.content);
+      const renamed = res.relPath && res.relPath !== relPath;
       set((state) => {
         const current = state.contentCache[key];
         if (!current) return state;
+        const nextEntry: NoteContent = {
+          ...current,
+          dirty: false,
+          updatedAt: res.updatedAt,
+          title: res.title || current.title,
+          wordCount: res.wordCount,
+          error: undefined,
+          absPath: res.absPath ?? current.absPath,
+        };
+        if (!renamed) {
+          return {
+            contentCache: { ...state.contentCache, [key]: nextEntry },
+          };
+        }
+        const newKey = makeNoteKey(projectId, res.relPath);
+        const { [key]: _oldContent, ...restContent } = state.contentCache;
+        const { [key]: oldComments, ...restComments } = state.commentsByNote;
+        const nextActiveRelPath =
+          state.activeProjectId === projectId && state.activeRelPath === relPath
+            ? res.relPath
+            : state.activeRelPath;
         return {
-          contentCache: {
-            ...state.contentCache,
-            [key]: {
-              ...current,
-              dirty: false,
-              updatedAt: res.updatedAt,
-              title: res.title || current.title,
-              wordCount: res.wordCount,
-              error: undefined,
-            },
-          },
+          contentCache: { ...restContent, [newKey]: nextEntry },
+          commentsByNote: oldComments
+            ? { ...restComments, [newKey]: oldComments }
+            : state.commentsByNote,
+          activeRelPath: nextActiveRelPath,
         };
       });
+      if (renamed) {
+        // Swap any pending debounce timer onto the new key so a fast-follow
+        // edit after a rename still saves rather than getting orphaned.
+        const pendingTimer = pendingTimers.get(key);
+        if (pendingTimer) {
+          pendingTimers.delete(key);
+          pendingTimers.set(makeNoteKey(projectId, res.relPath), pendingTimer);
+        }
+        void get().loadTree(projectId);
+      }
     } catch (err) {
       set((state) => {
         const current = state.contentCache[key];
