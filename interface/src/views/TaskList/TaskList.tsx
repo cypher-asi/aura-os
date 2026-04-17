@@ -17,6 +17,8 @@ import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
 } from "../../components/SidekickItemContextMenu";
+import { DeleteSpecModal } from "../../components/DeleteSpecModal";
+import { useDeleteSpec } from "../../hooks/use-delete-spec";
 
 type TaskMenuTarget =
   | { kind: "task"; task: Task }
@@ -27,9 +29,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const previewItem = useSidekickStore((s) => s.previewItem);
   const streamingAgentInstanceId = useSidekickStore((s) => s.streamingAgentInstanceId);
   const viewTask = useSidekickStore((s) => s.viewTask);
-  const removeSpec = useSidekickStore((s) => s.removeSpec);
   const removeTask = useSidekickStore((s) => s.removeTask);
-  const pushSpec = useSidekickStore((s) => s.pushSpec);
   const pushTask = useSidekickStore((s) => s.pushTask);
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
@@ -140,6 +140,15 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     resolveItem: resolveMenuTarget,
   });
 
+  const {
+    deleteTarget: specDeleteTarget,
+    setDeleteTarget: setSpecDeleteTarget,
+    deleteLoading: specDeleteLoading,
+    deleteError: specDeleteError,
+    handleDelete: handleSpecDelete,
+    closeDeleteModal: closeSpecDeleteModal,
+  } = useDeleteSpec(projectId);
+
   const handleMenuAction = useCallback(
     (actionId: string) => {
       const target = menu?.item;
@@ -154,14 +163,9 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
         });
         return;
       }
-      const { spec } = target;
-      removeSpec(spec.spec_id);
-      api.deleteSpec(projectId, spec.spec_id).catch((err) => {
-        console.error("Failed to delete spec", err);
-        pushSpec(spec);
-      });
+      setSpecDeleteTarget(target.spec);
     },
-    [menu, closeMenu, projectId, removeTask, removeSpec, pushTask, pushSpec],
+    [menu, closeMenu, projectId, removeTask, pushTask, setSpecDeleteTarget],
   );
 
   const isEmpty = tasks.length === 0;
@@ -199,6 +203,13 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
           onAction={handleMenuAction}
         />
       )}
+      <DeleteSpecModal
+        target={specDeleteTarget}
+        loading={specDeleteLoading}
+        error={specDeleteError}
+        onClose={closeSpecDeleteModal}
+        onDelete={handleSpecDelete}
+      />
     </>
   );
 }

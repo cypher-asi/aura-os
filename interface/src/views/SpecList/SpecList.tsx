@@ -17,6 +17,8 @@ import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
 } from "../../components/SidekickItemContextMenu";
+import { DeleteSpecModal } from "../../components/DeleteSpecModal";
+import { useDeleteSpec } from "../../hooks/use-delete-spec";
 
 export function SpecList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectActions();
@@ -164,18 +166,23 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     resolveItem: resolveMenuSpec,
   });
 
+  const {
+    deleteTarget,
+    setDeleteTarget,
+    deleteLoading,
+    deleteError,
+    handleDelete,
+    closeDeleteModal,
+  } = useDeleteSpec(projectId);
+
   const handleMenuAction = useCallback(
     (actionId: string) => {
       const target = menu?.item;
       closeMenu();
       if (!target || actionId !== "delete" || !projectId) return;
-      sidekickRef.current.removeSpec(target.spec_id);
-      api.deleteSpec(projectId, target.spec_id).catch((err) => {
-        console.error("Failed to delete spec", err);
-        sidekickRef.current.pushSpec(target);
-      });
+      setDeleteTarget(target);
     },
-    [menu, closeMenu, projectId],
+    [menu, closeMenu, projectId, setDeleteTarget],
   );
 
   const isEmpty = mergedSpecs.length === 0;
@@ -207,6 +214,13 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
           onAction={handleMenuAction}
         />
       )}
+      <DeleteSpecModal
+        target={deleteTarget}
+        loading={deleteLoading}
+        error={deleteError}
+        onClose={closeDeleteModal}
+        onDelete={handleDelete}
+      />
     </>
   );
 }

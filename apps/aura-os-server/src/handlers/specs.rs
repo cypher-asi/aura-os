@@ -16,7 +16,7 @@ use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 
 use super::projects_helpers::{project_tool_session_config, resolve_project_tool_workspace_path};
 use super::spec_disk::{mirror_spec_to_disk, remove_spec_from_disk};
-use crate::error::{ApiError, ApiResult};
+use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
 /// Resolve a local filesystem workspace root for disk-mirroring a spec.
@@ -350,14 +350,38 @@ pub(crate) async fn delete_spec(
         .and_then(|s| Spec::try_from(s).ok())
         .map(|s| s.title);
 
+    // Block deletion when the spec still has associated tasks so the user gets a
+    // clear, actionable error instead of silently orphaning tasks (or relying on
+    // undefined upstream cascade behavior).
+    let spec_id_str = spec_id.to_string();
+    let tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
+        .map_err(map_storage_error)?;
+    let associated_task_count = tasks
+        .iter()
+        .filter(|t| t.spec_id.as_deref() == Some(spec_id_str.as_str()))
+        .count();
+    if associated_task_count > 0 {
+        let noun = if associated_task_count == 1 {
+            "task"
+        } else {
+            "tasks"
+        };
+        return Err(ApiError::conflict(format!(
+            "Cannot delete spec: it has {associated_task_count} associated {noun}. \
+             Delete or reassign the {noun} first."
+        )));
+    }
+
     storage
-        .delete_spec(&spec_id.to_string(), &jwt)
+        .delete_spec(&spec_id_str, &jwt)
         .await
         .map_err(|e| match &e {
             aura_os_storage::StorageError::Server { status: 404, .. } => {
                 ApiError::not_found("spec not found")
             }
-            _ => ApiError::internal(format!("deleting spec: {e}")),
+            _ => map_storage_error(e),
         })?;
 
     if let (Some(title), Some(workspace_root)) = (

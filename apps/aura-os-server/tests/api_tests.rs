@@ -1474,6 +1474,80 @@ async fn spec_routes_support_storage_backed_crud() {
 }
 
 #[tokio::test]
+async fn delete_spec_with_associated_tasks_returns_conflict() {
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/specs"),
+        Some(serde_json::json!({
+            "title": "Spec With Tasks",
+            "markdownContents": "# Spec",
+            "orderIndex": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let spec = response_json(resp).await;
+    let spec_id = spec["spec_id"].as_str().unwrap().to_string();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks"),
+        Some(serde_json::json!({
+            "spec_id": spec_id.clone(),
+            "title": "Blocking Task",
+            "description": "Prevents spec deletion",
+            "status": "pending",
+            "order_index": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let task = response_json(resp).await;
+    let task_id = task["task_id"].as_str().unwrap().to_string();
+
+    let req = json_request(
+        "DELETE",
+        &format!("/api/projects/{project_id}/specs/{spec_id}"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    let body = response_json(resp).await;
+    assert_eq!(body["code"], "conflict");
+    let msg = body["error"].as_str().unwrap_or_default();
+    assert!(
+        msg.contains("1 associated task"),
+        "expected conflict message to mention the associated task, got: {msg}"
+    );
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/specs"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["spec_id"], spec_id);
+
+    let req = json_request(
+        "DELETE",
+        &format!("/api/projects/{project_id}/tasks/{task_id}"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    let req = json_request(
+        "DELETE",
+        &format!("/api/projects/{project_id}/specs/{spec_id}"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
 async fn task_routes_support_storage_backed_crud_and_state_changes() {
     let (app, _state, _storage, _db) = build_test_app_with_storage().await;
     let project_id = ProjectId::new();
