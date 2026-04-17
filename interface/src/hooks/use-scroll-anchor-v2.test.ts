@@ -82,7 +82,7 @@ describe("useScrollAnchorV2", () => {
     expect(container.scrollTop).toBe(140);
   });
 
-  it("defers resize-session anchor restoration until a settled measurement pass runs", () => {
+  it("keeps the anchor pinned during an active resize session so the thread does not jump", () => {
     const container = document.createElement("div");
     const anchor = document.createElement("div");
     anchor.setAttribute("data-message-id", "message-1");
@@ -118,13 +118,19 @@ describe("useScrollAnchorV2", () => {
     });
 
     rerender({ resizeSession: { isActive: true, settledAt: 0 } });
-    anchorTop = 90;
 
+    anchorTop = 90;
     act(() => {
       result.current.onContentHeightChange({ immediate: true });
     });
 
-    expect(container.scrollTop).toBe(100);
+    // Mid-drag height change: the anchor is restored on the scheduled frame
+    // so the visible message holds its position instead of sliding.
+    expect(container.scrollTop).toBe(140);
+
+    // Simulate that after the restoration the anchor is visually back at its
+    // original viewport offset (50), matching what a real browser would show.
+    anchorTop = 50;
 
     rerender({ resizeSession: { isActive: false, settledAt: 1 } });
 
@@ -132,6 +138,7 @@ describe("useScrollAnchorV2", () => {
       result.current.onContentHeightChange({ immediate: true });
     });
 
+    // Settled measurement pass after release reconciles without re-jumping.
     expect(container.scrollTop).toBe(140);
   });
 });

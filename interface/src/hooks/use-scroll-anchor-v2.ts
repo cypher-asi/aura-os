@@ -77,15 +77,6 @@ export function useScrollAnchorV2(
     if (el) guardedScroll(el, el.scrollHeight, guardRef);
   }, [ref]);
 
-  const scheduleResizePinnedFollow = useCallback(() => {
-    if (resizeFollowRafRef.current !== 0) return;
-    resizeFollowRafRef.current = requestAnimationFrame(() => {
-      resizeFollowRafRef.current = 0;
-      if (!resizeActiveRef.current || !pinnedRef.current) return;
-      doScrollToBottom();
-    });
-  }, [doScrollToBottom]);
-
   useLayoutEffect(() => {
     pinnedRef.current = true;
     currentAnchorRef.current = null;
@@ -130,6 +121,20 @@ export function useScrollAnchorV2(
     },
     [ref],
   );
+
+  const scheduleResizeFollow = useCallback(() => {
+    if (resizeFollowRafRef.current !== 0) return;
+    resizeFollowRafRef.current = requestAnimationFrame(() => {
+      resizeFollowRafRef.current = 0;
+      if (!resizeActiveRef.current) return;
+      if (pinnedRef.current) {
+        doScrollToBottom();
+        return;
+      }
+      const anchor = resizeAnchorRef.current ?? currentAnchorRef.current;
+      if (anchor) restoreAnchor(anchor);
+    });
+  }, [doScrollToBottom, restoreAnchor]);
 
   const reconcileResizeSession = useCallback(() => {
     if (pinnedRef.current) {
@@ -209,9 +214,7 @@ export function useScrollAnchorV2(
     (options?: { immediate?: boolean }) => {
       if (resizeActiveRef.current) {
         resizePendingRef.current = true;
-        if (pinnedRef.current) {
-          scheduleResizePinnedFollow();
-        }
+        scheduleResizeFollow();
         return;
       }
 
@@ -240,7 +243,7 @@ export function useScrollAnchorV2(
         reconcileContent();
       });
     },
-    [reconcileContent, reconcileResizeSession, scheduleResizePinnedFollow],
+    [reconcileContent, reconcileResizeSession, scheduleResizeFollow],
   );
 
   return {
