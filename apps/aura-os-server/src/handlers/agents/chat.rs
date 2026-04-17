@@ -658,26 +658,44 @@ pub(crate) async fn setup_agent_chat_persistence(
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
+fn harness_event_closes_turn(evt: &HarnessOutbound) -> bool {
+    matches!(
+        evt,
+        HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
+    )
+}
+
 fn harness_broadcast_to_sse(
+    state: AppState,
+    session_key: String,
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
-    stream::unfold((rx, false), |(mut rx, done)| async move {
-        if done {
-            return None;
-        }
+    stream::unfold((rx, false, false), move |(mut rx, done, cleaned_up)| {
+        let state = state.clone();
+        let session_key = session_key.clone();
+        async move {
+            if done {
+                return None;
+            }
 
-        loop {
-            match rx.recv().await {
-                Ok(evt) => {
-                    let should_close = matches!(
-                        evt,
-                        HarnessOutbound::AssistantMessageEnd(_) | HarnessOutbound::Error(_)
-                    );
-                    let event = super::super::sse::harness_event_to_sse(&evt);
-                    return Some((event, (rx, should_close)));
+            loop {
+                match rx.recv().await {
+                    Ok(evt) => {
+                        let should_close = harness_event_closes_turn(&evt);
+                        if should_close && !cleaned_up {
+                            remove_live_session(&state, &session_key).await;
+                        }
+                        let event = super::super::sse::harness_event_to_sse(&evt);
+                        return Some((event, (rx, should_close, cleaned_up || should_close)));
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        if !cleaned_up {
+                            remove_live_session(&state, &session_key).await;
+                        }
+                        return None;
+                    }
                 }
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(tokio::sync::broadcast::error::RecvError::Closed) => return None,
             }
         }
     })
@@ -1677,7 +1695,7 @@ async fn open_harness_chat_stream(
         prefix.push(Ok(warning_event));
     }
 
-    let broadcast_stream = harness_broadcast_to_sse(rx);
+    let broadcast_stream = harness_broadcast_to_sse(state.clone(), session_key.to_string(), rx);
 
     let stream = FuturesStreamExt::chain(futures_util::stream::iter(prefix), broadcast_stream);
     let boxed: SseStream = Box::pin(stream);
@@ -1838,7 +1856,7 @@ async fn handle_super_agent_stream(
         spawn_chat_persist_task(prx, pctx);
     }
 
-    let broadcast_stream = harness_broadcast_to_sse(rx);
+    let broadcast_stream = harness_broadcast_to_sse(state.clone(), session_key.to_string(), rx);
 
     let boxed: SseStream = Box::pin(broadcast_stream);
     Ok((
@@ -2142,8 +2160,26 @@ fn build_project_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::HarnessHttpGateway;
+    use crate::state::AppState;
+    use aura_os_auth::AuthService;
+    use aura_os_billing::BillingClient;
+    use aura_os_link::{
+        AssistantMessageEnd, AutomatonClient, FilesChanged, HarnessInbound, HarnessLink,
+        LocalHarness, SwarmHarness, TextDelta,
+    };
+    use aura_os_orgs::OrgService;
+    use aura_os_projects::ProjectService;
+    use aura_os_sessions::SessionService;
+    use aura_os_store::RocksStore;
+    use aura_os_super_agent::SuperAgentService;
+    use aura_os_tasks::TaskService;
     use aura_os_core::{parse_dt, SessionEventId};
     use aura_os_storage::StorageSession;
+    use futures_util::StreamExt;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::{broadcast, mpsc, Mutex};
 
     fn storage_session(
         id: &str,
@@ -2361,5 +2397,154 @@ mod tests {
         let empty = assistant_event("", None);
         let history = session_events_to_conversation_history(&[empty]);
         assert!(history.is_empty());
+    }
+
+    fn build_test_state() -> (AppState, tempfile::TempDir) {
+        let db_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let org_service = Arc::new(OrgService::new(store.clone()));
+        let auth_service = Arc::new(AuthService::new());
+        let project_service = Arc::new(ProjectService::new_with_network(None, store.clone()));
+        let task_service = Arc::new(TaskService::new(store.clone(), None));
+        let agent_service = Arc::new(aura_os_agents::AgentService::new(store.clone(), None));
+        let runtime_agent_state: aura_os_agents::RuntimeAgentStateMap =
+            Arc::new(Mutex::new(HashMap::new()));
+        let agent_instance_service = Arc::new(aura_os_agents::AgentInstanceService::new(
+            store.clone(),
+            None,
+            runtime_agent_state,
+            None,
+        ));
+        let session_service = Arc::new(SessionService::new(store.clone(), 0.8, 200_000));
+        let harness_base = "http://localhost:19080".to_string();
+        let local_harness: Arc<dyn HarnessLink> = Arc::new(LocalHarness::new(harness_base.clone()));
+        let swarm_harness: Arc<dyn HarnessLink> = Arc::new(SwarmHarness::new(
+            "http://localhost:19800".to_string(),
+            None,
+        ));
+        let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(64);
+        let billing_client = Arc::new(BillingClient::with_base_url(
+            "http://localhost:8079".to_string(),
+        ));
+        let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
+        let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
+        let super_agent_service = Arc::new(SuperAgentService::new(
+            "http://localhost:19080".to_string(),
+            project_service.clone(),
+            agent_service.clone(),
+            agent_instance_service.clone(),
+            task_service.clone(),
+            session_service.clone(),
+            org_service.clone(),
+            billing_client.clone(),
+            automaton_client.clone(),
+            None,
+            None,
+            None,
+            store.clone(),
+            event_broadcast.clone(),
+            local_harness.clone(),
+            db_dir.path().to_path_buf(),
+        ));
+
+        (
+            AppState {
+                data_dir: db_dir.path().to_path_buf(),
+                store,
+                org_service,
+                auth_service,
+                billing_client,
+                project_service,
+                task_service,
+                agent_service,
+                agent_instance_service,
+                session_service,
+                local_harness,
+                swarm_harness,
+                harness_sessions: Arc::new(Mutex::new(HashMap::new())),
+                terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
+                network_client: None,
+                storage_client: None,
+                integrations_client: None,
+                event_broadcast,
+                require_zero_pro: false,
+                chat_sessions: Arc::new(Mutex::new(HashMap::new())),
+                credit_cache: Arc::new(Mutex::new(HashMap::new())),
+                automaton_client,
+                harness_http,
+                automaton_registry: Arc::new(Mutex::new(HashMap::new())),
+                swarm_base_url: None,
+                task_output_cache: Arc::new(Mutex::new(HashMap::new())),
+                orbit_client: None,
+                validation_cache: Arc::new(dashmap::DashMap::new()),
+                super_agent_service,
+                super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
+            },
+            db_dir,
+        )
+    }
+
+    #[test]
+    fn harness_event_closes_turn_for_terminal_events() {
+        assert!(harness_event_closes_turn(&HarnessOutbound::Error(aura_os_link::ErrorMsg {
+            code: "oops".into(),
+            message: "broken".into(),
+            recoverable: false,
+        })));
+        assert!(harness_event_closes_turn(&HarnessOutbound::AssistantMessageEnd(
+            AssistantMessageEnd {
+                message_id: "m1".into(),
+                stop_reason: "end_turn".into(),
+                usage: SessionUsage::default(),
+                files_changed: FilesChanged::default(),
+            }
+        )));
+        assert!(!harness_event_closes_turn(&HarnessOutbound::TextDelta(TextDelta {
+            text: "hi".into(),
+        })));
+    }
+
+    #[tokio::test]
+    async fn terminal_harness_event_evicts_chat_session() {
+        let (state, _db_dir) = build_test_state();
+        let session_key = "agent:test-agent".to_string();
+        let (events_tx, events_rx) = broadcast::channel(16);
+        let (commands_tx, _commands_rx) = mpsc::unbounded_channel::<HarnessInbound>();
+
+        {
+            let mut reg = state.chat_sessions.lock().await;
+            reg.insert(
+                session_key.clone(),
+                ChatSession {
+                    session_id: "session-1".into(),
+                    commands_tx,
+                    events_tx: events_tx.clone(),
+                    model: Some("aura-claude-sonnet-4-6".into()),
+                },
+            );
+        }
+
+        let mut stream = Box::pin(harness_broadcast_to_sse(
+            state.clone(),
+            session_key.clone(),
+            events_rx,
+        ));
+
+        events_tx
+            .send(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
+                message_id: "m1".into(),
+                stop_reason: "end_turn".into(),
+                usage: SessionUsage::default(),
+                files_changed: FilesChanged::default(),
+            }))
+            .unwrap();
+
+        let _ = stream.next().await;
+
+        let reg = state.chat_sessions.lock().await;
+        assert!(
+            !reg.contains_key(&session_key),
+            "terminal event should evict cached chat session"
+        );
     }
 }
