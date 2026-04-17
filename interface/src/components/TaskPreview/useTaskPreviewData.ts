@@ -51,7 +51,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
   const elapsed = useElapsedTime(isActive);
 
-  const streamBuf = useStreamingText(streamKey);
+  const streamBuf = useStreamingText(streamKey ?? "__task-preview__");
   const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
   useTaskOutputHydration(projectId, task, isActive, isTerminal, streamBuf, seedTaskOutput);
 
