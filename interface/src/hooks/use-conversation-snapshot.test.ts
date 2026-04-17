@@ -131,4 +131,27 @@ describe("useConversationSnapshot", () => {
 
     expect(result.current.messages).toEqual([persistedMessage]);
   });
+
+  it("deduplicates pending and streamed optimistic copies of the same user message", () => {
+    const streamKey = "thread-6";
+    const pendingMessage: DisplaySessionEvent = {
+      id: "temp-hello",
+      role: "user",
+      content: "hello",
+    };
+    const streamedMessage: DisplaySessionEvent = {
+      id: "stream-user-hello",
+      role: "user",
+      content: "hello",
+    };
+
+    addPendingChatMessage(streamKey, pendingMessage);
+    setStreamMessages(streamKey, [streamedMessage]);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, []),
+    );
+
+    expect(result.current.messages).toEqual([streamedMessage]);
+  });
 });

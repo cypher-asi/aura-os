@@ -26,6 +26,7 @@ import {
   dispatchInsufficientCredits,
   isInsufficientCreditsError,
 } from "../../api/client";
+import { ApiClientError } from "../../api/core";
 import type { StreamRefs, StreamSetters, ToolCallEntry } from "../../types/stream";
 
 function makeRefs(): StreamRefs {
@@ -620,6 +621,26 @@ describe("stream/handlers", () => {
 
       expect(result[0].content).toBe("You have no credits remaining. Buy more credits to continue.");
       expect(result[0].displayVariant).toBe("insufficientCreditsError");
+    });
+
+    it("uses normalized API error messages for stream failures", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+      vi.mocked(isInsufficientCreditsError).mockReturnValue(false);
+      const error = new ApiClientError(400, {
+        error: "{\"error\":{\"message\":\"Bad request: Unsupported model: aura-claude-sonnet-4-6\"}}",
+        code: "bad_request",
+        details: null,
+      });
+
+      handleStreamError(refs, setters, error);
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => unknown[];
+      const result = updater([]) as Array<{ content: string }>;
+
+      expect(result[0].content).toContain("Unsupported model: aura-claude-sonnet-4-6");
+      expect(result[0].content).not.toContain("Bad request:");
     });
   });
 

@@ -61,9 +61,6 @@ function combineStoredAndStreamMessages(
   storedMessages: DisplaySessionEvent[],
   streamMessages: DisplaySessionEvent[],
 ): DisplaySessionEvent[] {
-  if (storedMessages.length === 0) {
-    return streamMessages;
-  }
   if (streamMessages.length === 0) {
     return storedMessages;
   }
@@ -92,10 +89,29 @@ function combineStoredAndStreamMessages(
 
     return true;
   });
-  if (liveOnlyMessages.length === 0) {
+  const dedupedLiveOnlyMessages: DisplaySessionEvent[] = [];
+  const seenLiveIds = new Set<string>();
+  for (let index = liveOnlyMessages.length - 1; index >= 0; index -= 1) {
+    const message = liveOnlyMessages[index];
+    if (seenLiveIds.has(message.id)) {
+      continue;
+    }
+    seenLiveIds.add(message.id);
+
+    if (
+      isOptimisticLocalMessage(message)
+      && dedupedLiveOnlyMessages.some((existing) => messageContentMatches(existing, message))
+    ) {
+      continue;
+    }
+
+    dedupedLiveOnlyMessages.push(message);
+  }
+  dedupedLiveOnlyMessages.reverse();
+  if (dedupedLiveOnlyMessages.length === 0) {
     return storedMessages;
   }
-  return [...storedMessages, ...liveOnlyMessages];
+  return [...storedMessages, ...dedupedLiveOnlyMessages];
 }
 
 function chooseBaseMessages(

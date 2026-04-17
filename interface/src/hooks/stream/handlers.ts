@@ -1,5 +1,6 @@
 import type { MutableRefObject } from "react";
 import { isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
+import { getApiErrorMessage } from "../../utils/api-errors";
 import type {
   ToolCallStartedInfo,
   ToolCallSnapshotInfo,
@@ -67,6 +68,10 @@ export function snapshotTimeline(refs: StreamRefs): TimelineItem[] | undefined {
 }
 
 function getStreamErrorMessage(error: unknown): string {
+  const apiMessage = getApiErrorMessage(error);
+  if (apiMessage && apiMessage !== "An unexpected error occurred") {
+    return apiMessage;
+  }
   if (typeof error === "string") return error;
   if (error instanceof Error) return error.message;
   return String(error);
