@@ -35,7 +35,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +85,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
+
+      - name: Verify runner architecture
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          actual_arch="$(uname -m)"
+          expected_arch="${{ matrix.arch }}"
+          if [ "$actual_arch" != "$expected_arch" ]; then
+            echo "Expected Linux runner architecture $expected_arch but got $actual_arch" >&2
+            exit 1
+          fi
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop --require-harness
@@ -140,7 +151,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -186,6 +197,17 @@ jobs:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
+
+      - name: Verify runner architecture
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          actual_arch="$(uname -m)"
+          expected_arch="${{ matrix.arch }}"
+          if [ "$actual_arch" != "$expected_arch" ]; then
+            echo "Expected Linux runner architecture $expected_arch but got $actual_arch" >&2
+            exit 1
+          fi
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
@@ -298,7 +320,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -316,6 +338,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
+
+      - name: Verify runner architecture
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          actual_arch="$(uname -m)"
+          expected_arch="${{ matrix.arch }}"
+          if [ "$actual_arch" != "$expected_arch" ]; then
+            echo "Expected Linux runner architecture $expected_arch but got $actual_arch" >&2
+            exit 1
+          fi
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
