@@ -1,6 +1,6 @@
 .root {
   --left-menu-fade-height: 72px;
-  --left-menu-selected-bg: rgba(255, 255, 255, 0.12);
+  --left-menu-selected-bg: var(--color-overlay-subtle);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -126,7 +126,7 @@
 
 .sectionHeader:hover,
 .sectionHeader:focus-within {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-overlay-subtle);
   color: rgba(255, 255, 255, 0.82);
 }
 
@@ -356,7 +356,7 @@
 }
 
 .agentRow:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-overlay-subtle);
   color: #ffffff;
 }
 
