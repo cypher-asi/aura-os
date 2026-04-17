@@ -131,10 +131,25 @@
 .topbarAlignRail {
   padding-left: 0;
   padding-right: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .topbarAlignRail > :first-child > :first-child {
   width: 42px;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.desktopSidebar,
+.desktopSidebar * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.desktopSidebar input,
+.desktopSidebar textarea,
+.desktopSidebar [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
 }
