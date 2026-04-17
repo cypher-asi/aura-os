@@ -82,63 +82,24 @@ describe("useScrollAnchorV2", () => {
     expect(container.scrollTop).toBe(140);
   });
 
-  it("keeps the anchor pinned during an active resize session so the thread does not jump", () => {
+  it("scrolls to bottom when pinned and content height grows", () => {
     const container = document.createElement("div");
-    const anchor = document.createElement("div");
-    anchor.setAttribute("data-message-id", "message-1");
-    container.appendChild(anchor);
-
     Object.defineProperties(container, {
       scrollHeight: { value: 1000, writable: true, configurable: true },
-      scrollTop: { value: 100, writable: true, configurable: true },
+      scrollTop: { value: 1000, writable: true, configurable: true },
       clientHeight: { value: 400, writable: true, configurable: true },
     });
 
-    container.getBoundingClientRect = vi.fn(() => makeRect(0, 400));
-
-    let anchorTop = 50;
-    anchor.getBoundingClientRect = vi.fn(() => makeRect(anchorTop, anchorTop + 40));
-
     const ref = { current: container };
-    const { result, rerender } = renderHook(
-      ({ resizeSession }) => useScrollAnchorV2(ref, {
-        resetKey: "thread-1",
-        resizeSession,
-      }),
-      {
-        initialProps: {
-          resizeSession: { isActive: false, settledAt: 0 },
-        },
-      },
-    );
+    const { result } = renderHook(() => useScrollAnchorV2(ref, { resetKey: "thread-1" }));
 
-    act(() => {
-      container.scrollTop = 100;
-      result.current.handleScroll();
-    });
-
-    rerender({ resizeSession: { isActive: true, settledAt: 0 } });
-
-    anchorTop = 90;
-    act(() => {
-      result.current.onContentHeightChange({ immediate: true });
-    });
-
-    // Mid-drag height change: the anchor is restored on the scheduled frame
-    // so the visible message holds its position instead of sliding.
-    expect(container.scrollTop).toBe(140);
-
-    // Simulate that after the restoration the anchor is visually back at its
-    // original viewport offset (50), matching what a real browser would show.
-    anchorTop = 50;
-
-    rerender({ resizeSession: { isActive: false, settledAt: 1 } });
+    (container as unknown as { scrollHeight: number }).scrollHeight = 1200;
 
     act(() => {
       result.current.onContentHeightChange({ immediate: true });
     });
 
-    // Settled measurement pass after release reconciles without re-jumping.
-    expect(container.scrollTop).toBe(140);
+    expect(result.current.isAutoFollowing).toBe(true);
+    expect(container.scrollTop).toBe(1200);
   });
 });

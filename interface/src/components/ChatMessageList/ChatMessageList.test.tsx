@@ -1,8 +1,7 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatMessageList } from "./ChatMessageList";
 import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
-import { ChatResizeSessionContext } from "../ChatPanel/chat-resize-session-context";
 
 const mockMessageBubble = vi.fn();
 const mockStreamEntry = {
@@ -24,7 +23,6 @@ let mockVirtualItems = [
 let mockTotalSize = 100;
 const mockMeasureElement = vi.fn();
 const mockMeasure = vi.fn();
-let nextStreamingBubbleHeight = 0;
 
 class MockResizeObserver {
   static instances: MockResizeObserver[] = [];
@@ -105,7 +103,6 @@ describe("ChatMessageList", () => {
     mockMeasureElement.mockReset();
     mockMeasure.mockReset();
     MockResizeObserver.reset();
-    nextStreamingBubbleHeight = 0;
     Object.assign(mockStreamEntry, {
       isStreaming: false,
       streamingText: "",
@@ -197,42 +194,37 @@ describe("ChatMessageList", () => {
     expect(onInitialAnchorReady).toHaveBeenCalled();
   });
 
-  it("runs one batched remeasure when a resize session settles", () => {
+  it("runs a post-commit reconciliation when total size changes", () => {
     const scrollRef = { current: document.createElement("div") };
     const onContentHeightChange = vi.fn();
 
     const { rerender } = render(
-      <ChatResizeSessionContext.Provider value={{ isActive: false, settledAt: 0 }}>
-        <ChatMessageList
-          messages={[
-            { id: "message-1", role: "assistant", content: "Hello" } as any,
-          ]}
-          streamKey="stream-1"
-          scrollRef={scrollRef}
-          heightCache={heightCache}
-          onContentHeightChange={onContentHeightChange}
-        />
-      </ChatResizeSessionContext.Provider>,
+      <ChatMessageList
+        messages={[
+          { id: "message-1", role: "assistant", content: "Hello" } as any,
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+        heightCache={heightCache}
+        onContentHeightChange={onContentHeightChange}
+      />,
     );
 
-    mockMeasure.mockClear();
     onContentHeightChange.mockClear();
+    mockTotalSize = 320;
 
     rerender(
-      <ChatResizeSessionContext.Provider value={{ isActive: false, settledAt: 1 }}>
-        <ChatMessageList
-          messages={[
-            { id: "message-1", role: "assistant", content: "Hello" } as any,
-          ]}
-          streamKey="stream-1"
-          scrollRef={scrollRef}
-          heightCache={heightCache}
-          onContentHeightChange={onContentHeightChange}
-        />
-      </ChatResizeSessionContext.Provider>,
+      <ChatMessageList
+        messages={[
+          { id: "message-1", role: "assistant", content: "Hello" } as any,
+        ]}
+        streamKey="stream-1"
+        scrollRef={scrollRef}
+        heightCache={heightCache}
+        onContentHeightChange={onContentHeightChange}
+      />,
     );
 
-    expect(mockMeasure).toHaveBeenCalledTimes(1);
     expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
   });
 
@@ -256,18 +248,19 @@ describe("ChatMessageList", () => {
     expect(getByRole("button", { name: "Load older messages" })).toBeInTheDocument();
   });
 
-  it("reconciles content height when the streaming bubble grows", () => {
+  it("reconciles content height when streaming text grows", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
 
     const scrollRef = { current: document.createElement("div") };
     const onContentHeightChange = vi.fn();
+    const messages = [
+      { id: "message-1", role: "assistant", content: "Hello" } as any,
+    ];
 
-    render(
+    const { rerender } = render(
       <ChatMessageList
-        messages={[
-          { id: "message-1", role: "assistant", content: "Hello" } as any,
-        ]}
+        messages={messages}
         streamKey="stream-1"
         scrollRef={scrollRef}
         heightCache={heightCache}
@@ -275,38 +268,25 @@ describe("ChatMessageList", () => {
       />,
     );
 
-    const streamingBubbleContainer = screen.getByTestId("streaming-bubble").parentElement;
-    if (!streamingBubbleContainer) {
-      throw new Error("Expected streaming bubble container to be rendered");
-    }
-
-    Object.defineProperty(streamingBubbleContainer, "getBoundingClientRect", {
-      configurable: true,
-      value: () => ({
-        x: 0,
-        y: 0,
-        top: 0,
-        left: 0,
-        right: 300,
-        bottom: nextStreamingBubbleHeight,
-        width: 300,
-        height: nextStreamingBubbleHeight,
-        toJSON: () => ({}),
-      }),
-    });
-
     onContentHeightChange.mockClear();
-    nextStreamingBubbleHeight = 180;
+    mockStreamEntry.streamingText = "partial output with more text";
 
     act(() => {
-      MockResizeObserver.trigger(streamingBubbleContainer);
+      rerender(
+        <ChatMessageList
+          messages={messages}
+          streamKey="stream-1"
+          scrollRef={scrollRef}
+          heightCache={heightCache}
+          onContentHeightChange={onContentHeightChange}
+        />,
+      );
     });
 
-    expect(onContentHeightChange).toHaveBeenCalledTimes(1);
     expect(onContentHeightChange).toHaveBeenCalledWith({ immediate: true });
   });
 
-  it("marks the just-finalized message as expanded without stuffing the streaming bubble height into the cache", () => {
+  it("marks the just-finalized message as expanded on streaming transition", () => {
     mockStreamEntry.isStreaming = true;
     mockStreamEntry.streamingText = "partial output";
 
@@ -325,33 +305,6 @@ describe("ChatMessageList", () => {
       />,
     );
 
-    const streamingBubbleContainer = screen.getByTestId("streaming-bubble").parentElement;
-    if (!streamingBubbleContainer) {
-      throw new Error("Expected streaming bubble container to be rendered");
-    }
-
-    Object.defineProperty(streamingBubbleContainer, "getBoundingClientRect", {
-      configurable: true,
-      value: () => ({
-        x: 0,
-        y: 0,
-        top: 0,
-        left: 0,
-        right: 300,
-        bottom: nextStreamingBubbleHeight,
-        width: 300,
-        height: nextStreamingBubbleHeight,
-        toJSON: () => ({}),
-      }),
-    });
-
-    nextStreamingBubbleHeight = 212;
-
-    act(() => {
-      MockResizeObserver.trigger(streamingBubbleContainer);
-    });
-
-    vi.mocked(heightCache.setHeight).mockClear();
     mockMessageBubble.mockClear();
     Object.assign(mockStreamEntry, {
       isStreaming: false,
@@ -372,8 +325,6 @@ describe("ChatMessageList", () => {
         />,
       );
     });
-
-    expect(heightCache.setHeight).not.toHaveBeenCalledWith("message-2", 212);
 
     const finalizedCall = mockMessageBubble.mock.calls.find(
       (call) => call[0].message.id === "message-2",

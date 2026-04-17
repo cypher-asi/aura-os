@@ -16,7 +16,6 @@ import { useChatUI } from "../../stores/chat-ui-store";
 import { useConversationSnapshot } from "../../hooks/use-conversation-snapshot";
 import { useLoadOlderMessages } from "../../hooks/use-load-older-messages";
 import { useChatViewStore, useThreadView } from "../../stores/chat-view-store";
-import { useChatResizeSession } from "./chat-resize-session-context";
 
 export interface UseChatPanelStateOptions {
   streamKey: string;
@@ -61,7 +60,6 @@ export function useChatPanelState({
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
   const heightCache = useMessageHeightCache();
-  const resizeSession = useChatResizeSession();
 
   useEffect(() => {
     chatUI.init(streamKey, adapterType, defaultModel);
@@ -91,7 +89,6 @@ export function useChatPanelState({
     onContentHeightChange,
   } = useScrollAnchorV2(messageAreaRef, {
     resetKey: scrollResetKey,
-    resizeSession,
   });
 
   const { loadOlder, isLoadingOlder, hasOlderMessages } = useLoadOlderMessages({

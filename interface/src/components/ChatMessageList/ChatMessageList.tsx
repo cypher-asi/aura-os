@@ -14,7 +14,6 @@ import type { DisplaySessionEvent } from "../../types/stream";
 import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 
 import { useStreamStore } from "../../hooks/stream/store";
-import { useChatResizeSession } from "../ChatPanel/chat-resize-session-context";
 
 const MESSAGE_GAP = 2;
 
@@ -69,7 +68,6 @@ export function ChatMessageList({
       progressText: state.entries[streamKey]?.progressText ?? "",
     })),
   );
-  const resizeSession = useChatResizeSession();
 
   const getItemKey = useCallback(
     (index: number) => messages[index].id,
@@ -96,14 +94,7 @@ export function ChatMessageList({
 
   const measureElementRef = useRef(virtualizer.measureElement);
   measureElementRef.current = virtualizer.measureElement;
-  const measureVirtualizerRef = useRef(virtualizer.measure);
-  measureVirtualizerRef.current = virtualizer.measure;
   const resizeObserversRef = useRef(new Map<string, ResizeObserver>());
-  const streamingBubbleRef = useRef<HTMLDivElement>(null);
-  const streamingBubbleObserverRef = useRef<ResizeObserver | null>(null);
-  const streamingBubbleHeightRef = useRef<number | null>(null);
-  const resizeSettleRafRef = useRef(0);
-  const lastResizeSettleRef = useRef(0);
 
   const updateMeasuredHeight = useCallback(
     (messageId: string, node: HTMLElement) => {
@@ -111,23 +102,18 @@ export function ChatMessageList({
       if (nextHeight <= 0) {
         return;
       }
-      const previousHeight = heightCache.getHeight(messageId);
       heightCache.setHeight(messageId, nextHeight);
-      if (
-        previousHeight === undefined
-        || Math.abs(previousHeight - nextHeight) >= 1
-      ) {
-        // Run the pinned-scroll correction synchronously inside the
-        // ResizeObserver callback (before paint). Deferring via rAF leaves
-        // one frame where the new layout is painted against the old
-        // scrollTop, which shows up as a visible jank/blink when the user
-        // toggles a tool/spec body while pinned to bottom.
-        onContentHeightChange?.({ immediate: true });
-      }
     },
-    [heightCache, onContentHeightChange],
+    [heightCache],
   );
 
+  // Observe each virtualized message so we can keep `heightCache` hot for
+  // messages that later scroll out of the virtualizer's active window. The
+  // virtualizer runs its own ResizeObserver via `measureElement` to drive
+  // `totalSize`; scroll-position corrections are handled from a single
+  // post-commit effect below (keyed on `totalSize`), not from inside these
+  // observer callbacks, so we don't fight the virtualizer's commit cycle
+  // with stale `scrollHeight` reads.
   const makeMeasureRef = useCallback(
     (messageId: string) => (node: HTMLElement | null) => {
       const existingObserver = resizeObserversRef.current.get(messageId);
@@ -154,45 +140,6 @@ export function ChatMessageList({
     [updateMeasuredHeight],
   );
 
-  const updateStreamingBubbleHeight = useCallback(
-    (node: HTMLElement) => {
-      const nextHeight = node.getBoundingClientRect().height;
-      if (nextHeight <= 0) {
-        return;
-      }
-      const previousHeight = streamingBubbleHeightRef.current;
-      streamingBubbleHeightRef.current = nextHeight;
-      if (previousHeight === null || Math.abs(previousHeight - nextHeight) >= 1) {
-        onContentHeightChange?.({ immediate: true });
-      }
-    },
-    [onContentHeightChange],
-  );
-
-  const setStreamingBubbleRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      streamingBubbleObserverRef.current?.disconnect();
-      streamingBubbleObserverRef.current = null;
-      streamingBubbleRef.current = node;
-
-      if (!node) {
-        streamingBubbleHeightRef.current = null;
-        return;
-      }
-
-      updateStreamingBubbleHeight(node);
-
-      if (typeof ResizeObserver !== "undefined") {
-        const observer = new ResizeObserver(() => {
-          updateStreamingBubbleHeight(node);
-        });
-        observer.observe(node);
-        streamingBubbleObserverRef.current = observer;
-      }
-    },
-    [updateStreamingBubbleHeight],
-  );
-
   const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
   const prevStreamingRef = useRef(nowStreaming);
   const justFinalizedIdRef = useRef<string | null>(null);
@@ -201,9 +148,7 @@ export function ChatMessageList({
   // MessageBubble rendered below picks up `initialThinkingExpanded` on the
   // same pass it mounts. Mark the last message as "just finalized" so its
   // ThinkingRow mounts already expanded, matching the StreamingBubble it
-  // replaces. The ThinkingRow's own deferred-collapse effect handles
-  // shrinking afterwards as a single clean layout change — so we no longer
-  // need to stuff the streaming bubble height into the virtualizer cache.
+  // replaces.
   {
     const wasStreaming = prevStreamingRef.current;
     if (wasStreaming && !nowStreaming) {
@@ -233,47 +178,31 @@ export function ChatMessageList({
     onInitialAnchorReady?.();
   }, [hasMessages, onContentHeightChange, onInitialAnchorReady, streamKey]);
 
-  // Whenever the virtualizer commits a new total size, re-run the scroll
-  // correction. During a resize drag the per-message ResizeObserver fires
-  // before the virtualizer rerenders, so scrollHeight at that moment still
-  // reflects the old totalSize wrapper; running again post-commit (but
-  // still pre-paint via useLayoutEffect) keeps the bottom / anchor pinned
-  // without a one-frame visible slide.
+  // Single post-commit, pre-paint scroll correction. Runs whenever the
+  // virtualizer's total size changes (height cache updates, load older,
+  // resize-driven rewrapping) or the streaming bubble's content changes.
+  // At this point React has just committed the new wrapper height, so
+  // `scrollHeight` is fresh — both the pinned-to-bottom and anchor-restore
+  // paths see accurate geometry.
   useLayoutEffect(() => {
     if (!hasMessages) return;
     onContentHeightChange?.({ immediate: true });
-  }, [hasMessages, onContentHeightChange, totalSize]);
+  }, [
+    hasMessages,
+    onContentHeightChange,
+    totalSize,
+    streamingText,
+    thinkingText,
+    activeToolCalls.length,
+    progressText,
+  ]);
 
   useEffect(() => () => {
     for (const observer of resizeObserversRef.current.values()) {
       observer.disconnect();
     }
     resizeObserversRef.current.clear();
-    streamingBubbleObserverRef.current?.disconnect();
-    streamingBubbleObserverRef.current = null;
-    if (resizeSettleRafRef.current !== 0) {
-      cancelAnimationFrame(resizeSettleRafRef.current);
-      resizeSettleRafRef.current = 0;
-    }
   }, []);
-
-  useEffect(() => {
-    if (resizeSession.isActive) {
-      return;
-    }
-    if (resizeSession.settledAt === 0 || resizeSession.settledAt === lastResizeSettleRef.current) {
-      return;
-    }
-    lastResizeSettleRef.current = resizeSession.settledAt;
-    if (resizeSettleRafRef.current !== 0) {
-      cancelAnimationFrame(resizeSettleRafRef.current);
-    }
-    resizeSettleRafRef.current = requestAnimationFrame(() => {
-      resizeSettleRafRef.current = 0;
-      measureVirtualizerRef.current?.();
-      onContentHeightChange?.({ immediate: true });
-    });
-  }, [onContentHeightChange, resizeSession.isActive, resizeSession.settledAt]);
 
   if (!hasMessages) {
     return <>{emptyState}</>;
@@ -333,7 +262,7 @@ export function ChatMessageList({
         })}
       </div>
       {nowStreaming && (
-        <div ref={setStreamingBubbleRef}>
+        <div>
           <StreamingBubble
             isStreaming={isStreaming}
             text={streamingText}

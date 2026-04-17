@@ -1,5 +1,4 @@
 import { useLayoutEffect, useRef, useCallback, useState } from "react";
-import type { ChatResizeSessionState } from "../components/ChatPanel/chat-resize-session-context";
 
 const BOTTOM_THRESHOLD_PX = 40;
 const INPUT_OVERLAY_PX = 140;
@@ -52,17 +51,14 @@ function findFirstVisibleMessage(
 
 export function useScrollAnchorV2(
   ref: React.RefObject<HTMLElement | null>,
-  options: { resetKey?: unknown; resizeSession?: ChatResizeSessionState },
+  options: { resetKey?: unknown },
 ): UseScrollAnchorV2Return {
-  const { resetKey, resizeSession } = options;
+  const { resetKey } = options;
 
   const pinnedRef = useRef(true);
   const guardRef = useRef(false);
   const currentAnchorRef = useRef<AnchorInfo | null>(null);
   const contentChangeRafRef = useRef(0);
-  const resizeActiveRef = useRef(false);
-  const resizeAnchorRef = useRef<AnchorInfo | null>(null);
-  const resizePendingRef = useRef(false);
 
   const [isAutoFollowing, setIsAutoFollowing] = useState(true);
 
@@ -79,8 +75,6 @@ export function useScrollAnchorV2(
   useLayoutEffect(() => {
     pinnedRef.current = true;
     currentAnchorRef.current = null;
-    resizeAnchorRef.current = null;
-    resizePendingRef.current = false;
     if (contentChangeRafRef.current !== 0) {
       cancelAnimationFrame(contentChangeRafRef.current);
       contentChangeRafRef.current = 0;
@@ -116,44 +110,6 @@ export function useScrollAnchorV2(
     },
     [ref],
   );
-
-  const runResizeFollow = useCallback(() => {
-    if (!resizeActiveRef.current) return;
-    if (pinnedRef.current) {
-      doScrollToBottom();
-      return;
-    }
-    const anchor = resizeAnchorRef.current ?? currentAnchorRef.current;
-    if (anchor) restoreAnchor(anchor);
-  }, [doScrollToBottom, restoreAnchor]);
-
-  const reconcileResizeSession = useCallback(() => {
-    if (pinnedRef.current) {
-      resizeAnchorRef.current = null;
-      doScrollToBottom();
-      return;
-    }
-    const anchor = resizeAnchorRef.current ?? currentAnchorRef.current;
-    resizeAnchorRef.current = null;
-    if (anchor) {
-      currentAnchorRef.current = anchor;
-      restoreAnchor(anchor);
-    }
-  }, [doScrollToBottom, restoreAnchor]);
-
-  useLayoutEffect(() => {
-    const nextActive = resizeSession?.isActive ?? false;
-    if (nextActive) {
-      resizeActiveRef.current = true;
-      resizePendingRef.current = false;
-      resizeAnchorRef.current = pinnedRef.current
-        ? null
-        : (currentAnchorRef.current ?? captureAnchor());
-      return;
-    }
-
-    resizeActiveRef.current = false;
-  }, [captureAnchor, resizeSession?.isActive]);
 
   const reconcileContent = useCallback(() => {
     if (pinnedRef.current) {
@@ -203,23 +159,6 @@ export function useScrollAnchorV2(
 
   const onContentHeightChange = useCallback(
     (options?: { immediate?: boolean }) => {
-      if (resizeActiveRef.current) {
-        resizePendingRef.current = true;
-        // Run the correction synchronously inside the ResizeObserver
-        // callback so the adjusted scrollTop is painted on the same frame
-        // as the height change. Deferring via rAF leaves one frame where
-        // the new layout is painted against the old scrollTop, which
-        // shows up as visible jank while dragging the divider.
-        runResizeFollow();
-        return;
-      }
-
-      if (resizePendingRef.current) {
-        resizePendingRef.current = false;
-        reconcileResizeSession();
-        return;
-      }
-
       if (options?.immediate) {
         if (contentChangeRafRef.current !== 0) {
           cancelAnimationFrame(contentChangeRafRef.current);
@@ -235,7 +174,7 @@ export function useScrollAnchorV2(
         reconcileContent();
       });
     },
-    [reconcileContent, reconcileResizeSession, runResizeFollow],
+    [reconcileContent],
   );
 
   return {
