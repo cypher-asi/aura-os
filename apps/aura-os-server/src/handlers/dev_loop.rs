@@ -488,14 +488,19 @@ async fn create_automaton_session(
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     active_task_id: Option<TaskId>,
+    model_override: Option<String>,
     jwt: Option<&str>,
 ) -> Option<SessionId> {
-    let model = state
-        .agent_instance_service
-        .get_instance(&project_id, &agent_instance_id)
-        .await
-        .ok()
-        .and_then(|instance| preferred_automaton_model(&instance));
+    let model = if model_override.is_some() {
+        model_override
+    } else {
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .ok()
+            .and_then(|instance| preferred_automaton_model(&instance))
+    };
     let user_id = jwt
         .and_then(|j| state.validation_cache.get(j))
         .map(|entry| entry.session.user_id.clone());
@@ -1375,7 +1380,7 @@ pub(crate) async fn start_loop(
     let start_params = AutomatonStartParams {
         project_id: project_id.to_string(),
         auth_token: jwt,
-        model: selected_model,
+        model: selected_model.clone(),
         workspace_root: Some(project_path),
         task_id: None,
         git_repo_url: resolve_git_repo_url(project.as_ref()),
@@ -1572,6 +1577,7 @@ pub(crate) async fn start_loop(
             project_id,
             agent_instance_id,
             first_task_uuid,
+            selected_model.clone(),
             jwt_for_persist.as_deref(),
         )
         .await
@@ -1992,7 +1998,7 @@ pub(crate) async fn run_single_task(
         .start(AutomatonStartParams {
             project_id: project_id.to_string(),
             auth_token: jwt,
-            model: selected_model,
+            model: selected_model.clone(),
             workspace_root: Some(project_path),
             task_id: Some(task_id.to_string()),
             git_repo_url: resolve_git_repo_url(project.as_ref()),
@@ -2041,6 +2047,7 @@ pub(crate) async fn run_single_task(
         project_id,
         agent_instance_id,
         Some(task_id),
+        selected_model.clone(),
         jwt_for_persist.as_deref(),
     )
     .await;

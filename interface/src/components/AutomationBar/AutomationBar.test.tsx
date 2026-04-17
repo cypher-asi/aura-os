@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, title, disabled, onClick, icon }: {
@@ -56,21 +57,16 @@ vi.mock("../../stores/event-store/index", () => {
   };
 });
 
-const setActiveTabMock = vi.fn();
-const mockSidekickState = { setActiveTab: setActiveTabMock };
-vi.mock("../../stores/sidekick-store", () => ({
-  useSidekickStore: Object.assign(
-    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
-    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
-  ),
-}));
-
 vi.mock("../StatusBadge", () => ({
   StatusBadge: ({ status }: { status: string }) => <span data-testid="status">{status}</span>,
 }));
 
 vi.mock("./AutomationBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
+vi.mock("../../stores/chat-ui-store", () => ({
+  useChatUI: vi.fn(() => ({ selectedModel: "aura-gpt-4.1" })),
 }));
 
 import { AutomationBar } from "../AutomationBar";
@@ -124,14 +120,13 @@ describe("AutomationBar", () => {
     });
   });
 
-  it("start button calls api.startLoop and switches to tasks tab", async () => {
+  it("start button calls api.startLoop with the active Aura model", async () => {
     const user = userEvent.setup();
     mockStartLoop.mockResolvedValue({ active_agent_instances: ["a1"] });
     renderBar();
 
     await user.click(screen.getByTitle("Start"));
-    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", "agent-1");
-    expect(setActiveTabMock).toHaveBeenCalledWith("tasks");
+    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", "agent-1", "aura-gpt-4.1");
   });
 
   it("pause button calls api.pauseLoop", async () => {
