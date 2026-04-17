@@ -20,6 +20,7 @@ const mockRunTask = vi.fn();
 const mockRetryTask = vi.fn();
 const mockListAgentInstances = vi.fn();
 const mockGetSession = vi.fn();
+let streamingTextKey: string | null = null;
 
 vi.mock("../../api/client", () => ({
   api: {
@@ -64,7 +65,7 @@ const eventStoreMock = {
 };
 vi.mock("../../stores/event-store/index", () => ({
   useEventStore: (sel: (s: typeof eventStoreMock) => unknown) => sel(eventStoreMock),
-  useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [] }),
+  useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [], gitSteps: [] }),
 }));
 
 vi.mock("../../hooks/use-loop-active", () => ({
@@ -92,6 +93,17 @@ vi.mock("../../hooks/use-task-output-hydration", () => ({
 
 vi.mock("../../hooks/use-task-stream", () => ({
   useTaskStream: () => ({ streamKey: "task:task-1" }),
+}));
+
+vi.mock("../../hooks/stream/hooks", () => ({
+  useStreamingText: (key: string | null) => {
+    streamingTextKey = key;
+    return "";
+  },
+}));
+
+vi.mock("../../stores/chat-ui-store", () => ({
+  useChatUI: () => ({ selectedModel: "aura-claude-sonnet-4-6" }),
 }));
 
 vi.mock("../VerificationStepItem", () => ({
@@ -172,6 +184,7 @@ function renderWithRouter(ui: React.ReactElement) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockLiveStatus = null;
+  streamingTextKey = null;
 });
 
 describe("TaskPreview", () => {
@@ -180,6 +193,11 @@ describe("TaskPreview", () => {
     expect(screen.getByTestId("task-meta")).toBeInTheDocument();
     expect(screen.getByTestId("task-files")).toBeInTheDocument();
     expect(screen.getByTestId("task-output")).toBeInTheDocument();
+  });
+
+  it("hydrates task output from the task stream instead of the chat stream", () => {
+    renderWithRouter(<TaskPreview task={makeTask({ status: "in_progress" as TaskStatus })} />);
+    expect(streamingTextKey).toBe("task:task-1");
   });
 
   it("shows effective status as ready", () => {
@@ -218,7 +236,12 @@ describe("RunTaskButton", () => {
 
     await user.click(screen.getByTitle("Run task"));
     await waitFor(() => {
-      expect(mockRunTask).toHaveBeenCalledWith("proj-1", "task-1", "agent-1");
+      expect(mockRunTask).toHaveBeenCalledWith(
+        "proj-1",
+        "task-1",
+        "agent-1",
+        "aura-claude-sonnet-4-6",
+      );
     });
   });
 

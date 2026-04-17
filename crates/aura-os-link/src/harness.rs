@@ -6,7 +6,7 @@ use aura_protocol::{
     SessionProviderConfig,
 };
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct SessionConfig {
     pub system_prompt: Option<String>,
     pub model: Option<String>,

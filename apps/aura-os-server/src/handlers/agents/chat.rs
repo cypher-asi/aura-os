@@ -682,11 +682,8 @@ fn harness_broadcast_to_sse(
                 match rx.recv().await {
                     Ok(evt) => {
                         let should_close = harness_event_closes_turn(&evt);
-                        if should_close && !cleaned_up {
-                            remove_live_session(&state, &session_key).await;
-                        }
                         let event = super::super::sse::harness_event_to_sse(&evt);
-                        return Some((event, (rx, should_close, cleaned_up || should_close)));
+                        return Some((event, (rx, should_close, cleaned_up)));
                     }
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
                     Err(tokio::sync::broadcast::error::RecvError::Closed) => {
@@ -712,6 +709,51 @@ async fn has_live_session(state: &AppState, key: &str) -> bool {
 async fn remove_live_session(state: &AppState, key: &str) {
     let mut reg = state.chat_sessions.lock().await;
     reg.remove(key);
+}
+
+async fn open_harness_chat_session_with_retry(
+    state: &AppState,
+    session_key: &str,
+    harness_mode: HarnessMode,
+    session_config: SessionConfig,
+    requested_model: Option<String>,
+    user_content: &str,
+    attachments: Option<&Vec<ChatAttachmentDto>>,
+) -> ApiResult<(
+    bool,
+    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
+    tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
+)> {
+    for attempt in 0..2 {
+        let (is_new, rx, commands_tx) = get_or_create_chat_session(
+            state,
+            session_key,
+            harness_mode,
+            session_config.clone(),
+            requested_model.clone(),
+        )
+        .await?;
+
+        let send_result = commands_tx.send(HarnessInbound::UserMessage(UserMessage {
+            content: user_content.to_string(),
+            tool_hints: None,
+            attachments: dto_attachments_to_protocol(attachments),
+        }));
+
+        match send_result {
+            Ok(()) => return Ok((is_new, rx, commands_tx)),
+            Err(e) if attempt == 0 && !is_new => {
+                info!(session_key, error = %e, "Cached chat session send failed; reopening session");
+                remove_live_session(state, session_key).await;
+            }
+            Err(e) => {
+                remove_live_session(state, session_key).await;
+                return Err(ApiError::internal(format!("sending user message: {e}")));
+            }
+        }
+    }
+
+    unreachable!("chat session retry loop should return on success or final failure")
 }
 
 pub(crate) async fn reset_agent_session(
@@ -794,15 +836,14 @@ fn conversation_content_blocks(
         .unwrap_or(&[])
         .iter()
         .filter_map(|block| match block {
-            ChatContentBlock::Text { text } => Some(ConversationContentBlock::Text {
-                text: text.clone(),
-            }),
+            ChatContentBlock::Text { text } => {
+                Some(ConversationContentBlock::Text { text: text.clone() })
+            }
             ChatContentBlock::ToolUse { id, name, input } => {
                 Some(ConversationContentBlock::ToolUse {
                     id: id.clone(),
                     name: name.clone(),
-                    input_json: serde_json::to_string(input)
-                        .unwrap_or_else(|_| "{}".to_string()),
+                    input_json: serde_json::to_string(input).unwrap_or_else(|_| "{}".to_string()),
                 })
             }
             ChatContentBlock::ToolResult {
@@ -814,12 +855,10 @@ fn conversation_content_blocks(
                 content: content.clone(),
                 is_error: *is_error,
             }),
-            ChatContentBlock::Image { media_type, data } => {
-                Some(ConversationContentBlock::Image {
-                    media_type: media_type.clone(),
-                    data: data.clone(),
-                })
-            }
+            ChatContentBlock::Image { media_type, data } => Some(ConversationContentBlock::Image {
+                media_type: media_type.clone(),
+                data: data.clone(),
+            }),
             ChatContentBlock::TaskRef { .. } | ChatContentBlock::SpecRef { .. } => None,
         })
         .collect();
@@ -831,9 +870,7 @@ fn conversation_content_blocks(
 /// block across the given event stream. Used to detect dangling `tool_use`
 /// blocks left behind by a crashed harness — those must be stripped before
 /// sending history back to the LLM.
-fn collect_referenced_tool_use_ids(
-    events: &[SessionEvent],
-) -> std::collections::HashSet<String> {
+fn collect_referenced_tool_use_ids(events: &[SessionEvent]) -> std::collections::HashSet<String> {
     let mut set = std::collections::HashSet::new();
     for evt in events {
         if let Some(blocks) = evt.content_blocks.as_deref() {
@@ -920,9 +957,7 @@ fn render_conversation_text(
 /// "tool_use without matching tool_result" 400 error on every subsequent
 /// prompt — which is exactly the class of bug that motivated this
 /// regression guard.
-pub fn session_events_to_super_agent_history(
-    events: &[SessionEvent],
-) -> Vec<serde_json::Value> {
+pub fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_json::Value> {
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
 
     let mut messages: Vec<serde_json::Value> = Vec::new();
@@ -1449,10 +1484,7 @@ pub async fn load_current_session_events_for_instance(
         return Ok(Vec::new());
     }
 
-    let Some(latest) = sessions
-        .iter()
-        .max_by_key(|s| storage_session_sort_key(s))
-    else {
+    let Some(latest) = sessions.iter().max_by_key(|s| storage_session_sort_key(s)) else {
         return Ok(Vec::new());
     };
 
@@ -1650,9 +1682,9 @@ fn map_harness_session_startup_error(message: &str) -> (StatusCode, Json<ApiErro
 }
 
 fn dto_attachments_to_protocol(
-    atts: &Option<Vec<ChatAttachmentDto>>,
+    atts: Option<&Vec<ChatAttachmentDto>>,
 ) -> Option<Vec<MessageAttachment>> {
-    atts.as_ref().and_then(|v| {
+    atts.and_then(|v| {
         if v.is_empty() {
             None
         } else {
@@ -1683,34 +1715,24 @@ async fn open_harness_chat_stream(
 ) -> ApiResult<SseResponse> {
     let persist_unavailable = persist_ctx.is_none();
 
-    let (is_new, rx, commands_tx) = get_or_create_chat_session(
+    if let Some(ref ctx) = persist_ctx {
+        persist_user_message(ctx, &user_content, &attachments);
+    }
+
+    let (is_new, rx, _commands_tx) = open_harness_chat_session_with_retry(
         state,
         session_key,
         harness_mode,
         session_config,
         requested_model,
+        &user_content,
+        attachments.as_ref(),
     )
     .await?;
 
-    // Subscribe the persistence receiver *before* sending the user message so
-    // we don't miss early harness events in a fast-response scenario.
-    let persist_rx = if persist_ctx.is_some() {
-        Some(rx.resubscribe())
-    } else {
-        None
-    };
-
-    if let Some(ref ctx) = persist_ctx {
-        persist_user_message(ctx, &user_content, &attachments);
-    }
-
-    commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: user_content,
-            tool_hints: None,
-            attachments: dto_attachments_to_protocol(&attachments),
-        }))
-        .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
+    // Subscribe the persistence receiver *before* streaming back events so we
+    // don't miss early harness output in a fast-response scenario.
+    let persist_rx = persist_ctx.as_ref().map(|_| rx.resubscribe());
 
     if let (Some(ctx), Some(prx)) = (persist_ctx, persist_rx) {
         spawn_chat_persist_task(prx, ctx);
@@ -2201,10 +2223,11 @@ fn build_project_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::HarnessHttpGateway;
     use crate::state::AppState;
+    use crate::HarnessHttpGateway;
     use aura_os_auth::AuthService;
     use aura_os_billing::BillingClient;
+    use aura_os_core::{parse_dt, SessionEventId};
     use aura_os_link::{
         AssistantMessageEnd, AutomatonClient, FilesChanged, HarnessInbound, HarnessLink,
         LocalHarness, SwarmHarness, TextDelta,
@@ -2212,11 +2235,10 @@ mod tests {
     use aura_os_orgs::OrgService;
     use aura_os_projects::ProjectService;
     use aura_os_sessions::SessionService;
+    use aura_os_storage::StorageSession;
     use aura_os_store::RocksStore;
     use aura_os_super_agent::SuperAgentService;
     use aura_os_tasks::TaskService;
-    use aura_os_core::{parse_dt, SessionEventId};
-    use aura_os_storage::StorageSession;
     use futures_util::StreamExt;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -2427,8 +2449,10 @@ mod tests {
 
         let history = session_events_to_conversation_history(&[assistant, tool_result]);
         assert!(
-            history.iter().any(|m| m.content.starts_with("Sure, creating now.")
-                && m.content.contains("tool_use create_spec")),
+            history
+                .iter()
+                .any(|m| m.content.starts_with("Sure, creating now.")
+                    && m.content.contains("tool_use create_spec")),
             "narration and tool_use must both survive, got: {history:?}"
         );
     }
@@ -2561,26 +2585,28 @@ mod tests {
 
     #[test]
     fn harness_event_closes_turn_for_terminal_events() {
-        assert!(harness_event_closes_turn(&HarnessOutbound::Error(aura_os_link::ErrorMsg {
-            code: "oops".into(),
-            message: "broken".into(),
-            recoverable: false,
-        })));
-        assert!(harness_event_closes_turn(&HarnessOutbound::AssistantMessageEnd(
-            AssistantMessageEnd {
+        assert!(harness_event_closes_turn(&HarnessOutbound::Error(
+            aura_os_link::ErrorMsg {
+                code: "oops".into(),
+                message: "broken".into(),
+                recoverable: false,
+            }
+        )));
+        assert!(harness_event_closes_turn(
+            &HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
                 message_id: "m1".into(),
                 stop_reason: "end_turn".into(),
                 usage: SessionUsage::default(),
                 files_changed: FilesChanged::default(),
-            }
+            })
+        ));
+        assert!(!harness_event_closes_turn(&HarnessOutbound::TextDelta(
+            TextDelta { text: "hi".into() }
         )));
-        assert!(!harness_event_closes_turn(&HarnessOutbound::TextDelta(TextDelta {
-            text: "hi".into(),
-        })));
     }
 
     #[tokio::test]
-    async fn terminal_harness_event_evicts_chat_session() {
+    async fn terminal_harness_event_keeps_chat_session_for_follow_up_turns() {
         let (state, _db_dir) = build_test_state();
         let session_key = "agent:test-agent".to_string();
         let (events_tx, events_rx) = broadcast::channel(16);
@@ -2618,8 +2644,9 @@ mod tests {
 
         let reg = state.chat_sessions.lock().await;
         assert!(
-            !reg.contains_key(&session_key),
-            "terminal event should evict cached chat session"
+            reg.contains_key(&session_key),
+            "terminal event should keep cached chat session for follow-up turns"
         );
     }
+
 }
