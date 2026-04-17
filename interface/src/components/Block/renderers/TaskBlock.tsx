@@ -42,6 +42,7 @@ export function TaskBlock({ entry, defaultExpanded }: TaskBlockProps) {
       badge={badge}
       status={status}
       defaultExpanded={defaultExpanded ?? false}
+      flushBody
     >
       <div className={styles.taskTitle}>{title}</div>
       {firstLine ? <div className={styles.taskDesc}>{firstLine}</div> : null}

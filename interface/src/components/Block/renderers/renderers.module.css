@@ -147,19 +147,30 @@
 
 /* ── Task ── */
 
+/*
+ * TaskBlock uses `flushBody`, so the body itself has no padding. Content
+ * styles own the indentation (10px matches the Block's header inset so
+ * task text aligns under the header title).
+ */
 .taskTitle {
   color: var(--color-text, #ddd);
   font-weight: 500;
   font-size: 13px;
+  padding: 8px 10px 0 10px;
 }
 
 .taskDesc {
   color: var(--color-text-secondary);
   font-size: 12px;
   margin-top: 4px;
+  padding: 0 10px 8px 10px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.taskTitle:last-child {
+  padding-bottom: 8px;
 }
 
 /* ── List ── */
