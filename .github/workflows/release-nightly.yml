@@ -43,7 +43,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -159,7 +159,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -328,7 +328,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
