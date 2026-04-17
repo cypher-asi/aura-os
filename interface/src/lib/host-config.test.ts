@@ -91,6 +91,33 @@ describe("host-config", () => {
     expect(hostConfig.getTargetHostOrigin()).toBe("http://10.0.2.2:3100");
   });
 
+  it("persists a bootstrap ?host= query param into localStorage", async () => {
+    storageState.set("aura-host-origin", "http://127.0.0.1:19847");
+    setLocation("/projects/demo?host=http://127.0.0.1:3100");
+
+    const hostConfig = await import("./host-config");
+    const persisted = hostConfig.syncQueryHostOriginToStorage();
+
+    expect(persisted).toBe("http://127.0.0.1:3100");
+    expect(storageState.get("aura-host-origin")).toBe("http://127.0.0.1:3100");
+
+    // After the query param is dropped (SPA nav), storage still wins over the
+    // previously-stale value.
+    setLocation("/projects/demo");
+    expect(hostConfig.getConfiguredHostOrigin()).toBe("http://127.0.0.1:3100");
+  });
+
+  it("leaves storage untouched when no ?host= query param is present", async () => {
+    storageState.set("aura-host-origin", "http://127.0.0.1:19847");
+    setLocation("/projects/demo");
+
+    const hostConfig = await import("./host-config");
+    const persisted = hostConfig.syncQueryHostOriginToStorage();
+
+    expect(persisted).toBeNull();
+    expect(storageState.get("aura-host-origin")).toBe("http://127.0.0.1:19847");
+  });
+
   it("prefers a user-configured host over the native build default", async () => {
     vi.stubEnv("VITE_IOS_DEFAULT_HOST", "http://127.0.0.1:3100");
     (window as Window & { Capacitor?: { isNativePlatform: () => boolean; getPlatform: () => string } }).Capacitor = {

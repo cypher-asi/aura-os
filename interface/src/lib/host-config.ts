@@ -50,6 +50,18 @@ export function getConfiguredHostOrigin(): string | null {
   return getQueryHostOrigin() ?? getStoredHostOrigin();
 }
 
+// Desktop/native shells bootstrap the webview with `?host=...`. SPA navigation
+// can drop that query string, causing later requests to fall back to a stale
+// localStorage value. Persist the bootstrap host into storage on startup so it
+// survives navigation.
+export function syncQueryHostOriginToStorage(): string | null {
+  if (!hasWindow()) return null;
+  const queryHost = getQueryHostOrigin();
+  if (!queryHost) return null;
+  if (getStoredHostOrigin() === queryHost) return queryHost;
+  return setConfiguredHostOrigin(queryHost);
+}
+
 export function getNativeDefaultHostOrigin(): string | null {
   if (!requiresExplicitHostOrigin()) return null;
   return normalizeHostOrigin(readNativeDefaultHostCandidate());

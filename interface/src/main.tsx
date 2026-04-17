@@ -14,6 +14,11 @@ import {
   markReactRootRenderScheduled,
 } from "./lib/perf/startup-perf";
 import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
+import { syncQueryHostOriginToStorage } from "./lib/host-config";
+
+// Must run before any module that reads the host origin (e.g. host-store,
+// API clients) so a `?host=` bootstrap param wins over stale localStorage.
+syncQueryHostOriginToStorage();
 
 markAppEntry();
 initWebVitalsLite();
