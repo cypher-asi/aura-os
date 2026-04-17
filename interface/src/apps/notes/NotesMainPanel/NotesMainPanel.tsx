@@ -307,11 +307,6 @@ export function NotesMainPanel() {
     <Lane flex>
       <div className={styles.container}>
         <div className={styles.toolbar}>
-          <span
-            className={`${styles.saveState} ${note?.error ? styles.saveStateError : ""}`}
-          >
-            {saveState}
-          </span>
           <div className={styles.modeToggle} role="tablist" aria-label="Editor mode">
             <button
               type="button"
@@ -365,6 +360,14 @@ export function NotesMainPanel() {
           </div>
         </div>
         <OverlayScrollbar scrollRef={scrollRef} />
+        {saveState ? (
+          <span
+            className={`${styles.saveState} ${note?.error ? styles.saveStateError : ""}`}
+            aria-live="polite"
+          >
+            {saveState}
+          </span>
+        ) : null}
       </div>
     </Lane>
   );

@@ -18,10 +18,13 @@
 }
 
 .saveState {
-  margin-right: auto;
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-3);
   font-size: 11px;
   color: var(--color-text-muted, var(--color-text-secondary));
   opacity: 0.7;
+  pointer-events: none;
 }
 
 .saveStateError {
