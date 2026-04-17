@@ -728,6 +728,14 @@ pub(crate) async fn reset_instance_session(
 }
 
 pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<ConversationMessage> {
+    // Defensive: a harness crash can leave `tool_use` blocks in storage with
+    // no matching `tool_result`. Feeding those back to the LLM trips
+    // Anthropic's "tool_use without matching tool_result" 400 error (seen
+    // with agent 1f7dabd9... after a 79h session crashed mid-tool-call).
+    // We drop any dangling `tool_use` whose id isn't referenced by a
+    // subsequent `tool_result` in the same event stream.
+    let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
+
     events
         .iter()
         .filter_map(|m| {
@@ -743,7 +751,11 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
             // (empty `content`, populated `content_blocks`) was filtered out
             // here, causing the model to lose all prior tool context after the
             // app was reopened.
-            let rendered = render_conversation_text(&m.content, m.content_blocks.as_deref());
+            let rendered = render_conversation_text(
+                &m.content,
+                m.content_blocks.as_deref(),
+                &referenced_tool_use_ids,
+            );
             if rendered.is_empty() {
                 return None;
             }
@@ -756,13 +768,39 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
         .collect()
 }
 
+/// Collect the set of `tool_use_id` values referenced by any `tool_result`
+/// block across the given event stream. Used to detect dangling `tool_use`
+/// blocks left behind by a crashed harness — those must be stripped before
+/// sending history back to the LLM.
+fn collect_referenced_tool_use_ids(
+    events: &[SessionEvent],
+) -> std::collections::HashSet<String> {
+    let mut set = std::collections::HashSet::new();
+    for evt in events {
+        if let Some(blocks) = evt.content_blocks.as_deref() {
+            for block in blocks {
+                if let ChatContentBlock::ToolResult { tool_use_id, .. } = block {
+                    set.insert(tool_use_id.clone());
+                }
+            }
+        }
+    }
+    set
+}
+
 /// Render a message into the flat-text shape the harness expects.
 ///
 /// Preserves the plain-text content when present; additionally serializes any
 /// `tool_use` / `tool_result` / `thinking` / `image` blocks as compact
 /// annotations so the model retains awareness of prior tool activity when
-/// loading history on a cold start.
-fn render_conversation_text(text: &str, blocks: Option<&[ChatContentBlock]>) -> String {
+/// loading history on a cold start. Skips `tool_use` blocks whose id isn't
+/// referenced by any `tool_result` in the stream (dangling blocks from a
+/// crashed tool-call cycle).
+fn render_conversation_text(
+    text: &str,
+    blocks: Option<&[ChatContentBlock]>,
+    referenced_tool_use_ids: &std::collections::HashSet<String>,
+) -> String {
     let mut parts: Vec<String> = Vec::new();
     if !text.is_empty() {
         parts.push(text.to_string());
@@ -779,7 +817,11 @@ fn render_conversation_text(text: &str, blocks: Option<&[ChatContentBlock]>) -> 
                     }
                     parts.push(text.clone());
                 }
-                ChatContentBlock::ToolUse { name, input, .. } => {
+                ChatContentBlock::ToolUse { id, name, input } => {
+                    if !referenced_tool_use_ids.contains(id) {
+                        warn!(tool_use_id = %id, %name, "skipping dangling tool_use (no matching tool_result)");
+                        continue;
+                    }
                     let input_preview =
                         serde_json::to_string(input).unwrap_or_else(|_| "{}".to_string());
                     parts.push(format!("[tool_use {name} input={input_preview}]"));
@@ -812,7 +854,18 @@ fn render_conversation_text(text: &str, blocks: Option<&[ChatContentBlock]>) -> 
 /// `SessionEvent`s. Unlike `session_events_to_conversation_history` (which
 /// only keeps text), this preserves tool_use / tool_result content blocks so
 /// the super agent can resume multi-turn tool conversations after a cold start.
-fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_json::Value> {
+///
+/// Dangling `tool_use` blocks (ones whose id has no matching `tool_result`
+/// in the event stream — typically left behind by a crashed harness) are
+/// stripped here. Feeding them back into context would trigger Anthropic's
+/// "tool_use without matching tool_result" 400 error on every subsequent
+/// prompt — which is exactly the class of bug that motivated this
+/// regression guard.
+pub fn session_events_to_super_agent_history(
+    events: &[SessionEvent],
+) -> Vec<serde_json::Value> {
+    let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
+
     let mut messages: Vec<serde_json::Value> = Vec::new();
     let mut pending_tool_results: Vec<serde_json::Value> = Vec::new();
 
@@ -871,6 +924,14 @@ fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_j
                                 }));
                             }
                             ChatContentBlock::ToolUse { id, name, input } => {
+                                if !referenced_tool_use_ids.contains(id) {
+                                    warn!(
+                                        tool_use_id = %id,
+                                        %name,
+                                        "skipping dangling tool_use (no matching tool_result) from super-agent history"
+                                    );
+                                    continue;
+                                }
                                 api_blocks.push(serde_json::json!({
                                     "type": "tool_use",
                                     "id": id,
@@ -1239,19 +1300,114 @@ async fn load_project_session_history(
     Ok(history)
 }
 
-/// Load the latest persisted session for this standalone agent.
-pub(crate) async fn load_latest_agent_events_from_storage(
+/// Load events from only the *current* storage session for a standalone
+/// agent — the most recent session by `storage_session_sort_key`, which is
+/// also the session `resolve_chat_session(force_new=false)` would return.
+///
+/// This is the LLM-context loader — it intentionally does NOT aggregate
+/// across historical sessions. After a "Clear session" reset, the current
+/// session is the fresh empty one just created by
+/// `setup_agent_chat_persistence(force_new=true)`, so no prior events
+/// (including any corrupted `tool_use` blocks left over from a crashed
+/// harness) can be re-injected into the model context. UI endpoints still
+/// call the aggregating loaders so prior messages remain visible in the
+/// chat timeline.
+async fn load_current_session_events_for_agent_result(
+    state: &AppState,
+    agent_id: &AgentId,
+    jwt: &str,
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
+    let Some(ref storage) = state.storage_client else {
+        warn!(%agent_id, "current agent session: no storage client available");
+        return Ok(Vec::new());
+    };
+    let agent_id_str = agent_id.to_string();
+    let matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
+    if matching.is_empty() {
+        info!(
+            %agent_id,
+            "current agent session: no matching project agents found — returning empty history"
+        );
+        return Ok(Vec::new());
+    }
+    let sessions_outcome = fetch_all_sessions(storage, jwt, &matching).await;
+    if sessions_outcome.all_failed() {
+        if let Some(err) = sessions_outcome.first_error {
+            return Err(err);
+        }
+    }
+
+    let Some(latest) = sessions_outcome
+        .sessions
+        .iter()
+        .max_by_key(|s| storage_session_sort_key(s))
+    else {
+        return Ok(Vec::new());
+    };
+
+    info!(
+        %agent_id,
+        session_id = %latest.id,
+        "current agent session: loading events from latest storage session only"
+    );
+    let storage_events = storage.list_events(&latest.id, jwt, None, None).await?;
+    Ok(events_to_session_history(
+        &storage_events,
+        latest.project_agent_id.as_deref().unwrap_or_default(),
+        latest.project_id.as_deref().unwrap_or_default(),
+    ))
+}
+
+pub async fn load_current_session_events_for_agent(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
 ) -> Vec<SessionEvent> {
-    match load_latest_agent_events_from_storage_result(state, agent_id, jwt).await {
+    match load_current_session_events_for_agent_result(state, agent_id, jwt).await {
         Ok(messages) => messages,
         Err(e) => {
-            warn!(error = %e, %agent_id, "failed to load latest agent messages from storage");
+            warn!(error = %e, %agent_id, "failed to load current agent session from storage");
             Vec::new()
         }
     }
+}
+
+/// Instance-scoped analogue of `load_current_session_events_for_agent` — used
+/// by the harness chat path for project-bound agent instances. Loads events
+/// from only the newest storage session for the instance.
+pub async fn load_current_session_events_for_instance(
+    state: &AppState,
+    agent_instance_id: &AgentInstanceId,
+    jwt: &str,
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
+    let Some(ref storage) = state.storage_client else {
+        return Ok(Vec::new());
+    };
+    let sessions = storage
+        .list_sessions(&agent_instance_id.to_string(), jwt)
+        .await?;
+    if sessions.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let Some(latest) = sessions
+        .iter()
+        .max_by_key(|s| storage_session_sort_key(s))
+    else {
+        return Ok(Vec::new());
+    };
+
+    info!(
+        %agent_instance_id,
+        session_id = %latest.id,
+        "current instance session: loading events from latest storage session only"
+    );
+    let storage_events = storage.list_events(&latest.id, jwt, None, None).await?;
+    Ok(events_to_session_history(
+        &storage_events,
+        &agent_instance_id.to_string(),
+        latest.project_id.as_deref().unwrap_or_default(),
+    ))
 }
 
 pub(crate) async fn list_agent_events(
@@ -1590,8 +1746,14 @@ async fn handle_super_agent_stream(
     }
 
     // Load conversation history: prefer in-memory cache (full Claude API
-    // format with tool blocks), fall back to storage-based reconstruction
-    // for cold starts (e.g. after server restart).
+    // format with tool blocks), fall back to the *current* storage session
+    // for cold starts (e.g. after server restart). We intentionally do NOT
+    // aggregate prior sessions — that would re-inject events the user
+    // already cleared via "Clear session" (which rotates to a fresh storage
+    // session via `setup_agent_chat_persistence(force_new=true)`). UI
+    // history endpoints still aggregate across sessions so prior messages
+    // remain visible in the chat timeline; only LLM context is scoped to
+    // the current session.
     let conversation_history: Vec<serde_json::Value> = if force_new {
         Vec::new()
     } else {
@@ -1601,11 +1763,11 @@ async fn handle_super_agent_stream(
             cached.clone()
         } else {
             drop(cache);
-            let stored = load_latest_agent_events_from_storage(state, &agent_id, jwt).await;
+            let stored = load_current_session_events_for_agent(state, &agent_id, jwt).await;
             if stored.is_empty() {
                 Vec::new()
             } else {
-                info!(%agent_id, stored_events = stored.len(), "super agent: reconstructing conversation from storage (cold start)");
+                info!(%agent_id, stored_events = stored.len(), "super agent: reconstructing conversation from current storage session (cold start)");
                 let bounded =
                     slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
                 session_events_to_super_agent_history(&bounded)
@@ -1731,10 +1893,13 @@ pub(crate) async fn send_agent_event_stream(
             cache.remove(&sa_key);
         }
     }
+    // LLM context rebuild on cold start: load only the current storage
+    // session, not the full multi-session aggregate. See
+    // `load_current_session_events_for_agent` doc-comment for rationale.
     let conversation_messages = if force_new {
         None
     } else if !has_live_session(&state, &session_key).await {
-        let stored = load_latest_agent_events_from_storage(&state, &agent_id, &jwt).await;
+        let stored = load_current_session_events_for_agent(&state, &agent_id, &jwt).await;
         if stored.is_empty() {
             None
         } else {
@@ -1827,10 +1992,13 @@ pub(crate) async fn send_event_stream(
     if force_new {
         remove_live_session(&state, &session_key).await;
     }
+    // LLM context rebuild on cold start: load only the current storage
+    // session, not the full multi-session aggregate. See
+    // `load_current_session_events_for_instance` doc-comment for rationale.
     let conversation_messages = if force_new {
         None
     } else if !has_live_session(&state, &session_key).await {
-        let stored = load_project_session_history(&state, &agent_instance_id, &jwt)
+        let stored = load_current_session_events_for_instance(&state, &agent_instance_id, &jwt)
             .await
             .map_err(map_storage_error)?;
         if stored.is_empty() {
@@ -2149,6 +2317,12 @@ mod tests {
 
     #[test]
     fn conversation_history_preserves_text_plus_tool_turns() {
+        // Healthy cycle: assistant emits narration + tool_use, tool result
+        // arrives in a subsequent event. Both narration and tool call must
+        // survive. (A dangling tool_use with no matching tool_result is
+        // stripped as a crash signature — see the
+        // `conversation_history_strips_dangling_tool_use_block` integration
+        // test in tests/chat_events_test.rs.)
         let assistant = assistant_event(
             "Sure, creating now.",
             Some(vec![ChatContentBlock::ToolUse {
@@ -2157,11 +2331,21 @@ mod tests {
                 input: serde_json::json!({ "title": "hello" }),
             }]),
         );
+        let tool_result = assistant_event(
+            "",
+            Some(vec![ChatContentBlock::ToolResult {
+                tool_use_id: "tool-1".into(),
+                content: "spec-123".into(),
+                is_error: Some(false),
+            }]),
+        );
 
-        let history = session_events_to_conversation_history(&[assistant]);
-        assert_eq!(history.len(), 1);
-        assert!(history[0].content.starts_with("Sure, creating now."));
-        assert!(history[0].content.contains("tool_use create_spec"));
+        let history = session_events_to_conversation_history(&[assistant, tool_result]);
+        assert!(
+            history.iter().any(|m| m.content.starts_with("Sure, creating now.")
+                && m.content.contains("tool_use create_spec")),
+            "narration and tool_use must both survive, got: {history:?}"
+        );
     }
 
     #[test]

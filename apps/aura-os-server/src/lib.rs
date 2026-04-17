@@ -100,9 +100,11 @@ pub fn ensure_user_bins_on_path() {
 }
 
 pub mod handlers_test_support {
-    use aura_os_core::SessionEvent;
+    use aura_os_core::{AgentId, AgentInstanceId, SessionEvent};
     use aura_os_link::ConversationMessage;
     use aura_os_storage::StorageSessionEvent;
+
+    use crate::state::AppState;
 
     pub fn events_to_session_history_pub(
         events: &[StorageSessionEvent],
@@ -120,6 +122,36 @@ pub mod handlers_test_support {
         events: &[SessionEvent],
     ) -> Vec<ConversationMessage> {
         crate::handlers::agents::chat_pub::session_events_to_conversation_history(events)
+    }
+
+    pub fn session_events_to_super_agent_history_pub(
+        events: &[SessionEvent],
+    ) -> Vec<serde_json::Value> {
+        crate::handlers::agents::chat_pub::session_events_to_super_agent_history(events)
+    }
+
+    pub async fn load_current_session_events_for_agent_pub(
+        state: &AppState,
+        agent_id: &AgentId,
+        jwt: &str,
+    ) -> Vec<SessionEvent> {
+        crate::handlers::agents::chat_pub::load_current_session_events_for_agent(
+            state, agent_id, jwt,
+        )
+        .await
+    }
+
+    pub async fn load_current_session_events_for_instance_pub(
+        state: &AppState,
+        agent_instance_id: &AgentInstanceId,
+        jwt: &str,
+    ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
+        crate::handlers::agents::chat_pub::load_current_session_events_for_instance(
+            state,
+            agent_instance_id,
+            jwt,
+        )
+        .await
     }
 
     pub fn build_project_system_prompt_for_test(

@@ -413,7 +413,309 @@ async fn standalone_agent_events_support_recent_window() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. System prompt includes project context
+// 5. Reset doesn't re-inject prior session events into LLM context
+// ---------------------------------------------------------------------------
+//
+// Regression: before the fix, "Clear session" only rotated the storage write
+// target and cleared in-memory caches. The LLM-context loaders aggregated
+// every past storage session, so a corrupted `tool_use` block left behind by
+// a crashed harness (e.g. agent 1f7dabd9... S1 at messages.4.content.1) kept
+// getting re-injected on cold starts / cache misses / page refreshes.
+//
+// The fix scopes LLM-context loads to the *current* storage session only
+// (the one `resolve_chat_session(force_new=false)` picks). UI history
+// endpoints still aggregate across sessions — those tests live elsewhere in
+// this file and remain unchanged.
+
+async fn create_session_with_user_event(
+    storage: &StorageClient,
+    project_agent_id: &str,
+    project_id: &str,
+    jwt: &str,
+    text: &str,
+) -> String {
+    let session = storage
+        .create_session(
+            project_agent_id,
+            jwt,
+            &CreateSessionRequest {
+                project_id: project_id.to_string(),
+                org_id: None,
+                model: None,
+                status: None,
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .expect("create session");
+    storage
+        .create_event(
+            &session.id,
+            jwt,
+            &CreateSessionEventRequest {
+                event_type: "user_message".into(),
+                sender: Some("user".into()),
+                project_id: Some(project_id.to_string()),
+                agent_id: Some(project_agent_id.to_string()),
+                org_id: None,
+                user_id: None,
+                content: Some(serde_json::json!({ "text": text })),
+                session_id: Some(session.id.clone()),
+            },
+        )
+        .await
+        .expect("create user event");
+    session.id
+}
+
+#[tokio::test]
+async fn current_session_loader_excludes_prior_sessions_for_agent() {
+    let (_app, state, storage, _db) = build_test_app_with_storage().await;
+    let jwt = "test-token";
+
+    let project = state
+        .project_service
+        .create_project(CreateProjectInput {
+            org_id: OrgId::new(),
+            name: "Reset Scope Test".into(),
+            description: "Regression for LLM context re-injection".into(),
+            build_command: None,
+            test_command: None,
+        })
+        .expect("create project");
+
+    let agent_id = AgentId::new();
+    let project_agent = storage
+        .create_project_agent(
+            &project.project_id.to_string(),
+            jwt,
+            &CreateProjectAgentRequest {
+                agent_id: agent_id.to_string(),
+                name: "Logos".into(),
+                org_id: None,
+                role: Some("Researcher".into()),
+                personality: None,
+                system_prompt: None,
+                skills: Some(vec![]),
+                icon: None,
+                harness: None,
+            },
+        )
+        .await
+        .expect("create project agent");
+
+    // S_old: simulates a "corrupted" prior session the user has reset away from.
+    let _s_old = create_session_with_user_event(
+        &storage,
+        &project_agent.id,
+        &project.project_id.to_string(),
+        jwt,
+        "old session message (should NOT appear in LLM context)",
+    )
+    .await;
+
+    // Ensure S_new gets a strictly-later started_at timestamp.
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+
+    // S_new: the fresh session created by reset.
+    let _s_new = create_session_with_user_event(
+        &storage,
+        &project_agent.id,
+        &project.project_id.to_string(),
+        jwt,
+        "new session message (should appear in LLM context)",
+    )
+    .await;
+
+    let history = aura_os_server::handlers_test_support::load_current_session_events_for_agent_pub(
+        &state, &agent_id, jwt,
+    )
+    .await;
+
+    assert_eq!(
+        history.len(),
+        1,
+        "LLM context must contain exactly the current session's events, not aggregated history"
+    );
+    assert_eq!(history[0].role, ChatRole::User);
+    assert_eq!(
+        history[0].content, "new session message (should appear in LLM context)",
+        "current-session loader returned events from a prior session"
+    );
+}
+
+#[tokio::test]
+async fn current_session_loader_excludes_prior_sessions_for_instance() {
+    let (_app, state, storage, _db) = build_test_app_with_storage().await;
+    let jwt = "test-token";
+
+    let project_id = ProjectId::new();
+    let agent_instance_id = AgentInstanceId::new();
+
+    let _s_old = create_session_with_user_event(
+        &storage,
+        &agent_instance_id.to_string(),
+        &project_id.to_string(),
+        jwt,
+        "old instance session (should NOT appear)",
+    )
+    .await;
+
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+
+    let _s_new = create_session_with_user_event(
+        &storage,
+        &agent_instance_id.to_string(),
+        &project_id.to_string(),
+        jwt,
+        "new instance session (should appear)",
+    )
+    .await;
+
+    let history =
+        aura_os_server::handlers_test_support::load_current_session_events_for_instance_pub(
+            &state,
+            &agent_instance_id,
+            jwt,
+        )
+        .await
+        .expect("loader succeeds");
+
+    assert_eq!(
+        history.len(),
+        1,
+        "LLM context for instance must contain only the current session's events"
+    );
+    assert_eq!(history[0].role, ChatRole::User);
+    assert_eq!(
+        history[0].content, "new instance session (should appear)",
+        "current-session instance loader returned events from a prior session"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 6. Dangling tool_use blocks are stripped from LLM-context conversions
+// ---------------------------------------------------------------------------
+
+fn make_assistant_event_with_blocks(content_blocks: Vec<ChatContentBlock>) -> SessionEvent {
+    SessionEvent {
+        event_id: SessionEventId::new(),
+        agent_instance_id: AgentInstanceId::new(),
+        project_id: ProjectId::new(),
+        role: ChatRole::Assistant,
+        content: String::new(),
+        content_blocks: Some(content_blocks),
+        thinking: None,
+        thinking_duration_ms: None,
+        created_at: chrono::Utc::now(),
+    }
+}
+
+#[tokio::test]
+async fn super_agent_history_strips_dangling_tool_use_block() {
+    // Mirrors the real-world corruption: an assistant turn emitted a
+    // tool_use block and the harness crashed before the matching
+    // tool_result landed in storage. Feeding this back into context trips
+    // the Anthropic API 400 "tool_use ids were found without tool_result
+    // blocks immediately after". The filter must drop the dangling block.
+    let dangling_id = "tc-dangling";
+    let matched_id = "tc-matched";
+
+    let events = vec![
+        SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::new(),
+            project_id: ProjectId::new(),
+            role: ChatRole::User,
+            content: "please do something".into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: chrono::Utc::now(),
+        },
+        make_assistant_event_with_blocks(vec![
+            ChatContentBlock::Text {
+                text: "calling a tool".into(),
+            },
+            ChatContentBlock::ToolUse {
+                id: matched_id.into(),
+                name: "do_thing".into(),
+                input: serde_json::json!({}),
+            },
+            ChatContentBlock::ToolUse {
+                id: dangling_id.into(),
+                name: "crashed_thing".into(),
+                input: serde_json::json!({}),
+            },
+        ]),
+        make_assistant_event_with_blocks(vec![ChatContentBlock::ToolResult {
+            tool_use_id: matched_id.into(),
+            content: "ok".into(),
+            is_error: None,
+        }]),
+    ];
+
+    let history =
+        aura_os_server::handlers_test_support::session_events_to_super_agent_history_pub(&events);
+
+    let serialized = serde_json::to_string(&history).unwrap();
+    assert!(
+        !serialized.contains(dangling_id),
+        "dangling tool_use id must not survive into super-agent history, got: {serialized}"
+    );
+    assert!(
+        serialized.contains(matched_id),
+        "matched tool_use must still be present, got: {serialized}"
+    );
+}
+
+#[tokio::test]
+async fn conversation_history_strips_dangling_tool_use_block() {
+    let dangling_id = "tc-dangling";
+    let matched_id = "tc-matched";
+
+    let events = vec![
+        make_assistant_event_with_blocks(vec![
+            ChatContentBlock::ToolUse {
+                id: matched_id.into(),
+                name: "ok_tool".into(),
+                input: serde_json::json!({"a": 1}),
+            },
+            ChatContentBlock::ToolUse {
+                id: dangling_id.into(),
+                name: "crashed_tool".into(),
+                input: serde_json::json!({"b": 2}),
+            },
+        ]),
+        make_assistant_event_with_blocks(vec![ChatContentBlock::ToolResult {
+            tool_use_id: matched_id.into(),
+            content: "done".into(),
+            is_error: None,
+        }]),
+    ];
+
+    let history =
+        aura_os_server::handlers_test_support::session_events_to_conversation_history_pub(&events);
+
+    let joined: String = history
+        .iter()
+        .map(|m| m.content.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        !joined.contains("crashed_tool"),
+        "dangling tool_use must not appear in rendered harness history, got:\n{joined}"
+    );
+    assert!(
+        joined.contains("ok_tool"),
+        "matched tool_use should still be rendered, got:\n{joined}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 7. System prompt includes project context
 // ---------------------------------------------------------------------------
 
 #[tokio::test]
