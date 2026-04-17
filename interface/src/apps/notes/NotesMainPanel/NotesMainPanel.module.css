@@ -99,12 +99,13 @@
 .editor :global(h3),
 .editor :global(h4) {
   font-weight: 600;
-  margin: 1.2em 0 0.4em;
+  margin: 1.2em 0 0.8em;
   line-height: 1.25;
 }
 
 .editor :global(h1) {
   font-size: 1.6em;
+  margin-bottom: 1.1em;
 }
 
 .editor :global(h2) {
