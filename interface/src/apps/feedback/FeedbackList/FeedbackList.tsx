@@ -64,6 +64,10 @@ export function FeedbackList() {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
+  // Stable callback so the Modal's focus effect doesn't re-fire on every
+  // keystroke inside the composer.
+  const handleModalClose = useCallback(() => setIsModalOpen(false), []);
+
   const productData: ExplorerNode[] = useMemo(
     () =>
       FEEDBACK_PRODUCT_FILTERS.map((f) => ({
@@ -215,7 +219,7 @@ export function FeedbackList() {
       </div>
       <NewFeedbackModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleModalClose}
       />
     </>
   );

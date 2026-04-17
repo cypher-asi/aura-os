@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import { Select } from "../../../components/Select";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
 import { useFeedbackStore } from "../../../stores/feedback-store";
 import {
+  DEFAULT_FEEDBACK_PRODUCT,
   FEEDBACK_CATEGORY_OPTIONS,
   FEEDBACK_PRODUCT_OPTIONS,
   FEEDBACK_STATUS_OPTIONS,
@@ -27,15 +28,16 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
   const isSubmitting = useFeedbackStore((s) => s.isSubmitting);
   const composerError = useFeedbackStore((s) => s.composerError);
   const resetComposerError = useFeedbackStore((s) => s.resetComposerError);
-  // The composer's product follows the current filter so posting from inside
-  // the Grid view (for example) tags the new item as Grid without a click.
-  const productFilter = useFeedbackStore((s) => s.productFilter);
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<FeedbackCategory>(DEFAULT_CATEGORY);
   const [status, setStatus] = useState<FeedbackStatus>(DEFAULT_STATUS);
-  const [product, setProduct] = useState<FeedbackProduct>(productFilter);
+  // Composer always defaults to AURA regardless of the current Product filter.
+  // Users pick a different product explicitly via the Product select.
+  const [product, setProduct] = useState<FeedbackProduct>(
+    DEFAULT_FEEDBACK_PRODUCT,
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -43,14 +45,10 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
       setBody("");
       setCategory(DEFAULT_CATEGORY);
       setStatus(DEFAULT_STATUS);
-      setProduct(productFilter);
+      setProduct(DEFAULT_FEEDBACK_PRODUCT);
       resetComposerError();
-    } else {
-      // Re-seed from the filter whenever the modal opens, so switching
-      // products between post attempts is reflected immediately.
-      setProduct(productFilter);
     }
-  }, [isOpen, productFilter, resetComposerError]);
+  }, [isOpen, resetComposerError]);
 
   const canSubmit = body.trim().length > 0 && !isSubmitting;
 
@@ -66,10 +64,13 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
     if (created) onClose();
   };
 
-  const handleClose = () => {
+  // ZUI's Modal re-runs its focus effect whenever `onClose`'s identity
+  // changes, so stabilize this callback — otherwise every keystroke
+  // triggers a re-render and yanks the cursor back to the title input.
+  const handleClose = useCallback(() => {
     if (isSubmitting) return;
     onClose();
-  };
+  }, [isSubmitting, onClose]);
 
   const handleBodyChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setBody(event.target.value);

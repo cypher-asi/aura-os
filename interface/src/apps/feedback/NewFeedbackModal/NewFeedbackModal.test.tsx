@@ -152,10 +152,10 @@ describe("NewFeedbackModal", () => {
     expect(feedbackApiMock.create).not.toHaveBeenCalled();
   });
 
-  it("submits the product from the current productFilter", async () => {
+  it("defaults the product to AURA even when the filter is on a different product", async () => {
     const onClose = vi.fn();
     const dto: FeedbackItemDto = {
-      id: "fb-grid",
+      id: "fb-aura",
       profileId: "p1",
       eventType: "feedback",
       postType: "post",
@@ -163,7 +163,7 @@ describe("NewFeedbackModal", () => {
       summary: "body",
       category: "feature_request",
       status: "not_started",
-      product: "the_grid",
+      product: "aura",
       createdAt: new Date().toISOString(),
       commentCount: 0,
       upvotes: 0,
@@ -176,7 +176,7 @@ describe("NewFeedbackModal", () => {
 
     render(<NewFeedbackModal isOpen onClose={onClose} />);
     fireEvent.change(screen.getByLabelText("Feedback body"), {
-      target: { value: "grid feedback" },
+      target: { value: "some feedback" },
     });
     fireEvent.click(screen.getByRole("button", { name: /post/i }));
 
@@ -184,7 +184,7 @@ describe("NewFeedbackModal", () => {
       expect(feedbackApiMock.create).toHaveBeenCalled();
     });
     expect(feedbackApiMock.create.mock.calls[0]![0]).toMatchObject({
-      product: "the_grid",
+      product: "aura",
     });
   });
 });
