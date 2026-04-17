@@ -130,10 +130,17 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 400) + "px";
+    const cap = Math.min(window.innerHeight * 0.7, 800);
+    el.style.height = Math.min(el.scrollHeight, cap) + "px";
   }, []);
 
   useEffect(() => { autoResizeTextarea(); }, [input, autoResizeTextarea]);
+
+  useEffect(() => {
+    const onResize = () => autoResizeTextarea();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [autoResizeTextarea]);
 
   useEffect(() => {
     if (!modelMenuOpen) return;
