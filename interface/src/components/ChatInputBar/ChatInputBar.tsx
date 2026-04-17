@@ -130,8 +130,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
-    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
+    el.style.height = Math.min(el.scrollHeight, 400) + "px";
   }, []);
 
   useEffect(() => { autoResizeTextarea(); }, [input, autoResizeTextarea]);
