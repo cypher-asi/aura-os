@@ -60,7 +60,6 @@ export function useScrollAnchorV2(
   const guardRef = useRef(false);
   const currentAnchorRef = useRef<AnchorInfo | null>(null);
   const contentChangeRafRef = useRef(0);
-  const resizeFollowRafRef = useRef(0);
   const resizeActiveRef = useRef(false);
   const resizeAnchorRef = useRef<AnchorInfo | null>(null);
   const resizePendingRef = useRef(false);
@@ -85,10 +84,6 @@ export function useScrollAnchorV2(
     if (contentChangeRafRef.current !== 0) {
       cancelAnimationFrame(contentChangeRafRef.current);
       contentChangeRafRef.current = 0;
-    }
-    if (resizeFollowRafRef.current !== 0) {
-      cancelAnimationFrame(resizeFollowRafRef.current);
-      resizeFollowRafRef.current = 0;
     }
     syncFollowState();
     doScrollToBottom();
@@ -122,18 +117,14 @@ export function useScrollAnchorV2(
     [ref],
   );
 
-  const scheduleResizeFollow = useCallback(() => {
-    if (resizeFollowRafRef.current !== 0) return;
-    resizeFollowRafRef.current = requestAnimationFrame(() => {
-      resizeFollowRafRef.current = 0;
-      if (!resizeActiveRef.current) return;
-      if (pinnedRef.current) {
-        doScrollToBottom();
-        return;
-      }
-      const anchor = resizeAnchorRef.current ?? currentAnchorRef.current;
-      if (anchor) restoreAnchor(anchor);
-    });
+  const runResizeFollow = useCallback(() => {
+    if (!resizeActiveRef.current) return;
+    if (pinnedRef.current) {
+      doScrollToBottom();
+      return;
+    }
+    const anchor = resizeAnchorRef.current ?? currentAnchorRef.current;
+    if (anchor) restoreAnchor(anchor);
   }, [doScrollToBottom, restoreAnchor]);
 
   const reconcileResizeSession = useCallback(() => {
@@ -214,16 +205,17 @@ export function useScrollAnchorV2(
     (options?: { immediate?: boolean }) => {
       if (resizeActiveRef.current) {
         resizePendingRef.current = true;
-        scheduleResizeFollow();
+        // Run the correction synchronously inside the ResizeObserver
+        // callback so the adjusted scrollTop is painted on the same frame
+        // as the height change. Deferring via rAF leaves one frame where
+        // the new layout is painted against the old scrollTop, which
+        // shows up as visible jank while dragging the divider.
+        runResizeFollow();
         return;
       }
 
       if (resizePendingRef.current) {
         resizePendingRef.current = false;
-        if (resizeFollowRafRef.current !== 0) {
-          cancelAnimationFrame(resizeFollowRafRef.current);
-          resizeFollowRafRef.current = 0;
-        }
         reconcileResizeSession();
         return;
       }
@@ -243,7 +235,7 @@ export function useScrollAnchorV2(
         reconcileContent();
       });
     },
-    [reconcileContent, reconcileResizeSession, scheduleResizeFollow],
+    [reconcileContent, reconcileResizeSession, runResizeFollow],
   );
 
   return {

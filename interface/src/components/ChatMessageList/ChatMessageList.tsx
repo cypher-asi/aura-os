@@ -233,6 +233,17 @@ export function ChatMessageList({
     onInitialAnchorReady?.();
   }, [hasMessages, onContentHeightChange, onInitialAnchorReady, streamKey]);
 
+  // Whenever the virtualizer commits a new total size, re-run the scroll
+  // correction. During a resize drag the per-message ResizeObserver fires
+  // before the virtualizer rerenders, so scrollHeight at that moment still
+  // reflects the old totalSize wrapper; running again post-commit (but
+  // still pre-paint via useLayoutEffect) keeps the bottom / anchor pinned
+  // without a one-frame visible slide.
+  useLayoutEffect(() => {
+    if (!hasMessages) return;
+    onContentHeightChange?.({ immediate: true });
+  }, [hasMessages, onContentHeightChange, totalSize]);
+
   useEffect(() => () => {
     for (const observer of resizeObserversRef.current.values()) {
       observer.disconnect();
