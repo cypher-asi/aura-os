@@ -101,8 +101,6 @@ export function ChatPanel({
     queue,
     messages,
     scrollToBottom,
-    heightCache,
-    onContentHeightChange,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,
@@ -339,11 +337,9 @@ export function ChatPanel({
                 streamKey={streamKey}
                 scrollRef={messageAreaRef}
                 emptyState={emptyState}
-                heightCache={heightCache}
                 onLoadOlder={loadOlder}
                 isLoadingOlder={isLoadingOlder}
                 hasOlderMessages={hasOlderMessages}
-                onContentHeightChange={onContentHeightChange}
                 onInitialAnchorReady={handleInitialAnchorReady}
                 isAutoFollowing={isAutoFollowing}
               />

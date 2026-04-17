@@ -4,10 +4,6 @@ import { useChatPanelState } from "./useChatPanelState";
 
 const mockHandleScroll = vi.fn();
 const mockScrollToBottom = vi.fn();
-const mockScrollToBottomIfPinned = vi.fn();
-const mockCaptureAnchor = vi.fn();
-const mockRestoreAnchor = vi.fn();
-const mockOnContentHeightChange = vi.fn();
 const mockEnqueue = vi.fn();
 const mockDequeue = vi.fn();
 const mockChatUI = {
@@ -24,10 +20,6 @@ vi.mock("../../hooks/use-scroll-anchor-v2", () => ({
   useScrollAnchorV2: () => ({
     handleScroll: mockHandleScroll,
     scrollToBottom: mockScrollToBottom,
-    scrollToBottomIfPinned: mockScrollToBottomIfPinned,
-    captureAnchor: mockCaptureAnchor,
-    restoreAnchor: mockRestoreAnchor,
-    onContentHeightChange: mockOnContentHeightChange,
     isAutoFollowing: true,
   }),
 }));
@@ -95,7 +87,6 @@ describe("useChatPanelState", () => {
     mockStreamMessages = [];
     mockHandleScroll.mockReset();
     mockScrollToBottom.mockReset();
-    mockScrollToBottomIfPinned.mockReset();
     mockEnqueue.mockReset();
     mockDequeue.mockReset();
     mockChatUI.init.mockReset();
@@ -185,7 +176,6 @@ describe("useChatPanelState", () => {
     });
 
     expect(mockDequeue).toHaveBeenCalledWith("stream-1");
-    expect(mockScrollToBottomIfPinned).not.toHaveBeenCalled();
     expect(mockScrollToBottom).not.toHaveBeenCalled();
   });
 });

@@ -3,13 +3,10 @@ import { agentTemplatesApi } from "../api/agents";
 import { buildDisplayEvents } from "../utils/build-display-messages";
 import { useMessageStore } from "../stores/message-store";
 import { useChatViewStore, useThreadView } from "../stores/chat-view-store";
-import type { AnchorInfo } from "./use-scroll-anchor-v2";
 
 interface UseLoadOlderMessagesOptions {
   threadKey: string;
   agentId?: string;
-  captureAnchor: () => AnchorInfo | null;
-  restoreAnchor: (anchor: AnchorInfo) => void;
 }
 
 interface UseLoadOlderMessagesReturn {
@@ -18,11 +15,16 @@ interface UseLoadOlderMessagesReturn {
   hasOlderMessages: boolean;
 }
 
+/**
+ * Loads an older page of history and prepends it to the thread. Reading
+ * position is preserved by the browser via CSS `overflow-anchor` on the
+ * scroll container — when content is inserted above the viewport the browser
+ * shifts `scrollTop` by the delta automatically, so no JS anchor capture /
+ * restore is needed.
+ */
 export function useLoadOlderMessages({
   threadKey,
   agentId,
-  captureAnchor,
-  restoreAnchor,
 }: UseLoadOlderMessagesOptions): UseLoadOlderMessagesReturn {
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const loadingRef = useRef(false);
@@ -34,7 +36,6 @@ export function useLoadOlderMessages({
     setIsLoadingOlder(true);
 
     try {
-      const anchor = captureAnchor();
       const orderedIds = useMessageStore.getState().orderedIds[threadKey];
       const oldestId = orderedIds?.[0];
       if (!oldestId) return;
@@ -53,15 +54,11 @@ export function useLoadOlderMessages({
       if (response.next_cursor) {
         useChatViewStore.getState().setOlderCursor(threadKey, response.next_cursor);
       }
-
-      if (anchor) {
-        requestAnimationFrame(() => restoreAnchor(anchor));
-      }
     } finally {
       loadingRef.current = false;
       setIsLoadingOlder(false);
     }
-  }, [agentId, threadKey, captureAnchor, restoreAnchor]);
+  }, [agentId, threadKey]);
 
   return { loadOlder, isLoadingOlder, hasOlderMessages };
 }

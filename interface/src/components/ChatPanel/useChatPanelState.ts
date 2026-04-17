@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useScrollAnchorV2 } from "../../hooks/use-scroll-anchor-v2";
-import { useMessageHeightCache } from "../../hooks/use-message-height-cache";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
@@ -59,7 +58,6 @@ export function useChatPanelState({
   const { messages } = useConversationSnapshot(streamKey, historyMessages);
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
-  const heightCache = useMessageHeightCache();
 
   useEffect(() => {
     chatUI.init(streamKey, adapterType, defaultModel);
@@ -80,22 +78,14 @@ export function useChatPanelState({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  const {
-    handleScroll,
-    scrollToBottom,
-    isAutoFollowing,
-    captureAnchor,
-    restoreAnchor,
-    onContentHeightChange,
-  } = useScrollAnchorV2(messageAreaRef, {
-    resetKey: scrollResetKey,
-  });
+  const { handleScroll, scrollToBottom, isAutoFollowing } = useScrollAnchorV2(
+    messageAreaRef,
+    { resetKey: scrollResetKey },
+  );
 
   const { loadOlder, isLoadingOlder, hasOlderMessages } = useLoadOlderMessages({
     threadKey: streamKey,
     agentId,
-    captureAnchor,
-    restoreAnchor,
   });
 
   const threadView = useThreadView(streamKey);
@@ -276,10 +266,6 @@ export function useChatPanelState({
     queue,
     messages,
     scrollToBottom,
-    heightCache,
-    captureAnchor,
-    restoreAnchor,
-    onContentHeightChange,
     handleRemoveAttachment,
     handleSend,
     handleQueueEdit,

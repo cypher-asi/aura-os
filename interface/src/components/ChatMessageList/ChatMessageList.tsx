@@ -1,17 +1,13 @@
 import {
   type ReactNode,
   type RefObject,
-  useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
 import type { DisplaySessionEvent } from "../../types/stream";
-import type { MessageHeightCache } from "../../hooks/use-message-height-cache";
 
 import { useStreamStore } from "../../hooks/stream/store";
 
@@ -22,11 +18,9 @@ interface ChatMessageListProps {
   streamKey: string;
   scrollRef: RefObject<HTMLDivElement | null>;
   emptyState?: ReactNode;
-  heightCache: MessageHeightCache;
   onLoadOlder?: () => void;
   isLoadingOlder?: boolean;
   hasOlderMessages?: boolean;
-  onContentHeightChange?: (options?: { immediate?: boolean }) => void;
   onInitialAnchorReady?: () => void;
   isAutoFollowing?: boolean;
 }
@@ -38,16 +32,24 @@ const EMPTY_TIMELINE: NonNullable<
   ReturnType<typeof useStreamStore.getState>["entries"][string]
 >["timeline"] = [];
 
+/**
+ * Renders the full chat transcript in natural flex flow. Pin-to-bottom and
+ * reading-position preservation when content above the viewport changes
+ * size are handled by the browser via CSS `overflow-anchor: auto` on the
+ * parent scroll container (see `ChatPanel.module.css`). This component only
+ * needs to push scrollTop to the fresh bottom when the last item itself
+ * grows (streaming tokens, a new message arriving while pinned) — a case
+ * the native scroll-anchoring algorithm doesn't cover, since it only
+ * compensates for size changes above the anchor.
+ */
 export function ChatMessageList({
   messages,
   streamKey,
   scrollRef,
   emptyState,
-  heightCache,
   onLoadOlder,
   isLoadingOlder,
   hasOlderMessages,
-  onContentHeightChange,
   onInitialAnchorReady,
   isAutoFollowing = true,
 }: ChatMessageListProps) {
@@ -71,115 +73,20 @@ export function ChatMessageList({
     })),
   );
 
-  const getItemKey = useCallback(
-    (index: number) => messages[index].id,
-    [messages],
-  );
-
-  const estimateSize = useCallback(
-    (index: number) => {
-      const msg = messages[index];
-      if (!msg) return 120;
-      return heightCache.getHeight(msg.id) ?? heightCache.estimateHeight(msg);
-    },
-    [messages, heightCache],
-  );
-
-  const isAutoFollowingRef = useRef(isAutoFollowing);
-  isAutoFollowingRef.current = isAutoFollowing;
-  const virtualWrapperRef = useRef<HTMLDivElement | null>(null);
-
-  const virtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize,
-    getItemKey,
-    overscan: 5,
-    gap: MESSAGE_GAP,
-  });
-
-  // The virtualizer's `scrollAdjustments` path is what keeps the viewport
-  // anchored during item resizes (lane drags, streaming, tool collapses),
-  // but it runs *before* React commits the new `totalSize`. That means the
-  // wrapper's `style.height` still reflects the old total, so `scrollHeight`
-  // is stale and the browser clamps `scrollTo(offset + delta)` back down to
-  // the old max. The adjustment gets swallowed and the pinned bottom pops
-  // one frame later when React finally commits.
-  //
-  // Fix: in the same callback, imperatively bump the wrapper's height by
-  // the item's delta and force a layout flush. That way the browser sees
-  // a fresh `scrollHeight` when the virtualizer's subsequent `scrollTo`
-  // runs and the scroll lands at the true new bottom on the same frame.
-  // React reconciles `style.height` to the final `totalSize` on its next
-  // commit, which is a no-op since we already wrote the same value.
-  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, delta, instance) => {
-    const wrapper = virtualWrapperRef.current;
-    if (wrapper && delta > 0) {
-      const current = parseFloat(wrapper.style.height) || wrapper.offsetHeight;
-      wrapper.style.height = `${current + delta}px`;
-      void wrapper.offsetHeight;
-    }
-    if (isAutoFollowingRef.current) return true;
-    return item.start < instance.getScrollOffset() + instance.scrollAdjustments;
-  };
-
-  const measureElementRef = useRef(virtualizer.measureElement);
-  measureElementRef.current = virtualizer.measureElement;
-  const resizeObserversRef = useRef(new Map<string, ResizeObserver>());
-
-  const updateMeasuredHeight = useCallback(
-    (messageId: string, node: HTMLElement) => {
-      const nextHeight = node.getBoundingClientRect().height;
-      if (nextHeight <= 0) {
-        return;
-      }
-      heightCache.setHeight(messageId, nextHeight);
-    },
-    [heightCache],
-  );
-
-  // Observe each virtualized message so we can keep `heightCache` hot for
-  // messages that later scroll out of the virtualizer's active window. The
-  // virtualizer runs its own ResizeObserver via `measureElement` to drive
-  // `totalSize`; scroll-position corrections are handled from a single
-  // post-commit effect below (keyed on `totalSize`), not from inside these
-  // observer callbacks, so we don't fight the virtualizer's commit cycle
-  // with stale `scrollHeight` reads.
-  const makeMeasureRef = useCallback(
-    (messageId: string) => (node: HTMLElement | null) => {
-      const existingObserver = resizeObserversRef.current.get(messageId);
-      if (!node) {
-        existingObserver?.disconnect();
-        resizeObserversRef.current.delete(messageId);
-        measureElementRef.current(node);
-        return;
-      }
-
-      measureElementRef.current(node);
-      updateMeasuredHeight(messageId, node);
-
-      existingObserver?.disconnect();
-      if (typeof ResizeObserver !== "undefined") {
-        const observer = new ResizeObserver(() => {
-          measureElementRef.current(node);
-          updateMeasuredHeight(messageId, node);
-        });
-        observer.observe(node);
-        resizeObserversRef.current.set(messageId, observer);
-      }
-    },
-    [updateMeasuredHeight],
-  );
-
   const nowStreaming = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
   const prevStreamingRef = useRef(nowStreaming);
   const justFinalizedIdRef = useRef<string | null>(null);
 
-  // Detect the streaming -> not streaming transition during render so the
-  // MessageBubble rendered below picks up `initialThinkingExpanded` on the
-  // same pass it mounts. Mark the last message as "just finalized" so its
-  // ThinkingRow mounts already expanded, matching the StreamingBubble it
-  // replaces.
+  // Detect streaming -> not-streaming transition during render so the
+  // MessageBubble for the just-finalized message mounts with its thinking /
+  // activity rows expanded, matching the StreamingBubble it replaces. This
+  // has to happen during render (not useEffect) because `initialThinkingExpanded`
+  // is read once at MessageBubble mount — deferring to useEffect means the
+  // bubble mounts collapsed for one frame and then can't be re-expanded.
+  // React Compiler's "no refs during render" rule doesn't distinguish this
+  // legitimate render-phase derivation from genuine misuse, so we disable it
+  // narrowly for this block.
+  /* eslint-disable react-hooks/refs */
   {
     const wasStreaming = prevStreamingRef.current;
     if (wasStreaming && !nowStreaming) {
@@ -188,13 +95,12 @@ export function ChatMessageList({
     }
     prevStreamingRef.current = nowStreaming;
   }
+  /* eslint-enable react-hooks/refs */
 
   const hasMessages =
     messages.length > 0 || isStreaming || streamingText || thinkingText || activeToolCalls.length > 0;
-  const virtualItems = virtualizer.getVirtualItems();
-  const totalSize = virtualizer.getTotalSize();
-  const initialLayoutReadyKeyRef = useRef<string | null>(null);
 
+  const initialLayoutReadyKeyRef = useRef<string | null>(null);
   useLayoutEffect(() => {
     if (!hasMessages) {
       initialLayoutReadyKeyRef.current = null;
@@ -205,35 +111,29 @@ export function ChatMessageList({
       return;
     }
     initialLayoutReadyKeyRef.current = initialLayoutReadyKey;
-    onContentHeightChange?.({ immediate: true });
     onInitialAnchorReady?.();
-  }, [hasMessages, onContentHeightChange, onInitialAnchorReady, streamKey]);
+  }, [hasMessages, onInitialAnchorReady, streamKey]);
 
-  // Single post-commit, pre-paint scroll correction. Runs whenever the
-  // virtualizer's total size changes (height cache updates, load older,
-  // resize-driven rewrapping) or the streaming bubble's content changes.
-  // At this point React has just committed the new wrapper height, so
-  // `scrollHeight` is fresh — both the pinned-to-bottom and anchor-restore
-  // paths see accurate geometry.
+  // Pin to bottom when the tail grows. CSS scroll anchoring handles content
+  // growth *above* the in-view anchor; it does not compensate for growth
+  // *at* the anchor itself, so we explicitly push scrollTop to scrollHeight
+  // whenever the streaming bubble gains tokens, a new message arrives, or
+  // a tool-row reveals content — but only while the user is actually pinned.
   useLayoutEffect(() => {
-    if (!hasMessages) return;
-    onContentHeightChange?.({ immediate: true });
+    if (!hasMessages || !isAutoFollowing) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [
     hasMessages,
-    onContentHeightChange,
-    totalSize,
+    isAutoFollowing,
+    scrollRef,
+    messages.length,
     streamingText,
     thinkingText,
     activeToolCalls.length,
     progressText,
   ]);
-
-  useEffect(() => () => {
-    for (const observer of resizeObserversRef.current.values()) {
-      observer.disconnect();
-    }
-    resizeObserversRef.current.clear();
-  }, []);
 
   if (!hasMessages) {
     return <>{emptyState}</>;
@@ -264,36 +164,22 @@ export function ChatMessageList({
           )}
         </div>
       )}
-      <div
-        ref={virtualWrapperRef}
-        style={{ position: "relative", height: totalSize, flexShrink: 0 }}
-      >
-        {virtualItems.map((virtualRow) => {
-          const msg = messages[virtualRow.index];
-          return (
-            <div
-              key={virtualRow.key}
-              data-index={virtualRow.index}
-              data-message-id={msg.id}
-              ref={makeMeasureRef(msg.id)}
-              style={{
-                display: "flex",
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-            >
-              <MessageBubble
-                message={msg}
-                isStreaming={isStreaming && msg.id.startsWith("stream-")}
-                initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
-                initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
-              />
-            </div>
-          );
-        })}
+      <div style={{ display: "flex", flexDirection: "column", gap: MESSAGE_GAP, flexShrink: 0 }}>
+        {/* eslint-disable-next-line react-hooks/refs -- reading justFinalizedIdRef.current here is part of the intentional render-phase pattern documented above the transition detection */}
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            data-message-id={msg.id}
+            style={{ display: "flex", width: "100%" }}
+          >
+            <MessageBubble
+              message={msg}
+              isStreaming={isStreaming && msg.id.startsWith("stream-")}
+              initialThinkingExpanded={msg.id === justFinalizedIdRef.current}
+              initialActivitiesExpanded={msg.id === justFinalizedIdRef.current}
+            />
+          </div>
+        ))}
       </div>
       {nowStreaming && (
         <div>

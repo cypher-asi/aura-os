@@ -163,12 +163,14 @@
   flex-direction: column;
 }
 
-.messageAreaFollowing {
-  overflow-anchor: none;
-}
-
+/* DIAGNOSTIC: let the browser keep the bottom/anchor stable natively via
+   CSS scroll anchoring. The previous `overflow-anchor: none` rules were
+   a no-op for virtualized items (absolute-positioned items are excluded
+   from anchor candidates anyway) but they blocked anchoring in the
+   non-virtualized diagnostic. Re-enable by omitting the override. */
+.messageAreaFollowing,
 .messageAreaReading {
-  overflow-anchor: none;
+  overflow-anchor: auto;
 }
 
 .messageArea::-webkit-scrollbar {

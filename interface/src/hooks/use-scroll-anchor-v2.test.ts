@@ -2,18 +2,30 @@ import { act, renderHook } from "@testing-library/react";
 import { vi } from "vitest";
 import { useScrollAnchorV2 } from "./use-scroll-anchor-v2";
 
-function makeRect(top: number, bottom: number): DOMRect {
-  return {
-    x: 0,
-    y: top,
-    width: 300,
-    height: bottom - top,
-    top,
-    right: 300,
-    bottom,
-    left: 0,
-    toJSON: () => ({}),
-  } as DOMRect;
+function makeContainer(overrides: {
+  scrollTop?: number;
+  scrollHeight?: number;
+  clientHeight?: number;
+} = {}) {
+  const container = document.createElement("div");
+  Object.defineProperties(container, {
+    scrollTop: {
+      value: overrides.scrollTop ?? 0,
+      writable: true,
+      configurable: true,
+    },
+    scrollHeight: {
+      value: overrides.scrollHeight ?? 1000,
+      writable: true,
+      configurable: true,
+    },
+    clientHeight: {
+      value: overrides.clientHeight ?? 400,
+      writable: true,
+      configurable: true,
+    },
+  });
+  return container;
 }
 
 describe("useScrollAnchorV2", () => {
@@ -33,73 +45,91 @@ describe("useScrollAnchorV2", () => {
   });
 
   it("starts pinned and scrolls to the bottom on mount", () => {
-    const container = document.createElement("div");
-    Object.defineProperties(container, {
-      scrollHeight: { value: 1000, writable: true, configurable: true },
-      scrollTop: { value: 100, writable: true, configurable: true },
-      clientHeight: { value: 400, writable: true, configurable: true },
-    });
-
+    const container = makeContainer({ scrollTop: 100, scrollHeight: 1000, clientHeight: 400 });
     const ref = { current: container };
-    const { result } = renderHook(() => useScrollAnchorV2(ref, { resetKey: "thread-1" }));
+
+    const { result } = renderHook(() =>
+      useScrollAnchorV2(ref, { resetKey: "thread-1" }),
+    );
 
     expect(result.current.isAutoFollowing).toBe(true);
     expect(container.scrollTop).toBe(1000);
   });
 
-  it("restores the current anchor when content height changes while reading older messages", () => {
-    const container = document.createElement("div");
-    const anchor = document.createElement("div");
-    anchor.setAttribute("data-message-id", "message-1");
-    container.appendChild(anchor);
-
-    Object.defineProperties(container, {
-      scrollHeight: { value: 1000, writable: true, configurable: true },
-      scrollTop: { value: 100, writable: true, configurable: true },
-      clientHeight: { value: 400, writable: true, configurable: true },
-    });
-
-    container.getBoundingClientRect = vi.fn(() => makeRect(0, 400));
-
-    let anchorTop = 50;
-    anchor.getBoundingClientRect = vi.fn(() => makeRect(anchorTop, anchorTop + 40));
-
+  it("flips out of auto-follow when the user scrolls far enough from the bottom", () => {
+    const container = makeContainer({ scrollTop: 1000, scrollHeight: 1000, clientHeight: 400 });
     const ref = { current: container };
-    const { result } = renderHook(() => useScrollAnchorV2(ref, { resetKey: "thread-1" }));
+
+    const { result } = renderHook(() =>
+      useScrollAnchorV2(ref, { resetKey: "thread-1" }),
+    );
 
     act(() => {
-      container.scrollTop = 100;
+      (container as unknown as { scrollTop: number }).scrollTop = 0;
       result.current.handleScroll();
     });
 
-    anchorTop = 90;
-
-    act(() => {
-      result.current.onContentHeightChange({ immediate: true });
-    });
-
     expect(result.current.isAutoFollowing).toBe(false);
-    expect(container.scrollTop).toBe(140);
   });
 
-  it("scrolls to bottom when pinned and content height grows", () => {
-    const container = document.createElement("div");
-    Object.defineProperties(container, {
-      scrollHeight: { value: 1000, writable: true, configurable: true },
-      scrollTop: { value: 1000, writable: true, configurable: true },
-      clientHeight: { value: 400, writable: true, configurable: true },
-    });
-
+  it("scrollToBottom snaps back to the bottom and re-pins", () => {
+    const container = makeContainer({ scrollTop: 1000, scrollHeight: 1000, clientHeight: 400 });
     const ref = { current: container };
-    const { result } = renderHook(() => useScrollAnchorV2(ref, { resetKey: "thread-1" }));
 
-    (container as unknown as { scrollHeight: number }).scrollHeight = 1200;
+    const { result } = renderHook(() =>
+      useScrollAnchorV2(ref, { resetKey: "thread-1" }),
+    );
 
     act(() => {
-      result.current.onContentHeightChange({ immediate: true });
+      (container as unknown as { scrollTop: number }).scrollTop = 0;
+      result.current.handleScroll();
+    });
+    expect(result.current.isAutoFollowing).toBe(false);
+
+    (container as unknown as { scrollHeight: number }).scrollHeight = 1200;
+    act(() => {
+      result.current.scrollToBottom();
+    });
+
+    expect(container.scrollTop).toBe(1200);
+    expect(result.current.isAutoFollowing).toBe(true);
+  });
+
+  it("ignores scroll events triggered by its own scrollToBottom writes", () => {
+    const container = makeContainer({ scrollTop: 1000, scrollHeight: 1000, clientHeight: 400 });
+    const ref = { current: container };
+
+    const { result } = renderHook(() =>
+      useScrollAnchorV2(ref, { resetKey: "thread-1" }),
+    );
+
+    // Scroll up, so we're no longer auto-following
+    act(() => {
+      (container as unknown as { scrollTop: number }).scrollTop = 0;
+      result.current.handleScroll();
+    });
+    expect(result.current.isAutoFollowing).toBe(false);
+
+    // Programmatic scroll-to-bottom should not flip us back to "not following"
+    // via the guarded scroll handler, even though it dispatches a scroll.
+    (container as unknown as { scrollHeight: number }).scrollHeight = 1200;
+    let restoreRaf: (() => void) | null = null;
+    requestAnimationFrameSpy.mockImplementationOnce((cb: FrameRequestCallback) => {
+      restoreRaf = () => cb(0);
+      return 1;
+    });
+
+    act(() => {
+      result.current.scrollToBottom();
+      // scrollTop set to 1200 — if handleScroll fired now it would see
+      // distFromBottom=0 and stay pinned, but we want to verify the guard
+      // short-circuits entirely before the rAF cleanup runs.
+      result.current.handleScroll();
     });
 
     expect(result.current.isAutoFollowing).toBe(true);
     expect(container.scrollTop).toBe(1200);
+
+    restoreRaf?.();
   });
 });
