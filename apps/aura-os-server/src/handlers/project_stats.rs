@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
-use tracing::{debug, warn};
+use tracing::{info, warn};
 
 use aura_os_core::ProjectId;
 use aura_os_storage::ProjectStats;
@@ -71,16 +71,21 @@ pub(crate) async fn get_project_stats(
     // `report_usage`. aura-router already tracks per-project usage on every
     // proxied LLM call, so when an internal token is available we overlay the
     // authoritative numbers from aura-network's internal endpoint.
-    if let Some(net) = state.network_client.as_ref() {
-        if net.has_internal_token() {
+    match state.network_client.as_ref() {
+        Some(net) if net.has_internal_token() => {
             match net.get_project_usage(&project_id.to_string(), None).await {
                 Ok(usage) => {
-                    debug!(
+                    // Log at info so the response is visible without tweaking
+                    // RUST_LOG while diagnosing mismatches between the grid
+                    // tiles (e.g. non-zero cost + zero tokens).
+                    info!(
                         %project_id,
                         total_tokens = usage.total_tokens,
                         total_input_tokens = usage.total_input_tokens,
                         total_output_tokens = usage.total_output_tokens,
                         total_cost_usd = usage.total_cost_usd,
+                        storage_total_tokens = resp.total_tokens,
+                        storage_estimated_cost_usd = resp.estimated_cost_usd,
                         "aura-network project usage fetched"
                     );
                     // Some aura-network deployments return `totalTokens = 0`
@@ -103,6 +108,12 @@ pub(crate) async fn get_project_stats(
                     warn!(%project_id, %error, "aura-network project usage fetch failed; using storage values");
                 }
             }
+        }
+        Some(_) => {
+            info!(%project_id, "aura-network internal token not configured; project stats tokens/cost come from aura-storage only");
+        }
+        None => {
+            info!(%project_id, "aura-network client disabled; project stats tokens/cost come from aura-storage only");
         }
     }
 
