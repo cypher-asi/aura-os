@@ -363,7 +363,7 @@ jobs:
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         shell: bash
         run: |
-          normalized="$(python infra/scripts/release/normalize-packager-key.py)"
+          normalized="$(python3 infra/scripts/release/normalize-packager-key.py)"
           if [ -n "$normalized" ]; then
             echo "CARGO_PACKAGER_SIGN_PRIVATE_KEY=$normalized" >> "$GITHUB_ENV"
           fi
