@@ -18,7 +18,6 @@ import {
   Quote,
 } from "lucide-react";
 import { Lane } from "../../../components/Lane";
-import { EmptyState } from "../../../components/EmptyState";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import {
   useActiveNote,
@@ -344,9 +343,7 @@ export function NotesMainPanel() {
         </div>
         <div ref={scrollRef} className={styles.scrollArea}>
           <div className={styles.centerColumn}>
-            {!note ? (
-              <EmptyState>Loading note…</EmptyState>
-            ) : mode === "wysiwyg" && editor ? (
+            {!note ? null : mode === "wysiwyg" && editor ? (
               <>
                 <BubbleMenu
                   editor={editor}
