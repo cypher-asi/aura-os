@@ -36,6 +36,7 @@ const AgentChatWindowPanel = memo(function AgentChatWindowPanel({ agentId }: { a
       errorMessage={chatProps.errorMessage}
       emptyMessage={chatProps.emptyMessage}
       scrollResetKey={chatProps.scrollResetKey}
+      historyMessages={chatProps.historyMessages}
       projects={chatProps.projects}
       selectedProjectId={chatProps.selectedProjectId}
       onProjectChange={chatProps.onProjectChange}
