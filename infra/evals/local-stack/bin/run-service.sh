@@ -86,7 +86,6 @@ if [[ "$service" == "harness" ]]; then
   export AURA_NETWORK_URL="$(stack_resolved_url network)"
   export AURA_STORAGE_URL="$(stack_resolved_url storage)"
   export ORBIT_URL="$(stack_resolved_url orbit)"
-  export AURA_ROUTER_URL="${AURA_STACK_ROUTER_URL}"
   export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
   export ENABLE_CMD_TOOLS="$AURA_STACK_HARNESS_ENABLE_CMD_TOOLS"
   export ALLOWED_COMMANDS="$AURA_STACK_HARNESS_ALLOWED_COMMANDS"
