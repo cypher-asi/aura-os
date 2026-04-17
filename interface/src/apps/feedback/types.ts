@@ -21,6 +21,11 @@ export type FeedbackSort =
 
 export type ViewerVote = "up" | "down" | "none";
 
+export type FeedbackProduct = "aura" | "the_grid" | "wilder_world" | "z_chain";
+
+/** Product the Aura OS shell tags new feedback with unless the user picks another. */
+export const DEFAULT_FEEDBACK_PRODUCT: FeedbackProduct = "aura";
+
 export interface FeedbackAuthor {
   name: string;
   avatarUrl?: string;
@@ -34,6 +39,7 @@ export interface FeedbackItem {
   body: string;
   category: FeedbackCategory;
   status: FeedbackStatus;
+  product: FeedbackProduct;
   upvotes: number;
   downvotes: number;
   voteScore: number;
@@ -55,6 +61,7 @@ export interface FeedbackDraft {
   body: string;
   category: FeedbackCategory;
   status: FeedbackStatus;
+  product: FeedbackProduct;
 }
 
 export const FEEDBACK_CATEGORY_OPTIONS: ReadonlyArray<{
@@ -90,6 +97,16 @@ export const FEEDBACK_SORT_OPTIONS: ReadonlyArray<{
   { value: "least_voted", label: "Least Voted" },
 ];
 
+export const FEEDBACK_PRODUCT_OPTIONS: ReadonlyArray<{
+  value: FeedbackProduct;
+  label: string;
+}> = [
+  { value: "aura", label: "AURA" },
+  { value: "the_grid", label: "The Grid" },
+  { value: "wilder_world", label: "Wilder World" },
+  { value: "z_chain", label: "Z Chain" },
+];
+
 export function categoryLabel(category: FeedbackCategory): string {
   const match = FEEDBACK_CATEGORY_OPTIONS.find((o) => o.value === category);
   return match?.label ?? category;
@@ -98,4 +115,9 @@ export function categoryLabel(category: FeedbackCategory): string {
 export function statusLabel(status: FeedbackStatus): string {
   const match = FEEDBACK_STATUS_OPTIONS.find((o) => o.value === status);
   return match?.label ?? status;
+}
+
+export function productLabel(product: FeedbackProduct): string {
+  const match = FEEDBACK_PRODUCT_OPTIONS.find((o) => o.value === product);
+  return match?.label ?? product;
 }

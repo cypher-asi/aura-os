@@ -93,6 +93,7 @@ describe("NewFeedbackModal", () => {
       selectedId: null,
       composerError: null,
       isSubmitting: false,
+      productFilter: "aura",
     });
   });
 
@@ -112,6 +113,7 @@ describe("NewFeedbackModal", () => {
       summary: "Please add dark mode",
       category: "feature_request",
       status: "not_started",
+      product: "aura",
       createdAt: new Date().toISOString(),
       commentCount: 0,
       upvotes: 0,
@@ -148,5 +150,41 @@ describe("NewFeedbackModal", () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(feedbackApiMock.create).not.toHaveBeenCalled();
+  });
+
+  it("submits the product from the current productFilter", async () => {
+    const onClose = vi.fn();
+    const dto: FeedbackItemDto = {
+      id: "fb-grid",
+      profileId: "p1",
+      eventType: "feedback",
+      postType: "post",
+      title: "t",
+      summary: "body",
+      category: "feature_request",
+      status: "not_started",
+      product: "the_grid",
+      createdAt: new Date().toISOString(),
+      commentCount: 0,
+      upvotes: 0,
+      downvotes: 0,
+      voteScore: 0,
+      viewerVote: "none",
+    };
+    feedbackApiMock.create.mockResolvedValueOnce(dto);
+    useFeedbackStore.setState({ productFilter: "the_grid" });
+
+    render(<NewFeedbackModal isOpen onClose={onClose} />);
+    fireEvent.change(screen.getByLabelText("Feedback body"), {
+      target: { value: "grid feedback" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /post/i }));
+
+    await vi.waitFor(() => {
+      expect(feedbackApiMock.create).toHaveBeenCalled();
+    });
+    expect(feedbackApiMock.create.mock.calls[0]![0]).toMatchObject({
+      product: "the_grid",
+    });
   });
 });

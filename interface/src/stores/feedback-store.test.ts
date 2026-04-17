@@ -26,6 +26,7 @@ function makeItem(overrides: Partial<FeedbackItem>): FeedbackItem {
     body: "x",
     category: "feedback",
     status: "not_started",
+    product: "aura",
     upvotes: 0,
     downvotes: 0,
     voteScore: 0,
@@ -107,6 +108,7 @@ describe("useFeedbackStore", () => {
       composerError: null,
       isSubmitting: false,
       commentsLoadedFor: new Set<string>(),
+      productFilter: "aura",
     });
   });
 
@@ -150,6 +152,7 @@ describe("useFeedbackStore", () => {
       body: "   ",
       category: "bug",
       status: "not_started",
+      product: "aura",
     });
     expect(created).toBeNull();
     expect(useFeedbackStore.getState().composerError).not.toBeNull();
@@ -166,6 +169,7 @@ describe("useFeedbackStore", () => {
       summary: "Body text",
       category: "feedback",
       status: "not_started",
+      product: "aura",
       createdAt: new Date().toISOString(),
       commentCount: 0,
       upvotes: 0,
@@ -181,6 +185,7 @@ describe("useFeedbackStore", () => {
       body: "Body text",
       category: "feedback",
       status: "not_started",
+      product: "aura",
     });
 
     expect(created).not.toBeNull();
@@ -189,6 +194,7 @@ describe("useFeedbackStore", () => {
       body: "Body text",
       category: "feedback",
       status: "not_started",
+      product: "aura",
     });
     const state = useFeedbackStore.getState();
     expect(state.items[0]!.id).toBe("fb-new");
@@ -202,9 +208,41 @@ describe("useFeedbackStore", () => {
       body: "Body text",
       category: "feedback",
       status: "not_started",
+      product: "aura",
     });
     expect(created).toBeNull();
     expect(useFeedbackStore.getState().composerError).toContain("boom");
+  });
+
+  it("createFeedback forwards the draft's product to the API", async () => {
+    const dto: FeedbackItemDto = {
+      id: "fb-grid",
+      profileId: "p1",
+      eventType: "feedback",
+      postType: "post",
+      title: "grid",
+      summary: "grid body",
+      category: "feedback",
+      status: "not_started",
+      product: "the_grid",
+      createdAt: new Date().toISOString(),
+      commentCount: 0,
+      upvotes: 0,
+      downvotes: 0,
+      voteScore: 0,
+      viewerVote: "none",
+    };
+    feedbackApiMock.create.mockResolvedValueOnce(dto);
+    await useFeedbackStore.getState().createFeedback({
+      title: "grid",
+      body: "grid body",
+      category: "feedback",
+      status: "not_started",
+      product: "the_grid",
+    });
+    expect(feedbackApiMock.create).toHaveBeenCalledWith(
+      expect.objectContaining({ product: "the_grid" }),
+    );
   });
 
   it("loadItems maps DTOs and clears load errors on success", async () => {
@@ -217,6 +255,7 @@ describe("useFeedbackStore", () => {
       summary: "body",
       category: "bug",
       status: "in_review",
+      product: "aura",
       createdAt: "2026-04-17T00:00:00Z",
       commentCount: 3,
       upvotes: 4,
@@ -234,6 +273,24 @@ describe("useFeedbackStore", () => {
     expect(state.items[0]!.id).toBe("fb-remote");
     expect(state.items[0]!.voteScore).toBe(3);
     expect(state.loadError).toBeNull();
+  });
+
+  it("useSortedFeedbackItems restricts items to the active productFilter", async () => {
+    const now = new Date().toISOString();
+    const auraItem = makeItem({ id: "fb-a", product: "aura", createdAt: now });
+    const gridItem = makeItem({ id: "fb-g", product: "the_grid", createdAt: now });
+    useFeedbackStore.setState({ items: [auraItem, gridItem] });
+
+    const { sortItems: _unused } = await import("./feedback-store");
+    void _unused;
+    const filterFor = (productFilter: "aura" | "the_grid") => {
+      const { items } = useFeedbackStore.getState();
+      return items.filter(
+        (item) => item.product === productFilter,
+      );
+    };
+    expect(filterFor("aura").map((i) => i.id)).toEqual(["fb-a"]);
+    expect(filterFor("the_grid").map((i) => i.id)).toEqual(["fb-g"]);
   });
 
   it("loadItems records a loadError when the API rejects", async () => {

@@ -6,11 +6,17 @@ import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton/ProjectsPlusButton";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useFeedback } from "../../../stores/feedback-store";
-import type { FeedbackCategory, FeedbackSort, FeedbackStatus } from "../types";
+import type {
+  FeedbackCategory,
+  FeedbackProduct,
+  FeedbackSort,
+  FeedbackStatus,
+} from "../types";
 import {
   FEEDBACK_ALL_CATEGORY_ICON,
   FEEDBACK_ALL_STATUS_ICON,
   FEEDBACK_CATEGORY_FILTERS,
+  FEEDBACK_PRODUCT_FILTERS,
   FEEDBACK_SORT_FILTERS,
   FEEDBACK_STATUS_FILTERS,
 } from "../feedback-filters";
@@ -20,7 +26,7 @@ import styles from "./FeedbackList.module.css";
 const ALL_CATEGORY_ID = "__all_categories__";
 const ALL_STATUS_ID = "__all_statuses__";
 
-type SectionId = "trending" | "type" | "status";
+type SectionId = "product" | "trending" | "type" | "status";
 
 export function FeedbackList() {
   const {
@@ -30,11 +36,14 @@ export function FeedbackList() {
     setCategoryFilter,
     statusFilter,
     setStatusFilter,
+    productFilter,
+    setProductFilter,
   } = useFeedback();
   const { setAction } = useSidebarSearch("feedback");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<Record<SectionId, boolean>>({
+    product: false,
     trending: true,
     type: true,
     status: true,
@@ -54,6 +63,16 @@ export function FeedbackList() {
   const toggleSection = useCallback((id: SectionId) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
+
+  const productData: ExplorerNode[] = useMemo(
+    () =>
+      FEEDBACK_PRODUCT_FILTERS.map((f) => ({
+        id: f.id,
+        label: f.label,
+        icon: f.icon,
+      })),
+    [],
+  );
 
   const sortData: ExplorerNode[] = useMemo(
     () =>
@@ -89,6 +108,8 @@ export function FeedbackList() {
     [],
   );
 
+  const productSelectedIds = useMemo(() => [productFilter], [productFilter]);
+
   const sortSelectedIds = useMemo(() => [sort], [sort]);
   const categorySelectedIds = useMemo(
     () => [categoryFilter ?? ALL_CATEGORY_ID],
@@ -97,6 +118,14 @@ export function FeedbackList() {
   const statusSelectedIds = useMemo(
     () => [statusFilter ?? ALL_STATUS_ID],
     [statusFilter],
+  );
+
+  const handleProductSelect = useCallback(
+    (ids: string[]) => {
+      const id = ids[ids.length - 1] as FeedbackProduct | undefined;
+      if (id) setProductFilter(id);
+    },
+    [setProductFilter],
   );
 
   const handleSortSelect = useCallback(
@@ -129,6 +158,19 @@ export function FeedbackList() {
     <>
       <div className={styles.root}>
         <div ref={scrollRef} className={styles.list}>
+          <FolderSection
+            label="Product"
+            expanded={expanded.product}
+            onToggle={() => toggleSection("product")}
+          >
+            <Explorer
+              data={productData}
+              enableDragDrop={false}
+              enableMultiSelect={false}
+              defaultSelectedIds={productSelectedIds}
+              onSelect={handleProductSelect}
+            />
+          </FolderSection>
           <FolderSection
             label="Trending"
             expanded={expanded.trending}

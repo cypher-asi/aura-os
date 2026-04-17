@@ -485,6 +485,7 @@ async fn create_feedback_rejects_unknown_category() {
             "body": "body",
             "category": "not-a-category",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -501,10 +502,54 @@ async fn create_feedback_rejects_unknown_status() {
             "body": "body",
             "category": "bug",
             "status": "definitely-not-a-status",
+            "product": "aura",
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(response_status(&resp), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_feedback_rejects_unknown_product() {
+    let (app, _db) = build_test_app_with_feedback_network(vec![]).await;
+    let req = json_request(
+        "POST",
+        "/api/feedback",
+        Some(json!({
+            "body": "body",
+            "category": "bug",
+            "status": "not_started",
+            "product": "not-a-product",
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(response_status(&resp), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_feedback_persists_product_tag_and_surfaces_on_list() {
+    let (app, _db) = build_test_app_with_feedback_network(vec![]).await;
+    let req = json_request(
+        "POST",
+        "/api/feedback",
+        Some(json!({
+            "body": "grid-specific request",
+            "category": "feature_request",
+            "status": "not_started",
+            "product": "the_grid",
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(response_status(&resp), StatusCode::CREATED);
+    let body = response_json(resp).await;
+    assert_eq!(body["product"], "the_grid");
+
+    let list = json_request("GET", "/api/feedback", None);
+    let resp = app.clone().oneshot(list).await.unwrap();
+    let items = response_json(resp).await;
+    let arr = items.as_array().unwrap();
+    assert_eq!(arr.len(), 1);
+    assert_eq!(arr[0]["product"], "the_grid");
 }
 
 #[tokio::test]
@@ -517,6 +562,7 @@ async fn create_feedback_rejects_empty_body() {
             "body": "   ",
             "category": "bug",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -535,6 +581,7 @@ async fn create_feedback_round_trip_shows_up_in_list() {
             "body": "Cmd+1/2/3 to focus panels",
             "category": "feature_request",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -544,6 +591,7 @@ async fn create_feedback_round_trip_shows_up_in_list() {
     assert_eq!(body["postType"], "post");
     assert_eq!(body["category"], "feature_request");
     assert_eq!(body["status"], "not_started");
+    assert_eq!(body["product"], "aura");
     assert_eq!(body["upvotes"], 0);
     assert_eq!(body["viewerVote"], "none");
 
@@ -590,6 +638,7 @@ async fn feedback_comment_round_trip() {
             "body": "Please add dark mode",
             "category": "feature_request",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let created = app.clone().oneshot(create).await.unwrap();
@@ -627,6 +676,7 @@ async fn add_comment_rejects_empty_content() {
             "body": "something",
             "category": "bug",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let created = app.clone().oneshot(create).await.unwrap();
@@ -673,6 +723,7 @@ async fn status_update_merges_status_into_metadata() {
             "body": "something",
             "category": "bug",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let created = app.clone().oneshot(create).await.unwrap();
@@ -722,6 +773,7 @@ async fn cast_vote_toggle_flow_up_down_none() {
             "body": "vote me",
             "category": "feature_request",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let created = app.clone().oneshot(create).await.unwrap();
@@ -782,6 +834,7 @@ async fn list_surfaces_vote_aggregates_from_upstream() {
             "body": "vote me",
             "category": "feature_request",
             "status": "not_started",
+            "product": "aura",
         })),
     );
     let created = app.clone().oneshot(create).await.unwrap();

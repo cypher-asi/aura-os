@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  Box,
   Bug,
   CheckCircle2,
   CircleDashed,
@@ -7,9 +8,12 @@ import {
   Clock,
   Eye,
   Flame,
+  Gem,
   Globe,
+  Grid3x3,
   HelpCircle,
   Layers,
+  Link as LinkIcon,
   MessageCircle,
   Palette,
   Rocket,
@@ -18,7 +22,12 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import type { FeedbackCategory, FeedbackSort, FeedbackStatus } from "./types";
+import type {
+  FeedbackCategory,
+  FeedbackProduct,
+  FeedbackSort,
+  FeedbackStatus,
+} from "./types";
 
 export const FEEDBACK_SORT_FILTERS: ReadonlyArray<{
   id: FeedbackSort;
@@ -58,3 +67,14 @@ export const FEEDBACK_STATUS_FILTERS: ReadonlyArray<{
 
 export const FEEDBACK_ALL_CATEGORY_ICON: ReactNode = <Layers size={14} />;
 export const FEEDBACK_ALL_STATUS_ICON: ReactNode = <Globe size={14} />;
+
+export const FEEDBACK_PRODUCT_FILTERS: ReadonlyArray<{
+  id: FeedbackProduct;
+  label: string;
+  icon: ReactNode;
+}> = [
+  { id: "aura", label: "AURA", icon: <Box size={14} /> },
+  { id: "the_grid", label: "The Grid", icon: <Grid3x3 size={14} /> },
+  { id: "wilder_world", label: "Wilder World", icon: <Gem size={14} /> },
+  { id: "z_chain", label: "Z Chain", icon: <LinkIcon size={14} /> },
+];

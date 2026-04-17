@@ -8,15 +8,17 @@ import type {
   FeedbackVoteResultDto,
 } from "../api/feedback";
 import { useAuthStore } from "./auth-store";
-import type {
-  FeedbackAuthor,
-  FeedbackCategory,
-  FeedbackComment,
-  FeedbackDraft,
-  FeedbackItem,
-  FeedbackSort,
-  FeedbackStatus,
-  ViewerVote,
+import {
+  DEFAULT_FEEDBACK_PRODUCT,
+  type FeedbackAuthor,
+  type FeedbackCategory,
+  type FeedbackComment,
+  type FeedbackDraft,
+  type FeedbackItem,
+  type FeedbackProduct,
+  type FeedbackSort,
+  type FeedbackStatus,
+  type ViewerVote,
 } from "../apps/feedback/types";
 
 interface FeedbackState {
@@ -25,6 +27,9 @@ interface FeedbackState {
   sort: FeedbackSort;
   categoryFilter: FeedbackCategory | null;
   statusFilter: FeedbackStatus | null;
+  /** Exactly one product is always selected — every feedback item is tagged
+   *  with a product and the list only ever shows items for the active one. */
+  productFilter: FeedbackProduct;
   selectedId: string | null;
   isLoading: boolean;
   loadError: string | null;
@@ -38,6 +43,7 @@ interface FeedbackActions {
   setSort: (sort: FeedbackSort) => void;
   setCategoryFilter: (category: FeedbackCategory | null) => void;
   setStatusFilter: (status: FeedbackStatus | null) => void;
+  setProductFilter: (product: FeedbackProduct) => void;
   selectItem: (id: string | null) => void;
   loadItems: () => Promise<void>;
   loadComments: (itemId: string) => Promise<void>;
@@ -71,6 +77,7 @@ function dtoToItem(dto: FeedbackItemDto): FeedbackItem {
     body: dto.summary ?? "",
     category: dto.category,
     status: dto.status,
+    product: dto.product,
     upvotes: dto.upvotes,
     downvotes: dto.downvotes,
     voteScore: dto.voteScore,
@@ -202,6 +209,7 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
         body: draft.body.trim(),
         category: draft.category,
         status: draft.status,
+        product: draft.product,
       });
       const item = dtoToItem(dto);
       set((state) => ({
@@ -371,6 +379,8 @@ export function useFeedback() {
       setCategoryFilter: s.setCategoryFilter,
       statusFilter: s.statusFilter,
       setStatusFilter: s.setStatusFilter,
+      productFilter: s.productFilter,
+      setProductFilter: s.setProductFilter,
       selectedId: s.selectedId,
       selectItem: s.selectItem,
       isLoading: s.isLoading,
@@ -390,14 +400,16 @@ export function useSortedFeedbackItems(): readonly FeedbackItem[] {
   const sort = useFeedbackStore((s) => s.sort);
   const categoryFilter = useFeedbackStore((s) => s.categoryFilter);
   const statusFilter = useFeedbackStore((s) => s.statusFilter);
+  const productFilter = useFeedbackStore((s) => s.productFilter);
   return useMemo(() => {
     const filtered = items.filter(
       (item) =>
+        item.product === productFilter &&
         (categoryFilter === null || item.category === categoryFilter) &&
         (statusFilter === null || item.status === statusFilter),
     );
     return sortItems(filtered, sort);
-  }, [items, sort, categoryFilter, statusFilter]);
+  }, [items, sort, categoryFilter, statusFilter, productFilter]);
 }
 
 export function useFeedbackComments(itemId: string | null): readonly FeedbackComment[] {

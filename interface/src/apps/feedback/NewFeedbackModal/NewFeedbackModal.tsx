@@ -5,8 +5,10 @@ import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
 import { useFeedbackStore } from "../../../stores/feedback-store";
 import {
   FEEDBACK_CATEGORY_OPTIONS,
+  FEEDBACK_PRODUCT_OPTIONS,
   FEEDBACK_STATUS_OPTIONS,
   type FeedbackCategory,
+  type FeedbackProduct,
   type FeedbackStatus,
 } from "../types";
 import styles from "./NewFeedbackModal.module.css";
@@ -25,11 +27,15 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
   const isSubmitting = useFeedbackStore((s) => s.isSubmitting);
   const composerError = useFeedbackStore((s) => s.composerError);
   const resetComposerError = useFeedbackStore((s) => s.resetComposerError);
+  // The composer's product follows the current filter so posting from inside
+  // the Grid view (for example) tags the new item as Grid without a click.
+  const productFilter = useFeedbackStore((s) => s.productFilter);
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<FeedbackCategory>(DEFAULT_CATEGORY);
   const [status, setStatus] = useState<FeedbackStatus>(DEFAULT_STATUS);
+  const [product, setProduct] = useState<FeedbackProduct>(productFilter);
 
   useEffect(() => {
     if (!isOpen) {
@@ -37,15 +43,26 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
       setBody("");
       setCategory(DEFAULT_CATEGORY);
       setStatus(DEFAULT_STATUS);
+      setProduct(productFilter);
       resetComposerError();
+    } else {
+      // Re-seed from the filter whenever the modal opens, so switching
+      // products between post attempts is reflected immediately.
+      setProduct(productFilter);
     }
-  }, [isOpen, resetComposerError]);
+  }, [isOpen, productFilter, resetComposerError]);
 
   const canSubmit = body.trim().length > 0 && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    const created = await createFeedback({ title, body, category, status });
+    const created = await createFeedback({
+      title,
+      body,
+      category,
+      status,
+      product,
+    });
     if (created) onClose();
   };
 
@@ -102,6 +119,14 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
           />
         </div>
         <div className={styles.selectsRow}>
+          <div className={styles.selectLabel}>
+            <span className={styles.selectLabelText}>Product</span>
+            <Select
+              value={product}
+              onChange={(v) => setProduct(v as FeedbackProduct)}
+              options={[...FEEDBACK_PRODUCT_OPTIONS]}
+            />
+          </div>
           <div className={styles.selectLabel}>
             <span className={styles.selectLabelText}>Category</span>
             <Select

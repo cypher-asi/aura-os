@@ -1,6 +1,7 @@
 import { apiFetch } from "./core";
 import type {
   FeedbackCategory,
+  FeedbackProduct,
   FeedbackSort,
   FeedbackStatus,
   ViewerVote,
@@ -16,6 +17,7 @@ export interface FeedbackItemDto {
   metadata?: Record<string, unknown> | null;
   category: FeedbackCategory;
   status: FeedbackStatus;
+  product: FeedbackProduct;
   createdAt?: string | null;
   commentCount: number;
   upvotes: number;
@@ -48,6 +50,7 @@ export interface CreateFeedbackInput {
   body: string;
   category: FeedbackCategory;
   status: FeedbackStatus;
+  product: FeedbackProduct;
 }
 
 export interface FeedbackListParams {

@@ -36,6 +36,12 @@ const STATUSES: &[&str] = &[
     "deployed",
 ];
 
+/// Canonical product values. Extend this list (and the matching UI enum) when
+/// onboarding a new product.
+const PRODUCTS: &[&str] = &["aura", "the_grid", "wilder_world", "z_chain"];
+
+const DEFAULT_PRODUCT: &str = "aura";
+
 /// Accepted sort modes. Non-`latest` values degrade to `latest` in phase 2
 /// because vote aggregates are not yet exposed by aura-network.
 const SORTS: &[&str] = &["latest", "popular", "trending", "most_voted", "least_voted"];
@@ -60,6 +66,16 @@ fn validate_status(value: &str) -> Result<(), (StatusCode, Json<ApiError>)> {
     } else {
         Err(ApiError::bad_request(format!(
             "unknown feedback status: {value}"
+        )))
+    }
+}
+
+fn validate_product(value: &str) -> Result<(), (StatusCode, Json<ApiError>)> {
+    if PRODUCTS.contains(&value) {
+        Ok(())
+    } else {
+        Err(ApiError::bad_request(format!(
+            "unknown feedback product: {value}"
         )))
     }
 }
@@ -89,6 +105,7 @@ pub(crate) struct CreateFeedbackRequest {
     pub body: String,
     pub category: String,
     pub status: String,
+    pub product: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -122,6 +139,7 @@ pub(crate) struct FeedbackItemResponse {
     pub metadata: Option<serde_json::Value>,
     pub category: String,
     pub status: String,
+    pub product: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
     pub comment_count: i64,
@@ -146,6 +164,12 @@ impl FeedbackItemResponse {
             .or_else(|| metadata_string(&metadata, "feedback_status"))
             .unwrap_or("not_started")
             .to_string();
+        // Default legacy items (created before product tagging landed) to
+        // the shell's default product so they remain visible.
+        let product = metadata_string(&metadata, "feedbackProduct")
+            .or_else(|| metadata_string(&metadata, "feedback_product"))
+            .unwrap_or(DEFAULT_PRODUCT)
+            .to_string();
         let profile = profiles.get(&e.profile_id);
         Self {
             author_name: profile
@@ -161,6 +185,7 @@ impl FeedbackItemResponse {
             metadata: e.metadata,
             category,
             status,
+            product,
             created_at: e.created_at,
             comment_count: e.comment_count,
             upvotes: e.upvotes,
@@ -293,10 +318,16 @@ pub(crate) async fn list_feedback(
     ))
 }
 
-fn build_feedback_metadata(category: &str, status: &str, body: &str) -> serde_json::Value {
+fn build_feedback_metadata(
+    category: &str,
+    status: &str,
+    product: &str,
+    body: &str,
+) -> serde_json::Value {
     serde_json::json!({
         "feedbackCategory": category,
         "feedbackStatus": status,
+        "feedbackProduct": product,
         "body": body,
     })
 }
@@ -312,6 +343,7 @@ pub(crate) async fn create_feedback(
     }
     validate_category(&req.category)?;
     validate_status(&req.status)?;
+    validate_product(&req.product)?;
 
     let client = state.require_network_client()?;
     let profile_id_str = session.profile_id.map(|id| id.to_string());
@@ -327,7 +359,12 @@ pub(crate) async fn create_feedback(
             head
         });
 
-    let metadata = build_feedback_metadata(&req.category, &req.status, req.body.trim());
+    let metadata = build_feedback_metadata(
+        &req.category,
+        &req.status,
+        &req.product,
+        req.body.trim(),
+    );
 
     let post = client
         .create_post(&aura_os_network::client::CreatePostParams {
