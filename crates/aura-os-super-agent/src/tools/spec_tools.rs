@@ -112,7 +112,7 @@ impl SuperAgentTool for CreateSpecTool {
         "create_spec"
     }
     fn description(&self) -> &str {
-        "Create a new persisted specification in a project"
+        "Create a new persisted specification in a project. Use this only after you have already shown the user the actual markdown draft as visible assistant text; pass that same finalized markdown in `markdown_contents`."
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
@@ -124,7 +124,7 @@ impl SuperAgentTool for CreateSpecTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "title": { "type": "string", "description": "Specification title" },
-                "markdown_contents": { "type": "string", "description": "Markdown body for the spec" },
+                "markdown_contents": { "type": "string", "description": "Markdown body for the spec. This should match the visible draft markdown you streamed to the user immediately before calling create_spec." },
                 "order_index": { "type": "integer", "description": "Optional sort order for the spec" }
             },
             "required": ["project_id", "title"]
@@ -168,7 +168,7 @@ impl SuperAgentTool for UpdateSpecTool {
         "update_spec"
     }
     fn description(&self) -> &str {
-        "Update an existing persisted specification"
+        "Update an existing persisted specification. Use this only after you have already shown the user the updated markdown draft as visible assistant text; pass that same finalized markdown in `markdown_contents`."
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
@@ -181,7 +181,7 @@ impl SuperAgentTool for UpdateSpecTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "spec_id": { "type": "string", "description": "Specification ID" },
                 "title": { "type": "string", "description": "Optional replacement title" },
-                "markdown_contents": { "type": "string", "description": "Optional replacement markdown body" },
+                "markdown_contents": { "type": "string", "description": "Optional replacement markdown body. This should match the visible updated draft markdown you streamed to the user immediately before calling update_spec." },
                 "order_index": { "type": "integer", "description": "Optional replacement sort order" }
             },
             "required": ["project_id", "spec_id"]
