@@ -136,7 +136,7 @@ describe("ChatInputBar", () => {
   it("shows default model label when selectedModel set in store", () => {
     mockSelectedModel = "claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
-    expect(screen.getByText("Opus 4.7")).toBeInTheDocument();
+    expect(screen.getByText("Opus 4.6")).toBeInTheDocument();
   });
 
   it("shows selected model label", () => {
@@ -150,7 +150,8 @@ describe("ChatInputBar", () => {
     mockSelectedModel = "claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
 
-    await user.click(screen.getByText("Opus 4.7"));
+    await user.click(screen.getByText("Opus 4.6"));
+    expect(screen.getByText("Opus 4.7")).toBeInTheDocument();
     expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
 
     await user.click(screen.getByText("Sonnet 4.6"));
