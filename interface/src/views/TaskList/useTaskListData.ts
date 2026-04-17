@@ -27,25 +27,43 @@ function isTerminalTaskStatus(status: TaskStatus | undefined): boolean {
   return status === "done" || status === "failed";
 }
 
-// Merge an incoming `task_saved` payload without allowing it to downgrade a task
-// that is already terminal (done/failed). Storage's `task_saved` snapshots can
-// arrive after `task_completed`/`task_failed` with a stale `in_progress` status
-// because the status transition runs on a separate code path on the backend.
+// Merge an incoming task snapshot without allowing it to downgrade a task that
+// the client already knows is terminal (done/failed). Storage snapshots from
+// `task_saved` broadcasts or `listTasks` refetches can arrive after the client
+// has already processed an authoritative `task_completed`/`task_failed` WS
+// event, because the DB's status transition runs on a separate code path.
+function mergeTaskPreservingTerminal(existing: Task | undefined, incoming: Task): Task {
+  if (!existing) return incoming;
+  if (!isTerminalTaskStatus(existing.status)) return incoming;
+  if (isTerminalTaskStatus(incoming.status)) return incoming;
+  return {
+    ...incoming,
+    status: existing.status,
+    execution_notes: existing.execution_notes ?? incoming.execution_notes,
+    files_changed: existing.files_changed ?? incoming.files_changed,
+  };
+}
+
 function upsertTask(prev: Task[], task: Task): Task[] {
   const existing = prev.find((candidate) => candidate.task_id === task.task_id);
-  const effective: Task =
-    existing && isTerminalTaskStatus(existing.status) && !isTerminalTaskStatus(task.status)
-      ? {
-          ...task,
-          status: existing.status,
-          execution_notes: existing.execution_notes ?? task.execution_notes,
-          files_changed: existing.files_changed ?? task.files_changed,
-        }
-      : task;
+  const effective = mergeTaskPreservingTerminal(existing, task);
   const next = existing
     ? prev.map((candidate) => (candidate.task_id === task.task_id ? effective : candidate))
     : [...prev, effective];
   return next.sort((a, b) => a.order_index - b.order_index);
+}
+
+// Reconcile a full list of tasks from the server with the current local state,
+// preserving terminal statuses the client has already observed over the WS.
+// Without this guard, a `listTasks` refetch that fires between super-agent
+// streaming turns (see `streamingId` effect below) would overwrite locally-done
+// tasks with a stale `in_progress` snapshot whenever the DB hasn't yet been
+// transitioned by the backend's `task_completed` handler.
+function mergeTaskListPreservingTerminal(prev: Task[], incoming: Task[]): Task[] {
+  const prevById = new Map(prev.map((t) => [t.task_id, t]));
+  return incoming
+    .map((t) => mergeTaskPreservingTerminal(prevById.get(t.task_id), t))
+    .sort((a, b) => a.order_index - b.order_index);
 }
 
 export function useTaskListData(): TaskListData {
@@ -64,7 +82,10 @@ export function useTaskListData(): TaskListData {
   const [loading] = useState(false);
 
   useEffect(() => { if (ctx?.initialSpecs) setLocalSpecs(ctx.initialSpecs); }, [ctx?.initialSpecs]);
-  useEffect(() => { if (ctx?.initialTasks) setLocalTasks(ctx.initialTasks); }, [ctx?.initialTasks]);
+  useEffect(() => {
+    if (!ctx?.initialTasks) return;
+    setLocalTasks((prev) => mergeTaskListPreservingTerminal(prev, ctx.initialTasks));
+  }, [ctx?.initialTasks]);
 
   const sidekickRef = useRef(useSidekickStore.getState());
   useEffect(() => useSidekickStore.subscribe((s) => { sidekickRef.current = s; }), []);
@@ -86,7 +107,7 @@ export function useTaskListData(): TaskListData {
     const pid = projectIdRef.current;
     if (!pid) return;
     api.listTasks(pid).then((t) => {
-      setLocalTasks(t.sort((a, b) => a.order_index - b.order_index));
+      setLocalTasks((prev) => mergeTaskListPreservingTerminal(prev, t));
       sidekickRef.current.clearDeletedTasks();
     }).catch(console.error);
   }, []);
