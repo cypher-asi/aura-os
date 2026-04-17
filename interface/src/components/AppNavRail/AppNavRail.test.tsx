@@ -53,6 +53,11 @@ vi.mock("@cypher-asi/zui", () => ({
   }) => <button {...props}>{icon}{children}</button>,
 }));
 
+vi.mock("../../hooks/use-active-app", () => ({
+  useActiveApp: () => state.activeApp,
+  useActiveAppId: () => state.activeApp.id,
+}));
+
 vi.mock("../../stores/app-store", () => ({
   useAppStore: (selector: (s: typeof state) => unknown) => selector(state),
   getOrderedTaskbarApps: (apps: typeof mockApps, taskbarAppOrder: string[]) => {

@@ -4,7 +4,6 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import Link from "@tiptap/extension-link";
 import { Markdown } from "tiptap-markdown";
 import {
   Bold,
@@ -24,9 +23,6 @@ import {
   useActiveNoteKey,
   useNotesStore,
 } from "../../../stores/notes-store";
-import { useProjectsListStore } from "../../../stores/projects-list-store";
-import { getLastNote } from "../../../utils/storage";
-import type { NotesTreeNode } from "../../../api/notes";
 import styles from "./NotesMainPanel.module.css";
 
 type EditMode = "wysiwyg" | "markdown";
@@ -60,26 +56,7 @@ function rejoinFrontmatter(frontmatter: string, body: string): string {
   return `${frontmatter}\n\n${trimmedBody}`;
 }
 
-function findFirstNoteRelPath(nodes: NotesTreeNode[]): string | null {
-  for (const node of nodes) {
-    if (node.kind === "note") return node.relPath;
-    const found = findFirstNoteRelPath(node.children);
-    if (found) return found;
-  }
-  return null;
-}
-
-function treeContainsNote(nodes: NotesTreeNode[], relPath: string): boolean {
-  for (const node of nodes) {
-    if (node.kind === "note" && node.relPath === relPath) return true;
-    if (node.kind === "folder" && treeContainsNote(node.children, relPath)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function NotesMainPanel() {
+export function NotesMainPanel({ children }: { children?: React.ReactNode }) {
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; notePath: string }>();
   const note = useActiveNote();
@@ -128,53 +105,11 @@ export function NotesMainPanel() {
     }
   }, [params.projectId, params.notePath, activeKey, selectNote, navigate]);
 
-  // Landing on `/notes` or `/notes/:projectId` with no note in the URL?
-  // Pick a reasonable default: (1) the already-active note in the store,
-  // (2) the last note persisted in localStorage (if it still exists),
-  // (3) the first note found in any project's tree.
-  const trees = useNotesStore((s) => s.trees);
-  const projects = useProjectsListStore((s) => s.projects);
-  useEffect(() => {
-    if (params.notePath) return;
-
-    // Priority 1: session-active note.
-    if (activeKey?.projectId && activeKey.relPath) {
-      navigate(
-        `/notes/${activeKey.projectId}/${encodeURIComponent(activeKey.relPath)}`,
-        { replace: true },
-      );
-      return;
-    }
-
-    // Priority 2: last note from localStorage, validated against the live tree.
-    const stored = getLastNote();
-    if (stored) {
-      const tree = trees[stored.projectId];
-      if (tree && !tree.loading && treeContainsNote(tree.nodes, stored.relPath)) {
-        navigate(
-          `/notes/${stored.projectId}/${encodeURIComponent(stored.relPath)}`,
-          { replace: true },
-        );
-        return;
-      }
-      // Still loading? wait for the next effect run when trees update.
-      if (tree?.loading) return;
-    }
-
-    // Priority 3: first note from the first project whose tree is ready.
-    for (const project of projects) {
-      const tree = trees[project.project_id];
-      if (!tree || tree.loading) continue;
-      const first = findFirstNoteRelPath(tree.nodes);
-      if (first) {
-        navigate(
-          `/notes/${project.project_id}/${encodeURIComponent(first)}`,
-          { replace: true },
-        );
-        return;
-      }
-    }
-  }, [params.notePath, activeKey, trees, projects, navigate]);
+  // When the URL lacks `:notePath`, auto-selection is handled by
+  // `NotesIndexRedirect` — which only mounts on `/notes` and
+  // `/notes/:projectId` routes. Keeping that logic out of the editor panel
+  // prevents it from firing during an outgoing app switch (e.g. Notes →
+  // Feedback) and hijacking the new route.
 
   const { frontmatter, body } = useMemo(() => {
     if (!note) return { frontmatter: "", body: "" };
@@ -198,11 +133,11 @@ export function NotesMainPanel() {
       extensions: [
         StarterKit.configure({
           codeBlock: { HTMLAttributes: { class: "code-block" } },
+          link: { openOnClick: false, autolink: true },
         }),
         Placeholder.configure({
           placeholder: "Start typing your note...",
         }),
-        Link.configure({ openOnClick: false, autolink: true }),
         Markdown.configure({
           html: false,
           tightLists: true,
@@ -294,11 +229,12 @@ export function NotesMainPanel() {
   }, [note]);
 
   if (!params.projectId || !params.notePath) {
-    // Auto-selection (see effects above) will redirect to a note shortly.
-    // Render an empty lane in the meantime so we don't flash a placeholder.
+    // `NotesIndexRedirect` is the route element for `/notes` and
+    // `/notes/:projectId`; it mounts inside this lane (via `children`) and
+    // issues a `Navigate` to a concrete note path.
     return (
       <Lane flex>
-        <div className={styles.container} />
+        <div className={styles.container}>{children}</div>
       </Lane>
     );
   }

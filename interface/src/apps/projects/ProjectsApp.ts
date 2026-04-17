@@ -5,9 +5,9 @@ import { SharedMainPanel } from "../../components/SharedMainPanel";
 import { SidekickContent } from "../../components/SidekickContent";
 import { SidekickTaskbar } from "../../components/SidekickTaskbar";
 import { PreviewContent, PreviewHeader } from "../../components/Preview";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
-export const ProjectsApp: AuraApp = {
+export const ProjectsApp: AuraAppModule = {
   id: "projects",
   label: "Projects",
   icon: FolderOpen,

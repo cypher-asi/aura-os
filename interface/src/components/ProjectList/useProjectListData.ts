@@ -5,7 +5,7 @@ import { useSidekickStore } from "../../stores/sidekick-store";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
 import type { AgentInstance } from "../../types";
 import { useAppUIStore } from "../../stores/app-ui-store";
-import { useAppStore } from "../../stores/app-store";
+import { useActiveAppId } from "../../hooks/use-active-app";
 import { useLoopStatus } from "../../hooks/use-loop-status";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -14,7 +14,7 @@ import { useProjectListActions } from "../../hooks/use-project-list-actions";
 export function useProjectListData(appIdOverride?: string) {
   const { projectId, agentInstanceId } = useParams();
   const location = useLocation();
-  const activeAppId = useAppStore((s) => s.activeApp.id);
+  const activeAppId = useActiveAppId();
   const appId = appIdOverride ?? activeAppId;
   const sidekick = useSidekickStore(
     useShallow((s) => ({

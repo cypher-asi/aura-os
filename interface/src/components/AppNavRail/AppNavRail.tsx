@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import type { AuraApp } from "../../apps/types";
 import { getOrderedTaskbarApps, useAppStore } from "../../stores/app-store";
+import { useActiveApp } from "../../hooks/use-active-app";
 import {
   getLastAgent,
   getLastProcessId,
@@ -232,7 +233,7 @@ export function AppNavRail({
   allowReorder = false,
 }: AppNavRailProps) {
   const apps = useAppStore((s) => s.apps);
-  const activeApp = useAppStore((s) => s.activeApp);
+  const activeApp = useActiveApp();
   const taskbarAppOrder = useAppStore((s) => s.taskbarAppOrder);
   const saveTaskbarAppOrder = useAppStore((s) => s.saveTaskbarAppOrder);
   const navigate = useNavigate();

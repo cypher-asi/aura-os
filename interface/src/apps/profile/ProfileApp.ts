@@ -3,9 +3,9 @@ import { ProfileList } from "./ProfileList";
 import { ProfileMainPanel } from "./ProfileMainPanel";
 import { ProfileSidekickPanel } from "./ProfileSidekickPanel";
 import { ProfileSidekickHeader } from "./ProfileSidekickHeader";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
-export const ProfileApp: AuraApp = {
+export const ProfileApp: AuraAppModule = {
   id: "profile",
   label: "Profile",
   icon: CircleUserRound,

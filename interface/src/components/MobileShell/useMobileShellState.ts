@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { useAppStore } from "../../stores/app-store";
+import { useActiveApp } from "../../hooks/use-active-app";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectActions } from "../../stores/project-action-store";
 import { getMostRecentProject, useProjectsListStore } from "../../stores/projects-list-store";
@@ -13,7 +13,7 @@ import {
 } from "../../utils/mobileNavigation";
 
 export function useMobileShellState() {
-  const activeApp = useAppStore((s) => s.activeApp);
+  const activeApp = useActiveApp();
   const { isPhoneLayout } = useAuraCapabilities();
   const projectContext = useProjectActions();
   const projects = useProjectsListStore((s) => s.projects);

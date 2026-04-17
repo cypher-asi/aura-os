@@ -19,15 +19,13 @@ vi.mock("../utils/storage", () => ({
   getTaskbarAppOrder: () => [],
   setTaskbarAppOrder: mockSetTaskbarAppOrder,
 }));
-vi.mock("./sidekick-store", () => ({
-  useSidekickStore: {
-    getState: () => ({
-      setActiveTab: mockSetActiveTab,
-    }),
-  },
-}));
 
-import { getOrderedTaskbarApps, resolveActiveApp, useAppStore, syncActiveApp } from "./app-store";
+import {
+  getOrderedTaskbarApps,
+  preloadAppForPathname,
+  resolveActiveApp,
+  useAppStore,
+} from "./app-store";
 
 beforeEach(() => {
   mockSetTaskbarAppOrder.mockReset();
@@ -37,7 +35,6 @@ beforeEach(() => {
   }
   useAppStore.setState({
     apps: mockApps,
-    activeApp: mockApps[0],
     taskbarAppOrder: ["agents", "projects", "tasks", "feed"],
   });
 });
@@ -47,41 +44,17 @@ describe("app-store", () => {
     it("contains all registered apps", () => {
       expect(useAppStore.getState().apps).toEqual(mockApps);
     });
-
-    it("has an activeApp defaulting to the first app", () => {
-      expect(useAppStore.getState().activeApp.id).toBe("agents");
-    });
   });
 
-  describe("syncActiveApp", () => {
-    it("switches activeApp when pathname matches a different app", () => {
-      syncActiveApp("/projects/123");
-      expect(useAppStore.getState().activeApp.id).toBe("projects");
+  describe("preloadAppForPathname", () => {
+    it("preloads the app that owns the pathname", () => {
+      preloadAppForPathname("/projects/123");
       expect(mockApps[1].preload).toHaveBeenCalledTimes(1);
-      expect(mockSetActiveTab).not.toHaveBeenCalled();
-    });
-
-    it("selects the tasks sidekick tab when entering the tasks app", () => {
-      syncActiveApp("/tasks/123");
-      expect(useAppStore.getState().activeApp.id).toBe("tasks");
-      expect(mockApps[2].preload).toHaveBeenCalledTimes(1);
-      expect(mockSetActiveTab).toHaveBeenCalledWith("tasks");
-    });
-
-    it("does not re-set state when the app already matches", () => {
-      const spy = vi.fn();
-      useAppStore.subscribe(spy);
-      syncActiveApp("/agents/something");
-      expect(spy).not.toHaveBeenCalled();
-      expect(mockSetActiveTab).not.toHaveBeenCalled();
     });
 
     it("falls back to the first app when no path matches", () => {
-      useAppStore.setState({ activeApp: mockApps[1] });
-      syncActiveApp("/unknown-route");
-      expect(useAppStore.getState().activeApp.id).toBe("agents");
+      preloadAppForPathname("/unknown-route");
       expect(mockApps[0].preload).toHaveBeenCalledTimes(1);
-      expect(mockSetActiveTab).not.toHaveBeenCalled();
     });
   });
 

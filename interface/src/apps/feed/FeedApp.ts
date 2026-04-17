@@ -3,9 +3,9 @@ import { FeedList } from "./FeedList";
 import { FeedMainPanel } from "./FeedMainPanel";
 import { FeedSidekickPanel } from "./FeedSidekickPanel";
 import { FeedSidekickHeader } from "./FeedSidekickHeader";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
-export const FeedApp: AuraApp = {
+export const FeedApp: AuraAppModule = {
   id: "feed",
   label: "Feed",
   icon: GitCommitVertical,

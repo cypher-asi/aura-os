@@ -70,8 +70,9 @@ vi.mock("../../stores/ui-modal-store", () => ({
   ) => selector({ openBuyCredits, openOrgSettings }),
 }));
 
-vi.mock("../../stores/app-store", () => ({
-  useAppStore: (selector: (state: typeof activeAppState) => unknown) => selector(activeAppState),
+vi.mock("../../hooks/use-active-app", () => ({
+  useActiveApp: () => activeAppState.activeApp,
+  useActiveAppId: () => activeAppState.activeApp.id,
 }));
 
 vi.mock("../../stores/app-ui-store", () => ({

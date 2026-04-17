@@ -6,7 +6,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { desktopApi } from "../../api/desktop";
-import { syncActiveApp, useAppStore } from "../../stores/app-store";
+import { preloadAppForPathname, resolveActiveApp } from "../../stores/app-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { sanitizeRestorePath } from "../../utils/last-app-path";
 import { setLastApp } from "../../utils/storage";
@@ -18,7 +18,6 @@ function hasDesktopBridge(): boolean {
 function AppSync(): null {
   const { pathname, search, hash } = useLocation();
   const markAppVisited = useAppUIStore((s) => s.markAppVisited);
-
   const setPreviousPath = useAppUIStore((s) => s.setPreviousPath);
 
   useEffect(() => {
@@ -30,17 +29,15 @@ function AppSync(): null {
         void desktopApi.persistLastRoute(restorePath).catch(() => {});
       }
     }
-    syncActiveApp(pathname);
-    const activeAppIdAfterSync = useAppStore.getState().activeApp.id;
-    markAppVisited(activeAppIdAfterSync);
-  }, [hash, pathname, search, markAppVisited, setPreviousPath]);
 
-  const activeAppId = useAppStore((s) => s.activeApp.id);
-
-  useEffect(() => {
+    // Active app is derived from the pathname (see `useActiveApp`) — this
+    // effect only handles the cross-cutting side-effects (prefetch, last-app
+    // persistence, visited tracking) that belong to "entered a new app".
+    preloadAppForPathname(pathname);
+    const activeAppId = resolveActiveApp(pathname).id;
     markAppVisited(activeAppId);
     setLastApp(activeAppId);
-  }, [activeAppId, markAppVisited]);
+  }, [hash, pathname, search, markAppVisited, setPreviousPath]);
 
   return null;
 }

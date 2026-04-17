@@ -4,7 +4,7 @@ import { Circle, Image } from "lucide-react";
 import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ReactNode } from "react";
-import type { AuraApp } from "../../types";
+import type { AuraAppModule } from "../../types";
 import { useSelectionMarquee } from "./useSelectionMarquee";
 import { BackgroundModal } from "../BackgroundModal";
 import styles from "./DesktopApp.module.css";
@@ -86,7 +86,7 @@ function MainPanel({ children }: { children?: ReactNode }) {
   );
 }
 
-export const DesktopApp: AuraApp = {
+export const DesktopApp: AuraAppModule = {
   id: "desktop",
   label: "Desktop",
   icon: Circle,

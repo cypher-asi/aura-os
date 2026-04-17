@@ -3,9 +3,9 @@ import { NotesNav } from "./NotesNav";
 import { NotesMainPanel } from "./NotesMainPanel";
 import { NotesSidekickPanel } from "./NotesSidekickPanel";
 import { NotesSidekickTaskbar } from "./NotesSidekickTaskbar";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
-export const NotesApp: AuraApp = {
+export const NotesApp: AuraAppModule = {
   id: "notes",
   label: "Notes",
   icon: FileText,

@@ -1,0 +1,1 @@
+export { NotesIndexRedirect } from "./NotesIndexRedirect";

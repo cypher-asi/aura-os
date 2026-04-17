@@ -5,6 +5,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import type { RouteObject } from "react-router-dom";
 import {
   Brain,
   Check,
@@ -16,14 +17,23 @@ import {
   FolderOpen,
   GitCommitVertical,
 } from "lucide-react";
-import type { AuraApp } from "./types";
+import type { AuraApp, AuraAppModule } from "./types";
+import { agentsRoutes } from "./agents/routes";
+import { projectsRoutes } from "./projects/routes";
+import { tasksRoutes } from "./tasks/routes";
+import { processRoutes } from "./process/routes";
+import { feedRoutes } from "./feed/routes";
+import { notesRoutes } from "./notes/routes";
+import { feedbackRoutes } from "./feedback/routes";
+import { profileRoutes } from "./profile/routes";
+import { desktopRoutes } from "./desktop/routes";
 
-type AppModuleLoader = () => Promise<AuraApp>;
+type AppModuleLoader = () => Promise<AuraAppModule>;
 
 const EmptyComponent = () => null;
 function wrapLazyAppComponent<Props>(
   loadApp: AppModuleLoader,
-  selectComponent: (app: AuraApp) => ComponentType<Props> | undefined,
+  selectComponent: (app: AuraAppModule) => ComponentType<Props> | undefined,
   fallbackRender?: (props: Props) => ReactNode,
 ): ComponentType<Props> {
   const LazyComponent = lazy(async () => {
@@ -45,7 +55,9 @@ function wrapLazyAppComponent<Props>(
 }
 
 function createAppDefinition(
-  metadata: Pick<AuraApp, "id" | "label" | "icon" | "basePath" | "searchPlaceholder">,
+  metadata: Pick<AuraApp, "id" | "label" | "icon" | "basePath" | "searchPlaceholder"> & {
+    routes: RouteObject[];
+  },
   loadApp: AppModuleLoader,
   options?: {
     hasDesktopLeftMenuPane?: boolean;
@@ -58,7 +70,7 @@ function createAppDefinition(
     includePrefetch?: boolean;
   },
 ): AuraApp {
-  let cachedAppPromise: Promise<AuraApp> | null = null;
+  let cachedAppPromise: Promise<AuraAppModule> | null = null;
   const loadAppOnce: AppModuleLoader = () => {
     cachedAppPromise ??= loadApp();
     return cachedAppPromise;
@@ -164,6 +176,7 @@ export const apps: AuraApp[] = [
       icon: Brain,
       basePath: "/agents",
       searchPlaceholder: "Search",
+      routes: agentsRoutes,
     },
     loadAgentsApp,
     {
@@ -180,6 +193,7 @@ export const apps: AuraApp[] = [
       icon: FolderOpen,
       basePath: "/projects",
       searchPlaceholder: "Search",
+      routes: projectsRoutes,
     },
     loadProjectsApp,
     {
@@ -198,6 +212,7 @@ export const apps: AuraApp[] = [
       icon: Check,
       basePath: "/tasks",
       searchPlaceholder: "Search",
+      routes: tasksRoutes,
     },
     loadTasksApp,
     {
@@ -217,6 +232,7 @@ export const apps: AuraApp[] = [
       icon: Cpu,
       basePath: "/process",
       searchPlaceholder: "Search",
+      routes: processRoutes,
     },
     loadProcessApp,
     {
@@ -233,6 +249,7 @@ export const apps: AuraApp[] = [
       label: "Feed",
       icon: GitCommitVertical,
       basePath: "/feed",
+      routes: feedRoutes,
     },
     loadFeedApp,
     {
@@ -248,6 +265,7 @@ export const apps: AuraApp[] = [
       icon: FileText,
       basePath: "/notes",
       searchPlaceholder: "Search notes",
+      routes: notesRoutes,
     },
     loadNotesApp,
     {
@@ -263,6 +281,7 @@ export const apps: AuraApp[] = [
       icon: Cross,
       basePath: "/feedback",
       searchPlaceholder: "Search feedback",
+      routes: feedbackRoutes,
     },
     loadFeedbackApp,
     {
@@ -278,6 +297,7 @@ export const apps: AuraApp[] = [
       icon: CircleUserRound,
       basePath: "/profile",
       searchPlaceholder: "Search",
+      routes: profileRoutes,
     },
     loadProfileApp,
     {
@@ -291,6 +311,7 @@ export const apps: AuraApp[] = [
       label: "Desktop",
       icon: Circle,
       basePath: "/desktop",
+      routes: desktopRoutes,
     },
     loadDesktopApp,
   ),

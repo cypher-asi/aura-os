@@ -4,9 +4,9 @@ import { ProcessMainPanel } from "./components/ProcessMainPanel";
 import { ProcessSidekickTaskbar } from "./components/ProcessSidekickTaskbar";
 import { ProcessSidekickContent } from "./components/ProcessSidekickContent/index";
 import { ProcessProvider } from "./components/ProcessProvider";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
-export const ProcessApp: AuraApp = {
+export const ProcessApp: AuraAppModule = {
   id: "process",
   label: "Processes",
   icon: Cpu,

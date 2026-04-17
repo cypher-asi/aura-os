@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Circle, CreditCard, ChevronRight, ChevronLeft, Settings } from "lucide-react";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { useAppStore } from "../../stores/app-store";
+import { useActiveApp } from "../../hooks/use-active-app";
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { getTaskbarAppsCollapsed, setTaskbarAppsCollapsed } from "../../utils/storage";
 import { formatCredits } from "../../utils/format";
@@ -25,7 +25,7 @@ function useClock() {
 export function BottomTaskbar() {
   const openBuyCredits = useUIModalStore((s) => s.openBuyCredits);
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
-  const activeApp = useAppStore((s) => s.activeApp);
+  const activeApp = useActiveApp();
   const time = useClock();
   const navigate = useNavigate();
   const previousPath = useAppUIStore((s) => s.previousPath);

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { useAppUIStore } from "../stores/app-ui-store";
-import { useAppStore } from "../stores/app-store";
+import { useActiveAppId } from "./use-active-app";
 
 type SidebarSearchValue = {
   query: string;
@@ -11,7 +11,7 @@ type SidebarSearchValue = {
 };
 
 export function useSidebarSearch(appIdOverride?: string): SidebarSearchValue {
-  const activeAppId = useAppStore((s) => s.activeApp.id);
+  const activeAppId = useActiveAppId();
   const appId = appIdOverride ?? activeAppId;
   const storeQuery = useAppUIStore((s) => s.sidebarQueries[appId] ?? "");
   const setSidebarQuery = useAppUIStore((s) => s.setSidebarQuery);

@@ -4,10 +4,10 @@ import { TasksMainPanel } from "./components/TasksMainPanel";
 import { SidekickContent } from "../../components/SidekickContent";
 import { SidekickTaskbar } from "../../components/SidekickTaskbar";
 import { PreviewContent, PreviewHeader } from "../../components/Preview";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 import { TasksProvider } from "./components/TasksProvider";
 
-export const TasksApp: AuraApp = {
+export const TasksApp: AuraAppModule = {
   id: "tasks",
   label: "Tasks",
   icon: Check,

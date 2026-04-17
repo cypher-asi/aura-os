@@ -1,12 +1,10 @@
 import { create } from "zustand";
 import type { AuraApp } from "../apps/types";
 import { apps as registeredApps } from "../apps/registry";
-import { useSidekickStore } from "./sidekick-store";
 import { getTaskbarAppOrder, setTaskbarAppOrder } from "../utils/storage";
 
 interface AppState {
   apps: AuraApp[];
-  activeApp: AuraApp;
   taskbarAppOrder: string[];
   saveTaskbarAppOrder: (nextOrder: string[]) => void;
   reorderTaskbarApps: (activeId: string, overId: string) => void;
@@ -16,18 +14,18 @@ function matchesBasePath(pathname: string, basePath: string): boolean {
   return pathname === basePath || pathname.startsWith(`${basePath}/`);
 }
 
+/**
+ * Resolve which `AuraApp` owns a given pathname. This is the single source of
+ * truth for "which app is active" — shells and chrome derive their state from
+ * this via the {@link useActiveApp} hook instead of mirroring it into store
+ * state. Keeping the lookup synchronous prevents the one-render lag that used
+ * to let the outgoing panel run URL-driven effects during a route transition.
+ */
 export function resolveActiveApp(pathname: string): AuraApp {
   return (
     registeredApps.find((a) => matchesBasePath(pathname, a.basePath)) ??
     registeredApps[0]
   );
-}
-
-function getInitialActiveApp(): AuraApp {
-  if (typeof window === "undefined") return registeredApps[0];
-  const initialApp = resolveActiveApp(window.location.pathname);
-  initialApp.preload?.();
-  return initialApp;
 }
 
 function isPinnedTaskbarApp(app: AuraApp): boolean {
@@ -66,7 +64,6 @@ function getInitialTaskbarAppOrder(): string[] {
 
 export const useAppStore = create<AppState>()((set, get) => ({
   apps: registeredApps,
-  activeApp: getInitialActiveApp(),
   taskbarAppOrder: getInitialTaskbarAppOrder(),
   saveTaskbarAppOrder: (nextOrder: string[]) => {
     const normalizedOrder = normalizeTaskbarAppOrder(get().apps, nextOrder);
@@ -89,19 +86,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
 }));
 
 /**
- * Call from a component inside BrowserRouter to sync pathname → activeApp.
- * Kept as a plain function so it can be called from a useEffect.
+ * Eagerly preload the app that owns a pathname. Called from the router-aware
+ * sync effect so panels can start their lazy imports the moment we know the
+ * pathname — without coupling the shell to a mutable `activeApp` store field.
  */
-export function syncActiveApp(pathname: string): void {
-  const match = resolveActiveApp(pathname);
-  match.preload?.();
-  const current = useAppStore.getState().activeApp;
-  if (current.id !== match.id) {
-    useAppStore.setState({ activeApp: match });
-    if (match.id === "tasks") {
-      useSidekickStore.getState().setActiveTab("tasks");
-    }
-  }
+export function preloadAppForPathname(pathname: string): void {
+  resolveActiveApp(pathname).preload?.();
 }
 
 export function getOrderedTaskbarApps(apps: AuraApp[], taskbarAppOrder: string[]): AuraApp[] {

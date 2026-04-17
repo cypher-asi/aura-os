@@ -5,10 +5,18 @@ import type { Project, Spec, Task } from "../../../../types";
 import { useProjectRegister } from "../../../../stores/project-action-store";
 import { useProjectsList } from "../../../projects/useProjectsList";
 import { compareSpecs } from "../../../../utils/collections";
+import { useSidekickStore } from "../../../../stores/sidekick-store";
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+
+  // The sidekick defaults to the tasks tab whenever the user enters the Tasks
+  // app. Because this provider only mounts under `/tasks/*` routes, the tab
+  // selection is naturally scoped to genuine app entry and unmounts on exit.
+  useEffect(() => {
+    useSidekickStore.getState().setActiveTab("tasks");
+  }, []);
   const { projects } = useProjectsList();
   const { register, unregister } = useProjectRegister();
 

@@ -19,7 +19,7 @@ import { ErrorBoundary } from "../ErrorBoundary";
 import { UpdateBanner } from "../UpdateBanner";
 import { PanelSearch } from "../PanelSearch";
 import { WindowControls } from "../WindowControls";
-import { useAppStore } from "../../stores/app-store";
+import { useActiveApp } from "../../hooks/use-active-app";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { apps } from "../../apps/registry";
 
@@ -83,7 +83,7 @@ function BackgroundLayer() {
 
 function SidebarSearchInput() {
   const { query, setQuery, action } = useSidebarSearch();
-  const activeApp = useAppStore((s) => s.activeApp);
+  const activeApp = useActiveApp();
 
   return (
     <PanelSearch
@@ -102,7 +102,7 @@ function SidekickPortalBridge({
   headerTarget: HTMLDivElement | null;
   panelTarget: HTMLDivElement | null;
 }) {
-  const activeApp = useAppStore((s) => s.activeApp);
+  const activeApp = useActiveApp();
   const { SidekickPanel, SidekickTaskbar } = activeApp;
 
   if (!SidekickPanel || !panelTarget) return null;
@@ -168,7 +168,7 @@ function PersistentSidekickLane({
 }
 
 export function DesktopShell() {
-  const activeApp = useAppStore((s) => s.activeApp);
+  const activeApp = useActiveApp();
   const { features } = useAuraCapabilities();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);

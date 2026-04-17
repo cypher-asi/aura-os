@@ -3,9 +3,9 @@ import { FeedbackList } from "./FeedbackList";
 import { FeedbackMainPanel } from "./FeedbackMainPanel";
 import { FeedbackSidekickPanel } from "./FeedbackSidekickPanel";
 import { FeedbackSidekickHeader } from "./FeedbackSidekickHeader";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
-export const FeedbackApp: AuraApp = {
+export const FeedbackApp: AuraAppModule = {
   id: "feedback",
   label: "Feedback",
   icon: Cross,

@@ -69,9 +69,13 @@ vi.mock("@cypher-asi/zui", () => ({
     isOpen ? <div data-testid="modal">{children}</div> : null,
 }));
 
+vi.mock("../../hooks/use-active-app", () => ({
+  useActiveApp: () => currentActiveApp,
+  useActiveAppId: () => currentActiveApp.id,
+}));
+
 vi.mock("../../stores/app-store", () => ({
-  useAppStore: (sel: (s: { activeApp: typeof mockProjectsApp }) => unknown) =>
-    sel({ activeApp: currentActiveApp }),
+  useAppStore: () => ({}),
 }));
 
 vi.mock("../../stores/app-ui-store", () => ({

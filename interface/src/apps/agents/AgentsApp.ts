@@ -5,13 +5,13 @@ import { AgentMainPanel } from "./AgentMainPanel";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSidekickTaskbar } from "./AgentSidekickTaskbar";
 import { useAgentStore } from "./stores";
-import type { AuraApp } from "../types";
+import type { AuraAppModule } from "../types";
 
 const AgentsLeftPanel = () => createElement(AgentList, { mode: "default" });
 const AgentsResponsiveControls = () =>
   createElement(AgentList, { mode: "responsive-controls" });
 
-export const AgentsApp: AuraApp = {
+export const AgentsApp: AuraAppModule = {
   id: "agents",
   label: "Agents",
   icon: Brain,
