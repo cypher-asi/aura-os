@@ -37,7 +37,7 @@ use crate::handlers::agents::workspace_tools::{
 };
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
-use crate::state::{AppState, AuthJwt, ChatSession};
+use crate::state::{AppState, AuthJwt, ChatSession, SuperAgentRun};
 
 use super::conversions::events_to_session_history;
 use super::runtime::{
@@ -738,6 +738,28 @@ async fn remove_live_session(state: &AppState, key: &str) {
     reg.remove(key);
 }
 
+/// Cancel any in-flight super-agent spawn for `session_key` and bump its
+/// generation counter. Returns the new generation so the caller can register
+/// a freshly-spawned run under it. The generation is what lets the spawn's
+/// final cache write be rejected if it raced past cancellation.
+async fn cancel_super_agent_run(state: &AppState, session_key: &str) -> u64 {
+    let mut runs = state.super_agent_runs.lock().await;
+    let next_gen = runs.get(session_key).map(|r| r.generation + 1).unwrap_or(1);
+    if let Some(existing) = runs.remove(session_key) {
+        existing.cancel.cancel();
+        if let Some(join) = existing.join {
+            join.abort();
+        }
+        info!(
+            session_key,
+            prior_generation = existing.generation,
+            new_generation = next_gen,
+            "super agent: cancelled in-flight run"
+        );
+    }
+    next_gen
+}
+
 pub(crate) async fn reset_agent_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -747,6 +769,10 @@ pub(crate) async fn reset_agent_session(
     remove_live_session(&state, &session_key).await;
     let sa_key = format!("super_agent:{agent_id}");
     remove_live_session(&state, &sa_key).await;
+    // Cancel first so the spawned task stops reading from the proxy; then
+    // clear the cache. The generation bump guarantees any cache write that
+    // beats us to the lock from the cancelled task will be rejected.
+    cancel_super_agent_run(&state, &sa_key).await;
     {
         let mut cache = state.super_agent_messages.lock().await;
         cache.remove(&sa_key);
@@ -1783,6 +1809,7 @@ async fn handle_super_agent_stream(
     let force_new = body.new_session.unwrap_or(false);
     if force_new {
         remove_live_session(state, &session_key).await;
+        cancel_super_agent_run(state, &session_key).await;
         let mut cache = state.super_agent_messages.lock().await;
         cache.remove(&session_key);
     }
@@ -1832,6 +1859,30 @@ async fn handle_super_agent_stream(
         persist_user_message(pctx, &user_content, &attachments);
     }
 
+    // Register a fresh run under `session_key` with a new cancellation token
+    // and a monotonic generation. Any prior in-flight spawn is cancelled so
+    // its subsequent cache write (guarded by generation below) will be
+    // rejected even if it races past cancellation.
+    let cancel_token = tokio_util::sync::CancellationToken::new();
+    let generation = {
+        let mut runs = state.super_agent_runs.lock().await;
+        let next_gen = runs.get(&session_key).map(|r| r.generation + 1).unwrap_or(1);
+        if let Some(existing) = runs.insert(
+            session_key.clone(),
+            SuperAgentRun {
+                generation: next_gen,
+                cancel: cancel_token.clone(),
+                join: None,
+            },
+        ) {
+            existing.cancel.cancel();
+            if let Some(join) = existing.join {
+                join.abort();
+            }
+        }
+        next_gen
+    };
+
     let stream_handle = aura_os_super_agent::stream::SuperAgentStream::new(
         sas.router_url.clone(),
         sas.http_client.clone(),
@@ -1842,7 +1893,8 @@ async fn handle_super_agent_stream(
         Arc::new(aura_os_super_agent::tools::ToolRegistry::with_all_tools()),
         tx,
         requested_model,
-    );
+    )
+    .with_cancel(cancel_token.clone());
 
     let content_for_run = user_content.clone();
     let image_blocks_for_run: Option<Vec<serde_json::Value>> =
@@ -1868,13 +1920,65 @@ async fn handle_super_agent_stream(
             }
         });
     let messages_cache = state.super_agent_messages.clone();
+    let runs_registry = state.super_agent_runs.clone();
     let cache_key = session_key.clone();
-    tokio::spawn(async move {
-        let messages = stream_handle
+    let run_cancel = cancel_token.clone();
+    let join = tokio::spawn(async move {
+        use aura_os_super_agent::stream::SuperAgentRunOutcome;
+        let outcome = stream_handle
             .run(content_for_run, image_blocks_for_run)
             .await;
-        messages_cache.lock().await.insert(cache_key, messages);
+
+        // Only persist conversation if this spawn is still the authoritative
+        // run for `cache_key`. Any of the following means we discard:
+        //  - the run was cancelled (reset / superseded);
+        //  - a newer generation has been registered meanwhile;
+        //  - the registry entry was removed (explicit reset).
+        let mut runs = runs_registry.lock().await;
+        let is_current = runs
+            .get(&cache_key)
+            .map(|r| r.generation == generation)
+            .unwrap_or(false);
+        if is_current {
+            runs.remove(&cache_key);
+        }
+        drop(runs);
+
+        match outcome {
+            SuperAgentRunOutcome::Completed(messages)
+                if is_current && !run_cancel.is_cancelled() =>
+            {
+                messages_cache.lock().await.insert(cache_key, messages);
+            }
+            SuperAgentRunOutcome::Completed(_) => {
+                debug!(
+                    cache_key = %cache_key,
+                    generation,
+                    "super agent: discarding stale run result (superseded or cancelled)"
+                );
+            }
+            SuperAgentRunOutcome::Cancelled => {
+                debug!(
+                    cache_key = %cache_key,
+                    generation,
+                    "super agent: run ended via cancellation, cache untouched"
+                );
+            }
+        }
     });
+
+    // Stash the join handle so reset can abort the task if the loop is
+    // blocked awaiting a long-running tool. The registry entry may already
+    // have been superseded by a newer spawn, in which case we just drop the
+    // join handle and rely on cancellation alone.
+    {
+        let mut runs = state.super_agent_runs.lock().await;
+        if let Some(run) = runs.get_mut(&session_key) {
+            if run.generation == generation {
+                run.join = Some(join);
+            }
+        }
+    }
 
     if let (Some(pctx), Some(prx)) = (persist_ctx, persist_rx) {
         spawn_chat_persist_task(prx, pctx);
@@ -1930,6 +2034,7 @@ pub(crate) async fn send_agent_event_stream(
         remove_live_session(&state, &session_key).await;
         let sa_key = format!("super_agent:{agent_id}");
         remove_live_session(&state, &sa_key).await;
+        cancel_super_agent_run(&state, &sa_key).await;
         {
             let mut cache = state.super_agent_messages.lock().await;
             cache.remove(&sa_key);

@@ -468,6 +468,9 @@ mod tests {
             super_agent_messages: Arc::new(tokio::sync::Mutex::new(
                 std::collections::HashMap::new(),
             )),
+            super_agent_runs: Arc::new(tokio::sync::Mutex::new(
+                std::collections::HashMap::new(),
+            )),
         }
     }
 

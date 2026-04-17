@@ -30,6 +30,7 @@ axum = { version = "0.7", features = ["ws"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.5", features = ["cors", "fs", "trace", "set-header"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-util = { version = "0.7", features = ["rt"] }
 futures-core = "0.3"
 futures-util = "0.3"
 tokio-tungstenite = { version = "0.29", features = ["native-tls"] }

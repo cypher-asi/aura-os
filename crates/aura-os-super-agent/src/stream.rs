@@ -67,6 +67,7 @@ use reqwest::Client;
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 use tokio::sync::broadcast;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
 use aura_os_link::{
@@ -185,6 +186,15 @@ struct ToolUseAccumulator {
 // SuperAgentStream
 // ---------------------------------------------------------------------------
 
+/// Outcome of [`SuperAgentStream::run`]. `Completed` holds the accumulated
+/// conversation messages for the caller to cache. `Cancelled` signals that a
+/// reset / superseding run fired mid-flight — the caller MUST discard these
+/// messages so they never rejoin the cache.
+pub enum SuperAgentRunOutcome {
+    Completed(Vec<Value>),
+    Cancelled,
+}
+
 pub struct SuperAgentStream {
     router_url: String,
     http: Client,
@@ -197,6 +207,7 @@ pub struct SuperAgentStream {
     model: String,
     max_turns: usize,
     max_tokens: u32,
+    cancel: CancellationToken,
 }
 
 impl SuperAgentStream {
@@ -223,6 +234,7 @@ impl SuperAgentStream {
             model: model.unwrap_or_else(|| DEFAULT_MODEL.to_string()),
             max_turns: DEFAULT_MAX_TOOL_TURNS,
             max_tokens: DEFAULT_MAX_TOKENS,
+            cancel: CancellationToken::new(),
         }
     }
 
@@ -237,6 +249,14 @@ impl SuperAgentStream {
         if let Some(n) = max_tokens {
             self.max_tokens = n;
         }
+        self
+    }
+
+    /// Attach a cancellation token. When signalled, the in-flight `/v1/messages`
+    /// stream is dropped mid-chunk (closing the proxy connection) and the
+    /// multi-turn loop exits with [`SuperAgentRunOutcome::Cancelled`].
+    pub fn with_cancel(mut self, token: CancellationToken) -> Self {
+        self.cancel = token;
         self
     }
 
@@ -256,7 +276,7 @@ impl SuperAgentStream {
         mut self,
         user_message: String,
         image_blocks: Option<Vec<Value>>,
-    ) -> Vec<Value> {
+    ) -> SuperAgentRunOutcome {
         let user_content = match image_blocks {
             Some(images) if !images.is_empty() => {
                 let mut blocks: Vec<Value> = Vec::new();
@@ -285,6 +305,11 @@ impl SuperAgentStream {
         let mut consecutive_truncations: usize = 0;
 
         for _turn in 0..self.max_turns {
+            if self.cancel.is_cancelled() {
+                info!("super agent: run cancelled before turn start");
+                return SuperAgentRunOutcome::Cancelled;
+            }
+
             let req = MessagesRequest {
                 model: self.model.clone(),
                 max_tokens: self.max_tokens,
@@ -314,7 +339,7 @@ impl SuperAgentStream {
                 "sending /v1/messages request"
             );
 
-            let resp = match self
+            let send_future = self
                 .http
                 .post(format!("{}/v1/messages", self.router_url))
                 .bearer_auth(&self.ctx.jwt)
@@ -326,18 +351,25 @@ impl SuperAgentStream {
                 // on the spec/file tool definitions.
                 .header("anthropic-beta", "fine-grained-tool-streaming-2025-05-14")
                 .json(&req)
-                .send()
-                .await
-            {
-                Ok(r) => r,
-                Err(e) => {
-                    self.emit(HarnessOutbound::Error(ErrorMsg {
-                        code: "llm_request_failed".into(),
-                        message: format!("Claude API request failed: {e}"),
-                        recoverable: false,
-                    }));
-                    return self.messages;
+                .send();
+
+            let resp = tokio::select! {
+                biased;
+                _ = self.cancel.cancelled() => {
+                    info!("super agent: run cancelled while sending /v1/messages");
+                    return SuperAgentRunOutcome::Cancelled;
                 }
+                res = send_future => match res {
+                    Ok(r) => r,
+                    Err(e) => {
+                        self.emit(HarnessOutbound::Error(ErrorMsg {
+                            code: "llm_request_failed".into(),
+                            message: format!("Claude API request failed: {e}"),
+                            recoverable: false,
+                        }));
+                        return SuperAgentRunOutcome::Completed(self.messages);
+                    }
+                },
             };
 
             if !resp.status().is_success() {
@@ -348,18 +380,22 @@ impl SuperAgentStream {
                     message: format!("Claude API returned {status}: {body}"),
                     recoverable: false,
                 }));
-                return self.messages;
+                return SuperAgentRunOutcome::Completed(self.messages);
             }
 
             let (stop_reason, usage) = match self.process_stream_response(resp).await {
-                Ok(outcome) => outcome,
+                Ok(Some(outcome)) => outcome,
+                Ok(None) => {
+                    info!("super agent: run cancelled during stream");
+                    return SuperAgentRunOutcome::Cancelled;
+                }
                 Err(e) => {
                     self.emit(HarnessOutbound::Error(ErrorMsg {
                         code: "stream_parse_error".into(),
                         message: format!("Failed to parse Claude stream: {e}"),
                         recoverable: false,
                     }));
-                    return self.messages;
+                    return SuperAgentRunOutcome::Completed(self.messages);
                 }
             };
 
@@ -420,7 +456,7 @@ impl SuperAgentStream {
                         },
                         files_changed: FilesChanged::default(),
                     }));
-                    return self.messages;
+                    return SuperAgentRunOutcome::Completed(self.messages);
                 }
             }
         }
@@ -445,7 +481,7 @@ impl SuperAgentStream {
             },
             files_changed: FilesChanged::default(),
         }));
-        self.messages
+        SuperAgentRunOutcome::Completed(self.messages)
     }
 
     /// Parse a streaming response, emit events, execute tools if needed,
@@ -454,7 +490,7 @@ impl SuperAgentStream {
     async fn process_stream_response(
         &mut self,
         resp: reqwest::Response,
-    ) -> Result<(Option<String>, UsagePayload), String> {
+    ) -> Result<Option<(Option<String>, UsagePayload)>, String> {
         use futures_util::StreamExt;
 
         let mut byte_stream = resp.bytes_stream();
@@ -468,7 +504,19 @@ impl SuperAgentStream {
         let mut current_block_type: Option<String> = None;
         let mut assistant_content_blocks: Vec<Value> = Vec::new();
 
-        while let Some(chunk_result) = byte_stream.next().await {
+        loop {
+            let next = tokio::select! {
+                biased;
+                _ = self.cancel.cancelled() => {
+                    // Dropping `byte_stream` + `resp` closes the proxy/router
+                    // HTTP/2 stream so no further bytes are pulled from
+                    // Anthropic. The caller observes `Ok(None)` and bails.
+                    drop(byte_stream);
+                    return Ok(None);
+                }
+                chunk = byte_stream.next() => chunk,
+            };
+            let Some(chunk_result) = next else { break };
             let chunk = chunk_result.map_err(|e| e.to_string())?;
             buffer.push_str(&String::from_utf8_lossy(&chunk));
 
@@ -779,7 +827,7 @@ impl SuperAgentStream {
             }));
         }
 
-        Ok((stop_reason, usage))
+        Ok(Some((stop_reason, usage)))
     }
 }
 
@@ -883,5 +931,90 @@ mod tests {
         assert_eq!(file["path"], Value::String("p".into()));
 
         assert!(build_partial_tool_input("run_command", "{\"cmd\":\"x\"").is_none());
+    }
+
+    /// A pre-cancelled token must short-circuit `run` before it ever contacts
+    /// the proxy. This is the structural guarantee that makes reset
+    /// deterministic: if the handler cancels the token before / at the start
+    /// of a run, no messages flow into the router and the outcome is
+    /// `Cancelled` so the caller discards any partial state.
+    #[tokio::test]
+    async fn run_exits_immediately_when_pre_cancelled() {
+        use aura_os_agents::{AgentInstanceService, AgentService, RuntimeAgentStateMap};
+        use aura_os_billing::BillingClient;
+        use aura_os_link::AutomatonClient;
+        use aura_os_orgs::OrgService;
+        use aura_os_projects::ProjectService;
+        use aura_os_sessions::SessionService;
+        use aura_os_store::RocksStore;
+        use aura_os_tasks::TaskService;
+        use tokio::sync::broadcast;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(RocksStore::open(dir.path()).unwrap());
+        let runtime_state: RuntimeAgentStateMap =
+            Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()));
+        let (evt_tx, _) = broadcast::channel(16);
+        let ctx = Arc::new(SuperAgentContext {
+            user_id: "u".into(),
+            org_id: "o".into(),
+            jwt: "j".into(),
+            project_service: Arc::new(ProjectService::new(store.clone())),
+            agent_service: Arc::new(AgentService::new(store.clone(), None)),
+            agent_instance_service: Arc::new(AgentInstanceService::new(
+                store.clone(),
+                None,
+                runtime_state,
+                None,
+            )),
+            task_service: Arc::new(TaskService::new(store.clone(), None)),
+            session_service: Arc::new(SessionService::new(store.clone(), 0.8, 200_000)),
+            org_service: Arc::new(OrgService::new(store.clone())),
+            billing_client: Arc::new(BillingClient::new()),
+            automaton_client: Arc::new(AutomatonClient::new("http://localhost:0".into())),
+            orbit_client: None,
+            network_client: None,
+            storage_client: None,
+            store: store.clone(),
+            event_broadcast: evt_tx,
+            local_server_base_url: None,
+            local_http_client: reqwest::Client::new(),
+        });
+
+        // Router URL points at an unroutable port; if the test ever actually
+        // tries to send a request the test would hang for the TCP timeout.
+        // Instead we expect the cancelled token to bail out first.
+        let router_url = "http://127.0.0.1:1".to_string();
+        let (tx, _rx) = broadcast::channel(8);
+
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+
+        let stream = SuperAgentStream::new(
+            router_url,
+            reqwest::Client::new(),
+            "system".into(),
+            vec![],
+            vec![],
+            ctx,
+            Arc::new(ToolRegistry::with_all_tools()),
+            tx,
+            None,
+        )
+        .with_cancel(cancel);
+
+        let start = std::time::Instant::now();
+        let outcome = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            stream.run("hello".into(), None),
+        )
+        .await
+        .expect("run should bail out quickly on pre-cancelled token");
+
+        assert!(matches!(outcome, SuperAgentRunOutcome::Cancelled));
+        assert!(
+            start.elapsed() < std::time::Duration::from_millis(500),
+            "cancelled run should return quickly"
+        );
     }
 }

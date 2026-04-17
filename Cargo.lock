@@ -517,6 +517,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-tungstenite 0.29.0",
+ "tokio-util",
  "tower",
  "tower-http 0.5.2",
  "tracing",
@@ -597,6 +598,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "tracing",
  "uuid",
 ]
@@ -5136,6 +5138,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

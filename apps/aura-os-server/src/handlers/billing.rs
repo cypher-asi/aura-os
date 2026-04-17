@@ -326,6 +326,7 @@ mod tests {
                 validation_cache: Arc::new(dashmap::DashMap::new()),
                 super_agent_service,
                 super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
+                super_agent_runs: Arc::new(Mutex::new(HashMap::new())),
             },
             db_dir,
         )

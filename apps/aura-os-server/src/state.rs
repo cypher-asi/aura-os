@@ -261,6 +261,19 @@ pub type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
 /// `"super_agent:{agent_id}"`.
 pub type SuperAgentConversationCache = Arc<Mutex<HashMap<String, Vec<serde_json::Value>>>>;
 
+/// Tracks a single in-flight super-agent spawn. `generation` increases every
+/// time a new run supersedes a prior one (on reset or `new_session=true`), and
+/// is used to gate the final cache write so a stale task cannot overwrite a
+/// freshly-cleared context. `cancel` stops the proxy stream and tool loop
+/// mid-flight when reset fires.
+pub struct SuperAgentRun {
+    pub generation: u64,
+    pub cancel: tokio_util::sync::CancellationToken,
+    pub join: Option<tokio::task::JoinHandle<()>>,
+}
+
+pub type SuperAgentRunRegistry = Arc<Mutex<HashMap<String, SuperAgentRun>>>;
+
 /// Accumulated live output for a running or recently completed task.
 #[derive(Clone, Default)]
 pub struct CachedTaskOutput {
@@ -349,6 +362,10 @@ pub struct AppState {
     /// context survives across requests (mirrors how the harness keeps state
     /// for normal agents).
     pub super_agent_messages: SuperAgentConversationCache,
+    /// In-flight super-agent runs keyed by `super_agent:{agent_id}`. Reset
+    /// uses this to cancel the running spawn and bump its generation so a
+    /// late cache write cannot reintroduce the cleared context.
+    pub super_agent_runs: SuperAgentRunRegistry,
 }
 
 impl AppState {
