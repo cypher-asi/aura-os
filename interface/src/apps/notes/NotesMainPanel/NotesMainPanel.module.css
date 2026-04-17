@@ -59,7 +59,7 @@
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-2) var(--space-5);
   width: 100%;
   box-sizing: border-box;
   scrollbar-width: none;
@@ -104,6 +104,10 @@
   font-weight: 600;
   margin: 1.2em 0 0.8em;
   line-height: 1.25;
+}
+
+.editor :global(> :first-child) {
+  margin-top: 0;
 }
 
 .editor :global(h1) {
