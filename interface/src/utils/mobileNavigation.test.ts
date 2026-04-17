@@ -45,6 +45,10 @@ describe("getMobileProjectDestination", () => {
     expect(getMobileProjectDestination("/feed/activity")).toBe("feed");
   });
 
+  it("does not return feed for /feedback (different app)", () => {
+    expect(getMobileProjectDestination("/feedback")).toBeNull();
+  });
+
   it("returns execution for /projects/:id/work", () => {
     expect(getMobileProjectDestination("/projects/p1/work")).toBe("execution");
   });
@@ -102,6 +106,10 @@ describe("getMobileShellMode", () => {
 
   it("returns global for /feed", () => {
     expect(getMobileShellMode("/feed", null, false)).toBe("global");
+  });
+
+  it("returns global for /feedback", () => {
+    expect(getMobileShellMode("/feedback", null, false)).toBe("global");
   });
 
   it("returns global for the mobile organization route", () => {

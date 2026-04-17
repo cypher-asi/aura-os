@@ -6,6 +6,7 @@ const { mockApps, mockSetTaskbarAppOrder } = vi.hoisted(() => ({
     { id: "projects", basePath: "/projects", label: "Projects", preload: vi.fn() },
     { id: "tasks", basePath: "/tasks", label: "Tasks", preload: vi.fn() },
     { id: "feed", basePath: "/feed", label: "Feed", preload: vi.fn() },
+    { id: "feedback", basePath: "/feedback", label: "Feedback", preload: vi.fn() },
     { id: "desktop", basePath: "/desktop", label: "Desktop", preload: vi.fn() },
   ],
   mockSetTaskbarAppOrder: vi.fn(),
@@ -89,26 +90,33 @@ describe("app-store", () => {
       expect(resolveActiveApp("/").id).toBe("agents");
       expect(resolveActiveApp("/desktop").id).toBe("desktop");
     });
+
+    it("does not treat /feedback as the /feed app (strict basePath match)", () => {
+      expect(resolveActiveApp("/feed").id).toBe("feed");
+      expect(resolveActiveApp("/feed/activity").id).toBe("feed");
+      expect(resolveActiveApp("/feedback").id).toBe("feedback");
+      expect(resolveActiveApp("/feedback/fb-1").id).toBe("feedback");
+    });
   });
 
   describe("taskbar app order", () => {
     it("sorts apps using the stored taskbar order", () => {
-      const ordered = getOrderedTaskbarApps(mockApps, ["feed", "agents", "projects", "tasks"]);
-      expect(ordered.map((app) => app.id)).toEqual(["feed", "agents", "projects", "tasks", "desktop"]);
+      const ordered = getOrderedTaskbarApps(mockApps, ["feed", "agents", "projects", "tasks", "feedback"]);
+      expect(ordered.map((app) => app.id)).toEqual(["feed", "agents", "projects", "tasks", "feedback", "desktop"]);
     });
 
     it("normalizes and persists a provided taskbar order", () => {
       useAppStore.getState().saveTaskbarAppOrder(["feed", "agents", "feed", "unknown"]);
 
-      expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects", "tasks"]);
-      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects", "tasks"]);
+      expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects", "tasks", "feedback"]);
+      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects", "tasks", "feedback"]);
     });
 
     it("persists reordered taskbar apps", () => {
       useAppStore.getState().reorderTaskbarApps("feed", "agents");
 
-      expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects", "tasks"]);
-      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects", "tasks"]);
+      expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects", "tasks", "feedback"]);
+      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects", "tasks", "feedback"]);
     });
   });
 });

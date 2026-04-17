@@ -151,6 +151,7 @@ export default function App() {
               <Route path="process/:processId" element={<ShellRoutePlaceholder title="Process" />} />
 
               <Route path="feed" element={<ShellRoutePlaceholder title="Feed" />} />
+              <Route path="feedback" element={<ShellRoutePlaceholder title="Feedback" />} />
               <Route path="profile" element={<ShellRoutePlaceholder title="Profile" />} />
               <Route path="desktop" element={<EmptyRoute />} />
             </Route>

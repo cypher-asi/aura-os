@@ -12,8 +12,15 @@ interface AppState {
   reorderTaskbarApps: (activeId: string, overId: string) => void;
 }
 
+function matchesBasePath(pathname: string, basePath: string): boolean {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`);
+}
+
 export function resolveActiveApp(pathname: string): AuraApp {
-  return registeredApps.find((a) => pathname.startsWith(a.basePath)) ?? registeredApps[0];
+  return (
+    registeredApps.find((a) => matchesBasePath(pathname, a.basePath)) ??
+    registeredApps[0]
+  );
 }
 
 function getInitialActiveApp(): AuraApp {

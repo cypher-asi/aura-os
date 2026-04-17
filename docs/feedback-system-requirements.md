@@ -165,9 +165,14 @@ Feedback-specific data must be represented in structured metadata using these ca
 
 ### Vote Data
 
-Vote state is required even though the current upstream social API does not expose vote endpoints.
+Vote state is required. Since the current upstream social API does not yet expose vote endpoints, vote support must be added to aura-network during development, using the local aura-network database as the canonical store.
 
-The Feedback system must therefore maintain per-post vote information in Aura OS application persistence and return aggregated vote data in Feedback API responses.
+For the first version:
+
+- vote data lives in the local aura-network Postgres database, not in Aura OS local persistence
+- the aura-network HTTP API exposes vote endpoints that Aura OS can call
+- Aura OS acts as a thin proxy and aggregator on top of those endpoints
+- production aura-network will be updated later; local dev moves first
 
 Each feedback item returned to the UI must include:
 
@@ -182,6 +187,23 @@ Each feedback item returned to the UI must include:
 - `down`
 - `none`
 
+### Local Aura Network Database
+
+During development, aura-network runs locally in Docker with Postgres reachable at:
+
+```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/aura_network
+```
+
+This database is the source of truth for feedback posts, comments, and votes while the Feedback system is being built.
+
+Rules:
+
+- local aura-network must be running to develop or test the Feedback system end-to-end
+- schema changes must be made as new migrations under the aura-network repo
+- Aura OS must not introduce a parallel feedback-specific local store; it uses aura-network instead
+- contract changes must be kept backward-compatible until production aura-network adopts them
+
 ## Integration Requirements
 
 ### Aura Network
@@ -195,6 +217,15 @@ The Feedback system must reuse existing aura-network post and comment flows for:
 - creating comments
 
 Feedback data returned from Aura OS must be filtered so that the Feedback app only surfaces posts that represent feedback items.
+
+Aura-network must be extended to support feedback-specific behavior that does not exist today:
+
+- vote data model
+- vote endpoints
+- one active vote per user per post
+- vote aggregates available in post responses
+
+These changes must land as new aura-network migrations and API surface in the local aura-network repo and be exercised against the local Postgres database before any production schema changes are considered.
 
 ### Aura OS Server
 
@@ -214,8 +245,10 @@ The server is responsible for:
 
 - filtering feedback posts from the broader social feed
 - parsing and validating feedback metadata
-- enriching responses with vote aggregates
-- enforcing one-vote-per-user rules
+- forwarding vote operations to aura-network
+- passing through vote aggregates returned by aura-network
+
+Enforcement of one-vote-per-user must happen in aura-network, since it owns the canonical vote data.
 
 ## Sorting Requirements
 
@@ -231,14 +264,15 @@ The exact trending formula may evolve, but the behavior must prefer recency plus
 
 ## State And Persistence Requirements
 
-The Feedback system should use the current Aura OS persistence and service patterns already used by the server.
+The Feedback system must use aura-network as the canonical persistence boundary for feedback posts, comments, and votes.
 
 Requirements:
 
-- feedback post and comment bodies remain sourced from aura-network
-- vote data is stored through Aura OS local persistence until a shared upstream vote API exists
-- the implementation must preserve the rule of one active vote per user per feedback item
-- response shaping must make the UI independent from raw persistence details
+- feedback post and comment bodies are owned by aura-network
+- vote data is owned by aura-network, backed by its local Postgres database in development
+- Aura OS must not introduce a parallel local vote store
+- the rule of one active vote per user per feedback item must be enforced in aura-network
+- response shaping on Aura OS must keep the UI independent from upstream schema details
 
 ## Functional Requirements
 
@@ -272,6 +306,7 @@ Requirements:
 - New interfaces and stores should be strongly typed.
 - Server behavior should be covered by focused tests.
 - UI behavior should be covered by focused tests where nearby patterns already exist.
+- Aura-network schema changes must ship with new migrations and be validated against the local aura-network Postgres database before Aura OS integration is considered complete.
 
 ## Non-Goals
 
@@ -281,7 +316,7 @@ The first version is not required to support:
 - file uploads or screenshots
 - nested comment threads
 - emoji reactions beyond upvote/downvote
-- cross-instance distributed vote storage outside the current Aura OS deployment model
+- production aura-network schema rollout; production migration is a later step
 
 ## Acceptance Criteria
 
@@ -294,4 +329,5 @@ The Feedback system is acceptable when:
 - users can upvote or downvote a feedback item with one active vote per user
 - feedback responses include the current viewer’s vote state and aggregate vote counts
 - the implementation uses current Aura OS architectural patterns and passes focused verification for server and interface behavior
+- aura-network schema changes exist as new migrations in the aura-network repo and are validated against the local `aura_network` Postgres database
 

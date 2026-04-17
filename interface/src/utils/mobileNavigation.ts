@@ -21,7 +21,7 @@ export function getProjectAgentInstanceIdFromPathname(pathname: string): string 
 }
 
 export function getMobileProjectDestination(pathname: string): MobileProjectDestination {
-  if (pathname.startsWith("/feed")) {
+  if (pathname === "/feed" || pathname.startsWith("/feed/")) {
     return "feed";
   }
 
@@ -70,8 +70,12 @@ export function getMobileShellMode(
   if (
     pathname === "/projects"
     || pathname.startsWith("/projects/organization")
-    || pathname.startsWith("/feed")
-    || pathname.startsWith("/profile")
+    || pathname === "/feed"
+    || pathname.startsWith("/feed/")
+    || pathname === "/feedback"
+    || pathname.startsWith("/feedback/")
+    || pathname === "/profile"
+    || pathname.startsWith("/profile/")
   ) {
     return "global";
   }

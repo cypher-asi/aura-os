@@ -1,0 +1,30 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-2);
+}
+
+.sectionHeader {
+  font-size: var(--font-size-xs, 11px);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-3) var(--space-3) var(--space-1);
+}
+
+.list [class*="itemContent"] {
+  min-height: 28px;
+}
+
+.list button[aria-selected="true"],
+.list button[aria-selected="true"]:hover {
+  background: var(--color-overlay-subtle) !important;
+}

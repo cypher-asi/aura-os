@@ -4,7 +4,7 @@ import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import {
   CircleUserRound, Building2, Check,
   ChevronRight, Plus, Server,
-  FolderOpen, Bot, GitCommitVertical,
+  FolderOpen, Bot, GitCommitVertical, Cross,
 } from "lucide-react";
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -81,6 +81,13 @@ export function AppSwitcherContent({ state }: { state: MobileShellState }) {
       description: "Activity across your projects",
       icon: GitCommitVertical,
       path: "/feed",
+    },
+    {
+      id: "feedback",
+      label: "Feedback",
+      description: "Post, vote, and discuss feedback",
+      icon: Cross,
+      path: "/feedback",
     },
     {
       id: "profile",

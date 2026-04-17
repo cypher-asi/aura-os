@@ -11,6 +11,7 @@ import {
   Circle,
   CircleUserRound,
   Cpu,
+  Cross,
   FolderOpen,
   GitCommitVertical,
 } from "lucide-react";
@@ -145,6 +146,8 @@ const loadProcessApp = () =>
   import("./process/ProcessApp").then((module) => module.ProcessApp);
 const loadFeedApp = () =>
   import("./feed/FeedApp").then((module) => module.FeedApp);
+const loadFeedbackApp = () =>
+  import("./feedback/FeedbackApp").then((module) => module.FeedbackApp);
 const loadProfileApp = () =>
   import("./profile/ProfileApp").then((module) => module.ProfileApp);
 const loadDesktopApp = () =>
@@ -229,6 +232,21 @@ export const apps: AuraApp[] = [
       basePath: "/feed",
     },
     loadFeedApp,
+    {
+      hasResponsiveControls: true,
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "feedback",
+      label: "Feedback",
+      icon: Cross,
+      basePath: "/feedback",
+      searchPlaceholder: "Search feedback",
+    },
+    loadFeedbackApp,
     {
       hasResponsiveControls: true,
       hasSidekickPanel: true,
