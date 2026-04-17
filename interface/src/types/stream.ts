@@ -49,6 +49,7 @@ export interface ToolCallEntry {
   isError?: boolean;
   pending: boolean;
   started?: boolean;
+  draft?: boolean;
 }
 
 /* ------------------------------------------------------------------ */

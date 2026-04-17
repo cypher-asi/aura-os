@@ -54,8 +54,9 @@ export function snapshotThinking(refs: StreamRefs) {
 }
 
 export function snapshotToolCalls(refs: StreamRefs): ToolCallEntry[] | undefined {
-  return refs.toolCalls.current.length > 0
-    ? [...refs.toolCalls.current]
+  const committedToolCalls = refs.toolCalls.current.filter((tc) => !tc.draft);
+  return committedToolCalls.length > 0
+    ? [...committedToolCalls]
     : undefined;
 }
 
@@ -303,7 +304,7 @@ function resolveToolCallInEvents(
     let changed = false;
     const next = prev.map((evt) => {
       if (!evt.toolCalls) return evt;
-      const idx = evt.toolCalls.findIndex((tc) => tc.id === toolCallId && tc.pending);
+      const idx = evt.toolCalls.findIndex((tc) => tc.id === toolCallId && tc.pending && !tc.draft);
       if (idx === -1) return evt;
       changed = true;
       return {
@@ -329,12 +330,12 @@ function resolvePendingToolCallsInEvents(
   setters.setEvents((prev) => {
     let changed = false;
     const next = prev.map((evt) => {
-      if (!evt.toolCalls?.some((tc) => tc.pending)) return evt;
+      if (!evt.toolCalls?.some((tc) => tc.pending && !tc.draft)) return evt;
       changed = true;
       return {
         ...evt,
         toolCalls: evt.toolCalls.map((tc) =>
-          tc.pending
+          tc.pending && !tc.draft
             ? {
                 ...tc,
                 pending: false,
@@ -460,8 +461,9 @@ export function handleToolCallSnapshot(
         id: info.id,
         name: info.name,
         input: info.input,
-        pending: true,
+        pending: false,
         started: true,
+        draft: true,
       },
     ];
     refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
@@ -471,11 +473,12 @@ export function handleToolCallSnapshot(
   }
 
   refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-    tc.id === info.id
+      tc.id === info.id
       ? {
         ...tc,
         name: info.name,
         input: { ...tc.input, ...info.input },
+        draft: tc.draft ?? true,
       }
       : tc,
   );
@@ -510,7 +513,7 @@ export function handleToolCall(
     }
     refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
       tc.id === info.id
-        ? { ...tc, name: info.name, input: mergedInput, started: false }
+        ? { ...tc, name: info.name, input: mergedInput, started: false, pending: true, draft: false }
         : tc,
     );
   } else {
@@ -519,6 +522,7 @@ export function handleToolCall(
       name: info.name,
       input: info.input,
       pending: true,
+      draft: false,
     };
     refs.toolCalls.current = [...refs.toolCalls.current, entry];
 
@@ -535,7 +539,7 @@ export function handleToolResult(
 ): void {
   let targetIndex = -1;
   if (info.id) {
-    targetIndex = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
+    targetIndex = refs.toolCalls.current.findIndex((tc) => tc.id === info.id && tc.pending);
   } else {
     for (let i = refs.toolCalls.current.length - 1; i >= 0; i--) {
       const tc = refs.toolCalls.current[i];
@@ -642,7 +646,7 @@ export function handleAssistantTurnBoundary(
     const bufferedContent = refs.streamBuffer.current;
 
     const newToolCalls = refs.toolCalls.current.filter(
-      (tc) => !refs.snapshottedToolCallIds.current.has(tc.id),
+      (tc) => !tc.draft && !refs.snapshottedToolCallIds.current.has(tc.id),
     );
     const newToolCallIds = new Set(newToolCalls.map((tc) => tc.id));
 
@@ -685,13 +689,13 @@ function resolvePendingToolCalls(
   setters: StreamSetters,
   resolution: PendingToolResolution,
 ): void {
-  const hasPending = refs.toolCalls.current.some((tc) => tc.pending);
+  const hasPending = refs.toolCalls.current.some((tc) => tc.pending && !tc.draft);
   if (!hasPending) {
     resolvePendingToolCallsInEvents(setters, resolution);
     return;
   }
   refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-    tc.pending
+    tc.pending && !tc.draft
       ? {
           ...tc,
           pending: false,
@@ -786,6 +790,7 @@ export function finalizeStream(
     setters,
     getPendingToolResolution(options?.reason ?? "disconnected", options?.message),
   );
+  refs.toolCalls.current = refs.toolCalls.current.filter((tc) => !tc.draft);
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const hasBuffer = !!refs.streamBuffer.current;

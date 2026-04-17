@@ -506,7 +506,7 @@ describe("stream/handlers", () => {
       });
     });
 
-    it("creates a pending started entry when snapshot arrives before started event", () => {
+    it("creates a draft entry when snapshot arrives before the real tool call", () => {
       const refs = makeRefs();
       const setters = makeSetters();
 
@@ -520,8 +520,9 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current[0]).toMatchObject({
         id: "tc2",
         name: "create_spec",
-        pending: true,
+        pending: false,
         started: true,
+        draft: true,
       });
       expect(refs.timeline.current).toHaveLength(1);
       expect(refs.timeline.current[0]).toMatchObject({ kind: "tool", toolCallId: "tc2" });
@@ -685,6 +686,24 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current[0].pending).toBe(false);
       expect(refs.toolCalls.current[0].isError).toBe(false);
       expect(refs.toolCalls.current[0].result).toContain("Completed before an explicit tool result");
+    });
+
+    it("drops draft-only snapshot tools on completion without surfacing a fake disconnect", () => {
+      const refs = makeRefs();
+      refs.toolCalls.current = [{
+        id: "tc-draft",
+        name: "list_files",
+        input: {},
+        pending: false,
+        started: true,
+        draft: true,
+      }];
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      finalizeStream(refs, setters, abortRef, false, { reason: "completed" });
+
+      expect(refs.toolCalls.current).toEqual([]);
     });
 
     it("marks pending tools as failed with the provided message", () => {
