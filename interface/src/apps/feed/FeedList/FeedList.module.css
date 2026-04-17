@@ -6,7 +6,9 @@
 }
 
 .list [class*="itemContent"] {
-  min-height: 28px;
+  min-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .list button[aria-selected="true"],
