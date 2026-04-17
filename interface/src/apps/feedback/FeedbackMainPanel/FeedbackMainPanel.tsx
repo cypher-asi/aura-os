@@ -6,15 +6,31 @@ import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import {
   useFeedback,
+  useFeedbackBootstrap,
   useSortedFeedbackItems,
 } from "../../../stores/feedback-store";
 import { FEEDBACK_SORT_FILTERS } from "../feedback-filters";
 import { FeedbackItemCard } from "../FeedbackItemCard";
 import styles from "./FeedbackMainPanel.module.css";
 
+function emptyMessage(isLoading: boolean, loadError: string | null): string {
+  if (isLoading) return "Loading feedback...";
+  if (loadError) return `Could not load feedback: ${loadError}`;
+  return "No feedback yet. Use the + button to post the first one.";
+}
+
 export function FeedbackMainPanel() {
+  useFeedbackBootstrap();
   const { isMobileLayout } = useAuraCapabilities();
-  const { sort, setSort, selectedId, selectItem, castVote } = useFeedback();
+  const {
+    sort,
+    setSort,
+    selectedId,
+    selectItem,
+    castVote,
+    isLoading,
+    loadError,
+  } = useFeedback();
   const sortedItems = useSortedFeedbackItems();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -44,7 +60,7 @@ export function FeedbackMainPanel() {
           {sortedItems.length === 0 ? (
             <div className={styles.emptyWrapper}>
               <EmptyState icon={<MessageSquare size={32} />}>
-                No feedback yet. Use the + button to post the first one.
+                {emptyMessage(isLoading, loadError)}
               </EmptyState>
             </div>
           ) : (

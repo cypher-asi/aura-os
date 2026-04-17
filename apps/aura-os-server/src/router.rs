@@ -11,9 +11,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, dev_loop, feed, files, follows, generation, harness_proxy, leaderboard,
-    log, org_tools, orgs, process, project_stats, projects, remote_files, remote_terminal, specs,
-    super_agent, swarm, system, tasks, terminal, users, ws,
+    agents, auth, billing, dev_loop, feed, feedback, files, follows, generation, harness_proxy,
+    leaderboard, log, org_tools, orgs, process, project_stats, projects, remote_files,
+    remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -81,6 +81,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(task_routes())
         .merge(agent_routes())
         .merge(social_routes())
+        .merge(feedback_routes())
         .merge(system_routes())
         .merge(super_agent_routes())
         .merge(process_routes())
@@ -452,6 +453,27 @@ fn social_routes() -> Router<AppState> {
             get(feed::list_comments).post(feed::add_comment),
         )
         .route("/api/comments/:comment_id", delete(feed::delete_comment))
+}
+
+fn feedback_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/feedback",
+            get(feedback::list_feedback).post(feedback::create_feedback),
+        )
+        .route("/api/feedback/:post_id", get(feedback::get_feedback))
+        .route(
+            "/api/feedback/:post_id/status",
+            axum::routing::patch(feedback::update_feedback_status),
+        )
+        .route(
+            "/api/feedback/:post_id/comments",
+            get(feedback::list_feedback_comments).post(feedback::add_feedback_comment),
+        )
+        .route(
+            "/api/feedback/:post_id/vote",
+            post(feedback::cast_feedback_vote),
+        )
 }
 
 fn super_agent_routes() -> Router<AppState> {

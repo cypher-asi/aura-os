@@ -6,10 +6,10 @@ use axum::extract::{Path, Query, State};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
+use chrono::{DateTime, Utc};
 use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info, warn};
 
@@ -73,9 +73,8 @@ async fn resolve_chat_session(
                 // `load_project_session_history` will later read from.
                 // Storage may return sessions in any order (insertion,
                 // alphanumeric id, etc.); we want newest-by-timestamp first.
-                sessions.sort_by(|a, b| {
-                    storage_session_sort_key(b).cmp(&storage_session_sort_key(a))
-                });
+                sessions
+                    .sort_by(|a, b| storage_session_sort_key(b).cmp(&storage_session_sort_key(a)));
                 for session in sessions.iter() {
                     match storage.list_events(&session.id, jwt, Some(1), None).await {
                         Ok(_) => return Some(session.id.clone()),
@@ -343,7 +342,8 @@ pub(crate) fn spawn_chat_persist_task(
                             // rejected by the LLM on replay.
                             if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
                                 b.get("type").and_then(|t| t.as_str()) == Some("tool_use")
-                                    && b.get("id").and_then(|i| i.as_str()) == Some(&last_tool_use_id)
+                                    && b.get("id").and_then(|i| i.as_str())
+                                        == Some(&last_tool_use_id)
                             }) {
                                 if block.get("input") == Some(&serde_json::Value::Null) {
                                     block["input"] = serde_json::json!({});
@@ -780,8 +780,8 @@ fn render_conversation_text(text: &str, blocks: Option<&[ChatContentBlock]>) -> 
                     parts.push(text.clone());
                 }
                 ChatContentBlock::ToolUse { name, input, .. } => {
-                    let input_preview = serde_json::to_string(input)
-                        .unwrap_or_else(|_| "{}".to_string());
+                    let input_preview =
+                        serde_json::to_string(input).unwrap_or_else(|_| "{}".to_string());
                     parts.push(format!("[tool_use {name} input={input_preview}]"));
                 }
                 ChatContentBlock::ToolResult {
@@ -2061,11 +2061,7 @@ mod tests {
         // later in wall-clock time, so the reader could pick a stale session
         // and the UI would only show part of the conversation.
         let earlier = storage_session("earlier", Some("2026-04-15T10:00:00Z"), None);
-        let later = storage_session(
-            "later",
-            Some("2026-04-15T10:00:00.123+00:00"),
-            None,
-        );
+        let later = storage_session("later", Some("2026-04-15T10:00:00.123+00:00"), None);
 
         let selected = latest_storage_session(&[earlier, later]).map(|session| session.id.clone());
 
@@ -2087,10 +2083,7 @@ mod tests {
         assert_eq!(selected.as_deref(), Some("dated"));
     }
 
-    fn assistant_event(
-        content: &str,
-        blocks: Option<Vec<ChatContentBlock>>,
-    ) -> SessionEvent {
+    fn assistant_event(content: &str, blocks: Option<Vec<ChatContentBlock>>) -> SessionEvent {
         SessionEvent {
             event_id: SessionEventId::new(),
             agent_instance_id: AgentInstanceId::nil(),

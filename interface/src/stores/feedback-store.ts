@@ -1,11 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { api } from "../api/client";
+import { ApiClientError } from "../api/core";
+import type { FeedbackCommentDto, FeedbackItemDto } from "../api/feedback";
 import { useAuthStore } from "./auth-store";
-import {
-  MOCK_FEEDBACK_COMMENTS,
-  MOCK_FEEDBACK_ITEMS,
-} from "../apps/feedback/mock-data";
 import type {
   FeedbackAuthor,
   FeedbackCategory,
@@ -24,8 +23,12 @@ interface FeedbackState {
   categoryFilter: FeedbackCategory | null;
   statusFilter: FeedbackStatus | null;
   selectedId: string | null;
+  isLoading: boolean;
+  loadError: string | null;
   isSubmitting: boolean;
   composerError: string | null;
+  /** item IDs for which we've already fetched comments at least once. */
+  commentsLoadedFor: Set<string>;
 }
 
 interface FeedbackActions {
@@ -33,6 +36,8 @@ interface FeedbackActions {
   setCategoryFilter: (category: FeedbackCategory | null) => void;
   setStatusFilter: (status: FeedbackStatus | null) => void;
   selectItem: (id: string | null) => void;
+  loadItems: () => Promise<void>;
+  loadComments: (itemId: string) => Promise<void>;
   createFeedback: (draft: FeedbackDraft) => Promise<FeedbackItem | null>;
   castVote: (id: string, vote: ViewerVote) => void;
   setStatus: (id: string, status: FeedbackStatus) => void;
@@ -51,6 +56,41 @@ function currentAuthor(): FeedbackAuthor {
   };
 }
 
+function dtoToItem(dto: FeedbackItemDto): FeedbackItem {
+  return {
+    id: dto.id,
+    author: {
+      name: dto.authorName ?? "Unknown",
+      avatarUrl: dto.authorAvatar ?? undefined,
+      type: "user",
+    },
+    title: dto.title ?? "",
+    body: dto.summary ?? "",
+    category: dto.category,
+    status: dto.status,
+    upvotes: dto.upvotes,
+    downvotes: dto.downvotes,
+    voteScore: dto.voteScore,
+    viewerVote: dto.viewerVote,
+    commentCount: dto.commentCount,
+    createdAt: dto.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function dtoToComment(dto: FeedbackCommentDto): FeedbackComment {
+  return {
+    id: dto.id,
+    itemId: dto.activityEventId,
+    author: {
+      name: dto.authorName ?? "Unknown",
+      avatarUrl: dto.authorAvatar ?? undefined,
+      type: "user",
+    },
+    text: dto.content,
+    createdAt: dto.createdAt ?? new Date().toISOString(),
+  };
+}
+
 function validateDraft(draft: FeedbackDraft): string | null {
   if (!draft.body.trim()) return "Please write your feedback before submitting.";
   if (draft.title && draft.title.length > 160) return "Title must be 160 characters or fewer.";
@@ -59,8 +99,14 @@ function validateDraft(draft: FeedbackDraft): string | null {
 }
 
 let nextLocalId = 1;
-function newId(prefix: string): string {
+function newLocalId(prefix: string): string {
   return `${prefix}-local-${nextLocalId++}`;
+}
+
+/// Swallow `501 Not Implemented` from phase-2 stub endpoints. Everything else
+/// still bubbles so the UI can react to real failures.
+function isNotImplemented(err: unknown): boolean {
+  return err instanceof ApiClientError && err.status === 501;
 }
 
 function applyVote(item: FeedbackItem, next: ViewerVote): FeedbackItem {
@@ -83,15 +129,18 @@ function applyVote(item: FeedbackItem, next: ViewerVote): FeedbackItem {
   };
 }
 
-export const useFeedbackStore = create<FeedbackStore>()((set) => ({
-  items: MOCK_FEEDBACK_ITEMS,
-  comments: MOCK_FEEDBACK_COMMENTS,
+export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
+  items: [],
+  comments: [],
   sort: "latest",
   categoryFilter: null,
   statusFilter: null,
   selectedId: null,
+  isLoading: false,
+  loadError: null,
   isSubmitting: false,
   composerError: null,
+  commentsLoadedFor: new Set<string>(),
 
   setSort: (sort) => set({ sort }),
 
@@ -99,9 +148,48 @@ export const useFeedbackStore = create<FeedbackStore>()((set) => ({
 
   setStatusFilter: (statusFilter) => set({ statusFilter }),
 
-  selectItem: (id) => set({ selectedId: id }),
+  selectItem: (id) => {
+    set({ selectedId: id });
+    if (id) {
+      void get().loadComments(id);
+    }
+  },
 
   resetComposerError: () => set({ composerError: null }),
+
+  loadItems: async () => {
+    set({ isLoading: true, loadError: null });
+    try {
+      const dtos = await api.feedback.list();
+      set({ items: dtos.map(dtoToItem), isLoading: false });
+    } catch (err) {
+      set({
+        isLoading: false,
+        loadError: err instanceof Error ? err.message : "Failed to load feedback.",
+      });
+    }
+  },
+
+  loadComments: async (itemId) => {
+    if (get().commentsLoadedFor.has(itemId)) return;
+    try {
+      const dtos = await api.feedback.listComments(itemId);
+      const fresh = dtos.map(dtoToComment);
+      set((state) => {
+        const existingIds = new Set(state.comments.map((c) => c.id));
+        const merged = [
+          ...state.comments,
+          ...fresh.filter((c) => !existingIds.has(c.id)),
+        ];
+        const loaded = new Set(state.commentsLoadedFor);
+        loaded.add(itemId);
+        return { comments: merged, commentsLoadedFor: loaded };
+      });
+    } catch {
+      // Leaving commentsLoadedFor untouched means the UI will retry on the
+      // next selection. The sidekick empty-state remains correct either way.
+    }
+  },
 
   createFeedback: async (draft) => {
     const error = validateDraft(draft);
@@ -111,51 +199,65 @@ export const useFeedbackStore = create<FeedbackStore>()((set) => ({
     }
 
     set({ isSubmitting: true, composerError: null });
-
-    const item: FeedbackItem = {
-      id: newId("fb"),
-      author: currentAuthor(),
-      title: draft.title.trim() || draft.body.trim().slice(0, 80),
-      body: draft.body.trim(),
-      category: draft.category,
-      status: draft.status,
-      upvotes: 0,
-      downvotes: 0,
-      voteScore: 0,
-      viewerVote: "none",
-      commentCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    set((state) => ({
-      items: [item, ...state.items],
-      isSubmitting: false,
-      selectedId: item.id,
-    }));
-
-    return item;
+    try {
+      const dto = await api.feedback.create({
+        title: draft.title.trim() || undefined,
+        body: draft.body.trim(),
+        category: draft.category,
+        status: draft.status,
+      });
+      const item = dtoToItem(dto);
+      set((state) => ({
+        items: [item, ...state.items],
+        isSubmitting: false,
+        selectedId: item.id,
+      }));
+      return item;
+    } catch (err) {
+      set({
+        isSubmitting: false,
+        composerError: err instanceof Error ? err.message : "Failed to post feedback.",
+      });
+      return null;
+    }
   },
 
-  castVote: (id, vote) =>
+  castVote: (id, vote) => {
     set((state) => ({
-      items: state.items.map((item) =>
-        item.id === id ? applyVote(item, vote) : item,
-      ),
-    })),
+      items: state.items.map((item) => (item.id === id ? applyVote(item, vote) : item)),
+    }));
+    // Phase 2: vote endpoint returns 501 until aura-network ships the vote
+    // store. Fire-and-forget keeps the optimistic UI snappy; the 501 is
+    // swallowed so we don't surface a scary error for a known-pending
+    // capability.
+    api.feedback.castVote(id, vote).catch((err) => {
+      if (!isNotImplemented(err)) {
+        console.warn("feedback vote failed", err);
+      }
+    });
+  },
 
-  setStatus: (id, status) =>
+  setStatus: (id, status) => {
     set((state) => ({
       items: state.items.map((item) =>
         item.id === id ? { ...item, status } : item,
       ),
-    })),
+    }));
+    // Phase 2: status PATCH is also 501 until aura-network exposes metadata
+    // updates; same optimistic swallow.
+    api.feedback.updateStatus(id, status).catch((err) => {
+      if (!isNotImplemented(err)) {
+        console.warn("feedback status update failed", err);
+      }
+    });
+  },
 
   addComment: (itemId, text) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const comment: FeedbackComment = {
-      id: newId("cm"),
+    const optimistic: FeedbackComment = {
+      id: newLocalId("cm"),
       itemId,
       author: currentAuthor(),
       text: trimmed,
@@ -163,13 +265,33 @@ export const useFeedbackStore = create<FeedbackStore>()((set) => ({
     };
 
     set((state) => ({
-      comments: [...state.comments, comment],
+      comments: [...state.comments, optimistic],
       items: state.items.map((item) =>
         item.id === itemId
           ? { ...item, commentCount: item.commentCount + 1 }
           : item,
       ),
     }));
+
+    api.feedback
+      .addComment(itemId, trimmed)
+      .then((dto) => {
+        const real = dtoToComment(dto);
+        set((state) => ({
+          comments: state.comments.map((c) => (c.id === optimistic.id ? real : c)),
+        }));
+      })
+      .catch((err) => {
+        console.warn("feedback add comment failed", err);
+        set((state) => ({
+          comments: state.comments.filter((c) => c.id !== optimistic.id),
+          items: state.items.map((item) =>
+            item.id === itemId
+              ? { ...item, commentCount: Math.max(0, item.commentCount - 1) }
+              : item,
+          ),
+        }));
+      });
   },
 }));
 
@@ -222,6 +344,8 @@ export function useFeedback() {
       setStatusFilter: s.setStatusFilter,
       selectedId: s.selectedId,
       selectItem: s.selectItem,
+      isLoading: s.isLoading,
+      loadError: s.loadError,
       isSubmitting: s.isSubmitting,
       composerError: s.composerError,
       createFeedback: s.createFeedback,
@@ -263,4 +387,15 @@ export function useFeedbackItem(id: string | null): FeedbackItem | null {
 
 export function useAddFeedbackComment(): (itemId: string, text: string) => void {
   return useFeedbackStore((s) => s.addComment);
+}
+
+/**
+ * Bootstraps the feedback list on mount. Call once from a component that
+ * lives for the lifetime of the Feedback app (e.g. the main panel).
+ */
+export function useFeedbackBootstrap(): void {
+  const loadItems = useFeedbackStore((s) => s.loadItems);
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
 }

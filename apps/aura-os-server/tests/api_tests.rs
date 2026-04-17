@@ -1679,8 +1679,8 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
     // is unreachable, `client.stop()` errors. The handler should still
     // remove the registry entry, emit `loop_stopped`, and return 200 so the
     // UI returns to the Run state instead of getting stuck on Pause/Stop.
-    use aura_os_server::ActiveAutomaton;
     use aura_os_core::AgentInstanceId;
+    use aura_os_server::ActiveAutomaton;
 
     let (app, state, _db) = build_test_app();
 

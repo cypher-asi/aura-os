@@ -38,14 +38,7 @@ async fn mirror_spec_best_effort(
     new_title: &str,
     markdown: &str,
 ) {
-    match mirror_spec_to_disk(
-        StdPath::new(workspace_root),
-        old_title,
-        new_title,
-        markdown,
-    )
-    .await
-    {
+    match mirror_spec_to_disk(StdPath::new(workspace_root), old_title, new_title, markdown).await {
         Ok(path) => info!(path = %path.display(), "spec mirrored to disk"),
         Err(err) => warn!(workspace = %workspace_root, %err, "failed to mirror spec to disk"),
     }

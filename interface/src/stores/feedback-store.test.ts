@@ -1,6 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const feedbackApiMock = vi.hoisted(() => ({
+  list: vi.fn(async () => []),
+  get: vi.fn(),
+  create: vi.fn(),
+  updateStatus: vi.fn(async () => undefined),
+  listComments: vi.fn(async () => []),
+  addComment: vi.fn(),
+  castVote: vi.fn(async () => undefined),
+}));
+
+vi.mock("../api/client", () => ({
+  api: { feedback: feedbackApiMock },
+}));
+
 import { sortItems, useFeedbackStore } from "./feedback-store";
 import type { FeedbackItem } from "../apps/feedback/types";
+import type { FeedbackItemDto } from "../api/feedback";
 
 function makeItem(overrides: Partial<FeedbackItem>): FeedbackItem {
   return {
@@ -67,26 +83,42 @@ describe("sortItems", () => {
   });
 });
 
+function seedItem(id: string, overrides: Partial<FeedbackItem> = {}): FeedbackItem {
+  return makeItem({ id, ...overrides });
+}
+
 describe("useFeedbackStore", () => {
+  beforeEach(() => {
+    feedbackApiMock.list.mockReset().mockResolvedValue([]);
+    feedbackApiMock.create.mockReset();
+    feedbackApiMock.castVote.mockReset().mockResolvedValue(undefined);
+    feedbackApiMock.updateStatus.mockReset().mockResolvedValue(undefined);
+    feedbackApiMock.listComments.mockReset().mockResolvedValue([]);
+    feedbackApiMock.addComment.mockReset();
+    useFeedbackStore.setState({
+      items: [],
+      comments: [],
+      selectedId: null,
+      composerError: null,
+      isSubmitting: false,
+      commentsLoadedFor: new Set<string>(),
+    });
+  });
+
   it("castVote toggles viewerVote and adjusts aggregates", () => {
-    const initial = useFeedbackStore.getState();
-    const firstId = initial.items[0]!.id;
-    const baseline = initial.items[0]!;
+    useFeedbackStore.setState({ items: [seedItem("fb-1")] });
+    useFeedbackStore.getState().castVote("fb-1", "up");
+    const afterUp = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
+    expect(afterUp.viewerVote).toBe("up");
+    expect(afterUp.upvotes).toBe(1);
+    expect(afterUp.voteScore).toBe(1);
 
-    useFeedbackStore.getState().castVote(firstId, "up");
-    const afterUp = useFeedbackStore.getState().items.find((i) => i.id === firstId)!;
-
-    if (baseline.viewerVote === "up") {
-      expect(afterUp.viewerVote).toBe("up");
-    } else {
-      expect(afterUp.viewerVote).toBe("up");
-      expect(afterUp.upvotes).toBe(baseline.upvotes + (baseline.viewerVote === "up" ? 0 : 1));
-      expect(afterUp.voteScore).toBe(afterUp.upvotes - afterUp.downvotes);
-    }
-
-    useFeedbackStore.getState().castVote(firstId, "none");
-    const cleared = useFeedbackStore.getState().items.find((i) => i.id === firstId)!;
+    useFeedbackStore.getState().castVote("fb-1", "none");
+    const cleared = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
     expect(cleared.viewerVote).toBe("none");
+    expect(cleared.upvotes).toBe(0);
+    expect(cleared.voteScore).toBe(0);
+    expect(feedbackApiMock.castVote).toHaveBeenCalledTimes(2);
   });
 
   it("createFeedback rejects an empty body with a composer error", async () => {
@@ -96,13 +128,31 @@ describe("useFeedbackStore", () => {
       category: "bug",
       status: "not_started",
     });
-
     expect(created).toBeNull();
     expect(useFeedbackStore.getState().composerError).not.toBeNull();
+    expect(feedbackApiMock.create).not.toHaveBeenCalled();
   });
 
-  it("createFeedback prepends a new item and selects it", async () => {
-    const before = useFeedbackStore.getState().items.length;
+  it("createFeedback calls the API and prepends the returned item", async () => {
+    const dto: FeedbackItemDto = {
+      id: "fb-new",
+      profileId: "p1",
+      eventType: "feedback",
+      postType: "post",
+      title: "Test",
+      summary: "Body text",
+      category: "feedback",
+      status: "not_started",
+      createdAt: new Date().toISOString(),
+      commentCount: 0,
+      upvotes: 0,
+      downvotes: 0,
+      voteScore: 0,
+      viewerVote: "none",
+      authorName: "Ada",
+    };
+    feedbackApiMock.create.mockResolvedValueOnce(dto);
+
     const created = await useFeedbackStore.getState().createFeedback({
       title: "Test",
       body: "Body text",
@@ -111,9 +161,61 @@ describe("useFeedbackStore", () => {
     });
 
     expect(created).not.toBeNull();
+    expect(feedbackApiMock.create).toHaveBeenCalledWith({
+      title: "Test",
+      body: "Body text",
+      category: "feedback",
+      status: "not_started",
+    });
     const state = useFeedbackStore.getState();
-    expect(state.items.length).toBe(before + 1);
-    expect(state.items[0]!.id).toBe(created!.id);
-    expect(state.selectedId).toBe(created!.id);
+    expect(state.items[0]!.id).toBe("fb-new");
+    expect(state.selectedId).toBe("fb-new");
+  });
+
+  it("createFeedback surfaces a composer error when the API fails", async () => {
+    feedbackApiMock.create.mockRejectedValueOnce(new Error("boom"));
+    const created = await useFeedbackStore.getState().createFeedback({
+      title: "Test",
+      body: "Body text",
+      category: "feedback",
+      status: "not_started",
+    });
+    expect(created).toBeNull();
+    expect(useFeedbackStore.getState().composerError).toContain("boom");
+  });
+
+  it("loadItems maps DTOs and clears load errors on success", async () => {
+    const dto: FeedbackItemDto = {
+      id: "fb-remote",
+      profileId: "p1",
+      eventType: "feedback",
+      postType: "post",
+      title: "remote",
+      summary: "body",
+      category: "bug",
+      status: "in_review",
+      createdAt: "2026-04-17T00:00:00Z",
+      commentCount: 3,
+      upvotes: 4,
+      downvotes: 1,
+      voteScore: 3,
+      viewerVote: "up",
+      authorName: "Grace",
+    };
+    feedbackApiMock.list.mockResolvedValueOnce([dto]);
+
+    await useFeedbackStore.getState().loadItems();
+
+    const state = useFeedbackStore.getState();
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]!.id).toBe("fb-remote");
+    expect(state.items[0]!.voteScore).toBe(3);
+    expect(state.loadError).toBeNull();
+  });
+
+  it("loadItems records a loadError when the API rejects", async () => {
+    feedbackApiMock.list.mockRejectedValueOnce(new Error("network down"));
+    await useFeedbackStore.getState().loadItems();
+    expect(useFeedbackStore.getState().loadError).toContain("network down");
   });
 });

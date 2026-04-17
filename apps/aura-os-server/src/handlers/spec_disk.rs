@@ -68,7 +68,9 @@ pub async fn mirror_spec_to_disk(
             match tokio::fs::remove_file(&old_path).await {
                 Ok(()) => debug!(path = %old_path.display(), "removed stale spec file on rename"),
                 Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
-                Err(err) => warn!(path = %old_path.display(), %err, "failed to remove stale spec file"),
+                Err(err) => {
+                    warn!(path = %old_path.display(), %err, "failed to remove stale spec file")
+                }
             }
         }
     }
@@ -82,10 +84,7 @@ pub async fn mirror_spec_to_disk(
 /// Best-effort delete of the on-disk mirror for a spec. `NotFound` is treated
 /// as success; any other I/O error is surfaced to the caller who can decide
 /// whether to log it.
-pub async fn remove_spec_from_disk(
-    workspace_root: &Path,
-    title: &str,
-) -> std::io::Result<()> {
+pub async fn remove_spec_from_disk(workspace_root: &Path, title: &str) -> std::io::Result<()> {
     let path = spec_disk_path(workspace_root, title);
     match tokio::fs::remove_file(&path).await {
         Ok(()) => Ok(()),
@@ -158,7 +157,9 @@ mod tests {
     #[tokio::test]
     async fn mirror_is_idempotent_when_title_unchanged() {
         let tmp = tempfile::tempdir().unwrap();
-        mirror_spec_to_disk(tmp.path(), None, "Keep", "v1").await.unwrap();
+        mirror_spec_to_disk(tmp.path(), None, "Keep", "v1")
+            .await
+            .unwrap();
         let path = mirror_spec_to_disk(tmp.path(), Some("Keep"), "Keep", "v2")
             .await
             .unwrap();

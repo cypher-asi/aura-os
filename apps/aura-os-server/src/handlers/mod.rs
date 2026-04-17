@@ -3,6 +3,7 @@ pub(crate) mod auth;
 pub(crate) mod billing;
 pub(crate) mod dev_loop;
 pub(crate) mod feed;
+pub(crate) mod feedback;
 pub(crate) mod files;
 pub(crate) mod follows;
 pub(crate) mod generation;

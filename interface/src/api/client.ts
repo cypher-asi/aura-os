@@ -31,6 +31,7 @@ import { orgsApi } from "./orgs";
 import { desktopApi } from "./desktop";
 import { loopApi } from "./loop";
 import { followsApi, usersApi, profilesApi, feedApi, leaderboardApi, platformStatsApi, usageApi, activityApi } from "./social";
+import { feedbackApi } from "./feedback";
 import { environmentApi } from "./environment";
 import { swarmApi } from "./swarm";
 import { processApi } from "./process";
@@ -51,6 +52,7 @@ export const api = {
   users: usersApi,
   profiles: profilesApi,
   feed: feedApi,
+  feedback: feedbackApi,
   leaderboard: leaderboardApi,
   platformStats: platformStatsApi,
   usage: usageApi,
