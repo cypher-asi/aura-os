@@ -106,6 +106,9 @@ jobs:
         env:
           ANDROID_VERSION_CODE: ${{ github.run_number }}
           ANDROID_VERSION_NAME: ${{ steps.version.outputs.version }}
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: nightly
         run: bundle exec fastlane android github_release
 
       - name: Stage Android release artifact
@@ -200,6 +203,10 @@ jobs:
       - name: Build signed iOS nightly IPA
         timeout-minutes: 30
         working-directory: interface/ios
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: nightly
         run: bundle exec fastlane ios github_release
 
       - name: Stage iOS release artifact

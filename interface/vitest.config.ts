@@ -15,6 +15,12 @@ export default defineConfig({
       },
     ],
   },
+  define: {
+    __APP_VERSION__: JSON.stringify("0.0.0-test"),
+    __APP_COMMIT__: JSON.stringify("testcommit"),
+    __APP_BUILD_TIME__: JSON.stringify("2026-04-17T00:00:00.000Z"),
+    __APP_CHANNEL__: JSON.stringify("test"),
+  },
   test: {
     environment: "jsdom",
     globals: true,

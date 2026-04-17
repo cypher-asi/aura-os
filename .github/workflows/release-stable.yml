@@ -231,6 +231,10 @@ jobs:
 
       - name: Build interface
         working-directory: interface
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: stable
         run: |
           npm ci
           npm run build

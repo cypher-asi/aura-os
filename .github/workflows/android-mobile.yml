@@ -167,8 +167,30 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
           echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
 
+      - name: Compute app version
+        id: version
+        shell: bash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          CHANNEL="beta"
+          case "${{ inputs.lane }}" in
+            release) CHANNEL="stable" ;;
+            beta) CHANNEL="beta" ;;
+            preflight) CHANNEL="preflight" ;;
+          esac
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
+            VERSION="${CHANNEL}.${SHORT_SHA}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
+
       - name: Upload bundle with fastlane
         working-directory: interface/android
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: ${{ steps.version.outputs.channel }}
         run: bundle exec fastlane android ${{ inputs.lane }}
 
       - name: Summarize Android release outputs

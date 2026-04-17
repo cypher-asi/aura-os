@@ -1,9 +1,44 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 
-export default defineConfig(({ mode }) => {
+function resolveBuildMeta(isDev: boolean) {
+  const pkgPath = path.resolve(__dirname, "package.json");
+  let pkgVersion = "0.0.0";
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+    if (pkg.version) pkgVersion = pkg.version;
+  } catch {
+    // fall through to default
+  }
+
+  const version = process.env.APP_VERSION || pkgVersion;
+
+  let commit = process.env.APP_COMMIT;
+  if (!commit) {
+    try {
+      commit = execSync("git rev-parse --short HEAD", {
+        cwd: __dirname,
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .toString()
+        .trim();
+    } catch {
+      commit = "local";
+    }
+  }
+  const shortCommit = commit ? commit.slice(0, 12) : "local";
+
+  const channel = process.env.APP_CHANNEL || (isDev ? "dev" : "stable");
+  const buildTime = isDev ? "dev" : new Date().toISOString();
+
+  return { version, commit: shortCommit, channel, buildTime };
+}
+
+export default defineConfig(({ mode, command }) => {
   const repoRoot = path.resolve(__dirname, "..");
   const env = loadEnv(mode, repoRoot, "");
   const serverPort = env.AURA_SERVER_PORT || "3100";
@@ -12,8 +47,15 @@ export default defineConfig(({ mode }) => {
   const vendoredZuiEntry = path.resolve(__dirname, "node_modules/@cypher-asi/zui/src/index.ts");
   const vendoredZuiStyles = path.resolve(__dirname, "node_modules/@cypher-asi/zui/src/styles/index.css");
   const analyzeBundle = mode === "analyze" || process.env.ANALYZE === "1";
+  const buildMeta = resolveBuildMeta(command === "serve");
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(buildMeta.version),
+      __APP_COMMIT__: JSON.stringify(buildMeta.commit),
+      __APP_BUILD_TIME__: JSON.stringify(buildMeta.buildTime),
+      __APP_CHANNEL__: JSON.stringify(buildMeta.channel),
+    },
     plugins: [
       react(),
       analyzeBundle &&

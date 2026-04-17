@@ -133,9 +133,32 @@ jobs:
           echo "VITE_NATIVE_DEFAULT_HOST=${DEFAULT_HOST}" >> "$GITHUB_ENV"
           echo "VITE_IOS_DEFAULT_HOST=${VITE_IOS_DEFAULT_HOST:-$DEFAULT_HOST}" >> "$GITHUB_ENV"
 
+      - name: Compute app version
+        id: version
+        shell: bash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          LANE="${{ github.event_name == 'workflow_dispatch' && inputs.lane || 'beta' }}"
+          CHANNEL="beta"
+          case "$LANE" in
+            release) CHANNEL="stable" ;;
+            beta) CHANNEL="beta" ;;
+            preflight|bootstrap_signing) CHANNEL="preflight" ;;
+          esac
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
+            VERSION="${CHANNEL}.${SHORT_SHA}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
+
       - name: Upload build with fastlane
         timeout-minutes: 30
         working-directory: interface/ios
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_COMMIT: ${{ github.sha }}
+          APP_CHANNEL: ${{ steps.version.outputs.channel }}
         run: bundle exec fastlane ios ${{ github.event_name == 'workflow_dispatch' && inputs.lane || 'beta' }}
 
       - name: Summarize iOS release outputs
