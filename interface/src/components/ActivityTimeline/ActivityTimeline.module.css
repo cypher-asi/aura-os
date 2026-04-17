@@ -18,3 +18,12 @@
   flex-direction: column;
   gap: 0;
 }
+
+/*
+ * Collapse adjacent Block borders so consecutive rows share a single 1px
+ * divider instead of stacking two (top of row N + bottom of row N-1) into
+ * a doubled line.
+ */
+.toolGroup > div + div {
+  margin-top: -1px;
+}
