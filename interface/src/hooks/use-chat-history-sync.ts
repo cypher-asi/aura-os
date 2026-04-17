@@ -106,7 +106,7 @@ export function useChatHistorySync({
 
   const prevHistoryLastMessageAtRef = useRef<string | null>(null);
   useEffect(() => {
-    if (hydrateToStream || historyStatus !== "ready" || !historyKey) {
+    if (historyStatus !== "ready" || !historyKey) {
       prevHistoryLastMessageAtRef.current = historyLastMessageAt;
       return;
     }
@@ -125,6 +125,14 @@ export function useChatHistorySync({
     const streamEntry = getStreamEntry(streamKey);
     const streamCount = streamEntry?.events.length ?? 0;
     if (streamCount === 0) {
+      return;
+    }
+
+    if (hydrateToStream) {
+      // Once a fresh persisted message arrives, prefer server history over
+      // any live-only stream rows. This clears abandoned optimistic error/tool
+      // snapshots without waiting for the message count to grow.
+      resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
       return;
     }
 

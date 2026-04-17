@@ -117,4 +117,63 @@ describe("useChatHistorySync", () => {
     });
     expect(resetEvents).not.toHaveBeenCalled();
   });
+
+  it("re-hydrates persisted history after streaming stops even when counts match", async () => {
+    const resetEvents = vi.fn();
+    const newerHistoryMessages: DisplaySessionEvent[] = [
+      { id: "evt-1", role: "user", content: "Create a spec" },
+      { id: "evt-2", role: "assistant", content: "Spec created" },
+    ];
+
+    mocks.getStreamEntry.mockReturnValue({
+      events: [
+        { id: "evt-1", role: "user", content: "Create a spec" },
+        { id: "error-1", role: "assistant", content: "*Error: Connection lost*" },
+      ] satisfies DisplaySessionEvent[],
+    });
+    mocks.useChatHistory.mockReturnValue({
+      events: mocks.historyMessages,
+      status: "ready",
+      error: null,
+    });
+
+    const { rerender } = renderHook(
+      ({ key }) =>
+        useChatHistorySync({
+          historyKey: key,
+          streamKey: "agent-1",
+          fetchFn: vi.fn(async () => []),
+          resetEvents,
+        }),
+      { initialProps: { key: "agent:agent-1" } },
+    );
+
+    await waitFor(() => {
+      expect(resetEvents).toHaveBeenCalledWith(mocks.historyMessages, {
+        allowWhileStreaming: true,
+      });
+    });
+
+    resetEvents.mockClear();
+    mocks.state.entries["agent:agent-1"] = {
+      events: newerHistoryMessages,
+      status: "ready",
+      fetchedAt: Date.now(),
+      error: null,
+      lastMessageAt: "2026-04-13T00:01:00Z",
+    };
+    mocks.useChatHistory.mockReturnValue({
+      events: newerHistoryMessages,
+      status: "ready",
+      error: null,
+    });
+
+    rerender({ key: "agent:agent-1" });
+
+    await waitFor(() => {
+      expect(resetEvents).toHaveBeenCalledWith(newerHistoryMessages, {
+        allowWhileStreaming: true,
+      });
+    });
+  });
 });
