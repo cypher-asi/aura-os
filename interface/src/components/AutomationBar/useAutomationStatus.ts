@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useEventStore } from "../../stores/event-store/index";
+import { useChatUI } from "../../stores/chat-ui-store";
+import { projectChatHistoryKey } from "../../stores/chat-history-store";
 import type { ProjectId } from "../../types";
 import { EventType } from "../../types/aura-events";
 
@@ -35,6 +37,9 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
+  const streamKey =
+    projectId && agentInstanceId ? projectChatHistoryKey(projectId, agentInstanceId) : null;
+  const { selectedModel } = useChatUI(streamKey ?? "__automation-status__");
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -122,7 +127,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     }
     try {
       setStarting(true);
-      const res = await api.startLoop(projectId, agentInstanceId);
+      const res = await api.startLoop(projectId, agentInstanceId, selectedModel);
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
       setPaused(false); setStarting(false);
     } catch (err) {
@@ -130,7 +135,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Failed to start loop", err);
     }
-  }, [projectId, agentInstanceId, paused]);
+  }, [projectId, agentInstanceId, paused, selectedModel]);
 
   const handlePause = useCallback(async () => {
     try {

@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store/index";
+import { useChatUI } from "../stores/chat-ui-store";
+import { projectChatHistoryKey } from "../stores/chat-history-store";
 import { EventType, type AuraEvent } from "../types/aura-events";
+import { getLastAgent } from "../utils/storage";
 
 interface LoopControlResult {
   loopRunning: boolean;
@@ -15,6 +19,13 @@ interface LoopControlResult {
 export function useLoopControl(projectId: string | undefined): LoopControlResult {
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
+  const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
+  const resolvedAgentInstanceId = agentInstanceId ?? (projectId ? getLastAgent(projectId) : null);
+  const streamKey =
+    projectId && resolvedAgentInstanceId
+      ? projectChatHistoryKey(projectId, resolvedAgentInstanceId)
+      : null;
+  const { selectedModel } = useChatUI(streamKey ?? "__loop-control__");
   const [loopRunning, setLoopRunning] = useState(false);
   const [loopPaused, setLoopPaused] = useState(false);
   const [error, setError] = useState("");
@@ -82,38 +93,38 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
     setError("");
     if (loopPaused) {
       try {
-        await api.resumeLoop(projectId);
+        await api.resumeLoop(projectId, resolvedAgentInstanceId ?? undefined);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to resume loop");
       }
       return;
     }
     try {
-      await api.startLoop(projectId);
+      await api.startLoop(projectId, resolvedAgentInstanceId ?? undefined, selectedModel);
       setLoopRunning(true);
       setLoopPaused(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start loop");
     }
-  }, [projectId, loopPaused]);
+  }, [projectId, loopPaused, resolvedAgentInstanceId, selectedModel]);
 
   const handlePause = useCallback(async () => {
     if (!projectId) return;
     try {
-      await api.pauseLoop(projectId);
+      await api.pauseLoop(projectId, resolvedAgentInstanceId ?? undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to pause loop");
     }
-  }, [projectId]);
+  }, [projectId, resolvedAgentInstanceId]);
 
   const handleStop = useCallback(async () => {
     if (!projectId) return;
     try {
-      await api.stopLoop(projectId);
+      await api.stopLoop(projectId, resolvedAgentInstanceId ?? undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to stop loop");
     }
-  }, [projectId]);
+  }, [projectId, resolvedAgentInstanceId]);
 
   return { loopRunning, loopPaused, error, handleStart, handlePause, handleStop };
 }
