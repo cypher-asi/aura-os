@@ -1107,6 +1107,12 @@ fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> DateTi
         .unwrap_or_else(|| DateTime::<Utc>::from(std::time::UNIX_EPOCH))
 }
 
+/// Pick the most recent session out of a list. No longer used by the chat
+/// history loaders (they now aggregate events across all sessions so prior
+/// sessions stay visible after the user starts a new session), but retained
+/// because its unit tests pin down the `storage_session_sort_key` ordering
+/// contract, which the loaders depend on for "oldest first" concatenation.
+#[cfg(test)]
 fn latest_storage_session(
     sessions: &[aura_os_storage::StorageSession],
 ) -> Option<&aura_os_storage::StorageSession> {
@@ -1148,16 +1154,26 @@ async fn load_latest_agent_events_from_storage_result(
         }
     }
 
-    let Some(session) = latest_storage_session(&sessions_outcome.sessions) else {
-        return Ok(Vec::new());
-    };
+    // Aggregate events across ALL sessions for this agent, oldest first.
+    // Each session is reconstructed independently via events_to_session_history
+    // (so a dangling tool-use in one session cannot bind to a message in
+    // another) and the results are concatenated. "Starting a new session"
+    // therefore no longer hides prior messages from the UI — it only
+    // changes which session new events get written to.
+    let mut ordered: Vec<&aura_os_storage::StorageSession> =
+        sessions_outcome.sessions.iter().collect();
+    ordered.sort_by_key(|session| storage_session_sort_key(session));
 
-    let storage_events = storage.list_events(&session.id, jwt, None, None).await?;
-    Ok(events_to_session_history(
-        &storage_events,
-        session.project_agent_id.as_deref().unwrap_or_default(),
-        session.project_id.as_deref().unwrap_or_default(),
-    ))
+    let mut history = Vec::new();
+    for session in &ordered {
+        let storage_events = storage.list_events(&session.id, jwt, None, None).await?;
+        history.extend(events_to_session_history(
+            &storage_events,
+            session.project_agent_id.as_deref().unwrap_or_default(),
+            session.project_id.as_deref().unwrap_or_default(),
+        ));
+    }
+    Ok(history)
 }
 
 async fn load_project_session_history(
@@ -1172,40 +1188,48 @@ async fn load_project_session_history(
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await?;
     let sessions_total = sessions.len();
-    let Some(session) = latest_storage_session(&sessions) else {
+    if sessions.is_empty() {
         info!(
             %agent_instance_id,
             sessions_total,
             "project session history: no sessions for agent instance"
         );
         return Ok(Vec::new());
-    };
-    let picked_session_id = session.id.clone();
-    let storage_events = storage.list_events(&session.id, &jwt, None, None).await?;
+    }
 
-    // Breakdown of persisted event types so we can distinguish "session has
-    // no events at all" (storage-side issue) from "session has many deltas
-    // but no assistant_message_end" (persistence never produced a terminal
-    // row, e.g. harness errored early and the safety net missed the turn).
-    let events_total = storage_events.len();
-    let user_messages = storage_events
-        .iter()
-        .filter(|e| e.event_type.as_deref() == Some("user_message"))
-        .count();
-    let assistant_ends = storage_events
-        .iter()
-        .filter(|e| e.event_type.as_deref() == Some("assistant_message_end"))
-        .count();
+    // Aggregate events across ALL sessions for this agent instance, oldest
+    // first. Each session is reconstructed independently (see comment in
+    // load_latest_agent_events_from_storage_result) and concatenated so the
+    // UI can display the full multi-session transcript even after the user
+    // started a new session.
+    let mut ordered: Vec<&aura_os_storage::StorageSession> = sessions.iter().collect();
+    ordered.sort_by_key(|session| storage_session_sort_key(session));
 
-    let history = events_to_session_history(
-        &storage_events,
-        &agent_instance_id.to_string(),
-        session.project_id.as_deref().unwrap_or_default(),
-    );
+    let mut history = Vec::new();
+    let mut events_total = 0usize;
+    let mut user_messages = 0usize;
+    let mut assistant_ends = 0usize;
+    for session in &ordered {
+        let storage_events = storage.list_events(&session.id, &jwt, None, None).await?;
+        events_total += storage_events.len();
+        user_messages += storage_events
+            .iter()
+            .filter(|e| e.event_type.as_deref() == Some("user_message"))
+            .count();
+        assistant_ends += storage_events
+            .iter()
+            .filter(|e| e.event_type.as_deref() == Some("assistant_message_end"))
+            .count();
+        history.extend(events_to_session_history(
+            &storage_events,
+            &agent_instance_id.to_string(),
+            session.project_id.as_deref().unwrap_or_default(),
+        ));
+    }
+
     info!(
         %agent_instance_id,
         sessions_total,
-        %picked_session_id,
         events_total,
         user_messages,
         assistant_ends,

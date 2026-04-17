@@ -14,7 +14,6 @@ import { ChatPanel } from "../ChatPanel";
 import {
   projectChatHistoryKey,
   agentHistoryKey,
-  useChatHistoryStore,
 } from "../../stores/chat-history-store";
 import { useSelectedAgent, LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
 import { useProjectsListStore } from "../../stores/projects-list-store";
@@ -242,11 +241,12 @@ function StandaloneAgentChatPanel({
 
   const handleNewSession = useCallback(() => {
     api.agents.resetSession(agentId).catch(() => {});
-    useChatHistoryStore.getState().clearHistory(historyKey);
     markNextSendAsNewSession();
     useContextUsageStore.getState().clearContextUtilization(streamKey);
-    resetEvents([], { allowWhileStreaming: true });
-  }, [agentId, historyKey, markNextSendAsNewSession, streamKey, resetEvents]);
+    // Intentionally keep historyKey cache + stream events so prior messages
+    // remain visible. The next send posts new_session=true and lands in a
+    // fresh storage session; the model's context no longer includes these.
+  }, [agentId, markNextSendAsNewSession, streamKey]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -346,11 +346,12 @@ function ProjectAgentChatPanel({
 
   const handleNewSession = useCallback(() => {
     api.resetInstanceSession(projectId, agentInstanceId).catch(() => {});
-    useChatHistoryStore.getState().clearHistory(historyKey);
     markNextSendAsNewSession();
     useContextUsageStore.getState().clearContextUtilization(streamKey);
-    resetEvents([], { allowWhileStreaming: true });
-  }, [projectId, agentInstanceId, historyKey, markNextSendAsNewSession, streamKey, resetEvents]);
+    // Intentionally keep historyKey cache + stream events so prior messages
+    // remain visible. The next send posts new_session=true and lands in a
+    // fresh storage session; the model's context no longer includes these.
+  }, [projectId, agentInstanceId, markNextSendAsNewSession, streamKey]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
     historyKey,

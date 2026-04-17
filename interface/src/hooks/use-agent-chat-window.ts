@@ -5,7 +5,7 @@ import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useChatHistorySync } from "./use-chat-history-sync";
 import { useDelayedLoading } from "./use-delayed-loading";
 import { useStandaloneAgentMeta } from "./use-agent-chat-meta";
-import { agentHistoryKey, useChatHistoryStore } from "../stores/chat-history-store";
+import { agentHistoryKey } from "../stores/chat-history-store";
 import { useAgentStore } from "../apps/agents/stores";
 import { useProjectsListStore } from "../stores/projects-list-store";
 import { useContextUtilization, useContextUsageStore } from "../stores/context-usage-store";
@@ -100,13 +100,12 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
   const handleNewSession = useCallback(() => {
     if (!agentId) return;
     api.agents.resetSession(agentId).catch(() => {});
-    if (historyKey) {
-      useChatHistoryStore.getState().clearHistory(historyKey);
-    }
     markNextSendAsNewSession();
     useContextUsageStore.getState().clearContextUtilization(streamKey);
-    resetEvents([], { allowWhileStreaming: true });
-  }, [agentId, historyKey, markNextSendAsNewSession, streamKey, resetEvents]);
+    // Intentionally keep historyKey cache + stream events so prior messages
+    // remain visible. The next send posts new_session=true and lands in a
+    // fresh storage session; the model's context no longer includes these.
+  }, [agentId, markNextSendAsNewSession, streamKey]);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
