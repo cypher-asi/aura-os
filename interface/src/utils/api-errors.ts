@@ -1,17 +1,48 @@
 import { ApiClientError } from "../api/core";
 
+/** Messages the upstream sends that carry no useful information on their own. */
+const OPAQUE_UPSTREAM_MESSAGE_PATTERN = /^an internal error occurred\.?$/i;
+
+interface NestedUpstreamError {
+  message?: string;
+  code?: string;
+}
+
+function parseNestedUpstream(body: string): NestedUpstreamError | null {
+  try {
+    const parsed = JSON.parse(body);
+    const inner = parsed?.error;
+    if (inner && typeof inner === "object") {
+      return {
+        message: typeof inner.message === "string" ? inner.message : undefined,
+        code: typeof inner.code === "string" ? inner.code : undefined,
+      };
+    }
+  } catch {
+    // not nested JSON -- caller falls back
+  }
+  return null;
+}
+
 /**
  * Extract a human-readable message from an API error, handling the
  * nested-JSON shape produced by the aura-network proxy layer.
+ *
+ * When the upstream returns an opaque message like "An internal error occurred"
+ * alongside a code (e.g. `DATABASE`), the code is appended so users see at
+ * least one piece of diagnostic context instead of a blind generic message.
  */
 export function getApiErrorMessage(err: unknown): string {
   if (err instanceof ApiClientError) {
-    try {
-      const nested = JSON.parse(err.body.error);
-      const msg = nested?.error?.message?.replace(/^Bad request: /, "");
-      if (msg) return msg;
-    } catch {
-      // not nested JSON -- fall through
+    const nested = parseNestedUpstream(err.body.error);
+    if (nested) {
+      const msg = nested.message?.replace(/^Bad request: /, "");
+      if (msg) {
+        if (nested.code && OPAQUE_UPSTREAM_MESSAGE_PATTERN.test(msg)) {
+          return `${msg} (${nested.code})`;
+        }
+        return msg;
+      }
     }
     return err.body.error;
   }

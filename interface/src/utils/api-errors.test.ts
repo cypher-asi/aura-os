@@ -41,6 +41,32 @@ describe("getApiErrorMessage", () => {
     expect(getApiErrorMessage(err)).toBe(nested);
   });
 
+  it("appends upstream code when the message is opaque", () => {
+    const nested = JSON.stringify({
+      error: { code: "DATABASE", message: "An internal error occurred" },
+    });
+    const err = makeApiError(500, nested);
+    expect(getApiErrorMessage(err)).toBe(
+      "An internal error occurred (DATABASE)",
+    );
+  });
+
+  it("does not append code when the message is already specific", () => {
+    const nested = JSON.stringify({
+      error: { code: "DATABASE", message: "Duplicate key on column foo" },
+    });
+    const err = makeApiError(500, nested);
+    expect(getApiErrorMessage(err)).toBe("Duplicate key on column foo");
+  });
+
+  it("tolerates an opaque message with no code and returns it unchanged", () => {
+    const nested = JSON.stringify({
+      error: { message: "An internal error occurred" },
+    });
+    const err = makeApiError(500, nested);
+    expect(getApiErrorMessage(err)).toBe("An internal error occurred");
+  });
+
   it("falls back to body.error when body.error is not valid JSON", () => {
     const err = makeApiError(400, "plain text error");
     expect(getApiErrorMessage(err)).toBe("plain text error");

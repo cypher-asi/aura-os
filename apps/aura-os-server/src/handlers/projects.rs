@@ -6,7 +6,7 @@ use aura_os_core::{Project, ProjectId};
 use aura_os_projects::UpdateProjectInput;
 
 use crate::dto::{CreateImportedProjectRequest, CreateProjectRequest, UpdateProjectRequest};
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{map_network_error, ApiError, ApiResult, UpstreamErrorContext};
 use crate::state::{AppState, AuthJwt};
 
 use super::projects_helpers::{
@@ -361,7 +361,7 @@ pub(crate) async fn delete_project(
         client
             .delete_project(&project_id.to_string(), &jwt)
             .await
-            .map_err(map_network_error)?;
+            .map_err(|e| map_project_delete_error(&project_id, e))?;
     }
 
     state
@@ -383,6 +383,46 @@ pub(crate) async fn delete_project(
     }
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Translate upstream delete-project errors into user-actionable responses.
+///
+/// The aura-network backend tends to return a generic
+/// `500 {"error":{"code":"DATABASE","message":"An internal error occurred"}}`
+/// when a project can't be deleted because rows in a sibling table still
+/// reference it (agents, sessions, feed entries, etc.). That bubbles up to
+/// the UI as the unhelpful "An internal error occurred". Rewrite the common
+/// cases to a `409 Conflict` with an actionable message, while preserving
+/// the upstream context in `details` for diagnostics.
+fn map_project_delete_error(
+    project_id: &ProjectId,
+    e: aura_os_network::NetworkError,
+) -> (StatusCode, Json<ApiError>) {
+    if let aura_os_network::NetworkError::Server { status, body } = &e {
+        if *status == 500 {
+            let ctx = UpstreamErrorContext::parse(body);
+            if ctx.upstream_code.as_deref() == Some("DATABASE") {
+                tracing::warn!(
+                    %project_id,
+                    upstream_message = ?ctx.upstream_message,
+                    body_preview = %body.chars().take(200).collect::<String>(),
+                    "opaque DATABASE error from aura-network on project delete; \
+                     likely a residual FK (feed, session, swarm, orbit metadata, etc.)",
+                );
+                let detail_msg = ctx
+                    .upstream_message
+                    .as_deref()
+                    .unwrap_or("An internal error occurred");
+                return ApiError::conflict_with_details(
+                    "Project can't be deleted because it still has linked resources \
+                     (e.g. sessions, feed entries, or orbit metadata). Remove or \
+                     archive those first, or archive the project instead.",
+                    format!("upstream: DATABASE - {detail_msg}"),
+                );
+            }
+        }
+    }
+    map_network_error(e)
 }
 
 pub(crate) async fn archive_project(
