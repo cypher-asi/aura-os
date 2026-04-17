@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Explorer } from "@cypher-asi/zui";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
@@ -27,13 +26,11 @@ function truncate(text: string, max: number): string {
 }
 
 export function SessionList({ searchQuery }: { searchQuery: string }) {
-  const navigate = useNavigate();
   const {
     sessions,
     sessionById,
     loading,
     selectedId,
-    setSelectedId,
     removeSession,
     restoreSession,
   } = useSessionListData();
@@ -151,18 +148,6 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
           enableMultiSelect={false}
           defaultExpandedIds={defaultExpandedIds}
           defaultSelectedIds={defaultSelectedIds}
-          onSelect={(ids) => {
-            const id = [...ids].reverse().find((candidate) =>
-              sessionById.has(candidate),
-            );
-            if (!id) return;
-            const session = sessionById.get(id);
-            if (!session) return;
-            setSelectedId(session.session_id);
-            navigate(
-              `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
-            );
-          }}
         />
       </div>
       {menu && (

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../../components/EmptyState";
@@ -127,7 +126,6 @@ export function ChatsTab({
   agent: Agent;
   projectBindings: ProjectBinding[];
 }) {
-  const navigate = useNavigate();
   const { sessions, loading, removeSession, restoreSession } = useAgentSessions(
     agent.agent_id,
     projectBindings,
@@ -226,17 +224,6 @@ export function ChatsTab({
           enableDragDrop={false}
           enableMultiSelect={false}
           defaultExpandedIds={defaultExpandedIds}
-          onSelect={(ids) => {
-            const id = [...ids].reverse().find((candidate) =>
-              sessionById.has(candidate),
-            );
-            if (!id) return;
-            const session = sessionById.get(id);
-            if (!session) return;
-            navigate(
-              `/projects/${session._projectId}/agents/${session._agentInstanceId}?session=${session.session_id}`,
-            );
-          }}
         />
       </div>
       {menu && (

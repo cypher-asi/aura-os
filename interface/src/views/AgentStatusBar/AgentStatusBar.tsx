@@ -16,7 +16,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
   const {
     connected, agents, selectedAgent, sessions, currentTaskTitle,
     dropdownOpen, setDropdownOpen, dropdownRef, sessionCount,
-    setSelectedAgentId, handleSessionClick,
+    setSelectedAgentId,
   } = useAgentStatusBarData(projectId);
 
   const agentOptions = useMemo(
@@ -60,7 +60,6 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
         setDropdownOpen={setDropdownOpen}
         sessionCount={sessionCount}
         sessions={sessions}
-        onSessionClick={handleSessionClick}
       />
 
       <div className={styles.autoRight}>
@@ -78,14 +77,13 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
 }
 
 function SessionDropdown({
-  dropdownRef, dropdownOpen, setDropdownOpen, sessionCount, sessions, onSessionClick,
+  dropdownRef, dropdownOpen, setDropdownOpen, sessionCount, sessions,
 }: {
   dropdownRef: React.RefObject<HTMLDivElement | null>;
   dropdownOpen: boolean;
   setDropdownOpen: (v: boolean) => void;
   sessionCount: number;
   sessions: Session[];
-  onSessionClick: (s: Session) => void;
 }) {
   return (
     <div ref={dropdownRef} className={styles.dropdownWrap}>
@@ -107,7 +105,6 @@ function SessionDropdown({
             return (
               <Item
                 key={session.session_id}
-                onClick={() => onSessionClick(session)}
                 className={styles.sessionItem}
               >
                 <Item.Label>

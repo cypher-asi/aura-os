@@ -4,7 +4,6 @@ import type { AuraEvent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
 import { api } from "../../api/client";
 import { useEventStore } from "../../stores/event-store/index";
-import { useSidekickStore } from "../../stores/sidekick-store";
 import { useClickOutside } from "../../hooks/use-click-outside";
 
 interface AgentEventParams {
@@ -65,13 +64,11 @@ interface AgentStatusBarData {
   setDropdownOpen: (open: boolean) => void;
   dropdownRef: React.RefObject<HTMLDivElement | null>;
   sessionCount: number;
-  handleSessionClick: (session: Session) => void;
 }
 
 export function useAgentStatusBarData(projectId: ProjectId): AgentStatusBarData {
   const connected = useEventStore((s) => s.connected);
   const subscribe = useEventStore((s) => s.subscribe);
-  const viewSession = useSidekickStore((s) => s.viewSession);
   const [agents, setAgents] = useState<AgentInstance[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -118,14 +115,9 @@ export function useAgentStatusBarData(projectId: ProjectId): AgentStatusBarData 
     ? currentTaskTitles[selectedAgent.agent_instance_id] ?? null
     : null;
 
-  const handleSessionClick = useCallback((session: Session) => {
-    setDropdownOpen(false);
-    viewSession(session);
-  }, [viewSession]);
-
   return {
     connected, agents, selectedAgent, selectedAgentId, setSelectedAgentId,
     sessions, currentTaskTitle, dropdownOpen, setDropdownOpen, dropdownRef,
-    sessionCount, handleSessionClick,
+    sessionCount,
   };
 }
