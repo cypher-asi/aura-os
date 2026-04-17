@@ -1,0 +1,212 @@
+/*
+ * Block primitive — unified shell for every non-prose item in the chat lane.
+ *
+ * The body is fixed-height when expanded (~8 lines tall) with an internal
+ * scrollbar. This is the single lever that stabilizes the chat lane: once a
+ * Block is mounted, its height no longer changes as content streams in, so
+ * nothing below can push against nothing above.
+ */
+
+:root {
+  --block-body-lines: 8;
+  --block-body-line-height: 1.5em;
+  --block-body-padding-y: 8px;
+  --block-body-height: calc(var(--block-body-lines) * var(--block-body-line-height) + var(--block-body-padding-y) * 2);
+}
+
+.block {
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.block + .block {
+  margin-top: 2px;
+}
+
+/* ── Status variants ── */
+
+.statusPending .statusDot {
+  background: var(--color-text, #ddd);
+  animation: blockDotPulse 1.5s ease-in-out infinite;
+}
+
+.statusPending .blockTitleText {
+  font-weight: 600;
+  color: var(--color-text, #fff);
+}
+
+.statusDone .statusDot {
+  background: var(--color-success, #4c9);
+}
+
+.statusError .statusDot {
+  background: #f87171;
+}
+
+.statusError .blockTitleText {
+  color: #f87171;
+}
+
+@keyframes blockDotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ── Header ── */
+
+.blockHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  text-align: left;
+}
+
+.blockHeader:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.statusDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-text-muted, #555);
+  transition: background 0.2s ease;
+}
+
+.blockIcon {
+  color: var(--color-text-muted, #888);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.blockTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.blockTitleText {
+  font-weight: 500;
+  color: var(--color-text, #ddd);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.blockSummary {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.blockBadge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--color-text-muted, #777);
+  flex-shrink: 0;
+  padding: 1px 6px;
+}
+
+.blockTrailing {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.blockChevron {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.35;
+  transition: transform 0.2s ease;
+}
+
+.blockChevronExpanded {
+  transform: rotate(90deg);
+}
+
+/*
+ * ── Body wrapper ──
+ *
+ * Collapse/expand uses the grid-template-rows 0fr <-> 1fr trick so the
+ * wrapper can animate height without measuring. When expanded, the inner
+ * `.blockBody` has a fixed max-height with its own scrollbar — layout
+ * surrounding this Block cannot be perturbed by body content streaming in.
+ */
+
+.blockBodyWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 160ms ease, opacity 160ms ease;
+  opacity: 0;
+  border-top: 1px solid transparent;
+}
+
+.blockBodyWrap > * {
+  min-height: 0;
+}
+
+.blockBodyWrapExpanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  border-top-color: var(--color-border, rgba(255, 255, 255, 0.06));
+}
+
+.blockBody {
+  min-height: 0;
+  max-height: var(--block-body-height);
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: var(--block-body-padding-y) 10px;
+  position: relative;
+}
+
+.blockBodyFlush {
+  padding: 0;
+}
+
+/* ── Streaming caret shared across block body renderers ── */
+
+.streamCaret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--color-text, #ddd);
+  animation: streamCaretBlink 1s steps(2, end) infinite;
+}
+
+@keyframes streamCaretBlink {
+  to { opacity: 0; }
+}

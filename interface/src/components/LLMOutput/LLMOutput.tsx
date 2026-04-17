@@ -7,7 +7,7 @@ import {
   normalizeLooseStrongEmphasis,
 } from "../../utils/text-normalize";
 import { ActivityTimeline } from "../ActivityTimeline";
-import { ThinkingRow } from "../ThinkingRow";
+import { ThinkingBlock } from "../Block";
 import { ToolCallsList } from "../ToolRow";
 import { SegmentedContent } from "../SegmentedContent";
 import styles from "./LLMOutput.module.css";
@@ -95,7 +95,7 @@ export function LLMOutput({
       ) : (
         <div className={styles.fallbackStack}>
           {hasThinking && thinkingText && (
-            <ThinkingRow
+            <ThinkingBlock
               text={thinkingText}
               isStreaming={isStreaming}
               durationMs={thinkingDurationMs}

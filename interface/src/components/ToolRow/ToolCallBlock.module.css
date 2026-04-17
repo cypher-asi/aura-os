@@ -1,11 +1,9 @@
 .toolCallsContainer {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 2px;
   margin-bottom: 0;
 }
-
-/* ── Summary header ── */
 
 .toolCallsHeader {
   display: flex;
@@ -19,23 +17,13 @@
   color: var(--color-text-muted, #555);
 }
 
-/* ── Checklist item row ── */
-
-.toolBlock {
-  border: none;
-  border-radius: 0;
-  background: none;
-  overflow: visible;
-  padding-left: 14px;
-}
-
 .toolHeader {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 1px 0;
-  border: none;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
   background: transparent;
   color: var(--color-text-secondary);
   font-family: inherit;
@@ -45,252 +33,11 @@
   text-align: left;
 }
 
-.toolHeader:hover {
-  background: transparent;
-}
-
-/* ── Status dot (replaces checkbox) ── */
-
-.statusDot {
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--color-text-muted, #555);
-  transition: background 0.2s ease;
-}
-
-.taskActive .statusDot {
-  background: var(--color-text, #ddd);
-  animation: dotPulse 1.5s ease-in-out infinite;
-}
-
-.taskActive .toolName {
-  font-weight: 600;
-  color: var(--color-text, #fff);
-}
-
-.taskDone .statusDot {
-  background: var(--color-success, #4c9);
-}
-
-.taskDone .toolName {
-  color: var(--color-text-secondary);
-}
-
-.taskDone .toolSummary {
-  color: var(--color-text-secondary);
-}
-
-.taskError .statusDot {
-  background: #f87171;
-}
-
-.taskError .toolName {
-  color: #f87171;
-}
-
-/* ── Expand chevron (far right) ── */
-
-.toolChevron {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  flex-shrink: 0;
-  opacity: 0.3;
-  transition: transform 0.2s ease;
-}
-
-.toolChevronExpanded {
-  transform: rotate(90deg);
-}
-
-/* ── Shared item parts ── */
-
-.toolName {
-  font-weight: 400;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.toolSummary {
-  color: var(--color-text-secondary);
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-/* ── Expandable detail body ──
-   Height-animated via the grid-template-rows 1fr <-> 0fr trick so the
-   wrapper can shrink smoothly without measuring heights. Pin-to-bottom
-   scroll correction (driven by the ResizeObserver in ChatMessageList)
-   tracks each intermediate height before paint, so collapsing a tool
-   body while pinned appears as a gentle slide rather than a single-frame
-   upward blink. */
-
-.toolBodyWrap {
-  display: grid;
-  grid-template-rows: 0fr;
-  overflow: hidden;
-  transition: grid-template-rows 160ms ease, opacity 160ms ease;
-  opacity: 0;
-}
-
-.toolBodyWrap > * {
-  min-height: 0;
-}
-
-.toolBodyExpanded {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-
-.toolBody {
-  min-height: 0;
-  padding: 6px 0 10px 0;
-}
-
-.section {
-  margin-top: 4px;
-}
-
-.sectionLabel {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--color-text-secondary);
-  margin-bottom: 3px;
-  font-weight: 600;
-}
-
-.json {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  line-height: 1.6;
-  background: transparent;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: 0;
-  padding: 10px 12px;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  color: var(--color-text-secondary);
-  margin: 0;
-}
-
-.errorText {
-  color: #f87171;
-}
-
-/* ── Task created indicator ── */
-
-.taskIndicator {
-  padding: 2px 0;
-  font-size: 12px;
-}
-
-.taskIndicatorRow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.taskIndicatorIcon {
-  color: var(--color-success, #4c9);
-  flex-shrink: 0;
-}
-
-.taskIndicatorLabel {
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.taskIndicatorTitle {
-  color: var(--color-text, #ddd);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.taskIndicatorDesc {
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Artifact refs (created tasks/specs) ── */
-
-.artifactRefs {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 10px;
-}
-
-.artifactRef {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 0;
-}
-
-.artifactRefIcon {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  min-width: 32px;
-}
-
-.artifactRefTitle {
-  font-size: 13px;
-  color: var(--color-text, #ddd);
-}
-
-.generatingHint {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.noMaxHeight {
-  max-height: none;
-}
-
 .showAllButton {
-  padding-left: 0;
+  justify-content: center;
   opacity: 0.7;
 }
 
-.headerErrorText {
-  color: #f87171;
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-.inlineError {
-  color: #f87171;
-  font-size: 11px;
-  padding: 4px 10px;
-}
-
-.inlineErrorCompact {
-  color: #f87171;
-  font-size: 11px;
-  margin-top: 2px;
+.showAllButton:hover {
+  opacity: 1;
 }

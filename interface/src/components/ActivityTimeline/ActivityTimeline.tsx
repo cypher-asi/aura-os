@@ -6,23 +6,9 @@ import {
   flattenListIndentation,
   normalizeLooseStrongEmphasis,
 } from "../../utils/text-normalize";
-import { ThinkingRow } from "../ThinkingRow";
-import { ToolCallBlock } from "../ToolRow";
+import { ThinkingBlock, isAutoExpandedTool, renderToolBlock } from "../Block";
 import { SegmentedContent } from "../SegmentedContent";
 import styles from "./ActivityTimeline.module.css";
-
-// Tools whose body holds useful live-streaming content worth showing
-// automatically (spec draft, file diff/contents, command output). Every
-// other tool -- reads, lists, deletes, transitions, task CRUD, etc. --
-// stays collapsed by default so finalized bubbles read as a tight
-// checklist instead of a wall of JSON.
-const AUTO_EXPAND_TOOLS = new Set([
-  "create_spec",
-  "update_spec",
-  "write_file",
-  "edit_file",
-  "run_command",
-]);
 
 interface ActivityTimelineProps {
   timeline: TimelineItem[];
@@ -57,7 +43,6 @@ export function ActivityTimeline({
     return map;
   }, [toolCalls]);
 
-  // Build flat list of rendered items with their kind
   const items: RenderedItem[] = [];
   for (const item of timeline) {
     if (item.kind === "thinking") {
@@ -66,7 +51,7 @@ export function ActivityTimeline({
         key: item.id,
         kind: "thinking",
         node: (
-          <ThinkingRow
+          <ThinkingBlock
             text={thinkingText}
             isStreaming={isStreaming}
             durationMs={thinkingDurationMs}
@@ -77,25 +62,18 @@ export function ActivityTimeline({
     } else if (item.kind === "tool") {
       const entry = toolCallMap.get(item.toolCallId);
       if (!entry) continue;
-      // Auto-expand only tools with rich live-streaming content (see
-      // AUTO_EXPAND_TOOLS). Reads, lists, deletes and task CRUD stay
-      // collapsed so finalized bubbles don't dump raw JSON on the reader.
-      // Historical bubbles (defaultActivitiesExpanded=false,
-      // entry.pending=false) always start collapsed; just-finalized
-      // bubbles mirror the StreamingBubble's state for the preview tools.
-      const isAutoExpand = AUTO_EXPAND_TOOLS.has(entry.name);
+      // Just-finalized bubbles (defaultActivitiesExpanded=true) mirror the
+      // StreamingBubble's state so the tools with rich live previews stay
+      // visible. Historical bubbles (false) and reads/lists/deletes stay
+      // collapsed so the turn reads as a tight checklist.
+      const auto = isAutoExpandedTool(entry.name);
       const defaultToolExpanded = defaultActivitiesExpanded
-        ? isAutoExpand
-        : entry.pending && isAutoExpand;
+        ? auto
+        : entry.pending && auto;
       items.push({
         key: item.id,
         kind: "tool",
-        node: (
-          <ToolCallBlock
-            entry={entry}
-            defaultExpanded={defaultToolExpanded}
-          />
-        ),
+        node: renderToolBlock(entry, defaultToolExpanded),
       });
     } else {
       const normalized = normalizeLooseStrongEmphasis(
@@ -109,13 +87,11 @@ export function ActivityTimeline({
     }
   }
 
-  // Group consecutive tool items together
   const groups: ReactNode[] = [];
   let i = 0;
   while (i < items.length) {
     const current = items[i];
     if (current.kind === "tool") {
-      // Collect consecutive tools
       const toolItems: RenderedItem[] = [];
       while (i < items.length && items[i].kind === "tool") {
         toolItems.push(items[i]);

@@ -1,0 +1,34 @@
+.thinkingBlock {
+  opacity: 0.65;
+}
+
+.thinkingBlockStreaming {
+  opacity: 1;
+}
+
+.thinkingLabelShimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-text-muted, #aaa) 0%,
+    var(--color-text, #fff) 40%,
+    var(--color-text-muted, #aaa) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.thinkingText {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

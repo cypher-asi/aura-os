@@ -35,7 +35,8 @@ describe("LLMOutput", () => {
       { id: "t1", name: "read_file", input: { path: "foo.ts" }, pending: false },
     ];
     render(<LLMOutput content="" toolCalls={toolCalls} />);
-    expect(screen.getByText(/Read file/i)).toBeInTheDocument();
+    expect(screen.getByText("foo.ts")).toBeInTheDocument();
+    expect(screen.getByText("Read")).toBeInTheDocument();
   });
 
   it("renders ActivityTimeline when timeline is provided", () => {
