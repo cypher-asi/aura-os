@@ -12,6 +12,7 @@
   --block-body-line-height: 1.5em;
   --block-body-padding-y: 8px;
   --block-body-height: calc(var(--block-body-lines) * var(--block-body-line-height) + var(--block-body-padding-y) * 2);
+  --block-header-height: 24px;
 }
 
 .block {
@@ -63,7 +64,11 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 10px;
+  height: var(--block-header-height);
+  min-height: var(--block-header-height);
+  max-height: var(--block-header-height);
+  box-sizing: border-box;
+  padding: 0 10px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -166,10 +171,11 @@
 .blockBodyWrap {
   display: grid;
   grid-template-rows: 0fr;
+  height: 0;
   overflow: hidden;
   transition: grid-template-rows 160ms ease, opacity 160ms ease;
   opacity: 0;
-  border-top: 1px solid transparent;
+  border-top: 0 solid transparent;
 }
 
 .blockBodyWrap > * {
@@ -178,8 +184,9 @@
 
 .blockBodyWrapExpanded {
   grid-template-rows: 1fr;
+  height: auto;
   opacity: 1;
-  border-top-color: var(--color-border, rgba(255, 255, 255, 0.06));
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
 }
 
 .blockBody {
