@@ -47,7 +47,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const effectiveStatus = liveStatus ?? task.status;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
-  const { streamKey } = useTaskStream(task.task_id, isActive);
+  const { streamKey: taskStreamKey } = useTaskStream(task.task_id, isActive);
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
   const elapsed = useElapsedTime(isActive);
 
@@ -97,7 +97,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
     taskOutput, effectiveStatus, effectiveSessionId, isActive, isTerminal,
     elapsed, failReason, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
-    fileOps, notes, showNotes, streamKey,
+    fileOps, notes, showNotes, streamKey: taskStreamKey,
   };
 }
 
