@@ -28,6 +28,7 @@ interface ChatMessageListProps {
   hasOlderMessages?: boolean;
   onContentHeightChange?: (options?: { immediate?: boolean }) => void;
   onInitialAnchorReady?: () => void;
+  isAutoFollowing?: boolean;
 }
 
 const EMPTY_TOOL_CALLS: NonNullable<
@@ -48,6 +49,7 @@ export function ChatMessageList({
   hasOlderMessages,
   onContentHeightChange,
   onInitialAnchorReady,
+  isAutoFollowing = true,
 }: ChatMessageListProps) {
   const {
     isStreaming,
@@ -83,6 +85,9 @@ export function ChatMessageList({
     [messages, heightCache],
   );
 
+  const isAutoFollowingRef = useRef(isAutoFollowing);
+  isAutoFollowingRef.current = isAutoFollowing;
+
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => scrollRef.current,
@@ -91,6 +96,18 @@ export function ChatMessageList({
     overscan: 5,
     gap: MESSAGE_GAP,
   });
+
+  // When the user is pinned to the bottom, keep every item size change
+  // synchronously re-anchored so the visible bottom doesn't pop. The
+  // virtualizer applies the delta to scrollTop inside its own ResizeObserver
+  // callback (pre-paint, same frame as the layout change), eliminating the
+  // one-frame lag between the DOM re-wrap and React's re-render of the
+  // virtualizer wrapper's totalSize. When reading (scrolled up), fall back to
+  // the default behavior that only compensates for items above the viewport.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => {
+    if (isAutoFollowingRef.current) return true;
+    return item.start < instance.getScrollOffset() + instance.scrollAdjustments;
+  };
 
   const measureElementRef = useRef(virtualizer.measureElement);
   measureElementRef.current = virtualizer.measureElement;

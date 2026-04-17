@@ -345,6 +345,7 @@ export function ChatPanel({
                 hasOlderMessages={hasOlderMessages}
                 onContentHeightChange={onContentHeightChange}
                 onInitialAnchorReady={handleInitialAnchorReady}
+                isAutoFollowing={isAutoFollowing}
               />
             </div>
           </div>
