@@ -12,6 +12,7 @@ import {
   CircleUserRound,
   Cpu,
   Cross,
+  FileText,
   FolderOpen,
   GitCommitVertical,
 } from "lucide-react";
@@ -148,6 +149,8 @@ const loadFeedApp = () =>
   import("./feed/FeedApp").then((module) => module.FeedApp);
 const loadFeedbackApp = () =>
   import("./feedback/FeedbackApp").then((module) => module.FeedbackApp);
+const loadNotesApp = () =>
+  import("./notes/NotesApp").then((module) => module.NotesApp);
 const loadProfileApp = () =>
   import("./profile/ProfileApp").then((module) => module.ProfileApp);
 const loadDesktopApp = () =>
@@ -232,6 +235,21 @@ export const apps: AuraApp[] = [
       basePath: "/feed",
     },
     loadFeedApp,
+    {
+      hasResponsiveControls: true,
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "notes",
+      label: "Notes",
+      icon: FileText,
+      basePath: "/notes",
+      searchPlaceholder: "Search notes",
+    },
+    loadNotesApp,
     {
       hasResponsiveControls: true,
       hasSidekickPanel: true,

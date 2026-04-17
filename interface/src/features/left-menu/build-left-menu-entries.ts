@@ -25,12 +25,26 @@ function buildTestId(prefix: string | undefined, nodeId: string): string | undef
   return prefix ? `${prefix}-${nodeId}` : undefined;
 }
 
-function isProjectEmptyNode(node: ExplorerNode): boolean {
-  return node.metadata?.type === "project-empty";
+function isEmptyStateNode(node: ExplorerNode): boolean {
+  const type = node.metadata?.type;
+  // `project-empty` is the original, app-specific sentinel; `empty` is the
+  // generic one new apps (e.g. Notes) should use.
+  return type === "empty" || type === "project-empty";
 }
 
 function isGroupNode(node: ExplorerNode): boolean {
   return Array.isArray(node.children);
+}
+
+function resolveGroupVariant(
+  node: ExplorerNode,
+): "default" | "section" {
+  const variant = node.metadata?.variant;
+  if (variant === "section" || variant === "default") {
+    return variant;
+  }
+  // Backwards-compat: Agents uses `type: "agent-group"` for section headers.
+  return node.metadata?.type === "agent-group" ? "section" : "default";
 }
 
 function buildLeafEntry(
@@ -70,9 +84,9 @@ function buildGroupEntry(
   node: ExplorerNodeWithSuffix,
   options: BuildLeftMenuEntriesOptions,
 ): LeftMenuGroupEntry {
-  const emptyNode = node.children?.find(isProjectEmptyNode);
+  const emptyNode = node.children?.find(isEmptyStateNode);
   const childEntries = (node.children ?? [])
-    .filter((childNode) => !isProjectEmptyNode(childNode))
+    .filter((childNode) => !isEmptyStateNode(childNode))
     .map((childNode) =>
       isGroupNode(childNode)
         ? buildGroupEntry(childNode, options)
@@ -89,7 +103,7 @@ function buildGroupEntry(
     id: node.id,
     label: node.label,
     suffix: node.suffix,
-    variant: node.metadata?.type === "agent-group" ? "section" : "default",
+    variant: resolveGroupVariant(node),
     expanded: Boolean(options.searchActive) || options.expandedIds.has(node.id),
     selected: options.selectedGroupIds?.has(node.id),
     testId: buildTestId(options.groupTestIdPrefix, node.id),

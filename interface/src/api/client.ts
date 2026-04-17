@@ -37,6 +37,7 @@ import { swarmApi } from "./swarm";
 import { processApi } from "./process";
 import { memoryApi } from "./memory";
 import { harnessSkillsApi } from "./harness-skills";
+import { notesApi } from "./notes";
 
 export const api = {
   auth: authApi,
@@ -63,4 +64,5 @@ export const api = {
   process: processApi,
   memory: memoryApi,
   harnessSkills: harnessSkillsApi,
+  notes: notesApi,
 };

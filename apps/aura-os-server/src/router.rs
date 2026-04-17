@@ -12,7 +12,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
     agents, auth, billing, dev_loop, feed, feedback, files, follows, generation, harness_proxy,
-    leaderboard, log, org_tools, orgs, process, project_stats, projects, remote_files,
+    leaderboard, log, notes, org_tools, orgs, process, project_stats, projects, remote_files,
     remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
@@ -87,6 +87,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(process_routes())
         .merge(generation_routes())
         .merge(harness_proxy_routes())
+        .merge(notes_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -648,6 +649,40 @@ fn harness_proxy_routes() -> Router<AppState> {
         .route(
             "/api/skills/:category/:name/content",
             get(harness_proxy::get_skill_content),
+        )
+}
+
+fn notes_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/notes/projects/:project_id/tree",
+            get(notes::list_tree),
+        )
+        .route(
+            "/api/notes/projects/:project_id/read",
+            get(notes::read_note),
+        )
+        .route(
+            "/api/notes/projects/:project_id/write",
+            post(notes::write_note),
+        )
+        .route(
+            "/api/notes/projects/:project_id/create",
+            post(notes::create_entry),
+        )
+        .route(
+            "/api/notes/projects/:project_id/rename",
+            post(notes::rename_entry),
+        )
+        .route(
+            "/api/notes/projects/:project_id/delete",
+            post(notes::delete_entry),
+        )
+        .route(
+            "/api/notes/projects/:project_id/comments",
+            get(notes::list_comments)
+                .post(notes::add_comment)
+                .delete(notes::delete_comment),
         )
 }
 

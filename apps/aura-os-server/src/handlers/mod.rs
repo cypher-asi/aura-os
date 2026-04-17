@@ -10,6 +10,7 @@ pub(crate) mod generation;
 pub(crate) mod harness_proxy;
 pub(crate) mod leaderboard;
 pub(crate) mod log;
+pub(crate) mod notes;
 pub(crate) mod org_tools;
 pub(crate) mod orgs;
 pub(crate) mod permissions;
