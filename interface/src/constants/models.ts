@@ -9,6 +9,7 @@ export interface ModelOption {
 
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   { id: "aura-claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
+  { id: "aura-claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
   { id: "aura-claude-opus-4-7", label: "Opus 4.7", tier: "opus", mode: "chat" },
   { id: "aura-claude-haiku-4-5", label: "Haiku 4.5", tier: "haiku", mode: "chat" },
   { id: "aura-gpt-5-4", label: "GPT-5.4", tier: "gpt", mode: "chat" },
@@ -32,9 +33,9 @@ export const AVAILABLE_MODELS: ModelOption[] = [
 ];
 
 const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
-  "aura-claude-opus-4-6": "aura-claude-opus-4-7",
+  "aura-claude-opus-4-6": "aura-claude-opus-4-6",
   "claude-opus-4-7": "aura-claude-opus-4-7",
-  "claude-opus-4-6": "aura-claude-opus-4-7",
+  "claude-opus-4-6": "aura-claude-opus-4-6",
   "aura-claude-sonnet-4-6": "aura-claude-sonnet-4-6",
   "claude-sonnet-4-6": "aura-claude-sonnet-4-6",
   "aura-claude-haiku-4-5": "aura-claude-haiku-4-5",
