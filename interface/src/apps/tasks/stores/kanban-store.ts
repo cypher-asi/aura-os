@@ -26,11 +26,35 @@ function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => a.order_index - b.order_index);
 }
 
+function isTerminalTaskStatus(status: Task["status"] | undefined): boolean {
+  return status === "done" || status === "failed";
+}
+
+// Guard against stale `task_saved` broadcasts or `listTasks` refetches that
+// arrive after the client has already observed an authoritative
+// `task_completed`/`task_failed` WS event. The DB status transition runs on a
+// separate code path from the completion event, so storage snapshots can still
+// carry the pre-completion status. Without this guard the Kanban board drops
+// tasks out of the Done lane when the user enters mid-automation. Mirrors the
+// logic in `useTaskListData.ts` and `sidekick-store.ts`.
+function preserveTerminalStatus(existing: Task | undefined, incoming: Task): Task {
+  if (!existing) return incoming;
+  if (!isTerminalTaskStatus(existing.status)) return incoming;
+  if (isTerminalTaskStatus(incoming.status)) return incoming;
+  return {
+    ...incoming,
+    status: existing.status,
+    execution_notes: existing.execution_notes ?? incoming.execution_notes,
+    files_changed: existing.files_changed ?? incoming.files_changed,
+  };
+}
+
 function upsertTask(tasks: Task[], task: Task): Task[] {
   const index = tasks.findIndex((candidate) => candidate.task_id === task.task_id);
-  if (index === -1) return sortTasks([...tasks, task]);
+  const effective = preserveTerminalStatus(tasks[index], task);
+  if (index === -1) return sortTasks([...tasks, effective]);
   const next = [...tasks];
-  next[index] = task;
+  next[index] = effective;
   return sortTasks(next);
 }
 
@@ -44,14 +68,19 @@ export const useKanbanStore = create<KanbanState>()((set, get) => ({
 
     set((s) => ({ loading: { ...s.loading, [projectId]: true } }));
     try {
-      const tasks = await tasksApi.listTasks(projectId);
-      set((s) => ({
-        tasksByProject: {
-          ...s.tasksByProject,
-          [projectId]: { tasks: sortTasks(tasks), fetchedAt: Date.now() },
-        },
-        loading: { ...s.loading, [projectId]: false },
-      }));
+      const fetched = await tasksApi.listTasks(projectId);
+      set((s) => {
+        const prev = s.tasksByProject[projectId]?.tasks ?? [];
+        const prevById = new Map(prev.map((t) => [t.task_id, t]));
+        const merged = fetched.map((t) => preserveTerminalStatus(prevById.get(t.task_id), t));
+        return {
+          tasksByProject: {
+            ...s.tasksByProject,
+            [projectId]: { tasks: sortTasks(merged), fetchedAt: Date.now() },
+          },
+          loading: { ...s.loading, [projectId]: false },
+        };
+      });
     } catch {
       set((s) => ({ loading: { ...s.loading, [projectId]: false } }));
     }
