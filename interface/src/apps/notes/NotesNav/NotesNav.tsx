@@ -10,12 +10,24 @@ import {
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton/ProjectsPlusButton";
+import { ExplorerContextMenu } from "../../../components/ProjectList/ExplorerContextMenu";
+import { ProjectListModals } from "../../../components/ProjectList/ProjectListModals";
+import { useProjectListActions } from "../../../hooks/use-project-list-actions";
 import leftMenuStyles from "../../../features/left-menu/LeftMenuTree/LeftMenuTree.module.css";
 import {
   useNotesStore,
   type NotesProjectTree,
 } from "../../../stores/notes-store";
 import type { NotesTreeNode } from "../../../api/notes";
+import {
+  folderIdFor,
+  noteIdFor,
+  parseNotesExplorerId,
+  projectIdFor,
+} from "./notes-explorer-ids";
+import { NotesEntryContextMenu } from "./NotesEntryContextMenu";
+import { NotesEntryModals } from "./NotesEntryModals";
+import { useNotesContextMenu } from "./useNotesContextMenu";
 
 function hoverPlusSuffix(onClick: () => void, title: string): ExplorerNode["suffix"] {
   return (
@@ -30,43 +42,6 @@ function hoverPlusSuffix(onClick: () => void, title: string): ExplorerNode["suff
       />
     </span>
   );
-}
-
-function noteIdFor(projectId: string, relPath: string): string {
-  return `note::${projectId}::${relPath}`;
-}
-
-function folderIdFor(projectId: string, relPath: string): string {
-  return `folder::${projectId}::${relPath}`;
-}
-
-function parseExplorerId(
-  id: string,
-): { kind: "project" | "note" | "folder"; projectId: string; relPath: string } | null {
-  if (id.startsWith("note::")) {
-    const body = id.slice("note::".length);
-    const sep = body.indexOf("::");
-    if (sep === -1) return null;
-    return {
-      kind: "note",
-      projectId: body.slice(0, sep),
-      relPath: body.slice(sep + 2),
-    };
-  }
-  if (id.startsWith("folder::")) {
-    const body = id.slice("folder::".length);
-    const sep = body.indexOf("::");
-    if (sep === -1) return null;
-    return {
-      kind: "folder",
-      projectId: body.slice(0, sep),
-      relPath: body.slice(sep + 2),
-    };
-  }
-  if (id.startsWith("project::")) {
-    return { kind: "project", projectId: id.slice("project::".length), relPath: "" };
-  }
-  return null;
 }
 
 function buildTreeNodes(
@@ -129,6 +104,13 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
 
   const { setAction } = useSidebarSearch("notes");
 
+  const projectActions = useProjectListActions();
+  const projectMap = useMemo(
+    () => new Map(projects.map((p) => [p.project_id, p])),
+    [projects],
+  );
+  const notesMenu = useNotesContextMenu({ projectActions, projectMap });
+
   useEffect(() => {
     if (!refreshedOnce.current && !loadingProjects && projects.length === 0) {
       refreshedOnce.current = true;
@@ -145,7 +127,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
   }, [projects, trees, loadTree]);
 
   const defaultExpandedIds = useMemo(() => {
-    return projects.map((project) => `project::${project.project_id}`);
+    return projects.map((project) => projectIdFor(project.project_id));
   }, [projects]);
 
   const { expandedIds, toggleGroup } = useLeftMenuExpandedGroups(defaultExpandedIds);
@@ -179,7 +161,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
           )
         : [];
       return {
-        id: `project::${projectId}`,
+        id: projectIdFor(projectId),
         label: project.name,
         children,
         suffix: hoverPlusSuffix(
@@ -215,7 +197,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
       buildLeftMenuEntries(data, {
         expandedIds: expandedIdsSet,
         onGroupActivate: (id) => {
-          const parsed = parseExplorerId(id);
+          const parsed = parseNotesExplorerId(id);
           if (parsed?.kind === "project" || parsed?.kind === "folder") {
             toggleGroup(id);
           }
@@ -223,7 +205,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
         onGroupToggle: (id) => toggleGroup(id),
         groupToggleMode: "secondary",
         onItemSelect: (id) => {
-          const parsed = parseExplorerId(id);
+          const parsed = parseNotesExplorerId(id);
           if (parsed?.kind === "note") {
             selectNote(parsed.projectId, parsed.relPath);
             navigate(
@@ -254,8 +236,18 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
           Create a project first to start adding notes.
         </div>
       ) : (
-        <LeftMenuTree ariaLabel="Notes navigation" entries={entries} />
+        <LeftMenuTree
+          ariaLabel="Notes navigation"
+          entries={entries}
+          onContextMenu={notesMenu.handleContextMenu}
+          onKeyDown={notesMenu.handleKeyDown}
+        />
       )}
+
+      <ExplorerContextMenu actions={projectActions} />
+      <ProjectListModals actions={projectActions} />
+      <NotesEntryContextMenu actions={notesMenu} />
+      <NotesEntryModals actions={notesMenu} />
     </div>
   );
 }
