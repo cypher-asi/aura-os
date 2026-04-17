@@ -111,6 +111,10 @@ pub struct SessionProviderConfig {
     /// Optional routing mode (`direct` or `proxy`).
     #[serde(default)]
     pub routing_mode: Option<String>,
+    /// Optional upstream provider family hint for managed proxy routing.
+    /// When set, harness proxy capability decisions prefer this over model-name heuristics.
+    #[serde(default)]
+    pub upstream_provider_family: Option<String>,
     /// Optional API key for direct provider access.
     #[serde(default)]
     pub api_key: Option<String>,
@@ -133,6 +137,7 @@ impl fmt::Debug for SessionProviderConfig {
         f.debug_struct("SessionProviderConfig")
             .field("provider", &self.provider)
             .field("routing_mode", &self.routing_mode)
+            .field("upstream_provider_family", &self.upstream_provider_family)
             .field("api_key", &self.api_key.as_ref().map(|_| "<redacted>"))
             .field("base_url", &self.base_url)
             .field("default_model", &self.default_model)

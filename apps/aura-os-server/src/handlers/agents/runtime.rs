@@ -446,9 +446,27 @@ async fn resolve_integration_inner(
 }
 
 pub(crate) fn build_harness_provider_config(
+    auth_source: &str,
     integration: Option<&ResolvedIntegration>,
     model: Option<&str>,
 ) -> ApiResult<Option<SessionProviderConfig>> {
+    if auth_source == "aura_managed" {
+        let default_model = model
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        return Ok(Some(SessionProviderConfig {
+            provider: "anthropic".to_string(),
+            routing_mode: Some("proxy".to_string()),
+            upstream_provider_family: harness_upstream_provider_family(model),
+            api_key: None,
+            base_url: None,
+            default_model,
+            fallback_model: None,
+            prompt_caching_enabled: Some(true),
+        }));
+    }
+
     let Some(integration) = integration else {
         return Ok(None);
     };
@@ -457,6 +475,7 @@ pub(crate) fn build_harness_provider_config(
         "anthropic" => Ok(Some(SessionProviderConfig {
             provider: "anthropic".to_string(),
             routing_mode: Some("direct".to_string()),
+            upstream_provider_family: None,
             api_key: integration.secret.clone(),
             base_url: None,
             default_model: model
@@ -470,6 +489,28 @@ pub(crate) fn build_harness_provider_config(
         other => Err(ApiError::bad_request(format!(
             "Aura currently supports org integrations only for the Anthropic provider, received `{other}`"
         ))),
+    }
+}
+
+fn harness_upstream_provider_family(model: Option<&str>) -> Option<String> {
+    let model = model?.trim().to_ascii_lowercase();
+    if model.is_empty() {
+        return None;
+    }
+
+    if model.starts_with("aura-claude") || model.starts_with("claude") {
+        Some("anthropic".to_string())
+    } else if model.starts_with("aura-gpt")
+        || model.starts_with("aura-o")
+        || model.starts_with("gpt")
+        || model.starts_with("o1")
+        || model.starts_with("o3")
+        || model.starts_with("o4")
+        || model.starts_with("codex")
+    {
+        Some("openai".to_string())
+    } else {
+        None
     }
 }
 
@@ -499,7 +540,11 @@ async fn run_harness_test(
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
         token: Some(jwt.to_string()),
-        provider_config: build_harness_provider_config(integration, model.as_deref())?,
+        provider_config: build_harness_provider_config(
+            &agent.auth_source,
+            integration,
+            model.as_deref(),
+        )?,
         installed_tools,
         installed_integrations,
         ..Default::default()
@@ -2151,7 +2196,8 @@ async fn build_external_prompt(
 mod tests {
     use super::{
         claude_tool_results, claude_tool_use_starts, codex_tool_result, codex_tool_use_start,
-        codex_turn_usage, parse_cursor_output, parse_gemini_output, parse_opencode_output,
+        codex_turn_usage, harness_upstream_provider_family, parse_cursor_output,
+        parse_gemini_output, parse_opencode_output,
     };
     use crate::handlers::agents::workspace_tools::{
         shared_workspace_tools, WorkspaceToolSourceKind,
@@ -2259,6 +2305,19 @@ mod tests {
 
         assert_eq!(outcome.text, "hello from cursor");
         assert_eq!(outcome.usage.provider, "cursor");
+    }
+
+    #[test]
+    fn harness_upstream_provider_family_maps_aura_managed_models() {
+        assert_eq!(
+            harness_upstream_provider_family(Some("aura-gpt-4.1")),
+            Some("openai".to_string())
+        );
+        assert_eq!(
+            harness_upstream_provider_family(Some("aura-claude-sonnet-4-6")),
+            Some("anthropic".to_string())
+        );
+        assert_eq!(harness_upstream_provider_family(Some("unknown-model")), None);
     }
 
     #[test]
