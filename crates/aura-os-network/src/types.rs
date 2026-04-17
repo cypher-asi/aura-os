@@ -555,23 +555,6 @@ pub struct UsageStats {
     pub total_cost_usd: f64,
 }
 
-/// Per-project token usage returned by `GET /internal/projects/:projectId/usage`.
-///
-/// Populated upstream by aura-router on every proxied LLM call. Fields are in
-/// camelCase on the wire (matching aura-network's API contract).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProjectUsage {
-    #[serde(default)]
-    pub total_input_tokens: u64,
-    #[serde(default)]
-    pub total_output_tokens: u64,
-    #[serde(default)]
-    pub total_tokens: u64,
-    #[serde(default)]
-    pub total_cost_usd: f64,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MemberUsageStats {

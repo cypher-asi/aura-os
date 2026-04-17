@@ -16,9 +16,6 @@ pub enum NetworkError {
 
     #[error("aura-network health check failed: {0}")]
     HealthCheckFailed(String),
-
-    #[error("validation error: {0}")]
-    Validation(String),
 }
 
 impl NetworkError {

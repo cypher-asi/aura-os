@@ -83,7 +83,6 @@ Edit `.env` and set:
 | `BILLING_SERVER_URL` | No | Credits/billing server (default: `https://billing.zero.tech`) |
 | `AURA_NETWORK_URL` | No | aura-network backend for orgs/sync (e.g. `https://your-network-host.example.com`). Omit for local-only. |
 | `AURA_NETWORK_AUTH_TOKEN` | No | Auth token for aura-network (when using `AURA_NETWORK_URL`) |
-| `AURA_NETWORK_INTERNAL_TOKEN` | No | Shared service-to-service secret for aura-network's `/internal/*` endpoints (required for per-project token/cost totals on the project stats grid). |
 | `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://your-storage-host.example.com`). Omit to disable. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
 | `GITHUB_APP_*` | No | GitHub App ID, private key, and slug for repository linking |
@@ -428,7 +427,7 @@ For the current release-build plan and workflow map, see:
 
 ### Optional services
 
-- **aura-network** — When `AURA_NETWORK_URL` (and optionally `AURA_NETWORK_AUTH_TOKEN`) is set, the app can sync organizations and projects with a shared backend (e.g. `https://your-network-host.example.com`). Set `AURA_NETWORK_INTERNAL_TOKEN` to unlock per-project token/cost totals on the project stats grid (queried via aura-network's internal `/internal/projects/:projectId/usage` endpoint).
+- **aura-network** — When `AURA_NETWORK_URL` (and optionally `AURA_NETWORK_AUTH_TOKEN`) is set, the app can sync organizations and projects with a shared backend (e.g. `https://your-network-host.example.com`).
 - **aura-storage** — When `AURA_STORAGE_URL` is set, execution data can be stored in a remote store (e.g. `https://your-storage-host.example.com`). Omit for local-only execution.
 - **Billing** — `BILLING_SERVER_URL` defaults to `https://billing.zero.tech`; set `BILLING_INTERNAL_TOKEN` if your billing server requires it.
 - **Orbit** — Third-party standalone service for Git/repo hosting. Set `ORBIT_BASE_URL` to the Orbit service URL (e.g. `https://orbit.your-domain.com` or `http://localhost:PORT`). Aura does not run Orbit; it only connects to it as a client.

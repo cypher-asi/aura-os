@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
-use tracing::{info, warn};
+use tracing::info;
 
 use aura_os_core::ProjectId;
 use aura_os_storage::ProjectStats;
@@ -87,58 +87,5 @@ pub(crate) async fn get_project_stats(
         storage_estimated_cost_usd = stats.estimated_cost_usd,
         "aura-storage project stats fetched"
     );
-    let mut resp = ProjectStatsResponse::from(stats);
-
-    // aura-storage's /api/stats endpoint historically reports 0 tokens/cost for
-    // interactive chat turns because only the automaton dev-loop calls
-    // `report_usage`. aura-router already tracks per-project usage on every
-    // proxied LLM call, so when an internal token is available we overlay the
-    // authoritative numbers from aura-network's internal endpoint.
-    match state.network_client.as_ref() {
-        Some(net) if net.has_internal_token() => {
-            match net.get_project_usage(&project_id.to_string(), None).await {
-                Ok(usage) => {
-                    // Log at info so the response is visible without tweaking
-                    // RUST_LOG while diagnosing mismatches between the grid
-                    // tiles (e.g. non-zero cost + zero tokens).
-                    info!(
-                        %project_id,
-                        total_tokens = usage.total_tokens,
-                        total_input_tokens = usage.total_input_tokens,
-                        total_output_tokens = usage.total_output_tokens,
-                        total_cost_usd = usage.total_cost_usd,
-                        storage_total_tokens = resp.total_tokens,
-                        storage_estimated_cost_usd = resp.estimated_cost_usd,
-                        "aura-network project usage fetched"
-                    );
-                    // Some aura-network deployments return `totalTokens = 0`
-                    // while still emitting non-zero `totalInputTokens` /
-                    // `totalOutputTokens` / `totalCostUsd`, because the
-                    // aggregate column isn't always populated. Fall back to
-                    // the component columns so the UI stays consistent with
-                    // cost instead of showing $0.11 alongside 0 tokens.
-                    let summed = usage
-                        .total_input_tokens
-                        .saturating_add(usage.total_output_tokens);
-                    resp.total_tokens = if usage.total_tokens > 0 {
-                        usage.total_tokens
-                    } else {
-                        summed
-                    };
-                    resp.estimated_cost_usd = usage.total_cost_usd;
-                }
-                Err(error) => {
-                    warn!(%project_id, %error, "aura-network project usage fetch failed; using storage values");
-                }
-            }
-        }
-        Some(_) => {
-            info!(%project_id, "aura-network internal token not configured; project stats tokens/cost come from aura-storage only");
-        }
-        None => {
-            info!(%project_id, "aura-network client disabled; project stats tokens/cost come from aura-storage only");
-        }
-    }
-
-    Ok(Json(resp))
+    Ok(Json(ProjectStatsResponse::from(stats)))
 }
