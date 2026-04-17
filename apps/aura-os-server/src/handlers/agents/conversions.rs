@@ -208,9 +208,18 @@ pub fn events_to_session_history(
                     .and_then(|c| c.get("text"))
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
+                // Deserialize per-block so a single malformed or unknown block
+                // variant (e.g. an image block written by a future client, or
+                // a legacy shape) does not silently nuke the entire user
+                // message. A strict `Vec<ChatContentBlock>` deserialize would
+                // return `None` on any mismatch, which — combined with the
+                // empty-content check on the display side — causes image-only
+                // or attachment-only user turns to disappear on reopen.
                 let content_blocks: Option<Vec<ChatContentBlock>> = content
                     .and_then(|c| c.get("content_blocks"))
-                    .and_then(|v| serde_json::from_value(v.clone()).ok());
+                    .and_then(|v| v.as_array().cloned())
+                    .map(|raw_blocks| deserialize_content_blocks(&event.id, raw_blocks))
+                    .filter(|blocks| !blocks.is_empty());
                 messages.push(SessionEvent {
                     event_id: SessionEventId::new(),
                     agent_instance_id,
@@ -447,6 +456,52 @@ mod tests {
         assert_eq!(history.len(), 1);
         let blocks = history[0].content_blocks.as_ref().unwrap();
         assert_eq!(blocks.len(), 2, "known blocks survive, unknown is skipped");
+    }
+
+    #[test]
+    fn events_to_session_history_preserves_user_image_only_turns() {
+        // Regression: user messages with only image attachments (no text)
+        // round-trip via JSON where a single malformed/unknown block would
+        // previously clear the whole content_blocks vec. After clearing,
+        // the display filter (empty content + empty blocks) would drop the
+        // whole turn, and users would see "my conversation is missing
+        // random messages" on reopen.
+        let events = vec![StorageSessionEvent {
+            id: "evt-1".to_string(),
+            session_id: Some("session-1".to_string()),
+            user_id: None,
+            agent_id: None,
+            sender: Some("user".to_string()),
+            project_id: Some("project-1".to_string()),
+            org_id: None,
+            event_type: Some("user_message".to_string()),
+            content: Some(serde_json::json!({
+                "text": "",
+                "content_blocks": [
+                    {
+                        "type": "image",
+                        "media_type": "image/png",
+                        "data": "aGVsbG8=",
+                    },
+                    { "type": "future_variant_we_dont_know_about", "foo": 1 },
+                ]
+            })),
+            created_at: Some("2026-01-01T00:00:00Z".to_string()),
+        }];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 1, "image-only user turn must survive");
+        let blocks = history[0]
+            .content_blocks
+            .as_ref()
+            .expect("content_blocks preserved");
+        assert_eq!(
+            blocks.len(),
+            1,
+            "known image block kept; unknown block skipped"
+        );
+        assert!(matches!(blocks[0], ChatContentBlock::Image { .. }));
     }
 
     #[test]

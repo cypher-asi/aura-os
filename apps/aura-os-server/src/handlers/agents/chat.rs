@@ -9,8 +9,9 @@ use axum::Json;
 use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub(crate) type SseStream =
     Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
@@ -66,12 +67,20 @@ async fn resolve_chat_session(
 ) -> Option<String> {
     if !force_new {
         match storage.list_sessions(project_agent_id, jwt).await {
-            Ok(sessions) => {
-                for session in sessions.iter().rev() {
+            Ok(mut sessions) => {
+                // Sort by the same recency key the reader uses so a writer
+                // never lands in a different session than
+                // `load_project_session_history` will later read from.
+                // Storage may return sessions in any order (insertion,
+                // alphanumeric id, etc.); we want newest-by-timestamp first.
+                sessions.sort_by(|a, b| {
+                    storage_session_sort_key(b).cmp(&storage_session_sort_key(a))
+                });
+                for session in sessions.iter() {
                     match storage.list_events(&session.id, jwt, Some(1), None).await {
                         Ok(_) => return Some(session.id.clone()),
                         Err(e) => {
-                            tracing::debug!(
+                            debug!(
                                 session_id = %session.id,
                                 error = %e,
                                 "Skipping stale session during resolution"
@@ -405,6 +414,57 @@ pub(crate) fn spawn_chat_persist_task(
                             .await
                             {
                                 persisted_events += 1;
+                            }
+
+                            // If the harness errored before producing any
+                            // text, thinking, or tool blocks (e.g. auth,
+                            // credits, provider 4xx on first byte), no
+                            // `assistant_message_end` will ever arrive. The
+                            // broadcast-closed safety net below only fires
+                            // when *some* output has accumulated, so the
+                            // turn would otherwise round-trip as
+                            // "user message with no assistant reply" on
+                            // every reopen. Persist a minimal synthesized
+                            // end row here so the turn is recoverable.
+                            if !end_persisted
+                                && full_text.is_empty()
+                                && content_blocks.is_empty()
+                                && thinking_buf.is_empty()
+                            {
+                                let err_summary = if err.message.trim().is_empty() {
+                                    format!("(agent error: {})", err.code)
+                                } else {
+                                    format!("(agent error: {})", err.message)
+                                };
+                                let end_payload = serde_json::json!({
+                                    "message_id": if message_id.is_empty() {
+                                        serde_json::Value::Null
+                                    } else {
+                                        serde_json::Value::String(message_id.clone())
+                                    },
+                                    "text": err_summary,
+                                    "thinking": serde_json::Value::Null,
+                                    "content_blocks": [],
+                                    "usage": serde_json::Value::Null,
+                                    "files_changed": {
+                                        "created": [],
+                                        "modified": [],
+                                        "deleted": [],
+                                    },
+                                    "stop_reason": "error",
+                                    "seq": seq + 1,
+                                    "synthesized": true,
+                                    "error_code": &err.code,
+                                });
+                                if persist("assistant_message_end", end_payload).await {
+                                    persisted_events += 1;
+                                    end_persisted = true;
+                                    warn!(
+                                        session_id = %ctx.session_id,
+                                        error_code = %err.code,
+                                        "Synthesized assistant_message_end after early harness error"
+                                    );
+                                }
                             }
                             break;
                         }
@@ -1025,13 +1085,26 @@ async fn fetch_all_sessions(
     }
 }
 
-fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> &str {
-    session
+/// Produce a sortable recency key for a storage session.
+///
+/// Parses RFC3339 timestamps so timezone-suffixed ("...Z") and offset
+/// ("+00:00") variants, or entries that include fractional seconds, compare
+/// correctly — raw string compare would mis-order them. Prefers `started_at`
+/// (when the session became active) then `created_at` (row creation) then
+/// `updated_at` (last row mutation). Missing / unparseable timestamps sort
+/// to the Unix epoch, so any session with a real timestamp always wins over
+/// a session with no recency signal at all.
+fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> DateTime<Utc> {
+    let candidate = session
         .started_at
         .as_deref()
         .or(session.created_at.as_deref())
-        .or(session.updated_at.as_deref())
-        .unwrap_or("")
+        .or(session.updated_at.as_deref());
+
+    candidate
+        .and_then(|raw| DateTime::parse_from_rfc3339(raw).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(|| DateTime::<Utc>::from(std::time::UNIX_EPOCH))
 }
 
 fn latest_storage_session(
@@ -1039,7 +1112,7 @@ fn latest_storage_session(
 ) -> Option<&aura_os_storage::StorageSession> {
     sessions
         .iter()
-        .max_by(|left, right| storage_session_sort_key(left).cmp(storage_session_sort_key(right)))
+        .max_by(|left, right| storage_session_sort_key(left).cmp(&storage_session_sort_key(right)))
 }
 
 async fn load_latest_agent_events_from_storage_result(
@@ -1098,15 +1171,48 @@ async fn load_project_session_history(
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await?;
+    let sessions_total = sessions.len();
     let Some(session) = latest_storage_session(&sessions) else {
+        info!(
+            %agent_instance_id,
+            sessions_total,
+            "project session history: no sessions for agent instance"
+        );
         return Ok(Vec::new());
     };
+    let picked_session_id = session.id.clone();
     let storage_events = storage.list_events(&session.id, &jwt, None, None).await?;
-    Ok(events_to_session_history(
+
+    // Breakdown of persisted event types so we can distinguish "session has
+    // no events at all" (storage-side issue) from "session has many deltas
+    // but no assistant_message_end" (persistence never produced a terminal
+    // row, e.g. harness errored early and the safety net missed the turn).
+    let events_total = storage_events.len();
+    let user_messages = storage_events
+        .iter()
+        .filter(|e| e.event_type.as_deref() == Some("user_message"))
+        .count();
+    let assistant_ends = storage_events
+        .iter()
+        .filter(|e| e.event_type.as_deref() == Some("assistant_message_end"))
+        .count();
+
+    let history = events_to_session_history(
         &storage_events,
         &agent_instance_id.to_string(),
         session.project_id.as_deref().unwrap_or_default(),
-    ))
+    );
+    info!(
+        %agent_instance_id,
+        sessions_total,
+        %picked_session_id,
+        events_total,
+        user_messages,
+        assistant_ends,
+        reconstructed_messages = history.len(),
+        "project session history loaded"
+    );
+    Ok(history)
 }
 
 /// Load the latest persisted session for this standalone agent.
@@ -1920,6 +2026,41 @@ mod tests {
         let selected = latest_storage_session(&[older, newer]).map(|session| session.id.clone());
 
         assert_eq!(selected.as_deref(), Some("newer"));
+    }
+
+    #[test]
+    fn latest_storage_session_handles_mixed_timestamp_formats() {
+        // Regression: `started_at` written by different storage backends or
+        // client versions can come back with and without explicit offsets or
+        // fractional seconds. A raw string compare would sort "2026-04-15T10:00:00Z"
+        // *before* "2026-04-15T10:00:00.123+00:00" even though the latter is
+        // later in wall-clock time, so the reader could pick a stale session
+        // and the UI would only show part of the conversation.
+        let earlier = storage_session("earlier", Some("2026-04-15T10:00:00Z"), None);
+        let later = storage_session(
+            "later",
+            Some("2026-04-15T10:00:00.123+00:00"),
+            None,
+        );
+
+        let selected = latest_storage_session(&[earlier, later]).map(|session| session.id.clone());
+
+        assert_eq!(selected.as_deref(), Some("later"));
+    }
+
+    #[test]
+    fn latest_storage_session_prefers_parseable_timestamp_over_missing() {
+        // A session without any recency signal must never beat a session
+        // with a valid `started_at`, even if they happen to be in an order
+        // where a string compare of "" vs "2026-..." would make the empty
+        // value larger (it doesn't, but defense-in-depth against future
+        // field additions).
+        let missing = storage_session("missing", None, None);
+        let dated = storage_session("dated", Some("2024-01-01T00:00:00Z"), None);
+
+        let selected = latest_storage_session(&[missing, dated]).map(|session| session.id.clone());
+
+        assert_eq!(selected.as_deref(), Some("dated"));
     }
 
     fn assistant_event(
