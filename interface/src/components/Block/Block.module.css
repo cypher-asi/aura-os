@@ -195,6 +195,69 @@
   padding: 0;
 }
 
+/*
+ * Strip the outer-markdown pre border/padding that ancestor rulesets (e.g.
+ * `.root pre` in LLMOutput.module.css) would otherwise paint onto renderer
+ * content nested inside a Block body. Every Block already owns its shell
+ * border — the body should never double up.
+ */
+.blockBody pre,
+.blockBody.blockBody pre {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+/*
+ * Monochrome syntax highlighting inside Block bodies.
+ *
+ * highlight.js ships with a full-color theme (github-dark) imported globally
+ * from main.tsx. Inside the chat lane that bleeds through as blue keywords,
+ * orange strings, teal section headers, etc., which clashes with the rest
+ * of the UI (which is strictly gray/white). Inside a Block body we collapse
+ * every hljs token class onto two ramps: structural/emphasis tokens use
+ * --color-text (bright), the rest use --color-text-secondary.
+ *
+ * The doubled-class selector boosts specificity over the imported
+ * `.hljs-*` rules so these win without !important.
+ */
+.blockBody.blockBody :global(.hljs),
+.blockBody.blockBody :global(.hljs) :global(span[class*="hljs-"]) {
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-weight: inherit;
+  font-style: inherit;
+}
+
+.blockBody.blockBody :global(.hljs-section),
+.blockBody.blockBody :global(.hljs-title),
+.blockBody.blockBody :global(.hljs-title.class_),
+.blockBody.blockBody :global(.hljs-title.function_),
+.blockBody.blockBody :global(.hljs-strong),
+.blockBody.blockBody :global(.hljs-keyword),
+.blockBody.blockBody :global(.hljs-selector-tag),
+.blockBody.blockBody :global(.hljs-name),
+.blockBody.blockBody :global(.hljs-type),
+.blockBody.blockBody :global(.hljs-built_in),
+.blockBody.blockBody :global(.hljs-tag),
+.blockBody.blockBody :global(.hljs-bullet),
+.blockBody.blockBody :global(.hljs-meta) {
+  color: var(--color-text, #fff);
+  font-weight: 600;
+}
+
+.blockBody.blockBody :global(.hljs-emphasis) {
+  color: var(--color-text, #fff);
+  font-style: italic;
+}
+
+.blockBody.blockBody :global(.hljs-comment),
+.blockBody.blockBody :global(.hljs-quote) {
+  color: var(--color-text-muted, #777);
+  font-style: italic;
+}
+
 /* ── Streaming caret shared across block body renderers ── */
 
 .streamCaret {
