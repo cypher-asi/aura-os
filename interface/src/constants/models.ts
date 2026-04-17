@@ -8,14 +8,15 @@ export interface ModelOption {
 }
 
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
-  { id: "aura-claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
   { id: "aura-claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
+  { id: "aura-claude-opus-4-7", label: "Opus 4.7", tier: "opus", mode: "chat" },
   { id: "aura-claude-haiku-4-5", label: "Haiku 4.5", tier: "haiku", mode: "chat" },
-  { id: "aura-gpt-4.1", label: "GPT-4.1", tier: "gpt", mode: "chat" },
-  { id: "aura-o3", label: "o3", tier: "gpt", mode: "chat" },
-  { id: "aura-o4-mini", label: "o4 Mini", tier: "gpt", mode: "chat" },
+  { id: "aura-gpt-5-4", label: "GPT-5.4", tier: "gpt", mode: "chat" },
+  { id: "aura-gpt-5-4-mini", label: "GPT-5.4 mini", tier: "gpt", mode: "chat" },
+  { id: "aura-gpt-5-4-nano", label: "GPT-5.4 nano", tier: "gpt", mode: "chat" },
+  { id: "aura-kimi-k2-5", label: "Kimi K2.5", tier: "sonnet", mode: "chat" },
   { id: "aura-deepseek-v3-2", label: "DeepSeek V3.2", tier: "sonnet", mode: "chat" },
-  { id: "aura-qwen2-5-coder-7b", label: "Qwen2.5 Coder 7B", tier: "haiku", mode: "chat" },
+  { id: "aura-oss-120b", label: "GPT-OSS 120B", tier: "haiku", mode: "chat" },
 ];
 
 export const IMAGE_MODELS: ModelOption[] = [
@@ -31,14 +32,31 @@ export const AVAILABLE_MODELS: ModelOption[] = [
 ];
 
 const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
-  "claude-opus-4-6": "aura-claude-opus-4-6",
+  "aura-claude-opus-4-6": "aura-claude-opus-4-7",
+  "claude-opus-4-7": "aura-claude-opus-4-7",
+  "claude-opus-4-6": "aura-claude-opus-4-7",
+  "aura-claude-sonnet-4-6": "aura-claude-sonnet-4-6",
   "claude-sonnet-4-6": "aura-claude-sonnet-4-6",
+  "aura-claude-haiku-4-5": "aura-claude-haiku-4-5",
+  "claude-haiku-4-5": "aura-claude-haiku-4-5",
   "claude-haiku-4-5-20251001": "aura-claude-haiku-4-5",
-  "gpt-4.1": "aura-gpt-4.1",
-  o3: "aura-o3",
-  "o4-mini": "aura-o4-mini",
+  "aura-gpt-4.1": "aura-gpt-5-4",
+  "gpt-5.4": "aura-gpt-5-4",
+  "gpt-5.4-mini": "aura-gpt-5-4-mini",
+  "gpt-5.4-nano": "aura-gpt-5-4-nano",
+  "gpt-4.1": "aura-gpt-5-4",
+  "aura-o3": "aura-gpt-5-4",
+  o3: "aura-gpt-5-4",
+  "aura-o4-mini": "aura-gpt-5-4-mini",
+  "o4-mini": "aura-gpt-5-4-mini",
+  "aura-kimi-k2-5": "aura-kimi-k2-5",
+  "aura-deepseek-v3-2": "aura-deepseek-v3-2",
+  "aura-oss-120b": "aura-oss-120b",
+  "aura-qwen2-5-coder-7b": "aura-kimi-k2-5",
+  "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
   "accounts/fireworks/models/deepseek-v3p2": "aura-deepseek-v3-2",
-  "accounts/fireworks/models/qwen2p5-coder-7b": "aura-qwen2-5-coder-7b",
+  "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",
+  "accounts/fireworks/models/qwen2p5-coder-7b": "aura-kimi-k2-5",
 };
 
 function normalizeManagedModelId(modelId?: string | null): string | null {
