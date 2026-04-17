@@ -87,6 +87,7 @@ export function ChatMessageList({
 
   const isAutoFollowingRef = useRef(isAutoFollowing);
   isAutoFollowingRef.current = isAutoFollowing;
+  const virtualWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -97,14 +98,27 @@ export function ChatMessageList({
     gap: MESSAGE_GAP,
   });
 
-  // When the user is pinned to the bottom, keep every item size change
-  // synchronously re-anchored so the visible bottom doesn't pop. The
-  // virtualizer applies the delta to scrollTop inside its own ResizeObserver
-  // callback (pre-paint, same frame as the layout change), eliminating the
-  // one-frame lag between the DOM re-wrap and React's re-render of the
-  // virtualizer wrapper's totalSize. When reading (scrolled up), fall back to
-  // the default behavior that only compensates for items above the viewport.
-  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => {
+  // The virtualizer's `scrollAdjustments` path is what keeps the viewport
+  // anchored during item resizes (lane drags, streaming, tool collapses),
+  // but it runs *before* React commits the new `totalSize`. That means the
+  // wrapper's `style.height` still reflects the old total, so `scrollHeight`
+  // is stale and the browser clamps `scrollTo(offset + delta)` back down to
+  // the old max. The adjustment gets swallowed and the pinned bottom pops
+  // one frame later when React finally commits.
+  //
+  // Fix: in the same callback, imperatively bump the wrapper's height by
+  // the item's delta and force a layout flush. That way the browser sees
+  // a fresh `scrollHeight` when the virtualizer's subsequent `scrollTo`
+  // runs and the scroll lands at the true new bottom on the same frame.
+  // React reconciles `style.height` to the final `totalSize` on its next
+  // commit, which is a no-op since we already wrote the same value.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, delta, instance) => {
+    const wrapper = virtualWrapperRef.current;
+    if (wrapper && delta > 0) {
+      const current = parseFloat(wrapper.style.height) || wrapper.offsetHeight;
+      wrapper.style.height = `${current + delta}px`;
+      void wrapper.offsetHeight;
+    }
     if (isAutoFollowingRef.current) return true;
     return item.start < instance.getScrollOffset() + instance.scrollAdjustments;
   };
@@ -250,7 +264,10 @@ export function ChatMessageList({
           )}
         </div>
       )}
-      <div style={{ position: "relative", height: totalSize, flexShrink: 0 }}>
+      <div
+        ref={virtualWrapperRef}
+        style={{ position: "relative", height: totalSize, flexShrink: 0 }}
+      >
         {virtualItems.map((virtualRow) => {
           const msg = messages[virtualRow.index];
           return (
