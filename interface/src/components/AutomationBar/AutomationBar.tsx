@@ -14,6 +14,7 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     status, agentCount, canPlay, canPause, canStop,
     starting, preparing, confirmStop, setConfirmStop,
     handleStart, handlePause, handleStop, handleStopConfirm,
+    stopError, clearStopError,
   } = useAutomationStatus(projectId);
 
   return (
@@ -69,6 +70,18 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
         cancelLabel="Cancel"
         danger
       />
+
+      {stopError && (
+        <ModalConfirm
+          isOpen
+          onClose={clearStopError}
+          onConfirm={clearStopError}
+          title="Stop failed"
+          message={stopError}
+          confirmLabel="Dismiss"
+          cancelLabel="Close"
+        />
+      )}
     </>
   );
 }

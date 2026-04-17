@@ -21,6 +21,14 @@ interface AutomationStatusData {
   handlePause: () => Promise<void>;
   handleStop: () => void;
   handleStopConfirm: () => Promise<void>;
+  stopError: string | null;
+  clearStopError: () => void;
+}
+
+function errorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "string" && err.length > 0) return err;
+  return fallback;
 }
 
 export function useAutomationStatus(projectId: ProjectId): AutomationStatusData {
@@ -32,6 +40,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   const [starting, setStarting] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
+  const [stopError, setStopError] = useState<string | null>(null);
 
   const isForProject = useCallback(
     (event: { project_id?: string }) => event.project_id === projectId,
@@ -124,19 +133,43 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   }, [projectId, agentInstanceId, paused]);
 
   const handlePause = useCallback(async () => {
-    try { await api.pauseLoop(projectId, agentInstanceId); } catch (err) { console.error("Failed to pause loop", err); }
+    try {
+      await api.pauseLoop(projectId, agentInstanceId);
+      setPreparing(false);
+    } catch (err) { console.error("Failed to pause loop", err); }
   }, [projectId, agentInstanceId]);
 
-  const handleStop = useCallback(() => { setConfirmStop(true); }, []);
+  const handleStop = useCallback(() => {
+    setStopError(null);
+    setConfirmStop(true);
+  }, []);
+
+  const clearStopError = useCallback(() => setStopError(null), []);
 
   const handleStopConfirm = useCallback(async () => {
     setConfirmStop(false);
+    setStopError(null);
+    // Optimistically clear UI state so the Run button returns immediately even
+    // if the HTTP round-trip is slow or ultimately fails. We reconcile against
+    // the authoritative backend state below.
+    setActiveAgents([]);
+    setPaused(false);
+    setStarting(false);
+    setPreparing(false);
     try {
       const res = await api.stopLoop(projectId, agentInstanceId);
       setActiveAgents(res.active_agent_instances ?? []);
-      setPaused(false); setStarting(false);
-    } catch (err) { console.error("Failed to stop loop", err); }
-  }, [projectId, agentInstanceId]);
+      setPaused(Boolean(res.paused));
+      fetchLoopStatus();
+    } catch (err) {
+      console.error("Failed to stop loop", err);
+      setStopError(errorMessage(err, "Failed to stop automation"));
+      // If the stop request failed the harness may still be running; refresh
+      // from the server so the UI reflects the true state instead of our
+      // optimistic clear.
+      fetchLoopStatus();
+    }
+  }, [projectId, agentInstanceId, fetchLoopStatus]);
 
   return {
     status, agentCount: activeAgents.length,
@@ -145,5 +178,6 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
     canStop: running || paused,
     starting, preparing, confirmStop, setConfirmStop,
     handleStart, handlePause, handleStop, handleStopConfirm,
+    stopError, clearStopError,
   };
 }

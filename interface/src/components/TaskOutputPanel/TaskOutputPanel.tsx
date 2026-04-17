@@ -183,6 +183,7 @@ function AutomationControls({ projectId }: { projectId: string }) {
     canPlay, canPause, canStop, starting, preparing,
     handleStart, handlePause, handleStop, handleStopConfirm,
     confirmStop, setConfirmStop,
+    stopError, clearStopError,
   } = useAutomationStatus(projectId);
 
   const showStopPause = canPause || canStop;
@@ -252,6 +253,18 @@ function AutomationControls({ projectId }: { projectId: string }) {
         cancelLabel="Cancel"
         danger
       />
+
+      {stopError && (
+        <ModalConfirm
+          isOpen
+          onClose={clearStopError}
+          onConfirm={clearStopError}
+          title="Stop failed"
+          message={stopError}
+          confirmLabel="Dismiss"
+          cancelLabel="Close"
+        />
+      )}
     </>
   );
 }

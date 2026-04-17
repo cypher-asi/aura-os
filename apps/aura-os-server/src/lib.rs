@@ -15,7 +15,7 @@ pub(crate) mod state;
 pub use app_builder::build_app_state;
 pub use harness_gateway::HarnessHttpGateway;
 pub use router::{build_local_api_cors_layer, create_router_with_interface};
-pub use state::{AppState, CachedSession};
+pub use state::{ActiveAutomaton, AppState, CachedSession};
 
 /// Discover common user-level binary directories (pip `--user` scripts, `~/.local/bin`,
 /// etc.) and append any that exist but are missing from `PATH`.  Call once at startup

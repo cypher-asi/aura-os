@@ -1730,21 +1730,36 @@ pub(crate) async fn stop_loop(
         .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
         .map(|(aiid, a)| (*aiid, a.automaton_id.clone(), a.harness_base_url.clone()))
         .collect();
-
-    if targets.is_empty() {
-        drop(reg);
-        return Err(ApiError::bad_request("no matching dev loop is running"));
-    }
     drop(reg);
 
-    let mut stopped_count = 0usize;
+    // Stop is idempotent: if nothing matches, the caller's goal ("no loop
+    // running for this project/agent") is already satisfied, so return the
+    // current status instead of a 4xx. This keeps the UI unstuck when the
+    // harness self-terminated or a previous stop already cleared the entry.
+    if targets.is_empty() {
+        let remaining = active_instances(&state, project_id).await;
+        return Ok(Json(LoopStatusResponse {
+            running: !remaining.is_empty(),
+            paused: false,
+            project_id: Some(project_id),
+            agent_instance_id: params.agent_instance_id,
+            active_agent_instances: Some(remaining),
+        }));
+    }
+
     for (aiid, automaton_id, base_url) in &targets {
         let client = aura_os_link::AutomatonClient::new(base_url);
+        // Best-effort: log harness-side failures but continue clearing local
+        // state. A failed stop call usually means the harness is already gone
+        // or unreachable; leaving the registry entry in place would block
+        // future starts/stops and keep the UI stuck on Pause/Stop forever.
         if let Err(e) = client.stop(automaton_id).await {
-            warn!(automaton_id, error = %e, "Failed to stop automaton");
-            continue;
+            warn!(
+                automaton_id,
+                error = %e,
+                "Failed to stop automaton at harness; clearing local registry anyway"
+            );
         }
-        stopped_count += 1;
         {
             let mut reg = state.automaton_registry.lock().await;
             reg.remove(aiid);
@@ -1765,10 +1780,6 @@ pub(crate) async fn stop_loop(
                 persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &ev).await;
             });
         }
-    }
-
-    if stopped_count == 0 {
-        return Err(ApiError::bad_gateway("failed to stop any automaton"));
     }
 
     let remaining = active_instances(&state, project_id).await;

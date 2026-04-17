@@ -145,7 +145,7 @@ describe("AutomationBar", () => {
     });
 
     await user.click(screen.getByTitle("Pause"));
-    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1");
+    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "agent-1");
   });
 
   it("stop button shows confirmation dialog", async () => {
@@ -177,7 +177,36 @@ describe("AutomationBar", () => {
     await user.click(confirmBtn);
 
     await waitFor(() => {
-      expect(mockStopLoop).toHaveBeenCalledWith("proj-1");
+      expect(mockStopLoop).toHaveBeenCalledWith("proj-1", "agent-1");
+    });
+  });
+
+  it("clears UI state and surfaces an error when stop fails", async () => {
+    const user = userEvent.setup();
+    mockGetLoopStatus.mockResolvedValueOnce({ active_agent_instances: ["a1"], paused: false });
+    // Reconciliation fetch after the failed stop returns no active agents so
+    // we can assert the UI recovers to the Run state.
+    mockGetLoopStatus.mockResolvedValue({ active_agent_instances: [], paused: false });
+    mockStopLoop.mockRejectedValue(new Error("harness unreachable"));
+    renderBar();
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Stop")).toBeEnabled();
+    });
+
+    await user.click(screen.getByTitle("Stop"));
+    const confirmBtn = screen.getByTestId("modal-confirm").querySelector("button:last-child")!;
+    await user.click(confirmBtn);
+
+    // Error surfaces through a ModalConfirm with the "Stop failed" title.
+    await waitFor(() => {
+      expect(screen.getByText("Stop failed")).toBeInTheDocument();
+    });
+    expect(screen.getByText("harness unreachable")).toBeInTheDocument();
+
+    // Play button is re-enabled (UI was optimistically cleared + reconciled).
+    await waitFor(() => {
+      expect(screen.getByTitle("Start")).toBeEnabled();
     });
   });
 
