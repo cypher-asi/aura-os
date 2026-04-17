@@ -97,6 +97,7 @@ async fn resolve_chat_session(
             }
         }
     }
+    close_active_sessions_for_agent(storage, jwt, project_agent_id).await;
     let req = aura_os_storage::CreateSessionRequest {
         project_id: project_id.to_string(),
         org_id: None,
@@ -110,6 +111,47 @@ async fn resolve_chat_session(
         Err(e) => {
             error!(error = %e, %project_agent_id, "Failed to create chat session in storage");
             None
+        }
+    }
+}
+
+/// Flip any lingering `active` sessions for this agent instance to
+/// `completed` so the sidekick does not render historical sessions as
+/// spinning/in-progress. Failures are logged and swallowed: retiring old
+/// sessions is best-effort and must never block creation of a new one.
+async fn close_active_sessions_for_agent(
+    storage: &StorageClient,
+    jwt: &str,
+    project_agent_id: &str,
+) {
+    let sessions = match storage.list_sessions(project_agent_id, jwt).await {
+        Ok(list) => list,
+        Err(e) => {
+            warn!(
+                %project_agent_id,
+                error = %e,
+                "Failed to list sessions while retiring stale active sessions"
+            );
+            return;
+        }
+    };
+
+    let now = Utc::now().to_rfc3339();
+    for session in sessions {
+        if session.status.as_deref() != Some("active") {
+            continue;
+        }
+        let req = aura_os_storage::UpdateSessionRequest {
+            status: Some("completed".to_string()),
+            total_input_tokens: None,
+            total_output_tokens: None,
+            context_usage_estimate: None,
+            summary_of_previous_context: None,
+            tasks_worked_count: None,
+            ended_at: Some(now.clone()),
+        };
+        if let Err(e) = storage.update_session(&session.id, jwt, &req).await {
+            warn!(session_id = %session.id, error = %e, "Failed to retire stale active session");
         }
     }
 }

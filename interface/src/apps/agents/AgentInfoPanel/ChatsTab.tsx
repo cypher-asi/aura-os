@@ -12,6 +12,7 @@ import {
 } from "../../../components/SidekickItemContextMenu";
 import type { ExplorerNodeWithSuffix } from "../../../lib/zui-compat";
 import type { Agent } from "../../../types";
+import { displaySessionStatus } from "../../../views/SessionList/displaySessionStatus";
 import viewStyles from "../../../views/aura.module.css";
 import styles from "./AgentInfoPanel.module.css";
 
@@ -155,10 +156,11 @@ export function ChatsTab({
         const label = summary
           ? `S${number} · ${truncate(summary, 80)}`
           : `S${number}`;
+        const status = displaySessionStatus(session.status, index === 0);
         return {
           id: session.session_id,
           label,
-          suffix: <TaskStatusIcon status={session.status} />,
+          suffix: <TaskStatusIcon status={status} />,
           metadata: { type: "session" },
         };
       });

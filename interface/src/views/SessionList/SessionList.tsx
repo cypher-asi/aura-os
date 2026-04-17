@@ -15,6 +15,7 @@ import {
 import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 import type { Session } from "../../types";
 import { useSessionListData } from "./useSessionListData";
+import { displaySessionStatus } from "./displaySessionStatus";
 import styles from "../aura.module.css";
 
 const SESSIONS_ROOT_ID = "__sessions_root__";
@@ -79,10 +80,11 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
       const label = summary
         ? `S${number} · ${truncate(summary, 80)}`
         : `S${number}`;
+      const status = displaySessionStatus(session.status, index === 0);
       return {
         id: session.session_id,
         label,
-        suffix: <TaskStatusIcon status={session.status} />,
+        suffix: <TaskStatusIcon status={status} />,
         metadata: { type: "session" },
       };
     });
