@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ChevronRight, FileText, FolderClosed } from "lucide-react";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import {
@@ -114,10 +114,10 @@ interface NotesNavProps {
 
 export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
   const navigate = useNavigate();
-  const params = useParams();
   const projects = useProjectsListStore((s) => s.projects);
   const loadingProjects = useProjectsListStore((s) => s.loadingProjects);
   const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
+  const openNewProjectModal = useProjectsListStore((s) => s.openNewProjectModal);
   const refreshedOnce = useRef(false);
 
   const trees = useNotesStore((s) => s.trees);
@@ -195,21 +195,15 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
   }, [projects, trees, handleCreateNote]);
 
   useEffect(() => {
-    const firstProject = projects[0];
-    if (!firstProject) {
-      setAction("notes", null);
-      return;
-    }
-    const pid = (params.projectId as string | undefined) ?? activeProjectId ?? firstProject.project_id;
     setAction(
       "notes",
       <ProjectsPlusButton
-        onClick={() => handleCreateNote(pid, "")}
-        title="New Note"
+        onClick={openNewProjectModal}
+        title="New Project"
       />,
     );
     return () => setAction("notes", null);
-  }, [projects, params.projectId, activeProjectId, handleCreateNote, setAction]);
+  }, [openNewProjectModal, setAction]);
 
   const selectedLeafId = useMemo<string | null>(() => {
     if (!activeProjectId || !activeRelPath) return null;
