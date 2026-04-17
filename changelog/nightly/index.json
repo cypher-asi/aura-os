@@ -2,17 +2,18 @@
   {
     "date": "2026-04-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.269.1",
-    "title": "Desktop Release Infrastructure Improvements",
-    "intro": "Today's nightly focused on strengthening the desktop release pipeline with build optimizations, versioning fixes, and enhanced changelog generation capabilities.",
-    "entryCount": 2,
+    "version": "0.1.0-nightly.278.1",
+    "title": "27 updates shipped",
+    "intro": "This nightly timeline for aura-os groups 71 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.278.1`.",
+    "entryCount": 27,
     "highlights": [
-      "Build time optimizations with sccache integration",
-      "Consistent nightly versioning across all platforms",
-      "Enhanced desktop updater with manual check support"
+      "Release Infrastructure and Interface updates",
+      "Interface updates",
+      "Release Infrastructure updates",
+      "Release Infrastructure updates"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-04-16T07:39:00.122Z",
+    "rawCommitCount": 71,
+    "generatedAt": "2026-04-17T03:02:17.123Z",
     "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
     "path": "history/2026-04-16.json"
   },

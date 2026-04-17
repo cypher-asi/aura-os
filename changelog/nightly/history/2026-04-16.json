@@ -1,25 +1,90 @@
 {
   "schemaVersion": 1,
   "promptVersion": 2,
-  "generator": "anthropic",
-  "generationError": null,
-  "generatedAt": "2026-04-16T07:39:00.122Z",
+  "generator": "fallback",
+  "generationError": "Error: Could not parse model response as JSON: SyntaxError: Unterminated string in JSON at position 6894 (line 162 column 58)",
+  "generatedAt": "2026-04-17T03:02:17.123Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.269.1",
+  "version": "0.1.0-nightly.278.1",
   "date": "2026-04-16",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75",
-  "previousProcessedSha": "507df1348032f8f4734809bd21c86df8d5a7af9e",
+  "lastIncludedSha": "134278eeb85bf00ae31442e440008bf97a108cec",
+  "previousProcessedSha": "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75",
   "commitShas": [
     "42464e797547a065c04738077b3b7c377b76eb8e",
     "7548957a3422485136de95ac324a80f97b01eb0f",
     "53a06a3e8785cae6b2e2494899c2044f1b969617",
     "2afe33bc6f00e7ab87b4988c66852e904359c7bf",
     "6ea4cb3d919cb95724bbbbc199833b2995ff7915",
-    "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75"
+    "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75",
+    "4c469d28706ab68016521961e7265cdafff35a85",
+    "ea9a869477e3c881c2c4e019ab6fec57ceca5960",
+    "5289ffdf391d47eb96c5e26f0d861a58b16c9e80",
+    "3ca1d086ced85b9205b3b357ebe41899849e3510",
+    "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403",
+    "c3189017be41e6ede6f259f5fd8c217086f0eae5",
+    "6dd5b86f2d8fae784d230da725502e10352b4f32",
+    "de072a4aa73880031b5449593937167990a8c03f",
+    "e0d5eea9cec17a9f38d08b2e0dde8762bc1d4fa4",
+    "267e80ea129adf1d42dfcaa0c4e81a301127c9a0",
+    "f04920cf9121525f172ce98416ec1ea0506801ba",
+    "25ada54247d106480256584463c5ca38a9bba89a",
+    "f1effd47d34c326733d52bb9a0853b3e2c841692",
+    "54d6ca8801051f031b738ed57aee5429f95e050c",
+    "940c02c82a9eebe0c4991590903ba17a516c0fc8",
+    "519ad33cd44ebe087999618d34a60646f77679b4",
+    "4f1f94a5aaf7df9cfc5792fa11119ca2372a93a2",
+    "4035f8fdb79d82851c461ae5ce0f4327cb87ad1d",
+    "5d9fd71a0e1d748d55a6857d4d97bf34d6c8027a",
+    "45c52b62ba3d9fe9d0af17b0b97692cfc9c2b6de",
+    "9dae22bc939b5580dd5a45c9ef23e0e3cdcb0b94",
+    "ff67b0be16e08a4e3d89e3190f5f434ccb170241",
+    "8c70b928dce3d36c41a972edee166b618280ee36",
+    "5d2045b07e4d4d1dd6925ba56e44f3d3d5c41ce9",
+    "f3c3368a496a695e5027abb0bc5df44f0d50d988",
+    "74e0a1f45b7a27d64e4407b811dfe8b1b19d591b",
+    "0ddff8d85b47514fea681053859fe6d40d0a99d4",
+    "b0bd9d7b10b4324eb61c966cb81e686cf73d886b",
+    "272b699b3fef7d1f01cb9f2066786a582f4442c7",
+    "dd3fc981f3f3e31fd22957e5aa767fdda9b262b0",
+    "2357d97eef968d7a6938b2e57d566769b5c40231",
+    "3544937f583ad044019380764cc91c92ff3755c4",
+    "a3368049454224e8a3c9e9c2171ad76459694015",
+    "88579baaec7f2cba46980ae90443dc1a9d39dae9",
+    "c19ff7984f5590b9f224d3c27c98f7b04c8f7b06",
+    "6cf7e3004297f92b25da7866415e8e912c373210",
+    "12be80e16fdc5b5bb44a56b0fdaf4c272ea440a5",
+    "38b68567ad2ee85176325eba19d36a787c914295",
+    "ed0edf5a0eb0dea0653e48edf5940b360023a6b3",
+    "cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666",
+    "0b340fa2e53179c0581f2c320c91738d371251b2",
+    "3484cb2b2544c3e92cdc9812dd47e514dbcc96e5",
+    "8c9c42f9c864c9b10ce67621468da6cc27f02b66",
+    "fc6fd9185d1e064d6056e3d777662187e5b278eb",
+    "ffda969e6b38fb2c58c1ff8d5ea2f5c337eab23c",
+    "4cedfe777005a6800019d2ba3e326182225cce31",
+    "7074f2f1eebed82cae520cb1342bd9a2ef044c29",
+    "d74a85554f8ad2e2805dd5951ba57c2d21d3a594",
+    "07253bf34bd62263cac12c87ba24228aed53d550",
+    "3f75764473706f21dbe15cab3dedbccb31cc65ce",
+    "3b9d7f0c242b241875d4c6e3b9d4406e77f93072",
+    "efd59b95e0518cee1655e239b29074140153abbb",
+    "f33ff9e8d6f8ad12a15fac7f4185166e666eee6a",
+    "e5adacc89276689a747b42f833458e719e069e11",
+    "000817bd48da1f40ad7977496115994f69259cd3",
+    "2f34e08d556fe37a85e34154b96a418e4a750936",
+    "24d6dc16d671e4938258e5f0c4474877a5cb24e8",
+    "8b62dfff790fff470ec793b12aec120bc9dfb0d3",
+    "4c3b40f3a94176a39c4a8f2fd23472c32526b41d",
+    "5bcaff3980468e746b5e3ccf11116be56445579f",
+    "5b95b6e4f66712c5c597e18e81c0c2ebe2a871ca",
+    "ddfdfe1af951cd42811ef6c423dbea72b9eec2b8",
+    "8be01e8e28c261bbd3843a548184c4260c7b3b5b",
+    "ecd52f184fdeaa57c125157ab32d44247f15950f",
+    "134278eeb85bf00ae31442e440008bf97a108cec"
   ],
-  "rawCommitCount": 6,
+  "rawCommitCount": 71,
   "rawCommits": [
     {
       "sha": "42464e797547a065c04738077b3b7c377b76eb8e",
@@ -259,36 +324,2810 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "4c469d28706ab68016521961e7265cdafff35a85",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-15T23:15:40-07:00",
+      "subject": "Reset agent chat context after new sessions.",
+      "body": "Create a fresh persisted session on reset, scope history to the latest session, and clear client thread caches so old conversations do not leak back into the next turn.\n\nMade-with: Cursor",
+      "parents": [
+        "507df1348032f8f4734809bd21c86df8d5a7af9e"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/agents/runtime.rs",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/hooks/use-agent-chat-stream.test.ts",
+        "interface/src/hooks/use-agent-chat-stream.ts",
+        "interface/src/hooks/use-agent-chat-window.ts",
+        "interface/src/hooks/use-chat-stream.test.ts",
+        "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
+        "interface/src/stores/chat-history-store.test.ts",
+        "interface/src/stores/chat-history-store.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 348,
+        "deletions": 185
+      },
+      "committedAtMs": 1776320140000,
+      "cleanSubject": "Reset agent chat context after new sessions",
+      "keywords": [
+        "reset",
+        "agent",
+        "chat",
+        "context",
+        "after",
+        "sessions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "ea9a869477e3c881c2c4e019ab6fec57ceca5960",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T12:59:23-04:00",
+      "subject": "Improve desktop CI runner and timing instrumentation",
+      "body": "",
+      "parents": [
+        "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 100,
+        "deletions": 20
+      },
+      "committedAtMs": 1776358763000,
+      "cleanSubject": "Improve desktop CI runner and timing instrumentation",
+      "keywords": [
+        "improve",
+        "desktop",
+        "runner",
+        "timing",
+        "instrumentation"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "scripts/ci/verify-desktop.mjs"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Other"
+      ]
+    },
+    {
+      "sha": "5289ffdf391d47eb96c5e26f0d861a58b16c9e80",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T12:13:52-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "4c469d28706ab68016521961e7265cdafff35a85",
+        "ea9a869477e3c881c2c4e019ab6fec57ceca5960"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 491,
+        "deletions": 94
+      },
+      "committedAtMs": 1776366832000,
+      "cleanSubject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "keywords": [
+        "merge",
+        "branch",
+        "main",
+        "https",
+        "github",
+        "cypher",
+        "aura"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "3ca1d086ced85b9205b3b357ebe41899849e3510",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T12:27:35-07:00",
+      "subject": "Fix sidekick empty-state flash and align Run row height",
+      "body": "Suppress the brief \"Select a project to get started\" render while project\nactions are still being registered on a project route, and make the Run\npane header match the height of the in-line specs search (32px).\n\nMade-with: Cursor",
+      "parents": [
+        "5289ffdf391d47eb96c5e26f0d861a58b16c9e80"
+      ],
+      "files": [
+        "interface/src/components/Sidekick/Sidekick.test.tsx",
+        "interface/src/components/SidekickContent/SidekickContent.tsx",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 20,
+        "deletions": 4
+      },
+      "committedAtMs": 1776367655000,
+      "cleanSubject": "Fix sidekick empty-state flash and align Run row height",
+      "keywords": [
+        "sidekick",
+        "empty",
+        "state",
+        "flash",
+        "align",
+        "height"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T13:10:15-07:00",
+      "subject": "Mirror specs to disk and show filename-style tool card",
+      "body": "Render create_spec / update_spec tool calls with a file-style card\n(<slug>.md header + streamed markdown body) and dual-write specs to\n<workspace_root>/spec/<slug>.md in addition to existing DB persistence,\nso the spec that's being generated is both visible in the chat and\navailable on the project's filesystem.\n\nMade-with: Cursor",
+      "parents": [
+        "3ca1d086ced85b9205b3b357ebe41899849e3510"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder.rs",
+        "apps/aura-os-server/src/handlers/mod.rs",
+        "apps/aura-os-server/src/handlers/projects_helpers.rs",
+        "apps/aura-os-server/src/handlers/spec_disk.rs",
+        "apps/aura-os-server/src/handlers/specs.rs",
+        "crates/aura-os-super-agent/src/lib.rs",
+        "crates/aura-os-super-agent/src/tools/helpers.rs",
+        "crates/aura-os-super-agent/src/tools/mod.rs",
+        "crates/aura-os-super-agent/src/tools/spec_tools.rs",
+        "crates/aura-os-super-agent/src/tools/tests.rs",
+        "interface/src/components/ToolRow/SpecPreviewCard.tsx",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx",
+        "interface/src/utils/format.test.ts",
+        "interface/src/utils/format.ts"
+      ],
+      "stats": {
+        "fileCount": 15,
+        "insertions": 587,
+        "deletions": 77
+      },
+      "committedAtMs": 1776370215000,
+      "cleanSubject": "Mirror specs to disk and show filename-style tool card",
+      "keywords": [
+        "mirror",
+        "specs",
+        "disk",
+        "show",
+        "filename",
+        "style",
+        "tool",
+        "card"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-super-agent/src",
+        "interface/src/components",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "c3189017be41e6ede6f259f5fd8c217086f0eae5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T13:11:53-07:00",
+      "subject": "Fade tool card body out before collapsing",
+      "body": "Pair the existing fadeSlideIn with a fadeSlideOut keyframe and a\n.toolBodyCollapsing class so ToolCallBlock bodies dissolve over ~120ms\ninstead of disappearing in one frame. This removes the blink and the\nbottom-overflow flash that was visible when a card auto-collapsed on\npending-to-done (create_spec, update_spec, and other tool cards).\n\nMade-with: Cursor",
+      "parents": [
+        "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403"
+      ],
+      "files": [
+        "interface/src/components/ToolRow/ToolCallBlock.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 18,
+        "deletions": 0
+      },
+      "committedAtMs": 1776370313000,
+      "cleanSubject": "Fade tool card body out before collapsing",
+      "keywords": [
+        "fade",
+        "tool",
+        "card",
+        "body",
+        "before",
+        "collapsing"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6dd5b86f2d8fae784d230da725502e10352b4f32",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T13:23:20-07:00",
+      "subject": "Show file previews while file-op tool calls are streaming",
+      "body": "Mirrors the existing spec-preview streaming behavior for write_file,\nedit_file, read_file, and delete_file so users can see the file path\nand partial content (or a spinner) inline before the tool completes.\nAdds delete_file to FILE_OPS with a dedicated header-only card.\n\nMade-with: Cursor",
+      "parents": [
+        "c3189017be41e6ede6f259f5fd8c217086f0eae5"
+      ],
+      "files": [
+        "interface/src/components/FilePreviewCard/FilePreviewCard.tsx",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx",
+        "interface/src/constants/tools.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 129,
+        "deletions": 25
+      },
+      "committedAtMs": 1776371000000,
+      "cleanSubject": "Show file previews while file-op tool calls are streaming",
+      "keywords": [
+        "show",
+        "file",
+        "previews",
+        "while",
+        "tool",
+        "calls",
+        "streaming"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/constants"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "de072a4aa73880031b5449593937167990a8c03f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T13:25:27-07:00",
+      "subject": "Stabilize create_spec tool card mount",
+      "body": "Render SpecPreviewCard unconditionally for pending create_spec / update_spec\ntool calls (the card already handles the empty streaming state via its own\nspinner), so the body keeps a stable shape from first paint instead of\nbriefly showing the generic \"Waiting for the tool result\" JSON block and\nthen swapping to the spec card once the title streams in.\n\nAlso drop the -4px translateY from fadeSlideIn so the body doesn't paint\noffset from its reserved box during the 150ms enter animation. Together\nthese remove the visible jerk where a newly appearing tool card flashed\nabove/below where it should sit in the chat lane.\n\nMade-with: Cursor",
+      "parents": [
+        "6dd5b86f2d8fae784d230da725502e10352b4f32"
+      ],
+      "files": [
+        "interface/src/components/ToolRow/ToolCallBlock.module.css",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 17,
+        "deletions": 4
+      },
+      "committedAtMs": 1776371127000,
+      "cleanSubject": "Stabilize create_spec tool card mount",
+      "keywords": [
+        "stabilize",
+        "create",
+        "spec",
+        "tool",
+        "card",
+        "mount"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e0d5eea9cec17a9f38d08b2e0dde8762bc1d4fa4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T14:10:19-07:00",
+      "subject": "Center chat input on empty threads",
+      "body": "When an agent has no conversation history, render the input bar\nvertically centered in the chat lane and slide it down to its docked\nposition once the first message is sent. Uses matching `bottom` +\n`transform` in both states so the transition animates smoothly.\n\nMade-with: Cursor",
+      "parents": [
+        "de072a4aa73880031b5449593937167990a8c03f"
+      ],
+      "files": [
+        "interface/src/components/ChatInputBar/ChatInputBar.module.css",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.test.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 85,
+        "deletions": 2
+      },
+      "committedAtMs": 1776373819000,
+      "cleanSubject": "Center chat input on empty threads",
+      "keywords": [
+        "center",
+        "chat",
+        "input",
+        "empty",
+        "threads"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "267e80ea129adf1d42dfcaa0c4e81a301127c9a0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T14:13:03-07:00",
+      "subject": "Stream create_spec markdown into the tool card live",
+      "body": "While super-agent tool_use blocks were streaming from Claude, input_json_delta\nchunks were accumulated server-side but never surfaced to the client, so the\nspec preview card sat on a spinner until the tool finished and the markdown\nfinally arrived in one jump.\n\nServer: a small partial_json helper extracts the in-flight value of a known\ntop-level string field (title / markdown_contents) from the accumulator\nbuffer, respecting JSON escape sequences. SuperAgentStream now emits a\nthrottled ToolCallSnapshot (~50ms floor) for create_spec / update_spec on\neach input_json_delta and a final snapshot at content_block_stop, so the\nclient sees the spec grow in real time. No protocol change --\nToolCallSnapshot already existed and was already merged into\nToolCallEntry.input by handleToolCallSnapshot.\n\nUI: SpecPreviewCard is now a fixed 3-line viewport (height based on 1.5em *\n3 + padding) pinned to the bottom while the call is pending, so the most\nrecently written lines stay in view like a rolling terminal tail. Dropped\nthe old 20-line slice and the \"Show all / Show less\" toggle so the card\nkeeps a stable shape while streaming. Added focused tests for the\nauto-scroll behavior and 11 unit tests for the partial JSON extractor.\n\nMade-with: Cursor",
+      "parents": [
+        "e0d5eea9cec17a9f38d08b2e0dde8762bc1d4fa4"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/lib.rs",
+        "crates/aura-os-super-agent/src/partial_json.rs",
+        "crates/aura-os-super-agent/src/stream.rs",
+        "interface/src/components/FilePreviewCard/FilePreviewCard.module.css",
+        "interface/src/components/ToolRow/SpecPreviewCard.test.tsx",
+        "interface/src/components/ToolRow/SpecPreviewCard.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 485,
+        "deletions": 40
+      },
+      "committedAtMs": 1776373983000,
+      "cleanSubject": "Stream create_spec markdown into the tool card live",
+      "keywords": [
+        "stream",
+        "create",
+        "spec",
+        "markdown",
+        "into",
+        "tool",
+        "card",
+        "live"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src",
+        "interface/src/components"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f04920cf9121525f172ce98416ec1ea0506801ba",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T14:29:19-07:00",
+      "subject": "Fix zero Projects/Signups/Revenue tiles in platform stats",
+      "body": "The PlatformStats deserializer only accepted camelCase keys, so any field\nthe remote aura-network emitted under a different name (e.g. snake_case\nor a synonym like projectCount) silently defaulted to 0 via\n#[serde(default)]. Added snake_case and common alternate-name aliases\nfor each field so the decoder is robust to the remote's actual key\nnames, and log the raw /api/stats response body once so we can verify\nwhich keys are in use.\n\nMade-with: Cursor",
+      "parents": [
+        "267e80ea129adf1d42dfcaa0c4e81a301127c9a0"
+      ],
+      "files": [
+        "crates/aura-os-network/src/client/analytics.rs",
+        "crates/aura-os-network/src/types.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 66,
+        "deletions": 9
+      },
+      "committedAtMs": 1776374959000,
+      "cleanSubject": "Fix zero Projects/Signups/Revenue tiles in platform stats",
+      "keywords": [
+        "zero",
+        "projects",
+        "signups",
+        "revenue",
+        "tiles",
+        "platform",
+        "stats"
+      ],
+      "fileGroups": [
+        "crates/aura-os-network/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "25ada54247d106480256584463c5ca38a9bba89a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T17:29:59-04:00",
+      "subject": "Use larger desktop runners and switch changelog to Pacific time",
+      "body": "",
+      "parents": [
+        "ea9a869477e3c881c2c4e019ab6fec57ceca5960"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release/generate-daily-changelog.mjs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 11,
+        "deletions": 11
+      },
+      "committedAtMs": 1776374999000,
+      "cleanSubject": "Use larger desktop runners and switch changelog to Pacific time",
+      "keywords": [
+        "larger",
+        "desktop",
+        "runners",
+        "switch",
+        "changelog",
+        "pacific",
+        "time"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "f1effd47d34c326733d52bb9a0853b3e2c841692",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T14:50:37-07:00",
+      "subject": "Use totalCostUsd for Total Revenue tile",
+      "body": "Remote /api/stats returns the platform revenue under the key\ntotalCostUsd, and the today-signup count under newSignupsToday.\nAdded those and a few cost-flavored aliases to PlatformStats so\nthe Total Revenue and New Signups tiles decode real values instead\nof silently defaulting to 0. Renamed the Projects and Revenue\ntiles to Total Projects / Total Revenue to match the upstream\nmetric scope (cumulative, not daily), and demoted the now-verified\nraw-body trace to debug so we don't log response bodies at info\nin steady state.\n\nMade-with: Cursor",
+      "parents": [
+        "f04920cf9121525f172ce98416ec1ea0506801ba"
+      ],
+      "files": [
+        "crates/aura-os-network/src/client/analytics.rs",
+        "crates/aura-os-network/src/types.rs",
+        "interface/src/apps/feed/LeaderboardSidekick/LeaderboardSidekick.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 16,
+        "deletions": 6
+      },
+      "committedAtMs": 1776376237000,
+      "cleanSubject": "Use totalCostUsd for Total Revenue tile",
+      "keywords": [
+        "totalcostusd",
+        "total",
+        "revenue",
+        "tile"
+      ],
+      "fileGroups": [
+        "crates/aura-os-network/src",
+        "interface/src/apps"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "54d6ca8801051f031b738ed57aee5429f95e050c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T14:59:11-07:00",
+      "subject": "Move logout into team settings panel, drop app settings modal",
+      "body": "Removes the top-bar Settings gear in DesktopShell, along with the entire\nSettingsModal (app updates + support links + logout lived here) and the\ncorresponding mobile \"App settings\" entry points. Logout now surfaces as\na persistent action pinned to the bottom of the OrgSettingsPanel left\nnav so it's reachable from every team-settings tab.\n\nMade-with: Cursor",
+      "parents": [
+        "f1effd47d34c326733d52bb9a0853b3e2c841692"
+      ],
+      "files": [
+        "interface/src/components/AppShell/AppShell.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/HostSettingsModal/HostSettingsModal.module.css",
+        "interface/src/components/HostSettingsModal/HostSettingsModal.tsx",
+        "interface/src/components/MobileShell/MobileDrawerContents.tsx",
+        "interface/src/components/MobileShell/MobileShell.test.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.test.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.tsx",
+        "interface/src/components/SettingsModal/SettingsModal.module.css",
+        "interface/src/components/SettingsModal/SettingsModal.test.tsx",
+        "interface/src/components/SettingsModal/SettingsModal.tsx",
+        "interface/src/components/SettingsModal/index.ts",
+        "interface/src/components/SettingsModal/useSettingsData.ts",
+        "interface/src/stores/ui-modal-store.test.ts",
+        "interface/src/stores/ui-modal-store.ts",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.test.tsx",
+        "interface/src/views/MobileOrganizationView/MobileOrganizationView.tsx"
+      ],
+      "stats": {
+        "fileCount": 19,
+        "insertions": 90,
+        "deletions": 599
+      },
+      "committedAtMs": 1776376751000,
+      "cleanSubject": "Move logout into team settings panel, drop app settings modal",
+      "keywords": [
+        "move",
+        "logout",
+        "into",
+        "team",
+        "settings",
+        "panel",
+        "drop",
+        "modal"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "940c02c82a9eebe0c4991590903ba17a516c0fc8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:00:04-07:00",
+      "subject": "Eliminate post-stream jerk when the assistant bubble finalizes",
+      "body": "The StreamingBubble showed the ThinkingRow expanded; the new MessageBubble\nswapped in with it collapsed, and ChatMessageList stuffed the streaming\nbubble's tall height into the virtualizer cache for the new message. That\ntriggered a second scroll reconcile once the ResizeObserver measured the\nactually-short bubble, producing a visible upward jerk.\n\nMark the just-finalized message so its ThinkingRow mounts expanded (via a\nnew defaultExpanded / initialThinkingExpanded / defaultThinkingExpanded\nprop chain through LLMOutput, ActivityTimeline, and MessageBubble). The\nswap is now a visual no-op, and the existing auto-collapse happens one\nrender later as a single clean layout change after the bubble has been\nmeasured. Drop the streaming-height cache override since it is no longer\nneeded.\n\nMade-with: Cursor",
+      "parents": [
+        "54d6ca8801051f031b738ed57aee5429f95e050c"
+      ],
+      "files": [
+        "interface/src/components/ActivityTimeline/ActivityTimeline.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/LLMOutput/LLMOutput.test.tsx",
+        "interface/src/components/LLMOutput/LLMOutput.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/ThinkingRow/ThinkingRow.test.tsx",
+        "interface/src/components/ThinkingRow/ThinkingRow.tsx"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 155,
+        "deletions": 27
+      },
+      "committedAtMs": 1776376804000,
+      "cleanSubject": "Eliminate post-stream jerk when the assistant bubble finalizes",
+      "keywords": [
+        "eliminate",
+        "post",
+        "stream",
+        "jerk",
+        "when",
+        "assistant",
+        "bubble",
+        "finalizes"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "519ad33cd44ebe087999618d34a60646f77679b4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:07:58-07:00",
+      "subject": "Make leaderboard global; key Organization filter to active org",
+      "body": "Platform Stats are global (49 users, 19.1M tokens) while the\nleaderboard was unconditionally org-scoped, so it only showed the\nactive org's slice (e.g. n3o at 45K). The feed's Organization\nfilter was also a no-op that returned every event because org_id\nwas dropped when building FeedEvent from the DTO.\n\nDrop the unused filter/setFilter state and the activeOrg\nsubscription from leaderboard-store so fetchEntries always calls\n/api/leaderboard without org_id. Surface orgId on FeedEvent and\npopulate it from FeedEventDto.org_id, then have applyFilter honor\nthe current org for the Organization tab (falls back to empty when\nno org is active). Everything/Leaderboard views remain global.\n\nMade-with: Cursor",
+      "parents": [
+        "940c02c82a9eebe0c4991590903ba17a516c0fc8"
+      ],
+      "files": [
+        "interface/src/stores/feed-store.ts",
+        "interface/src/stores/leaderboard-store.test.ts",
+        "interface/src/stores/leaderboard-store.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 11,
+        "deletions": 45
+      },
+      "committedAtMs": 1776377278000,
+      "cleanSubject": "Make leaderboard global; key Organization filter to active org",
+      "keywords": [
+        "make",
+        "leaderboard",
+        "global",
+        "organization",
+        "filter",
+        "active"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4f1f94a5aaf7df9cfc5792fa11119ca2372a93a2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:13:45-07:00",
+      "subject": "Remove events column from leaderboard",
+      "body": "The events counter showed the aura-network activity_event count\nper profile (git pushes, posts, comments), which is easy to read\nas \"AI activity\" and is not comparable to the token totals next\nto it. Pull it from both the leaderboard list row and the user\nsidekick card until we have a clearer signal to put there.\n\nMade-with: Cursor",
+      "parents": [
+        "519ad33cd44ebe087999618d34a60646f77679b4"
+      ],
+      "files": [
+        "interface/src/apps/feed/LeaderboardContent/LeaderboardContent.tsx",
+        "interface/src/apps/feed/LeaderboardSidekick/LeaderboardSidekick.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 0,
+        "deletions": 5
+      },
+      "committedAtMs": 1776377625000,
+      "cleanSubject": "Remove events column from leaderboard",
+      "keywords": [
+        "remove",
+        "events",
+        "column",
+        "from",
+        "leaderboard"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4035f8fdb79d82851c461ae5ce0f4327cb87ad1d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:14:39-07:00",
+      "subject": "Stabilize EntityCard header height and Sidekick label colors",
+      "body": "Always render the EntityCard name-action slot with a fixed min\nwidth/height so rows with a Follow/Edit button and rows without\none line up to the same 56px header height; the slot is hidden\nwhen no action is supplied. Move the header's bottom border onto\nthe body so the divider only shows when slotted content exists.\n\nTighten the Sidekick body typography to 12px with line-height\n1.25 and switch parent collapsible items to the\n--color-text-secondary shade that the Projects LeftMenu uses,\nkeyed on aria-expanded=\"true\"/\"false\" explicitly so leaf items\nstay white. Add a small EntityCard test covering the presence and\nabsence of the name-action placeholder.\n\nMade-with: Cursor",
+      "parents": [
+        "4f1f94a5aaf7df9cfc5792fa11119ca2372a93a2"
+      ],
+      "files": [
+        "interface/src/components/EntityCard/EntityCard.module.css",
+        "interface/src/components/EntityCard/EntityCard.test.tsx",
+        "interface/src/components/EntityCard/EntityCard.tsx",
+        "interface/src/components/Sidekick/Sidekick.module.css"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 79,
+        "deletions": 7
+      },
+      "committedAtMs": 1776377679000,
+      "cleanSubject": "Stabilize EntityCard header height and Sidekick label colors",
+      "keywords": [
+        "stabilize",
+        "entitycard",
+        "header",
+        "height",
+        "sidekick",
+        "label",
+        "colors"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5d9fd71a0e1d748d55a6857d4d97bf34d6c8027a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:16:50-07:00",
+      "subject": "Draft specs visibly before persisting them",
+      "body": "Guide the super-agent to stream spec drafts as normal assistant text before\ncalling create_spec/update_spec, then seed pending spec tool cards from that\njust-streamed draft via input.draft_preview. When the real\nmarkdown_contents snapshots arrive, the card naturally hands off from the\nfallback draft to the authoritative tool input.\n\nAlso flush any pending streamed text before starting a spec tool so the user\nsees the completed visible draft instead of a spinner-only card, and cover\nboth the handler and preview handoff behavior with focused tests.\n\nMade-with: Cursor",
+      "parents": [
+        "4035f8fdb79d82851c461ae5ce0f4327cb87ad1d"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/prompt.rs",
+        "interface/src/components/ToolRow/SpecPreviewCard.test.tsx",
+        "interface/src/components/ToolRow/SpecPreviewCard.tsx",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 72,
+        "deletions": 2
+      },
+      "committedAtMs": 1776377810000,
+      "cleanSubject": "Draft specs visibly before persisting them",
+      "keywords": [
+        "draft",
+        "specs",
+        "visibly",
+        "before",
+        "persisting",
+        "them"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src",
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "45c52b62ba3d9fe9d0af17b0b97692cfc9c2b6de",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:27:03-07:00",
+      "subject": "Count any feed event with commit metadata in CommitGrid",
+      "body": "The feed page commit grid was always empty because getCommitCount gated\non postType === \"push\", but createPost hardcodes post_type=\"post\", so no\npersisted events ever satisfied the gate. Drop the gate and count any\nevent whose commits[] or commit_ids[] is populated, regardless of post\ntype.\n\nMade-with: Cursor",
+      "parents": [
+        "5d9fd71a0e1d748d55a6857d4d97bf34d6c8027a"
+      ],
+      "files": [
+        "interface/src/lib/commitActivity.test.ts",
+        "interface/src/lib/commitActivity.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 25,
+        "deletions": 11
+      },
+      "committedAtMs": 1776378423000,
+      "cleanSubject": "Count any feed event with commit metadata in CommitGrid",
+      "keywords": [
+        "count",
+        "feed",
+        "event",
+        "with",
+        "commit",
+        "metadata",
+        "commitgrid"
+      ],
+      "fileGroups": [
+        "interface/src/lib"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9dae22bc939b5580dd5a45c9ef23e0e3cdcb0b94",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:27:31-07:00",
+      "subject": "Render unwrapped delete error messages in project/agent flows",
+      "body": "The project-delete and agent-instance-delete hooks were reading\nerr.body.error directly, which contains the upstream proxy's raw\nJSON blob (e.g. {\"error\":{\"code\":\"BAD_REQUEST\",\"message\":\"Bad\nrequest: Cannot delete project with existing project agents...\"}}).\nRoute these catch blocks through the shared getApiErrorMessage /\ngetApiErrorDetails helpers so the modal shows the actual message,\nmatching the global agent-delete flow.\n\nMade-with: Cursor",
+      "parents": [
+        "45c52b62ba3d9fe9d0af17b0b97692cfc9c2b6de"
+      ],
+      "files": [
+        "interface/src/apps/process/components/ProcessList/process-list-handlers.tsx",
+        "interface/src/hooks/use-project-list-actions.test.tsx",
+        "interface/src/hooks/use-project-list-actions.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 103,
+        "deletions": 22
+      },
+      "committedAtMs": 1776378451000,
+      "cleanSubject": "Render unwrapped delete error messages in project/agent flows",
+      "keywords": [
+        "render",
+        "unwrapped",
+        "delete",
+        "error",
+        "messages",
+        "project",
+        "agent",
+        "flows"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ff67b0be16e08a4e3d89e3190f5f434ccb170241",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T15:46:16-07:00",
+      "subject": "Smooth tool/thinking collapse so pinned chat stops blinking upward",
+      "body": "At end of stream the ThinkingRow and ToolCallBlock bodies were unmounted\nin a single frame, which (while pinned to bottom) caused every row above\nthe collapsed element to visually jump up. Fix by (a) never auto-collapsing\neither row when streaming ends so the finalized bubble matches the last\nstreaming frame, and (b) animating user-driven collapse via a\ngrid-template-rows 0fr<->1fr transition on the wrapper. The existing\nResizeObserver-driven pin-to-bottom correction now tracks each\nintermediate height before paint, turning the collapse into a gentle\nslide instead of a one-frame blink. Just-finalized MessageBubble tool\nrows receive initialActivitiesExpanded so the StreamingBubble ->\nMessageBubble swap is a visual no-op.\n\nMade-with: Cursor",
+      "parents": [
+        "9dae22bc939b5580dd5a45c9ef23e0e3cdcb0b94"
+      ],
+      "files": [
+        "interface/src/components/ActivityTimeline/ActivityTimeline.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.test.tsx",
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/LLMOutput/LLMOutput.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/ThinkingRow/ThinkingRow.module.css",
+        "interface/src/components/ThinkingRow/ThinkingRow.test.tsx",
+        "interface/src/components/ThinkingRow/ThinkingRow.tsx",
+        "interface/src/components/ToolRow/ToolCallBlock.module.css",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 234,
+        "deletions": 258
+      },
+      "committedAtMs": 1776379576000,
+      "cleanSubject": "Smooth tool/thinking collapse so pinned chat stops blinking upward",
+      "keywords": [
+        "smooth",
+        "tool",
+        "thinking",
+        "collapse",
+        "pinned",
+        "chat",
+        "stops",
+        "blinking",
+        "upward"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8c70b928dce3d36c41a972edee166b618280ee36",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T18:55:41-04:00",
+      "subject": "Fix cargo timings artifact upload paths",
+      "body": "",
+      "parents": [
+        "25ada54247d106480256584463c5ca38a9bba89a"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 33,
+        "deletions": 3
+      },
+      "committedAtMs": 1776380141000,
+      "cleanSubject": "Fix cargo timings artifact upload paths",
+      "keywords": [
+        "cargo",
+        "timings",
+        "artifact",
+        "upload",
+        "paths"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "5d2045b07e4d4d1dd6925ba56e44f3d3d5c41ce9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T18:59:39-04:00",
+      "subject": "Fix Linux larger-runner desktop dependencies",
+      "body": "",
+      "parents": [
+        "8c70b928dce3d36c41a972edee166b618280ee36"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 42,
+        "deletions": 30
+      },
+      "committedAtMs": 1776380379000,
+      "cleanSubject": "Fix Linux larger-runner desktop dependencies",
+      "keywords": [
+        "linux",
+        "larger",
+        "runner",
+        "desktop",
+        "dependencies"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "f3c3368a496a695e5027abb0bc5df44f0d50d988",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:00:28-07:00",
+      "subject": "Repair markdown strong emphasis with trailing whitespace before closer",
+      "body": "Models sometimes emit `**Title **` with a stray space before the closing\nmarker, which CommonMark refuses to recognize as right-flanking, so the\nasterisks render literally in chat. Extend normalizeLooseStrongEmphasis\nto also fix trailing-only whitespace cases while leaving well-formed\n`**bold**` spans untouched.\n\nMade-with: Cursor",
+      "parents": [
+        "ff67b0be16e08a4e3d89e3190f5f434ccb170241"
+      ],
+      "files": [
+        "interface/src/utils/text-normalize.test.ts",
+        "interface/src/utils/text-normalize.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 33,
+        "deletions": 5
+      },
+      "committedAtMs": 1776380428000,
+      "cleanSubject": "Repair markdown strong emphasis with trailing whitespace before closer",
+      "keywords": [
+        "repair",
+        "markdown",
+        "strong",
+        "emphasis",
+        "with",
+        "trailing",
+        "whitespace",
+        "before",
+        "closer"
+      ],
+      "fileGroups": [
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "74e0a1f45b7a27d64e4407b811dfe8b1b19d591b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:01:11-07:00",
+      "subject": "Show task title in create_task rows and make expand useful",
+      "body": "Pending create_task rows no longer stay stuck on \"Generating...\" once\nthe title has streamed in, and the expanded body renders the task title\n(plus description when present) instead of an empty panel. Tightens the\nvertical padding between stacked tool rows so a long checklist reads as\na dense list rather than a spaced-out column.\n\nMade-with: Cursor",
+      "parents": [
+        "f3c3368a496a695e5027abb0bc5df44f0d50d988"
+      ],
+      "files": [
+        "interface/src/components/ActivityTimeline/ActivityTimeline.module.css",
+        "interface/src/components/ToolRow/TaskCreatedIndicator.tsx",
+        "interface/src/components/ToolRow/ToolCallBlock.module.css",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 69,
+        "deletions": 9
+      },
+      "committedAtMs": 1776380471000,
+      "cleanSubject": "Show task title in create_task rows and make expand useful",
+      "keywords": [
+        "show",
+        "task",
+        "title",
+        "create",
+        "rows",
+        "make",
+        "expand",
+        "useful"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0ddff8d85b47514fea681053859fe6d40d0a99d4",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T19:09:02-04:00",
+      "subject": "Add Linux toolchain packages on larger runners",
+      "body": "",
+      "parents": [
+        "5d2045b07e4d4d1dd6925ba56e44f3d3d5c41ce9"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 7,
+        "deletions": 7
+      },
+      "committedAtMs": 1776380942000,
+      "cleanSubject": "Add Linux toolchain packages on larger runners",
+      "keywords": [
+        "linux",
+        "toolchain",
+        "packages",
+        "larger",
+        "runners"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "b0bd9d7b10b4324eb61c966cb81e686cf73d886b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:13:27-07:00",
+      "subject": "Stream partial tool inputs into spec and file preview cards",
+      "body": "Extend the super-agent harness to emit `tool_call_snapshot` events for\n`write_file` and `edit_file` alongside the existing spec tools, parsing\ntheir `path` / `content` / `old_text` / `new_text` fields out of the\nin-flight `input_json_delta` buffer. The preview cards now render the\nreal text the model is writing character-by-character instead of a\nspinner: `SpecPreviewCard` always mounts its code area with a blinking\ncaret while pending, `FilePreviewCard` drops the pending spinner in\nfavor of streaming `DiffView` / `CodeView`, and `ToolRow` no longer\nshows a redundant \"Generating...\" header hint for spec or file tools.\n\nMade-with: Cursor",
+      "parents": [
+        "74e0a1f45b7a27d64e4407b811dfe8b1b19d591b"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/stream.rs",
+        "interface/src/components/FilePreviewCard/FilePreviewCard.module.css",
+        "interface/src/components/FilePreviewCard/FilePreviewCard.tsx",
+        "interface/src/components/ToolRow/SpecPreviewCard.test.tsx",
+        "interface/src/components/ToolRow/SpecPreviewCard.tsx",
+        "interface/src/components/ToolRow/ToolRow.test.tsx",
+        "interface/src/components/ToolRow/ToolRow.tsx",
+        "interface/src/hooks/stream/handlers.test.ts",
+        "interface/src/hooks/stream/handlers.ts"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 379,
+        "deletions": 103
+      },
+      "committedAtMs": 1776381207000,
+      "cleanSubject": "Stream partial tool inputs into spec and file preview cards",
+      "keywords": [
+        "stream",
+        "partial",
+        "tool",
+        "inputs",
+        "into",
+        "spec",
+        "file",
+        "preview",
+        "cards"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src",
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "272b699b3fef7d1f01cb9f2066786a582f4442c7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:14:13-07:00",
+      "subject": "Tighten spacing between tool-only assistant bubbles",
+      "body": "Each iteration of the agent tool-use loop lands in its own saved\nassistant event, so a 13-step \"delete 13 specs\" turn became 13 separate\nMessageBubbles with 16px of bubble padding plus a 12px virtualizer gap\nbetween each row. Tool rows within one bubble were already flush, but\nacross bubbles they drifted apart, giving the checklist an\ninconsistent, airy feel.\n\nDrop the vertical padding on assistant bubbles that carry only tool\ncalls (no prose, no thinking, no artifact refs) via a new\nbubbleAssistantCompact modifier, and trim the ChatMessageList\nvirtualizer gap from 12px to 6px so text and tool rows sit at a\nconsistent rhythm across the board.\n\nMade-with: Cursor",
+      "parents": [
+        "b0bd9d7b10b4324eb61c966cb81e686cf73d886b"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/components/MessageBubble/MessageBubble.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 20,
+        "deletions": 2
+      },
+      "committedAtMs": 1776381253000,
+      "cleanSubject": "Tighten spacing between tool-only assistant bubbles",
+      "keywords": [
+        "tighten",
+        "spacing",
+        "between",
+        "tool",
+        "only",
+        "assistant",
+        "bubbles"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "dd3fc981f3f3e31fd22957e5aa767fdda9b262b0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:19:38-07:00",
+      "subject": "Only auto-expand tool rows with live preview content",
+      "body": "Finalized activity bubbles were dumping raw input/result JSON under\nlist/get/delete/transition rows because every non-create_task tool was\nauto-expanded on finalize. Narrow auto-expansion to the handful of\ntools whose body actually streams useful content -- create_spec,\nupdate_spec, write_file, edit_file, run_command -- so reads, lists,\ndeletes and task CRUD stay collapsed and the checklist reads as a\nsummary rather than a wall of JSON.\n\nMade-with: Cursor",
+      "parents": [
+        "272b699b3fef7d1f01cb9f2066786a582f4442c7"
+      ],
+      "files": [
+        "interface/src/components/ActivityTimeline/ActivityTimeline.tsx",
+        "interface/src/components/LLMOutput/LLMOutput.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 92,
+        "deletions": 6
+      },
+      "committedAtMs": 1776381578000,
+      "cleanSubject": "Only auto-expand tool rows with live preview content",
+      "keywords": [
+        "only",
+        "auto",
+        "expand",
+        "tool",
+        "rows",
+        "with",
+        "live",
+        "preview",
+        "content"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2357d97eef968d7a6938b2e57d566769b5c40231",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:20:07-07:00",
+      "subject": "Add right-click delete for specs and tasks in Sidekick",
+      "body": "The Specs and Tasks panels render the zui Explorer directly with no\ncontext-menu wiring, so right-click did nothing. Add a reusable\nSidekickItemContextMenu hook/component, expose deleteSpec/deleteTask in\nthe API client (endpoints already existed server-side), and wire both\nlist views to optimistically remove the target and roll back on error.\n\nMade-with: Cursor",
+      "parents": [
+        "dd3fc981f3f3e31fd22957e5aa767fdda9b262b0"
+      ],
+      "files": [
+        "interface/src/api/projects.test.ts",
+        "interface/src/api/projects.ts",
+        "interface/src/api/tasks.test.ts",
+        "interface/src/api/tasks.ts",
+        "interface/src/components/SidekickItemContextMenu/SidekickItemContextMenu.module.css",
+        "interface/src/components/SidekickItemContextMenu/SidekickItemContextMenu.tsx",
+        "interface/src/components/SidekickItemContextMenu/index.ts",
+        "interface/src/components/SidekickItemContextMenu/useSidekickItemContextMenu.test.tsx",
+        "interface/src/components/SidekickItemContextMenu/useSidekickItemContextMenu.ts",
+        "interface/src/views/SpecList/SpecList.tsx",
+        "interface/src/views/TaskList/TaskList.tsx"
+      ],
+      "stats": {
+        "fileCount": 11,
+        "insertions": 332,
+        "deletions": 27
+      },
+      "committedAtMs": 1776381607000,
+      "cleanSubject": "Add right-click delete for specs and tasks in Sidekick",
+      "keywords": [
+        "right",
+        "click",
+        "delete",
+        "specs",
+        "tasks",
+        "sidekick"
+      ],
+      "fileGroups": [
+        "interface/src/api",
+        "interface/src/components",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3544937f583ad044019380764cc91c92ff3755c4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:22:04-07:00",
+      "subject": "Show real per-project token usage from aura-network",
+      "body": "The project stats grid was reporting 0 tokens and $0 cost because\naura-storage's /api/stats?scope=project endpoint is only populated for\nautomaton runs (dev_loop calls report_usage explicitly). Chat turns go\nthrough aura-router, which already tracks per-project usage and exposes\nit on aura-network's /internal/projects/:projectId/usage endpoint.\n\nAdd internal-token auth to NetworkClient and overlay the authoritative\ntokens/cost from aura-network on top of the storage stats response.\nAlso wire the super-agent GetProjectCostTool to the real endpoint so it\nstops claiming per-project cost tracking is unavailable.\n\nMade-with: Cursor",
+      "parents": [
+        "2357d97eef968d7a6938b2e57d566769b5c40231"
+      ],
+      "files": [
+        "README.md",
+        "apps/aura-os-server/src/handlers/project_stats.rs",
+        "crates/aura-os-network/src/client/analytics.rs",
+        "crates/aura-os-network/src/client/mod.rs",
+        "crates/aura-os-network/src/error.rs",
+        "crates/aura-os-network/src/lib.rs",
+        "crates/aura-os-network/src/types.rs",
+        "crates/aura-os-super-agent/src/tools/monitor_tools.rs"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 161,
+        "deletions": 11
+      },
+      "committedAtMs": 1776381724000,
+      "cleanSubject": "Show real per-project token usage from aura-network",
+      "keywords": [
+        "show",
+        "real",
+        "project",
+        "token",
+        "usage",
+        "from",
+        "aura",
+        "network"
+      ],
+      "fileGroups": [
+        "README.md",
+        "apps/aura-os-server/src",
+        "crates/aura-os-network/src",
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "a3368049454224e8a3c9e9c2171ad76459694015",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:24:35-07:00",
+      "subject": "Enable Anthropic fine-grained tool streaming for spec/file tools",
+      "body": "Without the `anthropic-beta: fine-grained-tool-streaming-2025-05-14`\nheader and the per-tool `eager_input_streaming: true` flag, Anthropic\nvalidates the tool-use JSON as it streams and only emits\n`input_json_delta` events for complete fragments. That meant the\n`markdown_contents` of a `create_spec` call — a single very long\nstring value — was buffered until the tool block closed, so the\n`SpecPreviewCard` would show only the pre-tool draft preamble with a\nblinking caret until the whole spec finished generating, then snap to\nthe full markdown at once.\n\nOpting both sides into fine-grained streaming makes Anthropic emit\n`input_json_delta` chunks as raw partial string bytes, which the\nexisting `extract_partial_string_field` / `build_partial_spec_input`\npath already knows how to parse and forward as `tool_call_snapshot`\nevents. Consolidates the streaming tool-name list into a single shared\n`is_streaming_tool_name` helper so the snapshot emitter and the\n`eager_input_streaming` tool-definition flag can't drift.\n\nMade-with: Cursor",
+      "parents": [
+        "3544937f583ad044019380764cc91c92ff3755c4"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/stream.rs",
+        "crates/aura-os-super-agent/src/tools/mod.rs",
+        "crates/aura-os-super-agent/src/tools/tests.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 75,
+        "deletions": 14
+      },
+      "committedAtMs": 1776381875000,
+      "cleanSubject": "Enable Anthropic fine-grained tool streaming for spec/file tools",
+      "keywords": [
+        "enable",
+        "anthropic",
+        "fine",
+        "grained",
+        "tool",
+        "streaming",
+        "spec",
+        "file",
+        "tools"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "88579baaec7f2cba46980ae90443dc1a9d39dae9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T19:28:48-04:00",
+      "subject": "Add OpenSSL dev headers on Linux larger runners",
+      "body": "",
+      "parents": [
+        "0ddff8d85b47514fea681053859fe6d40d0a99d4"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 7,
+        "deletions": 7
+      },
+      "committedAtMs": 1776382128000,
+      "cleanSubject": "Add OpenSSL dev headers on Linux larger runners",
+      "keywords": [
+        "openssl",
+        "headers",
+        "linux",
+        "larger",
+        "runners"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "c19ff7984f5590b9f224d3c27c98f7b04c8f7b06",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:31:34-07:00",
+      "subject": "Tighten tool row spacing further across bubble boundaries",
+      "body": "Three sources were still adding visible space between successive tool\nrows: assistant turns that emit an empty text block alongside a\ntool_use were never classified as tool-only (so the bubble kept its\n16px padding), the ChatMessageList virtualizer still inserted 6px\nbetween every bubble, and each tool header carried 2px of vertical\npadding.\n\nCount whitespace-only content blocks as \"no prose\" when deciding\nbubbleAssistantCompact, drop MESSAGE_GAP to 2px, and trim\n.toolHeader padding to 1px 0. Tool rows within a bubble now sit at\n~15px pitch, and tool rows across bubbles sit at ~17px, so the\nchecklist reads as a single continuous list regardless of whether the\nagent batched its tool calls into one assistant turn or many.\n\nMade-with: Cursor",
+      "parents": [
+        "a3368049454224e8a3c9e9c2171ad76459694015"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/MessageBubble/MessageBubble.tsx",
+        "interface/src/components/ToolRow/ToolCallBlock.module.css"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 13,
+        "deletions": 7
+      },
+      "committedAtMs": 1776382294000,
+      "cleanSubject": "Tighten tool row spacing further across bubble boundaries",
+      "keywords": [
+        "tighten",
+        "tool",
+        "spacing",
+        "further",
+        "across",
+        "bubble",
+        "boundaries"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6cf7e3004297f92b25da7866415e8e912c373210",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:32:21-07:00",
+      "subject": "Filter deleted tasks and specs from TaskList view",
+      "body": "removeTask only dropped items from the sidekick store's tasks array, but\nuseTaskListData merges that with localTasks (initial fetch + streamed\nevents), so right-click delete had no visible effect on the Tasks panel.\nDeleting a spec from the Tasks view had the same issue because\nuseTaskListData didn't apply deletedSpecIds either.\n\nMirror the deletedSpecIds pattern for tasks (deletedTaskIds + removeTask\ntracks, pushTask clears, clearDeletedTasks resets on refetch), and apply\nboth deletion filters in useTaskListData. Also restore the item via\npushSpec/pushTask on delete failure in both list views.\n\nMade-with: Cursor",
+      "parents": [
+        "c19ff7984f5590b9f224d3c27c98f7b04c8f7b06"
+      ],
+      "files": [
+        "interface/src/stores/sidekick-store.test.ts",
+        "interface/src/stores/sidekick-store.ts",
+        "interface/src/views/SpecList/SpecList.tsx",
+        "interface/src/views/TaskList/TaskList.tsx",
+        "interface/src/views/TaskList/useTaskListData.test.tsx",
+        "interface/src/views/TaskList/useTaskListData.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 75,
+        "deletions": 12
+      },
+      "committedAtMs": 1776382341000,
+      "cleanSubject": "Filter deleted tasks and specs from TaskList view",
+      "keywords": [
+        "filter",
+        "deleted",
+        "tasks",
+        "specs",
+        "from",
+        "tasklist",
+        "view"
+      ],
+      "fileGroups": [
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "12be80e16fdc5b5bb44a56b0fdaf4c272ea440a5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:33:38-07:00",
+      "subject": "Log tool streaming flow to diagnose live preview lag",
+      "body": "Add `info!` / `debug!` tracing at each step of the tool-use streaming\npipeline so we can tell whether Anthropic is actually emitting\n`input_json_delta` events in real time (fine-grained streaming active)\nor buffering them until the block closes (fine-grained streaming\ndisabled — e.g. because the billing router is stripping the\n`eager_input_streaming` flag out of the tool definitions).\n\n- On every `/v1/messages` request: log the list of tool names that\n  carry `eager_input_streaming: true` so we can confirm the flag is\n  still present on the outbound body.\n- On `tool_use` content_block_start: log the tool name + whether the\n  harness considers it a streaming tool.\n- On every `input_json_delta` chunk: debug-log the delta length and\n  accumulated buffer size.\n- On every emitted `ToolCallSnapshot`: debug-log the current\n  `markdown_contents` / `content` length.\n- On `tool_use` content_block_stop: log total bytes and whether any\n  mid-stream snapshots were emitted before the final one.\n\nMade-with: Cursor",
+      "parents": [
+        "6cf7e3004297f92b25da7866415e8e912c373210"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/stream.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 56,
+        "deletions": 1
+      },
+      "committedAtMs": 1776382418000,
+      "cleanSubject": "Log tool streaming flow to diagnose live preview lag",
+      "keywords": [
+        "tool",
+        "streaming",
+        "flow",
+        "diagnose",
+        "live",
+        "preview"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "38b68567ad2ee85176325eba19d36a787c914295",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:34:36-07:00",
+      "subject": "Stop reformatting assistant bubbles after stream finishes",
+      "body": "The streaming bubble rendered LLM output without the `.markdown` CSS scope,\nbut the finalized MessageBubble wrapped it in `<div className={styles.markdown}>`\nwhich overrode heading sizes, paragraph spacing, list/table/code/link/blockquote\nstyling. The moment the stream ended the content visibly reflowed.\n\nDrop the `.markdown` wrapper (and its CSS block) so finalized assistant\nmessages render with the same plain `.bubbleAssistant` scope as the live\nstreaming bubble, eliminating the post-stream formatting shift.\n\nMade-with: Cursor",
+      "parents": [
+        "12be80e16fdc5b5bb44a56b0fdaf4c272ea440a5"
+      ],
+      "files": [
+        "interface/src/components/MessageBubble/MessageBubble.module.css",
+        "interface/src/components/MessageBubble/MessageBubble.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 11,
+        "deletions": 104
+      },
+      "committedAtMs": 1776382476000,
+      "cleanSubject": "Stop reformatting assistant bubbles after stream finishes",
+      "keywords": [
+        "stop",
+        "reformatting",
+        "assistant",
+        "bubbles",
+        "after",
+        "stream",
+        "finishes"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ed0edf5a0eb0dea0653e48edf5940b360023a6b3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:43:43-07:00",
+      "subject": "Rename Swarm environment label to Remote in agent create form",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "38b68567ad2ee85176325eba19d36a787c914295"
+      ],
+      "files": [
+        "interface/src/components/AgentEditorModal/AgentEditorForm.test.tsx",
+        "interface/src/components/AgentEditorModal/AgentEditorForm.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1776383023000,
+      "cleanSubject": "Rename Swarm environment label to Remote in agent create form",
+      "keywords": [
+        "rename",
+        "swarm",
+        "environment",
+        "label",
+        "remote",
+        "agent",
+        "create",
+        "form"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:47:56-07:00",
+      "subject": "Add aura_project_id to SessionInit for router billing headers",
+      "body": "aura-harness's reasoner sends X-Aura-Project-Id on every proxied /v1/messages\nwhen its ModelRequest has aura_project_id set, which is how aura-router\nattributes per-project usage on POST /internal/usage. The SessionInit protocol\nalready carries aura_agent_id / aura_session_id / aura_org_id for the matching\nheaders, but had no dedicated aura_project_id field (only project_id, which\nthe harness uses for domain tool routing). Add the missing field and forward\nit through SessionConfig and both harness backends so the caller can populate\nthe billing header.\n\nMade-with: Cursor",
+      "parents": [
+        "ed0edf5a0eb0dea0653e48edf5940b360023a6b3"
+      ],
+      "files": [
+        "crates/aura-os-link/src/harness.rs",
+        "crates/aura-os-link/src/local_harness.rs",
+        "crates/aura-os-link/src/swarm_harness.rs",
+        "crates/aura-protocol/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 10,
+        "deletions": 0
+      },
+      "committedAtMs": 1776383276000,
+      "cleanSubject": "Add aura_project_id to SessionInit for router billing headers",
+      "keywords": [
+        "aura",
+        "project",
+        "sessioninit",
+        "router",
+        "billing",
+        "headers"
+      ],
+      "fileGroups": [
+        "crates/aura-os-link/src",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "0b340fa2e53179c0581f2c320c91738d371251b2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:49:10-07:00",
+      "subject": "Preserve tool-only assistant turns in chat history on reopen",
+      "body": "Standalone agent chat was losing all prior assistant/tool turns when the\napp was closed and reopened, so the LLM restarted each session without\nmemory of anything it had done. User turns survived because they take a\nseparate code path.\n\nThree silent-drop points were stripping assistant turns from the history\nthat feeds the model on cold start:\n\n- events_to_session_history used serde_json::from_value::<Vec<_>>(..).ok()\n  so a single unknown or malformed ChatContentBlock variant nuked the\n  whole vector; combined with the empty-content guard this dropped the\n  entire turn. Switch to per-block deserialization that logs and skips\n  only the bad block.\n- session_events_to_conversation_history filtered on empty content, so\n  any tool-only assistant turn (empty text, populated content_blocks)\n  was removed before it reached the harness. Render tool_use /\n  tool_result / refs into the flat text shape the harness expects so\n  the LLM still sees prior tool activity.\n- spawn_chat_persist_task aborted the turn on RecvError::Lagged and on\n  early channel close, losing the terminating assistant_message_end\n  and therefore the full turn. Continue draining on lag, fill null\n  tool_use inputs from the first tool_result, and synthesize a final\n  end event when the broadcast closes before the harness signals\n  end-of-turn.\n\nCovered by new unit tests for tool-only round-trip, unknown block\ntolerance, and the conversation-history renderer.\n\nMade-with: Cursor",
+      "parents": [
+        "cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/agents/conversions.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 430,
+        "deletions": 33
+      },
+      "committedAtMs": 1776383350000,
+      "cleanSubject": "Preserve tool-only assistant turns in chat history on reopen",
+      "keywords": [
+        "preserve",
+        "tool",
+        "only",
+        "assistant",
+        "turns",
+        "chat",
+        "history",
+        "reopen"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "3484cb2b2544c3e92cdc9812dd47e514dbcc96e5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:49:40-07:00",
+      "subject": "Revert \"Add aura_project_id to SessionInit for router billing headers\"",
+      "body": "This reverts commit cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666.",
+      "parents": [
+        "0b340fa2e53179c0581f2c320c91738d371251b2"
+      ],
+      "files": [
+        "crates/aura-os-link/src/harness.rs",
+        "crates/aura-os-link/src/local_harness.rs",
+        "crates/aura-os-link/src/swarm_harness.rs",
+        "crates/aura-protocol/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 0,
+        "deletions": 10
+      },
+      "committedAtMs": 1776383380000,
+      "cleanSubject": "Revert \"Add aura_project_id to SessionInit for router billing headers\"",
+      "keywords": [
+        "revert",
+        "aura",
+        "project",
+        "sessioninit",
+        "router",
+        "billing",
+        "headers"
+      ],
+      "fileGroups": [
+        "crates/aura-os-link/src",
+        "crates/aura-protocol/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "8c9c42f9c864c9b10ce67621468da6cc27f02b66",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:52:00-07:00",
+      "subject": "Refetch project stats when a chat stream ends",
+      "body": "Previously useStatsDashboardData only fetched on mount / projectId change,\nso tokens, cost, and events stayed frozen after sending a message even\nthough the backend had already recorded the turn. Subscribe to the shared\nstream store and refetch on the falling edge of any entry's isStreaming\nflag, so the grid updates the moment an LLM turn completes.\n\nMade-with: Cursor",
+      "parents": [
+        "3484cb2b2544c3e92cdc9812dd47e514dbcc96e5"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "interface/src/views/StatsDashboard/useStatsDashboardData.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 41,
+        "deletions": 32
+      },
+      "committedAtMs": 1776383520000,
+      "cleanSubject": "Refetch project stats when a chat stream ends",
+      "keywords": [
+        "refetch",
+        "project",
+        "stats",
+        "when",
+        "chat",
+        "stream",
+        "ends"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "fc6fd9185d1e064d6056e3d777662187e5b278eb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T16:56:35-07:00",
+      "subject": "Sum input+output tokens when aura-network totalTokens is 0",
+      "body": "The project stats grid showed $0.11 cost alongside 0 tokens because some\naura-network deployments return a populated totalCostUsd / totalInputTokens\n/ totalOutputTokens but leave the aggregate totalTokens column at 0. Treat\ntotalTokens as authoritative only when it's non-zero, otherwise fall back\nto the component columns so the UI stays consistent with cost. Also log\nthe raw response at debug level to help diagnose future mismatches.\n\nMade-with: Cursor",
+      "parents": [
+        "8c9c42f9c864c9b10ce67621468da6cc27f02b66"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/project_stats.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 23,
+        "deletions": 2
+      },
+      "committedAtMs": 1776383795000,
+      "cleanSubject": "Sum input+output tokens when aura-network totalTokens is 0",
+      "keywords": [
+        "input",
+        "output",
+        "tokens",
+        "when",
+        "aura",
+        "network",
+        "totaltokens"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "ffda969e6b38fb2c58c1ff8d5ea2f5c337eab23c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:00:52-07:00",
+      "subject": "Log aura-network project usage response at info level",
+      "body": "Upgrading the project-stats diagnostic from debug! to info! so the\nresponse is visible in default logging, and adding an explicit branch\nlog when the internal token is missing or the network client is disabled.\nMakes it obvious whether 0-token grids are caused by a configuration gap,\na network fetch failure, or a backend returning inconsistent fields.\n\nMade-with: Cursor",
+      "parents": [
+        "fc6fd9185d1e064d6056e3d777662187e5b278eb"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/project_stats.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 4
+      },
+      "committedAtMs": 1776384052000,
+      "cleanSubject": "Log aura-network project usage response at info level",
+      "keywords": [
+        "aura",
+        "network",
+        "project",
+        "usage",
+        "response",
+        "info",
+        "level"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "4cedfe777005a6800019d2ba3e326182225cce31",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:06:55-07:00",
+      "subject": "Sum input+output tokens when aura-storage totalTokens is 0",
+      "body": "Your logs show `aura-network internal token not configured`, which means\nthe overlay from the previous commit never runs and tokens/cost both come\nfrom aura-storage. aura-storage returns a populated `estimatedCostUsd`\n($0.11) alongside `totalTokens = 0`, mirroring the same aggregate-column\nquirk we already worked around on the aura-network side.\n\nAdd `totalInputTokens` / `totalOutputTokens` (both optional) to the\n`ProjectStats` shape and fall back to their sum in the From impl when the\ntop-level aggregate is 0. Also log the raw storage response at info level\nto make the next mismatch visible without tweaking RUST_LOG.\n\nMade-with: Cursor",
+      "parents": [
+        "ffda969e6b38fb2c58c1ff8d5ea2f5c337eab23c"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/project_stats.rs",
+        "crates/aura-os-storage/src/types.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 31,
+        "deletions": 1
+      },
+      "committedAtMs": 1776384415000,
+      "cleanSubject": "Sum input+output tokens when aura-storage totalTokens is 0",
+      "keywords": [
+        "input",
+        "output",
+        "tokens",
+        "when",
+        "aura",
+        "storage",
+        "totaltokens"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-storage/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "7074f2f1eebed82cae520cb1342bd9a2ef044c29",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:10:12-07:00",
+      "subject": "Remove aura-network internal-token paths from the client",
+      "body": "Internal tokens are service-to-service secrets and don't belong in the\ndesktop client. Strip NetworkClient::has_internal_token, the internal-only\n/internal/projects/:projectId/usage call, the ProjectUsage type, and the\naura-network overlay in the project stats handler. Revert\nGetProjectCostTool to its pre-internal-token placeholder.\n\nPer-project token totals now come purely from aura-storage (authed with\nthe user JWT), with the existing totalInputTokens / totalOutputTokens\nfallback from the previous commit handling the case where aura-storage\nreturns a zero aggregate alongside populated component columns.\n\nMade-with: Cursor",
+      "parents": [
+        "4cedfe777005a6800019d2ba3e326182225cce31"
+      ],
+      "files": [
+        "README.md",
+        "apps/aura-os-server/src/handlers/project_stats.rs",
+        "crates/aura-os-network/src/client/analytics.rs",
+        "crates/aura-os-network/src/client/mod.rs",
+        "crates/aura-os-network/src/error.rs",
+        "crates/aura-os-network/src/lib.rs",
+        "crates/aura-os-network/src/types.rs",
+        "crates/aura-os-super-agent/src/tools/monitor_tools.rs"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 12,
+        "deletions": 193
+      },
+      "committedAtMs": 1776384612000,
+      "cleanSubject": "Remove aura-network internal-token paths from the client",
+      "keywords": [
+        "remove",
+        "aura",
+        "network",
+        "internal",
+        "token",
+        "paths",
+        "from",
+        "client"
+      ],
+      "fileGroups": [
+        "README.md",
+        "apps/aura-os-server/src",
+        "crates/aura-os-network/src",
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "d74a85554f8ad2e2805dd5951ba57c2d21d3a594",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:20:59-07:00",
+      "subject": "Restore missing user and assistant turns in project chat history",
+      "body": "Project agents were reopening with only a subset of prior messages\nbecause three independent paths silently dropped turns:\n\n- `user_message` rows used an all-or-nothing `Vec<ChatContentBlock>`\n  deserialize. Any single unknown/legacy block (common for image-only\n  turns) cleared the whole vector; combined with the display filter\n  dropping messages that had no content and no blocks, image-only user\n  turns vanished on reopen. Use the same per-block tolerant helper as\n  the assistant branch so known blocks survive even when peers fail.\n\n- `storage_session_sort_key` compared timestamps as raw strings, so\n  mixed RFC3339 formats (e.g. `...Z` vs `...+00:00` with fractional\n  seconds) sorted incorrectly and the reader could pick a stale\n  session. Parse timestamps with `DateTime::parse_from_rfc3339` and\n  fall back to the Unix epoch so sessions without a recency signal\n  always lose to sessions that have one.\n\n- The chat persistence task broke out of its loop on\n  `HarnessOutbound::Error` and only synthesized an\n  `assistant_message_end` when some output had accumulated. Turns\n  that errored before any output (auth, credits, provider 4xx on\n  first byte) stored the user message but no assistant reply, so\n  every reopen showed a dangling user turn. Synthesize a minimal\n  terminating row with the error summary so the turn is recoverable.\n\nAlso align the writer's session selection in `resolve_chat_session`\nwith the reader by sorting on the shared recency key, so new events\nnever land in a different session than the next read will pick. Add\ndiagnostic logs in `load_project_session_history` with session count,\npicked session id, and a breakdown of user/assistant event types so\nfuture regressions can be diagnosed without adding instrumentation.\n\nMade-with: Cursor",
+      "parents": [
+        "7074f2f1eebed82cae520cb1342bd9a2ef044c29"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/agents/conversions.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 208,
+        "deletions": 12
+      },
+      "committedAtMs": 1776385259000,
+      "cleanSubject": "Restore missing user and assistant turns in project chat history",
+      "keywords": [
+        "restore",
+        "missing",
+        "user",
+        "assistant",
+        "turns",
+        "project",
+        "chat",
+        "history"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "07253bf34bd62263cac12c87ba24228aed53d550",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:23:57-07:00",
+      "subject": "Prevent text selection and dragging on the AURA topbar logo",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "d74a85554f8ad2e2805dd5951ba57c2d21d3a594"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/MobileShell/MobileTopbar.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1776385437000,
+      "cleanSubject": "Prevent text selection and dragging on the AURA topbar logo",
+      "keywords": [
+        "prevent",
+        "text",
+        "selection",
+        "dragging",
+        "aura",
+        "topbar",
+        "logo"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3f75764473706f21dbe15cab3dedbccb31cc65ce",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:36:00-07:00",
+      "subject": "Disable text selection on topbar and left sidebar",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "07253bf34bd62263cac12c87ba24228aed53d550"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 15,
+        "deletions": 0
+      },
+      "committedAtMs": 1776386160000,
+      "cleanSubject": "Disable text selection on topbar and left sidebar",
+      "keywords": [
+        "disable",
+        "text",
+        "selection",
+        "topbar",
+        "left",
+        "sidebar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3b9d7f0c242b241875d4c6e3b9d4406e77f93072",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T17:43:06-07:00",
+      "subject": "Keep prior messages visible after starting a new chat session",
+      "body": "The reset-session button used to clear the chat view locally (history\ncache + stream events), so users perceived it as deleting their\nconversation even though the server was preserving the old session rows\nand creating a fresh one.\n\nClient: handleNewSession in AgentChatView (both standalone and project\npanels) and use-agent-chat-window no longer calls clearHistory or\nresetEvents. Prior events stay on screen; only the context-usage meter\nresets and the next send is marked new_session so it lands in the new\nstorage session.\n\nServer: load_latest_agent_events_from_storage_result and\nload_project_session_history now iterate every session for the agent /\nagent instance, reconstruct each session independently via\nevents_to_session_history, and concatenate them oldest-first. On reload\nthe UI sees the full multi-session transcript instead of only the\nlatest session. latest_storage_session is retained for its unit tests\n(it pins down the storage_session_sort_key ordering contract) and gated\nto #[cfg(test)].\n\nMade-with: Cursor",
+      "parents": [
+        "3f75764473706f21dbe15cab3dedbccb31cc65ce"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "interface/src/components/AgentChatView/AgentChatView.tsx",
+        "interface/src/hooks/use-agent-chat-window.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 71,
+        "deletions": 47
+      },
+      "committedAtMs": 1776386586000,
+      "cleanSubject": "Keep prior messages visible after starting a new chat session",
+      "keywords": [
+        "keep",
+        "prior",
+        "messages",
+        "visible",
+        "after",
+        "starting",
+        "chat",
+        "session"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "efd59b95e0518cee1655e239b29074140153abbb",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:06:15-07:00",
+      "subject": "Preserve terminal task status against stale task_saved events",
+      "body": "A `task_saved` broadcast from the agent runtime can arrive after\n`task_completed`/`task_failed` with a stale `in_progress` snapshot,\nbecause the status transition in storage happens on a separate code\npath from the dev loop's completion handling. Without a guard, the\nfrontend's task list (sidekick store + useTaskListData) overwrites the\njust-applied terminal status, so a task reads \"Done\" in the Run panel\nbut reverts to an open circle in the Tasks view while the loop is\nstill running.\n\nFix the race on both sides:\n\n- Frontend: make `done`/`failed` sticky in `useSidekickStore.pushTask`\n  and `useTaskListData.upsertTask`. A non-terminal `task_saved` payload\n  is merged but cannot downgrade an already-terminal status, and keeps\n  the local `execution_notes`/`files_changed` when the incoming payload\n  hasn't caught up yet.\n\n- Backend: in the dev loop's `task_completed` / `task_failed` branches,\n  call `storage.transition_task(Done|Failed)` after persisting output\n  so any subsequent `task_saved` snapshot already carries the terminal\n  status. Transition errors (e.g. already terminal) are logged and\n  non-fatal.\n\nMade-with: Cursor",
+      "parents": [
+        "3b9d7f0c242b241875d4c6e3b9d4406e77f93072"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "interface/src/stores/sidekick-store.ts",
+        "interface/src/views/TaskList/useTaskListData.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 71,
+        "deletions": 9
+      },
+      "committedAtMs": 1776387975000,
+      "cleanSubject": "Preserve terminal task status against stale task_saved events",
+      "keywords": [
+        "preserve",
+        "terminal",
+        "task",
+        "status",
+        "against",
+        "stale",
+        "saved",
+        "events"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/stores",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f33ff9e8d6f8ad12a15fac7f4185166e666eee6a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:08:21-07:00",
+      "subject": "Make Stop automation resilient to harness failures",
+      "body": "The Stop button would leave the UI stuck on Pause/Stop (and the\nloop potentially running) whenever the stop call failed or the\nregistry was already empty:\n\n- The backend's `stop_loop` returned 400 when nothing matched and\n  502 when every `client.stop()` call errored, leaving the\n  automaton_registry populated with unreachable entries that\n  blocked future starts and stops.\n- The frontend's `handleStopConfirm` swallowed errors to the\n  console and only updated local state inside the `try`, so a\n  failed stop never toggled the buttons back to Run and never\n  told the user what went wrong.\n\nFix both sides:\n\n- Backend: make `stop_loop` idempotent. An empty target set now\n  returns 200 with the current status, and harness-side errors no\n  longer abort the loop - we log the failure but still remove the\n  registry entry, emit `loop_stopped`, and persist the log event\n  so subscribers reconcile. Exported `ActiveAutomaton` to let the\n  integration tests seed the registry.\n\n- Frontend: `handleStopConfirm` optimistically clears\n  `activeAgents`/`paused`/`starting`/`preparing` before awaiting\n  the HTTP call, then reconciles against the authoritative status\n  on both success and failure. Failures surface via a new\n  `stopError` modal (dismissable) instead of being silently\n  dropped. `handlePause` also clears `preparing` on success.\n\nTests:\n- Rename `loop_stop_without_running` to\n  `loop_stop_without_running_is_idempotent` asserting 200 + empty\n  status, and add `loop_stop_clears_registry_even_when_harness_unreachable`\n  that points a live registry entry at a dead port and asserts\n  the registry is cleared and `loop_stopped` is broadcast.\n- Update `AutomationBar.test.tsx` assertions to reflect the\n  `(projectId, agentInstanceId)` signature and add a test for the\n  rejected-stop path verifying the error modal appears and the\n  Run button becomes enabled again.\n\nMade-with: Cursor",
+      "parents": [
+        "efd59b95e0518cee1655e239b29074140153abbb"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/tests/api_tests.rs",
+        "interface/src/components/AutomationBar/AutomationBar.test.tsx",
+        "interface/src/components/AutomationBar/AutomationBar.tsx",
+        "interface/src/components/AutomationBar/useAutomationStatus.ts",
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 192,
+        "deletions": 21
+      },
+      "committedAtMs": 1776388101000,
+      "cleanSubject": "Make Stop automation resilient to harness failures",
+      "keywords": [
+        "make",
+        "stop",
+        "automation",
+        "resilient",
+        "harness",
+        "failures"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "e5adacc89276689a747b42f833458e719e069e11",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:11:55-07:00",
+      "subject": "Stream visible spec markdown before calling create_spec/update_spec",
+      "body": "Clarifies the orchestrator rule so the model emits the actual draft\nmarkdown as visible assistant text rather than meta-commentary like\n\"I will create a spec\", and reinforces the same expectation in the\ncreate_spec and update_spec tool descriptions.\n\nMade-with: Cursor",
+      "parents": [
+        "f33ff9e8d6f8ad12a15fac7f4185166e666eee6a"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/prompt.rs",
+        "crates/aura-os-super-agent/src/tools/spec_tools.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 5,
+        "deletions": 5
+      },
+      "committedAtMs": 1776388315000,
+      "cleanSubject": "Stream visible spec markdown before calling create_spec/update_spec",
+      "keywords": [
+        "stream",
+        "visible",
+        "spec",
+        "markdown",
+        "before",
+        "calling",
+        "create",
+        "update"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "000817bd48da1f40ad7977496115994f69259cd3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:12:00-07:00",
+      "subject": "Persist bootstrap ?host= query param into localStorage",
+      "body": "Desktop and native shells bootstrap the webview with a `?host=` query\nparam, but SPA navigation drops that query string on subsequent route\nchanges, causing later requests to fall back to a stale stored origin.\nSync the bootstrap host into localStorage at app startup, before any\nmodule that reads the host origin, so the bootstrap value wins.\n\nMade-with: Cursor",
+      "parents": [
+        "e5adacc89276689a747b42f833458e719e069e11"
+      ],
+      "files": [
+        "interface/src/lib/host-config.test.ts",
+        "interface/src/lib/host-config.ts",
+        "interface/src/main.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 44,
+        "deletions": 0
+      },
+      "committedAtMs": 1776388320000,
+      "cleanSubject": "Persist bootstrap ?host= query param into localStorage",
+      "keywords": [
+        "persist",
+        "bootstrap",
+        "host",
+        "query",
+        "param",
+        "into",
+        "localstorage"
+      ],
+      "fileGroups": [
+        "interface/src/lib",
+        "interface/src/main.tsx"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2f34e08d556fe37a85e34154b96a418e4a750936",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:12:04-07:00",
+      "subject": "Default billing plan badge to \"pro\" and drop team-centric copy",
+      "body": "Shows \"pro\" instead of \"free\" as the fallback label when billing data\nis missing, and replaces \"Your team's active subscription\" with the\norg-agnostic \"Your active subscription\".\n\nMade-with: Cursor",
+      "parents": [
+        "000817bd48da1f40ad7977496115994f69259cd3"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsBilling/OrgSettingsBilling.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 2
+      },
+      "committedAtMs": 1776388324000,
+      "cleanSubject": "Default billing plan badge to \"pro\" and drop team-centric copy",
+      "keywords": [
+        "default",
+        "billing",
+        "plan",
+        "badge",
+        "drop",
+        "team",
+        "centric",
+        "copy"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "24d6dc16d671e4938258e5f0c4474877a5cb24e8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:12:09-07:00",
+      "subject": "Add hello-world website quick spec doc",
+      "body": "Minimal sample spec used as a smoke-test target for spec tooling and\ndeploy validation.\n\nMade-with: Cursor",
+      "parents": [
+        "2f34e08d556fe37a85e34154b96a418e4a750936"
+      ],
+      "files": [
+        "docs/hello-world-website-spec.md"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 86,
+        "deletions": 0
+      },
+      "committedAtMs": 1776388329000,
+      "cleanSubject": "Add hello-world website quick spec doc",
+      "keywords": [
+        "hello",
+        "world",
+        "website",
+        "quick",
+        "spec"
+      ],
+      "fileGroups": [
+        "docs/hello-world-website-spec.md"
+      ],
+      "primaryArea": "Docs",
+      "areas": [
+        "Docs"
+      ]
+    },
+    {
+      "sha": "8b62dfff790fff470ec793b12aec120bc9dfb0d3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:12:23-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "24d6dc16d671e4938258e5f0c4474877a5cb24e8",
+        "88579baaec7f2cba46980ae90443dc1a9d39dae9"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 86,
+        "deletions": 44
+      },
+      "committedAtMs": 1776388343000,
+      "cleanSubject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "keywords": [
+        "merge",
+        "branch",
+        "main",
+        "https",
+        "github",
+        "cypher",
+        "aura"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "4c3b40f3a94176a39c4a8f2fd23472c32526b41d",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:21:35-07:00",
+      "subject": "Preserve terminal task status across listTasks refetches too",
+      "body": "The previous commit guarded the `task_saved` event path, but the task\nlist was still reverting to `in_progress` during an automation run\nbecause `refetchTasks` (and the `initialTasks` effect) replaced\n`localTasks` with whatever `api.listTasks` returned, bypassing the\nmonotonic guard.\n\n`refetchTasks` fires between every super-agent streaming turn (see the\n`streamingId` effect), so any time the DB hadn't yet been transitioned\nto `done` when the next turn ended, the client would clobber its own\n`done` state — which `TaskList.displayStatus` then rendered as an open\ncircle because the underlying status was `in_progress` but the task\nwasn't `liveTaskIds` anymore.\n\nExtract the terminal-preservation merge into `mergeTaskPreservingTerminal`\nand apply it to both `refetchTasks` and the `initialTasks` effect via\n`mergeTaskListPreservingTerminal`, so a client-side `done`/`failed` is\nnever downgraded by a stale server snapshot.\n\nMade-with: Cursor",
+      "parents": [
+        "8b62dfff790fff470ec793b12aec120bc9dfb0d3"
+      ],
+      "files": [
+        "interface/src/views/TaskList/useTaskListData.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 36,
+        "deletions": 15
+      },
+      "committedAtMs": 1776388895000,
+      "cleanSubject": "Preserve terminal task status across listTasks refetches too",
+      "keywords": [
+        "preserve",
+        "terminal",
+        "task",
+        "status",
+        "across",
+        "listtasks",
+        "refetches"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5bcaff3980468e746b5e3ccf11116be56445579f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:24:40-07:00",
+      "subject": "Keep chat anchor pinned while resizing the sidekick pane",
+      "body": "During an active resize session, useScrollAnchorV2 only compensated for\nper-frame height changes when the user was pinned to the bottom. When\nscrolled up, the captured anchor was held but never restored until the\nresize ended, so remeasured messages slid around as the divider moved.\nGeneralize scheduleResizePinnedFollow into scheduleResizeFollow so every\nmid-drag content-height change either follows the bottom (pinned) or\nrestores the captured anchor (reading), keeping visible text stable.\n\nMade-with: Cursor",
+      "parents": [
+        "4c3b40f3a94176a39c4a8f2fd23472c32526b41d"
+      ],
+      "files": [
+        "interface/src/hooks/use-scroll-anchor-v2.test.ts",
+        "interface/src/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 26,
+        "deletions": 16
+      },
+      "committedAtMs": 1776389080000,
+      "cleanSubject": "Keep chat anchor pinned while resizing the sidekick pane",
+      "keywords": [
+        "keep",
+        "chat",
+        "anchor",
+        "pinned",
+        "while",
+        "resizing",
+        "sidekick",
+        "pane"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5b95b6e4f66712c5c597e18e81c0c2ebe2a871ca",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:32:50-07:00",
+      "subject": "Preserve terminal task status in the Kanban store",
+      "body": "The Kanban board dropped done/failed tasks back to earlier statuses when\nentering the task app mid-automation because `addTask` and `fetchTasks`\nreplaced cached tasks with whatever the DB currently reported. Storage\nsnapshots from `task_saved` broadcasts and `listTasks` refetches can lag\nthe authoritative `task_completed`/`task_failed` WS events, so the client\nalready knows a task is terminal when a stale snapshot arrives.\n\nMirror the `preserveTerminalStatus` guard already used in\n`useTaskListData` and `sidekick-store` so the Kanban cache honors\npreviously observed terminal statuses.\n\nMade-with: Cursor",
+      "parents": [
+        "5bcaff3980468e746b5e3ccf11116be56445579f"
+      ],
+      "files": [
+        "interface/src/apps/tasks/stores/kanban-store.test.ts",
+        "interface/src/apps/tasks/stores/kanban-store.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 108,
+        "deletions": 11
+      },
+      "committedAtMs": 1776389570000,
+      "cleanSubject": "Preserve terminal task status in the Kanban store",
+      "keywords": [
+        "preserve",
+        "terminal",
+        "task",
+        "status",
+        "kanban",
+        "store"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ddfdfe1af951cd42811ef6c423dbea72b9eec2b8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:39:03-07:00",
+      "subject": "Preserve terminal task status in the Sidekick TaskList cache",
+      "body": "The Sidekick tasks tab reads its initial list from the react-query layout\ncache, which was updated on every `task_saved` WS event with\n`mergeTaskIntoProjectLayout` and never touched by the authoritative\n`task_completed` / `task_failed` events. So a stale snapshot could\nsilently revert a Done task to `in_progress`, and a completion that\nlanded while the tab was unmounted never reached the cache at all. When\nthe user entered the Sidekick tasks tab mid-automation the TaskList\nre-rendered from that stale cache and checked tasks appeared to lose\ntheir state.\n\nGuard `mergeTaskIntoProjectLayout` with the same terminal-status\npreservation used in `useTaskListData`, `kanban-store`, and\n`sidekick-store`, and add a `patchTaskStatusInProjectLayout` helper.\nSubscribe to `TaskStarted` / `TaskCompleted` / `TaskFailed` in\n`useProjectLayoutData` so authoritative transitions update the layout\ncache regardless of whether the Sidekick TaskList is mounted.\n\nMade-with: Cursor",
+      "parents": [
+        "5b95b6e4f66712c5c597e18e81c0c2ebe2a871ca"
+      ],
+      "files": [
+        "interface/src/queries/project-queries.test.ts",
+        "interface/src/queries/project-queries.ts",
+        "interface/src/views/ProjectLayout/useProjectLayoutData.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 161,
+        "deletions": 1
+      },
+      "committedAtMs": 1776389943000,
+      "cleanSubject": "Preserve terminal task status in the Sidekick TaskList cache",
+      "keywords": [
+        "preserve",
+        "terminal",
+        "task",
+        "status",
+        "sidekick",
+        "tasklist",
+        "cache"
+      ],
+      "fileGroups": [
+        "interface/src/queries",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8be01e8e28c261bbd3843a548184c4260c7b3b5b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:39:06-07:00",
+      "subject": "Keep pinned chat at bottom during sidekick resize",
+      "body": "Follow-up to the anchor fix: when the user is pinned to the bottom, the\nper-message ResizeObserver fires before React commits the virtualizer's\nnew totalSize, so doScrollToBottom was using a stale scrollHeight and\nthe view slid up for one frame. Run the resize correction synchronously\n(no rAF) and also re-run it from a useLayoutEffect keyed on totalSize in\nChatMessageList so it fires once more post-commit but still pre-paint,\nkeeping the bottom and the reading-mode anchor perfectly stable while\ndragging.\n\nMade-with: Cursor",
+      "parents": [
+        "ddfdfe1af951cd42811ef6c423dbea72b9eec2b8"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/hooks/use-scroll-anchor-v2.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 26,
+        "deletions": 23
+      },
+      "committedAtMs": 1776389946000,
+      "cleanSubject": "Keep pinned chat at bottom during sidekick resize",
+      "keywords": [
+        "keep",
+        "pinned",
+        "chat",
+        "bottom",
+        "during",
+        "sidekick",
+        "resize"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ecd52f184fdeaa57c125157ab32d44247f15950f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-16T18:43:42-07:00",
+      "subject": "ci: use python3 for normalize-packager-key step",
+      "body": "Ubuntu runners only provide python3, so bare `python` invocations fail with exit code 127.\n\nMade-with: Cursor",
+      "parents": [
+        "8be01e8e28c261bbd3843a548184c4260c7b3b5b"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1776390222000,
+      "cleanSubject": "use python3 for normalize-packager-key step",
+      "keywords": [
+        "python3",
+        "normalize",
+        "packager",
+        "step"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "134278eeb85bf00ae31442e440008bf97a108cec",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T22:51:24-04:00",
+      "subject": "Restore Linux desktop jobs to x64 hosted runners",
+      "body": "",
+      "parents": [
+        "ecd52f184fdeaa57c125157ab32d44247f15950f"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 84,
+        "deletions": 7
+      },
+      "committedAtMs": 1776394284000,
+      "cleanSubject": "Restore Linux desktop jobs to x64 hosted runners",
+      "keywords": [
+        "restore",
+        "linux",
+        "desktop",
+        "jobs",
+        "hosted",
+        "runners"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 2,
+  "batchCount": 27,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.269.1",
+      "version": "0.1.0-nightly.278.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 24640074
+          "sizeBytes": 24703362
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92379640
+          "sizeBytes": 92420600
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -298,29 +3137,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.269.1",
+      "version": "0.1.0-nightly.278.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.269.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.278.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21327908
+          "sizeBytes": 21362129
         },
         {
-          "name": "Aura_0.1.0-nightly.269.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.278.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 21129071
+          "sizeBytes": 21157199
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -330,29 +3169,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.269.1",
+      "version": "0.1.0-nightly.278.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.269.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.278.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 22712614
+          "sizeBytes": 22793446
         },
         {
-          "name": "Aura_0.1.0-nightly.269.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.278.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 22549462
+          "sizeBytes": 22627349
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -362,17 +3201,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.269.1",
+      "version": "0.1.0-nightly.278.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 14844000
+          "sizeBytes": 14914117
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.269.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.278.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -384,77 +3223,603 @@
     "date": "2026-04-16",
     "repo": "aura-os",
     "channel": "nightly",
-    "version": "0.1.0-nightly.269.1",
-    "title": "Desktop Release Infrastructure Improvements",
-    "intro": "Today's nightly focused on strengthening the desktop release pipeline with build optimizations, versioning fixes, and enhanced changelog generation capabilities.",
+    "version": "0.1.0-nightly.278.1",
+    "title": "27 updates shipped",
+    "intro": "This nightly timeline for aura-os groups 71 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.278.1`.",
     "entries": [
       {
-        "time_label": "11:36 PM",
+        "time_label": "8:36 PM",
         "started_at": "2026-04-16T03:36:03.000Z",
         "ended_at": "2026-04-16T05:07:14.000Z",
-        "title": "Desktop Build Pipeline Enhancements",
-        "summary": "Improved desktop build workflows with caching optimizations and fixed nightly versioning consistency across all platforms.",
+        "title": "Release Infrastructure and Interface updates",
+        "summary": "Fix desktop validate workflow env duplication. Fix desktop nightly updater versioning.",
         "items": [
           {
-            "text": "Added sccache compilation caching to all desktop build workflows, reducing build times across validation, nightly, and stable release pipelines",
+            "text": "Fix desktop validate workflow env duplication",
             "commit_shas": [
-              "53a06a3e8785cae6b2e2494899c2044f1b969617"
+              "42464e797547a065c04738077b3b7c377b76eb8e"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Standardized nightly version format from git SHA-based to run number-based versioning (e.g., 0.1.0-nightly.269.1) for consistent release identification",
-            "commit_shas": [
-              "7548957a3422485136de95ac324a80f97b01eb0f",
-              "2afe33bc6f00e7ab87b4988c66852e904359c7bf"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Enhanced desktop updater with manual update check capability and improved version display in settings interface",
+            "text": "Fix desktop nightly updater versioning",
             "commit_shas": [
               "7548957a3422485136de95ac324a80f97b01eb0f"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Fixed environment variable duplication in desktop validation workflow configuration",
+            "text": "Add sccache to desktop build workflows",
             "commit_shas": [
-              "42464e797547a065c04738077b3b7c377b76eb8e"
+              "53a06a3e8785cae6b2e2494899c2044f1b969617"
             ],
             "confidence": "medium"
           }
         ]
       },
       {
-        "time_label": "2:46 AM",
-        "started_at": "2026-04-16T06:46:52.000Z",
-        "ended_at": "2026-04-16T07:23:03.000Z",
-        "title": "Release Tooling Improvements",
-        "summary": "Upgraded changelog generation system and aligned manifest publishing versioning for better release coordination.",
+        "time_label": "11:15 PM",
+        "started_at": "2026-04-16T06:15:40.000Z",
+        "ended_at": "2026-04-16T06:15:40.000Z",
+        "title": "Interface updates",
+        "summary": "Reset agent chat context after new sessions",
         "items": [
           {
-            "text": "Refactored daily changelog generation to use timeline-based batching with intelligent commit grouping by area, timing, and relatedness",
+            "text": "Reset agent chat context after new sessions",
+            "commit_shas": [
+              "4c469d28706ab68016521961e7265cdafff35a85"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "11:46 PM",
+        "started_at": "2026-04-16T06:46:52.000Z",
+        "ended_at": "2026-04-16T07:23:03.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "Refactor changelog generation into timeline entries. Align nightly manifest publish versioning.",
+        "items": [
+          {
+            "text": "Refactor changelog generation into timeline entries",
             "commit_shas": [
               "6ea4cb3d919cb95724bbbbc199833b2995ff7915"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Aligned nightly manifest publishing to use consistent run number-based versioning across all release artifacts",
+            "text": "Align nightly manifest publish versioning",
             "commit_shas": [
               "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75"
             ],
-            "confidence": "high"
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "9:59 AM",
+        "started_at": "2026-04-16T16:59:23.000Z",
+        "ended_at": "2026-04-16T16:59:23.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "Improve desktop CI runner and timing instrumentation",
+        "items": [
+          {
+            "text": "Improve desktop CI runner and timing instrumentation",
+            "commit_shas": [
+              "ea9a869477e3c881c2c4e019ab6fec57ceca5960"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "12:13 PM",
+        "started_at": "2026-04-16T19:13:52.000Z",
+        "ended_at": "2026-04-16T19:13:52.000Z",
+        "title": "Other updates",
+        "summary": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+        "items": [
+          {
+            "text": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+            "commit_shas": [
+              "5289ffdf391d47eb96c5e26f0d861a58b16c9e80"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "12:27 PM",
+        "started_at": "2026-04-16T19:27:35.000Z",
+        "ended_at": "2026-04-16T21:29:19.000Z",
+        "title": "Interface and Core Rust updates",
+        "summary": "Fix sidekick empty-state flash and align Run row height. Mirror specs to disk and show filename-style tool card.",
+        "items": [
+          {
+            "text": "Fix sidekick empty-state flash and align Run row height",
+            "commit_shas": [
+              "3ca1d086ced85b9205b3b357ebe41899849e3510"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Mirror specs to disk and show filename-style tool card",
+            "commit_shas": [
+              "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Fade tool card body out before collapsing",
+            "commit_shas": [
+              "c3189017be41e6ede6f259f5fd8c217086f0eae5"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "2:29 PM",
+        "started_at": "2026-04-16T21:29:59.000Z",
+        "ended_at": "2026-04-16T21:29:59.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "Use larger desktop runners and switch changelog to Pacific time",
+        "items": [
+          {
+            "text": "Use larger desktop runners and switch changelog to Pacific time",
+            "commit_shas": [
+              "25ada54247d106480256584463c5ca38a9bba89a"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "2:50 PM",
+        "started_at": "2026-04-16T21:50:37.000Z",
+        "ended_at": "2026-04-16T22:27:03.000Z",
+        "title": "Interface and Core Rust updates",
+        "summary": "Use totalCostUsd for Total Revenue tile. Move logout into team settings panel, drop app settings modal.",
+        "items": [
+          {
+            "text": "Use totalCostUsd for Total Revenue tile",
+            "commit_shas": [
+              "f1effd47d34c326733d52bb9a0853b3e2c841692"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Move logout into team settings panel, drop app settings modal",
+            "commit_shas": [
+              "54d6ca8801051f031b738ed57aee5429f95e050c"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Eliminate post-stream jerk when the assistant bubble finalizes",
+            "commit_shas": [
+              "940c02c82a9eebe0c4991590903ba17a516c0fc8"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "3:27 PM",
+        "started_at": "2026-04-16T22:27:31.000Z",
+        "ended_at": "2026-04-16T22:46:16.000Z",
+        "title": "Interface updates",
+        "summary": "Render unwrapped delete error messages in project/agent flows. Smooth tool/thinking collapse so pinned chat stops blinking upward.",
+        "items": [
+          {
+            "text": "Render unwrapped delete error messages in project/agent flows",
+            "commit_shas": [
+              "9dae22bc939b5580dd5a45c9ef23e0e3cdcb0b94"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Smooth tool/thinking collapse so pinned chat stops blinking upward",
+            "commit_shas": [
+              "ff67b0be16e08a4e3d89e3190f5f434ccb170241"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "3:55 PM",
+        "started_at": "2026-04-16T22:55:41.000Z",
+        "ended_at": "2026-04-16T22:59:39.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "Fix cargo timings artifact upload paths. Fix Linux larger-runner desktop dependencies.",
+        "items": [
+          {
+            "text": "Fix cargo timings artifact upload paths",
+            "commit_shas": [
+              "8c70b928dce3d36c41a972edee166b618280ee36"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Fix Linux larger-runner desktop dependencies",
+            "commit_shas": [
+              "5d2045b07e4d4d1dd6925ba56e44f3d3d5c41ce9"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:00 PM",
+        "started_at": "2026-04-16T23:00:28.000Z",
+        "ended_at": "2026-04-16T23:01:11.000Z",
+        "title": "Interface updates",
+        "summary": "Repair markdown strong emphasis with trailing whitespace before closer. Show task title in create_task rows and make expand useful.",
+        "items": [
+          {
+            "text": "Repair markdown strong emphasis with trailing whitespace before closer",
+            "commit_shas": [
+              "f3c3368a496a695e5027abb0bc5df44f0d50d988"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Show task title in create_task rows and make expand useful",
+            "commit_shas": [
+              "74e0a1f45b7a27d64e4407b811dfe8b1b19d591b"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:09 PM",
+        "started_at": "2026-04-16T23:09:02.000Z",
+        "ended_at": "2026-04-16T23:09:02.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "Add Linux toolchain packages on larger runners",
+        "items": [
+          {
+            "text": "Add Linux toolchain packages on larger runners",
+            "commit_shas": [
+              "0ddff8d85b47514fea681053859fe6d40d0a99d4"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:13 PM",
+        "started_at": "2026-04-16T23:13:27.000Z",
+        "ended_at": "2026-04-16T23:24:35.000Z",
+        "title": "Interface and Core Rust updates",
+        "summary": "Stream partial tool inputs into spec and file preview cards. Tighten spacing between tool-only assistant bubbles.",
+        "items": [
+          {
+            "text": "Stream partial tool inputs into spec and file preview cards",
+            "commit_shas": [
+              "b0bd9d7b10b4324eb61c966cb81e686cf73d886b"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Tighten spacing between tool-only assistant bubbles",
+            "commit_shas": [
+              "272b699b3fef7d1f01cb9f2066786a582f4442c7"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Only auto-expand tool rows with live preview content",
+            "commit_shas": [
+              "dd3fc981f3f3e31fd22957e5aa767fdda9b262b0"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:28 PM",
+        "started_at": "2026-04-16T23:28:48.000Z",
+        "ended_at": "2026-04-16T23:28:48.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "Add OpenSSL dev headers on Linux larger runners",
+        "items": [
+          {
+            "text": "Add OpenSSL dev headers on Linux larger runners",
+            "commit_shas": [
+              "88579baaec7f2cba46980ae90443dc1a9d39dae9"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:31 PM",
+        "started_at": "2026-04-16T23:31:34.000Z",
+        "ended_at": "2026-04-16T23:32:21.000Z",
+        "title": "Interface updates",
+        "summary": "Tighten tool row spacing further across bubble boundaries. Filter deleted tasks and specs from TaskList view.",
+        "items": [
+          {
+            "text": "Tighten tool row spacing further across bubble boundaries",
+            "commit_shas": [
+              "c19ff7984f5590b9f224d3c27c98f7b04c8f7b06"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Filter deleted tasks and specs from TaskList view",
+            "commit_shas": [
+              "6cf7e3004297f92b25da7866415e8e912c373210"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:33 PM",
+        "started_at": "2026-04-16T23:33:38.000Z",
+        "ended_at": "2026-04-16T23:33:38.000Z",
+        "title": "Core Rust updates",
+        "summary": "Log tool streaming flow to diagnose live preview lag",
+        "items": [
+          {
+            "text": "Log tool streaming flow to diagnose live preview lag",
+            "commit_shas": [
+              "12be80e16fdc5b5bb44a56b0fdaf4c272ea440a5"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:34 PM",
+        "started_at": "2026-04-16T23:34:36.000Z",
+        "ended_at": "2026-04-16T23:43:43.000Z",
+        "title": "Interface updates",
+        "summary": "Stop reformatting assistant bubbles after stream finishes. Rename Swarm environment label to Remote in agent create form.",
+        "items": [
+          {
+            "text": "Stop reformatting assistant bubbles after stream finishes",
+            "commit_shas": [
+              "38b68567ad2ee85176325eba19d36a787c914295"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Rename Swarm environment label to Remote in agent create form",
+            "commit_shas": [
+              "ed0edf5a0eb0dea0653e48edf5940b360023a6b3"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:47 PM",
+        "started_at": "2026-04-16T23:47:56.000Z",
+        "ended_at": "2026-04-16T23:47:56.000Z",
+        "title": "Core Rust updates",
+        "summary": "Add aura_project_id to SessionInit for router billing headers",
+        "items": [
+          {
+            "text": "Add aura_project_id to SessionInit for router billing headers",
+            "commit_shas": [
+              "cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:49 PM",
+        "started_at": "2026-04-16T23:49:10.000Z",
+        "ended_at": "2026-04-16T23:49:10.000Z",
+        "title": "Other updates",
+        "summary": "Preserve tool-only assistant turns in chat history on reopen",
+        "items": [
+          {
+            "text": "Preserve tool-only assistant turns in chat history on reopen",
+            "commit_shas": [
+              "0b340fa2e53179c0581f2c320c91738d371251b2"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:49 PM",
+        "started_at": "2026-04-16T23:49:40.000Z",
+        "ended_at": "2026-04-17T00:20:59.000Z",
+        "title": "Core Rust and Other updates",
+        "summary": "Revert \"Add aura_project_id to SessionInit for router billing headers\". Refetch project stats when a chat stream ends.",
+        "items": [
+          {
+            "text": "Revert \"Add aura_project_id to SessionInit for router billing headers\"",
+            "commit_shas": [
+              "3484cb2b2544c3e92cdc9812dd47e514dbcc96e5"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Refetch project stats when a chat stream ends",
+            "commit_shas": [
+              "8c9c42f9c864c9b10ce67621468da6cc27f02b66"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Sum input+output tokens when aura-network totalTokens is 0",
+            "commit_shas": [
+              "fc6fd9185d1e064d6056e3d777662187e5b278eb"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "5:23 PM",
+        "started_at": "2026-04-17T00:23:57.000Z",
+        "ended_at": "2026-04-17T01:08:21.000Z",
+        "title": "Interface updates",
+        "summary": "Prevent text selection and dragging on the AURA topbar logo. Disable text selection on topbar and left sidebar.",
+        "items": [
+          {
+            "text": "Prevent text selection and dragging on the AURA topbar logo",
+            "commit_shas": [
+              "07253bf34bd62263cac12c87ba24228aed53d550"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Disable text selection on topbar and left sidebar",
+            "commit_shas": [
+              "3f75764473706f21dbe15cab3dedbccb31cc65ce"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Keep prior messages visible after starting a new chat session",
+            "commit_shas": [
+              "3b9d7f0c242b241875d4c6e3b9d4406e77f93072"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "6:11 PM",
+        "started_at": "2026-04-17T01:11:55.000Z",
+        "ended_at": "2026-04-17T01:11:55.000Z",
+        "title": "Core Rust updates",
+        "summary": "Stream visible spec markdown before calling create_spec/update_spec",
+        "items": [
+          {
+            "text": "Stream visible spec markdown before calling create_spec/update_spec",
+            "commit_shas": [
+              "e5adacc89276689a747b42f833458e719e069e11"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "6:12 PM",
+        "started_at": "2026-04-17T01:12:00.000Z",
+        "ended_at": "2026-04-17T01:12:04.000Z",
+        "title": "Interface updates",
+        "summary": "Persist bootstrap ?host= query param into localStorage. Default billing plan badge to \"pro\" and drop team-centric copy.",
+        "items": [
+          {
+            "text": "Persist bootstrap ?host= query param into localStorage",
+            "commit_shas": [
+              "000817bd48da1f40ad7977496115994f69259cd3"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Default billing plan badge to \"pro\" and drop team-centric copy",
+            "commit_shas": [
+              "2f34e08d556fe37a85e34154b96a418e4a750936"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "6:12 PM",
+        "started_at": "2026-04-17T01:12:09.000Z",
+        "ended_at": "2026-04-17T01:12:09.000Z",
+        "title": "Docs updates",
+        "summary": "Add hello-world website quick spec doc",
+        "items": [
+          {
+            "text": "Add hello-world website quick spec doc",
+            "commit_shas": [
+              "24d6dc16d671e4938258e5f0c4474877a5cb24e8"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "6:12 PM",
+        "started_at": "2026-04-17T01:12:23.000Z",
+        "ended_at": "2026-04-17T01:12:23.000Z",
+        "title": "Other updates",
+        "summary": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+        "items": [
+          {
+            "text": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+            "commit_shas": [
+              "8b62dfff790fff470ec793b12aec120bc9dfb0d3"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "6:21 PM",
+        "started_at": "2026-04-17T01:21:35.000Z",
+        "ended_at": "2026-04-17T01:39:06.000Z",
+        "title": "Interface updates",
+        "summary": "Preserve terminal task status across listTasks refetches too. Keep chat anchor pinned while resizing the sidekick pane.",
+        "items": [
+          {
+            "text": "Preserve terminal task status across listTasks refetches too",
+            "commit_shas": [
+              "4c3b40f3a94176a39c4a8f2fd23472c32526b41d"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Keep chat anchor pinned while resizing the sidekick pane",
+            "commit_shas": [
+              "5bcaff3980468e746b5e3ccf11116be56445579f"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Preserve terminal task status in the Kanban store",
+            "commit_shas": [
+              "5b95b6e4f66712c5c597e18e81c0c2ebe2a871ca"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "6:43 PM",
+        "started_at": "2026-04-17T01:43:42.000Z",
+        "ended_at": "2026-04-17T02:51:24.000Z",
+        "title": "Release Infrastructure updates",
+        "summary": "use python3 for normalize-packager-key step. Restore Linux desktop jobs to x64 hosted runners.",
+        "items": [
+          {
+            "text": "use python3 for normalize-packager-key step",
+            "commit_shas": [
+              "ecd52f184fdeaa57c125157ab32d44247f15950f"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Restore Linux desktop jobs to x64 hosted runners",
+            "commit_shas": [
+              "134278eeb85bf00ae31442e440008bf97a108cec"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Build time optimizations with sccache integration",
-      "Consistent nightly versioning across all platforms",
-      "Enhanced desktop updater with manual check support"
+      "Release Infrastructure and Interface updates",
+      "Interface updates",
+      "Release Infrastructure updates",
+      "Release Infrastructure updates"
     ],
-    "raw_commit_count": 6
+    "raw_commit_count": 71
   }
 }
