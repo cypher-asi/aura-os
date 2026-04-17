@@ -204,6 +204,15 @@ Rules:
 - Aura OS must not introduce a parallel feedback-specific local store; it uses aura-network instead
 - contract changes must be kept backward-compatible until production aura-network adopts them
 
+### Split Aura Network Routing
+
+Aura OS server routes requests to aura-network per-app so Feedback development can target a local aura-network while the rest of the product keeps using the deployed backend:
+
+- `AURA_NETWORK_URL` — production aura-network (`https://aura-network.onrender.com`). Used by every handler except the Feedback app.
+- `AURA_NETWORK_FEEDBACK_URL` — optional override used only by `/api/feedback/*` handlers. Point this at the local aura-network during Feedback development.
+
+When `AURA_NETWORK_FEEDBACK_URL` is unset, the Feedback app falls back to `AURA_NETWORK_URL`. Unset it once production aura-network ships the vote and feedback-filter endpoints.
+
 ## Integration Requirements
 
 ### Aura Network

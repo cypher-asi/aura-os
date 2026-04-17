@@ -43,12 +43,18 @@ impl NetworkClient {
     /// Create a new `NetworkClient`, reading `AURA_NETWORK_URL` from env.
     /// Returns `None` if the env var is not set or empty (network integration disabled).
     pub fn from_env() -> Option<Self> {
-        let base_url = env::var("AURA_NETWORK_URL")
-            .ok()
-            .filter(|s| !s.is_empty())?;
+        Self::from_env_key("AURA_NETWORK_URL")
+    }
+
+    /// Create a new `NetworkClient` from an arbitrary env var name. Useful for
+    /// routing a subset of requests (e.g. the in-development Feedback app) to
+    /// a different aura-network deployment via `AURA_NETWORK_FEEDBACK_URL`.
+    /// Returns `None` if the env var is not set or empty.
+    pub fn from_env_key(key: &str) -> Option<Self> {
+        let base_url = env::var(key).ok().filter(|s| !s.is_empty())?;
 
         let base_url = base_url.trim_end_matches('/').to_string();
-        info!(%base_url, "aura-network client configured");
+        info!(%key, %base_url, "aura-network client configured");
 
         Some(Self {
             http: build_http_client(),

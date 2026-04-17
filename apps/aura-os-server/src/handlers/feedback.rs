@@ -287,7 +287,7 @@ pub(crate) async fn list_feedback(
     AuthJwt(jwt): AuthJwt,
     Query(query): Query<FeedbackListQuery>,
 ) -> ApiResult<Json<Vec<FeedbackItemResponse>>> {
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
 
     let sort = match query.sort.as_deref() {
         Some(value) => validate_sort(value)?,
@@ -345,7 +345,7 @@ pub(crate) async fn create_feedback(
     validate_status(&req.status)?;
     validate_product(&req.product)?;
 
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
     let profile_id_str = session.profile_id.map(|id| id.to_string());
     let title = req
         .title
@@ -397,7 +397,7 @@ pub(crate) async fn get_feedback(
     AuthJwt(jwt): AuthJwt,
     Path(post_id): Path<String>,
 ) -> ApiResult<Json<FeedbackItemResponse>> {
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
     let post = client
         .get_post(&post_id, &jwt)
         .await
@@ -419,7 +419,7 @@ pub(crate) async fn update_feedback_status(
 ) -> ApiResult<Json<FeedbackItemResponse>> {
     validate_status(&req.status)?;
 
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
     let patch = serde_json::json!({ "feedbackStatus": req.status });
     let post = client
         .patch_post_metadata(&post_id, &patch, &jwt)
@@ -439,7 +439,7 @@ pub(crate) async fn list_feedback_comments(
     AuthJwt(jwt): AuthJwt,
     Path(post_id): Path<String>,
 ) -> ApiResult<Json<Vec<FeedbackCommentResponse>>> {
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
     let comments = client
         .list_comments(&post_id, &jwt)
         .await
@@ -466,7 +466,7 @@ pub(crate) async fn add_feedback_comment(
         return Err(ApiError::bad_request("comment content is required"));
     }
 
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
     let comment = client
         .add_comment(&post_id, &req.content, &jwt)
         .await
@@ -501,7 +501,7 @@ pub(crate) async fn cast_feedback_vote(
         )));
     }
 
-    let client = state.require_network_client()?;
+    let client = state.require_feedback_network_client()?;
     let summary = client
         .cast_vote(&post_id, &req.vote, &jwt)
         .await

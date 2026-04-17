@@ -310,6 +310,7 @@ mod tests {
                 harness_sessions: Arc::new(Mutex::new(HashMap::new())),
                 terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
                 network_client: None,
+                feedback_network_client: None,
                 storage_client: None,
                 integrations_client: None,
                 event_broadcast,

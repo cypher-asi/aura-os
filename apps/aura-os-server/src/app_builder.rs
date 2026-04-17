@@ -304,6 +304,18 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         .unwrap_or_else(|| Path::new(".").to_path_buf());
     let store = Arc::new(RocksStore::open(db_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
+    let feedback_network_client = NetworkClient::from_env_key("AURA_NETWORK_FEEDBACK_URL")
+        .map(Arc::new)
+        .or_else(|| network_client.clone());
+    match (&feedback_network_client, &network_client) {
+        (Some(fb), Some(main)) if Arc::ptr_eq(fb, main) => {
+            info!("feedback routes share the main aura-network client (AURA_NETWORK_FEEDBACK_URL not set)");
+        }
+        (Some(fb), _) => {
+            info!(base_url = %fb.base_url(), "feedback routes using dedicated aura-network client");
+        }
+        _ => {}
+    }
     let storage_client = StorageClient::from_env().map(Arc::new);
     let integrations_client = IntegrationsClient::from_env().map(Arc::new);
     let orbit_client = OrbitClient::from_env().map(Arc::new);
@@ -395,6 +407,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,
+        feedback_network_client,
         storage_client,
         integrations_client,
         event_broadcast,

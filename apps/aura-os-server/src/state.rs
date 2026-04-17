@@ -310,6 +310,13 @@ pub struct AppState {
     pub terminal_manager: Arc<TerminalManager>,
     /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
     pub network_client: Option<Arc<NetworkClient>>,
+    /// Optional aura-network client dedicated to the Feedback app. Falls back
+    /// to `network_client` when `AURA_NETWORK_FEEDBACK_URL` is not set, so
+    /// feedback requests hit the main aura-network once prod ships the
+    /// feedback endpoints. Built separately during development so feedback
+    /// traffic can target a local aura-network while everything else keeps
+    /// using the deployed backend.
+    pub feedback_network_client: Option<Arc<NetworkClient>>,
     /// Optional aura-storage client. `None` when `AURA_STORAGE_URL` is not set.
     pub storage_client: Option<Arc<StorageClient>>,
     /// Optional aura-integrations client. `None` when `AURA_INTEGRATIONS_URL` is not set.
@@ -351,6 +358,18 @@ impl AppState {
     ) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
         self.network_client
             .as_ref()
+            .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
+    }
+
+    /// Get the feedback-scoped aura-network client, falling back to the main
+    /// `network_client` when no dedicated feedback URL is configured.
+    /// Returns 503 if neither is set.
+    pub(crate) fn require_feedback_network_client(
+        &self,
+    ) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
+        self.feedback_network_client
+            .as_ref()
+            .or(self.network_client.as_ref())
             .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
     }
 
