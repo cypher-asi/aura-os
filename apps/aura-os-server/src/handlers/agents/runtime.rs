@@ -500,6 +500,12 @@ fn harness_upstream_provider_family(model: Option<&str>) -> Option<String> {
 
     if model.starts_with("aura-claude") || model.starts_with("claude") {
         Some("anthropic".to_string())
+    } else if model.starts_with("aura-kimi")
+        || model.starts_with("aura-deepseek")
+        || model.starts_with("aura-oss")
+        || model.starts_with("aura-qwen")
+    {
+        Some("fireworks".to_string())
     } else if model.starts_with("aura-gpt")
         || model.starts_with("aura-o")
         || model.starts_with("gpt")
@@ -509,8 +515,6 @@ fn harness_upstream_provider_family(model: Option<&str>) -> Option<String> {
         || model.starts_with("codex")
     {
         Some("openai".to_string())
-    } else if model.starts_with("aura-deepseek") || model.starts_with("aura-qwen") {
-        Some("fireworks".to_string())
     } else {
         None
     }
@@ -2312,7 +2316,7 @@ mod tests {
     #[test]
     fn harness_upstream_provider_family_maps_aura_managed_models() {
         assert_eq!(
-            harness_upstream_provider_family(Some("aura-gpt-4.1")),
+            harness_upstream_provider_family(Some("aura-gpt-5-4-mini")),
             Some("openai".to_string())
         );
         assert_eq!(
@@ -2320,7 +2324,7 @@ mod tests {
             Some("anthropic".to_string())
         );
         assert_eq!(
-            harness_upstream_provider_family(Some("aura-deepseek-v3-2")),
+            harness_upstream_provider_family(Some("aura-kimi-k2-5")),
             Some("fireworks".to_string())
         );
         assert_eq!(harness_upstream_provider_family(Some("unknown-model")), None);
