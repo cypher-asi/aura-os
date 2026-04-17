@@ -106,8 +106,15 @@
   line-height: 1.25;
 }
 
+/* The first block is always the note title, regardless of whether the
+ * user typed it as plain text or a markdown heading. Pin it to the same
+ * H1-like styling so titles don't "lose" their look while being edited. */
 .editor :global(> :first-child) {
-  margin-top: 0;
+  margin: 0 0 1.1em;
+  font-size: 1.6em;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text);
 }
 
 .editor :global(h1) {
