@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "promptVersion": 2,
   "generator": "fallback",
-  "generationError": "Error: Could not parse model response as JSON: SyntaxError: Unterminated string in JSON at position 6894 (line 162 column 58)",
-  "generatedAt": "2026-04-17T03:02:17.123Z",
+  "generationError": "Error: Could not parse model response as JSON: SyntaxError: Unterminated string in JSON at position 6936 (line 161 column 35)",
+  "generatedAt": "2026-04-17T03:24:43.689Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.278.1",
+  "version": "0.1.0-nightly.279.1",
   "date": "2026-04-16",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "134278eeb85bf00ae31442e440008bf97a108cec",
-  "previousProcessedSha": "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75",
+  "lastIncludedSha": "a14a5644508b0bb9da9fc186029beb07872b3da4",
+  "previousProcessedSha": "134278eeb85bf00ae31442e440008bf97a108cec",
   "commitShas": [
     "42464e797547a065c04738077b3b7c377b76eb8e",
     "7548957a3422485136de95ac324a80f97b01eb0f",
@@ -82,9 +82,10 @@
     "ddfdfe1af951cd42811ef6c423dbea72b9eec2b8",
     "8be01e8e28c261bbd3843a548184c4260c7b3b5b",
     "ecd52f184fdeaa57c125157ab32d44247f15950f",
-    "134278eeb85bf00ae31442e440008bf97a108cec"
+    "134278eeb85bf00ae31442e440008bf97a108cec",
+    "a14a5644508b0bb9da9fc186029beb07872b3da4"
   ],
-  "rawCommitCount": 71,
+  "rawCommitCount": 72,
   "rawCommits": [
     {
       "sha": "42464e797547a065c04738077b3b7c377b76eb8e",
@@ -3098,6 +3099,49 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "a14a5644508b0bb9da9fc186029beb07872b3da4",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T23:12:57-04:00",
+      "subject": "Route Linux desktop jobs back to larger runner",
+      "body": "",
+      "parents": [
+        "134278eeb85bf00ae31442e440008bf97a108cec"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 7,
+        "deletions": 7
+      },
+      "committedAtMs": 1776395577000,
+      "cleanSubject": "Route Linux desktop jobs back to larger runner",
+      "keywords": [
+        "route",
+        "linux",
+        "desktop",
+        "jobs",
+        "back",
+        "larger",
+        "runner"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 27,
@@ -3105,29 +3149,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.278.1",
+      "version": "0.1.0-nightly.279.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 24703362
+          "sizeBytes": 24703322
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92420600
+          "sizeBytes": 92416504
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -3137,29 +3181,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.278.1",
+      "version": "0.1.0-nightly.279.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.278.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.279.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21362129
+          "sizeBytes": 21362335
         },
         {
-          "name": "Aura_0.1.0-nightly.278.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.279.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 21157199
+          "sizeBytes": 21157576
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3169,29 +3213,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.278.1",
+      "version": "0.1.0-nightly.279.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.278.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.279.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 22793446
+          "sizeBytes": 22794342
         },
         {
-          "name": "Aura_0.1.0-nightly.278.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.279.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 22627349
+          "sizeBytes": 22628228
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3201,17 +3245,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.278.1",
+      "version": "0.1.0-nightly.279.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 14914117
+          "sizeBytes": 14918915
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.278.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.279.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3223,9 +3267,9 @@
     "date": "2026-04-16",
     "repo": "aura-os",
     "channel": "nightly",
-    "version": "0.1.0-nightly.278.1",
+    "version": "0.1.0-nightly.279.1",
     "title": "27 updates shipped",
-    "intro": "This nightly timeline for aura-os groups 71 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.278.1`.",
+    "intro": "This nightly timeline for aura-os groups 72 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.279.1`.",
     "entries": [
       {
         "time_label": "8:36 PM",
@@ -3793,7 +3837,7 @@
       {
         "time_label": "6:43 PM",
         "started_at": "2026-04-17T01:43:42.000Z",
-        "ended_at": "2026-04-17T02:51:24.000Z",
+        "ended_at": "2026-04-17T03:12:57.000Z",
         "title": "Release Infrastructure updates",
         "summary": "use python3 for normalize-packager-key step. Restore Linux desktop jobs to x64 hosted runners.",
         "items": [
@@ -3810,6 +3854,13 @@
               "134278eeb85bf00ae31442e440008bf97a108cec"
             ],
             "confidence": "medium"
+          },
+          {
+            "text": "Route Linux desktop jobs back to larger runner",
+            "commit_shas": [
+              "a14a5644508b0bb9da9fc186029beb07872b3da4"
+            ],
+            "confidence": "medium"
           }
         ]
       }
@@ -3820,6 +3871,6 @@
       "Release Infrastructure updates",
       "Release Infrastructure updates"
     ],
-    "raw_commit_count": 71
+    "raw_commit_count": 72
   }
 }

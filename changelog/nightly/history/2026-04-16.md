@@ -2,10 +2,10 @@
 
 - Date: `2026-04-16`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.278.1`
+- Version: `0.1.0-nightly.279.1`
 - Release: https://github.com/cypher-asi/aura-os/releases/tag/nightly
 
-This nightly timeline for aura-os groups 71 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.278.1`.
+This nightly timeline for aura-os groups 72 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.279.1`.
 
 ## 8:36 PM — Release Infrastructure and Interface updates
 
@@ -190,6 +190,7 @@ use python3 for normalize-packager-key step. Restore Linux desktop jobs to x64 h
 
 - use python3 for normalize-packager-key step (`ecd52f1`)
 - Restore Linux desktop jobs to x64 hosted runners (`134278e`)
+- Route Linux desktop jobs back to larger runner (`a14a564`)
 
 ## Highlights
 
