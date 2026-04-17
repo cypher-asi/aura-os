@@ -14,6 +14,8 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   { id: "aura-gpt-4.1", label: "GPT-4.1", tier: "gpt", mode: "chat" },
   { id: "aura-o3", label: "o3", tier: "gpt", mode: "chat" },
   { id: "aura-o4-mini", label: "o4 Mini", tier: "gpt", mode: "chat" },
+  { id: "aura-deepseek-v3-2", label: "DeepSeek V3.2", tier: "sonnet", mode: "chat" },
+  { id: "aura-qwen2-5-coder-7b", label: "Qwen2.5 Coder 7B", tier: "haiku", mode: "chat" },
 ];
 
 export const IMAGE_MODELS: ModelOption[] = [
@@ -35,6 +37,8 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "gpt-4.1": "aura-gpt-4.1",
   o3: "aura-o3",
   "o4-mini": "aura-o4-mini",
+  "accounts/fireworks/models/deepseek-v3p2": "aura-deepseek-v3-2",
+  "accounts/fireworks/models/qwen2p5-coder-7b": "aura-qwen2-5-coder-7b",
 };
 
 function normalizeManagedModelId(modelId?: string | null): string | null {
