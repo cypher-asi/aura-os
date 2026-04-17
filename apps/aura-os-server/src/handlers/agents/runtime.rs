@@ -509,6 +509,8 @@ fn harness_upstream_provider_family(model: Option<&str>) -> Option<String> {
         || model.starts_with("codex")
     {
         Some("openai".to_string())
+    } else if model.starts_with("aura-deepseek") || model.starts_with("aura-qwen") {
+        Some("fireworks".to_string())
     } else {
         None
     }
@@ -2316,6 +2318,10 @@ mod tests {
         assert_eq!(
             harness_upstream_provider_family(Some("aura-claude-sonnet-4-6")),
             Some("anthropic".to_string())
+        );
+        assert_eq!(
+            harness_upstream_provider_family(Some("aura-deepseek-v3-2")),
+            Some("fireworks".to_string())
         );
         assert_eq!(harness_upstream_provider_family(Some("unknown-model")), None);
     }
