@@ -29,6 +29,7 @@ import {
   promotePendingSpec,
   promotePendingTask,
   backfillToolCallInput,
+  isTaskBackfillTool,
 } from "./optimistic-artifacts";
 import { useContextUsageStore } from "../../stores/context-usage-store";
 
@@ -127,8 +128,10 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
           if (c.is_error) removePendingArtifact(c.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
           else {
             promotePendingTask(c, projectId, sidekickRef.current, pendingTaskIdsRef);
-            backfillToolCallInput(refs, setters, event.content as Record<string, unknown>);
           }
+        }
+        if (!c.is_error && isTaskBackfillTool(c.name)) {
+          backfillToolCallInput(refs, setters, event.content as Record<string, unknown>);
         }
         if (c.name === "delete_spec" && !c.is_error) {
           try {

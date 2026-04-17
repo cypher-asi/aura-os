@@ -146,10 +146,19 @@ export function promotePendingTask(
   } catch { /* result wasn't parseable JSON -- leave pending for TaskSaved fallback */ }
 }
 
+const TASK_TOOL_NAMES = new Set([
+  "create_task",
+  "update_task",
+  "transition_task",
+  "retry_task",
+  "run_task",
+]);
+
 /**
- * After a create_task tool result arrives, parse the result JSON and
- * patch the ToolCallEntry.input so the header summary and expanded
- * TaskCreatedIndicator can display the task title/description.
+ * After a task tool result arrives, parse the result JSON and patch the
+ * matching ToolCallEntry.input so the TaskBlock header shows the task
+ * title/verb-phrase and the expanded body can link out to the real task
+ * in the sidekick (via task_id).
  */
 export function backfillToolCallInput(
   refs: { toolCalls: { current: ToolCallEntry[] } },
@@ -163,6 +172,7 @@ export function backfillToolCallInput(
     if (!raw || typeof raw === "string") return;
 
     const toolId = (c.id as string) || (c.tool_use_id as string);
+    const toolName = (c.name as string) || "";
     let idx = -1;
     if (toolId) {
       idx = refs.toolCalls.current.findIndex((tc) => tc.id === toolId);
@@ -170,7 +180,7 @@ export function backfillToolCallInput(
     if (idx === -1) {
       for (let i = refs.toolCalls.current.length - 1; i >= 0; i--) {
         const tc = refs.toolCalls.current[i];
-        if (tc.name === "create_task" && !tc.pending && tc.result === result) {
+        if (tc.name === toolName && !tc.pending && tc.result === result) {
           idx = i;
           break;
         }
@@ -178,11 +188,25 @@ export function backfillToolCallInput(
     }
     if (idx === -1) return;
 
+    const patch: Record<string, unknown> = {};
+    if (typeof raw.title === "string") patch.title = raw.title;
+    if (typeof raw.description === "string") patch.description = raw.description;
+    const resolvedTaskId = raw.task_id ?? raw.id;
+    if (typeof resolvedTaskId === "string") patch.task_id = resolvedTaskId;
+
+    if (Object.keys(patch).length === 0) return;
+
     refs.toolCalls.current = refs.toolCalls.current.map((tc, i) =>
-      i === idx
-        ? { ...tc, input: { ...tc.input, title: raw.title, description: raw.description } }
-        : tc,
+      i === idx ? { ...tc, input: { ...tc.input, ...patch } } : tc,
     );
     setters.setActiveToolCalls([...refs.toolCalls.current]);
   } catch { /* ignore unparseable results */ }
+}
+
+/**
+ * Whether a tool name should trigger the post-result input backfill used
+ * by the TaskBlock renderer.
+ */
+export function isTaskBackfillTool(name: string): boolean {
+  return TASK_TOOL_NAMES.has(name);
 }

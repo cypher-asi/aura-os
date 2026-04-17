@@ -173,6 +173,13 @@
   padding-bottom: 8px;
 }
 
+.taskActions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 10px 8px 10px;
+  margin-top: 4px;
+}
+
 /* ── List ── */
 
 .listRow {
