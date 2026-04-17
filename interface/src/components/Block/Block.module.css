@@ -12,7 +12,7 @@
   --block-body-line-height: 1.5em;
   --block-body-padding-y: 8px;
   --block-body-height: calc(var(--block-body-lines) * var(--block-body-line-height) + var(--block-body-padding-y) * 2);
-  --block-header-height: 24px;
+  --block-header-height: var(--control-height-sm, 32px);
 }
 
 .block {
