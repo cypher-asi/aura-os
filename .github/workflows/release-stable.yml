@@ -35,7 +35,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -74,6 +74,12 @@ jobs:
           else
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
+
+      - name: Install Linux runner dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -134,7 +140,7 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -168,6 +174,12 @@ jobs:
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -177,12 +189,6 @@ jobs:
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Determine version
         id: version
@@ -227,12 +233,22 @@ jobs:
         run: |
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
 
+      - name: Stage Cargo timings
+        if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
+        shell: bash
+        run: |
+          rm -rf cargo-timings-upload
+          if [ -d ../.aura-shared-target/cargo-timings ]; then
+            mkdir -p cargo-timings-upload
+            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
+          fi
+
       - name: Upload Cargo timings
         if: always() && (matrix.target == 'windows' || (matrix.target == 'macos' && matrix.arch == 'x86_64'))
         uses: actions/upload-artifact@v4
         with:
           name: cargo-timings-stable-build-app-${{ matrix.target }}-${{ matrix.arch }}
-          path: ../.aura-shared-target/cargo-timings
+          path: cargo-timings-upload
           if-no-files-found: warn
 
       - name: Archive desktop build inputs
@@ -282,13 +298,19 @@ jobs:
             target: windows
             arch: x86_64
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@1.94.1
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -297,12 +319,6 @@ jobs:
 
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
 
       - name: Determine version
         id: version
@@ -746,7 +762,7 @@ jobs:
       - name: Generate stable changelog
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/New_York
+          CHANGELOG_TIMEZONE: America/Los_Angeles
         run: |
           node repo/infra/scripts/release/generate-daily-changelog.mjs \
             --repo-dir repo \

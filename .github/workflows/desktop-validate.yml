@@ -77,7 +77,7 @@ jobs:
             target: windows-x64
             binary: ../.aura-shared-target/release/aura-os-desktop.exe
 
-    runs-on: ${{ matrix.os == 'windows-latest' && (vars.DESKTOP_WINDOWS_RUNNER != '' && vars.DESKTOP_WINDOWS_RUNNER || 'windows-latest') || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
+    runs-on: ${{ matrix.os == 'windows-latest' && 'aura-os-windows-x64-large' || matrix.os == 'ubuntu-latest' && 'aura-os-linux-x64-large' || matrix.os == 'macos-15-intel' && 'macos-15-large' || matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -118,18 +118,18 @@ jobs:
             echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
           fi
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang pkg-config libatomic1 libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: interface/package-lock.json
-
-      - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
 
       - name: Run desktop validation entrypoint
         env:
@@ -147,12 +147,22 @@ jobs:
         run: |
           "${SCCACHE_PATH}" --show-stats || sccache --show-stats || true
 
+      - name: Stage Cargo timings
+        if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')
+        shell: bash
+        run: |
+          rm -rf cargo-timings-upload
+          if [ -d ../.aura-shared-target/cargo-timings ]; then
+            mkdir -p cargo-timings-upload
+            cp -R ../.aura-shared-target/cargo-timings/. cargo-timings-upload/
+          fi
+
       - name: Upload Cargo timings
         if: always() && (matrix.target == 'windows-x64' || matrix.target == 'macos-x64')
         uses: actions/upload-artifact@v4
         with:
           name: cargo-timings-desktop-validate-${{ matrix.target }}
-          path: ../.aura-shared-target/cargo-timings
+          path: cargo-timings-upload
           if-no-files-found: warn
 
       - name: Install cargo-packager
