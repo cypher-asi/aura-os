@@ -29,6 +29,55 @@ export function parseNoteKey(key: string): NoteKey | null {
   };
 }
 
+function basename(relPath: string): string {
+  const idx = relPath.lastIndexOf("/");
+  return idx === -1 ? relPath : relPath.slice(idx + 1);
+}
+
+/**
+ * Return a new nodes array with the note at `fromRelPath` renamed to
+ * `toRelPath` (updating name/absPath/title/updatedAt). Returns the same
+ * reference if no note matched, so callers can skip updating state.
+ */
+function renameNoteInNodes(
+  nodes: NotesTreeNode[],
+  fromRelPath: string,
+  toRelPath: string,
+  nextAbsPath: string,
+  nextTitle: string,
+  nextUpdatedAt: string | undefined,
+): NotesTreeNode[] {
+  let changed = false;
+  const next = nodes.map((node): NotesTreeNode => {
+    if (node.kind === "folder") {
+      const updatedChildren = renameNoteInNodes(
+        node.children,
+        fromRelPath,
+        toRelPath,
+        nextAbsPath,
+        nextTitle,
+        nextUpdatedAt,
+      );
+      if (updatedChildren !== node.children) {
+        changed = true;
+        return { ...node, children: updatedChildren };
+      }
+      return node;
+    }
+    if (node.relPath !== fromRelPath) return node;
+    changed = true;
+    return {
+      ...node,
+      relPath: toRelPath,
+      name: basename(toRelPath),
+      absPath: nextAbsPath,
+      title: nextTitle,
+      updatedAt: nextUpdatedAt ?? node.updatedAt,
+    };
+  });
+  return changed ? next : nodes;
+}
+
 export interface NoteContent {
   content: string;
   title: string;
@@ -318,12 +367,34 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
           state.activeProjectId === projectId && state.activeRelPath === relPath
             ? res.relPath
             : state.activeRelPath;
+
+        // Patch the project tree in place so the left-menu / sidekick don't
+        // flash an unselected state while waiting for a reload round-trip.
+        const existingTree = state.trees[projectId];
+        const nextTrees = existingTree
+          ? {
+              ...state.trees,
+              [projectId]: {
+                ...existingTree,
+                nodes: renameNoteInNodes(
+                  existingTree.nodes,
+                  relPath,
+                  res.relPath,
+                  res.absPath ?? nextEntry.absPath,
+                  nextEntry.title,
+                  res.updatedAt,
+                ),
+              },
+            }
+          : state.trees;
+
         return {
           contentCache: { ...restContent, [newKey]: nextEntry },
           commentsByNote: oldComments
             ? { ...restComments, [newKey]: oldComments }
             : state.commentsByNote,
           activeRelPath: nextActiveRelPath,
+          trees: nextTrees,
         };
       });
       if (renamed) {
@@ -338,7 +409,6 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
         if (activeProjectId === projectId && activeRelPath === res.relPath) {
           setLastNote({ projectId, relPath: res.relPath });
         }
-        void get().loadTree(projectId);
       }
     } catch (err) {
       set((state) => {
