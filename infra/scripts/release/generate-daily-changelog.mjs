@@ -39,6 +39,7 @@ const BATCH_WINDOW_MINUTES = 120;
 const SOFT_BATCH_WINDOW_MINUTES = 45;
 const MAX_BATCH_SPAN_MINUTES = 180;
 const MAX_BATCH_COMMITS = 8;
+const TARGET_MAX_BATCHES = 8;
 
 if (!fs.existsSync(repoDir)) {
   console.error(`repo directory not found: ${repoDir}`);
@@ -132,6 +133,14 @@ function cleanSubject(subject) {
   return sanitizeText(subject)
     .replace(/^(feat|fix|chore|refactor|docs|test|ci|build)(\(.+?\))?:\s*/i, "")
     .replace(/\.$/, "");
+}
+
+function toTitleCase(value) {
+  return sanitizeText(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function extractKeywords(value) {
@@ -287,7 +296,7 @@ function batchRelatedness(batch, commit) {
   return score;
 }
 
-function batchCommits(commits, tz) {
+function buildRawBatches(commits) {
   const sorted = [...commits].sort((a, b) => a.committedAtMs - b.committedAtMs);
   const batches = [];
 
@@ -333,6 +342,62 @@ function batchCommits(commits, tz) {
     });
   }
 
+  return batches;
+}
+
+function adjacentBatchMergeScore(left, right) {
+  const leftArea = left.areaSummary[0]?.area || "";
+  const rightArea = right.areaSummary[0]?.area || "";
+  const minutesBetween = Math.max(0, (right.startedAtMs - left.endedAtMs) / 60000);
+  let score = 0;
+  if (leftArea && leftArea === rightArea) score += 6;
+  if (intersect(left.fileGroups, right.fileGroups).length > 0) score += 4;
+  score += intersect(
+    unique(left.commits.flatMap((commit) => commit.keywords)),
+    unique(right.commits.flatMap((commit) => commit.keywords)),
+  ).length;
+  if (minutesBetween <= 240) score += 2;
+  if (left.commits.length <= 2 || right.commits.length <= 2) score += 1;
+  return score;
+}
+
+function mergeAdjacentBatches(batches) {
+  if (batches.length <= TARGET_MAX_BATCHES) {
+    return batches;
+  }
+
+  const merged = [...batches];
+  while (merged.length > TARGET_MAX_BATCHES) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index < merged.length - 1; index += 1) {
+      const score = adjacentBatchMergeScore(merged[index], merged[index + 1]);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    }
+
+    const left = merged[bestIndex];
+    const right = merged[bestIndex + 1];
+    const combinedCommits = [...left.commits, ...right.commits]
+      .sort((a, b) => a.committedAtMs - b.committedAtMs);
+
+    merged.splice(bestIndex, 2, {
+      commits: combinedCommits,
+      startedAtMs: combinedCommits[0].committedAtMs,
+      endedAtMs: combinedCommits[combinedCommits.length - 1].committedAtMs,
+      fileGroups: unique([...left.fileGroups, ...right.fileGroups]),
+      areaSummary: summarizeAreas(combinedCommits),
+    });
+  }
+
+  return merged;
+}
+
+function batchCommits(commits, tz) {
+  const batches = mergeAdjacentBatches(buildRawBatches(commits));
   return batches.map((batch, index) => ({
     id: `entry-${index + 1}`,
     time_label: formatTimeLabel(new Date(batch.startedAtMs), tz),
@@ -343,16 +408,84 @@ function batchCommits(commits, tz) {
   }));
 }
 
+function shouldIgnoreCommitForRendering(commit) {
+  const subject = commit.subject.toLowerCase();
+  if (commit.parents.length > 1) return true;
+  if (/^merge (branch|pull request|remote-tracking)/i.test(commit.subject)) return true;
+  if (/^merge /.test(subject)) return true;
+  if (/^(format|fmt|lint|typo)\b/i.test(commit.cleanSubject)) return true;
+  if (/rustfmt|prettier|eslint --fix|formatting/i.test(subject)) return true;
+  if (/^bump .* version$/i.test(commit.cleanSubject)) return true;
+  return false;
+}
+
+function buildHeadlineFromBatch(batch) {
+  const topArea = batch.area_summary[0]?.area || "Product";
+  const secondArea = batch.area_summary[1]?.area || "";
+  const topSubjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 2);
+  if (topArea === "Release Infrastructure") {
+    return batch.commits.length > 1
+      ? "Release Pipeline Reliability Improvements"
+      : "Release Workflow Improvements";
+  }
+  if (topArea === "Interface" && secondArea === "Core Rust") {
+    return "Interface and Runtime Flow Improvements";
+  }
+  if (topArea === "Interface") {
+    return batch.commits.length > 1
+      ? "Interface and Chat Experience Improvements"
+      : toTitleCase(topSubjects[0] || "Interface improvements");
+  }
+  if (topArea === "Core Rust") {
+    return batch.commits.length > 1
+      ? "Core Runtime Improvements"
+      : toTitleCase(topSubjects[0] || "Core runtime improvements");
+  }
+  if (topArea === "Docs") {
+    return "Documentation Improvements";
+  }
+  if (topSubjects.length === 0) {
+    return `${topArea} updates`;
+  }
+  if (topSubjects.length === 1) {
+    return toTitleCase(topSubjects[0]);
+  }
+  return `${toTitleCase(topSubjects[0])} and ${toTitleCase(topSubjects[1])}`;
+}
+
+function buildBatchSummary(batch) {
+  const topArea = batch.area_summary[0]?.area || "Product";
+  const secondArea = batch.area_summary[1]?.area || "";
+  const subjectCount = unique(batch.commits.map((commit) => commit.cleanSubject)).length;
+
+  if (topArea === "Release Infrastructure") {
+    return `${subjectCount} related release, CI, signing, or packaging fixes were consolidated into one broader reliability update.`;
+  }
+  if (topArea === "Interface" && secondArea === "Core Rust") {
+    return `${subjectCount} related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.`;
+  }
+  if (topArea === "Interface") {
+    return `${subjectCount} related interface changes landed together across chat, settings, workflow, and product surfaces.`;
+  }
+  if (topArea === "Core Rust") {
+    return `${subjectCount} related runtime and backend changes landed together to improve underlying product behavior.`;
+  }
+  if (topArea === "Docs") {
+    return `${subjectCount} documentation updates landed together in support of the product and release flow.`;
+  }
+
+  const subjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 2);
+  if (subjects.length > 1) {
+    return `${subjects[0]}. ${subjects[1]}.`;
+  }
+  return `${subjects[0] || `${batch.commits.length} related updates shipped.`}`;
+}
+
 function buildDeterministicFallback({ dateKey, commits, repo, channel: currentChannel, currentVersion, batches, tz }) {
   const entries = batches.map((batch) => {
-    const topAreas = batch.area_summary.map(({ area }) => area).slice(0, 2);
-    const title = topAreas.length > 1
-      ? `${topAreas[0]} and ${topAreas[1]} updates`
-      : `${topAreas[0] || "Product"} updates`;
-    const subjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 3);
-    const summary = subjects.length > 1
-      ? `${subjects[0]}. ${subjects[1]}.`
-      : `${subjects[0] || `${batch.commits.length} related updates shipped.`}`;
+    const title = buildHeadlineFromBatch(batch);
+    const subjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 4);
+    const summary = buildBatchSummary(batch);
 
     return {
       time_label: batch.time_label,
@@ -361,10 +494,10 @@ function buildDeterministicFallback({ dateKey, commits, repo, channel: currentCh
       title,
       summary,
       items: subjects.map((text) => {
-        const source = batch.commits.find((commit) => commit.cleanSubject === text);
+        const sources = batch.commits.filter((commit) => commit.cleanSubject === text);
         return {
           text,
-          commit_shas: source ? [source.sha] : [],
+          commit_shas: sources.map((commit) => commit.sha),
           confidence: "medium",
         };
       }),
@@ -372,8 +505,8 @@ function buildDeterministicFallback({ dateKey, commits, repo, channel: currentCh
   });
 
   const title = `${entries.length} update${entries.length === 1 ? "" : "s"} shipped`;
-  const intro = `This ${currentChannel} timeline for ${repo} groups ${commits.length} landed commit${commits.length === 1 ? "" : "s"} into ${entries.length} update${entries.length === 1 ? "" : "s"} on ${formatDateInTimeZone(new Date(`${dateKey}T12:00:00Z`), tz)}${currentVersion ? ` for \`${currentVersion}\`` : ""}.`;
-  const highlights = entries.map((entry) => entry.title).slice(0, 4);
+  const intro = `This ${currentChannel} timeline for ${repo} groups ${commits.length} notable commit${commits.length === 1 ? "" : "s"} into ${entries.length} broader update${entries.length === 1 ? "" : "s"} on ${formatDateInTimeZone(new Date(`${dateKey}T12:00:00Z`), tz)}${currentVersion ? ` for \`${currentVersion}\`` : ""}.`;
+  const highlights = unique(entries.map((entry) => entry.title)).slice(0, 4);
 
   return {
     date: dateKey,
@@ -484,7 +617,9 @@ async function generateWithAnthropic(bundle) {
     "Do not mirror one commit per bullet unless the change is truly distinct and important.",
     "Do not reuse commit-title phrasing when a clearer outcome-oriented sentence is possible.",
     "Ignore merge commits, formatting-only changes, and low-signal maintenance unless they materially changed release quality, reliability, or user experience.",
+    "Ignore pure merge commits like 'Merge branch main', routine lockfile churn, and tiny housekeeping-only commits.",
     "Do not call out tests, refactors, or cleanup on their own unless they directly improved a shipped behavior or release confidence in a meaningful way.",
+    "If several commits are all part of the same CI, runner, cache, signing, or release-debugging thread, summarize them as one broader reliability update instead of listing each small fix.",
     "Do not invent features or claims that are not supported by the input.",
     "If evidence is weak, omit the item.",
     "If the day mostly contains infrastructure or release work, say that clearly rather than pretending it was a feature release.",
@@ -546,6 +681,8 @@ async function generateWithAnthropic(bundle) {
     "- Do not merge two distant batches into one headline just because they share a topic.",
     "- Do not repeat raw commit titles or conventional-commit phrasing unless the exact wording is genuinely the clearest option.",
     "- Exclude merge commits and low-signal maintenance unless they materially affected shipping, reliability, or user experience.",
+    "- Skip pure merge messages like 'Merge branch main' entirely.",
+    "- If several commits represent one release-debugging thread, compress them into one broader reliability bullet instead of enumerating each micro-fix.",
     "- Do not mention tests, formatting, or internal cleanup unless they clearly improved user-facing behavior or release confidence.",
     "- Mention platform names when relevant: Desktop, Mac, Windows, Linux, iOS, Android, Release Infrastructure, Website.",
     "",
@@ -689,16 +826,18 @@ const existingShas = new Set(existingCommits.map((commit) => commit.sha));
 const uniqueNewShas = newCommitShas.filter((sha) => !existingShas.has(sha));
 const appendedCommits = uniqueNewShas.map(collectCommit);
 const allCommits = [...existingCommits, ...appendedCommits];
+const filteredCommits = allCommits.filter((commit) => !shouldIgnoreCommitForRendering(commit));
+const renderableCommits = filteredCommits.length > 0 ? filteredCommits : allCommits;
 
 if (allCommits.length === 0) {
   console.error("No commits available to generate changelog entry");
   process.exit(1);
 }
 
-const allCommitShas = allCommits.map((commit) => commit.sha);
-const sortedAreas = summarizeAreas(allCommits);
-const timeBatches = batchCommits(allCommits, timeZone);
-const selectedCommitExcerpts = [...allCommits]
+const allCommitShas = renderableCommits.map((commit) => commit.sha);
+const sortedAreas = summarizeAreas(renderableCommits);
+const timeBatches = batchCommits(renderableCommits, timeZone);
+const selectedCommitExcerpts = [...renderableCommits]
   .sort((a, b) => scoreCommit(b) - scoreCommit(a))
   .slice(0, 8)
   .map((commit) => ({
@@ -708,7 +847,7 @@ const selectedCommitExcerpts = [...allCommits]
     excerpt: collectPatchExcerpt(commit.sha),
   }));
 
-const aggregateStats = allCommits.reduce((acc, commit) => {
+const aggregateStats = renderableCommits.reduce((acc, commit) => {
   acc.insertions += commit.stats.insertions;
   acc.deletions += commit.stats.deletions;
   acc.files += commit.stats.fileCount;
@@ -726,7 +865,8 @@ const bundle = {
   current_sha: currentSha,
   previous_processed_sha: previousSha || null,
   new_commit_count: uniqueNewShas.length,
-  total_daily_commit_count: allCommits.length,
+  total_daily_commit_count: renderableCommits.length,
+  raw_daily_commit_count: allCommits.length,
   aggregate_stats: aggregateStats,
   top_areas: sortedAreas,
   batches: timeBatches.map((batch) => ({
@@ -768,7 +908,7 @@ if (anthropicApiKey) {
 if (!rendered) {
   rendered = buildDeterministicFallback({
     dateKey,
-    commits: allCommits,
+    commits: renderableCommits,
     repo: repoName,
     channel,
     currentVersion: version,
@@ -792,6 +932,7 @@ const doc = {
   previousProcessedSha: previousSha || null,
   commitShas: allCommitShas,
   rawCommitCount: allCommits.length,
+  filteredCommitCount: renderableCommits.length,
   rawCommits: allCommits,
   batchCount: timeBatches.length,
   artifactSummaries,
