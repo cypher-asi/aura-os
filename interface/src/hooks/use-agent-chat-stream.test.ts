@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useAgentChatStream } from "./use-agent-chat-stream";
 import { useStreamStore, streamMetaMap } from "./stream/store";
 import { EventType } from "../types/aura-events";
+import { getPendingChatMessages } from "../lib/pending-chat-messages";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -19,6 +20,7 @@ describe("useAgentChatStream", () => {
   beforeEach(() => {
     streamMetaMap.clear();
     useStreamStore.setState({ entries: {} });
+    window.sessionStorage.clear();
     vi.mocked(api.agents.sendEventStream).mockReset().mockResolvedValue(undefined);
   });
 
@@ -190,5 +192,69 @@ describe("useAgentChatStream", () => {
       undefined,
       false,
     );
+  });
+
+  it("keeps pending agent messages when the stream errors before persistence", async () => {
+    vi.mocked(api.agents.sendEventStream).mockImplementation(async (
+      _agentId,
+      _content,
+      _action,
+      _model,
+      _attachments,
+      handler,
+    ) => {
+      handler?.onEvent({
+        type: EventType.Error,
+        content: { message: "connection lost" },
+      } as any);
+      handler?.onDone?.();
+    });
+
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    expect(getPendingChatMessages(result.current.streamKey)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: "user", content: "hello" }),
+      ]),
+    );
+  });
+
+  it("clears pending agent messages after a persisted message end", async () => {
+    vi.mocked(api.agents.sendEventStream).mockImplementation(async (
+      _agentId,
+      _content,
+      _action,
+      _model,
+      _attachments,
+      handler,
+    ) => {
+      handler?.onEvent({
+        type: EventType.MessageEnd,
+        content: {
+          event: {
+            id: "evt-1",
+            role: "assistant",
+            content: "persisted reply",
+          },
+        },
+      } as any);
+      handler?.onDone?.();
+    });
+
+    const { result } = renderHook(() =>
+      useAgentChatStream({ agentId: "agent-1" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("hello");
+    });
+
+    expect(getPendingChatMessages(result.current.streamKey)).toEqual([]);
   });
 });

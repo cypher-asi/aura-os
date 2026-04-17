@@ -7,7 +7,6 @@ import { generateImageStream, generate3dStream } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
 import {
   addPendingChatMessage,
-  clearPendingChatMessages,
 } from "../../lib/pending-chat-messages";
 
 import {
@@ -101,7 +100,6 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
             shouldStartNewSession,
           );
         }
-        clearPendingChatMessages(core.key);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err);
