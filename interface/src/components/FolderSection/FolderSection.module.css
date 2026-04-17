@@ -12,14 +12,7 @@
   min-height: var(--control-height-sm, 28px);
   padding: 0 16px;
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.62);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.sectionHeader:hover,
-.sectionHeader:focus-within {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--color-text-secondary);
 }
 
 .sectionMainButton {
