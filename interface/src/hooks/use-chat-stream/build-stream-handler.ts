@@ -31,7 +31,6 @@ import {
   backfillToolCallInput,
 } from "./optimistic-artifacts";
 import { useContextUsageStore } from "../../stores/context-usage-store";
-import { clearPendingChatMessages } from "../../lib/pending-chat-messages";
 
 export interface DispatchDeps {
   projectId: string;
@@ -165,7 +164,6 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       }
       case EventType.MessageEnd:
         handleEventSaved(refs, setters, event.content.event);
-        clearPendingChatMessages(coreKey);
         break;
       case EventType.AssistantMessageEnd: {
         handleAssistantTurnBoundary(refs, setters);

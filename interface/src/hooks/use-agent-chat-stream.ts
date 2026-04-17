@@ -131,7 +131,6 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               break;
             case EventType.MessageEnd:
               handleEventSaved(refs, setters, event.content.event);
-              clearPendingChatMessages(core.key);
               break;
             case EventType.AssistantMessageEnd: {
               handleAssistantTurnBoundary(refs, setters);
@@ -206,6 +205,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             shouldStartNewSession,
           );
         }
+        clearPendingChatMessages(core.key);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err);
