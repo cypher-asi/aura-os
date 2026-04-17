@@ -1939,7 +1939,11 @@ pub(crate) async fn send_agent_event_stream(
         // X-Aura-Session-Id on every /v1/messages call.
         aura_org_id: agent.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
-        provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
+        provider_config: build_harness_provider_config(
+            &agent.auth_source,
+            integration.as_ref(),
+            model.as_deref(),
+        )?,
         installed_tools,
         installed_integrations,
         ..Default::default()
@@ -2072,7 +2076,11 @@ pub(crate) async fn send_event_stream(
         // X-Aura-Session-Id on every /v1/messages call.
         aura_org_id: instance.org_id.as_ref().map(|o| o.to_string()),
         aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
-        provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
+        provider_config: build_harness_provider_config(
+            &instance.auth_source,
+            integration.as_ref(),
+            model.as_deref(),
+        )?,
         installed_tools,
         installed_integrations,
         ..Default::default()
