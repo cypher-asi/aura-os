@@ -2,18 +2,18 @@
   {
     "date": "2026-04-16",
     "channel": "nightly",
-    "version": "0.1.0-nightly.279.1",
-    "title": "27 updates shipped",
-    "intro": "This nightly timeline for aura-os groups 72 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.279.1`.",
-    "entryCount": 27,
+    "version": "0.1.0-nightly.280.1",
+    "title": "Interface Polish & Chat Streaming Improvements",
+    "intro": "Major improvements to chat streaming, tool preview cards, and interface polish. Enhanced spec and file tool streaming with live preview, simplified settings navigation, and strengthened chat session persistence.",
+    "entryCount": 4,
     "highlights": [
-      "Release Infrastructure and Interface updates",
-      "Interface updates",
-      "Release Infrastructure updates",
-      "Release Infrastructure updates"
+      "Live streaming tool previews for specs and files",
+      "Simplified settings navigation with logout in team panel",
+      "Fixed chat history persistence across app restarts",
+      "Improved task status reliability across all views"
     ],
-    "rawCommitCount": 72,
-    "generatedAt": "2026-04-17T03:24:43.689Z",
+    "rawCommitCount": 73,
+    "generatedAt": "2026-04-17T03:46:34.752Z",
     "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
     "path": "history/2026-04-16.json"
   },

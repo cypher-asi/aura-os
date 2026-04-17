@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "promptVersion": 2,
-  "generator": "fallback",
-  "generationError": "Error: Could not parse model response as JSON: SyntaxError: Unterminated string in JSON at position 6936 (line 161 column 35)",
-  "generatedAt": "2026-04-17T03:24:43.689Z",
+  "generator": "anthropic",
+  "generationError": null,
+  "generatedAt": "2026-04-17T03:46:34.752Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.279.1",
+  "version": "0.1.0-nightly.280.1",
   "date": "2026-04-16",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "a14a5644508b0bb9da9fc186029beb07872b3da4",
-  "previousProcessedSha": "134278eeb85bf00ae31442e440008bf97a108cec",
+  "lastIncludedSha": "1e4b343cc64dd5a587730d562f44549926a20a91",
+  "previousProcessedSha": "a14a5644508b0bb9da9fc186029beb07872b3da4",
   "commitShas": [
     "42464e797547a065c04738077b3b7c377b76eb8e",
     "7548957a3422485136de95ac324a80f97b01eb0f",
@@ -20,7 +20,6 @@
     "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75",
     "4c469d28706ab68016521961e7265cdafff35a85",
     "ea9a869477e3c881c2c4e019ab6fec57ceca5960",
-    "5289ffdf391d47eb96c5e26f0d861a58b16c9e80",
     "3ca1d086ced85b9205b3b357ebe41899849e3510",
     "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403",
     "c3189017be41e6ede6f259f5fd8c217086f0eae5",
@@ -55,7 +54,6 @@
     "c19ff7984f5590b9f224d3c27c98f7b04c8f7b06",
     "6cf7e3004297f92b25da7866415e8e912c373210",
     "12be80e16fdc5b5bb44a56b0fdaf4c272ea440a5",
-    "38b68567ad2ee85176325eba19d36a787c914295",
     "ed0edf5a0eb0dea0653e48edf5940b360023a6b3",
     "cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666",
     "0b340fa2e53179c0581f2c320c91738d371251b2",
@@ -75,7 +73,6 @@
     "000817bd48da1f40ad7977496115994f69259cd3",
     "2f34e08d556fe37a85e34154b96a418e4a750936",
     "24d6dc16d671e4938258e5f0c4474877a5cb24e8",
-    "8b62dfff790fff470ec793b12aec120bc9dfb0d3",
     "4c3b40f3a94176a39c4a8f2fd23472c32526b41d",
     "5bcaff3980468e746b5e3ccf11116be56445579f",
     "5b95b6e4f66712c5c597e18e81c0c2ebe2a871ca",
@@ -83,9 +80,11 @@
     "8be01e8e28c261bbd3843a548184c4260c7b3b5b",
     "ecd52f184fdeaa57c125157ab32d44247f15950f",
     "134278eeb85bf00ae31442e440008bf97a108cec",
-    "a14a5644508b0bb9da9fc186029beb07872b3da4"
+    "a14a5644508b0bb9da9fc186029beb07872b3da4",
+    "1e4b343cc64dd5a587730d562f44549926a20a91"
   ],
-  "rawCommitCount": 72,
+  "rawCommitCount": 73,
+  "filteredCommitCount": 70,
   "rawCommits": [
     {
       "sha": "42464e797547a065c04738077b3b7c377b76eb8e",
@@ -3142,36 +3141,73 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "1e4b343cc64dd5a587730d562f44549926a20a91",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-16T23:31:49-04:00",
+      "subject": "Tighten changelog filtering and fallback grouping",
+      "body": "",
+      "parents": [
+        "a14a5644508b0bb9da9fc186029beb07872b3da4"
+      ],
+      "files": [
+        "infra/scripts/release/generate-daily-changelog.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 161,
+        "deletions": 20
+      },
+      "committedAtMs": 1776396709000,
+      "cleanSubject": "Tighten changelog filtering and fallback grouping",
+      "keywords": [
+        "tighten",
+        "changelog",
+        "filtering",
+        "fallback",
+        "grouping"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 27,
+  "batchCount": 8,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.279.1",
+      "version": "0.1.0-nightly.280.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 24703322
+          "sizeBytes": 24703486
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92416504
+          "sizeBytes": 92420600
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -3181,29 +3217,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.279.1",
+      "version": "0.1.0-nightly.280.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.279.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.280.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21362335
+          "sizeBytes": 21362526
         },
         {
-          "name": "Aura_0.1.0-nightly.279.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.280.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 21157576
+          "sizeBytes": 21157352
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3213,29 +3249,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.279.1",
+      "version": "0.1.0-nightly.280.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.279.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.280.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 22794342
+          "sizeBytes": 22794223
         },
         {
-          "name": "Aura_0.1.0-nightly.279.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.280.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 22628228
+          "sizeBytes": 22628045
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3245,17 +3281,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.279.1",
+      "version": "0.1.0-nightly.280.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 14918915
+          "sizeBytes": 14910437
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.279.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.280.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3267,269 +3303,37 @@
     "date": "2026-04-16",
     "repo": "aura-os",
     "channel": "nightly",
-    "version": "0.1.0-nightly.279.1",
-    "title": "27 updates shipped",
-    "intro": "This nightly timeline for aura-os groups 72 landed commits into 27 updates on 2026-04-16 for `0.1.0-nightly.279.1`.",
+    "version": "0.1.0-nightly.280.1",
+    "title": "Interface Polish & Chat Streaming Improvements",
+    "intro": "Major improvements to chat streaming, tool preview cards, and interface polish. Enhanced spec and file tool streaming with live preview, simplified settings navigation, and strengthened chat session persistence.",
     "entries": [
       {
         "time_label": "8:36 PM",
         "started_at": "2026-04-16T03:36:03.000Z",
-        "ended_at": "2026-04-16T05:07:14.000Z",
-        "title": "Release Infrastructure and Interface updates",
-        "summary": "Fix desktop validate workflow env duplication. Fix desktop nightly updater versioning.",
+        "ended_at": "2026-04-16T23:01:11.000Z",
+        "title": "Chat Session Management & Settings Redesign",
+        "summary": "Overhauled chat session handling and simplified app settings navigation",
         "items": [
           {
-            "text": "Fix desktop validate workflow env duplication",
-            "commit_shas": [
-              "42464e797547a065c04738077b3b7c377b76eb8e"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Fix desktop nightly updater versioning",
-            "commit_shas": [
-              "7548957a3422485136de95ac324a80f97b01eb0f"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Add sccache to desktop build workflows",
-            "commit_shas": [
-              "53a06a3e8785cae6b2e2494899c2044f1b969617"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "11:15 PM",
-        "started_at": "2026-04-16T06:15:40.000Z",
-        "ended_at": "2026-04-16T06:15:40.000Z",
-        "title": "Interface updates",
-        "summary": "Reset agent chat context after new sessions",
-        "items": [
-          {
-            "text": "Reset agent chat context after new sessions",
+            "text": "Fixed agent chat context reset to create fresh sessions and clear client caches, preventing conversation leakage between sessions",
             "commit_shas": [
               "4c469d28706ab68016521961e7265cdafff35a85"
             ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "11:46 PM",
-        "started_at": "2026-04-16T06:46:52.000Z",
-        "ended_at": "2026-04-16T07:23:03.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "Refactor changelog generation into timeline entries. Align nightly manifest publish versioning.",
-        "items": [
-          {
-            "text": "Refactor changelog generation into timeline entries",
-            "commit_shas": [
-              "6ea4cb3d919cb95724bbbbc199833b2995ff7915"
-            ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Align nightly manifest publish versioning",
-            "commit_shas": [
-              "e1352ccc5a6c85c95eb7d5e44719c6a9feb27c75"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "9:59 AM",
-        "started_at": "2026-04-16T16:59:23.000Z",
-        "ended_at": "2026-04-16T16:59:23.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "Improve desktop CI runner and timing instrumentation",
-        "items": [
-          {
-            "text": "Improve desktop CI runner and timing instrumentation",
-            "commit_shas": [
-              "ea9a869477e3c881c2c4e019ab6fec57ceca5960"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "12:13 PM",
-        "started_at": "2026-04-16T19:13:52.000Z",
-        "ended_at": "2026-04-16T19:13:52.000Z",
-        "title": "Other updates",
-        "summary": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
-        "items": [
-          {
-            "text": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
-            "commit_shas": [
-              "5289ffdf391d47eb96c5e26f0d861a58b16c9e80"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "12:27 PM",
-        "started_at": "2026-04-16T19:27:35.000Z",
-        "ended_at": "2026-04-16T21:29:19.000Z",
-        "title": "Interface and Core Rust updates",
-        "summary": "Fix sidekick empty-state flash and align Run row height. Mirror specs to disk and show filename-style tool card.",
-        "items": [
-          {
-            "text": "Fix sidekick empty-state flash and align Run row height",
-            "commit_shas": [
-              "3ca1d086ced85b9205b3b357ebe41899849e3510"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Mirror specs to disk and show filename-style tool card",
-            "commit_shas": [
-              "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Fade tool card body out before collapsing",
-            "commit_shas": [
-              "c3189017be41e6ede6f259f5fd8c217086f0eae5"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "2:29 PM",
-        "started_at": "2026-04-16T21:29:59.000Z",
-        "ended_at": "2026-04-16T21:29:59.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "Use larger desktop runners and switch changelog to Pacific time",
-        "items": [
-          {
-            "text": "Use larger desktop runners and switch changelog to Pacific time",
-            "commit_shas": [
-              "25ada54247d106480256584463c5ca38a9bba89a"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "2:50 PM",
-        "started_at": "2026-04-16T21:50:37.000Z",
-        "ended_at": "2026-04-16T22:27:03.000Z",
-        "title": "Interface and Core Rust updates",
-        "summary": "Use totalCostUsd for Total Revenue tile. Move logout into team settings panel, drop app settings modal.",
-        "items": [
-          {
-            "text": "Use totalCostUsd for Total Revenue tile",
-            "commit_shas": [
-              "f1effd47d34c326733d52bb9a0853b3e2c841692"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Move logout into team settings panel, drop app settings modal",
+            "text": "Moved logout action into team settings panel and removed the top-bar settings modal entirely",
             "commit_shas": [
               "54d6ca8801051f031b738ed57aee5429f95e050c"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Eliminate post-stream jerk when the assistant bubble finalizes",
+            "text": "Added specs-to-disk mirroring so generated specs appear in project filesystem at <workspace_root>/spec/<slug>.md",
             "commit_shas": [
-              "940c02c82a9eebe0c4991590903ba17a516c0fc8"
+              "cca9aaeb02bebfaa8e1d95f3f53e9b1b0642c403"
             ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "3:27 PM",
-        "started_at": "2026-04-16T22:27:31.000Z",
-        "ended_at": "2026-04-16T22:46:16.000Z",
-        "title": "Interface updates",
-        "summary": "Render unwrapped delete error messages in project/agent flows. Smooth tool/thinking collapse so pinned chat stops blinking upward.",
-        "items": [
-          {
-            "text": "Render unwrapped delete error messages in project/agent flows",
-            "commit_shas": [
-              "9dae22bc939b5580dd5a45c9ef23e0e3cdcb0b94"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Smooth tool/thinking collapse so pinned chat stops blinking upward",
-            "commit_shas": [
-              "ff67b0be16e08a4e3d89e3190f5f434ccb170241"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "3:55 PM",
-        "started_at": "2026-04-16T22:55:41.000Z",
-        "ended_at": "2026-04-16T22:59:39.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "Fix cargo timings artifact upload paths. Fix Linux larger-runner desktop dependencies.",
-        "items": [
-          {
-            "text": "Fix cargo timings artifact upload paths",
-            "commit_shas": [
-              "8c70b928dce3d36c41a972edee166b618280ee36"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Fix Linux larger-runner desktop dependencies",
-            "commit_shas": [
-              "5d2045b07e4d4d1dd6925ba56e44f3d3d5c41ce9"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:00 PM",
-        "started_at": "2026-04-16T23:00:28.000Z",
-        "ended_at": "2026-04-16T23:01:11.000Z",
-        "title": "Interface updates",
-        "summary": "Repair markdown strong emphasis with trailing whitespace before closer. Show task title in create_task rows and make expand useful.",
-        "items": [
-          {
-            "text": "Repair markdown strong emphasis with trailing whitespace before closer",
-            "commit_shas": [
-              "f3c3368a496a695e5027abb0bc5df44f0d50d988"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Show task title in create_task rows and make expand useful",
-            "commit_shas": [
-              "74e0a1f45b7a27d64e4407b811dfe8b1b19d591b"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:09 PM",
-        "started_at": "2026-04-16T23:09:02.000Z",
-        "ended_at": "2026-04-16T23:09:02.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "Add Linux toolchain packages on larger runners",
-        "items": [
-          {
-            "text": "Add Linux toolchain packages on larger runners",
-            "commit_shas": [
-              "0ddff8d85b47514fea681053859fe6d40d0a99d4"
-            ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -3537,298 +3341,75 @@
         "time_label": "4:13 PM",
         "started_at": "2026-04-16T23:13:27.000Z",
         "ended_at": "2026-04-16T23:24:35.000Z",
-        "title": "Interface and Core Rust updates",
-        "summary": "Stream partial tool inputs into spec and file preview cards. Tighten spacing between tool-only assistant bubbles.",
+        "title": "Live Tool Streaming & Preview Cards",
+        "summary": "Enabled real-time streaming of tool inputs with live preview cards for specs and files",
         "items": [
           {
-            "text": "Stream partial tool inputs into spec and file preview cards",
+            "text": "Implemented live streaming of spec markdown content into preview cards as the model generates it, replacing static spinners",
+            "commit_shas": [
+              "267e80ea129adf1d42dfcaa0c4e81a301127c9a0"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Extended streaming to file operations (write_file, edit_file) with live diff and code previews",
             "commit_shas": [
               "b0bd9d7b10b4324eb61c966cb81e686cf73d886b"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Tighten spacing between tool-only assistant bubbles",
+            "text": "Added right-click delete functionality for specs and tasks in the Sidekick panels",
             "commit_shas": [
-              "272b699b3fef7d1f01cb9f2066786a582f4442c7"
+              "2357d97eef968d7a6938b2e57d566769b5c40231"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Only auto-expand tool rows with live preview content",
+            "text": "Enabled Anthropic fine-grained tool streaming for character-by-character preview updates",
             "commit_shas": [
-              "dd3fc981f3f3e31fd22957e5aa767fdda9b262b0"
+              "a3368049454224e8a3c9e9c2171ad76459694015"
             ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:28 PM",
-        "started_at": "2026-04-16T23:28:48.000Z",
-        "ended_at": "2026-04-16T23:28:48.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "Add OpenSSL dev headers on Linux larger runners",
-        "items": [
-          {
-            "text": "Add OpenSSL dev headers on Linux larger runners",
-            "commit_shas": [
-              "88579baaec7f2cba46980ae90443dc1a9d39dae9"
-            ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
       {
         "time_label": "4:31 PM",
         "started_at": "2026-04-16T23:31:34.000Z",
-        "ended_at": "2026-04-16T23:32:21.000Z",
-        "title": "Interface updates",
-        "summary": "Tighten tool row spacing further across bubble boundaries. Filter deleted tasks and specs from TaskList view.",
-        "items": [
-          {
-            "text": "Tighten tool row spacing further across bubble boundaries",
-            "commit_shas": [
-              "c19ff7984f5590b9f224d3c27c98f7b04c8f7b06"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Filter deleted tasks and specs from TaskList view",
-            "commit_shas": [
-              "6cf7e3004297f92b25da7866415e8e912c373210"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:33 PM",
-        "started_at": "2026-04-16T23:33:38.000Z",
-        "ended_at": "2026-04-16T23:33:38.000Z",
-        "title": "Core Rust updates",
-        "summary": "Log tool streaming flow to diagnose live preview lag",
-        "items": [
-          {
-            "text": "Log tool streaming flow to diagnose live preview lag",
-            "commit_shas": [
-              "12be80e16fdc5b5bb44a56b0fdaf4c272ea440a5"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:34 PM",
-        "started_at": "2026-04-16T23:34:36.000Z",
-        "ended_at": "2026-04-16T23:43:43.000Z",
-        "title": "Interface updates",
-        "summary": "Stop reformatting assistant bubbles after stream finishes. Rename Swarm environment label to Remote in agent create form.",
-        "items": [
-          {
-            "text": "Stop reformatting assistant bubbles after stream finishes",
-            "commit_shas": [
-              "38b68567ad2ee85176325eba19d36a787c914295"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Rename Swarm environment label to Remote in agent create form",
-            "commit_shas": [
-              "ed0edf5a0eb0dea0653e48edf5940b360023a6b3"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:47 PM",
-        "started_at": "2026-04-16T23:47:56.000Z",
-        "ended_at": "2026-04-16T23:47:56.000Z",
-        "title": "Core Rust updates",
-        "summary": "Add aura_project_id to SessionInit for router billing headers",
-        "items": [
-          {
-            "text": "Add aura_project_id to SessionInit for router billing headers",
-            "commit_shas": [
-              "cfdd29d4167b9b1cb83cdea36135a8b7b1b5f666"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:49 PM",
-        "started_at": "2026-04-16T23:49:10.000Z",
-        "ended_at": "2026-04-16T23:49:10.000Z",
-        "title": "Other updates",
-        "summary": "Preserve tool-only assistant turns in chat history on reopen",
-        "items": [
-          {
-            "text": "Preserve tool-only assistant turns in chat history on reopen",
-            "commit_shas": [
-              "0b340fa2e53179c0581f2c320c91738d371251b2"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "4:49 PM",
-        "started_at": "2026-04-16T23:49:40.000Z",
-        "ended_at": "2026-04-17T00:20:59.000Z",
-        "title": "Core Rust and Other updates",
-        "summary": "Revert \"Add aura_project_id to SessionInit for router billing headers\". Refetch project stats when a chat stream ends.",
-        "items": [
-          {
-            "text": "Revert \"Add aura_project_id to SessionInit for router billing headers\"",
-            "commit_shas": [
-              "3484cb2b2544c3e92cdc9812dd47e514dbcc96e5"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Refetch project stats when a chat stream ends",
-            "commit_shas": [
-              "8c9c42f9c864c9b10ce67621468da6cc27f02b66"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Sum input+output tokens when aura-network totalTokens is 0",
-            "commit_shas": [
-              "fc6fd9185d1e064d6056e3d777662187e5b278eb"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "5:23 PM",
-        "started_at": "2026-04-17T00:23:57.000Z",
-        "ended_at": "2026-04-17T01:08:21.000Z",
-        "title": "Interface updates",
-        "summary": "Prevent text selection and dragging on the AURA topbar logo. Disable text selection on topbar and left sidebar.",
-        "items": [
-          {
-            "text": "Prevent text selection and dragging on the AURA topbar logo",
-            "commit_shas": [
-              "07253bf34bd62263cac12c87ba24228aed53d550"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Disable text selection on topbar and left sidebar",
-            "commit_shas": [
-              "3f75764473706f21dbe15cab3dedbccb31cc65ce"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Keep prior messages visible after starting a new chat session",
-            "commit_shas": [
-              "3b9d7f0c242b241875d4c6e3b9d4406e77f93072"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "6:11 PM",
-        "started_at": "2026-04-17T01:11:55.000Z",
-        "ended_at": "2026-04-17T01:11:55.000Z",
-        "title": "Core Rust updates",
-        "summary": "Stream visible spec markdown before calling create_spec/update_spec",
-        "items": [
-          {
-            "text": "Stream visible spec markdown before calling create_spec/update_spec",
-            "commit_shas": [
-              "e5adacc89276689a747b42f833458e719e069e11"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "6:12 PM",
-        "started_at": "2026-04-17T01:12:00.000Z",
         "ended_at": "2026-04-17T01:12:04.000Z",
-        "title": "Interface updates",
-        "summary": "Persist bootstrap ?host= query param into localStorage. Default billing plan badge to \"pro\" and drop team-centric copy.",
+        "title": "Chat History & Task Status Reliability",
+        "summary": "Fixed chat history persistence and task status synchronization issues",
         "items": [
           {
-            "text": "Persist bootstrap ?host= query param into localStorage",
+            "text": "Restored missing assistant and tool turns in chat history that were being dropped on app reopen",
             "commit_shas": [
-              "000817bd48da1f40ad7977496115994f69259cd3"
+              "0b340fa2e53179c0581f2c320c91738d371251b2",
+              "d74a85554f8ad2e2805dd5951ba57c2d21d3a594"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Default billing plan badge to \"pro\" and drop team-centric copy",
+            "text": "Fixed task status preservation across all views to prevent completed tasks from reverting to in-progress",
             "commit_shas": [
-              "2f34e08d556fe37a85e34154b96a418e4a750936"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "6:12 PM",
-        "started_at": "2026-04-17T01:12:09.000Z",
-        "ended_at": "2026-04-17T01:12:09.000Z",
-        "title": "Docs updates",
-        "summary": "Add hello-world website quick spec doc",
-        "items": [
-          {
-            "text": "Add hello-world website quick spec doc",
-            "commit_shas": [
-              "24d6dc16d671e4938258e5f0c4474877a5cb24e8"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "6:12 PM",
-        "started_at": "2026-04-17T01:12:23.000Z",
-        "ended_at": "2026-04-17T01:12:23.000Z",
-        "title": "Other updates",
-        "summary": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
-        "items": [
-          {
-            "text": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
-            "commit_shas": [
-              "8b62dfff790fff470ec793b12aec120bc9dfb0d3"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "6:21 PM",
-        "started_at": "2026-04-17T01:21:35.000Z",
-        "ended_at": "2026-04-17T01:39:06.000Z",
-        "title": "Interface updates",
-        "summary": "Preserve terminal task status across listTasks refetches too. Keep chat anchor pinned while resizing the sidekick pane.",
-        "items": [
-          {
-            "text": "Preserve terminal task status across listTasks refetches too",
-            "commit_shas": [
-              "4c3b40f3a94176a39c4a8f2fd23472c32526b41d"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Keep chat anchor pinned while resizing the sidekick pane",
-            "commit_shas": [
+              "efd59b95e0518cee1655e239b29074140153abbb",
+              "4c3b40f3a94176a39c4a8f2fd23472c32526b41d",
               "5bcaff3980468e746b5e3ccf11116be56445579f"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Preserve terminal task status in the Kanban store",
+            "text": "Improved Stop automation resilience with better error handling and UI state management",
             "commit_shas": [
-              "5b95b6e4f66712c5c597e18e81c0c2ebe2a871ca"
+              "f33ff9e8d6f8ad12a15fac7f4185166e666eee6a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Enhanced chat scroll anchoring to stay stable during sidekick pane resizing",
+            "commit_shas": [
+              "5bcaff3980468e746b5e3ccf11116be56445579f",
+              "8be01e8e28c261bbd3843a548184c4260c7b3b5b"
             ],
             "confidence": "medium"
           }
@@ -3837,28 +3418,23 @@
       {
         "time_label": "6:43 PM",
         "started_at": "2026-04-17T01:43:42.000Z",
-        "ended_at": "2026-04-17T03:12:57.000Z",
-        "title": "Release Infrastructure updates",
-        "summary": "use python3 for normalize-packager-key step. Restore Linux desktop jobs to x64 hosted runners.",
+        "ended_at": "2026-04-17T03:31:49.000Z",
+        "title": "Release Infrastructure Improvements",
+        "summary": "Stabilized desktop build workflows and enhanced changelog generation",
         "items": [
           {
-            "text": "use python3 for normalize-packager-key step",
+            "text": "Fixed Linux desktop build dependencies and runner configuration issues",
             "commit_shas": [
-              "ecd52f184fdeaa57c125157ab32d44247f15950f"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Restore Linux desktop jobs to x64 hosted runners",
-            "commit_shas": [
-              "134278eeb85bf00ae31442e440008bf97a108cec"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Route Linux desktop jobs back to larger runner",
-            "commit_shas": [
+              "ecd52f184fdeaa57c125157ab32d44247f15950f",
+              "134278eeb85bf00ae31442e440008bf97a108cec",
               "a14a5644508b0bb9da9fc186029beb07872b3da4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Enhanced changelog generation with improved filtering and timeline grouping",
+            "commit_shas": [
+              "1e4b343cc64dd5a587730d562f44549926a20a91"
             ],
             "confidence": "medium"
           }
@@ -3866,11 +3442,11 @@
       }
     ],
     "highlights": [
-      "Release Infrastructure and Interface updates",
-      "Interface updates",
-      "Release Infrastructure updates",
-      "Release Infrastructure updates"
+      "Live streaming tool previews for specs and files",
+      "Simplified settings navigation with logout in team panel",
+      "Fixed chat history persistence across app restarts",
+      "Improved task status reliability across all views"
     ],
-    "raw_commit_count": 72
+    "raw_commit_count": 70
   }
 }
