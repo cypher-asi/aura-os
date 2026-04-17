@@ -57,6 +57,10 @@ mod types {
         pub input_tokens: u64,
         #[serde(default)]
         pub output_tokens: u64,
+        #[serde(default)]
+        pub cache_creation_input_tokens: u64,
+        #[serde(default)]
+        pub cache_read_input_tokens: u64,
     }
 }
 
@@ -164,6 +168,28 @@ const DEFAULT_MAX_TOOL_TURNS: usize = 25;
 const DEFAULT_MAX_TOKENS: u32 = 16_384;
 const DEFAULT_MODEL: &str = "claude-sonnet-4-5-20250514";
 const MAX_CONSECUTIVE_TRUNCATIONS: usize = 3;
+
+/// Effective prompt-window size used to derive `context_utilization` for
+/// the SuperAgent. Claude Sonnet / Opus models expose a 200k-token input
+/// window; the UI divides the estimated prompt tokens for the most recent
+/// turn by this to render the "N%" context indicator.
+const MODEL_CONTEXT_WINDOW: u64 = 200_000;
+
+/// Total prompt-side tokens consumed by a turn = fresh input + cache
+/// writes + cache hits. Anthropic reports these three separately in
+/// `message_start.usage`.
+fn estimated_context_tokens(usage: &types::UsagePayload) -> u64 {
+    usage
+        .input_tokens
+        .saturating_add(usage.cache_creation_input_tokens)
+        .saturating_add(usage.cache_read_input_tokens)
+}
+
+fn context_utilization_for(usage: &types::UsagePayload) -> f32 {
+    let est = estimated_context_tokens(usage) as f32;
+    let window = MODEL_CONTEXT_WINDOW as f32;
+    (est / window).clamp(0.0, 1.0)
+}
 
 #[derive(Serialize)]
 struct MessagesRequest {
@@ -302,6 +328,9 @@ impl SuperAgentStream {
 
         let mut cumulative_input: u64 = 0;
         let mut cumulative_output: u64 = 0;
+        let mut cumulative_cache_creation: u64 = 0;
+        let mut cumulative_cache_read: u64 = 0;
+        let mut last_turn_usage = UsagePayload::default();
         let mut consecutive_truncations: usize = 0;
 
         for _turn in 0..self.max_turns {
@@ -401,6 +430,9 @@ impl SuperAgentStream {
 
             cumulative_input += usage.input_tokens;
             cumulative_output += usage.output_tokens;
+            cumulative_cache_creation += usage.cache_creation_input_tokens;
+            cumulative_cache_read += usage.cache_read_input_tokens;
+            last_turn_usage = usage.clone();
 
             match stop_reason.as_deref() {
                 Some("tool_use") => {
@@ -437,20 +469,22 @@ impl SuperAgentStream {
                     }
                 }
                 _ => {
+                    let est_ctx = estimated_context_tokens(&last_turn_usage);
+                    let ctx_util = context_utilization_for(&last_turn_usage);
                     self.emit(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
                         message_id: msg_id,
                         stop_reason: stop_reason.unwrap_or_else(|| "end_turn".into()),
                         usage: SessionUsage {
                             input_tokens: usage.input_tokens,
                             output_tokens: usage.output_tokens,
-                            cache_creation_input_tokens: 0,
-                            cache_read_input_tokens: 0,
+                            cache_creation_input_tokens: usage.cache_creation_input_tokens,
+                            cache_read_input_tokens: usage.cache_read_input_tokens,
                             cumulative_input_tokens: cumulative_input,
                             cumulative_output_tokens: cumulative_output,
-                            cumulative_cache_creation_input_tokens: 0,
-                            cumulative_cache_read_input_tokens: 0,
-                            estimated_context_tokens: 0,
-                            context_utilization: 0.0,
+                            cumulative_cache_creation_input_tokens: cumulative_cache_creation,
+                            cumulative_cache_read_input_tokens: cumulative_cache_read,
+                            estimated_context_tokens: est_ctx,
+                            context_utilization: ctx_util,
                             model: self.model.clone(),
                             provider: "anthropic".into(),
                         },
@@ -462,20 +496,22 @@ impl SuperAgentStream {
         }
 
         warn!("Super Agent hit max tool turns ({})", self.max_turns);
+        let est_ctx = estimated_context_tokens(&last_turn_usage);
+        let ctx_util = context_utilization_for(&last_turn_usage);
         self.emit(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
             message_id: msg_id,
             stop_reason: "max_turns".into(),
             usage: SessionUsage {
-                input_tokens: 0,
-                output_tokens: 0,
-                cache_creation_input_tokens: 0,
-                cache_read_input_tokens: 0,
+                input_tokens: last_turn_usage.input_tokens,
+                output_tokens: last_turn_usage.output_tokens,
+                cache_creation_input_tokens: last_turn_usage.cache_creation_input_tokens,
+                cache_read_input_tokens: last_turn_usage.cache_read_input_tokens,
                 cumulative_input_tokens: cumulative_input,
                 cumulative_output_tokens: cumulative_output,
-                cumulative_cache_creation_input_tokens: 0,
-                cumulative_cache_read_input_tokens: 0,
-                estimated_context_tokens: 0,
-                context_utilization: 0.0,
+                cumulative_cache_creation_input_tokens: cumulative_cache_creation,
+                cumulative_cache_read_input_tokens: cumulative_cache_read,
+                estimated_context_tokens: est_ctx,
+                context_utilization: ctx_util,
                 model: self.model.clone(),
                 provider: "anthropic".into(),
             },
@@ -543,7 +579,15 @@ impl SuperAgentStream {
                     "message_start" => {
                         if let Some(ref msg) = evt.message {
                             if let Some(ref u) = msg.usage {
+                                // Anthropic reports prompt-side tokens in
+                                // `message_start` (input + cache hits/
+                                // creation). The running assistant-side
+                                // `output_tokens` arrives later in
+                                // `message_delta`.
                                 usage.input_tokens = u.input_tokens;
+                                usage.cache_creation_input_tokens =
+                                    u.cache_creation_input_tokens;
+                                usage.cache_read_input_tokens = u.cache_read_input_tokens;
                             }
                         }
                     }
@@ -920,6 +964,33 @@ mod tests {
         assert_eq!(v["content"], Value::String("hi".into()));
         assert!(v.get("old_text").is_none());
         assert!(v.get("new_text").is_none());
+    }
+
+    #[test]
+    fn context_utilization_counts_fresh_input_plus_cache_tokens() {
+        let mut u = types::UsagePayload::default();
+        u.input_tokens = 10_000;
+        u.cache_creation_input_tokens = 30_000;
+        u.cache_read_input_tokens = 60_000;
+        // 100k / 200k window = 0.5
+        let util = context_utilization_for(&u);
+        assert!((util - 0.5).abs() < 1e-6, "got {util}");
+        assert_eq!(estimated_context_tokens(&u), 100_000);
+    }
+
+    #[test]
+    fn context_utilization_clamps_to_one() {
+        let mut u = types::UsagePayload::default();
+        u.input_tokens = 250_000;
+        let util = context_utilization_for(&u);
+        assert_eq!(util, 1.0);
+    }
+
+    #[test]
+    fn context_utilization_zero_for_empty_usage() {
+        let u = types::UsagePayload::default();
+        assert_eq!(context_utilization_for(&u), 0.0);
+        assert_eq!(estimated_context_tokens(&u), 0);
     }
 
     #[test]
