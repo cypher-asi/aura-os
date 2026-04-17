@@ -78,11 +78,11 @@ export function OrgSettingsBilling({
           <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Current Plan</span>
             <span className={styles.rowDescription}>
-              Your team's active subscription
+              Your active subscription
             </span>
           </div>
           <div className={styles.rowControl}>
-            <span className={styles.roleBadge}>{billing?.plan ?? "free"}</span>
+            <span className={styles.roleBadge}>{billing?.plan ?? "pro"}</span>
           </div>
         </div>
         {isAdminOrOwner && (
