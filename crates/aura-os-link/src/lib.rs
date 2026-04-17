@@ -22,11 +22,12 @@ pub use runner::{
 pub use swarm_harness::{CreateAgentResponse, SwarmHarness};
 
 pub use aura_protocol::{
-    ApprovalResponse, AssistantMessageEnd, AssistantMessageStart, ConversationMessage, ErrorMsg,
-    FileOp, FilesChanged, InboundMessage as HarnessInbound, InstalledIntegration, InstalledTool,
-    InstalledToolIntegrationRequirement, InstalledToolRuntimeAuth, InstalledToolRuntimeExecution,
-    InstalledToolRuntimeIntegration, InstalledToolRuntimeProviderExecution, MessageAttachment,
-    OutboundMessage as HarnessOutbound, SessionInit, SessionProviderConfig, SessionReady,
-    SessionUsage, SkillInfo, TextDelta, ThinkingDelta, ToolAuth, ToolCallSnapshot, ToolInfo,
-    ToolResultMsg, ToolUseStart, UserMessage,
+    ApprovalResponse, AssistantMessageEnd, AssistantMessageStart, ConversationContentBlock,
+    ConversationMessage, ErrorMsg, FileOp, FilesChanged, InboundMessage as HarnessInbound,
+    InstalledIntegration, InstalledTool, InstalledToolIntegrationRequirement,
+    InstalledToolRuntimeAuth, InstalledToolRuntimeExecution, InstalledToolRuntimeIntegration,
+    InstalledToolRuntimeProviderExecution, MessageAttachment, OutboundMessage as HarnessOutbound,
+    SessionInit, SessionProviderConfig, SessionReady, SessionUsage, SkillInfo, TextDelta,
+    ThinkingDelta, ToolAuth, ToolCallSnapshot, ToolInfo, ToolResultMsg, ToolUseStart,
+    UserMessage,
 };

@@ -40,6 +40,38 @@ pub enum InboundMessage {
 pub struct ConversationMessage {
     pub role: String,
     pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_blocks: Option<Vec<ConversationContentBlock>>,
+}
+
+/// A structured conversation content block used when restoring session history.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub enum ConversationContentBlock {
+    Text {
+        text: String,
+    },
+    Thinking {
+        thinking: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        signature: Option<String>,
+    },
+    ToolUse {
+        id: String,
+        name: String,
+        input_json: String,
+    },
+    ToolResult {
+        tool_use_id: String,
+        content: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        is_error: Option<bool>,
+    },
+    Image {
+        media_type: String,
+        data: String,
+    },
 }
 
 /// Payload for `session_init`.

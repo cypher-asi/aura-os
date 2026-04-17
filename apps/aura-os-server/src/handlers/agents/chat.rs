@@ -25,8 +25,8 @@ use aura_os_core::{
     SessionEvent,
 };
 use aura_os_link::{
-    ConversationMessage, HarnessInbound, HarnessOutbound, MessageAttachment, SessionConfig,
-    SessionUsage, UserMessage,
+    ConversationContentBlock, ConversationMessage, HarnessInbound, HarnessOutbound,
+    MessageAttachment, SessionConfig, SessionUsage, UserMessage,
 };
 use aura_os_storage::StorageClient;
 
@@ -781,9 +781,50 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
             Some(ConversationMessage {
                 role: role.to_string(),
                 content: rendered,
+                content_blocks: conversation_content_blocks(m.content_blocks.as_deref()),
             })
         })
         .collect()
+}
+
+fn conversation_content_blocks(
+    blocks: Option<&[ChatContentBlock]>,
+) -> Option<Vec<ConversationContentBlock>> {
+    let mapped: Vec<ConversationContentBlock> = blocks
+        .unwrap_or(&[])
+        .iter()
+        .filter_map(|block| match block {
+            ChatContentBlock::Text { text } => Some(ConversationContentBlock::Text {
+                text: text.clone(),
+            }),
+            ChatContentBlock::ToolUse { id, name, input } => {
+                Some(ConversationContentBlock::ToolUse {
+                    id: id.clone(),
+                    name: name.clone(),
+                    input_json: serde_json::to_string(input)
+                        .unwrap_or_else(|_| "{}".to_string()),
+                })
+            }
+            ChatContentBlock::ToolResult {
+                tool_use_id,
+                content,
+                is_error,
+            } => Some(ConversationContentBlock::ToolResult {
+                tool_use_id: tool_use_id.clone(),
+                content: content.clone(),
+                is_error: *is_error,
+            }),
+            ChatContentBlock::Image { media_type, data } => {
+                Some(ConversationContentBlock::Image {
+                    media_type: media_type.clone(),
+                    data: data.clone(),
+                })
+            }
+            ChatContentBlock::TaskRef { .. } | ChatContentBlock::SpecRef { .. } => None,
+        })
+        .collect();
+
+    (!mapped.is_empty()).then_some(mapped)
 }
 
 /// Collect the set of `tool_use_id` values referenced by any `tool_result`
@@ -2390,6 +2431,40 @@ mod tests {
                 && m.content.contains("tool_use create_spec")),
             "narration and tool_use must both survive, got: {history:?}"
         );
+    }
+
+    #[test]
+    fn conversation_history_preserves_structured_blocks_for_session_hydration() {
+        let assistant = assistant_event(
+            "",
+            Some(vec![
+                ChatContentBlock::ToolUse {
+                    id: "tool-1".into(),
+                    name: "create_spec".into(),
+                    input: serde_json::json!({ "title": "hello" }),
+                },
+                ChatContentBlock::ToolResult {
+                    tool_use_id: "tool-1".into(),
+                    content: "spec-123".into(),
+                    is_error: Some(false),
+                },
+            ]),
+        );
+
+        let history = session_events_to_conversation_history(&[assistant]);
+        let blocks = history[0]
+            .content_blocks
+            .as_ref()
+            .expect("structured content blocks");
+
+        assert!(matches!(
+            &blocks[0],
+            ConversationContentBlock::ToolUse { name, .. } if name == "create_spec"
+        ));
+        assert!(matches!(
+            &blocks[1],
+            ConversationContentBlock::ToolResult { tool_use_id, .. } if tool_use_id == "tool-1"
+        ));
     }
 
     #[test]
