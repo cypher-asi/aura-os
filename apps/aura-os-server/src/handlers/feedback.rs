@@ -163,10 +163,10 @@ impl FeedbackItemResponse {
             status,
             created_at: e.created_at,
             comment_count: e.comment_count,
-            upvotes: 0,
-            downvotes: 0,
-            vote_score: 0,
-            viewer_vote: "none".to_string(),
+            upvotes: e.upvotes,
+            downvotes: e.downvotes,
+            vote_score: e.vote_score,
+            viewer_vote: e.viewer_vote,
         }
     }
 }
@@ -268,37 +268,26 @@ pub(crate) async fn list_feedback(
         Some(value) => validate_sort(value)?,
         None => "latest",
     };
-    if sort != "latest" {
-        warn!(
-            requested_sort = sort,
-            "feedback: non-latest sort degrades to latest until vote data ships in phase 3"
-        );
-    }
 
+    // Phase 3: aura-network now accepts `filter=feedback` + `sort=...` and
+    // inlines vote aggregates per row, so we forward directly.
     let events = client
-        .get_feed(Some("everything"), None, None, &jwt)
+        .get_feed_with_sort(
+            Some("feedback"),
+            Some(sort),
+            query.limit,
+            query.offset,
+            &jwt,
+        )
         .await
         .map_err(map_network_error)?;
 
-    let mut filtered: Vec<NetworkFeedEvent> = events
-        .into_iter()
-        .filter(|e| e.event_type == FEEDBACK_EVENT_TYPE)
-        .collect();
-
-    filtered.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-
-    let offset = query.offset.unwrap_or(0) as usize;
-    let limit = query.limit.unwrap_or(100) as usize;
-    let page: Vec<NetworkFeedEvent> = filtered
-        .into_iter()
-        .skip(offset)
-        .take(limit.max(1))
-        .collect();
-
-    let profiles = resolve_profiles(client, page.iter().map(|e| e.profile_id.as_str()), &jwt).await;
+    let profiles =
+        resolve_profiles(client, events.iter().map(|e| e.profile_id.as_str()), &jwt).await;
 
     Ok(Json(
-        page.into_iter()
+        events
+            .into_iter()
             .map(|e| FeedbackItemResponse::from_event(e, &profiles))
             .collect(),
     ))
@@ -386,24 +375,26 @@ pub(crate) async fn get_feedback(
 }
 
 pub(crate) async fn update_feedback_status(
-    AuthJwt(_jwt): AuthJwt,
-    Path(_post_id): Path<String>,
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(post_id): Path<String>,
     Json(req): Json<UpdateStatusRequest>,
-) -> ApiResult<StatusCode> {
+) -> ApiResult<Json<FeedbackItemResponse>> {
     validate_status(&req.status)?;
-    // Phase 2: aura-network does not yet expose a metadata-patch endpoint for
-    // posts, so status updates intentionally return 501 with a clear hint so
-    // clients can fall back to optimistic UI until phase 3 lands.
-    Err((
-        StatusCode::NOT_IMPLEMENTED,
-        Json(ApiError {
-            error: "feedback status updates are not yet available".to_string(),
-            code: "not_implemented".to_string(),
-            details: Some(
-                "scheduled for phase 3 alongside vote endpoints in aura-network".to_string(),
-            ),
-        }),
-    ))
+
+    let client = state.require_network_client()?;
+    let patch = serde_json::json!({ "feedbackStatus": req.status });
+    let post = client
+        .patch_post_metadata(&post_id, &patch, &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    if post.event_type != FEEDBACK_EVENT_TYPE {
+        return Err(ApiError::not_found("feedback item not found"));
+    }
+
+    let profiles = resolve_profiles(client, [post.profile_id.as_str()], &jwt).await;
+    Ok(Json(FeedbackItemResponse::from_event(post, &profiles)))
 }
 
 pub(crate) async fn list_feedback_comments(
@@ -451,25 +442,38 @@ pub(crate) async fn add_feedback_comment(
     ))
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FeedbackVoteResponse {
+    pub upvotes: i64,
+    pub downvotes: i64,
+    pub vote_score: i64,
+    pub viewer_vote: String,
+}
+
 pub(crate) async fn cast_feedback_vote(
-    AuthJwt(_jwt): AuthJwt,
-    Path(_post_id): Path<String>,
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(post_id): Path<String>,
     Json(req): Json<VoteRequest>,
-) -> ApiResult<StatusCode> {
+) -> ApiResult<Json<FeedbackVoteResponse>> {
     if !matches!(req.vote.as_str(), "up" | "down" | "none") {
         return Err(ApiError::bad_request(format!(
             "unknown vote value: {}",
             req.vote
         )));
     }
-    // Phase 2 stub: vote data lives in aura-network in phase 3. Until then the
-    // UI applies votes optimistically and swallows this 501.
-    Err((
-        StatusCode::NOT_IMPLEMENTED,
-        Json(ApiError {
-            error: "feedback votes are not yet available".to_string(),
-            code: "not_implemented".to_string(),
-            details: Some("scheduled for phase 3 via aura-network vote endpoints".to_string()),
-        }),
-    ))
+
+    let client = state.require_network_client()?;
+    let summary = client
+        .cast_vote(&post_id, &req.vote, &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    Ok(Json(FeedbackVoteResponse {
+        upvotes: summary.upvotes,
+        downvotes: summary.downvotes,
+        vote_score: summary.score,
+        viewer_vote: summary.viewer_vote,
+    }))
 }

@@ -58,9 +58,28 @@ impl NetworkClient {
         offset: Option<u32>,
         jwt: &str,
     ) -> Result<Vec<NetworkFeedEvent>, NetworkError> {
+        self.get_feed_with_sort(filter, None, limit, offset, jwt)
+            .await
+    }
+
+    /// Feed fetch with an optional `sort` parameter. Added in phase 3 so the
+    /// Feedback app can forward `most_voted | least_voted | popular |
+    /// trending` straight through to aura-network without re-sorting on the
+    /// Aura OS server.
+    pub async fn get_feed_with_sort(
+        &self,
+        filter: Option<&str>,
+        sort: Option<&str>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        jwt: &str,
+    ) -> Result<Vec<NetworkFeedEvent>, NetworkError> {
         let mut params = Vec::new();
         if let Some(filter_val) = filter {
             params.push(format!("filter={filter_val}"));
+        }
+        if let Some(sort_val) = sort {
+            params.push(format!("sort={sort_val}"));
         }
         if let Some(limit_val) = limit {
             params.push(format!("limit={limit_val}"));
@@ -178,6 +197,54 @@ impl NetworkClient {
         self.delete_authed(
             &format!("{}/api/comments/{}", self.base_url, comment_id),
             jwt,
+        )
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Votes
+    // -----------------------------------------------------------------------
+
+    pub async fn cast_vote(
+        &self,
+        post_id: &str,
+        vote: &str,
+        jwt: &str,
+    ) -> Result<NetworkVoteSummary, NetworkError> {
+        self.post_authed(
+            &format!("{}/api/posts/{}/votes", self.base_url, post_id),
+            jwt,
+            &serde_json::json!({ "vote": vote }),
+        )
+        .await
+    }
+
+    pub async fn get_vote_summary(
+        &self,
+        post_id: &str,
+        jwt: &str,
+    ) -> Result<NetworkVoteSummary, NetworkError> {
+        self.get_authed(
+            &format!("{}/api/posts/{}/votes/summary", self.base_url, post_id),
+            jwt,
+        )
+        .await
+    }
+
+    // -----------------------------------------------------------------------
+    // Metadata patch (used for feedback status updates)
+    // -----------------------------------------------------------------------
+
+    pub async fn patch_post_metadata(
+        &self,
+        post_id: &str,
+        metadata: &serde_json::Value,
+        jwt: &str,
+    ) -> Result<NetworkFeedEvent, NetworkError> {
+        self.patch_authed(
+            &format!("{}/api/posts/{}", self.base_url, post_id),
+            jwt,
+            &serde_json::json!({ "metadata": metadata }),
         )
         .await
     }

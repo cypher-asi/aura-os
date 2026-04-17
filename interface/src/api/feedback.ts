@@ -26,6 +26,13 @@ export interface FeedbackItemDto {
   authorAvatar?: string | null;
 }
 
+export interface FeedbackVoteResultDto {
+  upvotes: number;
+  downvotes: number;
+  voteScore: number;
+  viewerVote: ViewerVote;
+}
+
 export interface FeedbackCommentDto {
   id: string;
   activityEventId: string;
@@ -72,8 +79,8 @@ export const feedbackApi = {
       body: JSON.stringify(input),
     }),
 
-  updateStatus: (postId: string, status: FeedbackStatus): Promise<void> =>
-    apiFetch<void>(`/api/feedback/${postId}/status`, {
+  updateStatus: (postId: string, status: FeedbackStatus): Promise<FeedbackItemDto> =>
+    apiFetch<FeedbackItemDto>(`/api/feedback/${postId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
@@ -87,8 +94,8 @@ export const feedbackApi = {
       body: JSON.stringify({ content }),
     }),
 
-  castVote: (postId: string, vote: ViewerVote): Promise<void> =>
-    apiFetch<void>(`/api/feedback/${postId}/vote`, {
+  castVote: (postId: string, vote: ViewerVote): Promise<FeedbackVoteResultDto> =>
+    apiFetch<FeedbackVoteResultDto>(`/api/feedback/${postId}/vote`, {
       method: "POST",
       body: JSON.stringify({ vote }),
     }),

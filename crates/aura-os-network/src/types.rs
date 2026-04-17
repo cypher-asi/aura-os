@@ -431,6 +431,33 @@ pub struct NetworkFeedEvent {
     pub created_at: Option<String>,
     #[serde(default, alias = "comment_count")]
     pub comment_count: i64,
+    // Vote aggregates. Optional + #[serde(default)] so older aura-network
+    // versions (that don't include them) still deserialize cleanly.
+    #[serde(default)]
+    pub upvotes: i64,
+    #[serde(default)]
+    pub downvotes: i64,
+    #[serde(default, alias = "vote_score")]
+    pub vote_score: i64,
+    #[serde(default = "default_viewer_vote", alias = "viewer_vote")]
+    pub viewer_vote: String,
+}
+
+fn default_viewer_vote() -> String {
+    "none".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkVoteSummary {
+    #[serde(default)]
+    pub upvotes: i64,
+    #[serde(default)]
+    pub downvotes: i64,
+    #[serde(default)]
+    pub score: i64,
+    #[serde(default = "default_viewer_vote", alias = "viewer_vote")]
+    pub viewer_vote: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

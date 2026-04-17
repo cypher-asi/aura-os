@@ -4,10 +4,10 @@ const feedbackApiMock = vi.hoisted(() => ({
   list: vi.fn(async () => []),
   get: vi.fn(),
   create: vi.fn(),
-  updateStatus: vi.fn(async () => undefined),
+  updateStatus: vi.fn(),
   listComments: vi.fn(async () => []),
   addComment: vi.fn(),
-  castVote: vi.fn(async () => undefined),
+  castVote: vi.fn(),
 }));
 
 vi.mock("../api/client", () => ({
@@ -91,8 +91,13 @@ describe("useFeedbackStore", () => {
   beforeEach(() => {
     feedbackApiMock.list.mockReset().mockResolvedValue([]);
     feedbackApiMock.create.mockReset();
-    feedbackApiMock.castVote.mockReset().mockResolvedValue(undefined);
-    feedbackApiMock.updateStatus.mockReset().mockResolvedValue(undefined);
+    feedbackApiMock.castVote.mockReset().mockResolvedValue({
+      upvotes: 0,
+      downvotes: 0,
+      voteScore: 0,
+      viewerVote: "none",
+    });
+    feedbackApiMock.updateStatus.mockReset();
     feedbackApiMock.listComments.mockReset().mockResolvedValue([]);
     feedbackApiMock.addComment.mockReset();
     useFeedbackStore.setState({
@@ -105,20 +110,38 @@ describe("useFeedbackStore", () => {
     });
   });
 
-  it("castVote toggles viewerVote and adjusts aggregates", () => {
+  it("castVote toggles viewerVote optimistically and reconciles from the server", async () => {
     useFeedbackStore.setState({ items: [seedItem("fb-1")] });
-    useFeedbackStore.getState().castVote("fb-1", "up");
-    const afterUp = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
-    expect(afterUp.viewerVote).toBe("up");
-    expect(afterUp.upvotes).toBe(1);
-    expect(afterUp.voteScore).toBe(1);
+    feedbackApiMock.castVote.mockResolvedValueOnce({
+      upvotes: 7,
+      downvotes: 2,
+      voteScore: 5,
+      viewerVote: "up",
+    });
 
-    useFeedbackStore.getState().castVote("fb-1", "none");
-    const cleared = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
-    expect(cleared.viewerVote).toBe("none");
-    expect(cleared.upvotes).toBe(0);
-    expect(cleared.voteScore).toBe(0);
-    expect(feedbackApiMock.castVote).toHaveBeenCalledTimes(2);
+    useFeedbackStore.getState().castVote("fb-1", "up");
+    const optimistic = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
+    expect(optimistic.viewerVote).toBe("up");
+    expect(optimistic.upvotes).toBe(1);
+
+    await vi.waitFor(() => {
+      const latest = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
+      expect(latest.upvotes).toBe(7);
+      expect(latest.voteScore).toBe(5);
+    });
+    expect(feedbackApiMock.castVote).toHaveBeenCalledWith("fb-1", "up");
+  });
+
+  it("castVote reverts the optimistic update when the API rejects", async () => {
+    useFeedbackStore.setState({ items: [seedItem("fb-1", { upvotes: 3, voteScore: 3 })] });
+    feedbackApiMock.castVote.mockRejectedValueOnce(new Error("boom"));
+
+    useFeedbackStore.getState().castVote("fb-1", "up");
+    await vi.waitFor(() => {
+      const row = useFeedbackStore.getState().items.find((i) => i.id === "fb-1")!;
+      expect(row.upvotes).toBe(3);
+      expect(row.viewerVote).toBe("none");
+    });
   });
 
   it("createFeedback rejects an empty body with a composer error", async () => {

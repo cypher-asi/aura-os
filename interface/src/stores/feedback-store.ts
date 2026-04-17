@@ -2,8 +2,11 @@ import { useEffect, useMemo } from "react";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../api/client";
-import { ApiClientError } from "../api/core";
-import type { FeedbackCommentDto, FeedbackItemDto } from "../api/feedback";
+import type {
+  FeedbackCommentDto,
+  FeedbackItemDto,
+  FeedbackVoteResultDto,
+} from "../api/feedback";
 import { useAuthStore } from "./auth-store";
 import type {
   FeedbackAuthor,
@@ -101,12 +104,6 @@ function validateDraft(draft: FeedbackDraft): string | null {
 let nextLocalId = 1;
 function newLocalId(prefix: string): string {
   return `${prefix}-local-${nextLocalId++}`;
-}
-
-/// Swallow `501 Not Implemented` from phase-2 stub endpoints. Everything else
-/// still bubbles so the UI can react to real failures.
-function isNotImplemented(err: unknown): boolean {
-  return err instanceof ApiClientError && err.status === 501;
 }
 
 function applyVote(item: FeedbackItem, next: ViewerVote): FeedbackItem {
@@ -223,33 +220,65 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
   },
 
   castVote: (id, vote) => {
+    // Snapshot the current row so we can revert if the API call fails.
+    const previous = get().items.find((item) => item.id === id);
     set((state) => ({
       items: state.items.map((item) => (item.id === id ? applyVote(item, vote) : item)),
     }));
-    // Phase 2: vote endpoint returns 501 until aura-network ships the vote
-    // store. Fire-and-forget keeps the optimistic UI snappy; the 501 is
-    // swallowed so we don't surface a scary error for a known-pending
-    // capability.
-    api.feedback.castVote(id, vote).catch((err) => {
-      if (!isNotImplemented(err)) {
+
+    api.feedback
+      .castVote(id, vote)
+      .then((result: FeedbackVoteResultDto) => {
+        // Reconcile with server aggregates so totals (across other viewers)
+        // and our own vote state end up consistent.
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  upvotes: result.upvotes,
+                  downvotes: result.downvotes,
+                  voteScore: result.voteScore,
+                  viewerVote: result.viewerVote,
+                }
+              : item,
+          ),
+        }));
+      })
+      .catch((err) => {
         console.warn("feedback vote failed", err);
-      }
-    });
+        if (!previous) return;
+        set((state) => ({
+          items: state.items.map((item) => (item.id === id ? previous : item)),
+        }));
+      });
   },
 
   setStatus: (id, status) => {
+    const previous = get().items.find((item) => item.id === id);
     set((state) => ({
       items: state.items.map((item) =>
         item.id === id ? { ...item, status } : item,
       ),
     }));
-    // Phase 2: status PATCH is also 501 until aura-network exposes metadata
-    // updates; same optimistic swallow.
-    api.feedback.updateStatus(id, status).catch((err) => {
-      if (!isNotImplemented(err)) {
+
+    api.feedback
+      .updateStatus(id, status)
+      .then((dto) => {
+        const reconciled = dtoToItem(dto);
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === id ? reconciled : item,
+          ),
+        }));
+      })
+      .catch((err) => {
         console.warn("feedback status update failed", err);
-      }
-    });
+        if (!previous) return;
+        set((state) => ({
+          items: state.items.map((item) => (item.id === id ? previous : item)),
+        }));
+      });
   },
 
   addComment: (itemId, text) => {

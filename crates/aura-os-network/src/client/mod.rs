@@ -219,6 +219,39 @@ impl NetworkClient {
         Err(last_err.unwrap())
     }
 
+    pub(crate) async fn patch_authed<T: serde::de::DeserializeOwned, B: serde::Serialize>(
+        &self,
+        url: &str,
+        jwt: &str,
+        body: &B,
+    ) -> Result<T, NetworkError> {
+        let mut last_err = None;
+        for attempt in 0..=TRANSIENT_RETRY_COUNT {
+            if attempt > 0 {
+                tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
+            }
+            let resp = self
+                .http
+                .patch(url)
+                .bearer_auth(jwt)
+                .json(body)
+                .send()
+                .await?;
+            match self.handle_response(resp).await {
+                Ok(v) => return Ok(v),
+                Err(e) if e.is_transient() => {
+                    warn!(
+                        %url, attempt, error = %e,
+                        "transient upstream error, retrying"
+                    );
+                    last_err = Some(e);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Err(last_err.unwrap())
+    }
+
     pub(crate) async fn delete_authed(&self, url: &str, jwt: &str) -> Result<(), NetworkError> {
         let mut last_err = None;
         for attempt in 0..=TRANSIENT_RETRY_COUNT {
