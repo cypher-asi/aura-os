@@ -7,6 +7,7 @@ import type {
   NotesTreeNode,
 } from "../api/notes";
 import { useAuthStore } from "./auth-store";
+import { clearLastNote, setLastNote } from "../utils/storage";
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
 
@@ -190,8 +191,11 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
   selectNote: (projectId, relPath) => {
     set({ activeProjectId: projectId, activeRelPath: relPath });
     if (relPath) {
+      setLastNote({ projectId, relPath });
       void get().readNote(projectId, relPath);
       void get().loadComments(projectId, relPath);
+    } else {
+      clearLastNote();
     }
   },
 
@@ -213,6 +217,24 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
       }));
       return entry;
     } catch (err) {
+      // If the stored active selection points at a note that no longer
+      // exists (deleted, moved, etc.), drop it so the UI can fall back to
+      // an empty state rather than a permanent "Loading…" spinner.
+      const status = (err as { status?: number } | undefined)?.status;
+      if (status === 404) {
+        clearLastNote();
+        set((state) => {
+          const { [key]: _missing, ...restContent } = state.contentCache;
+          const shouldClearActive =
+            state.activeProjectId === projectId && state.activeRelPath === relPath;
+          return {
+            contentCache: restContent,
+            activeProjectId: shouldClearActive ? null : state.activeProjectId,
+            activeRelPath: shouldClearActive ? null : state.activeRelPath,
+          };
+        });
+        return null;
+      }
       set((state) => {
         const existing = state.contentCache[key];
         if (!existing) return state;
@@ -312,6 +334,10 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
           pendingTimers.delete(key);
           pendingTimers.set(makeNoteKey(projectId, res.relPath), pendingTimer);
         }
+        const { activeProjectId, activeRelPath } = get();
+        if (activeProjectId === projectId && activeRelPath === res.relPath) {
+          setLastNote({ projectId, relPath: res.relPath });
+        }
         void get().loadTree(projectId);
       }
     } catch (err) {
@@ -366,6 +392,7 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
       const { activeProjectId, activeRelPath } = get();
       if (activeProjectId === projectId && activeRelPath === relPath) {
         set({ activeRelPath: null });
+        clearLastNote();
       }
     } catch (err) {
       console.warn("delete note failed", err);

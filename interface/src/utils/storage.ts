@@ -11,6 +11,7 @@ import {
 type LastAgentMap = Record<string, string>;
 const LAST_STANDALONE_AGENT_KEY = "aura:lastAgentId";
 const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
+const LAST_NOTE_KEY = "aura:lastNote";
 
 function getMap(): LastAgentMap {
   try {
@@ -100,6 +101,48 @@ export function setLastProcessId(processId: string): void {
 export function clearLastProcessId(): void {
   try {
     localStorage.removeItem(LAST_PROCESS_ID_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export interface LastNoteRef {
+  projectId: string;
+  relPath: string;
+}
+
+export function getLastNote(): LastNoteRef | null {
+  try {
+    const raw = localStorage.getItem(LAST_NOTE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof parsed.projectId === "string" &&
+      typeof parsed.relPath === "string" &&
+      parsed.projectId &&
+      parsed.relPath
+    ) {
+      return { projectId: parsed.projectId, relPath: parsed.relPath };
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return null;
+}
+
+export function setLastNote(ref: LastNoteRef): void {
+  try {
+    localStorage.setItem(LAST_NOTE_KEY, JSON.stringify(ref));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function clearLastNote(): void {
+  try {
+    localStorage.removeItem(LAST_NOTE_KEY);
   } catch {
     // ignore storage failures
   }

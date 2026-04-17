@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, MessageSquare } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { Avatar } from "../../../components/Avatar";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
@@ -78,11 +78,9 @@ function NotesInfoPanel() {
   const tocItems = useMemo(() => (note ? parseToc(note.content) : []), [note]);
 
   if (!note) {
-    return (
-      <EmptyState icon={<MessageSquare size={32} />}>
-        Select a note to view info
-      </EmptyState>
-    );
+    // Auto-selection fills the active note moments after mount; avoid a
+    // flashing placeholder in the meantime.
+    return <div className={styles.panel} />;
   }
 
   return (
@@ -172,11 +170,7 @@ function NotesCommentsPanel() {
   }, [draft, autoResize]);
 
   if (!activeKey) {
-    return (
-      <EmptyState icon={<MessageSquare size={32} />}>
-        Select a note to view comments
-      </EmptyState>
-    );
+    return <div className={styles.panel} />;
   }
 
   const handleSubmit = () => {

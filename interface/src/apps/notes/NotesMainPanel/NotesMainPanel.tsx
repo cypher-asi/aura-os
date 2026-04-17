@@ -25,6 +25,9 @@ import {
   useActiveNoteKey,
   useNotesStore,
 } from "../../../stores/notes-store";
+import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { getLastNote } from "../../../utils/storage";
+import type { NotesTreeNode } from "../../../api/notes";
 import styles from "./NotesMainPanel.module.css";
 
 type EditMode = "wysiwyg" | "markdown";
@@ -58,6 +61,25 @@ function rejoinFrontmatter(frontmatter: string, body: string): string {
   return `${frontmatter}\n\n${trimmedBody}`;
 }
 
+function findFirstNoteRelPath(nodes: NotesTreeNode[]): string | null {
+  for (const node of nodes) {
+    if (node.kind === "note") return node.relPath;
+    const found = findFirstNoteRelPath(node.children);
+    if (found) return found;
+  }
+  return null;
+}
+
+function treeContainsNote(nodes: NotesTreeNode[], relPath: string): boolean {
+  for (const node of nodes) {
+    if (node.kind === "note" && node.relPath === relPath) return true;
+    if (node.kind === "folder" && treeContainsNote(node.children, relPath)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function NotesMainPanel() {
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; notePath: string }>();
@@ -69,23 +91,34 @@ export function NotesMainPanel() {
   const [mode, setMode] = useState<EditMode>("wysiwyg");
   const lastSyncedKey = useRef<string | null>(null);
 
+  // Single source of truth for URL <-> store reconciliation. The URL is the
+  // authority for "which note is shown": when it changes (user navigated,
+  // clicked in the nav, etc.) we pull the store onto it. The store is only
+  // allowed to drive the URL when the URL is stable and activeKey has drifted
+  // (i.e. an autosave rename changed the relPath under us). Splitting these
+  // into two effects lets them oscillate — zustand and react-router have
+  // independent subscriptions, so a single click can produce a render where
+  // URL and activeKey disagree; each effect then "corrects" the other's side,
+  // producing an infinite swap and an HTTP storm of reads.
+  const lastUrlSelectedRef = useRef<string | null>(null);
   useEffect(() => {
     if (!params.projectId || !params.notePath) return;
     const decoded = decodeURIComponent(params.notePath);
-    if (
-      activeKey?.projectId !== params.projectId ||
-      activeKey?.relPath !== decoded
-    ) {
-      selectNote(params.projectId, decoded);
-    }
-  }, [params.projectId, params.notePath, activeKey, selectNote]);
+    const urlKey = `${params.projectId}::${decoded}`;
 
-  // When an autosave rename changes the note's path server-side, quietly
-  // rewrite the URL so deep-links stay accurate without polluting history.
-  useEffect(() => {
-    if (!activeKey || !params.projectId || !params.notePath) return;
-    const decoded = decodeURIComponent(params.notePath);
+    if (lastUrlSelectedRef.current !== urlKey) {
+      lastUrlSelectedRef.current = urlKey;
+      if (
+        activeKey?.projectId !== params.projectId ||
+        activeKey?.relPath !== decoded
+      ) {
+        selectNote(params.projectId, decoded);
+      }
+      return;
+    }
+
     if (
+      activeKey &&
       activeKey.projectId === params.projectId &&
       activeKey.relPath !== decoded
     ) {
@@ -94,7 +127,55 @@ export function NotesMainPanel() {
         { replace: true },
       );
     }
-  }, [activeKey, params.projectId, params.notePath, navigate]);
+  }, [params.projectId, params.notePath, activeKey, selectNote, navigate]);
+
+  // Landing on `/notes` or `/notes/:projectId` with no note in the URL?
+  // Pick a reasonable default: (1) the already-active note in the store,
+  // (2) the last note persisted in localStorage (if it still exists),
+  // (3) the first note found in any project's tree.
+  const trees = useNotesStore((s) => s.trees);
+  const projects = useProjectsListStore((s) => s.projects);
+  useEffect(() => {
+    if (params.notePath) return;
+
+    // Priority 1: session-active note.
+    if (activeKey?.projectId && activeKey.relPath) {
+      navigate(
+        `/notes/${activeKey.projectId}/${encodeURIComponent(activeKey.relPath)}`,
+        { replace: true },
+      );
+      return;
+    }
+
+    // Priority 2: last note from localStorage, validated against the live tree.
+    const stored = getLastNote();
+    if (stored) {
+      const tree = trees[stored.projectId];
+      if (tree && !tree.loading && treeContainsNote(tree.nodes, stored.relPath)) {
+        navigate(
+          `/notes/${stored.projectId}/${encodeURIComponent(stored.relPath)}`,
+          { replace: true },
+        );
+        return;
+      }
+      // Still loading? wait for the next effect run when trees update.
+      if (tree?.loading) return;
+    }
+
+    // Priority 3: first note from the first project whose tree is ready.
+    for (const project of projects) {
+      const tree = trees[project.project_id];
+      if (!tree || tree.loading) continue;
+      const first = findFirstNoteRelPath(tree.nodes);
+      if (first) {
+        navigate(
+          `/notes/${project.project_id}/${encodeURIComponent(first)}`,
+          { replace: true },
+        );
+        return;
+      }
+    }
+  }, [params.notePath, activeKey, trees, projects, navigate]);
 
   const { frontmatter, body } = useMemo(() => {
     if (!note) return { frontmatter: "", body: "" };
@@ -214,11 +295,11 @@ export function NotesMainPanel() {
   }, [note]);
 
   if (!params.projectId || !params.notePath) {
+    // Auto-selection (see effects above) will redirect to a note shortly.
+    // Render an empty lane in the meantime so we don't flash a placeholder.
     return (
       <Lane flex>
-        <div className={styles.container}>
-          <EmptyState>Select a note from the left menu or create a new one.</EmptyState>
-        </div>
+        <div className={styles.container} />
       </Lane>
     );
   }
