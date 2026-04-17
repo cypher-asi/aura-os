@@ -5,6 +5,7 @@ import {
   mergeTaskIntoProjectLayout,
   mergeAgentIntoProjectAgents,
   mergeProjectAgentsSnapshot,
+  patchTaskStatusInProjectLayout,
   type ProjectLayoutBundle,
 } from "./project-queries";
 
@@ -201,5 +202,81 @@ describe("project layout realtime merging", () => {
       title: "New title",
       order_index: 5,
     });
+  });
+
+  it("preserves a done status when a stale TaskSaved snapshot arrives", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", status: "done", execution_notes: "shipped" })],
+    });
+
+    const merged = mergeTaskIntoProjectLayout(
+      current,
+      makeTask({ task_id: "task-1", status: "in_progress", execution_notes: "" }),
+    );
+
+    expect(merged?.tasks[0]).toMatchObject({
+      task_id: "task-1",
+      status: "done",
+      execution_notes: "shipped",
+    });
+  });
+
+  it("still accepts a failed status downgrading an in_progress task", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", status: "in_progress" })],
+    });
+
+    const merged = mergeTaskIntoProjectLayout(
+      current,
+      makeTask({ task_id: "task-1", status: "failed" }),
+    );
+
+    expect(merged?.tasks[0]).toMatchObject({ status: "failed" });
+  });
+});
+
+describe("patchTaskStatusInProjectLayout", () => {
+  it("patches the status of an existing task", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", status: "in_progress" })],
+    });
+
+    const patched = patchTaskStatusInProjectLayout(current, "task-1", {
+      status: "done",
+      execution_notes: "all good",
+    });
+
+    expect(patched?.tasks[0]).toMatchObject({
+      status: "done",
+      execution_notes: "all good",
+    });
+  });
+
+  it("refuses to downgrade a task that is already terminal", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", status: "done" })],
+    });
+
+    const patched = patchTaskStatusInProjectLayout(current, "task-1", {
+      status: "in_progress",
+    });
+
+    expect(patched?.tasks[0].status).toBe("done");
+  });
+
+  it("is a no-op when the task is missing from the cache", () => {
+    const current = makeLayoutBundle({ tasks: [] });
+
+    const patched = patchTaskStatusInProjectLayout(current, "missing", {
+      status: "done",
+    });
+
+    expect(patched).toBe(current);
+  });
+
+  it("returns undefined when there is no cached layout", () => {
+    expect(
+      patchTaskStatusInProjectLayout(undefined, "task-1", { status: "done" }),
+    ).toBeUndefined();
   });
 });

@@ -13,6 +13,28 @@ function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => a.order_index - b.order_index);
 }
 
+function isTerminalTaskStatus(status: Task["status"] | undefined): boolean {
+  return status === "done" || status === "failed";
+}
+
+// Guard the react-query layout cache against stale `task_saved` broadcasts
+// that can arrive after the client already knows a task is terminal. Without
+// this, a late snapshot with `in_progress` silently reverts a Done task in
+// the cache, which then feeds `initialTasks` into the Sidekick TaskList on
+// its next mount. Mirrors the guard in `useTaskListData`, `kanban-store`, and
+// `sidekick-store`.
+function preserveTerminalStatus(existing: Task | undefined, incoming: Task): Task {
+  if (!existing) return incoming;
+  if (!isTerminalTaskStatus(existing.status)) return incoming;
+  if (isTerminalTaskStatus(incoming.status)) return incoming;
+  return {
+    ...incoming,
+    status: existing.status,
+    execution_notes: existing.execution_notes ?? incoming.execution_notes,
+    files_changed: existing.files_changed ?? incoming.files_changed,
+  };
+}
+
 function upsertById<T, K extends keyof T>(
   items: T[],
   item: T,
@@ -111,10 +133,38 @@ export function mergeTaskIntoProjectLayout(
   task: Task,
 ): ProjectLayoutBundle | undefined {
   if (!current) return current;
+  const existing = current.tasks.find((t) => t.task_id === task.task_id);
+  const effective = preserveTerminalStatus(existing, task);
   return {
     ...current,
-    tasks: sortTasks(upsertById(current.tasks, task, "task_id")),
+    tasks: sortTasks(upsertById(current.tasks, effective, "task_id")),
   };
+}
+
+// Apply an authoritative status transition (from `task_completed` /
+// `task_failed` / `task_started` WS events) to the layout cache without
+// waiting for a follow-up `task_saved` snapshot. Matches the patch shape
+// used by `useTaskListData.updateTaskStatus` so the Sidekick TaskList shows
+// the right state on its next mount.
+export function patchTaskStatusInProjectLayout(
+  current: ProjectLayoutBundle | undefined,
+  taskId: string,
+  patch: Partial<Task>,
+): ProjectLayoutBundle | undefined {
+  if (!current) return current;
+  const index = current.tasks.findIndex((t) => t.task_id === taskId);
+  if (index === -1) return current;
+  const existing = current.tasks[index];
+  if (
+    isTerminalTaskStatus(existing.status) &&
+    patch.status !== undefined &&
+    !isTerminalTaskStatus(patch.status)
+  ) {
+    return current;
+  }
+  const nextTasks = [...current.tasks];
+  nextTasks[index] = { ...existing, ...patch };
+  return { ...current, tasks: sortTasks(nextTasks) };
 }
 
 export type AgentInstanceUpdate =

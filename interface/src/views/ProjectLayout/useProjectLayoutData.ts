@@ -8,6 +8,7 @@ import { useProjectsList } from "../../apps/projects/useProjectsList";
 import {
   mergeSpecIntoProjectLayout,
   mergeTaskIntoProjectLayout,
+  patchTaskStatusInProjectLayout,
   projectLayoutQueryOptions,
   projectQueryKeys,
   type ProjectLayoutBundle,
@@ -112,6 +113,38 @@ export function useProjectLayoutData(): ProjectLayoutData {
         queryClient.setQueryData<ProjectLayoutBundle | undefined>(
           projectQueryKeys.layout(projectId),
           (current) => mergeTaskIntoProjectLayout(current, e.content.task),
+        );
+      }),
+      subscribe(EventType.TaskStarted, (e) => {
+        if (e.project_id !== projectId || !e.content.task_id) return;
+        const taskId = e.content.task_id;
+        const sessionId = e.session_id;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => patchTaskStatusInProjectLayout(current, taskId, {
+            status: "in_progress",
+            ...(sessionId ? { session_id: sessionId } : {}),
+          }),
+        );
+      }),
+      subscribe(EventType.TaskCompleted, (e) => {
+        if (e.project_id !== projectId || !e.content.task_id) return;
+        const { task_id, execution_notes, files } = e.content;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => patchTaskStatusInProjectLayout(current, task_id, {
+            status: "done",
+            execution_notes,
+            ...(files ? { files_changed: files } : {}),
+          }),
+        );
+      }),
+      subscribe(EventType.TaskFailed, (e) => {
+        if (e.project_id !== projectId || !e.content.task_id) return;
+        const taskId = e.content.task_id;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => patchTaskStatusInProjectLayout(current, taskId, { status: "failed" }),
         );
       }),
     ];
