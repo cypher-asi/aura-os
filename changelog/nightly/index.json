@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-04-17",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.281.1",
+    "title": "Chat Performance & Feedback System Launch",
+    "intro": "Major chat scrolling improvements and the launch of a new Feedback app with full backend integration. Chat now uses native CSS scroll anchoring for smooth resizing, while the new Feedback system provides voting, commenting, and status tracking.",
+    "entryCount": 3,
+    "highlights": [
+      "Chat scrolling performance dramatically improved with native CSS scroll anchoring",
+      "New Feedback app launched with full voting and commenting system",
+      "Unified Block primitive stabilizes chat tool rendering during streaming",
+      "Session management enhanced with deletion and improved visual hierarchy"
+    ],
+    "rawCommitCount": 18,
+    "generatedAt": "2026-04-17T07:49:33.421Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
+    "path": "history/2026-04-17.json"
+  },
+  {
     "date": "2026-04-16",
     "channel": "nightly",
     "version": "0.1.0-nightly.280.1",
