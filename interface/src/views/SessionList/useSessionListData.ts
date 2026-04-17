@@ -9,6 +9,8 @@ interface SessionListData {
   loading: boolean;
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
+  removeSession: (sessionId: string) => void;
+  restoreSession: (session: Session) => void;
 }
 
 export function useSessionListData(): SessionListData {
@@ -37,5 +39,26 @@ export function useSessionListData(): SessionListData {
     [sessions],
   );
 
-  return { sessions, sessionById, loading, selectedId, setSelectedId };
+  const removeSession = useCallback((sessionId: string) => {
+    setSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
+  }, []);
+
+  const restoreSession = useCallback((session: Session) => {
+    setSessions((prev) => {
+      if (prev.some((s) => s.session_id === session.session_id)) return prev;
+      return [...prev, session].sort(
+        (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
+      );
+    });
+  }, []);
+
+  return {
+    sessions,
+    sessionById,
+    loading,
+    selectedId,
+    setSelectedId,
+    removeSession,
+    restoreSession,
+  };
 }

@@ -90,6 +90,32 @@ pub(crate) async fn get_session(
     Ok(Json(session))
 }
 
+pub(crate) async fn delete_session(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((_project_id, _agent_instance_id, session_id)): Path<(
+        ProjectId,
+        AgentInstanceId,
+        SessionId,
+    )>,
+) -> ApiResult<axum::http::StatusCode> {
+    let storage = state.require_storage_client()?;
+
+    storage
+        .delete_session(&session_id.to_string(), &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_os_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => ApiError::internal(format!("deleting session: {e}")),
+        })?;
+
+    info!(%session_id, "Session deleted");
+
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
 pub(crate) async fn list_session_tasks(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,

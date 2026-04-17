@@ -20,8 +20,8 @@ pub(crate) use instances::{
 };
 pub(crate) use runtime::test_agent_runtime;
 pub(crate) use sessions::{
-    generate_session_summary, get_session, list_project_sessions, list_session_events,
-    list_session_tasks, list_sessions, summarize_session,
+    delete_session, generate_session_summary, get_session, list_project_sessions,
+    list_session_events, list_session_tasks, list_sessions, summarize_session,
 };
 
 pub mod conversions_pub {
@@ -30,5 +30,8 @@ pub mod conversions_pub {
     pub(crate) use super::conversions::resolve_workspace_path;
 }
 pub mod chat_pub {
-    pub use super::chat::session_events_to_conversation_history;
+    pub use super::chat::{
+        load_current_session_events_for_agent, load_current_session_events_for_instance,
+        session_events_to_conversation_history, session_events_to_super_agent_history,
+    };
 }

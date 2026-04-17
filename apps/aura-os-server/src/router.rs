@@ -402,7 +402,7 @@ fn agent_routes() -> Router<AppState> {
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id",
-            get(agents::get_session),
+            get(agents::get_session).delete(agents::delete_session),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/tasks",

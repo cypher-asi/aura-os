@@ -1,32 +1,45 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { ExplorerNode } from "@cypher-asi/zui";
+import { Explorer } from "@cypher-asi/zui";
+import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
-import { OverlayScrollbar } from "../../components/OverlayScrollbar";
-import { StatusBadge } from "../../components/StatusBadge";
-import { formatTokens } from "../../utils/format";
+import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { EmptyState } from "../../components/EmptyState";
 import { api } from "../../api/client";
+import { useProjectActions } from "../../stores/project-action-store";
+import {
+  SidekickItemContextMenu,
+  useSidekickItemContextMenu,
+} from "../../components/SidekickItemContextMenu";
+import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
+import type { Session } from "../../types";
 import { useSessionListData } from "./useSessionListData";
-import styles from "./SessionList.module.css";
+import styles from "../aura.module.css";
 
-function formatDuration(startedAt: string, endedAt: string | null): string {
-  const start = new Date(startedAt).getTime();
-  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
-  const diffSec = Math.floor((end - start) / 1000);
-  if (diffSec < 60) return `${diffSec}s`;
-  const min = Math.floor(diffSec / 60);
-  const sec = diffSec % 60;
-  if (min < 60) return `${min}m ${sec}s`;
-  const hr = Math.floor(min / 60);
-  return `${hr}h ${min % 60}m`;
+const SESSIONS_ROOT_ID = "__sessions_root__";
+
+function truncate(text: string, max: number): string {
+  const first = text.split("\n")[0].trim();
+  if (first.length <= max) return first;
+  return `${first.slice(0, max - 1)}…`;
 }
 
 export function SessionList({ searchQuery }: { searchQuery: string }) {
   const navigate = useNavigate();
-  const { sessions, loading, selectedId, setSelectedId } = useSessionListData();
+  const {
+    sessions,
+    sessionById,
+    loading,
+    selectedId,
+    setSelectedId,
+    removeSession,
+    restoreSession,
+  } = useSessionListData();
+  const ctx = useProjectActions();
+  const projectId = ctx?.project.project_id;
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const summarizingRef = useRef<Set<string>>(new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     for (const session of sessions) {
@@ -59,15 +72,63 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
     }
   }, [sessions]);
 
-  const filtered = useMemo(() => {
-    if (!searchQuery) return sessions;
-    const q = searchQuery.toLowerCase();
-    return sessions.filter((s, i) => {
-      const num = `S${sessions.length - i}`.toLowerCase();
-      const summary = (summaries[s.session_id] ?? "").toLowerCase();
-      return num.includes(q) || summary.includes(q) || s.session_id.includes(q);
+  const explorerData: ExplorerNode[] = useMemo(() => {
+    const children: ExplorerNodeWithSuffix[] = sessions.map((session, index) => {
+      const number = sessions.length - index;
+      const summary = summaries[session.session_id];
+      const label = summary
+        ? `S${number} · ${truncate(summary, 80)}`
+        : `S${number}`;
+      return {
+        id: session.session_id,
+        label,
+        suffix: <TaskStatusIcon status={session.status} />,
+        metadata: { type: "session" },
+      };
     });
-  }, [sessions, searchQuery, summaries]);
+
+    return [
+      {
+        id: SESSIONS_ROOT_ID,
+        label: "Sessions",
+        children,
+      },
+    ];
+  }, [sessions, summaries]);
+
+  const filteredData = useMemo(
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
+  );
+
+  const defaultExpandedIds = useMemo(() => [SESSIONS_ROOT_ID], []);
+  const defaultSelectedIds = useMemo(
+    () => (selectedId ? [selectedId] : []),
+    [selectedId],
+  );
+
+  const resolveMenuTarget = useCallback(
+    (nodeId: string): Session | null => sessionById.get(nodeId) ?? null,
+    [sessionById],
+  );
+  const { menu, menuRef, handleContextMenu, closeMenu } =
+    useSidekickItemContextMenu<Session>({ resolveItem: resolveMenuTarget });
+
+  const handleMenuAction = useCallback(
+    (actionId: string) => {
+      const target = menu?.item;
+      closeMenu();
+      if (!target || actionId !== "delete" || !projectId) return;
+      removeSession(target.session_id);
+      api
+        .deleteSession(projectId, target.agent_instance_id, target.session_id)
+        .catch((err) => {
+          console.error("Failed to delete session", err);
+          restoreSession(target);
+        });
+    },
+    [menu, closeMenu, projectId, removeSession, restoreSession],
+  );
 
   const isEmpty = sessions.length === 0;
   const showEmpty = useDelayedEmpty(isEmpty, loading, 0);
@@ -78,58 +139,38 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
   }
 
   return (
-    <div className={styles.sessionListShell}>
-      <div ref={scrollRef} className={styles.sessionListWrap}>
-        {filtered.map((session) => {
-          const totalTokens = session.total_input_tokens + session.total_output_tokens;
-          const number = sessions.length - sessions.indexOf(session);
-          const summary = summaries[session.session_id];
-          const isSelected = selectedId === session.session_id;
-
-          return (
-            <div
-              key={session.session_id}
-              className={`${styles.sessionCard} ${isSelected ? styles.sessionCardSelected : ""}`}
-              onClick={() => {
-                setSelectedId(session.session_id);
-                navigate(
-                  `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
-                );
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setSelectedId(session.session_id);
-                  navigate(
-                    `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
-                  );
-                }
-              }}
-            >
-              <div className={styles.sessionCardHeader}>
-                <StatusBadge status={session.status} />
-                <span className={styles.sessionNumber}>S{number}</span>
-                <span className={styles.sessionMeta}>
-                  <span className={styles.sessionDuration}>
-                    {formatDuration(session.started_at, session.ended_at)}
-                  </span>
-                  {totalTokens > 0 && (
-                    <span className={styles.sessionCost}>
-                      {formatTokens(totalTokens)}
-                    </span>
-                  )}
-                </span>
-              </div>
-              {summary && <div className={styles.sessionSummary}>{summary}</div>}
-              {!summary && session.status !== "active" && summarizingRef.current.has(session.session_id) && (
-                <div className={styles.sessionSummaryPlaceholder}>Generating summary...</div>
-              )}
-            </div>
-          );
-        })}
+    <>
+      <div onContextMenu={handleContextMenu}>
+        <Explorer
+          data={filteredData}
+          className={styles.taskExplorer}
+          expandOnSelect
+          enableDragDrop={false}
+          enableMultiSelect={false}
+          defaultExpandedIds={defaultExpandedIds}
+          defaultSelectedIds={defaultSelectedIds}
+          onSelect={(ids) => {
+            const id = [...ids].reverse().find((candidate) =>
+              sessionById.has(candidate),
+            );
+            if (!id) return;
+            const session = sessionById.get(id);
+            if (!session) return;
+            setSelectedId(session.session_id);
+            navigate(
+              `/projects/${session.project_id}/agents/${session.agent_instance_id}?session=${session.session_id}`,
+            );
+          }}
+        />
       </div>
-      <OverlayScrollbar scrollRef={scrollRef} />
-    </div>
+      {menu && (
+        <SidekickItemContextMenu
+          x={menu.x}
+          y={menu.y}
+          menuRef={menuRef}
+          onAction={handleMenuAction}
+        />
+      )}
+    </>
   );
 }

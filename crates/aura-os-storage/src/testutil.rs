@@ -128,6 +128,21 @@ async fn list_sessions(
     Json(filtered)
 }
 
+async fn delete_session(
+    Path(session_id): Path<String>,
+    State(db): State<SharedDb>,
+) -> axum::http::StatusCode {
+    let mut db = db.lock().await;
+    let len_before = db.sessions.len();
+    db.sessions.retain(|s| s.id != session_id);
+    if db.sessions.len() < len_before {
+        db.events.retain(|e| e.session_id.as_deref() != Some(session_id.as_str()));
+        axum::http::StatusCode::OK
+    } else {
+        axum::http::StatusCode::NOT_FOUND
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Task handlers
 // ---------------------------------------------------------------------------
@@ -498,7 +513,9 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
         )
         .route(
             "/api/sessions/:session_id",
-            get(get_session).put(update_session),
+            get(get_session)
+                .put(update_session)
+                .delete(delete_session),
         )
         // Tasks
         .route(

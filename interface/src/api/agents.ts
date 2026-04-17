@@ -177,4 +177,9 @@ export const sessionsApi = {
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/summarize`,
       { method: "POST" },
     ),
+  deleteSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<void>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,
+      { method: "DELETE" },
+    ),
 };
