@@ -3,6 +3,10 @@ import type { DisplaySessionEvent } from "../types/stream";
 import { useMessageStore } from "../stores/message-store";
 import { createSetters, streamMetaMap, useStreamStore } from "./stream/store";
 import { useConversationSnapshot } from "./use-conversation-snapshot";
+import {
+  addPendingChatMessage,
+  clearPendingChatMessages,
+} from "../lib/pending-chat-messages";
 
 function setStreamMessages(streamKey: string, messages: DisplaySessionEvent[]) {
   useStreamStore.setState((state) => ({
@@ -28,6 +32,7 @@ describe("useConversationSnapshot", () => {
     streamMetaMap.clear();
     useStreamStore.setState({ entries: {} });
     useMessageStore.setState({ messages: {}, orderedIds: {} });
+    window.sessionStorage.clear();
   });
 
   it("deduplicates persisted user messages against temp stream messages", () => {
@@ -84,5 +89,46 @@ describe("useConversationSnapshot", () => {
     );
 
     expect(result.current.messages).toEqual(historyMessages);
+  });
+
+  it("includes pending local user messages on refresh before the backend acknowledges them", () => {
+    const streamKey = "thread-4";
+    const pendingMessage: DisplaySessionEvent = {
+      id: "temp-1",
+      role: "user",
+      content: "last failed message",
+    };
+
+    addPendingChatMessage(streamKey, pendingMessage);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, []),
+    );
+
+    expect(result.current.messages).toEqual([pendingMessage]);
+
+    clearPendingChatMessages(streamKey);
+  });
+
+  it("deduplicates pending local user messages once persisted history catches up", () => {
+    const streamKey = "thread-5";
+    const pendingMessage: DisplaySessionEvent = {
+      id: "temp-2",
+      role: "user",
+      content: "same text",
+    };
+    const persistedMessage: DisplaySessionEvent = {
+      id: "evt-user-3",
+      role: "user",
+      content: "same text",
+    };
+
+    addPendingChatMessage(streamKey, pendingMessage);
+
+    const { result } = renderHook(() =>
+      useConversationSnapshot(streamKey, [persistedMessage]),
+    );
+
+    expect(result.current.messages).toEqual([persistedMessage]);
   });
 });

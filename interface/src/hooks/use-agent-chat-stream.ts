@@ -4,6 +4,10 @@ import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import { generateImageStream, generate3dStream } from "../api/streams";
 import type { GenerationMode } from "../constants/models";
 import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
+import {
+  addPendingChatMessage,
+  clearPendingChatMessages,
+} from "../lib/pending-chat-messages";
 import type { Spec, Task } from "../types";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
@@ -82,6 +86,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       };
 
       core.setEvents((prev) => [...prev, userMsg]);
+      addPendingChatMessage(core.key, userMsg);
       core.setIsStreaming(true);
       resetStreamBuffers(refs, setters);
       refs.needsSeparator.current = false;
@@ -200,6 +205,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             shouldStartNewSession,
           );
         }
+        clearPendingChatMessages(core.key);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err);

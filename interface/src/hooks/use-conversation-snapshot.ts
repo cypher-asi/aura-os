@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useStreamEvents } from "./stream/hooks";
 import { useMessageStore } from "../stores/message-store";
 import type { DisplaySessionEvent } from "../types/stream";
+import { getPendingChatMessages } from "../lib/pending-chat-messages";
 
 function contentBlocksMatch(
   first: DisplaySessionEvent["contentBlocks"],
@@ -143,7 +144,11 @@ export function useConversationSnapshot(
   const messages = useMemo(() => {
     const stored = useMessageStore.getState().getThreadMessages(streamKey);
     const baseMessages = chooseBaseMessages(stored, historyMessages ?? []);
-    return combineStoredAndStreamMessages(baseMessages, streamMessages);
+    const pendingMessages = getPendingChatMessages(streamKey);
+    return combineStoredAndStreamMessages(
+      baseMessages,
+      [...pendingMessages, ...streamMessages],
+    );
   }, [streamKey, streamMessages, historyMessages]);
 
   return { messages };

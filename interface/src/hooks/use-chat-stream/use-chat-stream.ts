@@ -5,6 +5,10 @@ import { useProjectActions } from "../../stores/project-action-store";
 import type { ChatAttachment } from "../../api/streams";
 import { generateImageStream, generate3dStream } from "../../api/streams";
 import type { GenerationMode } from "../../constants/models";
+import {
+  addPendingChatMessage,
+  clearPendingChatMessages,
+} from "../../lib/pending-chat-messages";
 
 import {
   useStreamCore,
@@ -51,6 +55,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         contentBlocks: buildContentBlocks(trimmed, attachments),
       };
       core.setEvents((prev) => [...prev, userMsg]);
+      addPendingChatMessage(core.key, userMsg);
       core.setIsStreaming(true);
       sidekickRef.current.setStreamingAgentInstanceId(agentInstanceId);
       resetStreamBuffers(refs, setters);
@@ -96,6 +101,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
             shouldStartNewSession,
           );
         }
+        clearPendingChatMessages(core.key);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err);
