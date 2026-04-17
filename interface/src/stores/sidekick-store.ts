@@ -54,6 +54,25 @@ interface SidekickState extends SidekickSliceState<SidekickTab, PreviewItem> {
   updatePreviewSpecs: (specs: Spec[]) => void;
 }
 
+function isTerminalTaskStatus(status: Task["status"] | undefined): boolean {
+  return status === "done" || status === "failed";
+}
+
+// Preserve a terminal (done/failed) status against stale `task_saved` snapshots
+// that may arrive from storage after `task_completed`/`task_failed` has already
+// landed on the client (see dev_loop.rs -> runtime.rs::emit_tool_saved_completion).
+function preserveTerminalStatus(existing: Task | undefined, incoming: Task): Task {
+  if (!existing) return incoming;
+  if (!isTerminalTaskStatus(existing.status)) return incoming;
+  if (isTerminalTaskStatus(incoming.status)) return incoming;
+  return {
+    ...incoming,
+    status: existing.status,
+    execution_notes: existing.execution_notes ?? incoming.execution_notes,
+    files_changed: existing.files_changed ?? incoming.files_changed,
+  };
+}
+
 function patchTaskInHistory(
   history: PreviewItem[],
   taskId: string,
@@ -176,15 +195,16 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
 
   pushTask: (task) => {
     const { tasks, deletedTaskIds, previewItem, previewHistory } = get();
-    const exists = tasks.some((t) => t.task_id === task.task_id);
-    const next = exists
-      ? tasks.map((t) => (t.task_id === task.task_id ? task : t))
-      : [...tasks, task];
+    const existing = tasks.find((t) => t.task_id === task.task_id);
+    const effective = preserveTerminalStatus(existing, task);
+    const next = existing
+      ? tasks.map((t) => (t.task_id === task.task_id ? effective : t))
+      : [...tasks, effective];
     let newPreview = previewItem;
     if (previewItem?.kind === "task" && previewItem.task.task_id === task.task_id) {
-      newPreview = { kind: "task", task };
+      newPreview = { kind: "task", task: effective };
     }
-    const newHistory = patchTaskInHistory(previewHistory, task.task_id, task);
+    const newHistory = patchTaskInHistory(previewHistory, task.task_id, effective);
     const nextDeleted = deletedTaskIds.includes(task.task_id)
       ? deletedTaskIds.filter((id) => id !== task.task_id)
       : deletedTaskIds;

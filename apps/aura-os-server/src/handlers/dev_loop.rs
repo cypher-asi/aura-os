@@ -998,6 +998,18 @@ fn forward_automaton_events(params: ForwardParams) {
                                     &cached,
                                 )
                                 .await;
+                                if let (Some(storage_client), Some(jwt)) =
+                                    (storage_client.as_ref(), jwt.as_deref())
+                                {
+                                    let req = aura_os_storage::TransitionTaskRequest {
+                                        status: "done".to_string(),
+                                    };
+                                    if let Err(error) =
+                                        storage_client.transition_task(tid, jwt, &req).await
+                                    {
+                                        warn!(task_id = %tid, %error, "Failed to transition task to Done (may already be terminal)");
+                                    }
+                                }
                             }
                             Some("task_completed")
                         }
@@ -1056,6 +1068,18 @@ fn forward_automaton_events(params: ForwardParams) {
                                     &cached,
                                 )
                                 .await;
+                                if let (Some(storage_client), Some(jwt)) =
+                                    (storage_client.as_ref(), jwt.as_deref())
+                                {
+                                    let req = aura_os_storage::TransitionTaskRequest {
+                                        status: "failed".to_string(),
+                                    };
+                                    if let Err(error) =
+                                        storage_client.transition_task(tid, jwt, &req).await
+                                    {
+                                        warn!(task_id = %tid, %error, "Failed to transition task to Failed (may already be terminal)");
+                                    }
+                                }
                             }
                             Some("task_failed")
                         }

@@ -23,10 +23,28 @@ function upsertSpec(prev: Spec[], spec: Spec): Spec[] {
   return next.sort(compareSpecs);
 }
 
+function isTerminalTaskStatus(status: TaskStatus | undefined): boolean {
+  return status === "done" || status === "failed";
+}
+
+// Merge an incoming `task_saved` payload without allowing it to downgrade a task
+// that is already terminal (done/failed). Storage's `task_saved` snapshots can
+// arrive after `task_completed`/`task_failed` with a stale `in_progress` status
+// because the status transition runs on a separate code path on the backend.
 function upsertTask(prev: Task[], task: Task): Task[] {
-  const next = prev.some((candidate) => candidate.task_id === task.task_id)
-    ? prev.map((candidate) => (candidate.task_id === task.task_id ? task : candidate))
-    : [...prev, task];
+  const existing = prev.find((candidate) => candidate.task_id === task.task_id);
+  const effective: Task =
+    existing && isTerminalTaskStatus(existing.status) && !isTerminalTaskStatus(task.status)
+      ? {
+          ...task,
+          status: existing.status,
+          execution_notes: existing.execution_notes ?? task.execution_notes,
+          files_changed: existing.files_changed ?? task.files_changed,
+        }
+      : task;
+  const next = existing
+    ? prev.map((candidate) => (candidate.task_id === task.task_id ? effective : candidate))
+    : [...prev, effective];
   return next.sort((a, b) => a.order_index - b.order_index);
 }
 
