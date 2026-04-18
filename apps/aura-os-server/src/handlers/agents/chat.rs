@@ -22,7 +22,7 @@ const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 
 use aura_os_core::{
     Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId,
-    SessionEvent,
+    SessionEvent, Spec, Task,
 };
 use aura_os_link::{
     ConversationMessage, HarnessInbound, HarnessOutbound, MessageAttachment, SessionConfig,
@@ -840,9 +840,7 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
 /// block across the given event stream. Used to detect dangling `tool_use`
 /// blocks left behind by a crashed harness — those must be stripped before
 /// sending history back to the LLM.
-fn collect_referenced_tool_use_ids(
-    events: &[SessionEvent],
-) -> std::collections::HashSet<String> {
+fn collect_referenced_tool_use_ids(events: &[SessionEvent]) -> std::collections::HashSet<String> {
     let mut set = std::collections::HashSet::new();
     for evt in events {
         if let Some(blocks) = evt.content_blocks.as_deref() {
@@ -918,6 +916,114 @@ fn render_conversation_text(
     parts.join("\n")
 }
 
+fn format_project_state_snapshot(specs: &[Spec], tasks: &[Task]) -> Option<String> {
+    let mut sections: Vec<String> = Vec::new();
+
+    if !specs.is_empty() {
+        let mut recent_specs = specs.to_vec();
+        recent_specs.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        recent_specs.truncate(3);
+
+        let spec_lines: Vec<String> = recent_specs
+            .iter()
+            .map(|spec| format!("- {}", spec.title))
+            .collect();
+        sections.push(format!("Recent specs:\n{}", spec_lines.join("\n")));
+    }
+
+    if !tasks.is_empty() {
+        let mut recent_tasks = tasks.to_vec();
+        recent_tasks.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        recent_tasks.truncate(6);
+
+        let spec_titles: std::collections::HashMap<_, _> = specs
+            .iter()
+            .map(|spec| (spec.spec_id, spec.title.as_str()))
+            .collect();
+
+        let task_lines: Vec<String> = recent_tasks
+            .iter()
+            .map(|task| {
+                let status = format!("{:?}", task.status).to_lowercase();
+                let spec_suffix = spec_titles
+                    .get(&task.spec_id)
+                    .map(|title| format!(" (spec: {title})"))
+                    .unwrap_or_default();
+                format!("- [{status}] {}{}", task.title, spec_suffix)
+            })
+            .collect();
+        sections.push(format!("Recent tasks:\n{}", task_lines.join("\n")));
+    }
+
+    if sections.is_empty() {
+        None
+    } else {
+        Some(format!(
+            "Current durable project state from persisted Aura records:\n{}",
+            sections.join("\n\n")
+        ))
+    }
+}
+
+fn append_project_state_to_system_prompt(base: &str, snapshot: Option<&str>) -> String {
+    match snapshot {
+        Some(snapshot) if !snapshot.trim().is_empty() => {
+            let prefix = if base.trim().is_empty() {
+                String::new()
+            } else {
+                format!("{base}\n\n")
+            };
+            format!(
+                "{prefix}Use the following persisted project state as continuity context when continuing this conversation after a restart or model switch:\n{snapshot}"
+            )
+        }
+        _ => base.to_string(),
+    }
+}
+
+async fn load_project_state_snapshot(
+    state: &AppState,
+    project_id: &str,
+    jwt: &str,
+) -> Option<String> {
+    let storage = match state.storage_client.as_ref() {
+        Some(storage) => storage,
+        None => return None,
+    };
+
+    let specs = match storage.list_specs(project_id, jwt).await {
+        Ok(storage_specs) => {
+            let mut specs: Vec<Spec> = storage_specs
+                .into_iter()
+                .filter_map(|spec| Spec::try_from(spec).ok())
+                .collect();
+            specs.sort_by_key(|spec| spec.order_index);
+            specs
+        }
+        Err(err) => {
+            warn!(project_id, error = %err, "failed to load specs for project state snapshot");
+            Vec::new()
+        }
+    };
+
+    let tasks = match storage.list_tasks(project_id, jwt).await {
+        Ok(storage_tasks) => {
+            let mut tasks: Vec<Task> = storage_tasks
+                .into_iter()
+                .filter_map(|task| Task::try_from(task).ok())
+                .collect();
+            tasks.sort_by_key(|task| task.order_index);
+            tasks
+        }
+        Err(err) => {
+            warn!(project_id, error = %err, "failed to load tasks for project state snapshot");
+            Vec::new()
+        }
+    };
+
+    format_project_state_snapshot(&specs, &tasks)
+}
+
 /// Reconstruct conversation history in Claude API format from stored
 /// `SessionEvent`s. Unlike `session_events_to_conversation_history` (which
 /// only keeps text), this preserves tool_use / tool_result content blocks so
@@ -929,9 +1035,7 @@ fn render_conversation_text(
 /// "tool_use without matching tool_result" 400 error on every subsequent
 /// prompt — which is exactly the class of bug that motivated this
 /// regression guard.
-pub fn session_events_to_super_agent_history(
-    events: &[SessionEvent],
-) -> Vec<serde_json::Value> {
+pub fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_json::Value> {
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
 
     let mut messages: Vec<serde_json::Value> = Vec::new();
@@ -1458,10 +1562,7 @@ pub async fn load_current_session_events_for_instance(
         return Ok(Vec::new());
     }
 
-    let Some(latest) = sessions
-        .iter()
-        .max_by_key(|s| storage_session_sort_key(s))
-    else {
+    let Some(latest) = sessions.iter().max_by_key(|s| storage_session_sort_key(s)) else {
         return Ok(Vec::new());
     };
 
@@ -1866,7 +1967,10 @@ async fn handle_super_agent_stream(
     let cancel_token = tokio_util::sync::CancellationToken::new();
     let generation = {
         let mut runs = state.super_agent_runs.lock().await;
-        let next_gen = runs.get(&session_key).map(|r| r.generation + 1).unwrap_or(1);
+        let next_gen = runs
+            .get(&session_key)
+            .map(|r| r.generation + 1)
+            .unwrap_or(1);
         if let Some(existing) = runs.insert(
             session_key.clone(),
             SuperAgentRun {
@@ -2043,19 +2147,29 @@ pub(crate) async fn send_agent_event_stream(
     // LLM context rebuild on cold start: load only the current storage
     // session, not the full multi-session aggregate. See
     // `load_current_session_events_for_agent` doc-comment for rationale.
-    let conversation_messages = if force_new {
-        None
+    let (conversation_messages, project_state_snapshot) = if force_new {
+        (None, None)
     } else if !has_live_session(&state, &session_key).await {
         let stored = load_current_session_events_for_agent(&state, &agent_id, &jwt).await;
-        if stored.is_empty() {
+        let conversation_messages = if stored.is_empty() {
             None
         } else {
             let bounded =
                 slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
             Some(session_events_to_conversation_history(&bounded))
-        }
+        };
+        let snapshot_project_id = body
+            .project_id
+            .as_ref()
+            .map(|project_id| project_id.to_string())
+            .or_else(|| persist_ctx.as_ref().map(|ctx| ctx.project_id.clone()));
+        let project_state_snapshot = match snapshot_project_id {
+            Some(project_id) => load_project_state_snapshot(&state, &project_id, &jwt).await,
+            None => None,
+        };
+        (conversation_messages, project_state_snapshot)
     } else {
-        None
+        (None, None)
     };
 
     let integration = resolve_integration(&state, &agent, &jwt).await?;
@@ -2074,7 +2188,10 @@ pub(crate) async fn send_agent_event_stream(
         None
     };
     let config = SessionConfig {
-        system_prompt: Some(agent.system_prompt.clone()),
+        system_prompt: Some(append_project_state_to_system_prompt(
+            &agent.system_prompt,
+            project_state_snapshot.as_deref(),
+        )),
         agent_id: Some(agent_id.to_string()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
@@ -2146,19 +2263,22 @@ pub(crate) async fn send_event_stream(
     // LLM context rebuild on cold start: load only the current storage
     // session, not the full multi-session aggregate. See
     // `load_current_session_events_for_instance` doc-comment for rationale.
-    let conversation_messages = if force_new {
-        None
+    let (conversation_messages, project_state_snapshot) = if force_new {
+        (None, None)
     } else if !has_live_session(&state, &session_key).await {
         let stored = load_current_session_events_for_instance(&state, &agent_instance_id, &jwt)
             .await
             .map_err(map_storage_error)?;
-        if stored.is_empty() {
+        let conversation_messages = if stored.is_empty() {
             None
         } else {
             Some(session_events_to_conversation_history(&stored))
-        }
+        };
+        let project_state_snapshot =
+            load_project_state_snapshot(&state, &project_id.to_string(), &jwt).await;
+        (conversation_messages, project_state_snapshot)
     } else {
-        None
+        (None, None)
     };
 
     let pid_str = project_id.to_string();
@@ -2171,6 +2291,8 @@ pub(crate) async fn send_event_stream(
         &instance.system_prompt,
         project_path.as_deref(),
     );
+    let system_prompt =
+        append_project_state_to_system_prompt(&system_prompt, project_state_snapshot.as_deref());
 
     let integration = resolve_integration_ref(
         &state,
@@ -2497,8 +2619,10 @@ mod tests {
 
         let history = session_events_to_conversation_history(&[assistant, tool_result]);
         assert!(
-            history.iter().any(|m| m.content.starts_with("Sure, creating now.")
-                && m.content.contains("tool_use create_spec")),
+            history
+                .iter()
+                .any(|m| m.content.starts_with("Sure, creating now.")
+                    && m.content.contains("tool_use create_spec")),
             "narration and tool_use must both survive, got: {history:?}"
         );
     }
@@ -2508,5 +2632,77 @@ mod tests {
         let empty = assistant_event("", None);
         let history = session_events_to_conversation_history(&[empty]);
         assert!(history.is_empty());
+    }
+
+    fn spec(title: &str, order_index: u32) -> Spec {
+        Spec {
+            spec_id: aura_os_core::SpecId::new(),
+            project_id: ProjectId::nil(),
+            title: title.to_string(),
+            order_index,
+            markdown_contents: String::new(),
+            created_at: parse_dt(&None),
+            updated_at: parse_dt(&None),
+        }
+    }
+
+    fn task(title: &str, spec_id: aura_os_core::SpecId) -> Task {
+        Task {
+            task_id: aura_os_core::TaskId::new(),
+            project_id: ProjectId::nil(),
+            spec_id,
+            title: title.to_string(),
+            description: String::new(),
+            status: aura_os_core::TaskStatus::Backlog,
+            order_index: 0,
+            dependency_ids: Vec::new(),
+            parent_task_id: None,
+            assigned_agent_instance_id: None,
+            completed_by_agent_instance_id: None,
+            session_id: None,
+            execution_notes: String::new(),
+            files_changed: Vec::new(),
+            live_output: String::new(),
+            build_steps: Vec::new(),
+            test_steps: Vec::new(),
+            user_id: None,
+            model: None,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            created_at: parse_dt(&None),
+            updated_at: parse_dt(&None),
+        }
+    }
+
+    #[test]
+    fn project_state_snapshot_formats_recent_specs_and_tasks() {
+        let lemonade = spec("01: Make Lemonade", 1);
+        let tea = spec("02: Make Tea", 2);
+        let tasks = vec![
+            task("Gather ingredients and tools", lemonade.spec_id),
+            task("Juice and mix lemonade", lemonade.spec_id),
+            task("Boil water", tea.spec_id),
+        ];
+
+        let snapshot =
+            format_project_state_snapshot(&[lemonade.clone(), tea.clone()], &tasks).unwrap();
+
+        assert!(snapshot.contains("Recent specs:"));
+        assert!(snapshot.contains("01: Make Lemonade"));
+        assert!(snapshot.contains("Recent tasks:"));
+        assert!(snapshot.contains("Gather ingredients and tools"));
+        assert!(snapshot.contains("(spec: 01: Make Lemonade)"));
+    }
+
+    #[test]
+    fn project_state_snapshot_prompt_appends_snapshot_safely() {
+        let prompt = append_project_state_to_system_prompt(
+            "You are a helpful coding agent.",
+            Some("Current durable project state from persisted Aura records:\nRecent specs:\n- 01: Make Lemonade"),
+        );
+
+        assert!(prompt.contains("You are a helpful coding agent."));
+        assert!(prompt.contains("persisted Aura records"));
+        assert!(prompt.contains("01: Make Lemonade"));
     }
 }
