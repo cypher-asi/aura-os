@@ -14,6 +14,7 @@ use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
+use super::instances::repair_agent_name_in_place;
 use super::marketplace_fields::{merge_marketplace_tags, normalize_marketplace_fields};
 use tracing::{info, warn};
 
@@ -760,10 +761,10 @@ pub(crate) async fn list_agents(
                         agent.icon = shadow.icon;
                     }
                 }
-                super::instances::repair_general_agent_name_in_place(
-                    &state.agent_service,
-                    &mut agent,
-                );
+                // Repair blank names before persisting the shadow so the
+                // "New Agent" placeholder (and the UI renames that key off
+                // it) cascade to both library and project listings.
+                repair_agent_name_in_place(&state.agent_service, &mut agent);
                 let _ = state.agent_service.save_agent_shadow(&agent);
                 agent
             })
@@ -776,7 +777,7 @@ pub(crate) async fn list_agents(
         .list_agents()
         .map_err(|e| ApiError::internal(format!("listing agents: {e}")))?;
     for agent in agents.iter_mut() {
-        super::instances::repair_general_agent_name_in_place(&state.agent_service, agent);
+        repair_agent_name_in_place(&state.agent_service, agent);
     }
     Ok(Json(agents))
 }
@@ -798,7 +799,7 @@ pub(crate) async fn get_agent(
                 agent.icon = shadow.icon;
             }
         }
-        super::instances::repair_general_agent_name_in_place(&state.agent_service, &mut agent);
+        repair_agent_name_in_place(&state.agent_service, &mut agent);
         let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(agent));
     }
@@ -810,7 +811,7 @@ pub(crate) async fn get_agent(
             aura_os_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
             _ => ApiError::internal(format!("fetching agent: {e}")),
         })?;
-    super::instances::repair_general_agent_name_in_place(&state.agent_service, &mut agent);
+    repair_agent_name_in_place(&state.agent_service, &mut agent);
     Ok(Json(agent))
 }
 

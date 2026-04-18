@@ -60,23 +60,26 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
     }
 }
 
-/// If a project-local general agent's shadow name has been lost (empty after
-/// trim), restore it to the canonical `"New Agent"` default and persist the
-/// repaired shadow. This lets the UI's first-message rename flow
-/// (`maybeRenameFromFirstPrompt`) trigger the same way it does for freshly
-/// created generic project agents, whose rename guard checks for the exact
-/// string `"New Agent"`.
+/// If an agent's name has been lost (empty after trim), restore it to the
+/// canonical `"New Agent"` placeholder and persist the repaired shadow. This
+/// lets the UI's first-message rename flow (`maybeRenameFromFirstPrompt`)
+/// trigger the same way it does for freshly created generic project agents,
+/// whose rename guard checks for the exact string `"New Agent"`. For library
+/// agents that never go through a chat rename flow, the placeholder at least
+/// keeps the sidebar from rendering a blank row and leaves the door open for
+/// a manual rename via the agent settings UI.
+///
+/// Intentionally scope-agnostic: project-scoped (`list_agent_instances` /
+/// `get_agent_instance`) and library-scoped (`list_agents` / `get_agent`)
+/// call sites both call in here so a corrupted record never reaches the UI
+/// with a blank name.
 ///
 /// Returns `true` when the agent was mutated and a save was attempted.
-pub(super) fn repair_general_agent_name_in_place(
+pub(super) fn repair_agent_name_in_place(
     agent_service: &AgentService,
     agent: &mut Agent,
 ) -> bool {
-    let is_general = agent
-        .tags
-        .iter()
-        .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG);
-    if !is_general || !agent.name.trim().is_empty() {
+    if !agent.name.trim().is_empty() {
         return false;
     }
     agent.name = GENERAL_AGENT_NAME.to_string();
@@ -85,18 +88,18 @@ pub(super) fn repair_general_agent_name_in_place(
         tracing::warn!(
             error = %e,
             agent_id = %agent.agent_id,
-            "failed to repair missing project-local general agent name",
+            "failed to repair missing agent name",
         );
     }
     true
 }
 
-fn repair_general_agent_name_if_missing(
+fn repair_agent_name_if_missing(
     agent_service: &AgentService,
     agent: Option<Agent>,
 ) -> Option<Agent> {
     let mut agent = agent?;
-    repair_general_agent_name_in_place(agent_service, &mut agent);
+    repair_agent_name_in_place(agent_service, &mut agent);
     Some(agent)
 }
 
@@ -237,7 +240,7 @@ pub(crate) async fn list_agent_instances(
 
     let mut agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
     for agent in agent_map.values_mut() {
-        repair_general_agent_name_in_place(&state.agent_service, agent);
+        repair_agent_name_in_place(&state.agent_service, agent);
     }
 
     let project = state.project_service.get_project(&project_id).ok();
@@ -275,7 +278,7 @@ pub(crate) async fn get_agent_instance(
     } else {
         None
     };
-    let agent = repair_general_agent_name_if_missing(&state.agent_service, resolved);
+    let agent = repair_agent_name_if_missing(&state.agent_service, resolved);
     let mut instance = merge_agent_instance(&storage_agent, agent.as_ref(), None);
     let proj_id_str = storage_agent.project_id.clone().unwrap_or_default();
     let project = proj_id_str
@@ -319,11 +322,12 @@ pub(crate) async fn update_agent_instance(
             .get_agent_local(&parsed_agent_id)
             .map_err(|_| ApiError::bad_request("agent instance cannot be renamed"))?;
 
-        if !local_agent
+        let is_general = local_agent
             .tags
             .iter()
-            .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG)
-        {
+            .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG);
+        let is_placeholder_name = local_agent.name == GENERAL_AGENT_NAME;
+        if !is_general && !is_placeholder_name {
             return Err(ApiError::bad_request(
                 "only project-local general agents can be renamed",
             ));
@@ -473,7 +477,7 @@ mod tests {
         service.save_agent_shadow(&agent).unwrap();
 
         let repaired =
-            repair_general_agent_name_if_missing(&service, Some(agent)).expect("repaired agent");
+            repair_agent_name_if_missing(&service, Some(agent)).expect("repaired agent");
         assert_eq!(repaired.name, GENERAL_AGENT_NAME);
 
         let reloaded = service.get_agent_local(&agent_id).unwrap();
@@ -487,7 +491,7 @@ mod tests {
         let agent_id = agent.agent_id.clone();
         service.save_agent_shadow(&agent).unwrap();
 
-        let repaired = repair_general_agent_name_if_missing(&service, Some(agent)).unwrap();
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
         assert_eq!(repaired.name, GENERAL_AGENT_NAME);
 
         let reloaded = service.get_agent_local(&agent_id).unwrap();
@@ -495,16 +499,13 @@ mod tests {
     }
 
     #[test]
-    fn preserves_existing_name_on_general_agent() {
+    fn preserves_existing_name() {
         let (service, _dir) = make_service();
-        let agent = make_agent(
-            "My Named Agent",
-            vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()],
-        );
+        let agent = make_agent("My Named Agent", Vec::new());
         let agent_id = agent.agent_id.clone();
         service.save_agent_shadow(&agent).unwrap();
 
-        let repaired = repair_general_agent_name_if_missing(&service, Some(agent)).unwrap();
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
         assert_eq!(repaired.name, "My Named Agent");
 
         let reloaded = service.get_agent_local(&agent_id).unwrap();
@@ -512,23 +513,27 @@ mod tests {
     }
 
     #[test]
-    fn does_not_touch_non_general_agents_with_empty_name() {
+    fn repairs_untagged_project_agent_with_empty_name() {
+        // Project agents that aren't tagged project_local_general still get
+        // the same placeholder treatment so the UI sidebar never shows blanks;
+        // first-message rename (which is allowed for any agent whose current
+        // name is the placeholder) takes over from there.
         let (service, _dir) = make_service();
         let agent = make_agent("", Vec::new());
         let agent_id = agent.agent_id.clone();
         service.save_agent_shadow(&agent).unwrap();
 
-        let passthrough = repair_general_agent_name_if_missing(&service, Some(agent)).unwrap();
-        assert_eq!(passthrough.name, "");
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
+        assert_eq!(repaired.name, GENERAL_AGENT_NAME);
 
         let reloaded = service.get_agent_local(&agent_id).unwrap();
-        assert_eq!(reloaded.name, "");
+        assert_eq!(reloaded.name, GENERAL_AGENT_NAME);
     }
 
     #[test]
     fn returns_none_when_input_is_none() {
         let (service, _dir) = make_service();
-        assert!(repair_general_agent_name_if_missing(&service, None).is_none());
+        assert!(repair_agent_name_if_missing(&service, None).is_none());
     }
 
     #[test]
@@ -550,10 +555,7 @@ mod tests {
     #[test]
     fn repair_runs_on_agent_whose_stored_json_had_no_name_key() {
         let (service, _dir) = make_service();
-        let original = make_agent(
-            "placeholder",
-            vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()],
-        );
+        let original = make_agent("placeholder", Vec::new());
         let agent_id = original.agent_id.clone();
 
         let mut value = serde_json::to_value(&original).unwrap();
@@ -565,7 +567,7 @@ mod tests {
         assert_eq!(reloaded.name, "");
         service.save_agent_shadow(&reloaded).unwrap();
 
-        let repaired = repair_general_agent_name_if_missing(&service, Some(reloaded)).unwrap();
+        let repaired = repair_agent_name_if_missing(&service, Some(reloaded)).unwrap();
         assert_eq!(repaired.name, GENERAL_AGENT_NAME);
 
         let disk = service.get_agent_local(&agent_id).unwrap();
