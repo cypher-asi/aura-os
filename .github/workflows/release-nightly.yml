@@ -593,7 +593,26 @@ jobs:
         env:
           AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
-        run: cargo packager --release --packages aura-os-desktop
+        shell: bash
+        run: |
+          set -o pipefail
+
+          package_once() {
+            cargo packager --release --packages aura-os-desktop 2>&1 | tee packager.log
+          }
+
+          if package_once; then
+            exit 0
+          fi
+
+          if [ "${{ matrix.target }}" != "macos" ] || ! grep -q "hdiutil: create failed - Resource busy" packager.log; then
+            exit 1
+          fi
+
+          echo "Retrying macOS packaging after transient hdiutil create failure..."
+          rm -f packager.log
+          sleep 5
+          package_once
 
       - name: Collect artifacts
         id: artifacts
