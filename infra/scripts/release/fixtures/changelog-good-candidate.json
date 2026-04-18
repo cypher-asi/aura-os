@@ -1,0 +1,82 @@
+{
+  "day_title": "Chat resilience, release guardrails, and cleaner loop controls",
+  "day_intro": "This nightly tightened a few reliability seams across the product: chat now keeps pending messages and clearer errors visible, release tooling gained stronger changelog validation, and loop controls respect the model the user actually selected.",
+  "highlights": [
+    "Pending chat messages survive refresh and recovery",
+    "Release tooling now rejects weak changelog drafts",
+    "Loop controls respect the active model selection",
+    "Desktop chat surfaces clearer API errors"
+  ],
+  "entries": [
+    {
+      "batch_id": "entry-1",
+      "title": "Chat message recovery feels steadier",
+      "summary": "Early interface work focused on keeping pending messages visible through refreshes and cleaning up duplicate optimistic copies after a stream recovers.",
+      "items": [
+        {
+          "text": "Pending chat messages are now preserved through refreshes so users do not lose in-flight turns when the page reloads unexpectedly.",
+          "commit_shas": [
+            "1111111111111111111111111111111111111111"
+          ],
+          "confidence": "high"
+        },
+        {
+          "text": "Optimistic chat rows are deduplicated once the recovered stream catches up, avoiding a brief double-rendered message state.",
+          "commit_shas": [
+            "2222222222222222222222222222222222222222"
+          ],
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "batch_id": "entry-2",
+      "title": "Release notes now face stricter publication checks",
+      "summary": "Release infrastructure changes turned changelog generation into a more defensive workflow by retrying stale sessions and screening drafts against a stronger quality bar.",
+      "items": [
+        {
+          "text": "The release pipeline now retries changelog generation when it detects a stale cached session instead of quietly accepting a broken draft.",
+          "commit_shas": [
+            "3333333333333333333333333333333333333333"
+          ],
+          "confidence": "high"
+        },
+        {
+          "text": "Generated changelog drafts are validated against a stricter editorial rubric before they can be published.",
+          "commit_shas": [
+            "4444444444444444444444444444444444444444"
+          ],
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "batch_id": "entry-3",
+      "title": "Manual loop runs follow the chosen model",
+      "summary": "Loop controls were tightened so manual runs no longer drift back to a default model when a user has already picked something else.",
+      "items": [
+        {
+          "text": "Manual loop controls now forward the active model selection into execution, keeping loop behavior aligned with the user's current configuration.",
+          "commit_shas": [
+            "5555555555555555555555555555555555555555"
+          ],
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "batch_id": "entry-4",
+      "title": "Desktop chat shows more useful failures",
+      "summary": "The last desktop-focused fix makes chat failures easier to understand by surfacing clearer API error messages in context.",
+      "items": [
+        {
+          "text": "Desktop chat now surfaces clearer API failures so users can act on the real error instead of a vague fallback message.",
+          "commit_shas": [
+            "6666666666666666666666666666666666666666"
+          ],
+          "confidence": "high"
+        }
+      ]
+    }
+  ]
+}

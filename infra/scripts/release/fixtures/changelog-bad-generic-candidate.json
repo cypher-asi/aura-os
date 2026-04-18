@@ -1,0 +1,38 @@
+{
+  "day_title": "4 updates shipped",
+  "day_intro": "This nightly timeline groups commits into updates for the day and summarizes the work that landed.",
+  "highlights": [
+    "Chat updates",
+    "Chat updates"
+  ],
+  "entries": [
+    {
+      "batch_id": "entry-1",
+      "title": "Interface and Chat Experience Improvements",
+      "summary": "2 related changes landed together across chat and product surfaces.",
+      "items": [
+        {
+          "text": "Pending chat messages are preserved across refreshes.",
+          "commit_shas": [
+            "1111111111111111111111111111111111111111"
+          ],
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "batch_id": "entry-2",
+      "title": "Interface and Chat Experience Improvements",
+      "summary": "2 related changes landed together across chat and product surfaces.",
+      "items": [
+        {
+          "text": "Pending chat messages are preserved across refreshes.",
+          "commit_shas": [
+            "3333333333333333333333333333333333333333"
+          ],
+          "confidence": "medium"
+        }
+      ]
+    }
+  ]
+}
