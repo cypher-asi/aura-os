@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-04-18",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.288.1",
+    "title": "Multimodel support lands with smarter routing, richer model pickers, and stabler Mac builds",
+    "intro": "Today's nightly focused almost entirely on Aura's multimodel story: hosted agents now route through AURA Proxy, every loop and task control respects the active model selection, the chat model picker got a full visual overhaul with grouped sections and Opus 4.6, and the server gained resilient project-context handoff across model switches. Release Infrastructure also picked up two reliability fixes — automatic retry for transient macOS DMG failures and a loosened changelog validator.",
+    "entryCount": 4,
+    "highlights": [
+      "Hosted agents now route exclusively through AURA Proxy",
+      "Chat model picker redesigned with grouped sections, scroll, and Opus 4.6",
+      "Loop controls and task runs now honor the active model selection end-to-end",
+      "Project context (specs + tasks) is preserved across model switches and restarts",
+      "Mac DMG packaging now auto-retries on transient hdiutil failures"
+    ],
+    "rawCommitCount": 17,
+    "generatedAt": "2026-04-18T17:28:45.376Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
+    "path": "history/2026-04-18.json"
+  },
+  {
     "date": "2026-04-17",
     "channel": "nightly",
     "version": "0.1.0-nightly.284.1",
