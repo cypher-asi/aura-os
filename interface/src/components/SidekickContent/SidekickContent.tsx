@@ -195,6 +195,7 @@ export function SidekickContent() {
 function LaneOverlay() {
   const markerRef = useRef<HTMLDivElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const closePreview = useSidekickStore((s) => s.closePreview);
 
   useLayoutEffect(() => {
     if (markerRef.current) {
@@ -204,6 +205,22 @@ function LaneOverlay() {
       if (lane) setPortalTarget(lane);
     }
   }, []);
+
+  // Close the task/spec/session/log preview on Escape. Defer to any modal
+  // dialog layered on top so ESC dismisses the topmost surface first.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (event.defaultPrevented) return;
+      const hasModalOnTop = document.querySelector(
+        '[role="dialog"][aria-modal="true"]',
+      );
+      if (hasModalOnTop) return;
+      closePreview();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closePreview]);
 
   const content = (
     <div className={cn(overlayStyles.overlay, overlayStyles.fullLane)}>
