@@ -243,6 +243,46 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
   }, [isMobileLibrary]);
 
+  const prefetchAgentIds = useMemo(
+    () => (isDesktopSidebar ? agents.map((a) => a.agent_id) : []),
+    [agents, isDesktopSidebar],
+  );
+
+  useEffect(() => {
+    if (prefetchAgentIds.length === 0) return;
+    // Prefetch last-message previews for the sidebar with a small concurrency
+    // gate so first paint isn't blocked by a flood of parallel requests. The
+    // chat-history store TTL-caches, so repeats are cheap.
+    const CONCURRENCY = 4;
+    let cancelled = false;
+    const queue = [...prefetchAgentIds];
+    const worker = async () => {
+      while (!cancelled && queue.length > 0) {
+        const id = queue.shift();
+        if (!id) break;
+        try {
+          await useChatHistoryStore.getState().fetchHistory(
+            agentHistoryKey(id),
+            () =>
+              api.agents.listEvents(id, {
+                limit: STANDALONE_AGENT_HISTORY_LIMIT,
+              }),
+          );
+        } catch {
+          // errors are stored on the history entry; keep draining the queue
+        }
+      }
+    };
+    const workers = Array.from(
+      { length: Math.min(CONCURRENCY, prefetchAgentIds.length) },
+      () => worker(),
+    );
+    void Promise.all(workers);
+    return () => {
+      cancelled = true;
+    };
+  }, [prefetchAgentIds]);
+
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       const target = (e.target as HTMLElement).closest("button[id]");

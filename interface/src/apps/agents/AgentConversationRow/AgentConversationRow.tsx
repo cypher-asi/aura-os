@@ -41,9 +41,10 @@ export function AgentConversationRow({
   const messagePreview = lastMessage
     ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(lastMessage.content)}`
     : "";
+  const fallback = agentRole || "Open this agent";
   const preview = showMetadataOnly
-    ? agentDescription
-    : agentDescription || messagePreview;
+    ? agentDescription || fallback
+    : messagePreview || agentDescription || fallback;
   const { status, isLocal } = useAvatarState(agent.agent_id);
   const pinnedIds = useAgentStore((s) => s.pinnedAgentIds);
   const isPinned = agent.is_pinned || pinnedIds.has(agent.agent_id);
@@ -81,7 +82,7 @@ export function AgentConversationRow({
           </span>
           <span className={styles.time}>{formatChatTime(agent.updated_at)}</span>
         </span>
-        {preview ? <span className={styles.preview}>{preview}</span> : null}
+        <span className={styles.preview}>{preview}</span>
       </span>
     </button>
   );
