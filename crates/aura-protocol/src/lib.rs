@@ -100,6 +100,43 @@ pub struct SessionInit {
     /// Optional per-session provider override for BYOK/runtime isolation.
     #[serde(default)]
     pub provider_config: Option<SessionProviderConfig>,
+    /// Optional keyword-driven intent classifier spec. When present the harness
+    /// narrows the per-turn tool surface based on each user message using the
+    /// same tier-1 / tier-2 domain rules the aura-os super agent used to run
+    /// in-process. Ships as the profile-JSON subset that
+    /// `aura-tools::IntentClassifier::from_profile_json` accepts, plus a
+    /// `tool_domains` map from tool name to domain so the harness can narrow
+    /// `tool_definitions` (which are opaque to the classifier otherwise).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
+}
+
+/// Keyword-driven classifier spec shipped in [`SessionInit`].
+///
+/// Matches the JSON shape that
+/// `aura-tools::IntentClassifier::from_profile_json` deserializes, extended
+/// with `tool_domains` so the harness can answer "which domain does this
+/// tool belong to?" without hard-coding the mapping in its binary.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct IntentClassifierSpec {
+    /// Domain names that are always visible (tier-1). Snake-case strings
+    /// like `"project"`, `"agent"`, `"execution"`, `"monitoring"`.
+    pub tier1_domains: Vec<String>,
+    /// Keyword rules that expand the visible domain set tier-2 on demand.
+    pub classifier_rules: Vec<IntentClassifierRule>,
+    /// Mapping from tool name → domain. Any tool whose domain is in the
+    /// resolved visible set is kept on a turn.
+    #[serde(default)]
+    pub tool_domains: HashMap<String, String>,
+}
+
+/// One keyword → domain rule for [`IntentClassifierSpec`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct IntentClassifierRule {
+    pub domain: String,
+    pub keywords: Vec<String>,
 }
 
 /// Optional per-session provider override used for BYOK-style runtime resolution.

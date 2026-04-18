@@ -206,6 +206,57 @@ impl SuperAgentProfile {
             .filter(|t| domains.contains(&t.domain))
             .collect()
     }
+
+    /// Snake-case tier-1 domain names for the wire intent-classifier spec.
+    ///
+    /// Matches what `aura-tools::IntentClassifier::from_profile_json`
+    /// deserializes from `tier1_domains: [String]` on the harness side.
+    pub fn tier1_domains_snake_case(&self) -> Vec<String> {
+        self.tier1_domains
+            .iter()
+            .map(domain_to_snake_case)
+            .collect()
+    }
+
+    /// Classifier rules in `[{domain: String, keywords: [String]}]` form —
+    /// the exact JSON shape the harness classifier deserializes.
+    ///
+    /// The `domain` field is rendered in snake_case so the harness never
+    /// needs a copy of the `ToolDomain` enum.
+    pub fn classifier_rules_snake_case(&self) -> Vec<(String, Vec<String>)> {
+        self.classifier_rules
+            .iter()
+            .map(|r| (domain_to_snake_case(&r.domain), r.keywords.clone()))
+            .collect()
+    }
+
+    /// Map of `tool_name -> snake_case domain` for every tool in the
+    /// manifest, suitable for `IntentClassifierSpec::tool_domains`.
+    ///
+    /// The harness uses this mapping to decide which concrete
+    /// [`ToolDefinition`](aura_os_core::ToolDefinition) entries to keep
+    /// each turn once the classifier has chosen the visible domain set.
+    /// Without this map the harness would have to duplicate the manifest
+    /// in its own binary.
+    pub fn tool_domains_snake_case(
+        &self,
+    ) -> std::collections::HashMap<String, String> {
+        self.tool_manifest
+            .iter()
+            .map(|e| (e.name.clone(), domain_to_snake_case(&e.domain)))
+            .collect()
+    }
+}
+
+/// Small helper so every cross-process serialization site agrees on
+/// the snake_case rendering of [`ToolDomain`] (which is already the
+/// `#[serde(rename_all = "snake_case")]` representation — we just want
+/// the string without going through `serde_json::to_value`).
+fn domain_to_snake_case(domain: &ToolDomain) -> String {
+    serde_json::to_value(domain)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_string))
+        .unwrap_or_default()
 }
 
 /// Raw template string used by [`SuperAgentProfile::ceo_default`].
@@ -319,6 +370,47 @@ mod tests {
     fn tier1_domains_match_tier_module_constant() {
         let profile = SuperAgentProfile::ceo_default();
         assert_eq!(profile.tier1_domains, TIER1_DOMAINS);
+    }
+
+    #[test]
+    fn tier1_domains_snake_case_matches_wire_strings() {
+        let profile = SuperAgentProfile::ceo_default();
+        let strs = profile.tier1_domains_snake_case();
+        // Exact set the harness `IntentClassifier` matches against.
+        assert!(strs.contains(&"project".to_string()));
+        assert!(strs.contains(&"agent".to_string()));
+        assert!(strs.contains(&"execution".to_string()));
+        assert!(strs.contains(&"monitoring".to_string()));
+        // And every entry must round-trip through serde to a string
+        // (i.e. no Debug-formatted CamelCase leaked in).
+        for s in &strs {
+            assert!(s.chars().all(|c| c.is_lowercase() || c == '_'));
+        }
+    }
+
+    #[test]
+    fn classifier_rules_snake_case_preserves_keywords() {
+        let profile = SuperAgentProfile::ceo_default();
+        let rules = profile.classifier_rules_snake_case();
+        assert_eq!(rules.len(), profile.classifier_rules.len());
+        for (i, (dom, kws)) in rules.iter().enumerate() {
+            let expected_dom =
+                serde_json::to_value(profile.classifier_rules[i].domain).unwrap();
+            assert_eq!(dom, expected_dom.as_str().unwrap());
+            assert_eq!(*kws, profile.classifier_rules[i].keywords);
+        }
+    }
+
+    #[test]
+    fn tool_domains_snake_case_covers_every_manifest_entry() {
+        let profile = SuperAgentProfile::ceo_default();
+        let map = profile.tool_domains_snake_case();
+        assert_eq!(map.len(), profile.tool_manifest.len());
+        for entry in &profile.tool_manifest {
+            let expected =
+                serde_json::to_value(entry.domain).unwrap().as_str().unwrap().to_string();
+            assert_eq!(map.get(&entry.name), Some(&expected));
+        }
     }
 
     /// Contract test: the JSON wire shape must match what

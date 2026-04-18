@@ -13,7 +13,8 @@ use tower_http::trace::TraceLayer;
 use crate::handlers::{
     agents, auth, billing, browser, dev_loop, feed, feedback, files, follows, generation,
     harness_proxy, leaderboard, log, notes, org_tools, orgs, process, project_stats, projects,
-    remote_files, remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
+    remote_files, remote_terminal, specs, super_agent, super_agent_tools, swarm, system, tasks,
+    terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -494,6 +495,14 @@ fn super_agent_routes() -> Router<AppState> {
         .route(
             "/api/super-agent/events",
             get(super_agent::list_pending_events),
+        )
+        // Phase 3: dispatcher that lets a harness-hosted super-agent
+        // execute in-process super-agent tools via a generic
+        // `InstalledTool` handoff (see
+        // `aura_os_super_agent::harness_handoff`).
+        .route(
+            "/api/super_agent/tools/:name",
+            post(super_agent_tools::dispatch_super_agent_tool),
         )
 }
 

@@ -7,6 +7,7 @@ pub(crate) mod error;
 pub mod handlers;
 pub mod harness_client;
 pub(crate) mod harness_gateway;
+pub mod harness_super_agent_driver;
 mod network_bridge;
 
 pub(crate) mod persistence;
@@ -19,6 +20,11 @@ pub use harness_client::{
     SubmitTxResponse,
 };
 pub use harness_gateway::HarnessHttpGateway;
+pub use harness_super_agent_driver::{
+    preview_installed_tools, preview_intent_classifier_spec, preview_session_init,
+    HarnessSuperAgentConfig, HarnessSuperAgentDriver, HarnessSuperAgentError,
+    HarnessSuperAgentSession,
+};
 pub use router::{build_local_api_cors_layer, create_router_with_interface};
 pub use state::{ActiveAutomaton, AppState, CachedSession, SuperAgentRun};
 

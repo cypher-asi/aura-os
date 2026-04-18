@@ -283,6 +283,7 @@ impl HarnessLink for SwarmHarness {
                 aura_org_id: config.aura_org_id,
                 agent_id: config.agent_id,
                 provider_config: config.provider_config,
+                intent_classifier: None,
             })))
             .context("swarm session_init send failed")?;
 

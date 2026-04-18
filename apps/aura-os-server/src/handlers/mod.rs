@@ -25,6 +25,7 @@ pub(crate) mod spec_disk;
 pub(crate) mod specs;
 pub(crate) mod sse;
 pub(crate) mod super_agent;
+pub(crate) mod super_agent_tools;
 pub(crate) mod swarm;
 pub(crate) mod system;
 pub(crate) mod tasks;

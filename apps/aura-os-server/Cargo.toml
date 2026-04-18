@@ -18,6 +18,8 @@ aura-os-link = { path = "../../crates/aura-os-link" }
 aura-os-terminal = { path = "../../crates/aura-os-terminal" }
 aura-os-browser = { path = "../../crates/aura-os-browser" }
 aura-os-super-agent = { path = "../../crates/aura-os-super-agent" }
+aura-os-super-agent-profile = { path = "../../crates/aura-os-super-agent-profile" }
+aura-protocol = { path = "../../crates/aura-protocol" }
 aura-os-process = { path = "../../crates/aura-os-process" }
 aura-os-network = { path = "../../crates/aura-os-network" }
 aura-os-storage = { path = "../../crates/aura-os-storage" }
