@@ -58,6 +58,39 @@ test("validateRenderedEntry accepts a structurally valid generic draft", () => {
   assert.equal(rendered.highlights.length, candidate.highlights.length);
 });
 
+test("validateRenderedEntry rejects entries that reference unknown batches", () => {
+  const batches = buildFixtureBatches();
+  const candidate = readFixture("changelog-good-candidate.json");
+  candidate.entries[0].batch_id = "entry-999";
+
+  assert.throws(
+    () => validateRenderedEntry(candidate, batches, 6),
+    /entry\.batch_id must reference a known batch/,
+  );
+});
+
+test("validateRenderedEntry rejects bullets without valid SHAs from the batch", () => {
+  const batches = buildFixtureBatches();
+  const candidate = readFixture("changelog-good-candidate.json");
+  candidate.entries[0].items[0].commit_shas = ["not-a-real-sha"];
+
+  assert.throws(
+    () => validateRenderedEntry(candidate, batches, 6),
+    /entry item must cite at least one SHA from batch entry-1/,
+  );
+});
+
+test("validateRenderedEntry rejects duplicate batch entries", () => {
+  const batches = buildFixtureBatches();
+  const candidate = readFixture("changelog-good-candidate.json");
+  candidate.entries[1].batch_id = candidate.entries[0].batch_id;
+
+  assert.throws(
+    () => validateRenderedEntry(candidate, batches, 6),
+    /entry\.batch_id must be unique/,
+  );
+});
+
 test("assertStrictToolModelSupport warns instead of failing for non-allowlisted models", () => {
   assert.equal(assertStrictToolModelSupport("claude-sonnet-4-20250514"), false);
 });
