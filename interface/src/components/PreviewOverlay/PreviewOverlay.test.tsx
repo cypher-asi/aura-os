@@ -76,4 +76,46 @@ describe("PreviewOverlay", () => {
     );
     expect(screen.getByText("Action")).toBeDefined();
   });
+
+  it("closes on Escape key", () => {
+    const onClose = vi.fn();
+    render(
+      <PreviewOverlay title="T" onClose={onClose}>
+        <div />
+      </PreviewOverlay>
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close on Escape when a modal dialog is layered on top", () => {
+    const onClose = vi.fn();
+    const modal = document.createElement("div");
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    document.body.appendChild(modal);
+    try {
+      render(
+        <PreviewOverlay title="T" onClose={onClose}>
+          <div />
+        </PreviewOverlay>
+      );
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(onClose).not.toHaveBeenCalled();
+    } finally {
+      document.body.removeChild(modal);
+    }
+  });
+
+  it("ignores non-Escape keys", () => {
+    const onClose = vi.fn();
+    render(
+      <PreviewOverlay title="T" onClose={onClose}>
+        <div />
+      </PreviewOverlay>
+    );
+    fireEvent.keyDown(document, { key: "Enter" });
+    fireEvent.keyDown(document, { key: "a" });
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

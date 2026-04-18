@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button, Text, cn } from "@cypher-asi/zui";
 import { ArrowLeft, X } from "lucide-react";
@@ -34,6 +34,22 @@ export function PreviewOverlay({
       if (lane) setPortalTarget(lane);
     }
   }, [fullLane]);
+
+  // Close on Escape. If a real modal dialog is layered on top, defer to it
+  // so ESC dismisses the topmost surface first instead of the preview behind.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (event.defaultPrevented) return;
+      const hasModalOnTop = document.querySelector(
+        '[role="dialog"][aria-modal="true"]',
+      );
+      if (hasModalOnTop) return;
+      onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const overlay = (
     <div className={cn(styles.overlay, fullLane && styles.fullLane)}>
