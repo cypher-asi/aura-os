@@ -3,11 +3,7 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
-use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
-
-use crate::protocol::ServerEvent;
 
 /// Opaque session id. A session is a live browser page target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -47,9 +43,11 @@ impl std::str::FromStr for SessionId {
 
 /// Handle returned by [`crate::BrowserManager::spawn`].
 ///
-/// Dropping the handle cancels the session. Owners should keep it alive for
-/// the duration of the WebSocket connection and call
-/// [`crate::BrowserManager::kill`] explicitly when finished.
+/// The real event-channel + cancel token live inside the manager registry.
+/// The handle is a lightweight value containing only data the caller needs
+/// to return to the client; dropping it does **not** cancel the session.
+/// Use [`crate::BrowserManager::kill`] to end the session.
+#[derive(Debug, Clone)]
 pub struct SessionHandle {
     /// The session's unique id.
     pub id: SessionId,
@@ -58,26 +56,4 @@ pub struct SessionHandle {
     pub initial_url: Option<url::Url>,
     /// Whether the client should focus the address bar on open.
     pub focus_address_bar: bool,
-    /// Receiver for [`ServerEvent`]s produced by the backend. The server
-    /// handler drains this and serializes to the WebSocket.
-    pub events: mpsc::Receiver<ServerEvent>,
-    /// Cancellation token; cancelled on kill / drop.
-    pub cancel: CancellationToken,
-}
-
-impl fmt::Debug for SessionHandle {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SessionHandle")
-            .field("id", &self.id)
-            .field("initial_url", &self.initial_url)
-            .field("focus_address_bar", &self.focus_address_bar)
-            .field("cancelled", &self.cancel.is_cancelled())
-            .finish()
-    }
-}
-
-impl Drop for SessionHandle {
-    fn drop(&mut self) {
-        self.cancel.cancel();
-    }
 }

@@ -7,5 +7,7 @@
 mod frame;
 mod messages;
 
-pub use frame::{encode_frame_header, parse_frame_header, FrameHeader, FRAME_HEADER_LEN, FRAME_OPCODE};
+pub use frame::{
+    encode_frame_header, parse_frame_header, FrameHeader, FRAME_HEADER_LEN, FRAME_OPCODE,
+};
 pub use messages::{ClientMsg, MouseButton, MouseEventKind, NavState, ServerEvent};

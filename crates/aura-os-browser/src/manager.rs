@@ -15,22 +15,25 @@ use url::Url;
 use crate::backend::{BrowserBackend, StubBackend};
 use crate::config::{BrowserConfig, ResolveOptions, SpawnOptions};
 use crate::error::Error;
-use crate::protocol::ClientMsg;
+use crate::protocol::{ClientMsg, ServerEvent};
 use crate::session::resolver::{resolve_initial_url, ResolvedInitialUrl};
-use crate::session::settings::{
-    DetectedUrl, ProjectBrowserSettings, SettingsPatch, SettingsStore,
-};
+use crate::session::settings::{DetectedUrl, ProjectBrowserSettings, SettingsPatch, SettingsStore};
 use crate::session::{SessionHandle, SessionId};
 
 /// Channel capacity for per-session [`ServerEvent`] streams.
 const EVENT_CHANNEL_CAP: usize = 8;
 
-/// Registry entry for a live session. Clone-able for internal use only.
+/// Registry entry for a live session.
 struct RegistryEntry {
     project_id: Option<ProjectId>,
     cancel: CancellationToken,
     created_at: DateTime<Utc>,
     initial_url: Option<Url>,
+    /// Event receiver owned by the manager until the WS handler takes it.
+    /// A `std::sync::Mutex` is intentional here: the critical section is a
+    /// cheap `Option::take`, and holding a tokio mutex across an `.await`
+    /// while inside a [`dashmap::Ref`] is a deadlock hazard.
+    events: std::sync::Mutex<Option<mpsc::Receiver<ServerEvent>>>,
 }
 
 /// Lightweight snapshot of a live session (safe to serialize to the UI).
@@ -147,9 +150,10 @@ impl BrowserManager {
             id,
             RegistryEntry {
                 project_id: opts.project_id,
-                cancel: cancel.clone(),
+                cancel,
                 created_at: Utc::now(),
                 initial_url: resolved_url.clone(),
+                events: std::sync::Mutex::new(Some(rx)),
             },
         );
         info!(%id, "browser session spawned");
@@ -158,9 +162,24 @@ impl BrowserManager {
             id,
             initial_url: resolved_url,
             focus_address_bar,
-            events: rx,
-            cancel,
         })
+    }
+
+    /// Take ownership of a session's event receiver. Returns `None` if the
+    /// session is not registered or if another caller already took it.
+    pub fn take_events(&self, id: SessionId) -> Option<mpsc::Receiver<ServerEvent>> {
+        let entry = self.sessions.get(&id)?;
+        let taken = entry
+            .events
+            .lock()
+            .expect("browser events mutex poisoned")
+            .take();
+        taken
+    }
+
+    /// Look up the project id a session was spawned for.
+    pub fn project_id_of(&self, id: SessionId) -> Option<ProjectId> {
+        self.sessions.get(&id).and_then(|e| e.project_id)
     }
 
     /// List live sessions.
@@ -315,10 +334,7 @@ mod tests {
     async fn spawn_rejects_invalid_dimensions() {
         let dir = tempdir().unwrap();
         let manager = BrowserManager::new(test_config(&dir));
-        let err = manager
-            .spawn(SpawnOptions::new(10, 800))
-            .await
-            .unwrap_err();
+        let err = manager.spawn(SpawnOptions::new(10, 800)).await.unwrap_err();
         match err {
             Error::InvalidInput { field, .. } => assert_eq!(field, "width"),
             other => panic!("unexpected error: {other:?}"),
@@ -358,13 +374,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn take_events_returns_receiver_once() {
+        let dir = tempdir().unwrap();
+        let manager = BrowserManager::new(test_config(&dir));
+        let handle = manager.spawn(SpawnOptions::new(1280, 800)).await.unwrap();
+        assert!(manager.take_events(handle.id).is_some());
+        assert!(manager.take_events(handle.id).is_none());
+    }
+
+    #[tokio::test]
+    async fn project_id_of_round_trips() {
+        let dir = tempdir().unwrap();
+        let manager = BrowserManager::new(test_config(&dir));
+        let project = ProjectId::new();
+        let mut opts = SpawnOptions::new(1280, 800);
+        opts.project_id = Some(project);
+        let handle = manager.spawn(opts).await.unwrap();
+        assert_eq!(manager.project_id_of(handle.id), Some(project));
+    }
+
+    #[tokio::test]
     async fn capacity_exceeded_returns_error() {
         let dir = tempdir().unwrap();
         let mut config = test_config(&dir);
         config.max_sessions = 1;
         let manager = BrowserManager::new(config);
         let _first = manager.spawn(SpawnOptions::new(1280, 800)).await.unwrap();
-        let err = manager.spawn(SpawnOptions::new(1280, 800)).await.unwrap_err();
+        let err = manager
+            .spawn(SpawnOptions::new(1280, 800))
+            .await
+            .unwrap_err();
         match err {
             Error::CapacityExceeded(_) => {}
             other => panic!("unexpected error: {other:?}"),

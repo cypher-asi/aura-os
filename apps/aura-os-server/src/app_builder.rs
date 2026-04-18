@@ -94,6 +94,28 @@ fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.trim().is_empty())
 }
 
+/// Build the [`aura_os_browser::BrowserManager`] using the real Chromium
+/// CDP backend when the `cdp` feature is enabled, falling back to the
+/// stub backend otherwise. The CDP backend launches Chromium lazily on
+/// first use, so a missing executable only surfaces on first spawn.
+fn build_browser_manager(settings_root: PathBuf) -> Arc<aura_os_browser::BrowserManager> {
+    let config = aura_os_browser::BrowserConfig::default().with_settings_root(settings_root);
+
+    #[cfg(feature = "browser-cdp")]
+    {
+        info!("browser: initialising CDP backend (Chromium launched lazily)");
+        return Arc::new(aura_os_browser::BrowserManager::with_backend(
+            config,
+            Arc::new(aura_os_browser::CdpBackend::new()),
+        ));
+    }
+    #[allow(unreachable_code)]
+    {
+        info!("browser: using stub backend (enable the `browser-cdp` feature for real rendering)");
+        Arc::new(aura_os_browser::BrowserManager::new(config))
+    }
+}
+
 struct CoreServices {
     org_service: Arc<OrgService>,
     auth_service: Arc<AuthService>,
@@ -407,10 +429,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         chat_sessions: Arc::new(Mutex::new(HashMap::new())),
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
-        browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
-            aura_os_browser::BrowserConfig::default()
-                .with_settings_root(browser_settings_root.clone()),
-        )),
+        browser_manager: build_browser_manager(browser_settings_root.clone()),
         network_client,
         feedback_network_client,
         storage_client,

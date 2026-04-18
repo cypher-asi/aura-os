@@ -46,6 +46,13 @@ local-ip-address = "0.6"
 uuid = { version = "1", features = ["v4"] }
 url = { version = "2", features = ["serde"] }
 
+[features]
+default = []
+# Enables the real Chromium/CDP-backed browser backend. Requires a local
+# Chromium/Chrome executable at runtime; Chromium is launched lazily on
+# the first browser spawn so the server boots even without it.
+browser-cdp = ["aura-os-browser/cdp"]
+
 [dev-dependencies]
 tempfile = "3"
 tokio = { version = "1", features = ["full", "test-util"] }

@@ -33,9 +33,7 @@ static URL_RE: Lazy<Regex> = Lazy::new(|| {
     .expect("localhost URL regex should compile")
 });
 
-const TRAILING_PUNCT: &[char] = &[
-    ',', '.', ';', ':', ')', ']', '}', '>', '"', '\'', '`',
-];
+const TRAILING_PUNCT: &[char] = &[',', '.', ';', ':', ')', ']', '}', '>', '"', '\'', '`'];
 
 /// Extract dev-server URLs from an arbitrary line of text.
 ///

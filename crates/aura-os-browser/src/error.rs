@@ -74,4 +74,12 @@ impl Error {
             reason: reason.into(),
         }
     }
+
+    /// Build an [`Error::Backend`] with a labelled operation.
+    pub fn backend(op: &'static str, reason: impl Into<String>) -> Self {
+        Self::Backend {
+            op,
+            reason: reason.into(),
+        }
+    }
 }

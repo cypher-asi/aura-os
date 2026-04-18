@@ -252,11 +252,7 @@ impl SettingsStore {
         self.mutate_path(&path, mutate).await
     }
 
-    async fn mutate_path<F>(
-        &self,
-        path: &Path,
-        mutate: F,
-    ) -> Result<ProjectBrowserSettings, Error>
+    async fn mutate_path<F>(&self, path: &Path, mutate: F) -> Result<ProjectBrowserSettings, Error>
     where
         F: FnOnce(&mut ProjectBrowserSettings),
     {
@@ -288,14 +284,7 @@ fn push_visit(settings: &mut ProjectBrowserSettings, url: Url, title: Option<Str
     settings
         .history
         .retain(|entry| entry.url != url || entry.title != title);
-    settings.history.insert(
-        0,
-        HistoryEntry {
-            url,
-            title,
-            at,
-        },
-    );
+    settings.history.insert(0, HistoryEntry { url, title, at });
 }
 
 fn push_detected(settings: &mut ProjectBrowserSettings, entry: DetectedUrl) {
@@ -330,9 +319,7 @@ async fn read_file(path: &Path) -> ProjectBrowserSettings {
                 ProjectBrowserSettings::default()
             }
         },
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-            ProjectBrowserSettings::default()
-        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => ProjectBrowserSettings::default(),
         Err(err) => {
             warn!(
                 path = %path.display(),
@@ -346,22 +333,24 @@ async fn read_file(path: &Path) -> ProjectBrowserSettings {
 
 async fn write_file_atomic(path: &Path, settings: &ProjectBrowserSettings) -> Result<(), Error> {
     if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent).await.map_err(|err| {
-            Error::Settings {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|err| Error::Settings {
                 path: path.to_path_buf(),
                 detail: format!("create_dir_all: {err}"),
-            }
-        })?;
+            })?;
     }
     let bytes = serde_json::to_vec_pretty(settings).map_err(|err| Error::Settings {
         path: path.to_path_buf(),
         detail: format!("serialize: {err}"),
     })?;
     let tmp = path.with_extension("json.tmp");
-    tokio::fs::write(&tmp, &bytes).await.map_err(|err| Error::Settings {
-        path: path.to_path_buf(),
-        detail: format!("write tmp {}: {err}", tmp.display()),
-    })?;
+    tokio::fs::write(&tmp, &bytes)
+        .await
+        .map_err(|err| Error::Settings {
+            path: path.to_path_buf(),
+            detail: format!("write tmp {}: {err}", tmp.display()),
+        })?;
     tokio::fs::rename(&tmp, path)
         .await
         .map_err(|err| Error::Settings {
@@ -460,7 +449,10 @@ mod tests {
                 .unwrap();
         }
         store
-            .record_detected(Some(&project), detected("http://localhost:3000", DetectionSource::Probe))
+            .record_detected(
+                Some(&project),
+                detected("http://localhost:3000", DetectionSource::Probe),
+            )
             .await
             .unwrap();
         let settings = store.read_project(&project).await;
@@ -475,7 +467,11 @@ mod tests {
         let store = SettingsStore::new(dir.path().to_path_buf());
         let project = ProjectId::new();
         store
-            .record_visit(Some(&project), url("http://localhost:5173"), Some("Vite".into()))
+            .record_visit(
+                Some(&project),
+                url("http://localhost:5173"),
+                Some("Vite".into()),
+            )
             .await
             .unwrap();
         store
@@ -493,7 +489,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let project = ProjectId::new();
         let path = dir.path().join("projects").join(format!("{project}.json"));
-        tokio::fs::create_dir_all(path.parent().unwrap()).await.unwrap();
+        tokio::fs::create_dir_all(path.parent().unwrap())
+            .await
+            .unwrap();
         tokio::fs::write(&path, b"not json").await.unwrap();
         let store = SettingsStore::new(dir.path().to_path_buf());
         let settings = store.read_project(&project).await;
@@ -510,7 +508,10 @@ mod tests {
             .await
             .unwrap();
         store
-            .record_detected(Some(&project), detected("http://localhost:3000", DetectionSource::Terminal))
+            .record_detected(
+                Some(&project),
+                detected("http://localhost:3000", DetectionSource::Terminal),
+            )
             .await
             .unwrap();
         let cleared = store

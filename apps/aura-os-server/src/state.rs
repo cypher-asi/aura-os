@@ -19,6 +19,7 @@ use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 
 use crate::harness_gateway::HarnessHttpGateway;
+use aura_os_browser::BrowserManager;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -28,7 +29,6 @@ use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_store::RocksStore;
 use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
-use aura_os_browser::BrowserManager;
 use aura_os_terminal::TerminalManager;
 
 use crate::error::ApiError;

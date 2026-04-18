@@ -20,6 +20,16 @@ tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 bytes = "1"
 async-trait = "0.1"
+futures-util = { version = "0.3", optional = true }
+base64 = { version = "0.22", optional = true }
+chromiumoxide = { version = "0.9", optional = true }
+
+[features]
+default = []
+# Enables the real Chromium/CDP-backed `CdpBackend` (requires a local
+# Chromium/Chrome executable at runtime). The base crate always ships the
+# `StubBackend`; downstream crates opt in when they want rendering.
+cdp = ["dep:chromiumoxide", "dep:futures-util", "dep:base64"]
 
 [dev-dependencies]
 tempfile = "3"

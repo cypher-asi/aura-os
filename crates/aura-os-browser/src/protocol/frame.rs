@@ -53,14 +53,7 @@ pub fn parse_frame_header(buf: &[u8]) -> Result<(FrameHeader, usize), Error> {
     let seq = u32::from_le_bytes([buf[1], buf[2], buf[3], buf[4]]);
     let width = u16::from_le_bytes([buf[5], buf[6]]);
     let height = u16::from_le_bytes([buf[7], buf[8]]);
-    Ok((
-        FrameHeader {
-            seq,
-            width,
-            height,
-        },
-        FRAME_HEADER_LEN,
-    ))
+    Ok((FrameHeader { seq, width, height }, FRAME_HEADER_LEN))
 }
 
 /// Write a [`FrameHeader`] into `out` (9 bytes).

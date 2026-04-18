@@ -1,10 +1,13 @@
 //! Pluggable backend trait for the actual browser engine.
 //!
-//! The production backend (CDP + headless Chromium, powered by
-//! `chromiumoxide`) will implement [`BrowserBackend`] in a follow-up.
-//! For now we ship [`StubBackend`] so the rest of the stack — REST
-//! endpoints, WebSocket plumbing, settings file, resolver — can be
-//! exercised end-to-end without pulling in Chrome.
+//! Two implementations ship today:
+//! - [`StubBackend`] (default) — accepts sessions but never produces
+//!   frames. Useful for tests and environments without Chromium.
+//! - [`crate::CdpBackend`] (behind the `cdp` cargo feature) — real
+//!   headless Chromium via `chromiumoxide`.
+//!
+//! Wire the backend into the [`crate::BrowserManager`] via
+//! [`BrowserManager::with_backend`](crate::BrowserManager::with_backend).
 
 use async_trait::async_trait;
 use tokio::sync::mpsc;
