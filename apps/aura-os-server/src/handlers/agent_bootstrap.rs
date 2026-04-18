@@ -8,8 +8,22 @@ use aura_os_network::NetworkAgent;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
+use crate::handlers::projects;
 use crate::harness_client::HarnessClient;
 use crate::state::{AppState, AuthJwt, AuthSession};
+
+/// Project name used for the auto-created CEO home project. A project
+/// with this name is only treated as the canonical home if its
+/// description also starts with [`CEO_HOME_PROJECT_MARKER`] so a
+/// user-authored project literally called "Home" never gets adopted.
+const CEO_HOME_PROJECT_NAME: &str = "Home";
+
+/// Leading sentinel in the description of the CEO home project. Used
+/// to distinguish auto-created home projects from user-authored ones
+/// that happen to share the name. Keep stable — existing deployments
+/// depend on this exact prefix to find the project they previously
+/// created.
+const CEO_HOME_PROJECT_MARKER: &str = "[aura:ceo-home]";
 
 #[derive(Serialize)]
 pub(crate) struct SetupResponse {
@@ -142,6 +156,7 @@ pub(crate) async fn setup_ceo_agent(
             }
         }
         let _ = state.agent_service.save_agent_shadow(&agent);
+        ensure_ceo_home_project_and_binding(&state, &jwt, &agent).await;
         return Ok(Json(SetupResponse {
             agent,
             created: false,
@@ -191,10 +206,167 @@ pub(crate) async fn setup_ceo_agent(
     }
 
     info!(agent_id = %agent.agent_id, "CEO agent created");
+    ensure_ceo_home_project_and_binding(&state, &jwt, &agent).await;
     Ok(Json(SetupResponse {
         agent,
         created: true,
     }))
+}
+
+/// Ensure the canonical CEO has a project-agent binding somewhere so
+/// direct chat with it can be persisted.
+///
+/// The storage schema requires every chat session to live under a
+/// `project_agent` row (`/api/project-agents/{id}/sessions`), but the
+/// CEO super-agent is universe-scoped and has no natural project home.
+/// Without a binding [`super::agents::chat::setup_agent_chat_persistence`]
+/// returns `None` and the SSE stream prepends a "Chat history could not
+/// be saved — storage is unavailable" error event.
+///
+/// Strategy:
+/// 1. If any existing project already has a `project_agent` pointing at
+///    the canonical CEO, we're done.
+/// 2. Otherwise, reuse a previously auto-created Home project (matched
+///    by name + our stable marker prefix on the description) in the
+///    CEO's org, or create a new one.
+/// 3. Create a `project_agent` binding for the CEO in that project.
+///
+/// Best-effort: every network/storage failure is logged and swallowed
+/// so a transient error doesn't block the setup response. A retry is
+/// one `/api/super-agent/setup` call away.
+async fn ensure_ceo_home_project_and_binding(state: &AppState, jwt: &str, canonical_ceo: &Agent) {
+    let Some(storage) = state.storage_client.as_ref().cloned() else {
+        warn!(
+            agent_id = %canonical_ceo.agent_id,
+            "ceo home: storage client not configured; skipping binding"
+        );
+        return;
+    };
+    let Some(network) = state.network_client.as_ref().cloned() else {
+        warn!(
+            agent_id = %canonical_ceo.agent_id,
+            "ceo home: network client not configured; skipping binding"
+        );
+        return;
+    };
+    let ceo_org_id = match canonical_ceo.org_id.as_ref() {
+        Some(o) => o.to_string(),
+        None => {
+            warn!(
+                agent_id = %canonical_ceo.agent_id,
+                "ceo home: canonical CEO has no org_id; skipping binding"
+            );
+            return;
+        }
+    };
+    let ceo_agent_id = canonical_ceo.agent_id.to_string();
+
+    let all_projects = match projects::list_all_projects_from_network(state, jwt).await {
+        Ok(p) => p,
+        Err(e) => {
+            warn!(error = ?e, "ceo home: failed to list projects; skipping binding");
+            return;
+        }
+    };
+
+    // Step 1: if any existing project already has a binding for the
+    // canonical CEO, reuse it.
+    for project in &all_projects {
+        let pid = project.project_id.to_string();
+        match storage.list_project_agents(&pid, jwt).await {
+            Ok(agents) => {
+                if agents
+                    .iter()
+                    .any(|a| a.agent_id.as_deref() == Some(&ceo_agent_id))
+                {
+                    info!(
+                        %ceo_agent_id,
+                        project_id = %pid,
+                        "ceo home: canonical CEO already bound to a project; nothing to do"
+                    );
+                    return;
+                }
+            }
+            Err(e) => {
+                warn!(project_id = %pid, error = %e, "ceo home: failed to list project agents");
+            }
+        }
+    }
+
+    // Step 2: find or create the Home project in the CEO's org.
+    let existing_home = all_projects.iter().find(|p| {
+        p.org_id.to_string() == ceo_org_id
+            && p.name == CEO_HOME_PROJECT_NAME
+            && p.description.starts_with(CEO_HOME_PROJECT_MARKER)
+    });
+    let home_pid: String = match existing_home {
+        Some(p) => {
+            info!(project_id = %p.project_id, "ceo home: reusing existing Home project");
+            p.project_id.to_string()
+        }
+        None => {
+            let req = aura_os_network::CreateProjectRequest {
+                name: CEO_HOME_PROJECT_NAME.to_string(),
+                org_id: ceo_org_id.clone(),
+                description: Some(format!(
+                    "{CEO_HOME_PROJECT_MARKER} Auto-created workspace for the \
+                     CEO super-agent so its direct chats have somewhere to \
+                     persist. You can rename this project, but don't delete \
+                     it or CEO chat history will stop saving."
+                )),
+                folder: None,
+                git_repo_url: None,
+                git_branch: None,
+                orbit_base_url: None,
+                orbit_owner: None,
+                orbit_repo: None,
+            };
+            match network.create_project(jwt, &req).await {
+                Ok(p) => {
+                    info!(project_id = %p.id, org_id = %ceo_org_id, "ceo home: created Home project");
+                    p.id
+                }
+                Err(e) => {
+                    warn!(error = %e, "ceo home: failed to create Home project; skipping binding");
+                    return;
+                }
+            }
+        }
+    };
+
+    // Step 3: create a project_agent binding for the CEO in the Home
+    // project. Mirrors the request shape used by the standard
+    // `create_agent_instance` handler.
+    let binding_req = aura_os_storage::CreateProjectAgentRequest {
+        agent_id: ceo_agent_id.clone(),
+        name: canonical_ceo.name.clone(),
+        org_id: canonical_ceo.org_id.as_ref().map(|o| o.to_string()),
+        role: Some(canonical_ceo.role.clone()),
+        personality: Some(canonical_ceo.personality.clone()),
+        system_prompt: Some(canonical_ceo.system_prompt.clone()),
+        skills: Some(canonical_ceo.skills.clone()),
+        icon: canonical_ceo.icon.clone(),
+        harness: None,
+        permissions: Some(canonical_ceo.permissions.clone()),
+        intent_classifier: canonical_ceo.intent_classifier.clone(),
+    };
+    match storage
+        .create_project_agent(&home_pid, jwt, &binding_req)
+        .await
+    {
+        Ok(binding) => info!(
+            %ceo_agent_id,
+            project_id = %home_pid,
+            project_agent_id = %binding.id,
+            "ceo home: created project-agent binding"
+        ),
+        Err(e) => warn!(
+            error = %e,
+            %ceo_agent_id,
+            project_id = %home_pid,
+            "ceo home: failed to create project-agent binding"
+        ),
+    }
 }
 
 pub(crate) async fn list_orchestrations(

@@ -67,6 +67,13 @@ const HISTORY_TTL_MS = 30_000;
 const AGENTS_TTL_MS = 30_000;
 const PLACEHOLDER_AGENT_NAME = "New Agent";
 
+/// Per-app-session guard for the idempotent `POST /api/super-agent/setup`
+/// call issued from `fetchAgents`. Lifted to module scope so the auth
+/// subscription below can reset it on logout (otherwise a
+/// sign-out/sign-in cycle to a different account would skip the
+/// ensure-home call).
+let hasEnsuredCeoHomeThisSession = false;
+
 function agentStateKey(userId: string): string {
   return `state:${userId}`;
 }
@@ -151,19 +158,14 @@ export const useAgentStore = create<AgentState>()(
           .then(async (initialAgents) => {
             let agents = initialAgents;
             const superAgents = agents.filter((a) => isSuperAgent(a));
-            if (superAgents.length === 0) {
-              try {
-                const { agent } = await api.superAgent.setup();
-                agents = [...agents, agent];
-              } catch {
-                // setup may fail if network is down; non-blocking
-              }
-            } else if (superAgents.length > 1) {
+
+            if (superAgents.length > 1) {
               // Bootstrap races or permission-round-trip bugs on older
               // aura-network deployments can leave the list with >1 CEO
               // agent (the TS `isSuperAgent` fallback happily matches
-              // every duplicate). Ask the server to dedupe, then refetch
-              // so the UI settles on the single canonical record.
+              // every duplicate). Ask the server to dedupe first so the
+              // ensure-home call below operates on a single canonical
+              // record.
               try {
                 const { deleted } = await api.superAgent.cleanup();
                 if (deleted.length > 0) {
@@ -174,6 +176,31 @@ export const useAgentStore = create<AgentState>()(
                 // around until the next refresh.
               }
             }
+
+            // Ensure the canonical CEO exists *and* has a Home project
+            // binding so direct chats can persist. `setup()` is
+            // idempotent on both fronts, so calling it once per app
+            // session heals three cases in one hop:
+            //   - Brand new account: creates the CEO + Home project.
+            //   - Existing account missing a binding (the pre-fix
+            //     state, or after a dedupe orphaned the old one):
+            //     creates the Home project + binding.
+            //   - Everything already good: no-op on the server.
+            if (!hasEnsuredCeoHomeThisSession) {
+              try {
+                const { agent, created } = await api.superAgent.setup();
+                if (created) {
+                  // The agent was just created — our initial list
+                  // didn't include it, so splice it in.
+                  agents = [...agents.filter((a) => a.agent_id !== agent.agent_id), agent];
+                }
+                hasEnsuredCeoHomeThisSession = true;
+              } catch {
+                // setup may fail if network is down; keep the flag
+                // false so we retry on the next fetch.
+              }
+            }
+
             agents = repairAgentNames(agents);
             const sorted = agents.sort((a, b) => {
               if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
@@ -326,6 +353,7 @@ useAuthStore.subscribe((state) => {
   _prevAgentUserId = userId;
 
   if (!userId) {
+    hasEnsuredCeoHomeThisSession = false;
     useAgentStore.setState({
       agents: [],
       agentsStatus: "idle",
@@ -338,6 +366,7 @@ useAuthStore.subscribe((state) => {
     return;
   }
 
+  hasEnsuredCeoHomeThisSession = false;
   void hydratePersistedAgentState(userId);
 });
 
