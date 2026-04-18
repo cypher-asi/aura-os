@@ -85,12 +85,19 @@ pub(crate) enum UpdateStatus {
     Idle,
 }
 
+/// Callback invoked before the process exits as part of an update install.
+/// The main event loop registers this so it can stop sidecar child processes
+/// (local harness, Vite dev server) whose open file handles would otherwise
+/// block the Windows installer from overwriting the install directory.
+pub(crate) type ShutdownHook = Arc<dyn Fn() + Send + Sync>;
+
 /// Shared mutable state that both the background task and the API routes read/write.
 #[derive(Clone)]
 pub(crate) struct UpdateState {
     pub status: Arc<RwLock<UpdateStatus>>,
     pub channel: Arc<RwLock<UpdateChannel>>,
     settings_path: Arc<PathBuf>,
+    shutdown_hook: Arc<RwLock<Option<ShutdownHook>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -110,11 +117,37 @@ impl UpdateState {
             status: Arc::new(RwLock::new(UpdateStatus::Idle)),
             channel: Arc::new(RwLock::new(channel)),
             settings_path: Arc::new(settings_path),
+            shutdown_hook: Arc::new(RwLock::new(None)),
         }
     }
 
     pub(crate) fn persist_channel(&self, channel: UpdateChannel) -> Result<(), String> {
         persist_channel(self.settings_path.as_ref(), channel)
+    }
+
+    /// Register a callback that asks the main event loop to stop sidecars and
+    /// exit. Used prior to handing control to the platform installer so the
+    /// installer can overwrite locked files.
+    pub(crate) fn set_shutdown_hook<F>(&self, hook: F)
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        *self
+            .shutdown_hook
+            .write()
+            .expect("updater shutdown hook lock poisoned") = Some(Arc::new(hook));
+    }
+
+    fn trigger_shutdown(&self) {
+        let hook = {
+            self.shutdown_hook
+                .read()
+                .expect("updater shutdown hook lock poisoned")
+                .clone()
+        };
+        if let Some(hook) = hook {
+            hook();
+        }
     }
 }
 
@@ -363,7 +396,26 @@ pub(crate) fn install_and_restart(state: UpdateState) -> Result<(), String> {
     let channel = *state.channel.read().expect("updater channel lock poisoned");
     let status = Arc::clone(&state.status);
     match download_and_install_update(channel, status) {
-        Ok(Some(_)) => Ok(()),
+        Ok(Some(_)) => {
+            // On Windows, `update.install(bytes)` spawned the NSIS installer
+            // in passive mode, but the installer cannot overwrite files that
+            // are still held open by this process or its sidecar children
+            // (the local harness `aura-node.exe`, and any managed Vite dev
+            // server). Ask the main event loop to kill the sidecars and
+            // exit cleanly, then terminate the process so the installer
+            // can finish replacing files.
+            #[cfg(target_os = "windows")]
+            {
+                info!("shutting down for Windows installer to take over");
+                state.trigger_shutdown();
+                std::thread::sleep(Duration::from_millis(750));
+                std::process::exit(0);
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                Ok(())
+            }
+        }
         Ok(None) => Err("no update available".into()),
         Err(error) => {
             set_status(

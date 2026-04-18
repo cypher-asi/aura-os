@@ -56,6 +56,10 @@ pub(crate) enum UserEvent {
     AttachFrontendDevServer {
         frontend_url: String,
     },
+    /// Stop managed sidecars and exit the event loop so a pending platform
+    /// installer can overwrite this process's files. Posted by the updater
+    /// immediately before calling `std::process::exit`.
+    ShutdownForUpdate,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -927,6 +931,14 @@ fn spawn_server(
                 .map(std::path::Path::to_path_buf)
                 .unwrap_or_else(|| db_path.clone());
             let update_state = UpdateState::load(&updater_data_dir);
+            {
+                let shutdown_proxy = Arc::clone(&ide_proxy);
+                update_state.set_shutdown_hook(move || {
+                    if let Err(error) = shutdown_proxy.send_event(UserEvent::ShutdownForUpdate) {
+                        warn!(%error, "failed to post ShutdownForUpdate event");
+                    }
+                });
+            }
 
             let app_state =
                 aura_os_server::build_app_state(&db_path).expect("failed to open database");
@@ -1482,6 +1494,12 @@ fn handle_user_event(
             } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
                 ide_win.set_visible(true);
             }
+        }
+        UserEvent::ShutdownForUpdate => {
+            info!("updater requested shutdown; stopping sidecars and exiting event loop");
+            stop_managed_frontend_dev_server(managed_frontend_dev_server);
+            stop_managed_local_harness(managed_local_harness);
+            *control_flow = ControlFlow::Exit;
         }
         UserEvent::AttachFrontendDevServer {
             frontend_url: next_frontend_url,
