@@ -21,11 +21,12 @@ const DEFAULT_AGENT_HISTORY_WINDOW_LIMIT: usize = 80;
 const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 
 use aura_os_core::{
-    AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId, SessionEvent,
+    AgentId, AgentInstanceId, AgentPermissions, ChatContentBlock, ChatRole, HarnessMode, OrgId,
+    ProjectId, SessionEvent,
 };
 use aura_os_link::{
-    ConversationMessage, HarnessInbound, HarnessOutbound, MessageAttachment, SessionConfig,
-    SessionUsage, UserMessage,
+    ConversationMessage, HarnessInbound, HarnessOutbound, InstalledTool, MessageAttachment,
+    SessionConfig, SessionUsage, UserMessage,
 };
 use aura_os_storage::StorageClient;
 
@@ -43,6 +44,69 @@ use super::runtime::{
     build_harness_provider_config, effective_model, resolve_integration, resolve_integration_ref,
     send_external_agent_event_stream,
 };
+
+// ---------------------------------------------------------------------------
+// Session installed_tools assembly
+// ---------------------------------------------------------------------------
+
+/// Build the `installed_tools` payload for a harness chat session.
+///
+/// Concatenates workspace + trusted-MCP tools (org-scoped, may be empty)
+/// with the cross-agent tools derived from `permissions`, then dedupes
+/// by tool name.
+///
+/// The LLM API (Anthropic `/v1/messages`, OpenAI, etc.) rejects the
+/// whole request with a `400 Bad Request { "tools: Tool names must be
+/// unique." }` the moment the same tool name appears twice in the tools
+/// list, so we dedupe here and emit a `warn!` so any overlap shows up
+/// in logs instead of crashing the turn. First-occurrence wins — that
+/// keeps workspace / integration tools (org-specific endpoints + auth)
+/// ahead of any identically-named cross-agent tool.
+async fn build_session_installed_tools(
+    state: &AppState,
+    org_id: Option<&OrgId>,
+    permissions: &AgentPermissions,
+    jwt: &str,
+) -> Option<Vec<InstalledTool>> {
+    let mut tools = if let Some(org_id) = org_id {
+        installed_workspace_app_tools(state, org_id, jwt).await
+    } else {
+        Vec::new()
+    };
+    tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
+        permissions,
+    ));
+
+    let duplicates = dedupe_installed_tools_by_name(&mut tools);
+    if !duplicates.is_empty() {
+        warn!(
+            duplicate_tool_names = ?duplicates,
+            "dropped duplicate tool names from harness session installed_tools",
+        );
+    }
+
+    (!tools.is_empty()).then_some(tools)
+}
+
+/// Drop later entries with a tool `name` that was already seen earlier
+/// in `tools`. Returns the list of dropped names (in drop order) so the
+/// caller can log / alert.
+///
+/// Pure and deterministic so it's easy to unit-test and cheap to reason
+/// about from both chat entry points.
+fn dedupe_installed_tools_by_name(tools: &mut Vec<InstalledTool>) -> Vec<String> {
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut duplicates: Vec<String> = Vec::new();
+    tools.retain(|tool| {
+        if seen.insert(tool.name.clone()) {
+            true
+        } else {
+            duplicates.push(tool.name.clone());
+            false
+        }
+    });
+    duplicates
+}
 
 // ---------------------------------------------------------------------------
 // Chat persistence helpers
@@ -1778,17 +1842,13 @@ pub(crate) async fn send_agent_event_stream(
 
     let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
-    let installed_tools = {
-        let mut tools = if let Some(org_id) = agent.org_id.as_ref() {
-            installed_workspace_app_tools(&state, org_id, &jwt).await
-        } else {
-            Vec::new()
-        };
-        tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
-            &agent.permissions,
-        ));
-        (!tools.is_empty()).then_some(tools)
-    };
+    let installed_tools = build_session_installed_tools(
+        &state,
+        agent.org_id.as_ref(),
+        &agent.permissions,
+        &jwt,
+    )
+    .await;
     let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
         let integrations =
             installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
@@ -1917,17 +1977,13 @@ pub(crate) async fn send_event_stream(
                 .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         });
-    let installed_tools = {
-        let mut tools = if let Some(org_id) = instance.org_id.as_ref() {
-            installed_workspace_app_tools(&state, org_id, &jwt).await
-        } else {
-            Vec::new()
-        };
-        tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
-            &instance.permissions,
-        ));
-        (!tools.is_empty()).then_some(tools)
-    };
+    let installed_tools = build_session_installed_tools(
+        &state,
+        instance.org_id.as_ref(),
+        &instance.permissions,
+        &jwt,
+    )
+    .await;
     let installed_integrations = if let Some(org_id) = instance.org_id.as_ref() {
         let integrations =
             installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
@@ -2232,5 +2288,72 @@ mod tests {
         let empty = assistant_event("", None);
         let history = session_events_to_conversation_history(&[empty]);
         assert!(history.is_empty());
+    }
+
+    fn tool_named(name: &str) -> InstalledTool {
+        InstalledTool {
+            name: name.to_string(),
+            description: String::new(),
+            input_schema: serde_json::json!({"type": "object"}),
+            endpoint: String::new(),
+            auth: aura_os_link::ToolAuth::default(),
+            timeout_ms: None,
+            namespace: None,
+            required_integration: None,
+            runtime_execution: None,
+            metadata: std::collections::HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn dedupe_installed_tools_is_a_noop_when_all_names_are_unique() {
+        let mut tools = vec![
+            tool_named("list_agents"),
+            tool_named("send_to_agent"),
+            tool_named("create_spec"),
+        ];
+
+        let dropped = dedupe_installed_tools_by_name(&mut tools);
+
+        assert!(
+            dropped.is_empty(),
+            "unique-name list must not drop anything, got: {dropped:?}"
+        );
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names, vec!["list_agents", "send_to_agent", "create_spec"]);
+    }
+
+    #[test]
+    fn dedupe_installed_tools_keeps_first_occurrence_and_drops_later_duplicates() {
+        // Scenario: a trusted MCP integration exposes `list_agents` with
+        // an org-scoped endpoint, and the CEO preset's cross-agent tool
+        // manifest also emits `list_agents`. Without dedup the harness
+        // ships both to the LLM API and the request 400s with
+        // `"tools: Tool names must be unique."`.
+        let mut workspace_list_agents = tool_named("list_agents");
+        workspace_list_agents.endpoint = "workspace-endpoint".to_string();
+        let mut cross_agent_list_agents = tool_named("list_agents");
+        cross_agent_list_agents.endpoint = "cross-agent-endpoint".to_string();
+
+        let mut tools = vec![
+            workspace_list_agents,
+            tool_named("send_to_agent"),
+            cross_agent_list_agents,
+            tool_named("send_to_agent"),
+        ];
+
+        let dropped = dedupe_installed_tools_by_name(&mut tools);
+
+        assert_eq!(
+            dropped,
+            vec!["list_agents".to_string(), "send_to_agent".to_string()],
+            "second occurrences must be the ones dropped"
+        );
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names, vec!["list_agents", "send_to_agent"]);
+        assert_eq!(
+            tools[0].endpoint, "workspace-endpoint",
+            "first-occurrence wins so workspace (org-scoped) endpoint is preserved over the cross-agent copy"
+        );
     }
 }
