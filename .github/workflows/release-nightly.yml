@@ -601,15 +601,29 @@ jobs:
             cargo packager --release --packages aura-os-desktop 2>&1 | tee packager.log
           }
 
+          should_retry_packaging() {
+            if [ "${{ matrix.target }}" = "macos" ] && grep -q "hdiutil: create failed - Resource busy" packager.log; then
+              echo "Retrying macOS packaging after transient hdiutil create failure..."
+              return 0
+            fi
+
+            if [ "${{ matrix.target }}" = "linux" ] \
+              && grep -Eq "ERROR https://github\\.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-[^:]+: status code 5[0-9][0-9]" packager.log; then
+              echo "Retrying Linux packaging after transient AppRun download failure..."
+              return 0
+            fi
+
+            return 1
+          }
+
           if package_once; then
             exit 0
           fi
 
-          if [ "${{ matrix.target }}" != "macos" ] || ! grep -q "hdiutil: create failed - Resource busy" packager.log; then
+          if ! should_retry_packaging; then
             exit 1
           fi
 
-          echo "Retrying macOS packaging after transient hdiutil create failure..."
           rm -f packager.log
           sleep 5
           package_once
