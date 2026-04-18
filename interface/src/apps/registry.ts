@@ -16,6 +16,7 @@ import {
   FileText,
   FolderOpen,
   GitCommitVertical,
+  Plug,
 } from "lucide-react";
 import type { AuraApp, AuraAppModule } from "./types";
 import { agentsRoutes } from "./agents/routes";
@@ -25,6 +26,7 @@ import { processRoutes } from "./process/routes";
 import { feedRoutes } from "./feed/routes";
 import { notesRoutes } from "./notes/routes";
 import { feedbackRoutes } from "./feedback/routes";
+import { integrationsRoutes } from "./integrations/routes";
 import { profileRoutes } from "./profile/routes";
 import { desktopRoutes } from "./desktop/routes";
 
@@ -161,6 +163,8 @@ const loadFeedApp = () =>
   import("./feed/FeedApp").then((module) => module.FeedApp);
 const loadFeedbackApp = () =>
   import("./feedback/FeedbackApp").then((module) => module.FeedbackApp);
+const loadIntegrationsApp = () =>
+  import("./integrations/IntegrationsApp").then((module) => module.IntegrationsApp);
 const loadNotesApp = () =>
   import("./notes/NotesApp").then((module) => module.NotesApp);
 const loadProfileApp = () =>
@@ -288,6 +292,20 @@ export const apps: AuraApp[] = [
       hasResponsiveControls: true,
       hasSidekickPanel: true,
       hasSidekickTaskbar: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "integrations",
+      label: "Integrations",
+      icon: Plug,
+      basePath: "/integrations",
+      searchPlaceholder: "Search integrations",
+      routes: integrationsRoutes,
+    },
+    loadIntegrationsApp,
+    {
+      hasResponsiveControls: true,
     },
   ),
   createAppDefinition(
