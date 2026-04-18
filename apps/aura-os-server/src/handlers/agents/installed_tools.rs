@@ -12,7 +12,9 @@ use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
 
-use aura_os_agent_runtime::ceo::{build_cross_agent_tools, AGENT_TOOL_PATH_PREFIX};
+use aura_os_agent_runtime::ceo::{
+    aura_native_project_tool_origin, build_cross_agent_tools, AGENT_TOOL_PATH_PREFIX,
+};
 use aura_os_agent_runtime::tools::all_dispatchable_tool_names;
 use aura_os_core::{Agent, AgentId, AgentPermissions, Capability};
 use aura_protocol::AgentPermissionsWire;
@@ -186,7 +188,32 @@ fn capability_origin_for_cross_agent_tool(
         {
             Capability::ReadAgent
         }
-        _ => return None,
+        _ => {
+            // Aura-native project tools are emitted by
+            // `build_cross_agent_tools` whenever the agent has *any*
+            // `ReadProject` / `WriteProject` grant. The diagnostic
+            // doesn't need to know which specific project id the
+            // capability targets — the sidekick groups tools by
+            // capability *kind*, so we fall through to the canonical
+            // origin from the runtime helper and verify the agent
+            // actually has a matching grant before labelling the row.
+            let origin = aura_native_project_tool_origin(name)?;
+            match &origin {
+                Capability::ReadProject { .. }
+                    if caps.iter().any(|c| {
+                        matches!(
+                            c,
+                            Capability::ReadProject { .. } | Capability::WriteProject { .. }
+                        )
+                    }) => {}
+                Capability::WriteProject { .. }
+                    if caps
+                        .iter()
+                        .any(|c| matches!(c, Capability::WriteProject { .. })) => {}
+                _ => return None,
+            }
+            origin
+        }
     };
     Some(capability_wire_tag(&origin).to_string())
 }
@@ -306,6 +333,68 @@ mod tests {
         assert!(
             missing.is_empty(),
             "CEO manifest references tools that aren't in the dispatcher: {missing:?}"
+        );
+    }
+
+    #[test]
+    fn project_capabilities_map_aura_native_tools_to_origin() {
+        // `ReadProject` grant: read-only project tools should come back
+        // with "readProject" origin. Write-only names must return None
+        // because the helper insists on a real matching grant, not just
+        // a name match, to prevent mis-labelling.
+        let read_only = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::ReadProject {
+                id: "proj-1".to_string(),
+            }],
+        };
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("list_specs", &read_only).as_deref(),
+            Some("readProject")
+        );
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("get_project", &read_only).as_deref(),
+            Some("readProject")
+        );
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("run_task", &read_only),
+            None,
+            "run_task must not be labelled as readProject without a write grant"
+        );
+
+        // `WriteProject` grant: both halves of the manifest should pick
+        // up origins, with writes labelled as "writeProject" and reads
+        // as "readProject" (write implies read).
+        let writable = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::WriteProject {
+                id: "proj-2".to_string(),
+            }],
+        };
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("list_specs", &writable).as_deref(),
+            Some("readProject")
+        );
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("run_task", &writable).as_deref(),
+            Some("writeProject")
+        );
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("create_spec", &writable).as_deref(),
+            Some("writeProject")
+        );
+
+        // No project grants at all: even if a cross-agent name happens
+        // to appear in the aura-native list, the helper must return
+        // None so the diagnostic doesn't claim an origin the agent
+        // doesn't actually hold.
+        let no_project = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::SpawnAgent],
+        };
+        assert_eq!(
+            capability_origin_for_cross_agent_tool("list_specs", &no_project),
+            None
         );
     }
 
