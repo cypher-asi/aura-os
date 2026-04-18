@@ -1,41 +1,85 @@
-# Chat Performance & Feedback System Launch
+# 8 updates shipped
 
 - Date: `2026-04-17`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.281.1`
+- Version: `0.1.0-nightly.282.1`
 - Release: https://github.com/cypher-asi/aura-os/releases/tag/nightly
 
-Major chat scrolling improvements and the launch of a new Feedback app with full backend integration. Chat now uses native CSS scroll anchoring for smooth resizing, while the new Feedback system provides voting, commenting, and status tracking.
+This nightly timeline for aura-os groups 59 notable commits into 8 broader updates on 2026-04-17 for `0.1.0-nightly.282.1`.
 
-## 8:13 PM — Chat Performance Overhaul
+## 8:13 PM — Interface and Chat Experience Improvements
 
-Eliminated janky scrolling during sidekick resizing and unified tool rendering with a new Block primitive for stable layouts.
+8 related interface changes landed together across chat, settings, workflow, and product surfaces.
 
-- Fixed chat scroll jank during sidekick resize by consolidating four competing scroll correction systems into a single post-commit layout effect (`bc92aec`, `1876a8b`, `2ac44d6`)
-- Unified all chat tool artifacts (thinking, file ops, commands, specs) behind a single Block primitive with fixed-height scrollable bodies to prevent layout shifts during streaming (`ac75c03`)
-- Enhanced chat input with 70vh height limit, viewport-responsive sizing, and relocated scrollbar to the row's right edge (`2bfea9c`, `c3004df`)
-- Launched new Feedback app with voting, commenting, and status management, including full API backend and mock data integration (`ad094d0`, `932dfdc`)
+- Fix janky chat scroll at bottom during sidekick resize (`bc92aec`)
+- Pin chat to bottom synchronously during lane resize (`1876a8b`)
+- Stop scrollTop clamp from swallowing pin-to-bottom delta on resize (`2ac44d6`)
+- Double chat textarea height and move scrollbar to row's right edge (`2bfea9c`)
 
-## 10:36 PM — Chat Architecture Simplification
+## 10:36 PM — Interface and Chat Experience Improvements
 
-Replaced complex virtualization with native CSS scroll anchoring and integrated feedback system with real API endpoints.
+8 related interface changes landed together across chat, settings, workflow, and product surfaces.
 
-- Replaced chat virtualization with native CSS scroll anchoring, eliminating 533 lines of complex scroll management code while achieving smoother performance (`8879923`)
-- Added shared OverlayScrollbar component and FolderSection primitive used across Feed and Feedback apps for consistent UI patterns (`eaf0535`)
-- Implemented complete feedback API backend with list, create, get, update-status, comments, and voting endpoints plus integration tests (`a36c106`)
-- Added session deletion with right-click context menu and restyled session lists as Explorer trees with status icons (`bf2abc2`)
-- Scoped session reset to drop prior-session LLM context, preventing corrupted tool blocks from previous sessions affecting new conversations (`20fd39c`)
+- Share scroll + folder-section chrome across Feed and Feedback (`eaf0535`)
+- Replace chat virtualization with native CSS scroll anchoring (`8879923`)
+- Neutralize Block body borders and highlight colors (`aabd6a5`)
+- Align Block body text with header status dot (`3506a6d`)
 
-## 12:34 AM — Feedback System Integration
+## 12:34 AM — Interface and Runtime Flow Improvements
 
-Connected feedback voting and status updates to aura-network with optimistic UI updates and server reconciliation.
+8 related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.
 
-- Wired feedback votes and status updates through aura-network API with optimistic UI updates that reconcile with server aggregates and revert on failure (`1f7fea8`)
+- Wire feedback votes and status updates through aura-network (`1f7fea8`)
+- Drop tinted background on Run panel task rows (`485732b`)
+- Flush TaskBlock body so collapsed rows match other tools (`5231af4`)
+- Retire stale active sessions on rotation (`be5cc2d`)
+
+## 1:35 AM — Interface and Chat Experience Improvements
+
+8 related interface changes landed together across chat, settings, workflow, and product surfaces.
+
+- Tag feedback items with a product and filter by it (`71151ff`)
+- Match feedback filter section labels to projects sidebar (`fdeac18`)
+- Drop hover/focus highlight from feedback filter section header (`6fc86dc`)
+- Block spec deletion when tasks still reference it (`efaadf2`)
+
+## 2:50 PM — Interface and Chat Experience Improvements
+
+8 related interface changes landed together across chat, settings, workflow, and product surfaces.
+
+- Add Notes app backed by local markdown files (`3233d51`)
+- Use readable slugs for note paths and rename files to match titles (`a8bcc24`)
+- Auto-select a note on entering the Notes app and stop URL/store loop (`8a87c08`)
+- Add ZERO product, move New Idea into feed, honor adapter model lists (`8698dff`)
+
+## 3:52 PM — Interface and Chat Experience Improvements
+
+8 related interface changes landed together across chat, settings, workflow, and product surfaces.
+
+- Anchor notes save-state indicator to the bottom right (`0d57e49`)
+- Tighten notes scroll-area top padding and zero title top margin (`37dce04`)
+- Patch notes tree in place on autosave rename (`f1d283c`)
+- Pin note title to fixed h1 styling regardless of block type (`e7ad5da`)
+
+## 4:53 PM — Interface and Runtime Flow Improvements
+
+8 related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.
+
+- Show build version in Team Settings general section (`bbab5ed`)
+- Make session rows non-navigating in agent lists (`bb7ef80`)
+- Report real super-agent context utilization in AssistantMessageEnd (`01414ab`)
+- Refactor Notes and Feedback apps to match React and TypeScript rules (`37e29c6`)
+
+## 5:35 PM — Interface and Chat Experience Improvements
+
+3 related interface changes landed together across chat, settings, workflow, and product surfaces.
+
+- Colocate tests for the remaining Notes and Feedback components (`2cf7e90`)
+- Stabilize desktop shell background across app switches and boot (`05255bb`)
+- Trim unused UI scaffolding from process and agent chat views (`fb7008d`)
 
 ## Highlights
 
-- Chat scrolling performance dramatically improved with native CSS scroll anchoring
-- New Feedback app launched with full voting and commenting system
-- Unified Block primitive stabilizes chat tool rendering during streaming
-- Session management enhanced with deletion and improved visual hierarchy
+- Interface and Chat Experience Improvements
+- Interface and Runtime Flow Improvements
 

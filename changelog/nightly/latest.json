@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "promptVersion": 2,
-  "generator": "anthropic",
-  "generationError": null,
-  "generatedAt": "2026-04-17T07:49:33.421Z",
+  "generator": "fallback",
+  "generationError": "Error: Could not parse model response as JSON: SyntaxError: Unterminated string in JSON at position 6941 (line 134 column 29)",
+  "generatedAt": "2026-04-18T00:54:07.262Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.281.1",
+  "version": "0.1.0-nightly.282.1",
   "date": "2026-04-17",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "a70298a3dadc0dd1759348b424a9094e19bc4214",
-  "previousProcessedSha": "1e4b343cc64dd5a587730d562f44549926a20a91",
+  "lastIncludedSha": "fb7008d8c37a065b62adb53cd8a38d50043b911c",
+  "previousProcessedSha": "a70298a3dadc0dd1759348b424a9094e19bc4214",
   "commitShas": [
     "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77",
     "1876a8bf6cd28d01bf8fe57b960eb3916600389e",
@@ -28,10 +28,52 @@
     "bf2abc276abf16424be56819def59c2e7a3ad9df",
     "20fd39cc33d70396b8f914059a9b8cd7cd2a40dc",
     "ddcca630709fd1a7b5f69ebd80cf364fc161555b",
-    "1f7fea8d3c8aef6e1a1e621ce8f78eb5494799f3"
+    "1f7fea8d3c8aef6e1a1e621ce8f78eb5494799f3",
+    "485732b74d29bd4364e9ae06768e517769c86e32",
+    "5231af4b6a56c4945f09d9260965c5da39a89344",
+    "be5cc2d22249ed9655a125f3b1cece15853096dc",
+    "f94d4aef6ff5ee608e940604dd42ee923b7574ec",
+    "4f7ef42d91166c7ed2748524a54e95dbce96add2",
+    "22e47117109704b9e08661177b4e6869aba9bc3e",
+    "bbe97ce375f69e36ce6713ab0dce1cfb86628143",
+    "71151ff81f15f4827dfb98f9cf17c367965de7f0",
+    "fdeac181ffa0bd18a8162d6d0cb432852591f451",
+    "6fc86dcde57dae266f7046d9dad99055d44f08ef",
+    "efaadf235f8080acdbf060d1386e5286db18b47c",
+    "96325d502c75ccff99b05ae9ba17d01453ad7d84",
+    "9f57cc28d3e2b5836096897ba65d855197a15862",
+    "52d9f2907026562e25f511e2333a34089826ce73",
+    "a2299718b2fd4093d38a8489acd3acce9c35159a",
+    "3233d519a6448a0c8fa71dd9a7f63e115079ae74",
+    "a8bcc24f75de27e68e28a33ce4b40bb532acde84",
+    "8a87c08b1fcab96594fc4ad23997755a9ca028ad",
+    "8698dff127d198540a74f3770f95a992bcaaa5f2",
+    "06a6071dfa3b056aea03623141b8ecf66ce2587c",
+    "f8371daefe22cd3c13a7574502ceed84e7677d05",
+    "ae7b9b6689ea479185b015c7c5dddbe80e079bee",
+    "8b79db8d48b05449acf67aa759fec79f23d471d8",
+    "0d57e49a471396a8d2a6d1640ad893edd5ccd995",
+    "37dce044563c34e50eb6a84cadde7ad053df6583",
+    "f1d283cb88c2d9fb1ff5e3ec981bf9384b047dd7",
+    "e7ad5da46acb3074865a87d0102c8d927aaae8c2",
+    "7ad8e661beb98ab79ab1ffb12c8f9750af8be270",
+    "4b19d7be87068f43c32fecb16c11cc9c93c300ba",
+    "30b71c57bb7b9d4a1f393e3ebf873c98549b55a5",
+    "3e4121f7733929c28b3bf24a2f2ad4844d12cc6a",
+    "bbab5ed184b478924d62a460e7f70116841850ff",
+    "bb7ef803569e856757e3b7b1af10efa05c38702f",
+    "01414ab74108e075315259a1d01b0aa6be3a7828",
+    "37e29c64d78af4dfb0c68adff4461f80a0064def",
+    "a441491b847a019b82ffb0a6bb857fde9c2c80ee",
+    "809413ed222ee6cb490674e2f578e51f13146a79",
+    "cb437896751c31b0362dbb652590bf0f1ee147cf",
+    "2aa74643062094518f28e3c41820bc2b7bec3d2e",
+    "2cf7e90dbd7fb4f9fc3a4477aec32d962d1f4c3e",
+    "05255bb0c58cc67f7672a5b90f0d07cde50f2202",
+    "fb7008d8c37a065b62adb53cd8a38d50043b911c"
   ],
-  "rawCommitCount": 18,
-  "filteredCommitCount": 17,
+  "rawCommitCount": 60,
+  "filteredCommitCount": 59,
   "rawCommits": [
     {
       "sha": "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77",
@@ -887,36 +929,1940 @@
       "fileGroups": [],
       "primaryArea": "Other",
       "areas": []
+    },
+    {
+      "sha": "485732b74d29bd4364e9ae06768e517769c86e32",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T00:36:26-07:00",
+      "subject": "Drop tinted background on Run panel task rows",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "a70298a3dadc0dd1759348b424a9094e19bc4214"
+      ],
+      "files": [
+        "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 1
+      },
+      "committedAtMs": 1776411386000,
+      "cleanSubject": "Drop tinted background on Run panel task rows",
+      "keywords": [
+        "drop",
+        "tinted",
+        "background",
+        "panel",
+        "task",
+        "rows"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5231af4b6a56c4945f09d9260965c5da39a89344",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T00:36:47-07:00",
+      "subject": "Flush TaskBlock body so collapsed rows match other tools",
+      "body": "TaskBlock was the only tool renderer not passing `flushBody`, so its\nbody retained the default 8px vertical padding and bled extra height\ninto the collapsed row. Switch to `flushBody` and move the indentation\ninto `.taskTitle` / `.taskDesc` so expanded task content keeps the same\ninset while collapsed rows line up with the other tool blocks.\n\nMade-with: Cursor",
+      "parents": [
+        "485732b74d29bd4364e9ae06768e517769c86e32"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/TaskBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 0
+      },
+      "committedAtMs": 1776411407000,
+      "cleanSubject": "Flush TaskBlock body so collapsed rows match other tools",
+      "keywords": [
+        "flush",
+        "taskblock",
+        "body",
+        "collapsed",
+        "rows",
+        "match",
+        "other",
+        "tools"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "be5cc2d22249ed9655a125f3b1cece15853096dc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T00:39:36-07:00",
+      "subject": "Retire stale active sessions on rotation",
+      "body": "Sessions were being created with status=active and never transitioned\nout of it, so every historical session rendered with the spinning\nTaskStatusIcon in the sidekick. Before creating a new session in\nresolve_chat_session (the path hit by both reset-session and fresh\nchats) we now flip any prior active sessions for that agent instance\nto completed with ended_at=now. Failures are logged and swallowed so\nthey never block new-session creation.\n\nAlso adds a small displaySessionStatus frontend guard so legacy active\nrows already in storage render correctly: only the newest session per\ngroup keeps its real status; older active rows collapse to completed.\n\nMade-with: Cursor",
+      "parents": [
+        "5231af4b6a56c4945f09d9260965c5da39a89344"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/tests/session_rotation_test.rs",
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/views/SessionList/SessionList.tsx",
+        "interface/src/views/SessionList/displaySessionStatus.test.ts",
+        "interface/src/views/SessionList/displaySessionStatus.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 192,
+        "deletions": 2
+      },
+      "committedAtMs": 1776411576000,
+      "cleanSubject": "Retire stale active sessions on rotation",
+      "keywords": [
+        "retire",
+        "stale",
+        "active",
+        "sessions",
+        "rotation"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "f94d4aef6ff5ee608e940604dd42ee923b7574ec",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:16:00-07:00",
+      "subject": "Surface upstream error code when project delete fails",
+      "body": "The aura-network backend returns a generic 500\n{\"error\":{\"code\":\"DATABASE\",\"message\":\"An internal error occurred\"}}\nwhenever a project can't be deleted due to a residual FK (agents,\nsessions, feed entries, etc.). That bubbled up to the delete modal\nas an opaque \"An internal error occurred\" with no hint of what to do.\n\nRemap the specific DATABASE 500 on project delete to a 409 with an\nactionable message pointing users at Archive, thread upstream codes\ninto ApiError.details for all network errors, and fall back to\nappending the upstream code when the nested message is opaque.\n\nMade-with: Cursor",
+      "parents": [
+        "be5cc2d22249ed9655a125f3b1cece15853096dc"
+      ],
+      "files": [
+        "apps/aura-os-server/src/error.rs",
+        "apps/aura-os-server/src/handlers/projects.rs",
+        "interface/src/utils/api-errors.test.ts",
+        "interface/src/utils/api-errors.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 211,
+        "deletions": 9
+      },
+      "committedAtMs": 1776413760000,
+      "cleanSubject": "Surface upstream error code when project delete fails",
+      "keywords": [
+        "surface",
+        "upstream",
+        "error",
+        "code",
+        "when",
+        "project",
+        "delete",
+        "fails"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "4f7ef42d91166c7ed2748524a54e95dbce96add2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:16:48-07:00",
+      "subject": "Collapse Block shell to exact header height when closed",
+      "body": "Pin .blockHeader to a fixed --block-header-height and zero out the body\nwrap's height and transparent border so every collapsed Block (Thought\nand all tool renderers) matches the header row's rendered height.\n\nMade-with: Cursor",
+      "parents": [
+        "f94d4aef6ff5ee608e940604dd42ee923b7574ec"
+      ],
+      "files": [
+        "interface/src/components/Block/Block.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 10,
+        "deletions": 3
+      },
+      "committedAtMs": 1776413808000,
+      "cleanSubject": "Collapse Block shell to exact header height when closed",
+      "keywords": [
+        "collapse",
+        "block",
+        "shell",
+        "exact",
+        "header",
+        "height",
+        "when",
+        "closed"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "22e47117109704b9e08661177b4e6869aba9bc3e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:26:15-07:00",
+      "subject": "Align Block header with standard control height",
+      "body": "Point --block-header-height at --control-height-sm (32px) so every\ncollapsed and expanded Block header matches PanelSearch and the rest\nof the small-control family instead of its previous ad-hoc 24px.\n\nMade-with: Cursor",
+      "parents": [
+        "4f7ef42d91166c7ed2748524a54e95dbce96add2"
+      ],
+      "files": [
+        "interface/src/components/Block/Block.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1776414375000,
+      "cleanSubject": "Align Block header with standard control height",
+      "keywords": [
+        "align",
+        "block",
+        "header",
+        "with",
+        "standard",
+        "control",
+        "height"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bbe97ce375f69e36ce6713ab0dce1cfb86628143",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:31:59-07:00",
+      "subject": "Show Task Created verb and sidekick link in TaskBlock",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "22e47117109704b9e08661177b4e6869aba9bc3e"
+      ],
+      "files": [
+        "interface/src/components/Block/renderers/TaskBlock.tsx",
+        "interface/src/components/Block/renderers/renderers.module.css",
+        "interface/src/hooks/use-chat-stream/build-stream-handler.ts",
+        "interface/src/hooks/use-chat-stream/optimistic-artifacts.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 108,
+        "deletions": 30
+      },
+      "committedAtMs": 1776414719000,
+      "cleanSubject": "Show Task Created verb and sidekick link in TaskBlock",
+      "keywords": [
+        "show",
+        "task",
+        "created",
+        "verb",
+        "sidekick",
+        "link",
+        "taskblock"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "71151ff81f15f4827dfb98f9cf17c367965de7f0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:35:22-07:00",
+      "subject": "Tag feedback items with a product and filter by it",
+      "body": "Every feedback post is now tagged with a product (AURA, The Grid,\nWilder World, Z Chain) stored in the existing metadata JSON blob\nalongside category and status. The Aura OS shell defaults to AURA; the\ncomposer's product select follows the current Product filter so\nswitching to The Grid and posting from there tags the new item as The\nGrid without an extra click.\n\nThe left filter panel gains a new \"Product\" FolderSection pinned above\nTrending, collapsed by default with exactly one product selected at all\ntimes. No DB migration — product piggy-backs on metadata via the same\npattern already used for feedbackCategory/feedbackStatus, with\nserver-side validation rejecting unknown values.\n\nLegacy posts created before this landed default to AURA on read so they\nremain visible while the shell's current product filter is AURA.\n\nMade-with: Cursor",
+      "parents": [
+        "bbe97ce375f69e36ce6713ab0dce1cfb86628143"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/feedback.rs",
+        "apps/aura-os-server/tests/feedback_api_tests.rs",
+        "interface/src/api/feedback.ts",
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.test.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.tsx",
+        "interface/src/apps/feedback/feedback-filters.tsx",
+        "interface/src/apps/feedback/types.ts",
+        "interface/src/stores/feedback-store.test.ts",
+        "interface/src/stores/feedback-store.ts"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 326,
+        "deletions": 17
+      },
+      "committedAtMs": 1776414922000,
+      "cleanSubject": "Tag feedback items with a product and filter by it",
+      "keywords": [
+        "feedback",
+        "items",
+        "with",
+        "product",
+        "filter"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "fdeac181ffa0bd18a8162d6d0cb432852591f451",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:36:13-07:00",
+      "subject": "Match feedback filter section labels to projects sidebar",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "71151ff81f15f4827dfb98f9cf17c367965de7f0"
+      ],
+      "files": [
+        "interface/src/components/FolderSection/FolderSection.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 3
+      },
+      "committedAtMs": 1776414973000,
+      "cleanSubject": "Match feedback filter section labels to projects sidebar",
+      "keywords": [
+        "match",
+        "feedback",
+        "filter",
+        "section",
+        "labels",
+        "projects",
+        "sidebar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "6fc86dcde57dae266f7046d9dad99055d44f08ef",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:38:18-07:00",
+      "subject": "Drop hover/focus highlight from feedback filter section header",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "fdeac181ffa0bd18a8162d6d0cb432852591f451"
+      ],
+      "files": [
+        "interface/src/components/FolderSection/FolderSection.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 8
+      },
+      "committedAtMs": 1776415098000,
+      "cleanSubject": "Drop hover/focus highlight from feedback filter section header",
+      "keywords": [
+        "drop",
+        "hover",
+        "focus",
+        "highlight",
+        "from",
+        "feedback",
+        "filter",
+        "section",
+        "header"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "efaadf235f8080acdbf060d1386e5286db18b47c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:39:54-07:00",
+      "subject": "Block spec deletion when tasks still reference it",
+      "body": "Preflight list_tasks filtered by spec_id in delete_spec and return a\n409 conflict with a clear message (mentioning the task count) instead\nof silently proxying the delete. Upstream storage errors on the delete\nnow flow through map_storage_error so any storage-side 4xx is\npreserved.\n\nReplace the optimistic-delete-with-rollback flow in SpecList and\nTaskList with a shared DeleteSpecModal + useDeleteSpec hook that shows\nthe server error inline via getApiErrorMessage, matching the existing\nDeleteProjectModal pattern.\n\nMade-with: Cursor",
+      "parents": [
+        "6fc86dcde57dae266f7046d9dad99055d44f08ef"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/specs.rs",
+        "apps/aura-os-server/tests/api_tests.rs",
+        "interface/src/components/DeleteSpecModal/DeleteSpecModal.tsx",
+        "interface/src/components/DeleteSpecModal/index.ts",
+        "interface/src/hooks/use-delete-spec.ts",
+        "interface/src/views/SpecList/SpecList.tsx",
+        "interface/src/views/TaskList/TaskList.tsx"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 244,
+        "deletions": 18
+      },
+      "committedAtMs": 1776415194000,
+      "cleanSubject": "Block spec deletion when tasks still reference it",
+      "keywords": [
+        "block",
+        "spec",
+        "deletion",
+        "when",
+        "tasks",
+        "still",
+        "reference"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "96325d502c75ccff99b05ae9ba17d01453ad7d84",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:42:23-07:00",
+      "subject": "Align left menu hover/selected bg with feedback sidebar",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "efaadf235f8080acdbf060d1386e5286db18b47c"
+      ],
+      "files": [
+        "interface/src/features/left-menu/LeftMenuTree/LeftMenuTree.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1776415343000,
+      "cleanSubject": "Align left menu hover/selected bg with feedback sidebar",
+      "keywords": [
+        "align",
+        "left",
+        "menu",
+        "hover",
+        "selected",
+        "with",
+        "feedback",
+        "sidebar"
+      ],
+      "fileGroups": [
+        "interface/src/features"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "9f57cc28d3e2b5836096897ba65d855197a15862",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:44:16-07:00",
+      "subject": "Stop feedback composer from stealing focus, pin composer to AURA",
+      "body": "ZUI's Modal includes `onClose` in its focus effect dep array and\nre-runs `initialFocusRef.current.focus()` every time the callback\nidentity changes. Both the inline `handleClose` inside\nNewFeedbackModal and the `() => setIsModalOpen(false)` we passed from\nFeedbackList were fresh on every render, so every keystroke yanked\nthe cursor back to the title input. Memoize both callbacks so the\nModal's effect only fires on actual open/close.\n\nAlso drop the \"composer follows the current Product filter\" behaviour\nin favour of a hard AURA default. The Product filter on the left and\nthe composer's Product select are now independent; switching the\nfilter to The Grid no longer retargets new posts.\n\nMade-with: Cursor",
+      "parents": [
+        "96325d502c75ccff99b05ae9ba17d01453ad7d84"
+      ],
+      "files": [
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.test.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 24,
+        "deletions": 19
+      },
+      "committedAtMs": 1776415456000,
+      "cleanSubject": "Stop feedback composer from stealing focus, pin composer to AURA",
+      "keywords": [
+        "stop",
+        "feedback",
+        "composer",
+        "from",
+        "stealing",
+        "focus",
+        "aura"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "52d9f2907026562e25f511e2333a34089826ce73",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T01:46:39-07:00",
+      "subject": "Size feedback and feed filter items to 32px",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "9f57cc28d3e2b5836096897ba65d855197a15862"
+      ],
+      "files": [
+        "interface/src/apps/feed/FeedList/FeedList.module.css",
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 6,
+        "deletions": 2
+      },
+      "committedAtMs": 1776415599000,
+      "cleanSubject": "Size feedback and feed filter items to 32px",
+      "keywords": [
+        "size",
+        "feedback",
+        "feed",
+        "filter",
+        "items",
+        "32px"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a2299718b2fd4093d38a8489acd3acce9c35159a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T02:10:57-07:00",
+      "subject": "Route feedback to its own aura-network client",
+      "body": "Add an optional feedback-scoped NetworkClient sourced from\nAURA_NETWORK_FEEDBACK_URL so Feedback-app traffic can target a local\naura-network (which has the new vote and feedback-filter endpoints)\nwhile every other handler keeps using the deployed AURA_NETWORK_URL.\nWhen the override is unset, Feedback falls back to the main client so\nthe split cleans up automatically once prod aura-network adopts the\nfeedback endpoints.\n\nMade-with: Cursor",
+      "parents": [
+        "52d9f2907026562e25f511e2333a34089826ce73"
+      ],
+      "files": [
+        ".env.example",
+        "apps/aura-os-server/src/app_builder.rs",
+        "apps/aura-os-server/src/auth_guard.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/handlers/feedback.rs",
+        "apps/aura-os-server/src/state.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "crates/aura-os-network/src/client/mod.rs",
+        "docs/feedback-system-requirements.md"
+      ],
+      "stats": {
+        "fileCount": 9,
+        "insertions": 68,
+        "deletions": 11
+      },
+      "committedAtMs": 1776417057000,
+      "cleanSubject": "Route feedback to its own aura-network client",
+      "keywords": [
+        "route",
+        "feedback",
+        "aura",
+        "network",
+        "client"
+      ],
+      "fileGroups": [
+        ".env.example",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-network/src",
+        "docs/feedback-system-requirements.md"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust",
+        "Docs"
+      ]
+    },
+    {
+      "sha": "3233d519a6448a0c8fa71dd9a7f63e115079ae74",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T14:50:05-07:00",
+      "subject": "Add Notes app backed by local markdown files",
+      "body": "Introduces a new Notes app alongside Feed and Feedback that lets users\ncreate and edit free-form notes organized by Aura project. Notes are\nstored as markdown files under the data directory, with live first-line\ntitles, TipTap-powered WYSIWYG/markdown editing, and a sidekick that\nsurfaces file metadata, a generated table of contents, and local\ncomments stored in a sidecar JSON file.\n\nMade-with: Cursor",
+      "parents": [
+        "a2299718b2fd4093d38a8489acd3acce9c35159a"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/mod.rs",
+        "apps/aura-os-server/src/handlers/notes.rs",
+        "apps/aura-os-server/src/router.rs",
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/src/App.tsx",
+        "interface/src/api/client.ts",
+        "interface/src/api/notes.ts",
+        "interface/src/apps/notes/NotesApp.ts",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx",
+        "interface/src/apps/notes/NotesMainPanel/index.ts",
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx",
+        "interface/src/apps/notes/NotesNav/index.ts",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.module.css",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.tsx",
+        "interface/src/apps/notes/NotesSidekickPanel/index.ts",
+        "interface/src/apps/notes/NotesSidekickTaskbar/NotesSidekickTaskbar.tsx",
+        "interface/src/apps/notes/NotesSidekickTaskbar/index.ts",
+        "interface/src/apps/registry.ts",
+        "interface/src/features/left-menu/build-left-menu-entries.ts",
+        "interface/src/stores/notes-store.ts"
+      ],
+      "stats": {
+        "fileCount": 22,
+        "insertions": 3661,
+        "deletions": 9
+      },
+      "committedAtMs": 1776462605000,
+      "cleanSubject": "Add Notes app backed by local markdown files",
+      "keywords": [
+        "notes",
+        "backed",
+        "local",
+        "markdown",
+        "files"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/src/App.tsx",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/features",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "a8bcc24f75de27e68e28a33ce4b40bb532acde84",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:29:08-07:00",
+      "subject": "Use readable slugs for note paths and rename files to match titles",
+      "body": "Notes now live under <data_dir>/notes/<project-slug>/ instead of the\nproject UUID, with a `.project-id` marker file binding each folder to\nits project so lookups stay stable when the project is renamed and\ncollisions (`my-project-2`, `my-project-3`) fall back to numeric\nsuffixes. A one-time migration moves any existing UUID-named folder\ninto its new slug folder the first time the Notes app opens it.\n\nOn every autosave, the handler slugifies the note's first-line title\nand renames the `.md` file (plus its `.comments.json` sidecar) to\nmatch, carrying collisions onto a `-2` suffix. The write response now\nreturns the post-rename `relPath`/`absPath` so the client can rekey\nits caches, update the active selection, and quietly rewrite the URL\nwithout disturbing the editor's caret. Also shrink the Notes sidekick\ninfo text to 12px and drop the folder icon from the location link.\n\nMade-with: Cursor",
+      "parents": [
+        "3233d519a6448a0c8fa71dd9a7f63e115079ae74"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/notes.rs",
+        "interface/src/api/notes.ts",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.module.css",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.tsx",
+        "interface/src/stores/notes-store.ts"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 368,
+        "deletions": 44
+      },
+      "committedAtMs": 1776464948000,
+      "cleanSubject": "Use readable slugs for note paths and rename files to match titles",
+      "keywords": [
+        "readable",
+        "slugs",
+        "note",
+        "paths",
+        "rename",
+        "files",
+        "match",
+        "titles"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/api",
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "8a87c08b1fcab96594fc4ad23997755a9ca028ad",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:47:33-07:00",
+      "subject": "Auto-select a note on entering the Notes app and stop URL/store loop",
+      "body": "Remember the last-opened note in localStorage and, on entering the Notes\napp, pick a default: the session-active note, the persisted last note if\nit still exists, or the first note found in any project's tree. Drop the\n\"select a note\" empty states from the main panel and sidekick since a\nnote is always selected.\n\nAlso fix an oscillation between the URL and store that produced an HTTP\nstorm of alternating `/read` + `/comments` requests when switching notes.\nTwo effects (URL->store and store->URL) were independently \"correcting\"\nthe same disagreement in opposite directions, and because zustand and\nreact-router have separate useSyncExternalStore subscriptions a click\ncould land on a render where they disagreed. Collapsed them into a\nsingle effect that treats the URL as authoritative and only pushes the\nstore -> URL when the URL is stable (i.e. an autosave rename has\ndrifted activeKey under us).\n\nMade-with: Cursor",
+      "parents": [
+        "a8bcc24f75de27e68e28a33ce4b40bb532acde84"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.tsx",
+        "interface/src/stores/notes-store.ts",
+        "interface/src/utils/storage.ts"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 171,
+        "deletions": 26
+      },
+      "committedAtMs": 1776466053000,
+      "cleanSubject": "Auto-select a note on entering the Notes app and stop URL/store loop",
+      "keywords": [
+        "auto",
+        "select",
+        "note",
+        "entering",
+        "notes",
+        "stop",
+        "store",
+        "loop"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8698dff127d198540a74f3770f95a992bcaaa5f2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:47:54-07:00",
+      "subject": "Add ZERO product, move New Idea into feed, honor adapter model lists",
+      "body": "Feedback:\n- Add `zero` to the product whitelist on the server and the matching\n  FeedbackProduct enum/filters/options on the client, and relabel\n  \"The Grid\" -> \"The GRID\" for consistency.\n- Lift the New Feedback composer into a modal driven by `isComposerOpen`\n  on the store so sidebar/plus and feed-header triggers share one\n  instance, and add a \"New Idea\" button at the top of the feed.\n- Track a `hasLoaded` flag so re-entering the Feedback app after the\n  first bootstrap doesn't flash the empty/loading state on cached data,\n  and make `useFeedbackBootstrap` idempotent across mounts.\n\nChatInputBar:\n- Use the adapter-specific model list in chat mode and fall back to the\n  mode-filtered list for image/3d generation.\n- Hide the model picker entirely when the current mode has no\n  selectable models (e.g. 3d), and stop clobbering the chat model when\n  switching to a mode that offers none.\n\nMade-with: Cursor",
+      "parents": [
+        "8a87c08b1fcab96594fc4ad23997755a9ca028ad"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/feedback.rs",
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.tsx",
+        "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.module.css",
+        "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.tsx",
+        "interface/src/apps/feedback/feedback-filters.tsx",
+        "interface/src/apps/feedback/types.ts",
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/stores/feedback-store.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 219,
+        "deletions": 113
+      },
+      "committedAtMs": 1776466074000,
+      "cleanSubject": "Add ZERO product, move New Idea into feed, honor adapter model lists",
+      "keywords": [
+        "zero",
+        "product",
+        "move",
+        "idea",
+        "into",
+        "feed",
+        "honor",
+        "adapter",
+        "model",
+        "lists"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "06a6071dfa3b056aea03623141b8ecf66ce2587c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:48:33-07:00",
+      "subject": "Drop 'Loading note' placeholder from notes main panel",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "8698dff127d198540a74f3770f95a992bcaaa5f2"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 4
+      },
+      "committedAtMs": 1776466113000,
+      "cleanSubject": "Drop 'Loading note' placeholder from notes main panel",
+      "keywords": [
+        "drop",
+        "loading",
+        "note",
+        "placeholder",
+        "from",
+        "notes",
+        "main",
+        "panel"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f8371daefe22cd3c13a7574502ceed84e7677d05",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:49:50-07:00",
+      "subject": "Open New Project modal from the Notes search + button",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "06a6071dfa3b056aea03623141b8ecf66ce2587c"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 11
+      },
+      "committedAtMs": 1776466190000,
+      "cleanSubject": "Open New Project modal from the Notes search + button",
+      "keywords": [
+        "open",
+        "project",
+        "modal",
+        "from",
+        "notes",
+        "search",
+        "button"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "ae7b9b6689ea479185b015c7c5dddbe80e079bee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:50:35-07:00",
+      "subject": "Square off notes mode toggle and whiten the active label",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "f8371daefe22cd3c13a7574502ceed84e7677d05"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1776466235000,
+      "cleanSubject": "Square off notes mode toggle and whiten the active label",
+      "keywords": [
+        "square",
+        "notes",
+        "mode",
+        "toggle",
+        "whiten",
+        "active",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8b79db8d48b05449acf67aa759fec79f23d471d8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:51:47-07:00",
+      "subject": "Add breathing room below the note title",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "ae7b9b6689ea479185b015c7c5dddbe80e079bee"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 2,
+        "deletions": 1
+      },
+      "committedAtMs": 1776466307000,
+      "cleanSubject": "Add breathing room below the note title",
+      "keywords": [
+        "breathing",
+        "room",
+        "below",
+        "note",
+        "title"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "0d57e49a471396a8d2a6d1640ad893edd5ccd995",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:52:20-07:00",
+      "subject": "Anchor notes save-state indicator to the bottom right",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "8b79db8d48b05449acf67aa759fec79f23d471d8"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 6
+      },
+      "committedAtMs": 1776466340000,
+      "cleanSubject": "Anchor notes save-state indicator to the bottom right",
+      "keywords": [
+        "anchor",
+        "notes",
+        "save",
+        "state",
+        "indicator",
+        "bottom",
+        "right"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "37dce044563c34e50eb6a84cadde7ad053df6583",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:53:02-07:00",
+      "subject": "Tighten notes scroll-area top padding and zero title top margin",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "0d57e49a471396a8d2a6d1640ad893edd5ccd995"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 1
+      },
+      "committedAtMs": 1776466382000,
+      "cleanSubject": "Tighten notes scroll-area top padding and zero title top margin",
+      "keywords": [
+        "tighten",
+        "notes",
+        "scroll",
+        "area",
+        "padding",
+        "zero",
+        "title",
+        "margin"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "f1d283cb88c2d9fb1ff5e3ec981bf9384b047dd7",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:58:26-07:00",
+      "subject": "Patch notes tree in place on autosave rename",
+      "body": "After an autosave-driven rename, the store was kicking off a full\nloadTree round-trip. Between the state update (which had already moved\nactiveRelPath to the new slug) and the tree refresh, the tree still\nheld the old node id, so the left-menu selection briefly lost its\nhighlight and the sidekick Info row visibly flashed. We already have\nall the info we need from the write response, so rename the affected\nnote node synchronously inside the same set() that rekeys\ncontentCache/commentsByNote and drop the loadTree call.\n\nMade-with: Cursor",
+      "parents": [
+        "37dce044563c34e50eb6a84cadde7ad053df6583"
+      ],
+      "files": [
+        "interface/src/stores/notes-store.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 71,
+        "deletions": 1
+      },
+      "committedAtMs": 1776466706000,
+      "cleanSubject": "Patch notes tree in place on autosave rename",
+      "keywords": [
+        "patch",
+        "notes",
+        "tree",
+        "place",
+        "autosave",
+        "rename"
+      ],
+      "fileGroups": [
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "e7ad5da46acb3074865a87d0102c8d927aaae8c2",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T15:59:13-07:00",
+      "subject": "Pin note title to fixed h1 styling regardless of block type",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "f1d283cb88c2d9fb1ff5e3ec981bf9384b047dd7"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 8,
+        "deletions": 1
+      },
+      "committedAtMs": 1776466753000,
+      "cleanSubject": "Pin note title to fixed h1 styling regardless of block type",
+      "keywords": [
+        "note",
+        "title",
+        "fixed",
+        "styling",
+        "regardless",
+        "block",
+        "type"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "7ad8e661beb98ab79ab1ffb12c8f9750af8be270",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:00:04-07:00",
+      "subject": "Add right-click context menu to notes left panel",
+      "body": "Mirror the Projects explorer UX in the Notes navigator: right-click (or\nF2) on a note or folder now opens a context menu with rename, delete,\nreveal-in-folder, and new-note/new-folder actions, backed by its own\nmodal harness. Right-click on a project row reuses the existing project\ncontext menu via ProjectListModals. The id parsing helpers and hover-\nplus glue moved out of NotesNav.tsx into dedicated files so NotesNav\nstays a thin composer.\n\nMade-with: Cursor",
+      "parents": [
+        "e7ad5da46acb3074865a87d0102c8d927aaae8c2"
+      ],
+      "files": [
+        "interface/src/apps/notes/NotesNav/NotesEntryContextMenu.tsx",
+        "interface/src/apps/notes/NotesNav/NotesEntryModals.tsx",
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx",
+        "interface/src/apps/notes/NotesNav/notes-explorer-ids.ts",
+        "interface/src/apps/notes/NotesNav/useNotesContextMenu.ts"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 483,
+        "deletions": 42
+      },
+      "committedAtMs": 1776466804000,
+      "cleanSubject": "Add right-click context menu to notes left panel",
+      "keywords": [
+        "right",
+        "click",
+        "context",
+        "menu",
+        "notes",
+        "left",
+        "panel"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4b19d7be87068f43c32fecb16c11cc9c93c300ba",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:13:45-07:00",
+      "subject": "Show production build version in Settings",
+      "body": "Bake the version, short commit SHA, build timestamp, and release channel\ninto the interface bundle at build time and display them in the Settings\nview so users can tell exactly which production build they are running.\n\nCI workflows (stable, nightly, mobile nightly, android, iOS) now pass\nAPP_VERSION / APP_COMMIT / APP_CHANNEL to `npm run build` so the values\nshipped in production reflect the deployed release.\n\nMade-with: Cursor",
+      "parents": [
+        "7ad8e661beb98ab79ab1ffb12c8f9750af8be270"
+      ],
+      "files": [
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "interface/src/lib/build-info.test.ts",
+        "interface/src/lib/build-info.ts",
+        "interface/src/views/SettingsView/SettingsView.module.css",
+        "interface/src/views/SettingsView/SettingsView.test.tsx",
+        "interface/src/views/SettingsView/SettingsView.tsx",
+        "interface/src/vite-env.d.ts",
+        "interface/vite.config.ts",
+        "interface/vitest.config.ts"
+      ],
+      "stats": {
+        "fileCount": 13,
+        "insertions": 321,
+        "deletions": 1
+      },
+      "committedAtMs": 1776467625000,
+      "cleanSubject": "Show production build version in Settings",
+      "keywords": [
+        "show",
+        "production",
+        "build",
+        "version",
+        "settings"
+      ],
+      "fileGroups": [
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "interface/src/lib",
+        "interface/src/views",
+        "interface/src/vite-env.d.ts",
+        "interface/vite.config.ts",
+        "interface/vitest.config.ts"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Release Infrastructure",
+        "Other"
+      ]
+    },
+    {
+      "sha": "30b71c57bb7b9d4a1f393e3ebf873c98549b55a5",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:41:50-07:00",
+      "subject": "Make super-agent context reset deterministic via cancellable runs",
+      "body": "`reset_agent_session` previously cleared only the in-memory conversation\ncache; the `tokio::spawn` running the super-agent's multi-turn loop was\nuntracked, so it kept streaming from the router and, on completion, wrote\nits accumulated history back on top of the freshly-cleared cache. The\nnext user turn then sent the stale conversation into the proxy.\n\nTrack each run in a `super_agent_runs` registry with a `CancellationToken`\nand a monotonic generation. Reset and `new_session=true` cancel the\ntoken (dropping the `/v1/messages` stream mid-chunk) and bump the\ngeneration; the spawn's cache write is gated on the generation still\nmatching, so any race past cancellation is discarded.\n\n`SuperAgentStream::run` now returns `SuperAgentRunOutcome::{Completed,\nCancelled}` and short-circuits on a cancelled token both before each\nturn and inside `process_stream_response` via `tokio::select!`.\n\nMade-with: Cursor",
+      "parents": [
+        "4b19d7be87068f43c32fecb16c11cc9c93c300ba"
+      ],
+      "files": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src/app_builder.rs",
+        "apps/aura-os-server/src/auth_guard.rs",
+        "apps/aura-os-server/src/handlers/agents/chat.rs",
+        "apps/aura-os-server/src/handlers/billing.rs",
+        "apps/aura-os-server/src/lib.rs",
+        "apps/aura-os-server/src/state.rs",
+        "apps/aura-os-server/tests/common/mod.rs",
+        "apps/aura-os-server/tests/super_agent_reset_test.rs",
+        "crates/aura-os-super-agent/Cargo.toml",
+        "crates/aura-os-super-agent/src/stream.rs"
+      ],
+      "stats": {
+        "fileCount": 12,
+        "insertions": 431,
+        "deletions": 28
+      },
+      "committedAtMs": 1776469310000,
+      "cleanSubject": "Make super-agent context reset deterministic via cancellable runs",
+      "keywords": [
+        "make",
+        "super",
+        "agent",
+        "context",
+        "reset",
+        "deterministic",
+        "cancellable",
+        "runs"
+      ],
+      "fileGroups": [
+        "Cargo.lock",
+        "apps/aura-os-server/Cargo.toml",
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests",
+        "crates/aura-os-super-agent/Cargo.toml",
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "3e4121f7733929c28b3bf24a2f2ad4844d12cc6a",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:44:12-07:00",
+      "subject": "Make the app shell route-driven to fix Notes to Feedback flicker",
+      "body": "The shell previously mirrored the active app into `useAppStore.activeApp`\nvia an effect, so after `navigate('/feedback')` there was one render where\nthe URL was `/feedback` but the store still pointed at Notes. That stale\nrender let `NotesMainPanel`'s auto-select effect fire a replace-navigate\nback into `/notes/...`, cancelling the app switch.\n\n- Add `useActiveApp` which derives the active app synchronously from\n  `useLocation().pathname`. All shell chrome (DesktopShell, MobileShell,\n  BottomTaskbar, AppNavRail, sidebar search, project list) now reads from\n  it, removing the one-render lag.\n- Drop `activeApp` state and `syncActiveApp` from the store. The pathname\n  is the single source of truth; `preloadAppForPathname` handles the\n  lazy-import warmup side-effect, and TasksProvider takes over the\n  \"default to tasks sidekick tab\" effect it used to piggy-back on.\n- Give each app its own `routes.tsx` wired through a new `routes` field on\n  `AuraApp`. `App.tsx` flattens the registry's routes under the shell\n  layout, making each app module the single source of truth for the URLs\n  it handles. `AuraAppModule` is the lazy-loaded panel shape (without\n  routing), so heavy app bundles still don't evaluate on cold start.\n- Extract Notes auto-select into `NotesIndexRedirect`, mounted only on\n  `/notes` and `/notes/:projectId`. It unmounts the instant the user\n  navigates to another app, so it can no longer hijack outgoing routes.\n\nMade-with: Cursor",
+      "parents": [
+        "30b71c57bb7b9d4a1f393e3ebf873c98549b55a5"
+      ],
+      "files": [
+        "interface/src/App.tsx",
+        "interface/src/apps/agents/AgentsApp.ts",
+        "interface/src/apps/agents/routes.tsx",
+        "interface/src/apps/desktop/DesktopApp/DesktopApp.tsx",
+        "interface/src/apps/desktop/routes.tsx",
+        "interface/src/apps/feed/FeedApp.ts",
+        "interface/src/apps/feed/routes.tsx",
+        "interface/src/apps/feedback/FeedbackApp.ts",
+        "interface/src/apps/feedback/routes.tsx",
+        "interface/src/apps/notes/NotesApp.ts",
+        "interface/src/apps/notes/NotesIndexRedirect/NotesIndexRedirect.test.tsx",
+        "interface/src/apps/notes/NotesIndexRedirect/NotesIndexRedirect.tsx",
+        "interface/src/apps/notes/NotesIndexRedirect/index.ts",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx",
+        "interface/src/apps/notes/routes.tsx",
+        "interface/src/apps/process/ProcessApp.ts",
+        "interface/src/apps/process/routes.tsx",
+        "interface/src/apps/profile/ProfileApp.ts",
+        "interface/src/apps/profile/routes.tsx",
+        "interface/src/apps/projects/ProjectsApp.ts",
+        "interface/src/apps/projects/routes.tsx",
+        "interface/src/apps/registry.ts",
+        "interface/src/apps/tasks/TasksApp.ts",
+        "interface/src/apps/tasks/components/TasksProvider/TasksProvider.tsx",
+        "interface/src/apps/tasks/routes.tsx",
+        "interface/src/apps/types.ts",
+        "interface/src/components/AppNavRail/AppNavRail.test.tsx",
+        "interface/src/components/AppNavRail/AppNavRail.tsx",
+        "interface/src/components/AppProviders/AppProviders.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.render-churn.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.test.tsx",
+        "interface/src/components/BottomTaskbar/BottomTaskbar.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.test.tsx",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/components/MobileShell/useMobileShellState.ts",
+        "interface/src/components/ProjectList/useProjectListData.ts",
+        "interface/src/hooks/use-active-app.test.tsx",
+        "interface/src/hooks/use-active-app.ts",
+        "interface/src/hooks/use-sidebar-search.ts",
+        "interface/src/stores/app-store.test.ts",
+        "interface/src/stores/app-store.ts"
+      ],
+      "stats": {
+        "fileCount": 41,
+        "insertions": 601,
+        "deletions": 266
+      },
+      "committedAtMs": 1776469452000,
+      "cleanSubject": "Make the app shell route-driven to fix Notes to Feedback flicker",
+      "keywords": [
+        "make",
+        "shell",
+        "route",
+        "driven",
+        "notes",
+        "feedback",
+        "flicker"
+      ],
+      "fileGroups": [
+        "interface/src/App.tsx",
+        "interface/src/apps",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bbab5ed184b478924d62a460e7f70116841850ff",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:53:25-07:00",
+      "subject": "Show build version in Team Settings general section",
+      "body": "Users expected the version/commit/build time that used to live in the\nstandalone SettingsView to be visible in the Team Settings panel. Add\nan About group to OrgSettingsGeneral sourced from getBuildInfo().\n\nMade-with: Cursor",
+      "parents": [
+        "3e4121f7733929c28b3bf24a2f2ad4844d12cc6a"
+      ],
+      "files": [
+        "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 44,
+        "deletions": 0
+      },
+      "committedAtMs": 1776470005000,
+      "cleanSubject": "Show build version in Team Settings general section",
+      "keywords": [
+        "show",
+        "build",
+        "version",
+        "team",
+        "settings",
+        "general",
+        "section"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "bb7ef803569e856757e3b7b1af10efa05c38702f",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:53:57-07:00",
+      "subject": "Make session rows non-navigating in agent lists",
+      "body": "Clicking a session in the sidekick SessionList, the Agent Info\nChatsTab, and the project AgentStatusBar dropdown no longer\nnavigates to `?session=...` or opens a session preview. Session\nrows still render status, summaries, and context menu actions;\nthey're just informational displays now.\n\nMade-with: Cursor",
+      "parents": [
+        "bbab5ed184b478924d62a460e7f70116841850ff"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentInfoPanel/ChatsTab.tsx",
+        "interface/src/views/AgentStatusBar/AgentStatusBar.tsx",
+        "interface/src/views/AgentStatusBar/useAgentStatusBarData.ts",
+        "interface/src/views/SessionList/SessionList.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 3,
+        "deletions": 42
+      },
+      "committedAtMs": 1776470037000,
+      "cleanSubject": "Make session rows non-navigating in agent lists",
+      "keywords": [
+        "make",
+        "session",
+        "rows",
+        "navigating",
+        "agent",
+        "lists"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "01414ab74108e075315259a1d01b0aa6be3a7828",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T16:56:13-07:00",
+      "subject": "Report real super-agent context utilization in AssistantMessageEnd",
+      "body": "SuperAgentStream previously hard-coded estimated_context_tokens=0 and\ncontext_utilization=0.0, so the UI's N% context indicator stayed blank\nfor super-agents even though harness agents populated it via\nSessionService.\n\nCapture Anthropic's prompt-side token counts (input + cache_creation +\ncache_read) from message_start.usage, track them cumulatively alongside\ninput/output, and compute context_utilization = prompt_tokens / 200k\n(Claude Sonnet/Opus window), clamped to [0, 1]. Populate both the normal\nend-of-turn and max_turns AssistantMessageEnd emissions with the real\nnumbers and cumulative cache totals.\n\nAdds three unit tests covering the fresh+cache math, the >=100% clamp,\nand the empty-usage zero case.\n\nMade-with: Cursor",
+      "parents": [
+        "bb7ef803569e856757e3b7b1af10efa05c38702f"
+      ],
+      "files": [
+        "crates/aura-os-super-agent/src/stream.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 85,
+        "deletions": 14
+      },
+      "committedAtMs": 1776470173000,
+      "cleanSubject": "Report real super-agent context utilization in AssistantMessageEnd",
+      "keywords": [
+        "report",
+        "real",
+        "super",
+        "agent",
+        "context",
+        "utilization",
+        "assistantmessageend"
+      ],
+      "fileGroups": [
+        "crates/aura-os-super-agent/src"
+      ],
+      "primaryArea": "Core Rust",
+      "areas": [
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "37e29c64d78af4dfb0c68adff4461f80a0064def",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:21:52-07:00",
+      "subject": "Refactor Notes and Feedback apps to match React and TypeScript rules",
+      "body": "Split monolithic panels into colocated folders so each component owns its\nCSS, types, and tests: Notes gets BubbleToolbar, NotesInfoPanel,\nNotesCommentsPanel, NotesEntryContextMenu, and NotesEntryModals folders,\nwhile Feedback grows a reusable FeedbackFilterTree wrapper so FeedbackList\nis a thin orchestrator. NotesSidekickPanel is now a thin router over the\ntwo new panels, and FeedbackItemCard is rebuilt as an <article> with real\n<button> children so vote, comment, and select targets are all keyboard\nand screen-reader reachable.\n\nTighten typing across both apps: replace type assertions with type guards\nand instanceof narrowing (NewFeedbackModal, useNotesContextMenu,\nnotes-store), add an explicit NotesContextMenuApi return type, centralize\ntiptap markdown-storage casting in NotesMainPanel, and wire up the\nmissing setProductFilter action that FeedbackList already consumed.\nFire-and-forget store calls now attach .catch handlers so rejections no\nlonger surface as unhandled promise warnings.\n\nClean up presentation: move static inline styles into CSS modules,\ntokenize FeedbackList spacing, delete unused CSS and exports, drop\npremature useMemo for constant data, and consolidate Feedback filter\nlabels so they derive from types.ts instead of being duplicated per\nsidebar section. Add colocated tests for the new extracted components.\n\nMade-with: Cursor",
+      "parents": [
+        "01414ab74108e075315259a1d01b0aa6be3a7828"
+      ],
+      "files": [
+        "interface/src/apps/feedback/FeedbackFilterTree/FeedbackFilterTree.test.tsx",
+        "interface/src/apps/feedback/FeedbackFilterTree/FeedbackFilterTree.tsx",
+        "interface/src/apps/feedback/FeedbackFilterTree/index.ts",
+        "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.module.css",
+        "interface/src/apps/feedback/FeedbackItemCard/FeedbackItemCard.tsx",
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.module.css",
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.test.tsx",
+        "interface/src/apps/feedback/NewFeedbackModal/NewFeedbackModal.tsx",
+        "interface/src/apps/feedback/feedback-filters.tsx",
+        "interface/src/apps/feedback/types.ts",
+        "interface/src/apps/notes/NotesCommentsPanel/NotesCommentsPanel.module.css",
+        "interface/src/apps/notes/NotesCommentsPanel/NotesCommentsPanel.tsx",
+        "interface/src/apps/notes/NotesCommentsPanel/index.ts",
+        "interface/src/apps/notes/NotesEntryContextMenu/NotesEntryContextMenu.module.css",
+        "interface/src/apps/notes/NotesEntryContextMenu/NotesEntryContextMenu.tsx",
+        "interface/src/apps/notes/NotesEntryContextMenu/index.ts",
+        "interface/src/apps/notes/NotesEntryModals/NotesEntryModals.module.css",
+        "interface/src/apps/notes/NotesEntryModals/NotesEntryModals.tsx",
+        "interface/src/apps/notes/NotesEntryModals/index.ts",
+        "interface/src/apps/notes/NotesInfoPanel/NotesInfoPanel.module.css",
+        "interface/src/apps/notes/NotesInfoPanel/NotesInfoPanel.tsx",
+        "interface/src/apps/notes/NotesInfoPanel/index.ts",
+        "interface/src/apps/notes/NotesMainPanel/BubbleToolbar/BubbleToolbar.module.css",
+        "interface/src/apps/notes/NotesMainPanel/BubbleToolbar/BubbleToolbar.test.tsx",
+        "interface/src/apps/notes/NotesMainPanel/BubbleToolbar/BubbleToolbar.tsx",
+        "interface/src/apps/notes/NotesMainPanel/BubbleToolbar/index.ts",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.module.css",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.tsx",
+        "interface/src/apps/notes/NotesNav/NotesEntryContextMenu.tsx",
+        "interface/src/apps/notes/NotesNav/NotesEntryModals.tsx",
+        "interface/src/apps/notes/NotesNav/NotesNav.module.css",
+        "interface/src/apps/notes/NotesNav/NotesNav.tsx",
+        "interface/src/apps/notes/NotesNav/notes-explorer-ids.ts",
+        "interface/src/apps/notes/NotesNav/useNotesContextMenu.ts",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.module.css",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.test.tsx",
+        "interface/src/apps/notes/NotesSidekickPanel/NotesSidekickPanel.tsx",
+        "interface/src/apps/notes/NotesSidekickTaskbar/NotesSidekickTaskbar.test.tsx",
+        "interface/src/apps/notes/NotesSidekickTaskbar/NotesSidekickTaskbar.tsx",
+        "interface/src/stores/feedback-store.ts",
+        "interface/src/stores/notes-store.ts"
+      ],
+      "stats": {
+        "fileCount": 42,
+        "insertions": 1278,
+        "deletions": 657
+      },
+      "committedAtMs": 1776471712000,
+      "cleanSubject": "Refactor Notes and Feedback apps to match React and TypeScript rules",
+      "keywords": [
+        "refactor",
+        "notes",
+        "feedback",
+        "apps",
+        "match",
+        "react",
+        "typescript",
+        "rules"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a441491b847a019b82ffb0a6bb857fde9c2c80ee",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:26:27-07:00",
+      "subject": "Always show desktop background through top bar and taskbar",
+      "body": "The background layer, translucent blur on the top bar, and the shell's\ndata-desktop-mode attribute were previously gated on the desktop app\nbeing active. Render them unconditionally so the configured background\nshows through the top bar, taskbar, and surrounding surfaces in every\napp, while keeping sidebar collapse and sidekick visibility tied to the\ndesktop app as before.\n\nMade-with: Cursor",
+      "parents": [
+        "37e29c64d78af4dfb0c68adff4461f80a0064def"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 3,
+        "deletions": 3
+      },
+      "committedAtMs": 1776471987000,
+      "cleanSubject": "Always show desktop background through top bar and taskbar",
+      "keywords": [
+        "always",
+        "show",
+        "desktop",
+        "background",
+        "through",
+        "taskbar"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "809413ed222ee6cb490674e2f578e51f13146a79",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:27:10-07:00",
+      "subject": "Close sidekick preview overlays on Escape",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "a441491b847a019b82ffb0a6bb857fde9c2c80ee"
+      ],
+      "files": [
+        "interface/src/components/PreviewOverlay/PreviewOverlay.test.tsx",
+        "interface/src/components/PreviewOverlay/PreviewOverlay.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 59,
+        "deletions": 1
+      },
+      "committedAtMs": 1776472030000,
+      "cleanSubject": "Close sidekick preview overlays on Escape",
+      "keywords": [
+        "close",
+        "sidekick",
+        "preview",
+        "overlays",
+        "escape"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "cb437896751c31b0362dbb652590bf0f1ee147cf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:29:15-07:00",
+      "subject": "Restore opaque content surfaces outside desktop mode",
+      "body": "After always rendering the background layer, the middle panel, sidebar,\nand sidekick kept showing the wallpaper through them when leaving the\ndesktop app. Scope data-desktop-mode back to isDesktop so those content\nsurfaces fall back to var(--color-bg), while the top bar and bottom\ntaskbar stay translucent in every app (taskbar blur is promoted to the\nbase .bar rule).\n\nMade-with: Cursor",
+      "parents": [
+        "809413ed222ee6cb490674e2f578e51f13146a79"
+      ],
+      "files": [
+        "interface/src/components/BottomTaskbar/BottomTaskbar.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 4,
+        "deletions": 8
+      },
+      "committedAtMs": 1776472155000,
+      "cleanSubject": "Restore opaque content surfaces outside desktop mode",
+      "keywords": [
+        "restore",
+        "opaque",
+        "content",
+        "surfaces",
+        "outside",
+        "desktop",
+        "mode"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2aa74643062094518f28e3c41820bc2b7bec3d2e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:30:52-07:00",
+      "subject": "Close task and spec sidekick preview on Escape",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "cb437896751c31b0362dbb652590bf0f1ee147cf"
+      ],
+      "files": [
+        "interface/src/components/SidekickContent/SidekickContent.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 17,
+        "deletions": 0
+      },
+      "committedAtMs": 1776472252000,
+      "cleanSubject": "Close task and spec sidekick preview on Escape",
+      "keywords": [
+        "close",
+        "task",
+        "spec",
+        "sidekick",
+        "preview",
+        "escape"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "2cf7e90dbd7fb4f9fc3a4477aec32d962d1f4c3e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:35:48-07:00",
+      "subject": "Colocate tests for the remaining Notes and Feedback components",
+      "body": "Every component in the Notes and Feedback apps now ships with a\nneighbour *.test.tsx that covers its load-bearing behaviour:\n\n- NotesInfoPanel: parseToc handles frontmatter + code fences, word count\n  and location render correctly, and the path button calls\n  revealInFolder.\n- NotesCommentsPanel: empty state, existing comments, Enter-to-submit\n  clearing the draft, and whitespace-only drafts staying put.\n- NotesNav: empty onboarding hint, loading suppression, and the nav\n  tree once projects are present.\n- NotesEntryContextMenu: note vs folder menu items, and that selections\n  route through handleMenuAction.\n- NotesEntryModals: rename input wiring, delete dialog title + folder\n  warning, error alerts, and busy-state button disabling.\n- NotesMainPanel: empty-URL fallback, Rich/Markdown tab defaults,\n  switching into Markdown mode, and onChange -> updateContent.\n- FeedbackList: renders every filter section, and maps the synthetic\n  \"All Types\"/\"All Statuses\" ids to null store values while writing\n  real ids through directly.\n- FeedbackMainPanel: loading, error, empty, and populated list states,\n  plus the New Idea button opening the composer.\n- FeedbackSidekickHeader: renders for the selected item, hides without\n  one, and the close button clears the selection.\n- FeedbackSidekickPanel: empty-no-selection state, no-comments state,\n  existing comments, Enter-to-submit, and send-button disable rules.\n\nHeavy dependencies (ZUI, TipTap, the persist layer in browser-db) are\nmocked per-file so the assertions focus on each component's own\ndecisions rather than on dependency internals. Scoped vitest run passes\n17 files / 66 tests with no new typecheck or lint issues.\n\nMade-with: Cursor",
+      "parents": [
+        "2aa74643062094518f28e3c41820bc2b7bec3d2e"
+      ],
+      "files": [
+        "interface/src/apps/feedback/FeedbackList/FeedbackList.test.tsx",
+        "interface/src/apps/feedback/FeedbackMainPanel/FeedbackMainPanel.test.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickHeader/FeedbackSidekickHeader.test.tsx",
+        "interface/src/apps/feedback/FeedbackSidekickPanel/FeedbackSidekickPanel.test.tsx",
+        "interface/src/apps/notes/NotesCommentsPanel/NotesCommentsPanel.test.tsx",
+        "interface/src/apps/notes/NotesEntryContextMenu/NotesEntryContextMenu.test.tsx",
+        "interface/src/apps/notes/NotesEntryModals/NotesEntryModals.test.tsx",
+        "interface/src/apps/notes/NotesInfoPanel/NotesInfoPanel.test.tsx",
+        "interface/src/apps/notes/NotesMainPanel/NotesMainPanel.test.tsx",
+        "interface/src/apps/notes/NotesNav/NotesNav.test.tsx"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 1163,
+        "deletions": 0
+      },
+      "committedAtMs": 1776472548000,
+      "cleanSubject": "Colocate tests for the remaining Notes and Feedback components",
+      "keywords": [
+        "colocate",
+        "tests",
+        "remaining",
+        "notes",
+        "feedback",
+        "components"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "05255bb0c58cc67f7672a5b90f0d07cde50f2202",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:39:15-07:00",
+      "subject": "Stabilize desktop shell background across app switches and boot",
+      "body": "Move the opaque middle background onto .desktopContent (a shell-level\nelement that is never wrapped by ActiveProvider) so switching between\napps with a Provider like Process or Tasks no longer unmounts the\nbg-carrying div and flashes the wallpaper through. Drop the redundant\n.desktopShell[data-desktop-mode] transparency override; the shell keeps\na var(--color-bg) base at all times and the BackgroundLayer paints the\nwallpaper above it when present.\n\nTrack a hydrated flag in the desktop background store that is true\nimmediately for color and none modes and only flips for image mode\nafter the IDB image load resolves. Gate BackgroundLayer rendering and\nthe data-desktop-mode attribute on that flag so image-mode boots never\npaint a broken url() or briefly expose a see-through shell before the\nimage data is in hand.\n\nMade-with: Cursor",
+      "parents": [
+        "2cf7e90dbd7fb4f9fc3a4477aec32d962d1f4c3e"
+      ],
+      "files": [
+        "interface/src/components/DesktopShell/DesktopShell.module.css",
+        "interface/src/components/DesktopShell/DesktopShell.tsx",
+        "interface/src/stores/desktop-background-store.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 25,
+        "deletions": 18
+      },
+      "committedAtMs": 1776472755000,
+      "cleanSubject": "Stabilize desktop shell background across app switches and boot",
+      "keywords": [
+        "stabilize",
+        "desktop",
+        "shell",
+        "background",
+        "across",
+        "switches",
+        "boot"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/stores"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "fb7008d8c37a065b62adb53cd8a38d50043b911c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-17T17:40:38-07:00",
+      "subject": "Trim unused UI scaffolding from process and agent chat views",
+      "body": "Drop the unused @tiptap/extension-link dependency, remove the process\nmain panel empty state placeholder, and stop passing the redundant\nsession empty message to the project agent chat panel.\n\nMade-with: Cursor",
+      "parents": [
+        "05255bb0c58cc67f7672a5b90f0d07cde50f2202"
+      ],
+      "files": [
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/src/apps/process/components/ProcessMainPanel/ProcessMainPanel.tsx",
+        "interface/src/components/AgentChatView/AgentChatView.tsx"
+      ],
+      "stats": {
+        "fileCount": 4,
+        "insertions": 1,
+        "deletions": 13
+      },
+      "committedAtMs": 1776472838000,
+      "cleanSubject": "Trim unused UI scaffolding from process and agent chat views",
+      "keywords": [
+        "trim",
+        "unused",
+        "scaffolding",
+        "from",
+        "process",
+        "agent",
+        "chat",
+        "views"
+      ],
+      "fileGroups": [
+        "interface/package-lock.json",
+        "interface/package.json",
+        "interface/src/apps",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
     }
   ],
-  "batchCount": 3,
+  "batchCount": 8,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.281.1",
+      "version": "0.1.0-nightly.282.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 24799600
+          "sizeBytes": 25098994
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92523000
+          "sizeBytes": 92789240
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -926,29 +2872,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.281.1",
+      "version": "0.1.0-nightly.282.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.281.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.282.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21498260
+          "sizeBytes": 21754673
         },
         {
-          "name": "Aura_0.1.0-nightly.281.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.282.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 21284525
+          "sizeBytes": 21561281
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -958,29 +2904,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.281.1",
+      "version": "0.1.0-nightly.282.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.281.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.282.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 22905169
+          "sizeBytes": 23223679
         },
         {
-          "name": "Aura_0.1.0-nightly.281.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.282.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 22739651
+          "sizeBytes": 23042639
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -990,17 +2936,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.281.1",
+      "version": "0.1.0-nightly.282.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 14971657
+          "sizeBytes": 15208817
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.281.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.282.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1012,48 +2958,44 @@
     "date": "2026-04-17",
     "repo": "aura-os",
     "channel": "nightly",
-    "version": "0.1.0-nightly.281.1",
-    "title": "Chat Performance & Feedback System Launch",
-    "intro": "Major chat scrolling improvements and the launch of a new Feedback app with full backend integration. Chat now uses native CSS scroll anchoring for smooth resizing, while the new Feedback system provides voting, commenting, and status tracking.",
+    "version": "0.1.0-nightly.282.1",
+    "title": "8 updates shipped",
+    "intro": "This nightly timeline for aura-os groups 59 notable commits into 8 broader updates on 2026-04-17 for `0.1.0-nightly.282.1`.",
     "entries": [
       {
         "time_label": "8:13 PM",
         "started_at": "2026-04-17T03:13:19.000Z",
         "ended_at": "2026-04-17T05:26:18.000Z",
-        "title": "Chat Performance Overhaul",
-        "summary": "Eliminated janky scrolling during sidekick resizing and unified tool rendering with a new Block primitive for stable layouts.",
+        "title": "Interface and Chat Experience Improvements",
+        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
         "items": [
           {
-            "text": "Fixed chat scroll jank during sidekick resize by consolidating four competing scroll correction systems into a single post-commit layout effect",
+            "text": "Fix janky chat scroll at bottom during sidekick resize",
             "commit_shas": [
-              "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77",
-              "1876a8bf6cd28d01bf8fe57b960eb3916600389e",
+              "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Pin chat to bottom synchronously during lane resize",
+            "commit_shas": [
+              "1876a8bf6cd28d01bf8fe57b960eb3916600389e"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Stop scrollTop clamp from swallowing pin-to-bottom delta on resize",
+            "commit_shas": [
               "2ac44d67f00d4ec1ab3a8a36bdb49054ea94ac3c"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Unified all chat tool artifacts (thinking, file ops, commands, specs) behind a single Block primitive with fixed-height scrollable bodies to prevent layout shifts during streaming",
+            "text": "Double chat textarea height and move scrollbar to row's right edge",
             "commit_shas": [
-              "ac75c033143717e4e24ff5785fb9f582f43595e4"
+              "2bfea9c5c2505766ed82c356cb51c680c172fbe8"
             ],
-            "confidence": "high"
-          },
-          {
-            "text": "Enhanced chat input with 70vh height limit, viewport-responsive sizing, and relocated scrollbar to the row's right edge",
-            "commit_shas": [
-              "2bfea9c5c2505766ed82c356cb51c680c172fbe8",
-              "c3004dff62d93a0ed2e9849f1ec9c28a609103d1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Launched new Feedback app with voting, commenting, and status management, including full API backend and mock data integration",
-            "commit_shas": [
-              "ad094d032045f7c94bf8c7c9ea67d00ee2bb1e2d",
-              "932dfdce34918a7a499af6ef81afc69a0d5d3e4f"
-            ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
@@ -1061,69 +3003,259 @@
         "time_label": "10:36 PM",
         "started_at": "2026-04-17T05:36:04.000Z",
         "ended_at": "2026-04-17T07:29:37.000Z",
-        "title": "Chat Architecture Simplification",
-        "summary": "Replaced complex virtualization with native CSS scroll anchoring and integrated feedback system with real API endpoints.",
+        "title": "Interface and Chat Experience Improvements",
+        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
         "items": [
           {
-            "text": "Replaced chat virtualization with native CSS scroll anchoring, eliminating 533 lines of complex scroll management code while achieving smoother performance",
-            "commit_shas": [
-              "8879923f19844c12b1ab86b89c4dbca8a11f4ead"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added shared OverlayScrollbar component and FolderSection primitive used across Feed and Feedback apps for consistent UI patterns",
+            "text": "Share scroll + folder-section chrome across Feed and Feedback",
             "commit_shas": [
               "eaf05353f5170b88962c4aed3b44b2b09efeac5f"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Implemented complete feedback API backend with list, create, get, update-status, comments, and voting endpoints plus integration tests",
+            "text": "Replace chat virtualization with native CSS scroll anchoring",
             "commit_shas": [
-              "a36c106c9c7d78b5ccc1d60e57dec8a8820fdc9f"
+              "8879923f19844c12b1ab86b89c4dbca8a11f4ead"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Added session deletion with right-click context menu and restyled session lists as Explorer trees with status icons",
+            "text": "Neutralize Block body borders and highlight colors",
             "commit_shas": [
-              "bf2abc276abf16424be56819def59c2e7a3ad9df"
+              "aabd6a5e021142709c59a6a7a78446dc4f404e7c"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           },
           {
-            "text": "Scoped session reset to drop prior-session LLM context, preventing corrupted tool blocks from previous sessions affecting new conversations",
+            "text": "Align Block body text with header status dot",
             "commit_shas": [
-              "20fd39cc33d70396b8f914059a9b8cd7cd2a40dc"
+              "3506a6d95087017d65ab890793d0dbfd1fb84d5e"
             ],
-            "confidence": "high"
+            "confidence": "medium"
           }
         ]
       },
       {
         "time_label": "12:34 AM",
         "started_at": "2026-04-17T07:34:08.000Z",
-        "ended_at": "2026-04-17T07:34:08.000Z",
-        "title": "Feedback System Integration",
-        "summary": "Connected feedback voting and status updates to aura-network with optimistic UI updates and server reconciliation.",
+        "ended_at": "2026-04-17T08:31:59.000Z",
+        "title": "Interface and Runtime Flow Improvements",
+        "summary": "8 related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.",
         "items": [
           {
-            "text": "Wired feedback votes and status updates through aura-network API with optimistic UI updates that reconcile with server aggregates and revert on failure",
+            "text": "Wire feedback votes and status updates through aura-network",
             "commit_shas": [
               "1f7fea8d3c8aef6e1a1e621ce8f78eb5494799f3"
             ],
-            "confidence": "high"
+            "confidence": "medium"
+          },
+          {
+            "text": "Drop tinted background on Run panel task rows",
+            "commit_shas": [
+              "485732b74d29bd4364e9ae06768e517769c86e32"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Flush TaskBlock body so collapsed rows match other tools",
+            "commit_shas": [
+              "5231af4b6a56c4945f09d9260965c5da39a89344"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Retire stale active sessions on rotation",
+            "commit_shas": [
+              "be5cc2d22249ed9655a125f3b1cece15853096dc"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "1:35 AM",
+        "started_at": "2026-04-17T08:35:22.000Z",
+        "ended_at": "2026-04-17T09:10:57.000Z",
+        "title": "Interface and Chat Experience Improvements",
+        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "items": [
+          {
+            "text": "Tag feedback items with a product and filter by it",
+            "commit_shas": [
+              "71151ff81f15f4827dfb98f9cf17c367965de7f0"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Match feedback filter section labels to projects sidebar",
+            "commit_shas": [
+              "fdeac181ffa0bd18a8162d6d0cb432852591f451"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Drop hover/focus highlight from feedback filter section header",
+            "commit_shas": [
+              "6fc86dcde57dae266f7046d9dad99055d44f08ef"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Block spec deletion when tasks still reference it",
+            "commit_shas": [
+              "efaadf235f8080acdbf060d1386e5286db18b47c"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "2:50 PM",
+        "started_at": "2026-04-17T21:50:05.000Z",
+        "ended_at": "2026-04-17T22:51:47.000Z",
+        "title": "Interface and Chat Experience Improvements",
+        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "items": [
+          {
+            "text": "Add Notes app backed by local markdown files",
+            "commit_shas": [
+              "3233d519a6448a0c8fa71dd9a7f63e115079ae74"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Use readable slugs for note paths and rename files to match titles",
+            "commit_shas": [
+              "a8bcc24f75de27e68e28a33ce4b40bb532acde84"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Auto-select a note on entering the Notes app and stop URL/store loop",
+            "commit_shas": [
+              "8a87c08b1fcab96594fc4ad23997755a9ca028ad"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Add ZERO product, move New Idea into feed, honor adapter model lists",
+            "commit_shas": [
+              "8698dff127d198540a74f3770f95a992bcaaa5f2"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "3:52 PM",
+        "started_at": "2026-04-17T22:52:20.000Z",
+        "ended_at": "2026-04-17T23:44:12.000Z",
+        "title": "Interface and Chat Experience Improvements",
+        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "items": [
+          {
+            "text": "Anchor notes save-state indicator to the bottom right",
+            "commit_shas": [
+              "0d57e49a471396a8d2a6d1640ad893edd5ccd995"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Tighten notes scroll-area top padding and zero title top margin",
+            "commit_shas": [
+              "37dce044563c34e50eb6a84cadde7ad053df6583"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Patch notes tree in place on autosave rename",
+            "commit_shas": [
+              "f1d283cb88c2d9fb1ff5e3ec981bf9384b047dd7"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Pin note title to fixed h1 styling regardless of block type",
+            "commit_shas": [
+              "e7ad5da46acb3074865a87d0102c8d927aaae8c2"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "4:53 PM",
+        "started_at": "2026-04-17T23:53:25.000Z",
+        "ended_at": "2026-04-18T00:30:52.000Z",
+        "title": "Interface and Runtime Flow Improvements",
+        "summary": "8 related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.",
+        "items": [
+          {
+            "text": "Show build version in Team Settings general section",
+            "commit_shas": [
+              "bbab5ed184b478924d62a460e7f70116841850ff"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Make session rows non-navigating in agent lists",
+            "commit_shas": [
+              "bb7ef803569e856757e3b7b1af10efa05c38702f"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Report real super-agent context utilization in AssistantMessageEnd",
+            "commit_shas": [
+              "01414ab74108e075315259a1d01b0aa6be3a7828"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Refactor Notes and Feedback apps to match React and TypeScript rules",
+            "commit_shas": [
+              "37e29c64d78af4dfb0c68adff4461f80a0064def"
+            ],
+            "confidence": "medium"
+          }
+        ]
+      },
+      {
+        "time_label": "5:35 PM",
+        "started_at": "2026-04-18T00:35:48.000Z",
+        "ended_at": "2026-04-18T00:40:38.000Z",
+        "title": "Interface and Chat Experience Improvements",
+        "summary": "3 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "items": [
+          {
+            "text": "Colocate tests for the remaining Notes and Feedback components",
+            "commit_shas": [
+              "2cf7e90dbd7fb4f9fc3a4477aec32d962d1f4c3e"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Stabilize desktop shell background across app switches and boot",
+            "commit_shas": [
+              "05255bb0c58cc67f7672a5b90f0d07cde50f2202"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Trim unused UI scaffolding from process and agent chat views",
+            "commit_shas": [
+              "fb7008d8c37a065b62adb53cd8a38d50043b911c"
+            ],
+            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Chat scrolling performance dramatically improved with native CSS scroll anchoring",
-      "New Feedback app launched with full voting and commenting system",
-      "Unified Block primitive stabilizes chat tool rendering during streaming",
-      "Session management enhanced with deletion and improved visual hierarchy"
+      "Interface and Chat Experience Improvements",
+      "Interface and Runtime Flow Improvements"
     ],
-    "raw_commit_count": 18
+    "raw_commit_count": 59
   }
 }
