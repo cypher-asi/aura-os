@@ -1,0 +1,13 @@
+[package]
+name = "aura-os-super-agent-profile"
+version = "0.1.0"
+edition = "2021"
+description = "Portable super-agent profile (system prompt, tier classifier, tool manifest) shared between the in-process super-agent path and the harness-hosted path."
+
+[dependencies]
+aura-os-core = { path = "../aura-os-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+serde_json = "1"

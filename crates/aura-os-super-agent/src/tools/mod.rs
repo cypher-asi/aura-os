@@ -261,9 +261,11 @@ impl ToolRegistry {
 /// `input_json_delta` / `tool_call_snapshot`. Must stay in sync with the
 /// list in `crate::stream` (the stream module uses the same names to
 /// decide whether to emit snapshots).
+///
+/// The canonical list now lives in
+/// [`aura_os_super_agent_profile::STREAMING_TOOL_NAMES`] so it can be
+/// shipped to a harness-hosted agent in the super-agent profile; this
+/// wrapper keeps the existing in-process API stable.
 pub(crate) fn is_streaming_tool_name(name: &str) -> bool {
-    matches!(
-        name,
-        "create_spec" | "update_spec" | "write_file" | "edit_file"
-    )
+    aura_os_super_agent_profile::STREAMING_TOOL_NAMES.contains(&name)
 }

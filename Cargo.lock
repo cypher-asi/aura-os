@@ -612,6 +612,7 @@ dependencies = [
  "aura-os-sessions",
  "aura-os-storage",
  "aura-os-store",
+ "aura-os-super-agent-profile",
  "aura-os-tasks",
  "chrono",
  "futures-util",
@@ -625,6 +626,15 @@ dependencies = [
  "tokio-util",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "aura-os-super-agent-profile"
+version = "0.1.0"
+dependencies = [
+ "aura-os-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
