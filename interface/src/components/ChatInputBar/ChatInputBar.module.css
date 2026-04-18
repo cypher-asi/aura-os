@@ -271,7 +271,9 @@
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color 0.1s ease, background 0.1s ease;
+  transition:
+    color 0.1s ease,
+    background 0.1s ease;
 }
 
 .newSessionButton:hover {
@@ -388,7 +390,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
 }
 
 .projectMenuItem:hover {
@@ -437,6 +441,8 @@
   padding: 4px 0;
   min-width: 140px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .modelMenuItem {
@@ -450,7 +456,9 @@
   font-size: 12px;
   text-align: left;
   cursor: pointer;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
 }
 
 .modelMenuItem:hover {
@@ -461,6 +469,40 @@
 .modelMenuItemActive {
   color: var(--color-text);
   font-weight: 500;
+}
+
+.modelMenuGroup {
+  padding: 4px 0;
+}
+
+.modelMenuGroup + .modelMenuGroup {
+  border-top: 1px solid var(--color-border);
+}
+
+.modelMenuGroupLabel {
+  padding: 4px 12px 6px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.modelMenuShowMore {
+  display: block;
+  width: 100%;
+  padding: 8px 12px 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.modelMenuShowMore:hover {
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
 }
 
 .sendButton {
@@ -544,7 +586,9 @@
   color: var(--color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 0.1s ease, background 0.1s ease;
+  transition:
+    color 0.1s ease,
+    background 0.1s ease;
 }
 
 .commandChipRemove:hover {
@@ -593,7 +637,9 @@
   font-size: 12px;
   text-align: left;
   cursor: pointer;
-  transition: background 0.08s ease, color 0.08s ease;
+  transition:
+    background 0.08s ease,
+    color 0.08s ease;
 }
 
 .slashMenuItem:hover,
