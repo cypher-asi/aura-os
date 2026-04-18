@@ -14,6 +14,7 @@ pub(crate) mod persistence;
 pub(crate) mod router;
 pub(crate) mod state;
 pub mod super_agent_migration;
+pub mod super_agent_migration_seed;
 
 pub use app_builder::build_app_state;
 pub use harness_client::{
@@ -30,6 +31,9 @@ pub use router::{build_local_api_cors_layer, create_router_with_interface};
 pub use state::{ActiveAutomaton, AppState, CachedSession, SuperAgentRun};
 pub use super_agent_migration::{
     migrate_legacy_super_agents, MigrationError, MigrationReport,
+};
+pub use super_agent_migration_seed::{
+    seed_harness_record_log, SeedError, SeedReport,
 };
 
 /// Discover common user-level binary directories (pip `--user` scripts, `~/.local/bin`,

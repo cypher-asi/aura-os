@@ -21,13 +21,16 @@
 //!   or mutates other agent fields, so every consumer that still
 //!   branches on `role == "super_agent"` or the `"super_agent"` tag
 //!   keeps working.
-//! - It does **not** seed the harness Kernel record log from aura-os
-//!   session events. That seeder would need to write into the harness
-//!   RocksDB, which is out of process. Instead the harness cold-starts
-//!   the agent from `SessionInit::conversation_messages`, which
-//!   `dispatch_super_agent_via_harness` already populates from aura-os
-//!   session events on every turn. See
-//!   `TODO(phase6-followup): write harness record log seeder` below.
+//! - Each migrated record also triggers a best-effort
+//!   [harness record-log seed](`crate::super_agent_migration_seed`) so
+//!   the harness Kernel mirrors the aura-os session-event transcript on
+//!   cold start. Failures are logged at `warn!` and counted in
+//!   `seed_failed` — they never abort the migration loop. The harness
+//!   Kernel is append-only, so the seeder first consults
+//!   `GET /agents/:id/head`; agents that already have transactions are
+//!   reported as `AlreadySeeded` and skipped. When no JWT is cached on
+//!   boot, seeding is skipped (not counted as a failure) and will run
+//!   on the next authenticated startup.
 //! - Network pushes are best-effort. On boot the server often has no
 //!   cached JWT yet, so the upstream `tags` update simply fails; the
 //!   local shadow still gets the new tag set, and the sentinel tag
@@ -54,8 +57,6 @@
 //!   Wiring it through `SessionInit` is deferred until the
 //!   `agent_permissions` Cargo feature in aura-harness is flipped on
 //!   (currently off by default; see aura-harness `dc06eda`).
-//! - `TODO(phase6-followup): write harness record log seeder` — see
-//!   rationale above. Lives outside this crate.
 
 use std::collections::BTreeSet;
 
@@ -64,6 +65,7 @@ use aura_os_network::UpdateAgentRequest;
 use tracing::{info, warn};
 
 use crate::state::AppState;
+use crate::super_agent_migration_seed::{seed_harness_record_log, SeedReport};
 
 /// Sentinel tag written once the migrator has processed an agent.
 pub const MIGRATION_TAG: &str = "migration:super_agent_v1";
@@ -104,6 +106,17 @@ pub struct MigrationReport {
     /// Attempts that produced an error (logged at `warn!`). Does not
     /// stop the loop.
     pub failed: usize,
+    /// How many harness record-log seeds completed successfully —
+    /// either a fresh `Seeded { tx_count }` or an `AlreadySeeded`
+    /// response from the harness head check. "Already seeded" counts
+    /// here because the post-condition — the harness Kernel has this
+    /// agent's transcript — is satisfied either way.
+    pub seeded: usize,
+    /// How many seed attempts errored out. Non-fatal; the associated
+    /// agent record still carries its migration sentinel tag so the
+    /// tag-side work is durable, and the next authenticated startup
+    /// retries the seed.
+    pub seed_failed: usize,
     /// `true` when the env guard (`AURA_SUPER_AGENT_MIGRATE`) told us
     /// to no-op entirely.
     pub skipped_via_env: bool,
@@ -286,7 +299,14 @@ pub async fn migrate_legacy_super_agents(
         //    logged at `info!` for observability otherwise.
         push_tags_upstream(state, &updated).await;
 
-        // 3) Drop any stale in-memory conversation cache — the harness
+        // 3) Harness record-log seed — also best-effort. When a JWT
+        //    is cached, pipes the agent's session events into the
+        //    harness `/tx` endpoint so a cold-started harness agent
+        //    sees the same transcript. Gated by the same env guard,
+        //    so `AURA_SUPER_AGENT_MIGRATE=off` skips seeding too.
+        seed_record_log_for(state, &updated, &mut report).await;
+
+        // 4) Drop any stale in-memory conversation cache — the harness
         //    path writes its own transcript and we don't want the old
         //    legacy cache to shadow it on the first post-migration
         //    turn.
@@ -314,6 +334,8 @@ pub async fn migrate_legacy_super_agents(
         already_migrated = report.already_migrated,
         skipped_opt_out = report.skipped_opt_out,
         failed = report.failed,
+        seeded = report.seeded,
+        seed_failed = report.seed_failed,
         "super-agent migrator: run complete"
     );
 
@@ -362,6 +384,60 @@ async fn push_tags_upstream(state: &AppState, agent: &Agent) {
                 error = %err,
                 "super-agent migrator: upstream tag push failed (local shadow already updated; will retry on next CRUD round-trip)"
             );
+        }
+    }
+}
+
+/// Best-effort wrapper around [`seed_harness_record_log`]. Only runs
+/// when a JWT is cached and the env guard is already honored by the
+/// outer loop. Populates `report.seeded` / `report.seed_failed` and
+/// logs outcomes at `info!` / `warn!`.
+///
+/// Treats "no JWT cached" as a quiet skip: the typical first boot
+/// pattern is that the migrator runs before the user has signed in,
+/// and a subsequent authenticated startup will retry. Not counted as
+/// either a success or a failure so the metrics stay honest.
+async fn seed_record_log_for(state: &AppState, agent: &Agent, report: &mut MigrationReport) {
+    let Some(session) = state.store.get_cached_zero_auth_session() else {
+        info!(
+            agent_id = %agent.agent_id,
+            "super-agent migrator: no cached JWT — deferring harness record-log seed to next authenticated startup"
+        );
+        return;
+    };
+
+    match seed_harness_record_log(state, agent, &session.access_token).await {
+        Ok(SeedReport::Seeded { tx_count }) => {
+            info!(
+                agent_id = %agent.agent_id,
+                tx_count,
+                "super-agent migrator: harness record log seeded"
+            );
+            report.seeded += 1;
+        }
+        Ok(SeedReport::AlreadySeeded { existing_tx_count }) => {
+            info!(
+                agent_id = %agent.agent_id,
+                existing_tx_count,
+                "super-agent migrator: harness already had transactions — treated as seeded"
+            );
+            report.seeded += 1;
+        }
+        Ok(SeedReport::NothingToSeed) => {
+            info!(
+                agent_id = %agent.agent_id,
+                "super-agent migrator: no session events to seed — harness will cold-start from SessionInit"
+            );
+            // Not counted as `seeded`: there was nothing to do, and a
+            // future deploy may have content to seed.
+        }
+        Err(err) => {
+            warn!(
+                agent_id = %agent.agent_id,
+                error = %err,
+                "super-agent migrator: harness record-log seed failed (non-fatal)"
+            );
+            report.seed_failed += 1;
         }
     }
 }

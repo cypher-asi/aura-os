@@ -525,6 +525,7 @@ dependencies = [
 name = "aura-os-server"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "aura-os-agents",
  "aura-os-auth",
  "aura-os-billing",
