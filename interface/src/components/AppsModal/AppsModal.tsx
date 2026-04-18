@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { CSSProperties, HTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { Modal } from "@cypher-asi/zui";
 import {
   DndContext,
@@ -186,9 +187,22 @@ export function AppsModal({ isOpen, onClose }: Props) {
           rows={hiddenRows}
           emptyLabel="No hidden apps. Drag items here to hide them from the taskbar."
         />
-        <DragOverlay dropAnimation={null}>
-          {activeRow ? <AppRow row={activeRow} isOverlay /> : null}
-        </DragOverlay>
+        {/*
+          Portal the overlay to document.body so it escapes the modal's
+          transform ancestor (the ZUI Modal applies `transform: scale(1)` via
+          its scale-in animation with fill-mode forwards). Without this portal,
+          `position: fixed` on the DragOverlay would be anchored to the modal
+          instead of the viewport, which makes the ghost visually offset from
+          the pointer.
+        */}
+        {typeof document !== "undefined"
+          ? createPortal(
+              <DragOverlay dropAnimation={null} style={{ zIndex: 2000 }}>
+                {activeRow ? <AppRow row={activeRow} isOverlay /> : null}
+              </DragOverlay>,
+              document.body,
+            )
+          : null}
       </DndContext>
     </Modal>
   );
