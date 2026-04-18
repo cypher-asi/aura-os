@@ -38,6 +38,7 @@ import { processApi } from "./process";
 import { memoryApi } from "./memory";
 import { harnessSkillsApi } from "./harness-skills";
 import { notesApi } from "./notes";
+import { marketplaceApi } from "./marketplace";
 
 export const api = {
   auth: authApi,
@@ -65,4 +66,5 @@ export const api = {
   memory: memoryApi,
   harnessSkills: harnessSkillsApi,
   notes: notesApi,
+  marketplace: marketplaceApi,
 };

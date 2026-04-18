@@ -19,18 +19,31 @@
   display: none;
 }
 
-.content {
-  max-width: 720px;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.emptyWrapper {
+  max-width: 480px;
   width: 100%;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
   min-height: 100%;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 640px) {
   .scrollArea {
     padding: 12px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
 }

@@ -18,6 +18,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useSelectedAgent } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
+import type { Agent } from "../../../types";
 
 const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Profile" },
@@ -31,7 +32,16 @@ const TAB_ICONS: TabItem[] = [
   { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
 ];
 
-export function AgentSidekickTaskbar() {
+interface AgentSidekickTaskbarProps {
+  /**
+   * Override the agent resolved from `useSelectedAgent`. Used by apps that
+   * reuse this taskbar (e.g. the Marketplace) with an agent that isn't in
+   * the local agent store.
+   */
+  agent?: Agent | null;
+}
+
+export function AgentSidekickTaskbar({ agent: agentOverride }: AgentSidekickTaskbarProps = {}) {
   const { activeTab, setActiveTab, requestEdit, requestDelete } = useAgentSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
@@ -40,7 +50,8 @@ export function AgentSidekickTaskbar() {
       requestDelete: s.requestDelete,
     })),
   );
-  const { selectedAgent } = useSelectedAgent();
+  const { selectedAgent: storeSelectedAgent } = useSelectedAgent();
+  const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
 
   const isOwnAgent =

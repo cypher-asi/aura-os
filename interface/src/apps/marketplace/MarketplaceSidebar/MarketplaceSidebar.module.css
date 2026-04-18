@@ -1,0 +1,17 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.sidebar [class*="itemContent"] {
+  min-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.sidebar button[aria-selected="true"],
+.sidebar button[aria-selected="true"]:hover {
+  background: var(--color-overlay-subtle) !important;
+}

@@ -17,9 +17,11 @@ import {
   FolderOpen,
   GitCommitVertical,
   Plug,
+  Store,
 } from "lucide-react";
 import type { AuraApp, AuraAppModule } from "./types";
 import { agentsRoutes } from "./agents/routes";
+import { marketplaceRoutes } from "./marketplace/routes";
 import { projectsRoutes } from "./projects/routes";
 import { tasksRoutes } from "./tasks/routes";
 import { processRoutes } from "./process/routes";
@@ -153,6 +155,8 @@ function createAppDefinition(
 
 const loadAgentsApp = () =>
   import("./agents/AgentsApp").then((module) => module.AgentsApp);
+const loadMarketplaceApp = () =>
+  import("./marketplace/MarketplaceApp").then((module) => module.MarketplaceApp);
 const loadProjectsApp = () =>
   import("./projects/ProjectsApp").then((module) => module.ProjectsApp);
 const loadTasksApp = () =>
@@ -188,6 +192,23 @@ export const apps: AuraApp[] = [
       hasSidekickPanel: true,
       hasSidekickTaskbar: true,
       includePrefetch: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "marketplace",
+      label: "Marketplace",
+      icon: Store,
+      basePath: "/marketplace",
+      searchPlaceholder: "Search talent",
+      routes: marketplaceRoutes,
+    },
+    loadMarketplaceApp,
+    {
+      hasDesktopLeftMenuPane: true,
+      hasResponsiveControls: true,
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
     },
   ),
   createAppDefinition(
