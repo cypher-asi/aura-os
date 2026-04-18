@@ -12,7 +12,7 @@
   flex: 1;
   min-width: 0;
   gap: var(--space-1);
-  padding: 0 var(--space-2);
+  padding: 0;
   border-bottom: 1px solid var(--color-border);
   height: var(--control-height-sm, 32px);
   min-height: var(--control-height-sm, 32px);

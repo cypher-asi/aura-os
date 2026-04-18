@@ -13,6 +13,7 @@ import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
+import { useAuthStore } from "../../stores/auth-store";
 import styles from "./LoginView.module.css";
 
 const HostSettingsModal = lazy(() =>
@@ -22,7 +23,15 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
+  const isAuthenticated = useAuthStore((s) => s.user !== null);
   const f = useLoginForm();
+
+  // Authenticated users land here briefly on app open when the persisted URL
+  // was /login. Render nothing so the login chrome never flashes — the redirect
+  // useEffect inside useLoginForm will navigate away on mount.
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className={`${styles.page} ${f.isMobileLayout ? styles.pageMobile : ""}`}>
