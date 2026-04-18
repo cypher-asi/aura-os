@@ -12,6 +12,7 @@ import { useOrgStore } from "../../stores/org-store";
 import { queryClient } from "../../lib/query-client";
 import { projectQueryKeys } from "../../queries/project-queries";
 import type { Agent, AgentInstance } from "../../types";
+import { emptyAgentPermissions } from "../../types/permissions-wire";
 import { createAgentChatHandoffState } from "../../utils/chat-handoff";
 import { projectAgentChatRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
 import { setLastAgent, setLastProject } from "../../utils/storage";
@@ -253,6 +254,7 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
         auth_source: "aura_managed",
         integration_id: null,
         default_model: null,
+        permissions: emptyAgentPermissions(),
       });
       await waitForRemoteAgentReady(created.agent_id);
       const instance = await api.createAgentInstance(projectId, created.agent_id);

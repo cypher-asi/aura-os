@@ -3,6 +3,7 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { api, STANDALONE_AGENT_HISTORY_LIMIT } from "../../../api/client";
 import { buildDisplayEvents } from "../../../utils/build-display-messages";
 import type { Agent } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
 import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../lib/browser-db";
 import { useAuthStore } from "../../../stores/auth-store";
@@ -121,9 +122,7 @@ export const useAgentStore = create<AgentState>()(
         agentsFetchPromise = api.agents
           .list()
           .then(async (agents) => {
-            const hasSuperAgent = agents.some(
-              (a) => a.tags?.includes("super_agent") || a.role === "super_agent",
-            );
+            const hasSuperAgent = agents.some((a) => isSuperAgent(a));
             if (!hasSuperAgent) {
               try {
                 const { agent } = await api.superAgent.setup();

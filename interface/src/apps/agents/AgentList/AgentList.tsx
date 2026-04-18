@@ -28,10 +28,11 @@ import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
 import { getApiErrorDetails, getApiErrorMessage } from "../../../utils/api-errors";
 
 import type { Agent } from "../../../types";
+import { isSuperAgent as isSuperAgentByPerms } from "../../../types/permissions";
 import styles from "./AgentList.module.css";
 
 function buildAgentMenuItems(agent: Agent, pinnedIds: Set<string>, favoriteIds: Set<string>): MenuItem[] {
-  const isSuperAgent = agent.tags?.includes("super_agent");
+  const isSuperAgent = isSuperAgentByPerms(agent);
   const isPinned = agent.is_pinned || pinnedIds.has(agent.agent_id);
   const isFavorite = favoriteIds.has(agent.agent_id);
   const items: MenuItem[] = [];

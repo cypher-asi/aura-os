@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { Agent } from "../../../types";
+import { emptyAgentPermissions } from "../../../types/permissions-wire";
 import type { DisplaySessionEvent } from "../../../types/stream";
 
 vi.mock("../../../hooks/use-avatar-state", () => ({
@@ -22,6 +23,7 @@ const baseAgent: Agent = {
   skills: [],
   icon: null,
   machine_type: "local",
+  permissions: emptyAgentPermissions(),
   created_at: "2026-03-20T00:00:00Z",
   updated_at: "2026-03-20T00:00:00Z",
 };

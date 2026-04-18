@@ -1,6 +1,7 @@
 import { Pin } from "lucide-react";
 import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
 import { Avatar } from "../../../components/Avatar";
 import { useAvatarState } from "../../../hooks/use-avatar-state";
@@ -46,6 +47,7 @@ export function AgentConversationRow({
   const { status, isLocal } = useAvatarState(agent.agent_id);
   const pinnedIds = useAgentStore((s) => s.pinnedAgentIds);
   const isPinned = agent.is_pinned || pinnedIds.has(agent.agent_id);
+  const isCeo = isSuperAgent(agent);
 
   return (
     <button
@@ -69,13 +71,11 @@ export function AgentConversationRow({
         <span className={styles.top}>
           <span className={styles.name}>
             {agent.name}
-            {agent.tags?.includes("super_agent") && (
-              <span className={styles.ceoBadge}>CEO</span>
-            )}
-            {!agent.tags?.includes("super_agent") && agentRole && (
+            {isCeo && <span className={styles.ceoBadge}>CEO</span>}
+            {!isCeo && agentRole && (
               <span className={styles.roleBadge}>{agentRole}</span>
             )}
-            {isPinned && !agent.tags?.includes("super_agent") && (
+            {isPinned && !isCeo && (
               <Pin size={11} className={styles.pinIcon} />
             )}
           </span>

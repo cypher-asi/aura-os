@@ -20,6 +20,7 @@ import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
 import type { Agent } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {
@@ -308,7 +309,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
         {effectiveTab === "memory" && <MemoryTab agent={a} />}
         {effectiveTab === "stats" && <div className={styles.tabEmptyState}>No stats yet</div>}
 
-        {effectiveTab === "profile" && a.tags?.includes("super_agent") && (
+        {effectiveTab === "profile" && isSuperAgent(a) && (
           <SuperAgentDashboardPanel agent={a} />
         )}
       </div>

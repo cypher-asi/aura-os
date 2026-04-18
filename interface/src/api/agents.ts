@@ -4,6 +4,8 @@ import type {
   AgentInstanceId,
   Agent,
   AgentInstance,
+  AgentPermissions,
+  IntentClassifierSpec,
   Session,
   SessionEvent,
   Task,
@@ -53,6 +55,10 @@ export const agentTemplatesApi = {
     expertise?: string[];
     /** Local-only per-agent working directory override (absolute OS path). */
     local_workspace_path?: string | null;
+    /** Required capability + scope bundle. Backend rejects creates without. */
+    permissions: AgentPermissions;
+    /** Optional intent-classifier spec; CEO agents ship one. */
+    intent_classifier?: IntentClassifierSpec | null;
   }) =>
     apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
   get: (agentId: AgentId, options?: ApiRequestOptions) =>
@@ -80,6 +86,10 @@ export const agentTemplatesApi = {
      * - `string`: set the override to this absolute path.
      */
     local_workspace_path?: string | null;
+    /** Replaces the permissions bundle wholesale. `undefined` leaves it. */
+    permissions?: AgentPermissions;
+    /** Replaces the intent-classifier spec. `undefined` leaves it. */
+    intent_classifier?: IntentClassifierSpec | null;
   }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),

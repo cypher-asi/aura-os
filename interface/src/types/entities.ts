@@ -12,6 +12,10 @@ import type {
   ProcessRunTrigger,
   ProcessEventStatus,
 } from "./enums";
+import type {
+  AgentPermissions,
+  IntentClassifierSpec,
+} from "./permissions-wire";
 
 export interface Project {
   project_id: ProjectId;
@@ -121,11 +125,37 @@ export interface Agent {
   tags: string[];
   is_pinned: boolean;
   /**
+   * Marketplace listing status. Absent on records produced before Phase 3;
+   * consumers should treat `undefined` as `"closed"`.
+   */
+  listing_status?: "closed" | "hireable";
+  /** Marketplace expertise slugs; see `MARKETPLACE_EXPERTISE`. */
+  expertise?: string[];
+  /** Aggregated marketplace stats (computed server-side). */
+  jobs?: number;
+  revenue_usd?: number;
+  reputation?: number;
+  /**
    * Local-only override for the agent's working directory, applied only when
    * the agent runs on a local machine. Takes precedence over the project's
    * `local_workspace_path` when both are set.
    */
   local_workspace_path?: string | null;
+  /**
+   * Required capability + scope bundle. The harness enforces these
+   * unconditionally on every session — there is no role-based fallback.
+   * Regular agents carry an empty bundle; CEO/super-agents carry the
+   * universe-scope CEO preset. Use `isSuperAgent(agent)` from
+   * `@/types/permissions` to detect CEO agents — never branch on `role`
+   * or tags.
+   */
+  permissions: AgentPermissions;
+  /**
+   * Optional per-turn intent classifier. When present the harness narrows
+   * the per-turn tool surface based on each user message. Populated for
+   * CEO-style agents; `null`/absent for regular agents.
+   */
+  intent_classifier?: IntentClassifierSpec | null;
   created_at: string;
   updated_at: string;
 }

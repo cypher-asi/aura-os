@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { api } from "../../api/client";
-import type { Agent, OrgIntegration } from "../../types";
+import type { Agent, AgentPermissions, OrgIntegration } from "../../types";
+import { emptyAgentPermissions } from "../../types/permissions-wire";
+import { isSuperAgent as isSuperAgentByPerms } from "../../types/permissions";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { getAgentNameValidationMessage } from "../../lib/agentNameValidation";
@@ -17,14 +19,10 @@ import {
   mergeListingStatusTag,
   type AgentListingStatus,
 } from "../../apps/marketplace/listing-status";
-import { expertiseSlugsFromTags } from "../../apps/marketplace/marketplace-expertise";
-
-export type HostMode = "local" | "cloud";
-
-/// Tag string that marks a super-agent as harness-hosted ("cloud"). Mirrors
-/// `HARNESS_HOST_TAG` in aura-os-server so the UI and server agree on the
-/// wire format for the Phase 4 Local/Cloud toggle.
-export const HOST_MODE_HARNESS_TAG = "host_mode:harness";
+import {
+  MARKETPLACE_EXPERTISE_SLUG_SET,
+  expertiseSlugsFromTags,
+} from "../../apps/marketplace/marketplace-expertise";
 
 interface AgentEditorFormResult {
   name: string;
@@ -57,8 +55,6 @@ interface AgentEditorFormResult {
    */
   localWorkspacePath: string;
   setLocalWorkspacePath: (v: string) => void;
-  hostMode: HostMode;
-  setHostMode: (v: HostMode) => void;
   listingStatus: AgentListingStatus;
   setListingStatus: (v: AgentListingStatus) => void;
   simplifyForMobileCreate: boolean;
@@ -133,10 +129,6 @@ export function useAgentEditorForm(
   const [defaultModel, setDefaultModel] = useState("");
   const [localWorkspacePath, setLocalWorkspacePath] = useState("");
   const [initialLocalWorkspacePath, setInitialLocalWorkspacePath] = useState("");
-  // Local vs Cloud host mode for super-agents. Brand-new agents default to
-  // "local" (in-process super-agent path). Existing agents load from their
-  // tag set so toggling the UI round-trips through `host_mode:harness`.
-  const [hostMode, setHostMode] = useState<HostMode>("local");
   const [listingStatus, setListingStatus] = useState<AgentListingStatus>(DEFAULT_LISTING_STATUS);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -154,11 +146,13 @@ export function useAgentEditorForm(
   );
   const refreshIntegrations = useOrgStore((s) => s.refreshIntegrations);
 
+  const isSuperAgent = !!(agent && isSuperAgentByPerms(agent));
+
   useEffect(() => {
     if (!isOpen) return;
     if (agent) {
-      const isSuperRole = agent.role === "super_agent" || agent.tags?.includes("super_agent");
-      setName(agent.name); setRole(isSuperRole ? "" : agent.role);
+      setName(agent.name);
+      setRole(isSuperAgentByPerms(agent) ? "" : agent.role);
       setPersonality(agent.personality); setSystemPrompt(agent.system_prompt);
       setIcon(agent.icon ?? "");
       setAdapterType(agent.adapter_type ?? "aura_harness");
@@ -168,12 +162,7 @@ export function useAgentEditorForm(
       setDefaultModel(agent.default_model ?? "");
       setLocalWorkspacePath(agent.local_workspace_path ?? "");
       setInitialLocalWorkspacePath(agent.local_workspace_path ?? "");
-      setHostMode(
-        agent.tags?.some((t) => t.toLowerCase() === HOST_MODE_HARNESS_TAG)
-          ? "cloud"
-          : "local",
-      );
-      setListingStatus(listingStatusFromTags(agent.tags));
+      setListingStatus(agent.listing_status ?? listingStatusFromTags(agent.tags));
       setShowAdvancedRuntime(
         !isDefaultCreateRuntime(
           agent.adapter_type ?? "aura_harness",
@@ -194,7 +183,6 @@ export function useAgentEditorForm(
       setDefaultModel("");
       setLocalWorkspacePath("");
       setInitialLocalWorkspacePath("");
-      setHostMode("local");
       setListingStatus(DEFAULT_LISTING_STATUS);
     }
     setError(""); setNameError("");
@@ -364,32 +352,60 @@ export function useAgentEditorForm(
 
     setNameError(""); setSaving(true); setError("");
     try {
-      const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent");
       const trimmedName = name.trim();
       const machineType = adapterType === "aura_harness"
         ? environment === "swarm_microvm" ? "remote" : "local"
         : "local";
-      // Only super-agents are affected by the host-mode toggle today; the
-      // toggle is hidden for regular agents, but we still strip any stale
-      // `host_mode:harness` tag they may have inherited so they can't be
-      // silently migrated. Other tags are preserved verbatim.
-      const tagsAfterHostMode = isSuperAgent
-        ? mergeHostModeTag(agent?.tags, hostMode)
-        : agent?.tags;
-      // Persist the marketplace listing status as an `expertise:`-style tag
-      // until Phase 3 adds a real `listing_status` column on the network
-      // agent record. `mergeListingStatusTag` strips any prior listing
-      // tags before reapplying the current choice.
-      const shouldPatchTags = isSuperAgent || listingStatus !== DEFAULT_LISTING_STATUS ||
-        (agent?.tags?.some((t) => t.toLowerCase().startsWith("listing_status:")) ?? false);
+      // `role` is a free-text display label. We preserve the existing role on
+      // super-agents (so their chosen title stays) and never inject any system
+      // tags (`host_mode:*`, `preset:*`, `migration:*`) on save. User-facing
+      // tags like listing-status flow through unchanged below.
+      const roleToSend = isSuperAgent ? (agent?.role ?? role.trim()) : role.trim();
+      // Strip any legacy system tags that the old harness-mode / CEO-preset
+      // migration flows used to inject (`host_mode:*`, `preset:*`,
+      // `migration:*`). Those are no longer meaningful to the backend and the
+      // interface must never re-emit them. User-facing tags (e.g.
+      // `team:frontend`) and the legacy `super_agent` sentinel pass through
+      // unchanged — `super_agent` has no system meaning now that detection is
+      // permissions-based, but we preserve it verbatim rather than quietly
+      // dropping a tag the user may have set themselves.
+      const userFacingTags = (agent?.tags ?? []).filter((t) => {
+        const lower = t.toLowerCase();
+        return (
+          !lower.startsWith("host_mode:") &&
+          !lower.startsWith("preset:") &&
+          !lower.startsWith("migration:")
+        );
+      });
+      // TODO(aura-network-migration): drop tag dual-write after aura-network
+      // schema ships (docs/migrations/2026-04-17-marketplace-agent-fields.md).
+      // Until then, we keep writing `listing_status:<x>` tags alongside the
+      // typed field so older aura-network instances still see the value.
+      const hasLegacySystemTag =
+        (agent?.tags ?? []).some((t) => {
+          const lower = t.toLowerCase();
+          return (
+            lower.startsWith("host_mode:") ||
+            lower.startsWith("preset:") ||
+            lower.startsWith("migration:")
+          );
+        });
+      const existingListingStatusTag = userFacingTags.some((t) =>
+        t.toLowerCase().startsWith("listing_status:"),
+      );
+      const shouldPatchTags =
+        listingStatus !== DEFAULT_LISTING_STATUS ||
+        existingListingStatusTag ||
+        hasLegacySystemTag;
       const tagsPayload = shouldPatchTags
-        ? mergeListingStatusTag(tagsAfterHostMode, listingStatus)
+        ? mergeListingStatusTag(userFacingTags, listingStatus)
         : undefined;
-      // Send `listing_status` and `expertise` as first-class fields so the
-      // server validates them against the canonical slug list (Phase 2). The
-      // legacy `tags` encoding remains for backwards compatibility until
-      // Phase 3 promotes both fields to dedicated network columns.
-      const expertiseSlugs = expertiseSlugsFromTags(agent?.tags);
+      // Prefer the typed `expertise` column on the agent; fall back to tags
+      // for agents that haven't been resaved since the Phase 3 rollout and
+      // therefore still carry the values in their tag set only.
+      const expertiseSlugs = agent?.expertise?.length
+        ? agent.expertise.filter((slug) => MARKETPLACE_EXPERTISE_SLUG_SET.has(slug))
+        : expertiseSlugsFromTags(agent?.tags);
       // `local_workspace_path` is local-only and uses patch semantics: for
       // update we only include it when it actually changed (including
       // clearing it via `null`); for create we only include it when set.
@@ -403,10 +419,12 @@ export function useAgentEditorForm(
         : trimmedLocalPath
           ? { local_workspace_path: trimmedLocalPath }
           : {};
-      const payload = {
+      const basePayload = {
         org_id: agent?.org_id ?? activeOrg?.org_id,
-        name: trimmedName, role: isSuperAgent ? "super_agent" : role.trim(),
-        personality: personality.trim(), system_prompt: systemPrompt.trim(),
+        name: trimmedName,
+        role: roleToSend,
+        personality: personality.trim(),
+        system_prompt: systemPrompt.trim(),
         icon: icon || (agent?.icon ? null : undefined),
         machine_type: !agent && isMobileLayout && adapterType === "aura_harness" ? "remote" : machineType,
         adapter_type: adapterType,
@@ -419,9 +437,22 @@ export function useAgentEditorForm(
         ...(expertiseSlugs.length > 0 ? { expertise: expertiseSlugs } : {}),
         ...localWorkspacePatch,
       };
-      const saved = agent
-        ? await api.agents.update(agent.agent_id, payload)
-        : await api.agents.create({ ...payload, icon: payload.icon ?? "" });
+      let saved: Agent;
+      if (agent) {
+        // Update path: `permissions` is optional and we never edit it from
+        // this form today, so we pass `undefined` meaning "don't change".
+        saved = await api.agents.update(agent.agent_id, basePayload);
+      } else {
+        // Create path: `permissions` is required. New agents always spawn
+        // with an empty permissions bundle (no cross-agent capabilities);
+        // the CEO bootstrap has its own dedicated endpoint.
+        const createPayload: Parameters<typeof api.agents.create>[0] = {
+          ...basePayload,
+          icon: basePayload.icon ?? "",
+          permissions: cloneAgentPermissions(emptyAgentPermissions()),
+        };
+        saved = await api.agents.create(createPayload);
+      }
       onSaved(saved);
       if (closeOnSave) {
         onClose();
@@ -429,9 +460,7 @@ export function useAgentEditorForm(
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, localWorkspacePath, initialLocalWorkspacePath, hostMode, listingStatus, agent, activeOrg?.org_id, isMobileLayout, onSaved, closeOnSave, onClose]);
-
-  const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent") || false;
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, localWorkspacePath, initialLocalWorkspacePath, listingStatus, agent, activeOrg?.org_id, isMobileLayout, isSuperAgent, onSaved, closeOnSave, onClose]);
 
   return {
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,
@@ -440,7 +469,6 @@ export function useAgentEditorForm(
     authSource, setAuthSource, showAdvancedRuntime, setShowAdvancedRuntime,
     integrationId, setIntegrationId, defaultModel, setDefaultModel,
     localWorkspacePath, setLocalWorkspacePath,
-    hostMode, setHostMode,
     listingStatus, setListingStatus,
     simplifyForMobileCreate, restrictCreateToAuraRuntimes,
     availableIntegrations: integrations,
@@ -452,19 +480,13 @@ export function useAgentEditorForm(
   };
 }
 
-/// Produce the tag vector to send on save given an existing agent's tags and
-/// a selected host mode. Returns a new array; never mutates the input. Any
-/// non-host-mode tags (e.g. `super_agent`, future feature flags) are
-/// preserved verbatim; only the `host_mode:*` entries are rewritten.
-export function mergeHostModeTag(
-  existing: readonly string[] | undefined,
-  hostMode: HostMode,
-): string[] {
-  const kept = (existing ?? []).filter(
-    (t) => !t.toLowerCase().startsWith("host_mode:"),
-  );
-  if (hostMode === "cloud") {
-    kept.push(HOST_MODE_HARNESS_TAG);
-  }
-  return kept;
+function cloneAgentPermissions(p: AgentPermissions): AgentPermissions {
+  return {
+    scope: {
+      orgs: [...p.scope.orgs],
+      projects: [...p.scope.projects],
+      agent_ids: [...p.scope.agent_ids],
+    },
+    capabilities: p.capabilities.map((c) => ({ ...c })),
+  };
 }
