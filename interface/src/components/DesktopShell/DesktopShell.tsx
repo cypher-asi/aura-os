@@ -289,10 +289,10 @@ export function DesktopShell() {
 
   return (
     <>
-      <div className={styles.desktopShell} data-desktop-mode={isDesktop || undefined}>
-        {isDesktop && <BackgroundLayer />}
+      <div className={styles.desktopShell} data-desktop-mode>
+        <BackgroundLayer />
         <Topbar
-          className={`titlebar-drag ${styles.topbarAlignRail} ${isDesktop ? styles.topbarBlur : ""}`}
+          className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}
           onDoubleClick={() => windowCommand("maximize")}
           icon={<OrgSelector variant="icon" />}
           title={<span className="titlebar-center" style={{ userSelect: "none" }}><img src="/AURA_logo_text_mark.png" alt="AURA" draggable={false} style={{ height: 11, display: "block", userSelect: "none", pointerEvents: "none" }} /></span>}
