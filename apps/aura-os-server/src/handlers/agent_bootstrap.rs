@@ -119,6 +119,60 @@ async fn dedupe_ceo_agents<'a>(
     }
 }
 
+/// Best-effort write-back of the CEO preset for a canonical CEO whose
+/// network record has a non-preset permissions bundle.
+///
+/// This covers the case where the CEO was originally created against an
+/// older aura-network deployment that didn't persist the `permissions`
+/// column — or the field was lost via a migration — and so fetches come
+/// back with an empty bundle. Without this repair the next fetch would
+/// again hit the read-time safety net in
+/// [`crate::handlers::agents::conversions::agent_from_network`] and every
+/// subsequent server boot would keep papering over the same bug.
+///
+/// Any failure here is logged and swallowed; the caller still returns
+/// the repaired in-memory agent, and the patch will be retried on the
+/// next call to [`setup_ceo_agent`].
+async fn ensure_canonical_ceo_permissions_persisted(
+    network: &aura_os_network::NetworkClient,
+    jwt: &str,
+    canonical: &NetworkAgent,
+) {
+    if canonical.permissions.is_ceo_preset() {
+        return;
+    }
+    let classifier = canonical.intent_classifier.clone().or_else(|| {
+        Some(aura_os_agent_runtime::ceo::ceo_intent_classifier_spec())
+    });
+    let req = aura_os_network::UpdateAgentRequest {
+        name: None,
+        role: None,
+        personality: None,
+        system_prompt: None,
+        skills: None,
+        icon: None,
+        harness: None,
+        machine_type: None,
+        vm_id: None,
+        tags: None,
+        listing_status: None,
+        expertise: None,
+        permissions: Some(aura_os_core::AgentPermissions::ceo_preset()),
+        intent_classifier: classifier,
+    };
+    match network.update_agent(&canonical.id, jwt, &req).await {
+        Ok(_) => info!(
+            agent_id = %canonical.id,
+            "repaired CEO permissions on canonical network record"
+        ),
+        Err(error) => warn!(
+            agent_id = %canonical.id,
+            error = %error,
+            "failed to repair CEO permissions on canonical network record; retry next setup"
+        ),
+    }
+}
+
 /// Idempotent CEO-agent bootstrap.
 ///
 /// Looks up the caller's first org, scans its agents for anyone already
@@ -148,6 +202,16 @@ pub(crate) async fn setup_ceo_agent(
 
     let outcome = dedupe_ceo_agents(network, &jwt, &net_agents).await;
     if let Some(canonical) = outcome.canonical {
+        // Older aura-network deployments didn't persist the
+        // `permissions` column for agents, leaving the canonical CEO
+        // with an empty permissions bundle on read. That breaks
+        // `is_ceo_preset()`-gated code paths (Permissions tab toggles,
+        // `build_cross_agent_tools` manifest, etc.). Best-effort patch
+        // the network copy so the fix sticks; the in-memory `Agent`
+        // returned to the caller is further repaired by
+        // `conversions::agent_from_network` so the UI is correct even
+        // if the patch fails.
+        ensure_canonical_ceo_permissions_persisted(network, &jwt, canonical).await;
         let mut agent = agent_from_network(canonical);
         let _ = state.agent_service.apply_runtime_config(&mut agent);
         if agent.icon.is_none() {
