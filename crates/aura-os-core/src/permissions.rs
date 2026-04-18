@@ -110,6 +110,35 @@ impl AgentPermissions {
             .iter()
             .all(|c| self.capabilities.contains(c))
     }
+
+    /// Read-time safety net for CEO agents whose `permissions` bundle
+    /// was persisted empty (older `aura-network` deployments didn't
+    /// store the column, so legacy records round-trip as
+    /// `AgentPermissions::empty()`).
+    ///
+    /// If `(name, role)` identifies the CEO role *and* `self` is not
+    /// already the canonical [`Self::ceo_preset`], this returns the
+    /// preset so downstream callers (tool manifest builders, sidekick
+    /// toggles, etc.) see an agent with the capabilities users expect
+    /// from the CEO icon. For every other case it returns `self`
+    /// unchanged.
+    ///
+    /// The check is intentionally narrow — only `name == "CEO"` *and*
+    /// `role == "CEO"` (case-insensitive) — so a non-CEO agent can't
+    /// accidentally be promoted by sharing one field. A persistent
+    /// write-time repair in the server's bootstrap handler will
+    /// eventually patch the network record itself; this helper keeps
+    /// the in-memory view correct between now and then.
+    #[must_use]
+    pub fn normalized_for_identity(self, name: &str, role: Option<&str>) -> Self {
+        let looks_like_ceo = name.eq_ignore_ascii_case("CEO")
+            && role.is_some_and(|r| r.eq_ignore_ascii_case("CEO"));
+        if looks_like_ceo && !self.is_ceo_preset() {
+            Self::ceo_preset()
+        } else {
+            self
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +261,53 @@ mod tests {
     #[test]
     fn ceo_preset_recognised() {
         assert!(AgentPermissions::ceo_preset().is_ceo_preset());
+    }
+
+    #[test]
+    fn normalized_for_identity_upgrades_empty_ceo_to_preset() {
+        let upgraded =
+            AgentPermissions::empty().normalized_for_identity("CEO", Some("CEO"));
+        assert!(upgraded.is_ceo_preset());
+    }
+
+    #[test]
+    fn normalized_for_identity_is_case_insensitive() {
+        let upgraded =
+            AgentPermissions::empty().normalized_for_identity("ceo", Some("Ceo"));
+        assert!(upgraded.is_ceo_preset());
+    }
+
+    #[test]
+    fn normalized_for_identity_leaves_non_ceo_untouched() {
+        let perms = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::ReadAgent],
+        };
+        let same = perms.clone().normalized_for_identity("Atlas", Some("Engineer"));
+        assert_eq!(same, perms);
+    }
+
+    #[test]
+    fn normalized_for_identity_requires_both_name_and_role_to_match() {
+        // name matches but role doesn't — must not promote.
+        let only_name =
+            AgentPermissions::empty().normalized_for_identity("CEO", Some("Engineer"));
+        assert!(!only_name.is_ceo_preset());
+        // role matches but name doesn't — must not promote.
+        let only_role =
+            AgentPermissions::empty().normalized_for_identity("Atlas", Some("CEO"));
+        assert!(!only_role.is_ceo_preset());
+        // role missing entirely — must not promote (prevents pre-
+        // schema records from hijacking the preset).
+        let missing_role = AgentPermissions::empty().normalized_for_identity("CEO", None);
+        assert!(!missing_role.is_ceo_preset());
+    }
+
+    #[test]
+    fn normalized_for_identity_preserves_already_correct_preset() {
+        let preset = AgentPermissions::ceo_preset();
+        let same = preset.clone().normalized_for_identity("CEO", Some("CEO"));
+        assert_eq!(same, preset);
     }
 
     #[test]

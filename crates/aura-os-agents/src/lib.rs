@@ -58,7 +58,16 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
         revenue_usd: 0.0,
         reputation: 0.0,
         local_workspace_path: None,
-        permissions: net.permissions.clone(),
+        // Read-time safety net for legacy records whose `permissions`
+        // column was never persisted: if this agent is the CEO by
+        // name+role but the bundle isn't the canonical preset, promote
+        // it in-memory so the harness tool manifest / sidekick toggles
+        // behave correctly until `ensure_canonical_ceo_permissions_persisted`
+        // patches the network record on the next bootstrap.
+        permissions: net
+            .permissions
+            .clone()
+            .normalized_for_identity(&net.name, net.role.as_deref()),
         intent_classifier: net.intent_classifier.clone(),
         created_at,
         updated_at,
@@ -714,5 +723,60 @@ mod tests {
         assert_eq!(agent.environment, "swarm_microvm");
         assert_eq!(agent.auth_source, "aura_managed");
         assert_eq!(agent.default_model.as_deref(), Some("claude-sonnet"));
+    }
+
+    fn minimal_network_agent(name: &str, role: Option<&str>) -> NetworkAgent {
+        NetworkAgent {
+            id: AgentId::new().to_string(),
+            name: name.to_string(),
+            role: role.map(str::to_string),
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            machine_type: None,
+            vm_id: None,
+            user_id: "u1".to_string(),
+            org_id: Some(OrgId::new().to_string()),
+            profile_id: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            jobs: None,
+            revenue_usd: None,
+            reputation: None,
+            permissions: AgentPermissions::empty(),
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn network_agent_to_core_repairs_empty_ceo_permissions() {
+        // Regression for the CEO-has-no-tools bug: this converter is
+        // hit by the project-agent-instance chat path. When the
+        // network record has empty permissions but the agent is
+        // clearly the CEO (name + role both "CEO"), we must return
+        // the canonical preset so `build_cross_agent_tools` takes the
+        // CEO branch and emits the full manifest.
+        let net = minimal_network_agent("CEO", Some("CEO"));
+        let agent = network_agent_to_core(&net);
+        assert!(
+            agent.permissions.is_ceo_preset(),
+            "CEO with empty network permissions must be promoted to the preset on read"
+        );
+    }
+
+    #[test]
+    fn network_agent_to_core_leaves_non_ceo_empty_permissions_alone() {
+        // The safety net is intentionally narrow: a non-CEO agent with
+        // empty permissions stays empty. Prevents other agents from
+        // silently picking up the CEO capability bundle.
+        let net = minimal_network_agent("Atlas", Some("Engineer"));
+        let agent = network_agent_to_core(&net);
+        assert!(!agent.permissions.is_ceo_preset());
+        assert!(agent.permissions.capabilities.is_empty());
     }
 }

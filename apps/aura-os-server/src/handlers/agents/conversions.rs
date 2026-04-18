@@ -36,22 +36,26 @@ pub(crate) fn get_user_id(session: &ZeroAuthSession) -> String {
 /// [`AgentPermissions::is_ceo_preset`] on the stored bundle. When that
 /// returns `false` but the agent's name and role both spell `CEO`, we
 /// treat the stored bundle as corrupted-on-read and return the preset +
-/// canonical intent classifier instead. The heuristic mirrors
-/// `looks_like_ceo` in [`crate::handlers::agent_bootstrap`] so the
-/// bootstrap dedupe and the read-time repair agree on what counts as a
-/// CEO.
+/// canonical intent classifier instead.
+///
+/// Permission normalisation is delegated to
+/// [`AgentPermissions::normalized_for_identity`] so this handler and the
+/// other read-time converter in `aura-os-agents::network_agent_to_core`
+/// can't drift apart — both now route through the same `aura-os-core`
+/// helper. The classifier fix-up stays here because it pulls the
+/// canonical spec from `aura-os-agent-runtime`, which sits above
+/// `aura-os-agents` in the crate graph.
 ///
 /// [`build_cross_agent_tools`]: aura_os_agent_runtime::ceo::build_cross_agent_tools
 fn effective_permissions_and_classifier(
     net: &NetworkAgent,
 ) -> (AgentPermissions, Option<IntentClassifierSpec>) {
-    let looks_like_ceo = net.name.eq_ignore_ascii_case("CEO")
-        && net
-            .role
-            .as_deref()
-            .unwrap_or("")
-            .eq_ignore_ascii_case("CEO");
-    if looks_like_ceo && !net.permissions.is_ceo_preset() {
+    let permissions = net
+        .permissions
+        .clone()
+        .normalized_for_identity(&net.name, net.role.as_deref());
+    let permissions_were_repaired = permissions != net.permissions;
+    if permissions_were_repaired {
         warn!(
             agent_id = %net.id,
             "CEO agent has non-preset permissions in network record; applying read-time preset"
@@ -59,9 +63,9 @@ fn effective_permissions_and_classifier(
         let classifier = net.intent_classifier.clone().or_else(|| {
             Some(aura_os_agent_runtime::ceo::ceo_intent_classifier_spec())
         });
-        return (AgentPermissions::ceo_preset(), classifier);
+        return (permissions, classifier);
     }
-    (net.permissions.clone(), net.intent_classifier.clone())
+    (permissions, net.intent_classifier.clone())
 }
 
 pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
