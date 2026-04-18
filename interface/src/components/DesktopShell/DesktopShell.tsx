@@ -231,25 +231,38 @@ export function DesktopShell() {
   );
 
 
+  // Keep `--left-panel-width` in sync with the actual sidebar width.
+  //
+  // We measure synchronously in a layout effect (before paint) whenever the
+  // active app or desktop-mode collapse state changes, because the CSS var
+  // drives horizontal centering in app panels (e.g. Notes' centerColumn). If
+  // the var lagged the sidebar's width by a frame, the first paint after an
+  // app switch would position content against the previous sidebar width —
+  // producing a visible flicker as text jumps to its final column.
+  //
+  // The ResizeObserver then handles ongoing resize drags; it also writes the
+  // var synchronously (no rAF batching) so paints during a drag stay aligned.
+  useLayoutEffect(() => {
+    const el = leftPanelRef.current;
+    if (!el) return;
+    const width = Math.round(el.getBoundingClientRect().width);
+    document.documentElement.style.setProperty("--left-panel-width", `${width}px`);
+  }, [isDesktop, activeApp.id]);
+
   useEffect(() => {
     const el = leftPanelRef.current;
     if (!el) return;
-    let rafId: number | null = null;
     let lastWidth = -1;
     const ro = new ResizeObserver(([entry]) => {
       const rawWidth = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
       const nextWidth = Math.round(rawWidth);
       if (nextWidth === lastWidth) return;
       lastWidth = nextWidth;
-      if (rafId != null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        document.documentElement.style.setProperty("--left-panel-width", `${nextWidth}px`);
-      });
+      document.documentElement.style.setProperty("--left-panel-width", `${nextWidth}px`);
     });
     ro.observe(el);
     return () => {
       ro.disconnect();
-      if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, []);
 

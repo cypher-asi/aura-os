@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -69,6 +77,37 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<EditMode>("wysiwyg");
   const lastSyncedKey = useRef<string | null>(null);
+
+  // Gate the note body on a post-commit layout pass. When mounting after an
+  // app switch (e.g. desktop mode → Notes), the sidebar expands in the same
+  // commit that mounts us; the `--left-panel-width` CSS variable that
+  // `centerColumn` depends on for horizontal positioning is updated in a
+  // parent layout effect. React runs child layout effects before parent
+  // layout effects, so on the first render our content could paint against
+  // a stale variable and flicker in the center before snapping to its final
+  // column. We start the column hidden and reveal it via direct DOM mutation
+  // in a layout effect, which runs after both our own and the parent's
+  // effects have reconciled layout. We mutate the DOM (rather than drive
+  // visibility through React state) so we don't trigger a cascading re-render
+  // on every mount.
+  const centerColumnRef = useRef<HTMLDivElement | null>(null);
+  const firstLayoutDoneRef = useRef(false);
+  const setCenterColumnRef = useCallback((el: HTMLDivElement | null) => {
+    centerColumnRef.current = el;
+    if (el && !firstLayoutDoneRef.current) {
+      el.style.visibility = "hidden";
+    }
+  }, []);
+  useLayoutEffect(() => {
+    if (firstLayoutDoneRef.current) return;
+    const el = centerColumnRef.current;
+    if (!el) return;
+    // Force a style/layout flush so the reveal happens against the final
+    // positioning (parent effects have run by now, updating CSS vars).
+    el.getBoundingClientRect();
+    el.style.visibility = "";
+    firstLayoutDoneRef.current = true;
+  });
 
   // Single source of truth for URL <-> store reconciliation. The URL is the
   // authority for "which note is shown": when it changes (user navigated,
@@ -272,7 +311,10 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
           </div>
         </div>
         <div ref={scrollRef} className={styles.scrollArea}>
-          <div className={styles.centerColumn}>
+          <div
+            ref={setCenterColumnRef}
+            className={styles.centerColumn}
+          >
             {!note ? null : mode === "wysiwyg" && editor ? (
               <>
                 <BubbleMenu
