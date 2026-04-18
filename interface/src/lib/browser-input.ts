@@ -121,7 +121,7 @@ export function buildWheelMsg(
  * only so in-page handlers that inspect `event.keyCode` receive the
  * expected value.
  */
-export const VK_BY_CODE: Readonly<Record<string, number>> = Object.freeze({
+const vkByCode: Record<string, number> = {
   Backspace: 0x08,
   Tab: 0x09,
   Enter: 0x0d,
@@ -189,16 +189,16 @@ export const VK_BY_CODE: Readonly<Record<string, number>> = Object.freeze({
   Backslash: 0xdc,
   BracketRight: 0xdd,
   Quote: 0xde,
-});
+};
 
 for (let i = 0; i < 10; i++) {
-  (VK_BY_CODE as Record<string, number>)[`Digit${i}`] = 0x30 + i;
+  vkByCode[`Digit${i}`] = 0x30 + i;
 }
 for (let i = 0; i < 26; i++) {
-  (VK_BY_CODE as Record<string, number>)[
-    `Key${String.fromCharCode(0x41 + i)}`
-  ] = 0x41 + i;
+  vkByCode[`Key${String.fromCharCode(0x41 + i)}`] = 0x41 + i;
 }
+
+export const VK_BY_CODE: Readonly<Record<string, number>> = Object.freeze(vkByCode);
 
 /** `true` when the key typed a printable character. */
 export function isPrintableKey(event: {

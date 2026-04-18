@@ -27,10 +27,31 @@ export interface BrowserAddressBarProps {
   onSelectDetected?: (url: string) => void;
 }
 
+function normalizeBrowserUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed);
+  const candidate = hasScheme
+    ? trimmed
+    : /^(localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[^\]]+\]|[^/\s]+\:\d+)(?:[/?#]|$)/.test(trimmed)
+      ? `http://${trimmed}`
+      : trimmed.includes(".")
+        ? `https://${trimmed}`
+        : null;
+
+  if (!candidate) return null;
+
+  try {
+    return new URL(candidate).toString();
+  } catch {
+    return null;
+  }
+}
+
 export function BrowserAddressBar({
   value,
   autoFocus,
-  loading,
   canGoBack,
   canGoForward,
   pinnedUrl,
@@ -60,9 +81,9 @@ export function BrowserAddressBar({
   const handleSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const trimmed = draft.trim();
-      if (!trimmed) return;
-      onSubmit(trimmed);
+      const normalized = normalizeBrowserUrl(draft);
+      if (!normalized) return;
+      onSubmit(normalized);
     },
     [draft, onSubmit],
   );
@@ -72,9 +93,9 @@ export function BrowserAddressBar({
       onUnpin?.();
       return;
     }
-    const trimmed = draft.trim();
-    if (!trimmed) return;
-    onPin?.(trimmed);
+    const normalized = normalizeBrowserUrl(draft);
+    if (!normalized) return;
+    onPin?.(normalized);
   }, [draft, isPinned, onPin, onUnpin]);
 
   const handleSelectDetected = useCallback(
@@ -111,8 +132,8 @@ export function BrowserAddressBar({
         type="button"
         className={styles.navButton}
         onClick={onReload}
-        aria-label={loading ? "Stop" : "Reload"}
-        title={loading ? "Stop" : "Reload"}
+        aria-label="Reload"
+        title="Reload"
       >
         <RefreshCw size={14} />
       </button>
@@ -120,7 +141,7 @@ export function BrowserAddressBar({
         <input
           ref={inputRef}
           className={styles.input}
-          type="url"
+          type="text"
           inputMode="url"
           autoComplete="off"
           spellCheck={false}

@@ -8,6 +8,13 @@
   overflow-x: auto;
 }
 
+.tabWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 184px;
+}
+
 .tab {
   display: inline-flex;
   align-items: center;
@@ -19,6 +26,7 @@
   color: var(--color-text-muted, #9a9a9a);
   cursor: pointer;
   font-size: 12px;
+  min-width: 0;
   max-width: 160px;
 }
 

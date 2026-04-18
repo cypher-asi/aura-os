@@ -22,28 +22,26 @@ export function BrowserInstanceTabs({
       {instances.map((instance) => {
         const active = instance.clientId === activeClientId;
         return (
-          <button
-            key={instance.clientId}
-            type="button"
-            role="tab"
-            aria-current={active ? "page" : undefined}
-            aria-selected={active}
-            className={styles.tab}
-            onClick={() => onActivate(instance.clientId)}
-          >
-            <span className={styles.title}>{instance.title}</span>
+          <div key={instance.clientId} className={styles.tabWrap}>
+            <button
+              type="button"
+              role="tab"
+              aria-current={active ? "page" : undefined}
+              aria-selected={active}
+              className={styles.tab}
+              onClick={() => onActivate(instance.clientId)}
+            >
+              <span className={styles.title}>{instance.title}</span>
+            </button>
             <button
               type="button"
               className={styles.close}
               aria-label={`Close ${instance.title}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onClose(instance.clientId);
-              }}
+              onClick={() => onClose(instance.clientId)}
             >
               <X size={12} />
             </button>
-          </button>
+          </div>
         );
       })}
       <button

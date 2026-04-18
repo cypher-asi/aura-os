@@ -18,7 +18,7 @@ interface BrowserPanelState {
   activeClientId: string | null;
   perProjectSettings: Record<string, ProjectBrowserSettings>;
 
-  addInstance: () => BrowserInstance;
+  addInstance: () => BrowserInstance | null;
   removeInstance: (clientId: string) => void;
   setServerId: (clientId: string, serverId: string) => void;
   setActive: (clientId: string) => void;
@@ -43,16 +43,14 @@ export const useBrowserPanelStore = create<BrowserPanelState>()((set, get) => ({
   perProjectSettings: {},
 
   addInstance: () => {
+    if (get().instances.length >= MAX_INSTANCES) {
+      return null;
+    }
     const instance = createInstance();
-    set((state) => {
-      if (state.instances.length >= MAX_INSTANCES) {
-        return { instances: state.instances, activeClientId: state.activeClientId };
-      }
-      return {
-        instances: [...state.instances, instance],
-        activeClientId: instance.clientId,
-      };
-    });
+    set((state) => ({
+      instances: [...state.instances, instance],
+      activeClientId: instance.clientId,
+    }));
     return instance;
   },
 
@@ -93,5 +91,8 @@ export const useBrowserPanelStore = create<BrowserPanelState>()((set, get) => ({
 
   getProjectSettings: (projectId) => get().perProjectSettings[projectId],
 
-  clear: () => set({ instances: [], activeClientId: null }),
+  clear: () => {
+    nextNum = 1;
+    set({ instances: [], activeClientId: null, perProjectSettings: {} });
+  },
 }));

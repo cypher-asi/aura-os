@@ -71,4 +71,10 @@ describe("BrowserAddressBar", () => {
     expect(screen.getByLabelText("Back")).toBeDisabled();
     expect(screen.getByLabelText("Forward")).toBeDisabled();
   });
+
+  it("keeps the reload action labeled consistently while loading", () => {
+    render(<BrowserAddressBar value="" loading onSubmit={() => {}} />);
+    expect(screen.getByLabelText("Reload")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Stop")).not.toBeInTheDocument();
+  });
 });
