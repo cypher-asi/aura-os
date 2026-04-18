@@ -760,6 +760,10 @@ pub(crate) async fn list_agents(
                         agent.icon = shadow.icon;
                     }
                 }
+                super::instances::repair_general_agent_name_in_place(
+                    &state.agent_service,
+                    &mut agent,
+                );
                 let _ = state.agent_service.save_agent_shadow(&agent);
                 agent
             })
@@ -767,10 +771,13 @@ pub(crate) async fn list_agents(
         return Ok(Json(agents));
     }
 
-    let agents = state
+    let mut agents = state
         .agent_service
         .list_agents()
         .map_err(|e| ApiError::internal(format!("listing agents: {e}")))?;
+    for agent in agents.iter_mut() {
+        super::instances::repair_general_agent_name_in_place(&state.agent_service, agent);
+    }
     Ok(Json(agents))
 }
 
@@ -791,17 +798,19 @@ pub(crate) async fn get_agent(
                 agent.icon = shadow.icon;
             }
         }
+        super::instances::repair_general_agent_name_in_place(&state.agent_service, &mut agent);
         let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(agent));
     }
 
-    let agent = state
+    let mut agent = state
         .agent_service
         .get_agent_local(&agent_id)
         .map_err(|e| match e {
             aura_os_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
             _ => ApiError::internal(format!("fetching agent: {e}")),
         })?;
+    super::instances::repair_general_agent_name_in_place(&state.agent_service, &mut agent);
     Ok(Json(agent))
 }
 

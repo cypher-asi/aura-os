@@ -66,26 +66,37 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
 /// (`maybeRenameFromFirstPrompt`) trigger the same way it does for freshly
 /// created generic project agents, whose rename guard checks for the exact
 /// string `"New Agent"`.
+///
+/// Returns `true` when the agent was mutated and a save was attempted.
+pub(super) fn repair_general_agent_name_in_place(
+    agent_service: &AgentService,
+    agent: &mut Agent,
+) -> bool {
+    let is_general = agent
+        .tags
+        .iter()
+        .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG);
+    if !is_general || !agent.name.trim().is_empty() {
+        return false;
+    }
+    agent.name = GENERAL_AGENT_NAME.to_string();
+    agent.updated_at = Utc::now();
+    if let Err(e) = agent_service.save_agent_shadow(agent) {
+        tracing::warn!(
+            error = %e,
+            agent_id = %agent.agent_id,
+            "failed to repair missing project-local general agent name",
+        );
+    }
+    true
+}
+
 fn repair_general_agent_name_if_missing(
     agent_service: &AgentService,
     agent: Option<Agent>,
 ) -> Option<Agent> {
     let mut agent = agent?;
-    let is_general = agent
-        .tags
-        .iter()
-        .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG);
-    if is_general && agent.name.trim().is_empty() {
-        agent.name = GENERAL_AGENT_NAME.to_string();
-        agent.updated_at = Utc::now();
-        if let Err(e) = agent_service.save_agent_shadow(&agent) {
-            tracing::warn!(
-                error = %e,
-                agent_id = %agent.agent_id,
-                "failed to repair missing project-local general agent name",
-            );
-        }
-    }
+    repair_general_agent_name_in_place(agent_service, &mut agent);
     Some(agent)
 }
 
@@ -224,7 +235,10 @@ pub(crate) async fn list_agent_instances(
         .filter_map(|spa| spa.agent_id.clone())
         .collect();
 
-    let agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
+    let mut agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
+    for agent in agent_map.values_mut() {
+        repair_general_agent_name_in_place(&state.agent_service, agent);
+    }
 
     let project = state.project_service.get_project(&project_id).ok();
 
