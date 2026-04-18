@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "promptVersion": 2,
-  "generator": "fallback",
-  "generationError": "Error: Could not parse model response as JSON: SyntaxError: Unterminated string in JSON at position 6941 (line 134 column 29)",
-  "generatedAt": "2026-04-18T00:54:07.262Z",
+  "promptVersion": 3,
+  "generator": "anthropic",
+  "generationError": null,
+  "generatedAt": "2026-04-18T05:00:38.657Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.282.1",
+  "version": "0.1.0-nightly.284.1",
   "date": "2026-04-17",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "fb7008d8c37a065b62adb53cd8a38d50043b911c",
-  "previousProcessedSha": "a70298a3dadc0dd1759348b424a9094e19bc4214",
+  "lastIncludedSha": "90f33e24d91aac648d9ea96c283dedb0418d8069",
+  "previousProcessedSha": "fb7008d8c37a065b62adb53cd8a38d50043b911c",
   "commitShas": [
     "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77",
     "1876a8bf6cd28d01bf8fe57b960eb3916600389e",
@@ -70,10 +70,12 @@
     "2aa74643062094518f28e3c41820bc2b7bec3d2e",
     "2cf7e90dbd7fb4f9fc3a4477aec32d962d1f4c3e",
     "05255bb0c58cc67f7672a5b90f0d07cde50f2202",
-    "fb7008d8c37a065b62adb53cd8a38d50043b911c"
+    "fb7008d8c37a065b62adb53cd8a38d50043b911c",
+    "d5180da8af305d575dc5b42df883b628336f4355",
+    "90f33e24d91aac648d9ea96c283dedb0418d8069"
   ],
-  "rawCommitCount": 60,
-  "filteredCommitCount": 59,
+  "rawCommitCount": 62,
+  "filteredCommitCount": 61,
   "rawCommits": [
     {
       "sha": "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77",
@@ -2833,36 +2835,114 @@
         "Interface",
         "Other"
       ]
+    },
+    {
+      "sha": "d5180da8af305d575dc5b42df883b628336f4355",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-18T00:13:12-04:00",
+      "subject": "Harden changelog generation and add rubric fixtures",
+      "body": "",
+      "parents": [
+        "fb7008d8c37a065b62adb53cd8a38d50043b911c"
+      ],
+      "files": [
+        "infra/scripts/release/fixtures/changelog-bad-generic-candidate.json",
+        "infra/scripts/release/fixtures/changelog-commits.json",
+        "infra/scripts/release/fixtures/changelog-good-candidate.json",
+        "infra/scripts/release/generate-daily-changelog.mjs",
+        "infra/scripts/release/generate-daily-changelog.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 952,
+        "deletions": 371
+      },
+      "committedAtMs": 1776485592000,
+      "cleanSubject": "Harden changelog generation and add rubric fixtures",
+      "keywords": [
+        "harden",
+        "changelog",
+        "generation",
+        "rubric",
+        "fixtures"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "90f33e24d91aac648d9ea96c283dedb0418d8069",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-18T00:49:33-04:00",
+      "subject": "Relax changelog validator count limits",
+      "body": "",
+      "parents": [
+        "d5180da8af305d575dc5b42df883b628336f4355"
+      ],
+      "files": [
+        "infra/scripts/release/generate-daily-changelog.mjs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 18
+      },
+      "committedAtMs": 1776487773000,
+      "cleanSubject": "Relax changelog validator count limits",
+      "keywords": [
+        "relax",
+        "changelog",
+        "validator",
+        "count",
+        "limits"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
-  "batchCount": 8,
+  "batchCount": 6,
   "artifactSummaries": [
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.282.1",
+      "version": "0.1.0-nightly.284.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 25098994
+          "sizeBytes": 25099114
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92789240
+          "sizeBytes": 92793336
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -2872,29 +2952,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.282.1",
+      "version": "0.1.0-nightly.284.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.282.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.284.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21754673
+          "sizeBytes": 21759304
         },
         {
-          "name": "Aura_0.1.0-nightly.282.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.284.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 21561281
+          "sizeBytes": 21567026
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2904,29 +2984,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.282.1",
+      "version": "0.1.0-nightly.284.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.282.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.284.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 23223679
+          "sizeBytes": 23227927
         },
         {
-          "name": "Aura_0.1.0-nightly.282.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.284.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 23042639
+          "sizeBytes": 23044372
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2936,17 +3016,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.282.1",
+      "version": "0.1.0-nightly.284.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 15208817
+          "sizeBytes": 15206395
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.282.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.284.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -2955,158 +3035,71 @@
     }
   ],
   "rendered": {
-    "date": "2026-04-17",
-    "repo": "aura-os",
-    "channel": "nightly",
-    "version": "0.1.0-nightly.282.1",
-    "title": "8 updates shipped",
-    "intro": "This nightly timeline for aura-os groups 59 notable commits into 8 broader updates on 2026-04-17 for `0.1.0-nightly.282.1`.",
+    "title": "Feedback and Notes apps ship, chat scroll overhauled, agent reliability hardened",
+    "intro": "A dense nightly that delivered two new first-class apps — Feedback and Notes — while simultaneously replacing the chat panel's virtualizer with native CSS scroll anchoring to eliminate the long-standing resize jank. Agent session management got deterministic cancellation and proper context scoping, and the release pipeline gained build-version surfacing across all CI targets.",
     "entries": [
       {
         "time_label": "8:13 PM",
         "started_at": "2026-04-17T03:13:19.000Z",
-        "ended_at": "2026-04-17T05:26:18.000Z",
-        "title": "Interface and Chat Experience Improvements",
-        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "ended_at": "2026-04-17T09:10:57.000Z",
+        "title": "Chat scroll rebuilt and Feedback app launched end-to-end",
+        "summary": "Four iterative JS-side scroll fixes were superseded by a root-cause rewrite to CSS scroll anchoring, while the Feedback app went from mock data to a fully wired backend with votes, product tags, and session reliability improvements.",
         "items": [
           {
-            "text": "Fix janky chat scroll at bottom during sidekick resize",
+            "text": "Replaced the TanStack virtualizer with native CSS scroll anchoring in the chat panel, eliminating the frame-lag jank that caused messages to slide and pop during sidekick lane resizes. The virtualizer, per-message ResizeObserver, height cache, and ~533 lines of scroll-correction plumbing were removed; a single targeted useLayoutEffect now handles the only case the browser can't cover — pinning to the bottom as new tokens stream in.",
             "commit_shas": [
-              "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Pin chat to bottom synchronously during lane resize",
-            "commit_shas": [
-              "1876a8bf6cd28d01bf8fe57b960eb3916600389e"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Stop scrollTop clamp from swallowing pin-to-bottom delta on resize",
-            "commit_shas": [
-              "2ac44d67f00d4ec1ab3a8a36bdb49054ea94ac3c"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Double chat textarea height and move scrollbar to row's right edge",
-            "commit_shas": [
-              "2bfea9c5c2505766ed82c356cb51c680c172fbe8"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "10:36 PM",
-        "started_at": "2026-04-17T05:36:04.000Z",
-        "ended_at": "2026-04-17T07:29:37.000Z",
-        "title": "Interface and Chat Experience Improvements",
-        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
-        "items": [
-          {
-            "text": "Share scroll + folder-section chrome across Feed and Feedback",
-            "commit_shas": [
-              "eaf05353f5170b88962c4aed3b44b2b09efeac5f"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Replace chat virtualization with native CSS scroll anchoring",
-            "commit_shas": [
+              "bc92aec8f86c3a245326cf9deb42a32ccdb9fb77",
+              "1876a8bf6cd28d01bf8fe57b960eb3916600389e",
+              "2ac44d67f00d4ec1ab3a8a36bdb49054ea94ac3c",
               "8879923f19844c12b1ab86b89c4dbca8a11f4ead"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Neutralize Block body borders and highlight colors",
+            "text": "All agent tool outputs (thinking, file ops, commands, specs, tasks, media, status readouts) now render through a unified Block primitive with a fixed-height scrollable body. Content streaming inside a Block no longer causes layout shifts in the surrounding chat lane — it behaves like a rolling tail -f inside the block. Stacked tool-row borders were also collapsed from 2px to a clean 1px divider.",
             "commit_shas": [
-              "aabd6a5e021142709c59a6a7a78446dc4f404e7c"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Align Block body text with header status dot",
-            "commit_shas": [
-              "3506a6d95087017d65ab890793d0dbfd1fb84d5e"
-            ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "12:34 AM",
-        "started_at": "2026-04-17T07:34:08.000Z",
-        "ended_at": "2026-04-17T08:31:59.000Z",
-        "title": "Interface and Runtime Flow Improvements",
-        "summary": "8 related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.",
-        "items": [
-          {
-            "text": "Wire feedback votes and status updates through aura-network",
-            "commit_shas": [
-              "1f7fea8d3c8aef6e1a1e621ce8f78eb5494799f3"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Drop tinted background on Run panel task rows",
-            "commit_shas": [
-              "485732b74d29bd4364e9ae06768e517769c86e32"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Flush TaskBlock body so collapsed rows match other tools",
-            "commit_shas": [
+              "ac75c033143717e4e24ff5785fb9f582f43595e4",
+              "ddcca630709fd1a7b5f69ebd80cf364fc161555b",
+              "aabd6a5e021142709c59a6a7a78446dc4f404e7c",
+              "3506a6d95087017d65ab890793d0dbfd1fb84d5e",
+              "4f7ef42d91166c7ed2748524a54e95dbce96add2",
+              "22e47117109704b9e08661177b4e6869aba9bc3e",
               "5231af4b6a56c4945f09d9260965c5da39a89344"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Retire stale active sessions on rotation",
+            "text": "The Feedback app launched with a full backend (list, create, vote, status-update, comment endpoints in Rust) and a live frontend store replacing mock data. Votes and status updates are applied optimistically and reconciled with server aggregates, reverting on failure. A dedicated AURA_NETWORK_FEEDBACK_URL override lets feedback traffic target a local aura-network instance independently of the main network client.",
             "commit_shas": [
+              "ad094d032045f7c94bf8c7c9ea67d00ee2bb1e2d",
+              "a36c106c9c7d78b5ccc1d60e57dec8a8820fdc9f",
+              "1f7fea8d3c8aef6e1a1e621ce8f78eb5494799f3",
+              "a2299718b2fd4093d38a8489acd3acce9c35159a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Feedback posts can now be tagged with a product (AURA, The Grid, Wilder World, Z Chain) stored in the existing metadata blob. The left filter panel gained a Product section, and the composer defaults to AURA independently of the active filter — fixing a bug where switching the filter retargeted new posts.",
+            "commit_shas": [
+              "71151ff81f15f4827dfb98f9cf17c367965de7f0",
+              "9f57cc28d3e2b5836096897ba65d855197a15862"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Agent session management received two reliability fixes: session reset now scopes LLM context to the current storage session only (preventing corrupted tool_use blocks from prior sessions re-injecting into the model), and stale active sessions are transitioned to completed on rotation so the sidekick no longer shows a spinning status icon for every historical session.",
+            "commit_shas": [
+              "20fd39cc33d70396b8f914059a9b8cd7cd2a40dc",
               "be5cc2d22249ed9655a125f3b1cece15853096dc"
             ],
-            "confidence": "medium"
-          }
-        ]
-      },
-      {
-        "time_label": "1:35 AM",
-        "started_at": "2026-04-17T08:35:22.000Z",
-        "ended_at": "2026-04-17T09:10:57.000Z",
-        "title": "Interface and Chat Experience Improvements",
-        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
-        "items": [
-          {
-            "text": "Tag feedback items with a product and filter by it",
-            "commit_shas": [
-              "71151ff81f15f4827dfb98f9cf17c367965de7f0"
-            ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Match feedback filter section labels to projects sidebar",
-            "commit_shas": [
-              "fdeac181ffa0bd18a8162d6d0cb432852591f451"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Drop hover/focus highlight from feedback filter section header",
-            "commit_shas": [
-              "6fc86dcde57dae266f7046d9dad99055d44f08ef"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Block spec deletion when tasks still reference it",
+            "text": "Project delete now returns a clear 409 with an actionable message (pointing to Archive) instead of an opaque 500 when residual foreign-key references block deletion. Spec deletion similarly blocks with a 409 when tasks still reference the spec, surfacing the task count inline.",
             "commit_shas": [
               "efaadf235f8080acdbf060d1386e5286db18b47c"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -3114,36 +3107,37 @@
         "time_label": "2:50 PM",
         "started_at": "2026-04-17T21:50:05.000Z",
         "ended_at": "2026-04-17T22:51:47.000Z",
-        "title": "Interface and Chat Experience Improvements",
-        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "title": "Notes app introduced with TipTap editor and slug-based file paths",
+        "summary": "A new Notes app lets users write and organize free-form markdown notes per project, with WYSIWYG editing, auto-renaming files to match titles, and a sidekick showing metadata, table of contents, and local comments.",
         "items": [
           {
-            "text": "Add Notes app backed by local markdown files",
+            "text": "Notes are stored as plain markdown files on disk under the data directory, organized by project. The TipTap editor supports both WYSIWYG rich-text and raw markdown modes, with live first-line titles. A sidekick panel surfaces file metadata, a generated table of contents, and local comments stored in a sidecar JSON file.",
             "commit_shas": [
               "3233d519a6448a0c8fa71dd9a7f63e115079ae74"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Use readable slugs for note paths and rename files to match titles",
+            "text": "Note files are now stored under human-readable project slugs instead of UUIDs, with a .project-id marker file keeping lookups stable across renames. On every autosave, the file is renamed to match its first-line title (with collision suffixes), and the client rekeys its caches and updates the URL without disturbing the editor caret.",
             "commit_shas": [
               "a8bcc24f75de27e68e28a33ce4b40bb532acde84"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Auto-select a note on entering the Notes app and stop URL/store loop",
+            "text": "The Notes app now auto-selects a note on entry — restoring the last-opened note from localStorage, falling back to the first note found — and eliminates the empty 'select a note' state. A URL-store oscillation that caused an HTTP storm of alternating read and comment requests when switching notes was also fixed.",
             "commit_shas": [
-              "8a87c08b1fcab96594fc4ad23997755a9ca028ad"
+              "8a87c08b1fcab96594fc4ad23997755a9ca028ad",
+              "06a6071dfa3b056aea03623141b8ecf66ce2587c"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Add ZERO product, move New Idea into feed, honor adapter model lists",
+            "text": "Feedback gained a ZERO product option and a 'New Idea' button at the top of the feed. The chat model picker now uses the adapter-specific model list and hides entirely when the current generation mode has no selectable models.",
             "commit_shas": [
               "8698dff127d198540a74f3770f95a992bcaaa5f2"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -3151,36 +3145,43 @@
         "time_label": "3:52 PM",
         "started_at": "2026-04-17T22:52:20.000Z",
         "ended_at": "2026-04-17T23:44:12.000Z",
-        "title": "Interface and Chat Experience Improvements",
-        "summary": "8 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "title": "Notes polish, route-driven shell, and super-agent reset hardened",
+        "summary": "Notes received context menus, autosave-rename tree patching, and a fixed title style, while the app shell was refactored to derive the active app from the URL — eliminating a flicker when switching between Notes and Feedback.",
         "items": [
           {
-            "text": "Anchor notes save-state indicator to the bottom right",
+            "text": "Right-clicking a note or folder in the Notes navigator now opens a context menu with rename, delete, reveal-in-folder, and new-note/new-folder actions, mirroring the Projects explorer UX.",
             "commit_shas": [
-              "0d57e49a471396a8d2a6d1640ad893edd5ccd995"
+              "7ad8e661beb98ab79ab1ffb12c8f9750af8be270"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Tighten notes scroll-area top padding and zero title top margin",
-            "commit_shas": [
-              "37dce044563c34e50eb6a84cadde7ad053df6583"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Patch notes tree in place on autosave rename",
+            "text": "Autosave-driven renames now patch the notes tree in place synchronously instead of triggering a full loadTree round-trip, eliminating the brief highlight loss and sidekick info flash that occurred between the state update and the tree refresh.",
             "commit_shas": [
               "f1d283cb88c2d9fb1ff5e3ec981bf9384b047dd7"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Pin note title to fixed h1 styling regardless of block type",
+            "text": "The app shell now derives the active app synchronously from the URL pathname instead of mirroring it through a Zustand effect. This eliminated a one-render lag that allowed Notes' auto-select effect to fire a replace-navigate back into /notes/... when switching to Feedback, cancelling the app switch.",
             "commit_shas": [
-              "e7ad5da46acb3074865a87d0102c8d927aaae8c2"
+              "3e4121f7733929c28b3bf24a2f2ad4844d12cc6a"
             ],
-            "confidence": "medium"
+            "confidence": "high"
+          },
+          {
+            "text": "Super-agent session reset is now race-condition-free: each run is tracked with a CancellationToken and a monotonic generation counter. Reset cancels the in-flight /v1/messages stream mid-chunk and gates the cache write on the generation still matching, so any race past cancellation is discarded rather than overwriting the fresh session.",
+            "commit_shas": [
+              "30b71c57bb7b9d4a1f393e3ebf873c98549b55a5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The build version, short commit SHA, build timestamp, and release channel are now baked into the interface bundle at build time and displayed in the Settings view. All CI workflows (stable, nightly, mobile nightly, Android, iOS) pass these values to the build so production releases always show the correct metadata.",
+            "commit_shas": [
+              "4b19d7be87068f43c32fecb16c11cc9c93c300ba"
+            ],
+            "confidence": "high"
           }
         ]
       },
@@ -3188,36 +3189,39 @@
         "time_label": "4:53 PM",
         "started_at": "2026-04-17T23:53:25.000Z",
         "ended_at": "2026-04-18T00:30:52.000Z",
-        "title": "Interface and Runtime Flow Improvements",
-        "summary": "8 related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.",
+        "title": "Shell background, keyboard shortcuts, and super-agent context utilization",
+        "summary": "The desktop wallpaper now shows through the top bar and taskbar in every app, sidekick previews close on Escape, and super-agents report real context utilization percentages in the UI.",
         "items": [
           {
-            "text": "Show build version in Team Settings general section",
+            "text": "The configured desktop background now shows through the top bar and bottom taskbar in every app, not just the desktop app. Content surfaces (sidebar, middle panel, sidekick) remain opaque outside desktop mode, and a hydration flag prevents image-mode boots from briefly painting a broken or transparent shell before the image data loads.",
             "commit_shas": [
-              "bbab5ed184b478924d62a460e7f70116841850ff"
+              "a441491b847a019b82ffb0a6bb857fde9c2c80ee",
+              "cb437896751c31b0362dbb652590bf0f1ee147cf",
+              "809413ed222ee6cb490674e2f578e51f13146a79"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Make session rows non-navigating in agent lists",
+            "text": "Pressing Escape now closes sidekick preview overlays and task/spec sidekick previews, making keyboard-driven workflows faster.",
             "commit_shas": [
-              "bb7ef803569e856757e3b7b1af10efa05c38702f"
+              "809413ed222ee6cb490674e2f578e51f13146a79",
+              "2aa74643062094518f28e3c41820bc2b7bec3d2e"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Report real super-agent context utilization in AssistantMessageEnd",
+            "text": "Super-agents now report real context utilization to the UI. Anthropic prompt-side token counts (input, cache creation, cache read) are captured from message_start.usage, accumulated cumulatively, and expressed as a percentage of the 200k Claude context window — fixing the blank N% indicator that previously showed for super-agents.",
             "commit_shas": [
               "01414ab74108e075315259a1d01b0aa6be3a7828"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Refactor Notes and Feedback apps to match React and TypeScript rules",
+            "text": "Build version information is now also visible in the Team Settings general section, so operators can confirm the deployed build without navigating to the standalone Settings view.",
             "commit_shas": [
-              "37e29c64d78af4dfb0c68adff4461f80a0064def"
+              "bbab5ed184b478924d62a460e7f70116841850ff"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -3225,37 +3229,51 @@
         "time_label": "5:35 PM",
         "started_at": "2026-04-18T00:35:48.000Z",
         "ended_at": "2026-04-18T00:40:38.000Z",
-        "title": "Interface and Chat Experience Improvements",
-        "summary": "3 related interface changes landed together across chat, settings, workflow, and product surfaces.",
+        "title": "Test coverage locked in for Notes and Feedback",
+        "summary": "Every component in the Notes and Feedback apps now ships with a colocated test covering its load-bearing behavior, and the desktop shell background was stabilized against app-switch flashes.",
         "items": [
           {
-            "text": "Colocate tests for the remaining Notes and Feedback components",
+            "text": "66 new tests across 17 files cover the full Notes and Feedback component surfaces — editor modes, context menus, rename/delete modals, comment submission, filter trees, sidekick panels, and loading/error/empty states. Heavy dependencies (ZUI, TipTap, browser-db) are mocked per-file so assertions focus on each component's own decisions.",
             "commit_shas": [
               "2cf7e90dbd7fb4f9fc3a4477aec32d962d1f4c3e"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           },
           {
-            "text": "Stabilize desktop shell background across app switches and boot",
+            "text": "The desktop shell background no longer flashes the wallpaper through when switching between apps that use an ActiveProvider wrapper (e.g. Process, Tasks). The opaque middle background was moved to a shell-level element that is never unmounted during app switches.",
             "commit_shas": [
               "05255bb0c58cc67f7672a5b90f0d07cde50f2202"
             ],
-            "confidence": "medium"
-          },
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "time_label": "9:13 PM",
+        "started_at": "2026-04-18T04:13:12.000Z",
+        "ended_at": "2026-04-18T04:49:33.000Z",
+        "title": "Release Infrastructure: changelog generation hardened",
+        "summary": "The daily changelog generation script was significantly strengthened with rubric-based validation fixtures and relaxed count limits to improve output quality checks.",
+        "items": [
           {
-            "text": "Trim unused UI scaffolding from process and agent chat views",
+            "text": "The changelog generation script was overhauled with rubric fixtures (a known-good candidate and a known-bad generic candidate) and an automated test suite, making it easier to catch regressions in output quality. Validator count limits were also relaxed to reduce false rejections on legitimate multi-entry changelogs.",
             "commit_shas": [
-              "fb7008d8c37a065b62adb53cd8a38d50043b911c"
+              "d5180da8af305d575dc5b42df883b628336f4355",
+              "90f33e24d91aac648d9ea96c283dedb0418d8069"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Interface and Chat Experience Improvements",
-      "Interface and Runtime Flow Improvements"
+      "Chat scroll jank eliminated via CSS anchor rewrite",
+      "Feedback app launched with live API, votes, and product filtering",
+      "Notes app added with TipTap editor, slug paths, and context menus",
+      "Agent session reset made race-condition-free with cancellable runs",
+      "Build version now visible in Settings and Team Settings on all platforms",
+      "Release changelog tooling hardened with rubric fixtures"
     ],
-    "raw_commit_count": 59
+    "raw_commit_count": 61
   }
 }

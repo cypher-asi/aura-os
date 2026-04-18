@@ -2,16 +2,20 @@
   {
     "date": "2026-04-17",
     "channel": "nightly",
-    "version": "0.1.0-nightly.282.1",
-    "title": "8 updates shipped",
-    "intro": "This nightly timeline for aura-os groups 59 notable commits into 8 broader updates on 2026-04-17 for `0.1.0-nightly.282.1`.",
-    "entryCount": 8,
+    "version": "0.1.0-nightly.284.1",
+    "title": "Feedback and Notes apps ship, chat scroll overhauled, agent reliability hardened",
+    "intro": "A dense nightly that delivered two new first-class apps — Feedback and Notes — while simultaneously replacing the chat panel's virtualizer with native CSS scroll anchoring to eliminate the long-standing resize jank. Agent session management got deterministic cancellation and proper context scoping, and the release pipeline gained build-version surfacing across all CI targets.",
+    "entryCount": 6,
     "highlights": [
-      "Interface and Chat Experience Improvements",
-      "Interface and Runtime Flow Improvements"
+      "Chat scroll jank eliminated via CSS anchor rewrite",
+      "Feedback app launched with live API, votes, and product filtering",
+      "Notes app added with TipTap editor, slug paths, and context menus",
+      "Agent session reset made race-condition-free with cancellable runs",
+      "Build version now visible in Settings and Team Settings on all platforms",
+      "Release changelog tooling hardened with rubric fixtures"
     ],
-    "rawCommitCount": 60,
-    "generatedAt": "2026-04-18T00:54:07.262Z",
+    "rawCommitCount": 62,
+    "generatedAt": "2026-04-18T05:00:38.657Z",
     "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
     "path": "history/2026-04-17.json"
   },
