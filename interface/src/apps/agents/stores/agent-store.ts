@@ -65,9 +65,36 @@ type AgentState = {
 
 const HISTORY_TTL_MS = 30_000;
 const AGENTS_TTL_MS = 30_000;
+const PLACEHOLDER_AGENT_NAME = "New Agent";
 
 function agentStateKey(userId: string): string {
   return `state:${userId}`;
+}
+
+/**
+ * Mirror of the server-side repair in `handlers/agents/instances.rs`:
+ * a blank `name` coming from storage (either the IndexedDB hydration cache
+ * or the network response) would render as an empty sidebar row. Normalise
+ * to the canonical `"New Agent"` placeholder so the row is at least
+ * visible, and — for project instances — so `maybeRenameFromFirstPrompt`
+ * can still derive a real title from the first user message (its guard
+ * checks for this exact string).
+ */
+function repairAgentName<T extends { name: string }>(agent: T): T {
+  if (agent.name && agent.name.trim().length > 0) {
+    return agent;
+  }
+  return { ...agent, name: PLACEHOLDER_AGENT_NAME };
+}
+
+function repairAgentNames<T extends { name: string }>(agents: T[]): T[] {
+  let mutated = false;
+  const out = agents.map((agent) => {
+    const repaired = repairAgentName(agent);
+    if (repaired !== agent) mutated = true;
+    return repaired;
+  });
+  return mutated ? out : agents;
 }
 
 async function hydratePersistedAgentState(userId: string): Promise<void> {
@@ -79,7 +106,7 @@ async function hydratePersistedAgentState(userId: string): Promise<void> {
     return;
   }
   useAgentStore.setState({
-    agents: cached.agents,
+    agents: repairAgentNames(cached.agents),
     history: cached.history,
     selectedAgentId: cached.selectedAgentId,
     pinnedAgentIds: new Set(cached.pinnedAgentIds),
@@ -147,6 +174,7 @@ export const useAgentStore = create<AgentState>()(
                 // around until the next refresh.
               }
             }
+            agents = repairAgentNames(agents);
             const sorted = agents.sort((a, b) => {
               if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
               return a.name.localeCompare(b.name);
@@ -173,9 +201,10 @@ export const useAgentStore = create<AgentState>()(
       },
 
       patchAgent: (updated): void => {
+        const repaired = repairAgentName(updated);
         set((s) => ({
           agents: s.agents.map((a) =>
-            a.agent_id === updated.agent_id ? updated : a,
+            a.agent_id === repaired.agent_id ? repaired : a,
           ),
         }));
       },
