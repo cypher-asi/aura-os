@@ -59,6 +59,8 @@
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   user-select: none;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .rowOverlay {

@@ -6,17 +6,16 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  closestCorners,
+  closestCenter,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -58,7 +57,10 @@ export function AppsModal({ isOpen, onClose }: Props) {
       .map((app) => ({ id: app.id, label: app.label, Icon: app.icon }));
   }, [apps, taskbarAppOrder]);
 
-  const hiddenSet = useMemo(() => new Set(taskbarHiddenAppIds), [taskbarHiddenAppIds]);
+  const hiddenSet = useMemo(
+    () => new Set(taskbarHiddenAppIds),
+    [taskbarHiddenAppIds],
+  );
 
   const visibleRows = useMemo(
     () => rows.filter((row) => !hiddenSet.has(row.id)),
@@ -69,7 +71,10 @@ export function AppsModal({ isOpen, onClose }: Props) {
     [rows, hiddenSet],
   );
 
-  const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+  const rowsById = useMemo(
+    () => new Map(rows.map((row) => [row.id, row])),
+    [rows],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -86,50 +91,9 @@ export function AppsModal({ isOpen, onClose }: Props) {
     [hiddenSet, rowsById],
   );
 
-  const commit = useCallback(
-    (nextVisibleIds: string[], nextHiddenIds: string[]) => {
-      // Preserve the full normalized order: visible first (in their current
-      // order), then hidden (in their current order). This keeps the taskbar
-      // order stable when an app is unhidden later.
-      const order = [...nextVisibleIds, ...nextHiddenIds];
-      saveTaskbarAppsLayout(order, nextHiddenIds);
-    },
-    [saveTaskbarAppsLayout],
-  );
-
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
   }, []);
-
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event;
-      if (!over) return;
-      const activeItemId = String(active.id);
-      const overId = String(over.id);
-
-      const activeSection = findSection(activeItemId);
-      const overSection = findSection(overId);
-      if (!activeSection || !overSection) return;
-      if (activeSection === overSection) return;
-
-      // Moving across sections: flip hidden membership for the active row so
-      // the live preview (and the underlying taskbar) reflect the move.
-      const nextHidden = new Set(taskbarHiddenAppIds);
-      if (overSection === "hidden") nextHidden.add(activeItemId);
-      else nextHidden.delete(activeItemId);
-
-      const nextVisibleIds = rows
-        .map((row) => row.id)
-        .filter((id) => !nextHidden.has(id));
-      const nextHiddenIds = rows
-        .map((row) => row.id)
-        .filter((id) => nextHidden.has(id));
-
-      commit(nextVisibleIds, nextHiddenIds);
-    },
-    [commit, findSection, rows, taskbarHiddenAppIds],
-  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -142,38 +106,56 @@ export function AppsModal({ isOpen, onClose }: Props) {
       if (activeItemId === overId) return;
 
       const activeSection = findSection(activeItemId);
-      const overSection = findSection(overId);
-      if (!activeSection || !overSection) return;
+      const targetSection = findSection(overId);
+      if (!activeSection || !targetSection) return;
 
-      // Cross-section moves are already applied by handleDragOver — nothing
-      // further to do if the drop target is another section's container.
-      if (activeSection !== overSection) return;
-      if (overId === "visible" || overId === "hidden") return;
+      // Compute the new arrangement from the current snapshot and commit it
+      // atomically on drop. Committing only on drop (not during onDragOver)
+      // keeps the source element in the DOM during drag, so the DragOverlay
+      // activator rect stays stable and the ghost tracks the cursor cleanly.
+      const visibleIds = rows
+        .filter((row) => !hiddenSet.has(row.id))
+        .map((row) => row.id);
+      const hiddenIds = rows
+        .filter((row) => hiddenSet.has(row.id))
+        .map((row) => row.id);
 
-      const currentHidden = new Set(taskbarHiddenAppIds);
-      const sourceIds =
-        activeSection === "visible"
-          ? rows.filter((row) => !currentHidden.has(row.id)).map((row) => row.id)
-          : rows.filter((row) => currentHidden.has(row.id)).map((row) => row.id);
+      const sourceIds = activeSection === "visible" ? visibleIds : hiddenIds;
+      const fromIndex = sourceIds.indexOf(activeItemId);
+      if (fromIndex === -1) return;
+      const withoutActive = [
+        ...sourceIds.slice(0, fromIndex),
+        ...sourceIds.slice(fromIndex + 1),
+      ];
 
-      const oldIndex = sourceIds.indexOf(activeItemId);
-      const newIndex = sourceIds.indexOf(overId);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      let nextVisibleIds =
+        activeSection === "visible" ? withoutActive : visibleIds;
+      let nextHiddenIds =
+        activeSection === "hidden" ? withoutActive : hiddenIds;
 
-      const reordered = arrayMove(sourceIds, oldIndex, newIndex);
+      const targetList =
+        targetSection === "visible" ? nextVisibleIds : nextHiddenIds;
+      let insertIndex: number;
+      if (overId === "visible" || overId === "hidden") {
+        insertIndex = targetList.length;
+      } else {
+        const overIndex = targetList.indexOf(overId);
+        insertIndex = overIndex === -1 ? targetList.length : overIndex;
+      }
 
-      const nextVisibleIds =
-        activeSection === "visible"
-          ? reordered
-          : rows.filter((row) => !currentHidden.has(row.id)).map((row) => row.id);
-      const nextHiddenIds =
-        activeSection === "hidden"
-          ? reordered
-          : rows.filter((row) => currentHidden.has(row.id)).map((row) => row.id);
+      const nextTargetList = [
+        ...targetList.slice(0, insertIndex),
+        activeItemId,
+        ...targetList.slice(insertIndex),
+      ];
 
-      commit(nextVisibleIds, nextHiddenIds);
+      if (targetSection === "visible") nextVisibleIds = nextTargetList;
+      else nextHiddenIds = nextTargetList;
+
+      const order = [...nextVisibleIds, ...nextHiddenIds];
+      saveTaskbarAppsLayout(order, nextHiddenIds);
     },
-    [commit, findSection, rows, taskbarHiddenAppIds],
+    [findSection, hiddenSet, rows, saveTaskbarAppsLayout],
   );
 
   const activeRow = activeId ? rowsById.get(activeId) ?? null : null;
@@ -186,9 +168,9 @@ export function AppsModal({ isOpen, onClose }: Props) {
       </p>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis]}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
@@ -204,7 +186,7 @@ export function AppsModal({ isOpen, onClose }: Props) {
           rows={hiddenRows}
           emptyLabel="No hidden apps. Drag items here to hide them from the taskbar."
         />
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {activeRow ? <AppRow row={activeRow} isOverlay /> : null}
         </DragOverlay>
       </DndContext>
@@ -235,15 +217,20 @@ function AppSection({ id, title, rows, emptyLabel }: AppSectionProps) {
         {id === "hidden" ? <EyeOff size={12} aria-hidden="true" /> : null}
       </header>
       <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
-        <ul ref={setNodeRef} className={styles.list} data-section={id}>
+        <div
+          ref={setNodeRef}
+          className={styles.list}
+          data-section={id}
+          role="list"
+        >
           {rows.length === 0 ? (
-            <li className={styles.empty} aria-live="polite">
+            <div className={styles.empty} role="listitem" aria-live="polite">
               {emptyLabel}
-            </li>
+            </div>
           ) : (
             rows.map((row) => <SortableAppRow key={row.id} row={row} />)
           )}
-        </ul>
+        </div>
       </SortableContext>
     </section>
   );
@@ -286,7 +273,7 @@ function SortableAppRow({ row }: SortableAppRowProps) {
 
 interface AppRowProps {
   row: AppRowData;
-  refSetter?: (node: HTMLLIElement | null) => void;
+  refSetter?: (node: HTMLDivElement | null) => void;
   style?: CSSProperties;
   dragAttributes?: DragAttributes & HTMLAttributes<HTMLButtonElement>;
   dragListeners?: DragListeners;
@@ -307,7 +294,13 @@ function AppRow({
   const { Icon } = row;
 
   return (
-    <li ref={refSetter} className={cls} style={style} data-app-id={row.id}>
+    <div
+      ref={refSetter}
+      className={cls}
+      style={style}
+      data-app-id={row.id}
+      role="listitem"
+    >
       <button
         type="button"
         className={styles.handle}
@@ -321,6 +314,6 @@ function AppRow({
         <Icon size={16} />
       </span>
       <span className={styles.label}>{row.label}</span>
-    </li>
+    </div>
   );
 }
