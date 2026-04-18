@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-18T17:28:45.376Z",
+  "generatedAt": "2026-04-18T17:42:37.339Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.288.1",
+  "version": "0.1.0-nightly.289.1",
   "date": "2026-04-18",
   "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
-  "lastIncludedSha": "e96e6a2af5542c0991d2e9b717bd889c16ae82b5",
-  "previousProcessedSha": "90f33e24d91aac648d9ea96c283dedb0418d8069",
+  "lastIncludedSha": "dcf5cb670f191e57ada243bdb2234c0142b131b5",
+  "previousProcessedSha": "e96e6a2af5542c0991d2e9b717bd889c16ae82b5",
   "commitShas": [
     "f365b8559c1ceae5ba98af87f8d4f9ee9450d821",
     "aa79e902c16f4f3d81a8e3c95f2c7772e0923bce",
@@ -28,10 +28,11 @@
     "494aa6444163919b19fc5d0e674e7805959090af",
     "afa57d88238814b1502e0cf0861453de35eee3bb",
     "e8dd6ba33201798bea728b7d2eb696ebe6c3b281",
-    "e96e6a2af5542c0991d2e9b717bd889c16ae82b5"
+    "e96e6a2af5542c0991d2e9b717bd889c16ae82b5",
+    "dcf5cb670f191e57ada243bdb2234c0142b131b5"
   ],
-  "rawCommitCount": 17,
-  "filteredCommitCount": 17,
+  "rawCommitCount": 18,
+  "filteredCommitCount": 18,
   "rawCommits": [
     {
       "sha": "f365b8559c1ceae5ba98af87f8d4f9ee9450d821",
@@ -742,6 +743,48 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "dcf5cb670f191e57ada243bdb2234c0142b131b5",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-18T13:30:16-04:00",
+      "subject": "Retry transient Linux AppRun packaging failures",
+      "body": "",
+      "parents": [
+        "e96e6a2af5542c0991d2e9b717bd889c16ae82b5"
+      ],
+      "files": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 48,
+        "deletions": 6
+      },
+      "committedAtMs": 1776533416000,
+      "cleanSubject": "Retry transient Linux AppRun packaging failures",
+      "keywords": [
+        "retry",
+        "transient",
+        "linux",
+        "apprun",
+        "packaging",
+        "failures"
+      ],
+      "fileGroups": [
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 4,
@@ -749,29 +792,29 @@
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.288.1",
+      "version": "0.1.0-nightly.289.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 25142278
+          "sizeBytes": 25137422
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 92809720
+          "sizeBytes": 92822008
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -781,29 +824,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.288.1",
+      "version": "0.1.0-nightly.289.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.288.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.289.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 21814031
+          "sizeBytes": 21815165
         },
         {
-          "name": "Aura_0.1.0-nightly.288.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.289.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 21617184
+          "sizeBytes": 21619042
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -813,29 +856,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.288.1",
+      "version": "0.1.0-nightly.289.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.288.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.289.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 23233418
+          "sizeBytes": 23230059
         },
         {
-          "name": "Aura_0.1.0-nightly.288.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.289.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 23075296
+          "sizeBytes": 23069716
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -845,17 +888,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.288.1",
+      "version": "0.1.0-nightly.289.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 15226455
+          "sizeBytes": 15227080
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.288.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.289.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -864,41 +907,35 @@
     }
   ],
   "rendered": {
-    "title": "Multimodel support lands with smarter routing, richer model pickers, and stabler Mac builds",
-    "intro": "Today's nightly focused almost entirely on Aura's multimodel story: hosted agents now route through AURA Proxy, every loop and task control respects the active model selection, the chat model picker got a full visual overhaul with grouped sections and Opus 4.6, and the server gained resilient project-context handoff across model switches. Release Infrastructure also picked up two reliability fixes — automatic retry for transient macOS DMG failures and a loosened changelog validator.",
+    "title": "Multimodel support, smarter context handoff, and more resilient desktop packaging",
+    "intro": "Today's nightly focused on a broad multimodel overhaul: hosted agents now route through AURA Proxy, model selection is wired end-to-end from the chat bar through dev-loop and task runs, and the model picker itself got a significant visual refresh. Alongside the product work, release infrastructure picked up automatic retry logic for transient Mac and Linux packaging failures.",
     "entries": [
       {
         "time_label": "12:15 AM",
         "started_at": "2026-04-18T07:15:02.000Z",
         "ended_at": "2026-04-18T07:15:02.000Z",
-        "title": "AURA Proxy routing and model-aware loop controls",
-        "summary": "Hosted agents are now locked to AURA Proxy for credentials and billing, and every dev-loop and task-run path forwards the user's active model selection to the server.",
+        "title": "AURA Proxy routing and end-to-end model wiring",
+        "summary": "Hosted agents are now exclusively routed through AURA Proxy, and the actively selected model is propagated into dev-loop starts, task runs, and harness sessions.",
         "items": [
           {
-            "text": "Hosted agents configured with the aura_harness adapter now route exclusively through AURA Proxy — the agent editor UI reflects this with a single, always-selected 'AURA Proxy' credential card instead of a choice between managed and org-integration auth.",
+            "text": "Hosted Aura agents now use AURA Proxy as the sole credential and billing path — the agent editor UI was simplified to reflect this, removing the previous dual-choice between 'Managed by Aura' and an org integration.",
             "commit_shas": [
               "f365b8559c1ceae5ba98af87f8d4f9ee9450d821"
             ],
             "confidence": "high"
           },
           {
-            "text": "Dev-loop starts and manual task runs now accept an explicit model override that takes precedence over the agent's stored defaults, so the model selected in the chat bar is what actually runs.",
+            "text": "The active model selection is now forwarded when starting or resuming a dev loop and when triggering manual task runs, so the model chosen in the UI is consistently used throughout execution.",
             "commit_shas": [
               "f4b5c6d127c2dc478f2e1b974b1ffdeb8d0f8d54",
+              "8ec261b9d2b6caafeac4c17bf4a18f934125e222",
+              "ea19f01383d670d1071e74d950ecfa1fdfccaea3",
               "9c6747900e77bc679566bd0769219141a81d223b"
             ],
             "confidence": "high"
           },
           {
-            "text": "The AutomationBar's start/stop controls and the loop-control hook both forward the active Aura model to the server, closing the gap between what the UI shows and what the automaton session uses.",
-            "commit_shas": [
-              "ea19f01383d670d1071e74d950ecfa1fdfccaea3",
-              "8ec261b9d2b6caafeac4c17bf4a18f934125e222"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Proxy hints are now sent to harness sessions at runtime, and Fireworks-backed OSS model aliases are exposed so they can be selected alongside first-party Aura models.",
+            "text": "Aura-managed proxy hints are now sent to harness sessions at runtime, and Fireworks-backed OSS model aliases are exposed for selection.",
             "commit_shas": [
               "76e0e4c75b51bd81fcf7e4174e7160a0e40aac60",
               "f093cef8cab08eca560fb77c613381118502eebd"
@@ -911,36 +948,35 @@
         "time_label": "12:15 AM",
         "started_at": "2026-04-18T07:15:02.000Z",
         "ended_at": "2026-04-18T07:15:02.000Z",
-        "title": "Chat model picker redesign and multimodel release candidate polish",
-        "summary": "The chat model picker was rebuilt with grouped sections, a scrollable dropdown, and updated model IDs — including Opus 4.6 — while server-side context handoff across model switches was significantly strengthened.",
+        "title": "Model catalog refresh and chat picker redesign",
+        "summary": "The model catalog was updated with current providers and Opus 4.6, the multimodel release candidate was narrowed, and the chat model picker received a significant layout and UX overhaul.",
         "items": [
           {
-            "text": "The chat model picker now renders models in labeled, bordered groups with a capped scrollable dropdown (max-height 280 px) and a 'show more' affordance, making long model lists navigable without overwhelming the input bar.",
+            "text": "The managed model catalog was refreshed to reflect current providers, and Opus 4.6 is now available in all Aura model pickers.",
+            "commit_shas": [
+              "f80524e58e66750b535cf755719cc0775bd794de",
+              "287a3aad0a9001d6873ad2ab2c3c8f1538a43e4c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The chat model picker was redesigned with grouped sections, section labels, a scrollable dropdown (capped at 280px), and a 'show more' affordance — making it easier to navigate a growing model list.",
             "commit_shas": [
               "494aa6444163919b19fc5d0e674e7805959090af"
             ],
             "confidence": "high"
           },
           {
-            "text": "Opus 4.6 is now listed in Aura model pickers, and the managed model catalog was refreshed to reflect current provider offerings with corrected Aura model IDs throughout.",
-            "commit_shas": [
-              "287a3aad0a9001d6873ad2ab2c3c8f1538a43e4c",
-              "f80524e58e66750b535cf755719cc0775bd794de"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "When switching models mid-session, the server now injects a structured snapshot of the project's recent specs and tasks into the system prompt, preserving continuity context across restarts and model changes.",
+            "text": "When switching models mid-session, the agent now receives a snapshot of recent project specs and tasks as continuity context, preventing loss of project state across restarts or model changes.",
             "commit_shas": [
               "f2dc6b4064c670787ec2a20ed5032d0d70af649b"
             ],
             "confidence": "high"
           },
           {
-            "text": "The multimodel release candidate was narrowed: session event pagination now fetches full history by default (paginating in 500-event pages) instead of silently truncating at the server's 100-event default, and a task-preview wiring regression was fixed.",
+            "text": "Session event pagination was fixed to auto-paginate through full history when no explicit limit is set, preventing silent truncation at the previous 100-event server default.",
             "commit_shas": [
-              "3a2dc62b4b36c5cd4de6baa2559d09ba812600a2",
-              "fe0b5b9645a6de4d22ea48ef648117ee980691b1"
+              "3a2dc62b4b36c5cd4de6baa2559d09ba812600a2"
             ],
             "confidence": "high"
           }
@@ -950,11 +986,11 @@
         "time_label": "2:10 AM",
         "started_at": "2026-04-18T09:10:15.000Z",
         "ended_at": "2026-04-18T09:10:15.000Z",
-        "title": "Mac DMG packaging reliability fix",
-        "summary": "Release Infrastructure: macOS desktop builds now automatically retry DMG creation when hdiutil reports a transient 'Resource busy' error, preventing flaky CI failures from blocking nightly and stable releases.",
+        "title": "Mac desktop packaging reliability fix",
+        "summary": "Release Infrastructure: macOS DMG builds now automatically retry on transient hdiutil 'Resource busy' failures across nightly, stable, and validation workflows.",
         "items": [
           {
-            "text": "All three desktop CI workflows (validate, nightly, stable) now detect the 'hdiutil: create failed - Resource busy' error on macOS targets and retry packaging once after a 5-second pause, rather than failing the entire release job.",
+            "text": "All three desktop CI workflows (validate, nightly, stable) now detect and retry the intermittent macOS hdiutil 'Resource busy' error that was causing DMG packaging to fail spuriously on Mac.",
             "commit_shas": [
               "afa57d88238814b1502e0cf0861453de35eee3bb"
             ],
@@ -965,12 +1001,19 @@
       {
         "time_label": "10:05 AM",
         "started_at": "2026-04-18T17:05:16.000Z",
-        "ended_at": "2026-04-18T17:17:12.000Z",
-        "title": "Changelog generator validation loosened",
-        "summary": "Release Infrastructure: the nightly changelog generator no longer hard-errors on strict-tool model mismatches or rubric rule violations, making the tooling more resilient to model and prompt variation.",
+        "ended_at": "2026-04-18T17:30:16.000Z",
+        "title": "Linux packaging retry and changelog tooling improvements",
+        "summary": "Release Infrastructure: Linux AppRun download failures now also trigger an automatic retry, and nightly changelog validation was relaxed to reduce false-positive failures.",
         "items": [
           {
-            "text": "The changelog generator's strict-tool model allowlist check was downgraded from a hard error to a warning, and the rubric validation layer (word-count checks, duplicate-title detection, templated-summary guards) was removed entirely, reducing false-positive failures in the release pipeline.",
+            "text": "Linux AppImage builds now retry automatically when the AppRun binary download returns a 5xx error, complementing the earlier macOS DMG retry logic and making desktop packaging more resilient on both platforms.",
+            "commit_shas": [
+              "dcf5cb670f191e57ada243bdb2234c0142b131b5"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Nightly changelog generation was made more permissive: strict model allowlist enforcement was downgraded from a hard error to a warning, and overly rigid rubric checks were removed to reduce unnecessary CI failures.",
             "commit_shas": [
               "e8dd6ba33201798bea728b7d2eb696ebe6c3b281",
               "e96e6a2af5542c0991d2e9b717bd889c16ae82b5"
@@ -981,12 +1024,13 @@
       }
     ],
     "highlights": [
-      "Hosted agents now route exclusively through AURA Proxy",
-      "Chat model picker redesigned with grouped sections, scroll, and Opus 4.6",
-      "Loop controls and task runs now honor the active model selection end-to-end",
-      "Project context (specs + tasks) is preserved across model switches and restarts",
-      "Mac DMG packaging now auto-retries on transient hdiutil failures"
+      "Hosted agents now route through AURA Proxy",
+      "Active model selection honored across chat, loops, and task runs",
+      "Opus 4.6 added to model pickers; Fireworks-backed OSS aliases exposed",
+      "Chat model picker redesigned with grouped sections and scrollable dropdown",
+      "Project specs and tasks injected as continuity context on model switch",
+      "Mac DMG and Linux AppRun packaging failures now auto-retry in CI"
     ],
-    "raw_commit_count": 17
+    "raw_commit_count": 18
   }
 }

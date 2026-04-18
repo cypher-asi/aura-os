@@ -2,19 +2,20 @@
   {
     "date": "2026-04-18",
     "channel": "nightly",
-    "version": "0.1.0-nightly.288.1",
-    "title": "Multimodel support lands with smarter routing, richer model pickers, and stabler Mac builds",
-    "intro": "Today's nightly focused almost entirely on Aura's multimodel story: hosted agents now route through AURA Proxy, every loop and task control respects the active model selection, the chat model picker got a full visual overhaul with grouped sections and Opus 4.6, and the server gained resilient project-context handoff across model switches. Release Infrastructure also picked up two reliability fixes — automatic retry for transient macOS DMG failures and a loosened changelog validator.",
+    "version": "0.1.0-nightly.289.1",
+    "title": "Multimodel support, smarter context handoff, and more resilient desktop packaging",
+    "intro": "Today's nightly focused on a broad multimodel overhaul: hosted agents now route through AURA Proxy, model selection is wired end-to-end from the chat bar through dev-loop and task runs, and the model picker itself got a significant visual refresh. Alongside the product work, release infrastructure picked up automatic retry logic for transient Mac and Linux packaging failures.",
     "entryCount": 4,
     "highlights": [
-      "Hosted agents now route exclusively through AURA Proxy",
-      "Chat model picker redesigned with grouped sections, scroll, and Opus 4.6",
-      "Loop controls and task runs now honor the active model selection end-to-end",
-      "Project context (specs + tasks) is preserved across model switches and restarts",
-      "Mac DMG packaging now auto-retries on transient hdiutil failures"
+      "Hosted agents now route through AURA Proxy",
+      "Active model selection honored across chat, loops, and task runs",
+      "Opus 4.6 added to model pickers; Fireworks-backed OSS aliases exposed",
+      "Chat model picker redesigned with grouped sections and scrollable dropdown",
+      "Project specs and tasks injected as continuity context on model switch",
+      "Mac DMG and Linux AppRun packaging failures now auto-retry in CI"
     ],
-    "rawCommitCount": 17,
-    "generatedAt": "2026-04-18T17:28:45.376Z",
+    "rawCommitCount": 18,
+    "generatedAt": "2026-04-18T17:42:37.339Z",
     "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/nightly",
     "path": "history/2026-04-18.json"
   },

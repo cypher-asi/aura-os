@@ -1,47 +1,48 @@
-# Multimodel support lands with smarter routing, richer model pickers, and stabler Mac builds
+# Multimodel support, smarter context handoff, and more resilient desktop packaging
 
 - Date: `2026-04-18`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.288.1`
+- Version: `0.1.0-nightly.289.1`
 - Release: https://github.com/cypher-asi/aura-os/releases/tag/nightly
 
-Today's nightly focused almost entirely on Aura's multimodel story: hosted agents now route through AURA Proxy, every loop and task control respects the active model selection, the chat model picker got a full visual overhaul with grouped sections and Opus 4.6, and the server gained resilient project-context handoff across model switches. Release Infrastructure also picked up two reliability fixes — automatic retry for transient macOS DMG failures and a loosened changelog validator.
+Today's nightly focused on a broad multimodel overhaul: hosted agents now route through AURA Proxy, model selection is wired end-to-end from the chat bar through dev-loop and task runs, and the model picker itself got a significant visual refresh. Alongside the product work, release infrastructure picked up automatic retry logic for transient Mac and Linux packaging failures.
 
-## 12:15 AM — AURA Proxy routing and model-aware loop controls
+## 12:15 AM — AURA Proxy routing and end-to-end model wiring
 
-Hosted agents are now locked to AURA Proxy for credentials and billing, and every dev-loop and task-run path forwards the user's active model selection to the server.
+Hosted agents are now exclusively routed through AURA Proxy, and the actively selected model is propagated into dev-loop starts, task runs, and harness sessions.
 
-- Hosted agents configured with the aura_harness adapter now route exclusively through AURA Proxy — the agent editor UI reflects this with a single, always-selected 'AURA Proxy' credential card instead of a choice between managed and org-integration auth. (`f365b85`)
-- Dev-loop starts and manual task runs now accept an explicit model override that takes precedence over the agent's stored defaults, so the model selected in the chat bar is what actually runs. (`f4b5c6d`, `9c67479`)
-- The AutomationBar's start/stop controls and the loop-control hook both forward the active Aura model to the server, closing the gap between what the UI shows and what the automaton session uses. (`ea19f01`, `8ec261b`)
-- Proxy hints are now sent to harness sessions at runtime, and Fireworks-backed OSS model aliases are exposed so they can be selected alongside first-party Aura models. (`76e0e4c`, `f093cef`)
+- Hosted Aura agents now use AURA Proxy as the sole credential and billing path — the agent editor UI was simplified to reflect this, removing the previous dual-choice between 'Managed by Aura' and an org integration. (`f365b85`)
+- The active model selection is now forwarded when starting or resuming a dev loop and when triggering manual task runs, so the model chosen in the UI is consistently used throughout execution. (`f4b5c6d`, `8ec261b`, `ea19f01`, `9c67479`)
+- Aura-managed proxy hints are now sent to harness sessions at runtime, and Fireworks-backed OSS model aliases are exposed for selection. (`76e0e4c`, `f093cef`)
 
-## 12:15 AM — Chat model picker redesign and multimodel release candidate polish
+## 12:15 AM — Model catalog refresh and chat picker redesign
 
-The chat model picker was rebuilt with grouped sections, a scrollable dropdown, and updated model IDs — including Opus 4.6 — while server-side context handoff across model switches was significantly strengthened.
+The model catalog was updated with current providers and Opus 4.6, the multimodel release candidate was narrowed, and the chat model picker received a significant layout and UX overhaul.
 
-- The chat model picker now renders models in labeled, bordered groups with a capped scrollable dropdown (max-height 280 px) and a 'show more' affordance, making long model lists navigable without overwhelming the input bar. (`494aa64`)
-- Opus 4.6 is now listed in Aura model pickers, and the managed model catalog was refreshed to reflect current provider offerings with corrected Aura model IDs throughout. (`287a3aa`, `f80524e`)
-- When switching models mid-session, the server now injects a structured snapshot of the project's recent specs and tasks into the system prompt, preserving continuity context across restarts and model changes. (`f2dc6b4`)
-- The multimodel release candidate was narrowed: session event pagination now fetches full history by default (paginating in 500-event pages) instead of silently truncating at the server's 100-event default, and a task-preview wiring regression was fixed. (`3a2dc62`, `fe0b5b9`)
+- The managed model catalog was refreshed to reflect current providers, and Opus 4.6 is now available in all Aura model pickers. (`f80524e`, `287a3aa`)
+- The chat model picker was redesigned with grouped sections, section labels, a scrollable dropdown (capped at 280px), and a 'show more' affordance — making it easier to navigate a growing model list. (`494aa64`)
+- When switching models mid-session, the agent now receives a snapshot of recent project specs and tasks as continuity context, preventing loss of project state across restarts or model changes. (`f2dc6b4`)
+- Session event pagination was fixed to auto-paginate through full history when no explicit limit is set, preventing silent truncation at the previous 100-event server default. (`3a2dc62`)
 
-## 2:10 AM — Mac DMG packaging reliability fix
+## 2:10 AM — Mac desktop packaging reliability fix
 
-Release Infrastructure: macOS desktop builds now automatically retry DMG creation when hdiutil reports a transient 'Resource busy' error, preventing flaky CI failures from blocking nightly and stable releases.
+Release Infrastructure: macOS DMG builds now automatically retry on transient hdiutil 'Resource busy' failures across nightly, stable, and validation workflows.
 
-- All three desktop CI workflows (validate, nightly, stable) now detect the 'hdiutil: create failed - Resource busy' error on macOS targets and retry packaging once after a 5-second pause, rather than failing the entire release job. (`afa57d8`)
+- All three desktop CI workflows (validate, nightly, stable) now detect and retry the intermittent macOS hdiutil 'Resource busy' error that was causing DMG packaging to fail spuriously on Mac. (`afa57d8`)
 
-## 10:05 AM — Changelog generator validation loosened
+## 10:05 AM — Linux packaging retry and changelog tooling improvements
 
-Release Infrastructure: the nightly changelog generator no longer hard-errors on strict-tool model mismatches or rubric rule violations, making the tooling more resilient to model and prompt variation.
+Release Infrastructure: Linux AppRun download failures now also trigger an automatic retry, and nightly changelog validation was relaxed to reduce false-positive failures.
 
-- The changelog generator's strict-tool model allowlist check was downgraded from a hard error to a warning, and the rubric validation layer (word-count checks, duplicate-title detection, templated-summary guards) was removed entirely, reducing false-positive failures in the release pipeline. (`e8dd6ba`, `e96e6a2`)
+- Linux AppImage builds now retry automatically when the AppRun binary download returns a 5xx error, complementing the earlier macOS DMG retry logic and making desktop packaging more resilient on both platforms. (`dcf5cb6`)
+- Nightly changelog generation was made more permissive: strict model allowlist enforcement was downgraded from a hard error to a warning, and overly rigid rubric checks were removed to reduce unnecessary CI failures. (`e8dd6ba`, `e96e6a2`)
 
 ## Highlights
 
-- Hosted agents now route exclusively through AURA Proxy
-- Chat model picker redesigned with grouped sections, scroll, and Opus 4.6
-- Loop controls and task runs now honor the active model selection end-to-end
-- Project context (specs + tasks) is preserved across model switches and restarts
-- Mac DMG packaging now auto-retries on transient hdiutil failures
+- Hosted agents now route through AURA Proxy
+- Active model selection honored across chat, loops, and task runs
+- Opus 4.6 added to model pickers; Fireworks-backed OSS aliases exposed
+- Chat model picker redesigned with grouped sections and scrollable dropdown
+- Project specs and tasks injected as continuity context on model switch
+- Mac DMG and Linux AppRun packaging failures now auto-retry in CI
 
