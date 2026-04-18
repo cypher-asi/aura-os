@@ -208,34 +208,3 @@
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
-
-.bubbleButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.bubbleButton:hover {
-  background: color-mix(in srgb, var(--color-bg-secondary, #181818) 84%, white 16%);
-  color: var(--color-text);
-}
-
-.bubbleButton[data-active="true"] {
-  background: color-mix(in srgb, var(--color-bg-secondary, #181818) 72%, white 28%);
-  color: var(--color-text);
-}
-
-.empty {
-  padding: 60px 24px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  text-align: center;
-}

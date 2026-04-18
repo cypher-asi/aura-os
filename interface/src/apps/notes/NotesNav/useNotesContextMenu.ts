@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import type { useProjectListActions } from "../../../hooks/use-project-list-actions";
 import type { Project } from "../../../types";
@@ -30,7 +38,28 @@ interface Options {
   projectMap: Map<string, Project>;
 }
 
-export function useNotesContextMenu({ projectActions, projectMap }: Options) {
+export interface NotesContextMenuApi {
+  ctxMenu: NotesCtxMenuState | null;
+  ctxMenuRef: RefObject<HTMLDivElement | null>;
+  handleContextMenu: (e: ReactMouseEvent) => void;
+  handleKeyDown: (e: ReactKeyboardEvent) => void;
+  handleMenuAction: (actionId: string) => void;
+  renameTarget: NotesEntryTarget | null;
+  setRenameTarget: (target: NotesEntryTarget | null) => void;
+  handleRenameSave: (newName: string) => Promise<void>;
+  deleteTarget: NotesEntryTarget | null;
+  setDeleteTarget: (target: NotesEntryTarget | null) => void;
+  deleteLoading: boolean;
+  deleteError: string | null;
+  setDeleteError: (error: string | null) => void;
+  handleDelete: () => Promise<void>;
+  parentRelPathFor: (relPath: string) => string;
+}
+
+export function useNotesContextMenu({
+  projectActions,
+  projectMap,
+}: Options): NotesContextMenuApi {
   const navigate = useNavigate();
   const renameEntry = useNotesStore((s) => s.renameEntry);
   const deleteEntry = useNotesStore((s) => s.deleteEntry);
@@ -53,7 +82,9 @@ export function useNotesContextMenu({ projectActions, projectMap }: Options) {
   useEffect(() => {
     if (!ctxMenu) return;
     const handleDocumentClick = (e: MouseEvent) => {
-      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+      if (ctxMenuRef.current && !ctxMenuRef.current.contains(target)) {
         setCtxMenu(null);
       }
     };
@@ -69,8 +100,10 @@ export function useNotesContextMenu({ projectActions, projectMap }: Options) {
   }, [ctxMenu]);
 
   const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      const button = (e.target as HTMLElement).closest("button[id]");
+    (e: ReactMouseEvent) => {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest("button[id]");
       if (!button) return;
       const parsed = parseNotesExplorerId(button.id);
       if (!parsed) return;
@@ -103,9 +136,11 @@ export function useNotesContextMenu({ projectActions, projectMap }: Options) {
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: ReactKeyboardEvent) => {
       if (e.key !== "F2") return;
-      const focused = (e.target as HTMLElement).closest("button[id]");
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const focused = target.closest("button[id]");
       if (!focused) return;
       const parsed = parseNotesExplorerId(focused.id);
       if (!parsed) return;

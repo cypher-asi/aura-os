@@ -91,17 +91,6 @@ export const FEEDBACK_STATUS_OPTIONS: ReadonlyArray<{
   { value: "deployed", label: "Deployed" },
 ];
 
-export const FEEDBACK_SORT_OPTIONS: ReadonlyArray<{
-  value: FeedbackSort;
-  label: string;
-}> = [
-  { value: "latest", label: "Latest" },
-  { value: "popular", label: "Most Popular" },
-  { value: "trending", label: "Trending" },
-  { value: "most_voted", label: "Most Voted" },
-  { value: "least_voted", label: "Least Voted" },
-];
-
 export const FEEDBACK_PRODUCT_OPTIONS: ReadonlyArray<{
   value: FeedbackProduct;
   label: string;
@@ -121,9 +110,4 @@ export function categoryLabel(category: FeedbackCategory): string {
 export function statusLabel(status: FeedbackStatus): string {
   const match = FEEDBACK_STATUS_OPTIONS.find((o) => o.value === status);
   return match?.label ?? status;
-}
-
-export function productLabel(product: FeedbackProduct): string {
-  const match = FEEDBACK_PRODUCT_OPTIONS.find((o) => o.value === product);
-  return match?.label ?? product;
 }

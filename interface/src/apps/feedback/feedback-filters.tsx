@@ -23,60 +23,102 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import type {
-  FeedbackCategory,
-  FeedbackProduct,
-  FeedbackSort,
-  FeedbackStatus,
+import {
+  FEEDBACK_CATEGORY_OPTIONS,
+  FEEDBACK_PRODUCT_OPTIONS,
+  FEEDBACK_STATUS_OPTIONS,
+  type FeedbackCategory,
+  type FeedbackProduct,
+  type FeedbackSort,
+  type FeedbackStatus,
 } from "./types";
+import type { FeedbackFilterOption } from "./FeedbackFilterTree";
 
-export const FEEDBACK_SORT_FILTERS: ReadonlyArray<{
-  id: FeedbackSort;
-  label: string;
-  icon: ReactNode;
-}> = [
-  { id: "latest", label: "Latest", icon: <Clock size={14} /> },
-  { id: "popular", label: "Most Popular", icon: <Star size={14} /> },
-  { id: "trending", label: "Trending", icon: <Flame size={14} /> },
-  { id: "most_voted", label: "Most Voted", icon: <TrendingUp size={14} /> },
-  { id: "least_voted", label: "Least Voted", icon: <TrendingDown size={14} /> },
+/**
+ * Presentational filter data for the Feedback sidebar. The string labels are
+ * derived from `types.ts` option tables so we never duplicate them; this
+ * module only owns the per-id icons.
+ */
+
+const CATEGORY_ICONS: Record<FeedbackCategory, ReactNode> = {
+  feature_request: <Sparkles size={14} />,
+  bug: <Bug size={14} />,
+  ui_ux: <Palette size={14} />,
+  feedback: <MessageCircle size={14} />,
+  question: <HelpCircle size={14} />,
+};
+
+const STATUS_ICONS: Record<FeedbackStatus, ReactNode> = {
+  not_started: <CircleDashed size={14} />,
+  in_review: <Eye size={14} />,
+  in_progress: <CircleDot size={14} />,
+  done: <CheckCircle2 size={14} />,
+  deployed: <Rocket size={14} />,
+};
+
+const PRODUCT_ICONS: Record<FeedbackProduct, ReactNode> = {
+  aura: <Box size={14} />,
+  the_grid: <Grid3x3 size={14} />,
+  wilder_world: <Gem size={14} />,
+  z_chain: <LinkIcon size={14} />,
+  zero: <Circle size={14} />,
+};
+
+const SORT_LABELS: Record<FeedbackSort, string> = {
+  latest: "Latest",
+  popular: "Most Popular",
+  trending: "Trending",
+  most_voted: "Most Voted",
+  least_voted: "Least Voted",
+};
+
+const SORT_ICONS: Record<FeedbackSort, ReactNode> = {
+  latest: <Clock size={14} />,
+  popular: <Star size={14} />,
+  trending: <Flame size={14} />,
+  most_voted: <TrendingUp size={14} />,
+  least_voted: <TrendingDown size={14} />,
+};
+
+export const FEEDBACK_CATEGORY_FILTERS: ReadonlyArray<
+  FeedbackFilterOption<FeedbackCategory>
+> = FEEDBACK_CATEGORY_OPTIONS.map((option) => ({
+  id: option.value,
+  label: option.label,
+  icon: CATEGORY_ICONS[option.value],
+}));
+
+export const FEEDBACK_STATUS_FILTERS: ReadonlyArray<
+  FeedbackFilterOption<FeedbackStatus>
+> = FEEDBACK_STATUS_OPTIONS.map((option) => ({
+  id: option.value,
+  label: option.label,
+  icon: STATUS_ICONS[option.value],
+}));
+
+export const FEEDBACK_PRODUCT_FILTERS: ReadonlyArray<
+  FeedbackFilterOption<FeedbackProduct>
+> = FEEDBACK_PRODUCT_OPTIONS.map((option) => ({
+  id: option.value,
+  label: option.label,
+  icon: PRODUCT_ICONS[option.value],
+}));
+
+const SORT_ORDER: ReadonlyArray<FeedbackSort> = [
+  "latest",
+  "popular",
+  "trending",
+  "most_voted",
+  "least_voted",
 ];
 
-export const FEEDBACK_CATEGORY_FILTERS: ReadonlyArray<{
-  id: FeedbackCategory;
-  label: string;
-  icon: ReactNode;
-}> = [
-  { id: "feature_request", label: "Feature Request", icon: <Sparkles size={14} /> },
-  { id: "bug", label: "Bug", icon: <Bug size={14} /> },
-  { id: "ui_ux", label: "UI/UX", icon: <Palette size={14} /> },
-  { id: "feedback", label: "Feedback", icon: <MessageCircle size={14} /> },
-  { id: "question", label: "Question", icon: <HelpCircle size={14} /> },
-];
-
-export const FEEDBACK_STATUS_FILTERS: ReadonlyArray<{
-  id: FeedbackStatus;
-  label: string;
-  icon: ReactNode;
-}> = [
-  { id: "not_started", label: "Not Started", icon: <CircleDashed size={14} /> },
-  { id: "in_review", label: "In Review", icon: <Eye size={14} /> },
-  { id: "in_progress", label: "In Progress", icon: <CircleDot size={14} /> },
-  { id: "done", label: "Done", icon: <CheckCircle2 size={14} /> },
-  { id: "deployed", label: "Deployed", icon: <Rocket size={14} /> },
-];
+export const FEEDBACK_SORT_FILTERS: ReadonlyArray<
+  FeedbackFilterOption<FeedbackSort>
+> = SORT_ORDER.map((id) => ({
+  id,
+  label: SORT_LABELS[id],
+  icon: SORT_ICONS[id],
+}));
 
 export const FEEDBACK_ALL_CATEGORY_ICON: ReactNode = <Layers size={14} />;
 export const FEEDBACK_ALL_STATUS_ICON: ReactNode = <Globe size={14} />;
-
-export const FEEDBACK_PRODUCT_FILTERS: ReadonlyArray<{
-  id: FeedbackProduct;
-  label: string;
-  icon: ReactNode;
-}> = [
-  { id: "aura", label: "AURA", icon: <Box size={14} /> },
-  { id: "the_grid", label: "The GRID", icon: <Grid3x3 size={14} /> },
-  { id: "wilder_world", label: "Wilder World", icon: <Gem size={14} /> },
-  { id: "z_chain", label: "Z Chain", icon: <LinkIcon size={14} /> },
-  { id: "zero", label: "ZERO", icon: <Circle size={14} /> },
-];

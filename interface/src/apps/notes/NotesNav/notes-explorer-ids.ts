@@ -1,6 +1,6 @@
-export type NotesExplorerKind = "project" | "folder" | "note";
+type NotesExplorerKind = "project" | "folder" | "note";
 
-export interface ParsedNotesExplorerId {
+interface ParsedNotesExplorerId {
   kind: NotesExplorerKind;
   projectId: string;
   relPath: string;

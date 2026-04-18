@@ -165,6 +165,8 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
 
   setStatusFilter: (statusFilter) => set({ statusFilter }),
 
+  setProductFilter: (productFilter) => set({ productFilter }),
+
   selectItem: (id) => {
     set({ selectedId: id });
     if (id) {

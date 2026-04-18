@@ -98,9 +98,6 @@
   padding-left: 36px;
 }
 
-.empty {
-  padding: 24px;
-  color: var(--color-text-secondary);
-  text-align: center;
-  font-size: 13px;
+.tocEmpty {
+  opacity: 0.6;
 }

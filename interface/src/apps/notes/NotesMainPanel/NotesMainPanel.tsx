@@ -1,21 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "tiptap-markdown";
-import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  Heading1,
-  Heading2,
-  List,
-  ListOrdered,
-  Quote,
-} from "lucide-react";
 import { Lane } from "../../../components/Lane";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import {
@@ -23,7 +12,21 @@ import {
   useActiveNoteKey,
   useNotesStore,
 } from "../../../stores/notes-store";
+import { BubbleToolbar } from "./BubbleToolbar";
 import styles from "./NotesMainPanel.module.css";
+
+/** Narrow a TipTap editor's `storage` field to the slice the markdown
+ *  extension adds. `tiptap-markdown` augments it at runtime without
+ *  extending the `Editor` type, so this keeps the cast in one place. */
+function getMarkdownStorage(editor: Editor): { getMarkdown: () => string } {
+  const storage = editor.storage as { markdown?: { getMarkdown: () => string } };
+  if (!storage.markdown) {
+    throw new Error(
+      "tiptap-markdown storage missing — Markdown extension must be registered on the editor.",
+    );
+  }
+  return storage.markdown;
+}
 
 type EditMode = "wysiwyg" | "markdown";
 
@@ -56,7 +59,7 @@ function rejoinFrontmatter(frontmatter: string, body: string): string {
   return `${frontmatter}\n\n${trimmedBody}`;
 }
 
-export function NotesMainPanel({ children }: { children?: React.ReactNode }) {
+export function NotesMainPanel({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const params = useParams<{ projectId: string; notePath: string }>();
   const note = useActiveNote();
@@ -150,9 +153,7 @@ export function NotesMainPanel({ children }: { children?: React.ReactNode }) {
       onUpdate: ({ editor: ed }) => {
         const current = activeKeyRef.current;
         if (!current) return;
-        const md = (ed.storage as unknown as {
-          markdown: { getMarkdown: () => string };
-        }).markdown.getMarkdown();
+        const md = getMarkdownStorage(ed).getMarkdown();
         const joined = rejoinFrontmatter(frontmatterRef.current, md);
         updateContent(current.projectId, current.relPath, joined);
       },
@@ -175,9 +176,7 @@ export function NotesMainPanel({ children }: { children?: React.ReactNode }) {
     const key = `${activeKey.projectId}::${activeKey.relPath}`;
     if (lastSyncedKey.current === key) return;
     lastSyncedKey.current = key;
-    const currentMd = (editor.storage as unknown as {
-      markdown: { getMarkdown: () => string };
-    }).markdown.getMarkdown();
+    const currentMd = getMarkdownStorage(editor).getMarkdown();
     // Skip setContent when the body is already in sync (e.g. we're only
     // reacting to an autosave rename, not a genuine note switch). setContent
     // clears the selection, which would otherwise be jarring mid-typing.
@@ -291,6 +290,7 @@ export function NotesMainPanel({ children }: { children?: React.ReactNode }) {
                 value={body}
                 onChange={(e) => handleMarkdownEdit(e.target.value)}
                 spellCheck={false}
+                aria-label="Note body (markdown)"
               />
             )}
           </div>
@@ -306,69 +306,5 @@ export function NotesMainPanel({ children }: { children?: React.ReactNode }) {
         ) : null}
       </div>
     </Lane>
-  );
-}
-
-function BubbleToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
-  if (!editor) return null;
-  const btn = (
-    active: boolean,
-    label: string,
-    icon: React.ReactNode,
-    onClick: () => void,
-  ) => (
-    <button
-      type="button"
-      className={styles.bubbleButton}
-      data-active={active}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      aria-label={label}
-      title={label}
-    >
-      {icon}
-    </button>
-  );
-  return (
-    <>
-      {btn(editor.isActive("bold"), "Bold", <Bold size={14} />, () =>
-        editor.chain().focus().toggleBold().run(),
-      )}
-      {btn(editor.isActive("italic"), "Italic", <Italic size={14} />, () =>
-        editor.chain().focus().toggleItalic().run(),
-      )}
-      {btn(editor.isActive("strike"), "Strikethrough", <Strikethrough size={14} />, () =>
-        editor.chain().focus().toggleStrike().run(),
-      )}
-      {btn(editor.isActive("code"), "Inline code", <Code size={14} />, () =>
-        editor.chain().focus().toggleCode().run(),
-      )}
-      {btn(
-        editor.isActive("heading", { level: 1 }),
-        "Heading 1",
-        <Heading1 size={14} />,
-        () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
-      )}
-      {btn(
-        editor.isActive("heading", { level: 2 }),
-        "Heading 2",
-        <Heading2 size={14} />,
-        () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-      )}
-      {btn(editor.isActive("bulletList"), "Bullet list", <List size={14} />, () =>
-        editor.chain().focus().toggleBulletList().run(),
-      )}
-      {btn(
-        editor.isActive("orderedList"),
-        "Ordered list",
-        <ListOrdered size={14} />,
-        () => editor.chain().focus().toggleOrderedList().run(),
-      )}
-      {btn(editor.isActive("blockquote"), "Blockquote", <Quote size={14} />, () =>
-        editor.chain().focus().toggleBlockquote().run(),
-      )}
-    </>
   );
 }

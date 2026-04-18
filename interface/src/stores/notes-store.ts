@@ -34,6 +34,15 @@ function basename(relPath: string): string {
   return idx === -1 ? relPath : relPath.slice(idx + 1);
 }
 
+function isErrorWithStatus(err: unknown): err is { status: number } {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "status" in err &&
+    typeof (err as { status: unknown }).status === "number"
+  );
+}
+
 /**
  * Return a new nodes array with the note at `fromRelPath` renamed to
  * `toRelPath` (updating name/absPath/title/updatedAt). Returns the same
@@ -241,8 +250,17 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
     set({ activeProjectId: projectId, activeRelPath: relPath });
     if (relPath) {
       setLastNote({ projectId, relPath });
-      void get().readNote(projectId, relPath);
-      void get().loadComments(projectId, relPath);
+      // Fire-and-forget: the individual actions update their own slices of
+      // store state on success, and swallow/log errors on failure. We attach
+      // `.catch` explicitly so an unhandled rejection can't crash the app.
+      get()
+        .readNote(projectId, relPath)
+        .catch((err) => console.warn("readNote after selectNote failed", err));
+      get()
+        .loadComments(projectId, relPath)
+        .catch((err) =>
+          console.warn("loadComments after selectNote failed", err),
+        );
     } else {
       clearLastNote();
     }
@@ -269,8 +287,7 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
       // If the stored active selection points at a note that no longer
       // exists (deleted, moved, etc.), drop it so the UI can fall back to
       // an empty state rather than a permanent "Loading…" spinner.
-      const status = (err as { status?: number } | undefined)?.status;
-      if (status === 404) {
+      if (isErrorWithStatus(err) && err.status === 404) {
         clearLastNote();
         set((state) => {
           const { [key]: _missing, ...restContent } = state.contentCache;

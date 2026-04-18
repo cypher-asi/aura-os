@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { Button, Input, Modal, Text } from "@cypher-asi/zui";
 import { Select } from "../../../components/Select";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
@@ -13,6 +13,18 @@ import {
   type FeedbackStatus,
 } from "../types";
 import styles from "./NewFeedbackModal.module.css";
+
+function isFeedbackProduct(value: string): value is FeedbackProduct {
+  return FEEDBACK_PRODUCT_OPTIONS.some((option) => option.value === value);
+}
+
+function isFeedbackCategory(value: string): value is FeedbackCategory {
+  return FEEDBACK_CATEGORY_OPTIONS.some((option) => option.value === value);
+}
+
+function isFeedbackStatus(value: string): value is FeedbackStatus {
+  return FEEDBACK_STATUS_OPTIONS.some((option) => option.value === value);
+}
 
 export interface NewFeedbackModalProps {
   isOpen: boolean;
@@ -72,7 +84,7 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
     onClose();
   }, [isSubmitting, onClose]);
 
-  const handleBodyChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleBodyChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setBody(event.target.value);
     if (composerError) resetComposerError();
   };
@@ -124,7 +136,9 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
             <span className={styles.selectLabelText}>Product</span>
             <Select
               value={product}
-              onChange={(v) => setProduct(v as FeedbackProduct)}
+              onChange={(v) => {
+                if (isFeedbackProduct(v)) setProduct(v);
+              }}
               options={[...FEEDBACK_PRODUCT_OPTIONS]}
             />
           </div>
@@ -132,7 +146,9 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
             <span className={styles.selectLabelText}>Category</span>
             <Select
               value={category}
-              onChange={(v) => setCategory(v as FeedbackCategory)}
+              onChange={(v) => {
+                if (isFeedbackCategory(v)) setCategory(v);
+              }}
               options={[...FEEDBACK_CATEGORY_OPTIONS]}
             />
           </div>
@@ -140,7 +156,9 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
             <span className={styles.selectLabelText}>Status</span>
             <Select
               value={status}
-              onChange={(v) => setStatus(v as FeedbackStatus)}
+              onChange={(v) => {
+                if (isFeedbackStatus(v)) setStatus(v);
+              }}
               options={[...FEEDBACK_STATUS_OPTIONS]}
             />
           </div>

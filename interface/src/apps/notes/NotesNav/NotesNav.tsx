@@ -14,6 +14,7 @@ import { ExplorerContextMenu } from "../../../components/ProjectList/ExplorerCon
 import { ProjectListModals } from "../../../components/ProjectList/ProjectListModals";
 import { useProjectListActions } from "../../../hooks/use-project-list-actions";
 import leftMenuStyles from "../../../features/left-menu/LeftMenuTree/LeftMenuTree.module.css";
+import styles from "./NotesNav.module.css";
 import {
   useNotesStore,
   type NotesProjectTree,
@@ -25,8 +26,8 @@ import {
   parseNotesExplorerId,
   projectIdFor,
 } from "./notes-explorer-ids";
-import { NotesEntryContextMenu } from "./NotesEntryContextMenu";
-import { NotesEntryModals } from "./NotesEntryModals";
+import { NotesEntryContextMenu } from "../NotesEntryContextMenu";
+import { NotesEntryModals } from "../NotesEntryModals";
 import { useNotesContextMenu } from "./useNotesContextMenu";
 
 function hoverPlusSuffix(onClick: () => void, title: string): ExplorerNode["suffix"] {
@@ -220,18 +221,9 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
   );
 
   return (
-    <div style={{ height: "100%" }}>
+    <div className={styles.root}>
       {projects.length === 0 && !loadingProjects ? (
-        <div
-          style={{
-            padding: "24px 16px",
-            color: "var(--color-text-secondary)",
-            fontSize: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        <div className={styles.emptyState}>
           <ChevronRight size={14} aria-hidden="true" />
           Create a project first to start adding notes.
         </div>

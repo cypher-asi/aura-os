@@ -8,8 +8,8 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import projectListStyles from "../../../components/ProjectList/ProjectList.module.css";
-import type { useNotesContextMenu } from "./useNotesContextMenu";
+import type { NotesContextMenuApi } from "../NotesNav/useNotesContextMenu";
+import styles from "./NotesEntryContextMenu.module.css";
 
 const noteMenuItems: MenuItem[] = [
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
@@ -26,19 +26,18 @@ const folderMenuItems: MenuItem[] = [
   { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
-interface Props {
-  actions: ReturnType<typeof useNotesContextMenu>;
+export interface NotesEntryContextMenuProps {
+  actions: NotesContextMenuApi;
 }
 
-export function NotesEntryContextMenu({ actions }: Props) {
+export function NotesEntryContextMenu({ actions }: NotesEntryContextMenuProps) {
   const menu = actions.ctxMenu;
   if (!menu) return null;
-  const items =
-    menu.target.kind === "note" ? noteMenuItems : folderMenuItems;
+  const items = menu.target.kind === "note" ? noteMenuItems : folderMenuItems;
   return createPortal(
     <div
       ref={actions.ctxMenuRef}
-      className={projectListStyles.contextMenuOverlay}
+      className={styles.overlay}
       style={{ left: menu.x, top: menu.y }}
     >
       <Menu

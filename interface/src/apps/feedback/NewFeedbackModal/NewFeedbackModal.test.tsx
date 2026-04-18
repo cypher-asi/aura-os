@@ -183,7 +183,9 @@ describe("NewFeedbackModal", () => {
     await vi.waitFor(() => {
       expect(feedbackApiMock.create).toHaveBeenCalled();
     });
-    expect(feedbackApiMock.create.mock.calls[0]![0]).toMatchObject({
+    const [firstCallArgs] = feedbackApiMock.create.mock.calls;
+    expect(firstCallArgs).toBeDefined();
+    expect(firstCallArgs?.[0]).toMatchObject({
       product: "aura",
     });
   });

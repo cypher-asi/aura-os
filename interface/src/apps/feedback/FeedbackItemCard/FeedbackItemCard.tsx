@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { timeAgo } from "../../../utils/format";
 import {
@@ -21,15 +22,8 @@ export function FeedbackItemCard({
   onSelect,
   onVote,
 }: FeedbackItemCardProps) {
-  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onSelect(item.id);
-    }
-  };
-
   const handleVote = (
-    event: React.MouseEvent<HTMLButtonElement>,
+    event: MouseEvent<HTMLButtonElement>,
     next: ViewerVote,
   ) => {
     event.stopPropagation();
@@ -37,15 +31,14 @@ export function FeedbackItemCard({
     onVote(item.id, resolved);
   };
 
+  // The card splits into three interactive regions so we can use native
+  // `<button>`s end-to-end (nesting buttons inside a single card-button
+  // would be invalid HTML): the vote column with its own up/down buttons, a
+  // primary `.body` button that owns "select this feedback", and an optional
+  // comment-count button that also selects. They're laid out side-by-side
+  // by the `.card` grid, so the card still reads as a single row visually.
   return (
-    <div
-      className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      onClick={() => onSelect(item.id)}
-      onKeyDown={handleCardKeyDown}
-    >
+    <article className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}>
       <div className={styles.voteColumn}>
         <button
           type="button"
@@ -70,40 +63,42 @@ export function FeedbackItemCard({
         </button>
       </div>
 
-      <div className={styles.body}>
-        <div className={styles.headerRow}>
+      <button
+        type="button"
+        className={styles.body}
+        aria-pressed={isSelected}
+        onClick={() => onSelect(item.id)}
+      >
+        <span className={styles.headerRow}>
           <span className={styles.authorName}>{item.author.name}</span>
           <span className={styles.separator}>&middot;</span>
           <span className={styles.timestamp}>{timeAgo(item.createdAt)}</span>
           <span className={styles.separator}>&middot;</span>
           <span className={styles.category}>{categoryLabel(item.category)}</span>
           <span className={styles.headerSpacer} />
-          <span
-            className={styles.statusTag}
-            data-status={item.status}
-          >
+          <span className={styles.statusTag} data-status={item.status}>
             {statusLabel(item.status)}
           </span>
-        </div>
+        </span>
 
-        <div className={styles.title}>{item.title}</div>
-        <div className={styles.preview}>{item.body}</div>
+        <span className={styles.title}>{item.title}</span>
+        <span className={styles.preview}>{item.body}</span>
+      </button>
 
-        {item.commentCount > 0 ? (
-          <button
-            type="button"
-            className={styles.commentPreview}
-            aria-label={`${item.commentCount} comment${item.commentCount !== 1 ? "s" : ""}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect(item.id);
-            }}
-          >
-            <MessageSquare size={12} />
-            {item.commentCount} comment{item.commentCount !== 1 ? "s" : ""}
-          </button>
-        ) : null}
-      </div>
-    </div>
+      {item.commentCount > 0 ? (
+        <button
+          type="button"
+          className={styles.commentPreview}
+          aria-label={`${item.commentCount} comment${item.commentCount !== 1 ? "s" : ""}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(item.id);
+          }}
+        >
+          <MessageSquare size={12} />
+          {item.commentCount} comment{item.commentCount !== 1 ? "s" : ""}
+        </button>
+      ) : null}
+    </article>
   );
 }
