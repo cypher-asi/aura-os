@@ -4,6 +4,7 @@ mod crud;
 mod instances;
 mod runtime;
 mod sessions;
+pub(crate) mod super_agent_harness;
 pub(crate) mod workspace_tools;
 
 pub(crate) use chat::{

@@ -140,10 +140,32 @@ impl HarnessSuperAgentDriver {
             jwt,
             self.config.model.clone(),
         );
+        self.start_with_init(init, jwt, user_message, None).await
+    }
+
+    /// Variant of [`Self::start`] that accepts a pre-built
+    /// [`SessionInit`] so the caller can inject conversation history,
+    /// session/agent IDs, or any other wire fields the plain
+    /// profile-based builder does not populate.
+    ///
+    /// `jwt` is only used for the websocket upgrade; any token the
+    /// harness should forward when calling domain tools must already
+    /// be set on `init.token` (usually via
+    /// [`aura_os_super_agent::harness_handoff::build_super_agent_session_init`]).
+    ///
+    /// `attachments` are passed through on the initial
+    /// [`aura_protocol::UserMessage`].
+    pub async fn start_with_init(
+        &self,
+        init: SessionInit,
+        jwt: &str,
+        user_message: &str,
+        attachments: Option<Vec<aura_protocol::MessageAttachment>>,
+    ) -> Result<HarnessSuperAgentSession, HarnessSuperAgentError> {
         debug!(
-            preset = %profile.preset,
             installed_tool_count = init.installed_tools.as_ref().map(Vec::len).unwrap_or(0),
             has_classifier = init.intent_classifier.is_some(),
+            has_history = init.conversation_messages.is_some(),
             "starting harness super-agent session"
         );
 
@@ -154,12 +176,11 @@ impl HarnessSuperAgentDriver {
 
         let session_id = wait_for_session_ready(&mut ws).await?;
 
-        let user_frame =
-            serde_json::to_string(&InboundMessage::UserMessage(UserMessage {
-                content: user_message.to_string(),
-                tool_hints: None,
-                attachments: None,
-            }))?;
+        let user_frame = serde_json::to_string(&InboundMessage::UserMessage(UserMessage {
+            content: user_message.to_string(),
+            tool_hints: None,
+            attachments,
+        }))?;
         ws.send(WsMessage::Text(user_frame.into())).await?;
 
         let (tx, rx) = mpsc::channel(self.config.event_buffer);

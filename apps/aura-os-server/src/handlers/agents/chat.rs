@@ -58,6 +58,16 @@ pub(crate) struct ChatPersistCtx {
     project_id: String,
 }
 
+impl ChatPersistCtx {
+    /// aura-os session id this persist context is writing into.
+    /// Exposed so the harness-hosted super-agent route can propagate
+    /// the session id into `SessionInit::aura_session_id` for cross-
+    /// system correlation.
+    pub(crate) fn session_id(&self) -> String {
+        self.session_id.clone()
+    }
+}
+
 async fn resolve_chat_session(
     storage: &StorageClient,
     jwt: &str,
@@ -697,10 +707,10 @@ pub(crate) async fn setup_agent_chat_persistence(
     })
 }
 
-const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
+pub(crate) const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
-fn harness_broadcast_to_sse(
+pub(crate) fn harness_broadcast_to_sse(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
     stream::unfold((rx, false), |(mut rx, done)| async move {
@@ -1778,6 +1788,76 @@ async fn resolve_org_for_super_agent(state: &AppState, jwt: &str) -> (String, St
     ("Default Org".into(), "default".into())
 }
 
+/// Harness-hosted super-agent dispatch. Assembles the pieces the
+/// [`super::super_agent_harness::handle_super_agent_via_harness`]
+/// handler needs (org resolution, conversation history,
+/// persistence) and delegates. Kept adjacent to
+/// `handle_super_agent_stream` so the two paths read as peers.
+async fn dispatch_super_agent_via_harness(
+    state: &AppState,
+    jwt: &str,
+    _auth_session: &aura_os_core::ZeroAuthSession,
+    agent: &Agent,
+    body: SendChatRequest,
+) -> ApiResult<SseResponse> {
+    use super::super_agent_harness::{handle_super_agent_via_harness, HarnessSuperAgentTurn};
+
+    let agent_id = agent.agent_id;
+    let force_new = body.new_session.unwrap_or(false);
+    let (org_name, org_id) = resolve_org_for_super_agent(state, jwt).await;
+
+    let conversation_history: Option<Vec<aura_protocol::ConversationMessage>> = if force_new {
+        None
+    } else {
+        let stored = load_current_session_events_for_agent(state, &agent_id, jwt).await;
+        if stored.is_empty() {
+            None
+        } else {
+            let bounded =
+                slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
+            Some(session_events_to_conversation_history(&bounded))
+        }
+    };
+
+    let persist_ctx =
+        setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt, force_new).await;
+    if persist_ctx.is_none() {
+        warn!(%agent_id, "super agent (harness): persistence context unavailable");
+    }
+    let aura_session_id = persist_ctx.as_ref().map(|c| c.session_id());
+
+    let protocol_attachments: Option<Vec<aura_protocol::MessageAttachment>> =
+        body.attachments.as_ref().map(|atts| {
+            atts.iter()
+                .map(|a| aura_protocol::MessageAttachment {
+                    type_: a.type_.clone(),
+                    media_type: a.media_type.clone(),
+                    data: a.data.clone(),
+                    name: a.name.clone(),
+                })
+                .collect()
+        });
+
+    let profile = Arc::new(aura_os_super_agent_profile::SuperAgentProfile::ceo_default());
+
+    handle_super_agent_via_harness(HarnessSuperAgentTurn {
+        state,
+        jwt,
+        agent,
+        org_name: &org_name,
+        org_id: &org_id,
+        user_content: body.content,
+        attachments: protocol_attachments,
+        model_override: body.model,
+        conversation_history,
+        force_new_session: force_new,
+        persist_ctx,
+        aura_session_id,
+        profile,
+    })
+    .await
+}
+
 async fn handle_super_agent_stream(
     state: &AppState,
     jwt: &str,
@@ -2011,8 +2091,27 @@ pub(crate) async fn send_agent_event_stream(
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     if agent.role == "super_agent" || agent.tags.contains(&"super_agent".to_string()) {
-        info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
-        return handle_super_agent_stream(&state, &jwt, &auth_session, &agent, body).await;
+        use super::super_agent_harness::{host_mode_for_agent, HostMode};
+        match host_mode_for_agent(&agent) {
+            HostMode::Harness => {
+                info!(
+                    %agent_id,
+                    "SuperAgent detected (host_mode=harness) — routing to harness-hosted handler"
+                );
+                return dispatch_super_agent_via_harness(
+                    &state,
+                    &jwt,
+                    &auth_session,
+                    &agent,
+                    body,
+                )
+                .await;
+            }
+            HostMode::InProcess => {
+                info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
+                return handle_super_agent_stream(&state, &jwt, &auth_session, &agent, body).await;
+            }
+        }
     }
 
     if agent.adapter_type != "aura_harness" {
