@@ -64,7 +64,7 @@ const eventStoreMock = {
 };
 vi.mock("../../stores/event-store/index", () => ({
   useEventStore: (sel: (s: typeof eventStoreMock) => unknown) => sel(eventStoreMock),
-  useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [] }),
+  useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [], gitSteps: [] }),
 }));
 
 vi.mock("../../hooks/use-loop-active", () => ({
@@ -218,7 +218,7 @@ describe("RunTaskButton", () => {
 
     await user.click(screen.getByTitle("Run task"));
     await waitFor(() => {
-      expect(mockRunTask).toHaveBeenCalledWith("proj-1", "task-1", "agent-1");
+      expect(mockRunTask).toHaveBeenCalledWith("proj-1", "task-1", "agent-1", null);
     });
   });
 

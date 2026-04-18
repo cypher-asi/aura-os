@@ -34,11 +34,11 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const pushPreview = useSidekickStore((s) => s.pushPreview);
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
-  const streamKey =
+  const chatStreamKey =
     projectId && routeAgentInstanceId
       ? projectChatHistoryKey(projectId, routeAgentInstanceId)
       : null;
-  const { selectedModel } = useChatUI(streamKey ?? "__task-preview__");
+  const { selectedModel } = useChatUI(chatStreamKey ?? "__task-preview__");
   const [retrying, setRetrying] = useState(false);
 
   const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id, task.status);
@@ -47,11 +47,11 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const effectiveStatus = liveStatus ?? task.status;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
-  const { streamKey } = useTaskStream(task.task_id, isActive);
+  const { streamKey: taskStreamKey } = useTaskStream(task.task_id, isActive);
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
   const elapsed = useElapsedTime(isActive);
 
-  const streamBuf = useStreamingText(streamKey);
+  const streamBuf = useStreamingText(taskStreamKey);
   const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
   useTaskOutputHydration(projectId, task, isActive, isTerminal, streamBuf, seedTaskOutput);
 
@@ -97,7 +97,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
     taskOutput, effectiveStatus, effectiveSessionId, isActive, isTerminal,
     elapsed, failReason, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
-    fileOps, notes, showNotes, streamKey,
+    fileOps, notes, showNotes, streamKey: taskStreamKey,
   };
 }
 
