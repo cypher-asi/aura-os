@@ -208,7 +208,7 @@ export function BrowserViewport({
       if (!rect) return;
       e.preventDefault();
       const coords = toViewportCoords(e, rect);
-      send(buildWheelMsg(coords, -e.deltaX, -e.deltaY));
+      send(buildWheelMsg(coords, e.deltaX, e.deltaY));
     },
     [rectFromCanvas, send],
   );
