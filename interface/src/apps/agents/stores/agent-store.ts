@@ -121,14 +121,30 @@ export const useAgentStore = create<AgentState>()(
 
         agentsFetchPromise = api.agents
           .list()
-          .then(async (agents) => {
-            const hasSuperAgent = agents.some((a) => isSuperAgent(a));
-            if (!hasSuperAgent) {
+          .then(async (initialAgents) => {
+            let agents = initialAgents;
+            const superAgents = agents.filter((a) => isSuperAgent(a));
+            if (superAgents.length === 0) {
               try {
                 const { agent } = await api.superAgent.setup();
-                agents.push(agent);
+                agents = [...agents, agent];
               } catch {
                 // setup may fail if network is down; non-blocking
+              }
+            } else if (superAgents.length > 1) {
+              // Bootstrap races or permission-round-trip bugs on older
+              // aura-network deployments can leave the list with >1 CEO
+              // agent (the TS `isSuperAgent` fallback happily matches
+              // every duplicate). Ask the server to dedupe, then refetch
+              // so the UI settles on the single canonical record.
+              try {
+                const { deleted } = await api.superAgent.cleanup();
+                if (deleted.length > 0) {
+                  agents = await api.agents.list();
+                }
+              } catch {
+                // cleanup is best-effort; stale duplicates will stick
+                // around until the next refresh.
               }
             }
             const sorted = agents.sort((a, b) => {
