@@ -13,6 +13,7 @@ import {
  * Team Settings form uses.
  */
 export type IntegrationGroupId =
+  | "providers"
   | "communication"
   | "productivity"
   | "coding"
@@ -30,6 +31,7 @@ export interface IntegrationGroup {
 }
 
 const GROUP_ORDER: ReadonlyArray<{ id: IntegrationGroupId; title: string }> = [
+  { id: "providers", title: "Providers" },
   { id: "communication", title: "Communication" },
   { id: "productivity", title: "Productivity" },
   { id: "coding", title: "Coding" },
@@ -41,20 +43,20 @@ const GROUP_ORDER: ReadonlyArray<{ id: IntegrationGroupId; title: string }> = [
   { id: "mcp_servers", title: "MCP Servers" },
 ];
 
-// Explicit provider -> group assignment. Keep the 9 groups from the product
-// spec at the top so adding a new provider there is a one-line change; the
-// long-tail AI model connections and utility integrations fall back to
-// sensible defaults below.
+// Explicit provider -> group assignment. Shared model credentials
+// (AURA Proxy, Anthropic, OpenAI, Gemini, xAI, OpenRouter) all live under
+// "Providers" so users can find them in one place; tool-style integrations
+// keep their workflow-oriented categories below.
 const PROVIDER_GROUP: Record<string, IntegrationGroupId> = {
+  aura_proxy: "providers",
+  anthropic: "providers",
+  openai: "providers",
+  google_gemini: "providers",
+  xai: "providers",
+  openrouter: "providers",
   slack: "communication",
   notion: "productivity",
   linear: "productivity",
-  anthropic: "coding",
-  openai: "coding",
-  google_gemini: "coding",
-  xai: "coding",
-  openrouter: "coding",
-  aura_proxy: "coding",
   github: "coding",
   buffer: "social_media",
   metricool: "social_media",
