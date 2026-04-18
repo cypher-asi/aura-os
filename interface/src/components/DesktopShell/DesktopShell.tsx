@@ -183,9 +183,21 @@ export function DesktopShell() {
   );
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const mainPanelRef = useRef<HTMLDivElement>(null);
+  // Callback-ref-backed state: the main panel div is unmounted and remounted
+  // whenever `ActiveProvider` changes identity (e.g. Projects has no Provider
+  // so `ActiveProvider` is `Fragment`, while Tasks has a lazy-wrapped
+  // `TasksProvider`). When the ref changes, the retarget effect re-runs so it
+  // can apply the stored width once the new panel is in the DOM.
+  const [mainPanelEl, setMainPanelEl] = useState<HTMLDivElement | null>(null);
+  const handleMainPanelRef = useCallback((node: HTMLDivElement | null) => {
+    setMainPanelEl(node);
+  }, []);
   const sidekickResizeControlsRef = useRef<LaneResizeControls | null>(null);
-  const previousSidekickAppIdRef = useRef<string | null>(null);
+  // Tracks the app whose width is currently applied to the Lane. We only mark
+  // an app as "applied" after successfully calling setSize, so if the Lane or
+  // main panel isn't ready yet, a later effect run (when they come online)
+  // still retries instead of skipping.
+  const appliedSidekickAppIdRef = useRef<string | null>(null);
   const [sidekickInitialWidth] = useState(() =>
     readStoredSidekickWidth(activeApp.id),
   );
@@ -267,78 +279,74 @@ export function DesktopShell() {
   // Retarget the sidekick Lane whenever the active app changes so each app
   // restores the width the user chose for it.
   //
-  // We intentionally skip the very first render: `sidekickInitialWidth` (used
-  // as the Lane's `defaultWidth`) already reflects the initial app's stored
-  // width, so running a setSize on mount would be a no-op at best and, at
-  // worst, fire before the outlet has laid out.
+  // Timing is tricky: when an app switch involves a different `ActiveProvider`
+  // (e.g. Projects has no Provider, Tasks has a lazy-loaded `TasksProvider`),
+  // the provider swap unmounts and remounts the main panel div. Meanwhile, a
+  // suspense boundary can briefly replace the panel with `null` while the
+  // lazy chunk loads, so `mainPanelEl` is null for one or more renders after
+  // the navigation. To handle this robustly:
   //
-  // We rely on `sidekickResizeControlsRef` (populated by the Lane's own
-  // layout effect) and `mainPanelRef` being wired before this effect runs.
-  // The outlet can still be settling (main panel width momentarily 0) right
-  // after a route change, so we retry across a few animation frames before
-  // falling back to a ResizeObserver for the main panel. This is what makes
-  // the first visit to an app reliably retarget.
+  // - `mainPanelEl` is callback-ref-backed state, so this effect re-runs
+  //   whenever the main panel div appears/disappears.
+  // - `appliedSidekickAppIdRef` tracks which app's width is currently on the
+  //   Lane. We only mark an app as applied after a successful `setSize`, so
+  //   if prerequisites (main panel, sidekick controls, non-zero width) are
+  //   missing, a later effect run (triggered by the new main panel mounting)
+  //   retries the apply.
+  // - The first render short-circuits because `sidekickInitialWidth` (passed
+  //   as Lane's `defaultWidth`) already applied the initial app's width.
+  //
+  // A ResizeObserver also watches the main panel for the case where it mounts
+  // with width 0 (e.g. during suspense fallback) and later lays out.
   useLayoutEffect(() => {
-    const previousAppId = previousSidekickAppIdRef.current;
-    previousSidekickAppIdRef.current = activeApp.id;
+    if (appliedSidekickAppIdRef.current === null) {
+      appliedSidekickAppIdRef.current = activeApp.id;
+      return;
+    }
+    if (appliedSidekickAppIdRef.current === activeApp.id) return;
+    if (!mainPanelEl) return;
+    const sidekickResizeControls = sidekickResizeControlsRef.current;
+    if (!sidekickResizeControls) return;
 
-    if (previousAppId === null) return;
-    if (previousAppId === activeApp.id) return;
-
-    let cancelled = false;
-    let rafId: number | null = null;
-    let resizeObserver: ResizeObserver | null = null;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    const applyTarget = () => {
-      if (cancelled) return false;
-      const mainPanelHost = mainPanelRef.current;
-      const sidekickResizeControls = sidekickResizeControlsRef.current;
-      if (!mainPanelHost || !sidekickResizeControls) return false;
-
-      const mainWidth = Math.round(mainPanelHost.getBoundingClientRect().width);
-      if (mainWidth <= 0) return false;
-
-      const currentSidekickWidth = sidekickCollapsed
-        ? 0
-        : sidekickResizeControls.getSize();
-      sidekickResizeControls.setSize(
-        getSidekickTargetWidth(activeApp.id, {
-          mainWidth,
-          currentSidekickWidth,
-        }),
-      );
-      return true;
-    };
-
-    const schedule = () => {
-      if (cancelled) return;
-      if (applyTarget()) return;
-      attempts += 1;
-      if (attempts < maxAttempts) {
-        rafId = requestAnimationFrame(schedule);
-        return;
-      }
-      const mainPanelHost = mainPanelRef.current;
-      if (!mainPanelHost || typeof ResizeObserver === "undefined") return;
-      resizeObserver = new ResizeObserver(() => {
-        if (applyTarget()) {
-          resizeObserver?.disconnect();
-          resizeObserver = null;
+    const mainWidth = Math.round(mainPanelEl.getBoundingClientRect().width);
+    if (mainWidth <= 0) {
+      if (typeof ResizeObserver === "undefined") return;
+      const observer = new ResizeObserver(() => {
+        if (appliedSidekickAppIdRef.current === activeApp.id) {
+          observer.disconnect();
+          return;
         }
+        const controls = sidekickResizeControlsRef.current;
+        if (!controls) return;
+        const observedWidth = Math.round(
+          mainPanelEl.getBoundingClientRect().width,
+        );
+        if (observedWidth <= 0) return;
+        const currentSidekickWidth = sidekickCollapsed ? 0 : controls.getSize();
+        controls.setSize(
+          getSidekickTargetWidth(activeApp.id, {
+            mainWidth: observedWidth,
+            currentSidekickWidth,
+          }),
+        );
+        appliedSidekickAppIdRef.current = activeApp.id;
+        observer.disconnect();
       });
-      resizeObserver.observe(mainPanelHost);
-    };
+      observer.observe(mainPanelEl);
+      return () => observer.disconnect();
+    }
 
-    schedule();
-
-    return () => {
-      cancelled = true;
-      if (rafId != null) cancelAnimationFrame(rafId);
-      resizeObserver?.disconnect();
-    };
-  }, [activeApp.id, sidekickCollapsed]);
+    const currentSidekickWidth = sidekickCollapsed
+      ? 0
+      : sidekickResizeControls.getSize();
+    sidekickResizeControls.setSize(
+      getSidekickTargetWidth(activeApp.id, {
+        mainWidth,
+        currentSidekickWidth,
+      }),
+    );
+    appliedSidekickAppIdRef.current = activeApp.id;
+  }, [activeApp.id, sidekickCollapsed, mainPanelEl]);
 
   return (
     <>
@@ -407,7 +415,7 @@ export function DesktopShell() {
           </div>
 
           <ActiveProvider>
-            <div ref={mainPanelRef} className={styles.mainPanelHost}>
+            <div ref={handleMainPanelRef} className={styles.mainPanelHost}>
               <ErrorBoundary name="main">
                 <MainPanel>{routeContent}</MainPanel>
               </ErrorBoundary>
