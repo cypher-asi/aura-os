@@ -693,6 +693,100 @@
   cursor: pointer;
 }
 
+/* ── Active harness tools diagnostic section ── */
+
+.permsToolsWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-danger, #ef4444) 40%, transparent);
+  background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
+  color: var(--color-text);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.permsToolsWarningIcon {
+  color: var(--color-danger, #ef4444);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.permsToolsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+.permsToolsGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: var(--font-size-2xs, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.permsToolsRow {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 0;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.permsToolsStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.permsToolsStatusDotOk {
+  background: var(--color-success, #22c55e);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success, #22c55e) 20%, transparent);
+}
+
+.permsToolsStatusDotMissing {
+  background: var(--color-danger, #ef4444);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger, #ef4444) 20%, transparent);
+}
+
+.permsToolsName {
+  font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 11px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.permsToolsNameMissing {
+  color: var(--color-danger, #ef4444);
+}
+
+.permsToolsBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.03));
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
 /* ── Empty state for placeholder tabs ── */
 
 .tabEmptyState {

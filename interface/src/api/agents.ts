@@ -132,7 +132,64 @@ export const agentTemplatesApi = {
   sendEventStream: sendAgentEventStream,
   resetSession: (agentId: AgentId) =>
     apiFetch<void>(`/api/agents/${agentId}/reset-session`, { method: "POST" }),
+  getInstalledTools: (
+    agentId: AgentId,
+    options?: ApiRequestOptions,
+  ) =>
+    apiFetch<AgentInstalledToolsDiagnostic>(
+      `/api/agents/${agentId}/installed-tools`,
+      { signal: options?.signal },
+    ),
 };
+
+/**
+ * Source of an installed tool row. Mirrors the backend
+ * `InstalledToolDiagnosticRow.source` field.
+ *
+ * - `workspace`: app-provider / MCP / aura-native tools surfaced by the
+ *   org's installed workspace integrations.
+ * - `cross_agent`: tools added by
+ *   `aura_os_agent_runtime::ceo::build_cross_agent_tools` based on the
+ *   agent's `AgentPermissions` (CEO manifest or capability-gated subset).
+ * - `integration`: `InstalledIntegration` entries the harness sees
+ *   alongside the tool list.
+ */
+export type InstalledToolDiagnosticSource =
+  | "workspace"
+  | "cross_agent"
+  | "integration";
+
+export interface InstalledToolDiagnosticRow {
+  name: string;
+  endpoint: string;
+  source: InstalledToolDiagnosticSource;
+  /**
+   * Capability variant that caused a `cross_agent` tool to be added
+   * (camelCase, matches `Capability["type"]`). Absent for the full CEO
+   * manifest and for `workspace`/`integration` rows.
+   */
+  capability_origin?: string;
+  /**
+   * Whether the in-process dispatcher at `/api/agent_tools/:name` knows
+   * how to execute this tool. Always `true` for `workspace` /
+   * `integration` rows (they're dispatched via other endpoints).
+   */
+  registered: boolean;
+}
+
+export interface AgentInstalledToolsDiagnostic {
+  agent_id: string;
+  is_ceo_preset: boolean;
+  agent_permissions: AgentPermissions;
+  tools: InstalledToolDiagnosticRow[];
+  /**
+   * Cross-agent tool names whose endpoint points at
+   * `/api/agent_tools/:name` but that the dispatcher doesn't know
+   * about. A non-empty list indicates a wiring gap (e.g. the UI label
+   * doesn't match the registered tool name).
+   */
+  missing_registrations: string[];
+}
 
 export const agentInstancesApi = {
   createAgentInstance: (projectId: ProjectId, agentId: AgentId) =>

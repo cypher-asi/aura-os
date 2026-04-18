@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-const { mockUpdate, mockPatchAgent } = vi.hoisted(() => ({
+const { mockUpdate, mockPatchAgent, mockGetInstalledTools } = vi.hoisted(() => ({
   mockUpdate: vi.fn(),
   mockPatchAgent: vi.fn(),
+  mockGetInstalledTools: vi.fn(),
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -50,6 +51,8 @@ vi.mock("../../../api/client", () => ({
   api: {
     agents: {
       update: (...args: unknown[]) => mockUpdate(...args),
+      getInstalledTools: (...args: unknown[]) =>
+        mockGetInstalledTools(...args),
     },
   },
 }));
@@ -136,6 +139,16 @@ describe("PermissionsTab", () => {
     vi.clearAllMocks();
     projectsListState.projects = [];
     orgState.orgs = [];
+    mockGetInstalledTools.mockResolvedValue({
+      agent_id: "agent-1",
+      is_ceo_preset: false,
+      agent_permissions: {
+        scope: { orgs: [], projects: [], agent_ids: [] },
+        capabilities: [],
+      },
+      tools: [],
+      missing_registrations: [],
+    });
   });
 
   it("renders the CEO preset banner and locks all switches", () => {

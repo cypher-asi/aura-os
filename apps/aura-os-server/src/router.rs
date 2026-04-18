@@ -378,6 +378,10 @@ fn agent_routes() -> Router<AppState> {
             post(agents::reset_agent_session),
         )
         .route(
+            "/api/agents/:agent_id/installed-tools",
+            get(agents::get_installed_tools_diagnostic),
+        )
+        .route(
             "/api/projects/:project_id/agents",
             post(agents::create_agent_instance).get(agents::list_agent_instances),
         )

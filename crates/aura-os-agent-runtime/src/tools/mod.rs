@@ -228,6 +228,12 @@ impl ToolRegistry {
         self.tools.values().collect()
     }
 
+    /// Names of every tool currently in this registry, including those
+    /// registered via [`register_process_tools`].
+    pub fn tool_names(&self) -> Vec<String> {
+        self.tools.keys().cloned().collect()
+    }
+
     pub fn tools_for_domains(&self, domains: &[ToolDomain]) -> Vec<&Arc<dyn AgentTool>> {
         self.tools
             .values()
@@ -255,6 +261,27 @@ impl ToolRegistry {
             })
             .collect()
     }
+}
+
+/// Names of every tool that the in-process `/api/agent_tools/:name`
+/// dispatcher knows how to execute. Built from
+/// [`ToolRegistry::with_all_tools`] plus the dynamically-registered
+/// process tool names, so diagnostic surfaces can reason about tools
+/// without needing a `ProcessExecutor` to hand to `register_process_tools`.
+#[must_use]
+pub fn all_dispatchable_tool_names() -> std::collections::HashSet<String> {
+    let mut names: std::collections::HashSet<String> =
+        ToolRegistry::with_all_tools().tool_names().into_iter().collect();
+    for name in [
+        "create_process",
+        "list_processes",
+        "trigger_process",
+        "delete_process",
+        "list_process_runs",
+    ] {
+        names.insert(name.to_string());
+    }
+    names
 }
 
 /// Tool names that should stream their JSON arguments to the client via

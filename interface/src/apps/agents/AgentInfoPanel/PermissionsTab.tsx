@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Text, Toggle } from "@cypher-asi/zui";
-import { Plus, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, Plus, ShieldCheck, X } from "lucide-react";
 import { api } from "../../../api/client";
+import type {
+  AgentInstalledToolsDiagnostic,
+  InstalledToolDiagnosticRow,
+} from "../../../api/agents";
 import { getApiErrorMessage } from "../../../utils/api-errors";
 import { useAgentStore } from "../stores";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
@@ -79,6 +83,173 @@ function permissionsEqual(
   if (ca.length !== cb.length) return false;
   for (let i = 0; i < ca.length; i++) if (ca[i] !== cb[i]) return false;
   return true;
+}
+
+/**
+ * Friendly label for each `InstalledToolDiagnosticRow.source` bucket.
+ * Kept out of `CAPABILITY_LABELS` because it applies to rows that are
+ * *not* tied to a capability (workspace tools, integrations).
+ */
+const SOURCE_GROUP_LABELS: Record<
+  InstalledToolDiagnosticRow["source"],
+  string
+> = {
+  workspace: "Workspace tools",
+  cross_agent: "Cross-agent tools",
+  integration: "Integrations",
+};
+
+/**
+ * Group diagnostic rows for display. Cross-agent rows are bucketed by
+ * their `capability_origin` (falling back to "Cross-agent tools" for the
+ * unconditional CEO manifest, which has no origin); workspace /
+ * integration rows fall into their source group.
+ */
+function groupDiagnosticRows(
+  rows: InstalledToolDiagnosticRow[],
+): { key: string; label: string; rows: InstalledToolDiagnosticRow[] }[] {
+  const groups = new Map<
+    string,
+    { key: string; label: string; rows: InstalledToolDiagnosticRow[] }
+  >();
+  for (const row of rows) {
+    const groupKey =
+      row.source === "cross_agent" && row.capability_origin
+        ? `cap:${row.capability_origin}`
+        : `src:${row.source}`;
+    const label =
+      row.source === "cross_agent" && row.capability_origin
+        ? `Capability: ${row.capability_origin}`
+        : SOURCE_GROUP_LABELS[row.source];
+    let entry = groups.get(groupKey);
+    if (!entry) {
+      entry = { key: groupKey, label, rows: [] };
+      groups.set(groupKey, entry);
+    }
+    entry.rows.push(row);
+  }
+  return Array.from(groups.values());
+}
+
+interface ActiveHarnessToolsSectionProps {
+  agentId: string;
+  /**
+   * Bumped by callers after `onSave` persists permission changes so the
+   * diagnostic refetches against the now-authoritative agent record.
+   */
+  refreshKey: number;
+}
+
+/**
+ * Read-only diagnostic that shows the exact `installed_tools` list the
+ * server would ship to the harness for this agent, including whether the
+ * in-process dispatcher actually has a handler for each name. Surfaces
+ * wiring gaps (for example a capability that emits a `spawn_agent` tool
+ * name when the dispatcher only knows `create_agent`).
+ */
+function ActiveHarnessToolsSection({
+  agentId,
+  refreshKey,
+}: ActiveHarnessToolsSectionProps) {
+  const [data, setData] = useState<AgentInstalledToolsDiagnostic | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    api.agents
+      .getInstalledTools(agentId, { signal: controller.signal })
+      .then((result) => {
+        setData(result);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setError(getApiErrorMessage(err));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [agentId, refreshKey]);
+
+  const groups = useMemo(
+    () => (data ? groupDiagnosticRows(data.tools) : []),
+    [data],
+  );
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.permsSectionHeader}>
+        <span className={styles.permsSectionTitle}>Active harness tools</span>
+      </div>
+      {loading && !data && (
+        <span className={styles.permsEmpty}>Loading tools…</span>
+      )}
+      {error && <span className={styles.permsSaveError}>{error}</span>}
+      {data && data.missing_registrations.length > 0 && (
+        <div className={styles.permsToolsWarning} role="alert">
+          <AlertTriangle size={14} className={styles.permsToolsWarningIcon} />
+          <div>
+            <Text size="xs" weight="medium">
+              Unregistered cross-agent tool
+              {data.missing_registrations.length > 1 ? "s" : ""}:{" "}
+              {data.missing_registrations.join(", ")}
+            </Text>
+            <Text size="xs" variant="muted">
+              These names are declared by the agent's capabilities but the
+              server's <code>/api/agent_tools/:name</code> dispatcher has no
+              handler with this exact name, so calls to them will fail.
+            </Text>
+          </div>
+        </div>
+      )}
+      {data && data.tools.length === 0 && !loading && !error && (
+        <span className={styles.permsEmpty}>
+          No tools installed for this agent.
+        </span>
+      )}
+      {groups.map((group) => (
+        <div key={group.key} className={styles.permsToolsGroup}>
+          <div className={styles.permsToolsGroupHeader}>{group.label}</div>
+          {group.rows.map((row) => {
+            const isMissing = !row.registered;
+            return (
+              <div
+                key={`${row.source}:${row.name}`}
+                className={styles.permsToolsRow}
+              >
+                <span
+                  className={`${styles.permsToolsStatusDot} ${
+                    isMissing
+                      ? styles.permsToolsStatusDotMissing
+                      : styles.permsToolsStatusDotOk
+                  }`}
+                  title={
+                    isMissing
+                      ? "Installed but no matching handler is registered in the dispatcher."
+                      : "Registered with the dispatcher."
+                  }
+                />
+                <span
+                  className={`${styles.permsToolsName} ${
+                    isMissing ? styles.permsToolsNameMissing : ""
+                  }`}
+                  title={row.endpoint}
+                >
+                  {row.name}
+                </span>
+                <span className={styles.permsToolsBadge}>
+                  {row.source.replace("_", " ")}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function useClickOutside(
@@ -340,6 +511,7 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
   const [projectPickerStep, setProjectPickerStep] = useState<
     null | { stage: "project" } | { stage: "mode"; projectId: string }
   >(null);
+  const [toolsRefreshKey, setToolsRefreshKey] = useState(0);
 
   useEffect(() => {
     setDraft(agent.permissions ?? emptyAgentPermissions());
@@ -468,6 +640,7 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
         permissions: draft,
       });
       useAgentStore.getState().patchAgent(updated);
+      setToolsRefreshKey((k) => k + 1);
     } catch (err) {
       setSaveError(getApiErrorMessage(err));
     } finally {
@@ -596,6 +769,11 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
           );
         })}
       </div>
+
+      <ActiveHarnessToolsSection
+        agentId={agent.agent_id}
+        refreshKey={toolsRefreshKey}
+      />
 
       <div className={styles.section}>
         <div className={styles.permsSectionHeader}>
