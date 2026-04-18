@@ -16,10 +16,12 @@ use aura_os_browser::{
 use aura_os_core::ProjectId;
 
 use crate::state::AppState;
+use crate::state::AuthSession;
 
 pub(crate) async fn ws_browser(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
+    AuthSession(session): AuthSession,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let session_id: SessionId = match id.parse() {
@@ -28,6 +30,9 @@ pub(crate) async fn ws_browser(
             return (axum::http::StatusCode::BAD_REQUEST, "invalid session id").into_response();
         }
     };
+    if !state.browser_manager.is_owned_by(session_id, &session.user_id) {
+        return (axum::http::StatusCode::NOT_FOUND, "browser session not found").into_response();
+    }
     ws.on_upgrade(move |socket| handle_socket(socket, state, session_id))
 }
 

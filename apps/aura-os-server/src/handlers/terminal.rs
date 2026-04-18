@@ -16,6 +16,7 @@ use aura_os_core::ProjectId;
 use aura_os_terminal::TerminalId;
 
 use crate::state::AppState;
+use crate::state::AuthJwt;
 
 #[derive(Deserialize)]
 pub(crate) struct SpawnRequest {
@@ -34,14 +35,19 @@ pub(crate) struct SpawnResponse {
 
 pub(crate) async fn spawn_terminal(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(body): Json<SpawnRequest>,
 ) -> impl IntoResponse {
     let cols = body.cols.unwrap_or(80);
     let rows = body.rows.unwrap_or(24);
+    let project_id = match authorize_optional_project_id(&state, &jwt, body.project_id).await {
+        Ok(project_id) => project_id,
+        Err(err) => return err.into_response(),
+    };
 
     match state
         .terminal_manager
-        .spawn_with_project(cols, rows, body.cwd, body.project_id)
+        .spawn_with_project(cols, rows, body.cwd, project_id)
     {
         Ok(info) => {
             let resp = SpawnResponse {
@@ -56,6 +62,52 @@ pub(crate) async fn spawn_terminal(
         )
             .into_response(),
     }
+}
+
+async fn authorize_optional_project_id(
+    state: &AppState,
+    jwt: &str,
+    project_id: Option<String>,
+) -> Result<Option<String>, axum::response::Response> {
+    let Some(raw_project_id) = project_id else {
+        return Ok(None);
+    };
+    let parsed = match ProjectId::from_str(&raw_project_id) {
+        Ok(project_id) => project_id,
+        Err(_) => {
+            return Err(
+                (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({ "error": "invalid project id" })),
+                )
+                    .into_response(),
+            )
+        }
+    };
+    if let Some(client) = &state.network_client {
+        if let Err((status, body)) = client
+            .get_project(&parsed.to_string(), jwt)
+            .await
+            .map_err(crate::error::map_network_error)
+        {
+            return Err((status, body).into_response());
+        }
+    } else if let Err(err) = state.project_service.get_project(&parsed) {
+        let response = match err {
+            aura_os_projects::ProjectError::NotFound(_) => (
+                axum::http::StatusCode::NOT_FOUND,
+                Json(serde_json::json!({ "error": "project not found" })),
+            )
+                .into_response(),
+            other => (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": format!("fetching project: {other}") })),
+            )
+                .into_response(),
+        };
+        return Err(response);
+    }
+    Ok(Some(raw_project_id))
 }
 
 pub(crate) async fn list_terminals(State(state): State<AppState>) -> impl IntoResponse {

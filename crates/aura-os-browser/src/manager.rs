@@ -25,6 +25,7 @@ const EVENT_CHANNEL_CAP: usize = 8;
 
 /// Registry entry for a live session.
 struct RegistryEntry {
+    owner_id: Option<String>,
     project_id: Option<ProjectId>,
     cancel: CancellationToken,
     created_at: DateTime<Utc>,
@@ -108,7 +109,24 @@ impl BrowserManager {
     /// When `opts.initial_url` is `None` and a `project_id` is provided,
     /// the initial URL is resolved via
     /// [`crate::session::resolver::resolve_initial_url`].
-    pub async fn spawn(&self, mut opts: SpawnOptions) -> Result<SessionHandle, Error> {
+    pub async fn spawn(&self, opts: SpawnOptions) -> Result<SessionHandle, Error> {
+        self.spawn_inner(None, opts).await
+    }
+
+    /// Spawn a new session owned by the supplied caller identity.
+    pub async fn spawn_for_owner(
+        &self,
+        owner_id: impl Into<String>,
+        opts: SpawnOptions,
+    ) -> Result<SessionHandle, Error> {
+        self.spawn_inner(Some(owner_id.into()), opts).await
+    }
+
+    async fn spawn_inner(
+        &self,
+        owner_id: Option<String>,
+        mut opts: SpawnOptions,
+    ) -> Result<SessionHandle, Error> {
         if self.sessions.len() >= self.config.max_sessions {
             return Err(Error::CapacityExceeded(format!(
                 "max {} concurrent browser sessions",
@@ -149,6 +167,7 @@ impl BrowserManager {
         self.sessions.insert(
             id,
             RegistryEntry {
+                owner_id,
                 project_id: opts.project_id,
                 cancel,
                 created_at: Utc::now(),
@@ -195,6 +214,28 @@ impl BrowserManager {
             .collect()
     }
 
+    /// List live sessions belonging to a specific owner.
+    pub fn list_for_owner(&self, owner_id: &str) -> Vec<SessionInfo> {
+        self.sessions
+            .iter()
+            .filter(|entry| entry.value().owner_id.as_deref() == Some(owner_id))
+            .map(|entry| SessionInfo {
+                id: entry.key().to_string(),
+                project_id: entry.value().project_id.map(|p| p.to_string()),
+                initial_url: entry.value().initial_url.as_ref().map(|u| u.to_string()),
+                created_at: entry.value().created_at,
+            })
+            .collect()
+    }
+
+    /// Returns true when the session belongs to the given owner.
+    pub fn is_owned_by(&self, id: SessionId, owner_id: &str) -> bool {
+        self.sessions
+            .get(&id)
+            .and_then(|entry| entry.owner_id.as_deref().map(|owner| owner == owner_id))
+            .unwrap_or(false)
+    }
+
     /// Kill a session. Idempotent.
     pub async fn kill(&self, id: SessionId) -> Result<(), Error> {
         let removed = self.sessions.remove(&id);
@@ -212,6 +253,9 @@ impl BrowserManager {
     pub async fn dispatch(&self, id: SessionId, msg: ClientMsg) -> Result<(), Error> {
         if !self.sessions.contains_key(&id) {
             return Err(Error::SessionNotFound(id.to_string()));
+        }
+        if let ClientMsg::Navigate { ref url } = msg {
+            validate_url(url)?;
         }
         self.backend.dispatch(id, msg).await
     }
@@ -408,5 +452,34 @@ mod tests {
             Error::CapacityExceeded(_) => {}
             other => panic!("unexpected error: {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn list_for_owner_filters_sessions() {
+        let dir = tempdir().unwrap();
+        let manager = BrowserManager::new(test_config(&dir));
+        manager
+            .spawn_for_owner("u1", SpawnOptions::new(1280, 800))
+            .await
+            .unwrap();
+        manager
+            .spawn_for_owner("u2", SpawnOptions::new(1280, 800))
+            .await
+            .unwrap();
+        assert_eq!(manager.list_for_owner("u1").len(), 1);
+        assert_eq!(manager.list_for_owner("u2").len(), 1);
+        assert!(manager.list_for_owner("u3").is_empty());
+    }
+
+    #[tokio::test]
+    async fn is_owned_by_matches_spawn_owner() {
+        let dir = tempdir().unwrap();
+        let manager = BrowserManager::new(test_config(&dir));
+        let handle = manager
+            .spawn_for_owner("u1", SpawnOptions::new(1280, 800))
+            .await
+            .unwrap();
+        assert!(manager.is_owned_by(handle.id, "u1"));
+        assert!(!manager.is_owned_by(handle.id, "u2"));
     }
 }

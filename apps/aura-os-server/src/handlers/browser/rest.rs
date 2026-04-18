@@ -14,7 +14,7 @@ use aura_os_browser::{
 use aura_os_core::ProjectId;
 
 use crate::error::{ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 /// Payload for `POST /api/browser`.
 #[derive(Debug, Deserialize)]
@@ -46,16 +46,21 @@ pub(crate) struct SpawnResponse {
 
 pub(crate) async fn spawn_browser(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Json(body): Json<SpawnRequest>,
 ) -> ApiResult<Json<SpawnResponse>> {
     let project_id = parse_optional_project_id(body.project_id.as_deref())?;
+    if let Some(pid) = project_id.as_ref() {
+        ensure_project_access(&state, &jwt, pid).await?;
+    }
     let mut opts = SpawnOptions::new(body.width, body.height);
     opts.project_id = project_id;
     opts.initial_url = body.initial_url;
 
     let handle = state
         .browser_manager
-        .spawn(opts)
+        .spawn_for_owner(session.user_id, opts)
         .await
         .map_err(map_browser_error)?;
 
@@ -66,17 +71,24 @@ pub(crate) async fn spawn_browser(
     }))
 }
 
-pub(crate) async fn list_browsers(State(state): State<AppState>) -> Json<Vec<SessionInfo>> {
-    Json(state.browser_manager.list())
+pub(crate) async fn list_browsers(
+    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
+) -> Json<Vec<SessionInfo>> {
+    Json(state.browser_manager.list_for_owner(&session.user_id))
 }
 
 pub(crate) async fn kill_browser(
     State(state): State<AppState>,
+    AuthSession(session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<StatusCode> {
     let session_id = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid session id"))?;
+    if !state.browser_manager.is_owned_by(session_id, &session.user_id) {
+        return Err(ApiError::not_found("browser session not found"));
+    }
     state
         .browser_manager
         .kill(session_id)
@@ -87,18 +99,22 @@ pub(crate) async fn kill_browser(
 
 pub(crate) async fn get_project_settings(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<String>,
 ) -> ApiResult<Json<ProjectBrowserSettings>> {
     let pid = parse_project_id(&project_id)?;
+    ensure_project_access(&state, &jwt, &pid).await?;
     Ok(Json(state.browser_manager.get_project_settings(&pid).await))
 }
 
 pub(crate) async fn update_project_settings(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<String>,
     Json(patch): Json<SettingsPatch>,
 ) -> ApiResult<Json<ProjectBrowserSettings>> {
     let pid = parse_project_id(&project_id)?;
+    ensure_project_access(&state, &jwt, &pid).await?;
     let updated = state
         .browser_manager
         .update_project_settings(&pid, patch)
@@ -114,9 +130,11 @@ pub(crate) struct DetectResponse {
 
 pub(crate) async fn run_detect(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<String>,
 ) -> ApiResult<Json<DetectResponse>> {
     let pid = parse_project_id(&project_id)?;
+    ensure_project_access(&state, &jwt, &pid).await?;
     let detected = state
         .browser_manager
         .run_detect(Some(&pid))
@@ -139,6 +157,24 @@ fn parse_optional_project_id(raw: Option<&str>) -> ApiResult<Option<ProjectId>> 
 fn parse_project_id(raw: &str) -> ApiResult<ProjectId> {
     raw.parse()
         .map_err(|_| ApiError::bad_request("invalid project id"))
+}
+
+async fn ensure_project_access(state: &AppState, jwt: &str, project_id: &ProjectId) -> ApiResult<()> {
+    if let Some(client) = &state.network_client {
+        client
+            .get_project(&project_id.to_string(), jwt)
+            .await
+            .map_err(crate::error::map_network_error)?;
+        return Ok(());
+    }
+    state
+        .project_service
+        .get_project(project_id)
+        .map(|_| ())
+        .map_err(|err| match err {
+            aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
+            other => ApiError::internal(format!("fetching project: {other}")),
+        })
 }
 
 fn map_browser_error(err: BrowserError) -> (StatusCode, Json<ApiError>) {

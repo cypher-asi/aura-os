@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aura-os-server = { path = "../aura-os-server" }
+aura-os-server = { path = "../aura-os-server", features = ["browser-cdp"] }
 aura-os-ide = { path = "../aura-os-ide" }
 axum = "0.7"
 base64 = "0.22"
