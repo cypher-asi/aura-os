@@ -26,10 +26,12 @@
 //! session; the client can retry. Browser launch errors bubble up.
 
 use std::collections::VecDeque;
+use std::env;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use base64::Engine;
@@ -39,9 +41,10 @@ use chromiumoxide::cdp::browser_protocol::input::{
     MouseButton as CdpMouseButton,
 };
 use chromiumoxide::cdp::browser_protocol::page::{
-    EventFrameNavigated, EventFrameStartedLoading, EventFrameStoppedLoading, EventLoadEventFired,
-    EventScreencastFrame, GetNavigationHistoryParams, NavigateToHistoryEntryParams, ReloadParams,
-    ScreencastFrameAckParams, StartScreencastFormat, StartScreencastParams, StopScreencastParams,
+    EnableParams as PageEnableParams, EventFrameNavigated, EventFrameStartedLoading,
+    EventFrameStoppedLoading, EventLoadEventFired, EventScreencastFrame, GetNavigationHistoryParams,
+    NavigateToHistoryEntryParams, ReloadParams, ScreencastFrameAckParams, StartScreencastFormat,
+    StartScreencastParams, StopScreencastParams,
 };
 use chromiumoxide::{Browser, BrowserConfig as ChromiumBrowserConfig, Page};
 use dashmap::DashMap;
@@ -101,10 +104,12 @@ impl CdpBackendConfig {
     /// - `BROWSER_PROXY_SERVER` — proxy server URL.
     /// - `BROWSER_DISABLE_SANDBOX` — `1`/`true` to pass `--no-sandbox`.
     pub fn from_env() -> Self {
-        let executable_path = std::env::var_os("BROWSER_EXECUTABLE_PATH").map(PathBuf::from);
-        let user_data_dir = std::env::var_os("BROWSER_USER_DATA_DIR").map(PathBuf::from);
-        let proxy_server = std::env::var("BROWSER_PROXY_SERVER").ok();
-        let disable_sandbox = std::env::var("BROWSER_DISABLE_SANDBOX")
+        let executable_path = env::var_os("BROWSER_EXECUTABLE_PATH")
+            .map(PathBuf::from)
+            .or_else(discover_default_browser_executable);
+        let user_data_dir = env::var_os("BROWSER_USER_DATA_DIR").map(PathBuf::from);
+        let proxy_server = env::var("BROWSER_PROXY_SERVER").ok();
+        let disable_sandbox = env::var("BROWSER_DISABLE_SANDBOX")
             .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "on"))
             .unwrap_or(false);
         Self {
@@ -115,6 +120,43 @@ impl CdpBackendConfig {
             idle_shutdown: Some(CHROMIUM_IDLE_GRACE),
         }
     }
+}
+
+fn discover_default_browser_executable() -> Option<PathBuf> {
+    #[cfg(windows)]
+    {
+        let roots = [
+            env::var_os("ProgramFiles").map(PathBuf::from),
+            env::var_os("ProgramFiles(x86)").map(PathBuf::from),
+            env::var_os("LocalAppData").map(PathBuf::from),
+        ];
+        let suffixes: &[&[&str]] = &[
+            &["Google", "Chrome", "Application", "chrome.exe"],
+            &["Chromium", "Application", "chrome.exe"],
+            &["Microsoft", "Edge", "Application", "msedge.exe"],
+        ];
+
+        for root in roots.into_iter().flatten() {
+            for suffix in suffixes {
+                let candidate = suffix
+                    .iter()
+                    .fold(root.clone(), |path: PathBuf, part| path.join(part));
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn default_profile_dir() -> PathBuf {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    env::temp_dir().join(format!("aura-browser-profile-{}-{millis}", std::process::id()))
 }
 
 /// Command forwarded from the public trait methods to the per-session task.
@@ -179,9 +221,13 @@ impl CdpBackend {
             if let Some(path) = &self.inner.config.executable_path {
                 builder = builder.chrome_executable(path);
             }
-            if let Some(dir) = &self.inner.config.user_data_dir {
-                builder = builder.user_data_dir(dir);
-            }
+            let user_data_dir = self
+                .inner
+                .config
+                .user_data_dir
+                .clone()
+                .unwrap_or_else(default_profile_dir);
+            builder = builder.user_data_dir(&user_data_dir);
             if let Some(proxy) = &self.inner.config.proxy_server {
                 builder = builder.arg(format!("--proxy-server={proxy}"));
             }
@@ -201,7 +247,7 @@ impl CdpBackend {
                     }
                 }
             });
-            info!("headless Chromium launched");
+            info!(profile_dir = %user_data_dir.display(), "headless Chromium launched");
             *guard = Some(Arc::new(browser));
         }
         Ok(Arc::clone(
@@ -387,6 +433,12 @@ async fn run_session_loop(
     mut width: u16,
     mut height: u16,
 ) {
+    if let Err(err) = page.execute(PageEnableParams::default()).await {
+        error!(%id, %err, "failed to enable Page domain");
+        let _ = events.send(ServerEvent::Exit { code: 1 }).await;
+        return;
+    }
+
     if let Err(err) = start_screencast(&page, quality, width, height).await {
         warn!(%id, %err, "startScreencast failed; continuing without frames");
     }
@@ -803,15 +855,24 @@ mod tests {
 
     #[test]
     fn config_from_env_default_is_safe() {
-        std::env::remove_var("BROWSER_DISABLE_SANDBOX");
-        std::env::remove_var("BROWSER_EXECUTABLE_PATH");
-        std::env::remove_var("BROWSER_USER_DATA_DIR");
-        std::env::remove_var("BROWSER_PROXY_SERVER");
+        env::remove_var("BROWSER_DISABLE_SANDBOX");
+        env::remove_var("BROWSER_EXECUTABLE_PATH");
+        env::remove_var("BROWSER_USER_DATA_DIR");
+        env::remove_var("BROWSER_PROXY_SERVER");
         let cfg = CdpBackendConfig::from_env();
         assert!(!cfg.disable_sandbox);
-        assert!(cfg.executable_path.is_none());
+        assert_eq!(cfg.executable_path, discover_default_browser_executable());
         assert!(cfg.user_data_dir.is_none());
         assert!(cfg.proxy_server.is_none());
         assert_eq!(cfg.idle_shutdown, Some(CHROMIUM_IDLE_GRACE));
+    }
+
+    #[test]
+    fn config_from_env_prefers_explicit_executable_path() {
+        let explicit = std::env::temp_dir().join("aura-browser-explicit.exe");
+        env::set_var("BROWSER_EXECUTABLE_PATH", &explicit);
+        let cfg = CdpBackendConfig::from_env();
+        assert_eq!(cfg.executable_path, Some(explicit));
+        env::remove_var("BROWSER_EXECUTABLE_PATH");
     }
 }
