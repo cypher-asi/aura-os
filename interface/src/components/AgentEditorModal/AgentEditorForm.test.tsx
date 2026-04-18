@@ -26,24 +26,17 @@ function makeProps(overrides: Partial<AgentEditorFormProps> = {}): AgentEditorFo
     isSuperAgent: false,
     personality: "",
     setPersonality: vi.fn(),
+    systemPrompt: "",
+    setSystemPrompt: vi.fn(),
     icon: "",
-    adapterType: "aura_harness",
-    setAdapterType: vi.fn(),
     environment: "local_host",
     setEnvironment: vi.fn(),
-    authSource: "aura_managed",
-    setAuthSource: vi.fn(),
     showAdvancedRuntime: false,
     setShowAdvancedRuntime: vi.fn(),
-    integrationId: "",
-    setIntegrationId: vi.fn(),
-    defaultModel: "",
-    setDefaultModel: vi.fn(),
     listingStatus: "closed",
     setListingStatus: vi.fn(),
     simplifyForMobileCreate: false,
     restrictCreateToAuraRuntimes: true,
-    availableIntegrations: [],
     nameError: "",
     setNameError: vi.fn(),
     nameRef: { current: null },
@@ -127,22 +120,30 @@ describe("AgentEditorForm", () => {
     expect(screen.queryByText(/Run on Aura cloud/i)).not.toBeInTheDocument();
   });
 
-  it("shows runtime and credential controls for non-default setups", () => {
+  it("shows Runs On and Visibility controls in advanced mode", () => {
     render(
       <AgentEditorForm
         {...makeProps({
           restrictCreateToAuraRuntimes: false,
-          adapterType: "codex",
           environment: "local_host",
-          authSource: "local_cli_auth",
           showAdvancedRuntime: true,
         })}
       />,
     );
 
-    expect(screen.getByText("Credentials")).toBeInTheDocument();
     expect(screen.getByText("Runs On")).toBeInTheDocument();
-    expect(screen.getByText("Codex")).toBeInTheDocument();
+    expect(screen.getByText("Visibility")).toBeInTheDocument();
+    expect(screen.queryByText("Credentials")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agent Type")).not.toBeInTheDocument();
+    expect(screen.queryByText("Default Model")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ready to use")).not.toBeInTheDocument();
+  });
+
+  it("shows a System Prompt field below Personality", () => {
+    render(<AgentEditorForm {...makeProps()} />);
+
+    expect(screen.getByText("Personality")).toBeInTheDocument();
+    expect(screen.getByText("System Prompt")).toBeInTheDocument();
   });
 });
 

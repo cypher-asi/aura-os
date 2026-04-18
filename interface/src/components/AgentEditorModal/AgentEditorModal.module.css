@@ -87,6 +87,23 @@
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.labelInfo {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+  cursor: help;
+  opacity: 0.7;
+}
+
+.labelInfo:hover,
+.labelInfo:focus-visible {
+  opacity: 1;
+  outline: none;
 }
 
 .avatarRow {
@@ -307,6 +324,11 @@
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text-primary);
+  width: 100%;
+}
+
+.choiceTitle .labelInfo {
+  margin-left: auto;
 }
 
 .choiceBody {
