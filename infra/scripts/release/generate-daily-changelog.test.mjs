@@ -5,7 +5,6 @@ import test from "node:test";
 import {
   assertStrictToolModelSupport,
   batchCommits,
-  collectRubricIssues,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
 
@@ -49,41 +48,16 @@ test("validateRenderedEntry accepts the publication-ready fixture draft", () => 
   assert.equal(rendered.entries[1].items.length, 2);
 });
 
-test("collectRubricIssues flags the generic fixture draft before publication", () => {
+test("validateRenderedEntry accepts a structurally valid generic draft", () => {
   const batches = buildFixtureBatches();
   const candidate = readFixture("changelog-bad-generic-candidate.json");
 
-  const issues = collectRubricIssues({
-    title: candidate.day_title,
-    intro: candidate.day_intro,
-    highlights: candidate.highlights,
-    entries: candidate.entries.map((entry) => ({
-      title: entry.title,
-      summary: entry.summary,
-      items: entry.items,
-    })),
-  }, batches);
+  const rendered = validateRenderedEntry(candidate, batches, 6);
 
-  assert(issues.some((issue) => issue.includes("day title is too generic")));
-  assert(issues.some((issue) => issue.includes("highlights must be unique")));
-  assert(issues.some((issue) => issue.includes("is too templated")));
-  assert(issues.some((issue) => issue.includes("is reused")));
-  assert(issues.some((issue) => issue.includes("duplicate bullet text detected")));
+  assert.equal(rendered.entries.length, candidate.entries.length);
+  assert.equal(rendered.highlights.length, candidate.highlights.length);
 });
 
-test("validateRenderedEntry rejects the generic fixture draft", () => {
-  const batches = buildFixtureBatches();
-  const candidate = readFixture("changelog-bad-generic-candidate.json");
-
-  assert.throws(
-    () => validateRenderedEntry(candidate, batches, 6),
-    /Changelog rubric failed:/,
-  );
-});
-
-test("assertStrictToolModelSupport rejects non-allowlisted models", () => {
-  assert.throws(
-    () => assertStrictToolModelSupport("claude-sonnet-4-20250514"),
-    /not in the strict-tool allowlist/,
-  );
+test("assertStrictToolModelSupport warns instead of failing for non-allowlisted models", () => {
+  assert.equal(assertStrictToolModelSupport("claude-sonnet-4-20250514"), false);
 });

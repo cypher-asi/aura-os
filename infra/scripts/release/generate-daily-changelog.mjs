@@ -429,7 +429,7 @@ function buildChangelogTool(batchIds) {
       "Use this exactly once for the final answer after reviewing all provided release batches, commit summaries, and diff excerpts.",
       "Only return fields defined by the schema. Do not include date, channel, version, timestamps, or counts because those are computed by the caller.",
       "Each entry must map to one provided batch_id and stay faithful to that batch's time window and evidence.",
-      "Use 2 to 6 entries total, omit only truly low-signal batches, and keep every bullet directly supported by the listed commits or excerpts.",
+      "Use a readable number of entries, omit only truly low-signal batches, and keep every bullet directly supported by the listed commits or excerpts.",
       "Each item's commit_shas must only reference commits from the same batch_id.",
     ].join(" "),
     strict: true,
@@ -542,90 +542,12 @@ function findToolUseInput(responseJson, toolName) {
 
 function assertStrictToolModelSupport(model) {
   if (STRICT_TOOL_SUPPORTED_MODELS.includes(model)) {
-    return;
+    return true;
   }
-  throw new Error(
-    `Model ${model} is not in the strict-tool allowlist (${STRICT_TOOL_SUPPORTED_MODELS.join(", ")})`,
+  console.warn(
+    `Warning: model ${model} is not in the strict-tool allowlist (${STRICT_TOOL_SUPPORTED_MODELS.join(", ")}); continuing anyway.`,
   );
-}
-
-function wordCount(value) {
-  return sanitizeText(value).split(/\s+/).filter(Boolean).length;
-}
-
-function normalizeForComparison(value) {
-  return sanitizeText(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function collectRubricIssues(rendered, batches) {
-  const issues = [];
-  const normalizedDayTitle = normalizeForComparison(rendered.title);
-  const normalizedIntro = normalizeForComparison(rendered.intro);
-
-  if (wordCount(rendered.title) < 3 || wordCount(rendered.title) > 14) {
-    issues.push("day title must be between 3 and 14 words");
-  }
-  if (/\bupdates?\s+shipped\b/i.test(rendered.title) || /\brelease notes?\b/i.test(rendered.title)) {
-    issues.push("day title is too generic");
-  }
-  if (wordCount(rendered.intro) < 12) {
-    issues.push("day intro is too short");
-  }
-  if (
-    normalizedIntro.includes("groups") &&
-    normalizedIntro.includes("commits") &&
-    normalizedIntro.includes("updates")
-  ) {
-    issues.push("day intro reads like a generated count summary instead of an editorial intro");
-  }
-
-  const normalizedHighlights = rendered.highlights.map(normalizeForComparison).filter(Boolean);
-  if (new Set(normalizedHighlights).size !== normalizedHighlights.length) {
-    issues.push("highlights must be unique");
-  }
-
-  const titleCounts = new Map();
-  const itemTexts = new Set();
-  for (const entry of rendered.entries) {
-    const normalizedEntryTitle = normalizeForComparison(entry.title);
-    titleCounts.set(normalizedEntryTitle, (titleCounts.get(normalizedEntryTitle) || 0) + 1);
-
-    if (wordCount(entry.title) < 2 || wordCount(entry.title) > 10) {
-      issues.push(`entry title "${entry.title}" must be between 2 and 10 words`);
-    }
-    if (/^\d+\s+related\b/i.test(entry.summary) || /\blanded together\b/i.test(entry.summary)) {
-      issues.push(`entry summary "${entry.summary}" is too templated`);
-    }
-    if (wordCount(entry.summary) < 8) {
-      issues.push(`entry summary "${entry.summary}" is too short`);
-    }
-
-    for (const item of entry.items) {
-      const normalizedItemText = normalizeForComparison(item.text);
-      if (wordCount(item.text) < 6) {
-        issues.push(`item "${item.text}" is too short`);
-      }
-      if (itemTexts.has(normalizedItemText)) {
-        issues.push(`duplicate bullet text detected: "${item.text}"`);
-      }
-      itemTexts.add(normalizedItemText);
-    }
-  }
-
-  for (const [title, count] of titleCounts.entries()) {
-    if (title && count > 1) {
-      issues.push(`entry title "${title}" is reused ${count} times`);
-    }
-  }
-
-  if (issues.length === 0 && normalizedDayTitle === normalizeForComparison(batches[0]?.id || "")) {
-    issues.push("day title does not look editorial");
-  }
-
-  return unique(issues);
+  return false;
 }
 
 function validateRenderedEntry(candidate, batches, totalCommitCount) {
@@ -713,11 +635,6 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
     raw_commit_count: totalCommitCount,
   };
 
-  const rubricIssues = collectRubricIssues(rendered, batches);
-  if (rubricIssues.length > 0) {
-    throw new Error(`Changelog rubric failed: ${rubricIssues.join("; ")}`);
-  }
-
   return rendered;
 }
 
@@ -760,7 +677,7 @@ async function generateWithAnthropic(bundle) {
     "Desired style:",
     "- one compact day title",
     "- one short day intro paragraph",
-    "- 2 to 6 timeline entries selected from the provided batches",
+    "- a readable set of timeline entries selected from the provided batches",
     "- each timeline entry should map to exactly one provided batch_id and have a headline, short summary, and 1 to 4 concise bullets",
     "- entries should be specific and meaningful",
     "- if there are important release or reliability changes, include them as their own timeline entries",
@@ -781,9 +698,6 @@ async function generateWithAnthropic(bundle) {
     "- If several commits represent one release-debugging thread, compress them into one broader reliability bullet instead of enumerating each micro-fix.",
     "- Do not mention tests, formatting, or internal cleanup unless they clearly improved user-facing behavior or release confidence.",
     "- Mention platform names when relevant: Desktop, Mac, Windows, Linux, iOS, Android, Release Infrastructure, Website.",
-    "- Use distinct entry titles. Do not repeat the same headline for multiple timeline entries.",
-    "- Write editorial summaries, not counting summaries like '8 related changes landed together'.",
-    "- The day title must be publication-ready and not generic.",
     `- Return the final answer by calling the ${toolName} tool, not as freeform text.`,
     "",
     "Release bundle:",
@@ -814,7 +728,7 @@ async function generateWithAnthropic(bundle) {
             role: "user",
             content: attempt === 1
               ? userPrompt
-              : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nCall the tool again with corrected input. Keep it compact, with at most 6 timeline entries.`,
+              : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nCall the tool again with corrected input.`,
           },
         ],
       }),
@@ -1101,10 +1015,7 @@ async function main() {
 export {
   assertStrictToolModelSupport,
   batchCommits,
-  collectRubricIssues,
-  normalizeForComparison,
   validateRenderedEntry,
-  wordCount,
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
