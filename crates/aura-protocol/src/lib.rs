@@ -109,6 +109,68 @@ pub struct SessionInit {
     /// `tool_definitions` (which are opaque to the classifier otherwise).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub intent_classifier: Option<IntentClassifierSpec>,
+    /// Phase 5: explicit `AgentPermissions` bundle for this session. When
+    /// set, the harness enforces scope + capability checks for cross-agent
+    /// tools (`spawn_agent`, `send_to_agent`, `agent_lifecycle`,
+    /// `get_agent_state`, `delegate_task`). When `None` the harness falls
+    /// back to [`Self::preset`] resolution, then to no-permissions
+    /// (enforcement off — legacy behavior).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_permissions: Option<AgentPermissionsWire>,
+    /// Phase 5: named permission preset to apply when
+    /// [`Self::agent_permissions`] is `None`. Currently only `"ceo"` is
+    /// recognized by the harness and resolves to the CEO-superagent
+    /// preset. Unknown presets are ignored (enforcement stays off).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preset: Option<String>,
+}
+
+/// Wire-compatible mirror of `aura_core::AgentPermissions`.
+///
+/// Mirrored here so `aura-protocol` stays decoupled from the harness-core
+/// crates; the harness translates [`AgentPermissionsWire`] into its own
+/// `aura_core::AgentPermissions` at `SessionInit` time. Additive /
+/// forward-compatible: unknown capability variants deserialize into
+/// [`CapabilityWire::Other`] rather than rejecting the session.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct AgentPermissionsWire {
+    #[serde(default)]
+    pub scope: AgentScopeWire,
+    #[serde(default)]
+    pub capabilities: Vec<CapabilityWire>,
+}
+
+/// Wire-compatible mirror of `aura_core::AgentScope`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct AgentScopeWire {
+    #[serde(default)]
+    pub orgs: Vec<String>,
+    #[serde(default)]
+    pub projects: Vec<String>,
+    #[serde(default)]
+    pub agent_ids: Vec<String>,
+}
+
+/// Wire-compatible mirror of `aura_core::Capability` (externally-tagged
+/// camel-case enum matching the core serialization format).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub enum CapabilityWire {
+    SpawnAgent,
+    ControlAgent,
+    ReadAgent,
+    ManageOrgMembers,
+    ManageBilling,
+    InvokeProcess,
+    PostToFeed,
+    GenerateMedia,
+    #[serde(rename_all = "camelCase")]
+    ReadProject { id: String },
+    #[serde(rename_all = "camelCase")]
+    WriteProject { id: String },
 }
 
 /// Keyword-driven classifier spec shipped in [`SessionInit`].

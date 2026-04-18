@@ -59,6 +59,8 @@ impl HarnessLink for LocalHarness {
                 agent_id: config.agent_id,
                 provider_config: config.provider_config,
                 intent_classifier: None,
+                agent_permissions: None,
+                preset: None,
             })))
             .context("local harness session_init send failed")?;
 

@@ -179,6 +179,8 @@ pub fn build_super_agent_session_init(
         agent_id: None,
         provider_config: None,
         intent_classifier: Some(profile_to_intent_classifier_spec(profile)),
+        agent_permissions: None,
+        preset: None,
     }
 }
 
