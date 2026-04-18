@@ -17,27 +17,6 @@ vi.mock("../../api/client", () => ({
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
-  Input: ({
-    value,
-    onChange,
-    placeholder,
-    "aria-label": ariaLabel,
-    disabled,
-  }: {
-    value?: string;
-    onChange?: (e: { target: { value: string } }) => void;
-    placeholder?: string;
-    "aria-label"?: string;
-    disabled?: boolean;
-  }) => (
-    <input
-      aria-label={ariaLabel}
-      value={value}
-      disabled={disabled}
-      placeholder={placeholder}
-      onChange={(e) => onChange?.({ target: { value: e.target.value } })}
-    />
-  ),
   Button: ({
     children,
     onClick,
@@ -62,15 +41,31 @@ describe("FolderPickerField", () => {
     hasDesktopBridge = true;
   });
 
-  it("edits the value via the text input", () => {
-    const onChange = vi.fn();
+  it("renders the default path when no override is set", () => {
     render(
-      <FolderPickerField value="" onChange={onChange} label="Local folder" />,
+      <FolderPickerField
+        value=""
+        onChange={() => {}}
+        defaultPath="/data/workspaces/proj-123"
+      />,
     );
-    fireEvent.change(screen.getByLabelText("Local folder"), {
-      target: { value: "C:/workspaces/my-project" },
-    });
-    expect(onChange).toHaveBeenCalledWith("C:/workspaces/my-project");
+    expect(screen.getByText("/data/workspaces/proj-123")).toBeTruthy();
+  });
+
+  it("falls back to a generic placeholder when no defaultPath is provided", () => {
+    render(<FolderPickerField value="" onChange={() => {}} />);
+    expect(screen.getByText("(default)")).toBeTruthy();
+  });
+
+  it("renders the path when an override is set", () => {
+    render(
+      <FolderPickerField
+        value="/Users/me/projects/acme"
+        onChange={() => {}}
+        defaultPath="/data/workspaces/proj-123"
+      />,
+    );
+    expect(screen.getByText("/Users/me/projects/acme")).toBeTruthy();
   });
 
   it("picks a folder via the desktop bridge when available", async () => {
@@ -104,7 +99,12 @@ describe("FolderPickerField", () => {
     expect(onChange).toHaveBeenCalledWith("");
   });
 
-  it("hides the Browse button when there is no desktop bridge", () => {
+  it("does not render the clear button when no override is set", () => {
+    render(<FolderPickerField value="" onChange={() => {}} />);
+    expect(screen.queryByLabelText("Clear folder")).toBeNull();
+  });
+
+  it("hides the folder-picker button when there is no desktop bridge", () => {
     hasDesktopBridge = false;
     render(<FolderPickerField value="" onChange={() => {}} />);
     expect(screen.queryByLabelText("Choose folder")).toBeNull();

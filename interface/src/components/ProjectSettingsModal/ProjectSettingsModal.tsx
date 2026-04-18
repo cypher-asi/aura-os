@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Input, Spinner, Text } from "@cypher-asi/zui";
 import { api, type OrbitCollaborator } from "../../api/client";
 import type { Project } from "../../types";
+import {
+  joinWorkspacePath,
+  useWorkspaceRoot,
+} from "../../hooks/use-workspace-defaults";
 import { FolderPickerField } from "../FolderPickerField";
 import styles from "./ProjectSettingsModal.module.css";
 
@@ -22,6 +26,10 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const workspaceRoot = useWorkspaceRoot();
+  const defaultWorkspacePath = project
+    ? joinWorkspacePath(workspaceRoot, project.project_id)
+    : "";
 
   useEffect(() => {
     if (!target) {
@@ -126,7 +134,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
             value={localWorkspacePath}
             onChange={setLocalWorkspacePath}
             disabled={saving}
-            defaultHint="Only applies to agents running on this machine. Leave blank to use the default Aura-managed workspace."
+            defaultPath={defaultWorkspacePath}
           />
           {project?.orbit_owner && project?.orbit_repo && (
             <>

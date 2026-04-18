@@ -1,6 +1,10 @@
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useNewProjectForm } from "../../hooks/use-new-project-form";
+import {
+  joinWorkspacePath,
+  useWorkspaceRoot,
+} from "../../hooks/use-workspace-defaults";
 import { FolderPickerField } from "../FolderPickerField";
 import styles from "./NewProjectModal.module.css";
 
@@ -13,6 +17,10 @@ interface NewProjectModalProps {
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
   const { inputRef: nameInputRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const form = useNewProjectForm(isOpen, onClose, onCreated);
+  const workspaceRoot = useWorkspaceRoot();
+  const defaultWorkspacePath = workspaceRoot
+    ? joinWorkspacePath(workspaceRoot, "<new-project-id>")
+    : "";
 
   return (
     <Modal
@@ -52,7 +60,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             if (!form.name.trim()) form.setNameError("Required");
           }}
           placeholder="Project name"
-          validationMessage={form.nameError}
         />
         <div className={styles.fieldGroup}>
           <Text size="sm" className={styles.fieldLabel}>Orbit repo</Text>
@@ -72,7 +79,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           value={form.localWorkspacePath}
           onChange={form.setLocalWorkspacePath}
           disabled={form.loading}
-          defaultHint="Leave blank to use the default Aura-managed workspace folder."
+          defaultPath={defaultWorkspacePath}
         />
 
         {form.error && (

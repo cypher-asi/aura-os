@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Button, Input, Text } from "@cypher-asi/zui";
+import { Text } from "@cypher-asi/zui";
 import { FolderOpen, X } from "lucide-react";
 import { api } from "../../api/client";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -13,37 +13,36 @@ export interface FolderPickerFieldProps {
   /** Field label. */
   label?: string;
   /**
-   * Shown under the input when empty. Typically describes the default
-   * location that will be used if no folder is picked.
+   * The actual default path that will be used when no override is set. When
+   * provided, the field renders this path in muted text so the user can see
+   * the folder that will be used by default. Omit (or pass an empty string)
+   * for a generic "(default)" placeholder.
    */
-  defaultHint?: string;
-  /** Disable the input + buttons (e.g. while saving). */
+  defaultPath?: string;
+  /** Disable the picker + clear buttons (e.g. while saving). */
   disabled?: boolean;
-  /** Aria-label for the text input. Defaults to `label`. */
-  inputAriaLabel?: string;
 }
 
 /**
- * A reusable folder-picker input that opens a native OS folder dialog when
- * running inside the desktop app, and degrades to a plain text input on the
- * web (where no native picker is available). Always lets the user clear the
- * override with the trailing "x" button so the caller knows to fall back to
- * its default.
+ * Reusable folder-picker field rendered as a single input-style box: the
+ * current path (or `defaultPath` placeholder) spans the full width, with a
+ * trailing folder-icon button embedded at the right edge of the same box.
+ * Clicking the icon opens the native OS folder dialog (desktop app only).
+ * On the web build (no native bridge) the picker is disabled.
  */
 export function FolderPickerField({
   value,
   onChange,
   label = "Local folder",
-  defaultHint,
+  defaultPath,
   disabled = false,
-  inputAriaLabel,
 }: FolderPickerFieldProps) {
   const { hasDesktopBridge } = useAuraCapabilities();
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handlePick = useCallback(async () => {
-    if (disabled || picking) return;
+    if (disabled || picking || !hasDesktopBridge) return;
     setPicking(true);
     setError(null);
     try {
@@ -56,12 +55,19 @@ export function FolderPickerField({
     } finally {
       setPicking(false);
     }
-  }, [disabled, picking, onChange]);
+  }, [disabled, picking, hasDesktopBridge, onChange]);
 
   const handleClear = useCallback(() => {
     if (disabled) return;
     onChange("");
   }, [disabled, onChange]);
+
+  const hasOverride = Boolean(value);
+  const displayText = hasOverride
+    ? value
+    : defaultPath && defaultPath.length > 0
+      ? defaultPath
+      : "(default)";
 
   return (
     <div className={styles.fieldGroup}>
@@ -70,49 +76,42 @@ export function FolderPickerField({
           {label}
         </Text>
       ) : null}
-      <div className={styles.inputRow}>
-        <Input
-          className={styles.input}
-          aria-label={inputAriaLabel ?? label ?? "Local folder"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={defaultHint ?? "Absolute path to a folder"}
-          disabled={disabled}
-          spellCheck={false}
-        />
-        {hasDesktopBridge ? (
-          <Button
-            variant="ghost"
-            onClick={handlePick}
-            disabled={disabled || picking}
-            aria-label="Choose folder"
-            className={styles.pickButton}
-          >
-            <FolderOpen size={14} />
-            {picking ? "Picking…" : "Browse"}
-          </Button>
-        ) : null}
-        {value ? (
-          <Button
-            variant="ghost"
+      <div className={styles.field}>
+        <Text
+          variant="muted"
+          size="sm"
+          className={`${styles.pathText} ${!hasOverride ? styles.pathTextDefault : ""}`}
+          title={displayText}
+        >
+          {displayText}
+        </Text>
+        {hasOverride ? (
+          <button
+            type="button"
             onClick={handleClear}
             disabled={disabled}
             aria-label="Clear folder"
-            className={styles.clearButton}
+            className={styles.iconButton}
           >
             <X size={14} />
-          </Button>
+          </button>
+        ) : null}
+        {hasDesktopBridge ? (
+          <button
+            type="button"
+            onClick={handlePick}
+            disabled={disabled || picking}
+            aria-label="Choose folder"
+            className={styles.iconButton}
+          >
+            <FolderOpen size={14} />
+          </button>
         ) : null}
       </div>
-      {!value && defaultHint ? (
-        <Text variant="muted" size="xs" className={styles.hint}>
-          {defaultHint}
-        </Text>
-      ) : null}
       {!hasDesktopBridge ? (
         <Text variant="muted" size="xs" className={styles.hint}>
           Folder pickers are only available in the Aura desktop app; this
-          setting is only applied when the project's agents run on a local
+          setting only applies when the project's agents run on a local
           machine.
         </Text>
       ) : null}
