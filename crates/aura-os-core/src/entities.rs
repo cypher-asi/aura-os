@@ -233,6 +233,7 @@ pub struct Agent {
     pub user_id: String,
     #[serde(default)]
     pub org_id: Option<OrgId>,
+    #[serde(default)]
     pub name: String,
     pub role: String,
     pub personality: String,
