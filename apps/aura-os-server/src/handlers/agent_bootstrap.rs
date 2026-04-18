@@ -1,9 +1,10 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
-use tracing::info;
+use tracing::{info, warn};
 
 use aura_os_core::{Agent, AgentOrchestration};
+use aura_os_network::NetworkAgent;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
@@ -16,13 +17,104 @@ pub(crate) struct SetupResponse {
     pub created: bool,
 }
 
+#[derive(Serialize)]
+pub(crate) struct CleanupCeoResponse {
+    /// Agent ID of the single CEO that remains after cleanup, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kept: Option<String>,
+    /// Agent IDs that were successfully deleted.
+    pub deleted: Vec<String>,
+    /// Agent IDs whose delete call failed (logged as warnings server-side).
+    pub failed: Vec<String>,
+}
+
+/// True if a network agent record looks like a CEO bootstrap agent.
+///
+/// The canonical signal is [`AgentPermissions::is_ceo_preset`], but older
+/// aura-network deployments don't persist the full `permissions` column
+/// yet, in which case the permissions bundle comes back empty via
+/// `#[serde(default)]`. We therefore treat `name == "CEO" && role == "CEO"`
+/// as a fallback signal so the bootstrap never creates a duplicate CEO
+/// just because the network forgot its permissions.
+fn looks_like_ceo(net: &NetworkAgent) -> bool {
+    if net.permissions.is_ceo_preset() {
+        return true;
+    }
+    let role = net.role.as_deref().unwrap_or("");
+    net.name.eq_ignore_ascii_case("CEO") && role.eq_ignore_ascii_case("CEO")
+}
+
+/// Sort CEO candidates so the oldest record is first. `created_at == None`
+/// sorts last so records that do have a timestamp always win.
+fn sort_ceo_candidates_oldest_first(candidates: &mut [&NetworkAgent]) {
+    candidates.sort_by(|a, b| match (&a.created_at, &b.created_at) {
+        (Some(a), Some(b)) => a.cmp(b),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    });
+}
+
+/// Result of running the dedupe sweep: the canonical CEO (oldest match),
+/// the list of IDs that were deleted, and the list of IDs whose delete
+/// call failed. Never creates new agents.
+struct DedupeOutcome<'a> {
+    canonical: Option<&'a NetworkAgent>,
+    deleted: Vec<String>,
+    failed: Vec<String>,
+}
+
+/// Scan `net_agents` for CEO records, keep the oldest, and best-effort
+/// delete the rest via `network.delete_agent`. Pure dedupe — no creates.
+async fn dedupe_ceo_agents<'a>(
+    network: &aura_os_network::NetworkClient,
+    jwt: &str,
+    net_agents: &'a [NetworkAgent],
+) -> DedupeOutcome<'a> {
+    let mut candidates: Vec<&NetworkAgent> =
+        net_agents.iter().filter(|a| looks_like_ceo(a)).collect();
+    sort_ceo_candidates_oldest_first(&mut candidates);
+
+    let Some((canonical, extras)) = candidates.split_first() else {
+        return DedupeOutcome {
+            canonical: None,
+            deleted: Vec::new(),
+            failed: Vec::new(),
+        };
+    };
+
+    let mut deleted: Vec<String> = Vec::new();
+    let mut failed: Vec<String> = Vec::new();
+    for dup in extras {
+        match network.delete_agent(&dup.id, jwt).await {
+            Ok(()) => {
+                info!(agent_id = %dup.id, "deleted duplicate CEO agent");
+                deleted.push(dup.id.clone());
+            }
+            Err(err) => {
+                warn!(agent_id = %dup.id, error = %err, "failed to delete duplicate CEO agent");
+                failed.push(dup.id.clone());
+            }
+        }
+    }
+
+    DedupeOutcome {
+        canonical: Some(canonical),
+        deleted,
+        failed,
+    }
+}
+
 /// Idempotent CEO-agent bootstrap.
 ///
 /// Looks up the caller's first org, scans its agents for anyone already
-/// holding the full [`AgentPermissions::ceo_preset`] bundle, and either
-/// returns that record or creates a new one seeded with the preset via
-/// the standard `create_agent` network pipeline. There is deliberately
-/// no role or tag check — permissions are the single source of truth.
+/// holding the full [`AgentPermissions::ceo_preset`] bundle (with a
+/// name/role fallback — see [`looks_like_ceo`]), and either returns that
+/// record or creates a new one seeded with the preset via the standard
+/// `create_agent` network pipeline. If the scan finds multiple CEO
+/// records (e.g. from prior bootstrap races or permission round-trip
+/// bugs), the oldest is kept and the rest are deleted so the agents
+/// list stays clean.
 pub(crate) async fn setup_ceo_agent(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -40,11 +132,9 @@ pub(crate) async fn setup_ceo_agent(
         Err(_) => ("My Organization".into(), "default".into()),
     };
 
-    if let Some(net_agent) = net_agents
-        .iter()
-        .find(|a| a.permissions.is_ceo_preset())
-    {
-        let mut agent = agent_from_network(net_agent);
+    let outcome = dedupe_ceo_agents(network, &jwt, &net_agents).await;
+    if let Some(canonical) = outcome.canonical {
+        let mut agent = agent_from_network(canonical);
         let _ = state.agent_service.apply_runtime_config(&mut agent);
         if agent.icon.is_none() {
             if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
@@ -154,4 +244,24 @@ pub(crate) async fn harness_health(
 ) -> Json<crate::harness_client::HarnessProbeResult> {
     let client = HarnessClient::from_env();
     Json(client.probe(Some(&jwt)).await)
+}
+
+/// POST `/api/super-agent/cleanup` — one-shot dedupe of CEO bootstrap
+/// agents. Keeps the oldest CEO record and deletes every other agent
+/// matching [`looks_like_ceo`]. Never creates a new CEO, so calling this
+/// on an account with zero CEO agents is a no-op (the caller can still
+/// hit `/api/super-agent/setup` afterwards to bootstrap one).
+pub(crate) async fn cleanup_ceo_agents(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(_session): AuthSession,
+) -> ApiResult<Json<CleanupCeoResponse>> {
+    let network = state.require_network_client()?;
+    let net_agents = network.list_agents(&jwt).await.map_err(map_network_error)?;
+    let outcome = dedupe_ceo_agents(network, &jwt, &net_agents).await;
+    Ok(Json(CleanupCeoResponse {
+        kept: outcome.canonical.map(|a| a.id.clone()),
+        deleted: outcome.deleted,
+        failed: outcome.failed,
+    }))
 }

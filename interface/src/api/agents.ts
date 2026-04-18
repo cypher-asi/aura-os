@@ -175,8 +175,22 @@ export const agentInstancesApi = {
     ),
 };
 
+export interface CleanupCeoResponse {
+  kept?: string;
+  deleted: string[];
+  failed: string[];
+}
+
 export const superAgentApi = {
   setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/super-agent/setup", { method: "POST" }),
+  /**
+   * Dedupe CEO bootstrap agents on the server: keep the oldest CEO,
+   * delete the rest. Never creates a new agent.
+   */
+  cleanup: () =>
+    apiFetch<CleanupCeoResponse>("/api/super-agent/cleanup", {
+      method: "POST",
+    }),
   listOrchestrations: () => apiFetch<AgentOrchestration[]>("/api/agent-orchestrations"),
   getOrchestration: (id: string) => apiFetch<AgentOrchestration>(`/api/agent-orchestrations/${id}`),
 };

@@ -498,6 +498,10 @@ fn agent_bootstrap_routes() -> Router<AppState> {
             post(agent_bootstrap::setup_ceo_agent),
         )
         .route(
+            "/api/super-agent/cleanup",
+            post(agent_bootstrap::cleanup_ceo_agents),
+        )
+        .route(
             "/api/agent-orchestrations",
             get(agent_bootstrap::list_orchestrations),
         )
