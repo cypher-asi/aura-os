@@ -163,10 +163,6 @@ export function AppsModal({ isOpen, onClose }: Props) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Apps" size="sm">
-      <p className={styles.description}>
-        Drag and drop apps to reorder them. Drag between sections to show or
-        hide apps in the taskbar.
-      </p>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
