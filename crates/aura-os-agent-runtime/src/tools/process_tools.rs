@@ -184,20 +184,14 @@ impl AgentTool for TriggerProcessTool {
         "trigger_process"
     }
     fn description(&self) -> &str {
-        "Manually trigger a process to run immediately"
+        trigger_process_metadata().0
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "process_id": { "type": "string", "description": "ID of the process to trigger" }
-            },
-            "required": ["process_id"]
-        })
+        trigger_process_metadata().1
     }
 
     async fn execute(
@@ -329,4 +323,26 @@ impl AgentTool for ListProcessRunsTool {
             is_error: false,
         })
     }
+}
+
+/// Static `(description, parameters_schema)` for `trigger_process`.
+///
+/// `TriggerProcessTool` holds an `Arc<ProcessExecutor>` so it can't be
+/// instantiated by [`crate::tools::tool_metadata_map`] (which runs
+/// without an executor). Both that map and the trait impl below call
+/// this helper so the two can't drift out of sync.
+pub(crate) fn trigger_process_metadata() -> (&'static str, serde_json::Value) {
+    (
+        "Manually trigger a process to run immediately",
+        json!({
+            "type": "object",
+            "properties": {
+                "process_id": {
+                    "type": "string",
+                    "description": "ID of the process to trigger"
+                }
+            },
+            "required": ["process_id"]
+        }),
+    )
 }

@@ -284,6 +284,77 @@ pub fn all_dispatchable_tool_names() -> std::collections::HashSet<String> {
     names
 }
 
+/// Map of `tool_name -> (description, input_schema)` for every tool the
+/// `/api/agent_tools/:name` dispatcher can execute.
+///
+/// Built once per caller by walking [`ToolRegistry::with_all_tools`] and
+/// then topping up with the five process tools (which aren't in the
+/// default registry because `TriggerProcessTool` needs a
+/// `ProcessExecutor` at runtime, but all five carry fully-static
+/// metadata).
+///
+/// [`crate::ceo::build_cross_agent_tools`] uses this to stamp the real
+/// description + parameters_schema onto each `InstalledTool` it ships
+/// to the harness; without it the LLM sees just a tool name with an
+/// empty `{}` schema and defensively refuses to call the tool.
+#[must_use]
+pub fn tool_metadata_map() -> HashMap<String, (String, serde_json::Value)> {
+    let mut map: HashMap<String, (String, serde_json::Value)> = HashMap::new();
+    let registry = ToolRegistry::with_all_tools();
+    for name in registry.tool_names() {
+        if let Some(tool) = registry.get(&name) {
+            map.insert(
+                name,
+                (tool.description().to_string(), tool.parameters_schema()),
+            );
+        }
+    }
+    // Process tools: registered dynamically at boot via
+    // `register_process_tools`, but their metadata is static so we can
+    // inline it here. Four are ZSTs we can construct for free;
+    // `trigger_process` hand-codes the same description + schema the
+    // `AgentTool` impl returns (kept in sync by a round-trip test in
+    // `process_tools` tests below).
+    map.insert(
+        "create_process".to_string(),
+        (
+            process_tools::CreateProcessTool.description().to_string(),
+            process_tools::CreateProcessTool.parameters_schema(),
+        ),
+    );
+    map.insert(
+        "list_processes".to_string(),
+        (
+            process_tools::ListProcessesTool.description().to_string(),
+            process_tools::ListProcessesTool.parameters_schema(),
+        ),
+    );
+    map.insert(
+        "delete_process".to_string(),
+        (
+            process_tools::DeleteProcessTool.description().to_string(),
+            process_tools::DeleteProcessTool.parameters_schema(),
+        ),
+    );
+    map.insert(
+        "list_process_runs".to_string(),
+        (
+            process_tools::ListProcessRunsTool.description().to_string(),
+            process_tools::ListProcessRunsTool.parameters_schema(),
+        ),
+    );
+    // `TriggerProcessTool` needs a `ProcessExecutor` to construct, so
+    // we can't just call `.description()` / `.parameters_schema()` on
+    // an instance like the four ZST tools above. Pull the same static
+    // values the trait impl uses so the two paths can't drift apart.
+    let (trigger_desc, trigger_schema) = process_tools::trigger_process_metadata();
+    map.insert(
+        "trigger_process".to_string(),
+        (trigger_desc.to_string(), trigger_schema),
+    );
+    map
+}
+
 /// Tool names that should stream their JSON arguments to the client via
 /// `input_json_delta` / `tool_call_snapshot`. Must stay in sync with the
 /// list in `crate::stream` (the stream module uses the same names to

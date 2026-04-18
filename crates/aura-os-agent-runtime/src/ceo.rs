@@ -149,12 +149,18 @@ pub fn ceo_classify_intent(message: &str) -> Vec<aura_os_core::ToolDomain> {
 /// dispatcher can authorize against the real user.
 #[must_use]
 pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledTool> {
+    // Build the name -> (description, schema) map *once* so each
+    // InstalledTool gets the real metadata the LLM needs to call the
+    // tool. Shipping `""` / `{}` here (the old behaviour) left the
+    // model unable to decide when to invoke `send_to_agent` etc.
+    let metadata = crate::tools::tool_metadata_map();
+
     // CEO preset: full manifest, one InstalledTool per registered tool.
     if permissions.is_ceo_preset() {
         return AgentTemplate::ceo_default()
             .tool_manifest
             .into_iter()
-            .map(|entry| installed_tool_for(&entry.name))
+            .map(|entry| installed_tool_for(&entry.name, &metadata))
             .collect();
     }
 
@@ -162,16 +168,16 @@ pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledT
     let mut tools: Vec<InstalledTool> = Vec::new();
     let caps = &permissions.capabilities;
     if caps.contains(&Capability::SpawnAgent) {
-        tools.push(installed_tool_for("spawn_agent"));
+        tools.push(installed_tool_for("spawn_agent", &metadata));
     }
     if caps.contains(&Capability::ControlAgent) {
-        tools.push(installed_tool_for("send_to_agent"));
-        tools.push(installed_tool_for("remote_agent_action"));
+        tools.push(installed_tool_for("send_to_agent", &metadata));
+        tools.push(installed_tool_for("remote_agent_action", &metadata));
     }
     if caps.contains(&Capability::ReadAgent) {
-        tools.push(installed_tool_for("get_agent"));
-        tools.push(installed_tool_for("list_agents"));
-        tools.push(installed_tool_for("get_remote_agent_state"));
+        tools.push(installed_tool_for("get_agent", &metadata));
+        tools.push(installed_tool_for("list_agents", &metadata));
+        tools.push(installed_tool_for("get_remote_agent_state", &metadata));
     }
     // Aura-native project control plane — gated so the menu the LLM
     // sees mirrors what the agent could actually invoke. `WriteProject`
@@ -181,12 +187,12 @@ pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledT
     let has_write = has_any_write_project(caps);
     if has_read || has_write {
         for name in AURA_NATIVE_PROJECT_READ_TOOLS {
-            tools.push(installed_tool_for(name));
+            tools.push(installed_tool_for(name, &metadata));
         }
     }
     if has_write {
         for name in AURA_NATIVE_PROJECT_WRITE_TOOLS {
-            tools.push(installed_tool_for(name));
+            tools.push(installed_tool_for(name, &metadata));
         }
     }
     tools
@@ -211,11 +217,22 @@ pub fn aura_native_project_tool_origin(name: &str) -> Option<Capability> {
     None
 }
 
-fn installed_tool_for(name: &str) -> InstalledTool {
+fn installed_tool_for(
+    name: &str,
+    metadata: &std::collections::HashMap<String, (String, serde_json::Value)>,
+) -> InstalledTool {
+    // Pull the real description + parameters schema from the canonical
+    // `ToolRegistry` (via `tool_metadata_map`). The fallback — empty
+    // description, generic object schema — only kicks in for names the
+    // registry doesn't know about, which would indicate a wiring bug
+    // surfaced by the installed-tools diagnostic's `missing_registrations`.
+    let (description, input_schema) = metadata.get(name).cloned().unwrap_or_else(|| {
+        (String::new(), serde_json::json!({"type": "object"}))
+    });
     InstalledTool {
         name: name.to_string(),
-        description: String::new(),
-        input_schema: serde_json::json!({"type": "object"}),
+        description,
+        input_schema,
         endpoint: format!("{AGENT_TOOL_PATH_PREFIX}/{name}"),
         auth: ToolAuth::default(),
         timeout_ms: None,
@@ -353,6 +370,91 @@ mod tests {
                 "CEO manifest missing `{expected}`; got {names:?}"
             );
         }
+    }
+
+    #[test]
+    fn installed_tools_carry_real_descriptions_and_schemas() {
+        // Regression guard for the `InstalledTool` description/schema
+        // bug: the harness LLM was seeing tool names with blank
+        // descriptions and `{"type":"object"}` schemas, so it
+        // couldn't tell when/how to invoke `send_to_agent`,
+        // `list_agents`, etc. Every tool we emit must now carry the
+        // canonical description + parameters schema from `ToolRegistry`.
+        let tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        let find = |name: &str| -> &InstalledTool {
+            tools
+                .iter()
+                .find(|t| t.name == name)
+                .unwrap_or_else(|| panic!("`{name}` missing from CEO manifest"))
+        };
+
+        // Every tool must ship a non-empty description; the empty
+        // string was the pre-fix behaviour that made the LLM believe
+        // the tools didn't exist.
+        for name in [
+            "send_to_agent",
+            "list_agents",
+            "get_agent",
+            "create_spec",
+            "run_task",
+            "trigger_process",
+        ] {
+            assert!(
+                !find(name).description.is_empty(),
+                "`{name}` must ship a non-empty description to the harness"
+            );
+        }
+
+        // Tools that take arguments must now ship the real required
+        // list — this is what lets the LLM pick the right call shape.
+        let check_required = |name: &str, required_arg: &str| {
+            let schema = &find(name).input_schema;
+            let required = schema
+                .get("required")
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(str::to_string))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            assert!(
+                required.iter().any(|r| r == required_arg),
+                "`{name}` schema must require `{required_arg}`; got required = {required:?}"
+            );
+        };
+        check_required("send_to_agent", "message");
+        check_required("create_spec", "project_id");
+        check_required("run_task", "task_id");
+        // Exercises the fallback branch in `tool_metadata_map` that
+        // inlines metadata for the five process tools (since
+        // `TriggerProcessTool` needs a live executor and so doesn't
+        // live in `with_all_tools()`).
+        check_required("trigger_process", "process_id");
+    }
+
+    #[test]
+    fn installed_tools_for_readproject_carry_schemas() {
+        // The new capability-gated aura-native branch must also get
+        // real schemas, otherwise project-scoped agents would hit the
+        // same "LLM can't call this" problem as the CEO did.
+        let perms = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::ReadProject {
+                id: "proj-1".to_string(),
+            }],
+        };
+        let tools = build_cross_agent_tools(&perms);
+        let list_specs = tools
+            .iter()
+            .find(|t| t.name == "list_specs")
+            .expect("ReadProject should emit list_specs");
+        assert!(!list_specs.description.is_empty());
+        assert!(list_specs
+            .input_schema
+            .get("properties")
+            .and_then(|v| v.as_object())
+            .is_some_and(|p| !p.is_empty()));
     }
 
     #[test]
