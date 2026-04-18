@@ -388,7 +388,7 @@ mod tests {
         let id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let _rt_guard = test_runtime().enter();
         let store = Arc::new(
-            aura_os_store::RocksStore::open(
+            aura_os_store::SettingsStore::open(
                 &std::env::temp_dir().join(format!("aura-test-guard-{}-{id}", std::process::id())),
             )
             .unwrap(),
@@ -397,7 +397,7 @@ mod tests {
         let local_harness: Arc<dyn aura_os_link::HarnessLink> = Arc::new(
             aura_os_link::LocalHarness::new("http://localhost:8080".to_string()),
         );
-        let super_agent_service = Arc::new(aura_os_super_agent::SuperAgentService::new(
+        let agent_runtime = Arc::new(aura_os_agent_runtime::AgentRuntimeService::new(
             "http://localhost:9998".to_string(),
             Arc::new(aura_os_projects::ProjectService::new(store.clone())),
             Arc::new(aura_os_agents::AgentService::new(store.clone(), None)),
@@ -465,7 +465,7 @@ mod tests {
             task_output_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             orbit_client: None,
             validation_cache: cache,
-            super_agent_service,
+            agent_runtime,
         }
     }
 

@@ -1,18 +1,14 @@
-//! Prompt templates for the CEO super-agent.
+//! Prompt templates for the CEO agent template.
 //!
-//! Extracted into the profile crate so that the harness-hosted
-//! super-agent path can build system prompts without dragging the
-//! whole `aura-os-super-agent` dependency graph along. (The legacy
-//! in-process `SuperAgentStream` path that originally shared this
-//! prompt was retired in Phase 6.)
+//! Lives in the templates crate so the harness-hosted chat dispatch can
+//! build system prompts without dragging the whole `aura-os-agent-runtime`
+//! dependency graph along.
 
-/// Build the CEO super-agent system prompt for a given organization.
+/// Build the CEO system prompt for a given organization.
 ///
-/// Behavior-bit-compatible with the previous
-/// `aura_os_super_agent::prompt::super_agent_system_prompt` — any change
-/// here changes what real super-agent deployments see on their next
-/// turn.
-pub fn super_agent_system_prompt(org_name: &str, org_id: &str) -> String {
+/// Any change here changes what real CEO-preset deployments see on their
+/// next turn.
+pub fn ceo_system_prompt(org_name: &str, org_id: &str) -> String {
     format!(
         r#"You are the CEO SuperAgent for the "{org_name}" organization in Aura OS.
 
@@ -47,9 +43,7 @@ You are a high-level orchestrator that manages projects, agents, and all system 
 
 /// Render an optional "Current State" section appended to the system prompt.
 ///
-/// Any of the three strings may be empty and will simply be omitted;
-/// matches the previous `aura_os_super_agent::prompt::build_dynamic_context`
-/// byte-for-byte.
+/// Any of the three strings may be empty and will simply be omitted.
 pub fn build_dynamic_context(
     projects_summary: &str,
     fleet_summary: &str,
@@ -74,7 +68,7 @@ mod tests {
 
     #[test]
     fn system_prompt_embeds_org_identifiers() {
-        let s = super_agent_system_prompt("Acme", "org-123");
+        let s = ceo_system_prompt("Acme", "org-123");
         assert!(s.contains("\"Acme\""));
         assert!(s.contains("Organization: Acme"));
         assert!(s.contains("Organization ID: org-123"));

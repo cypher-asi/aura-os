@@ -1,21 +1,20 @@
 //! Intent-tier classifier and the `load_domain_tools` meta-tool.
 //!
-//! The pure classifier (keyword → [`ToolDomain`] rules) moved to
-//! `aura-os-super-agent-profile` in phase 2 so it can run in both the
-//! in-process super-agent path and a harness-hosted `TurnObserver`.
-//! This module re-exports the portable helpers and keeps
-//! [`LoadDomainToolsTool`], which depends on the in-process
-//! [`SuperAgentTool`] trait.
+//! The pure classifier (keyword → [`ToolDomain`] rules) lives in
+//! `aura-os-agent-templates` so it can run in both the in-process
+//! agent-runtime path and a harness-hosted `TurnObserver`. This module
+//! re-exports the portable helpers and keeps [`LoadDomainToolsTool`],
+//! which depends on the in-process [`AgentTool`] trait.
 
 use async_trait::async_trait;
 use serde_json::json;
 
 use aura_os_core::ToolDomain;
 
-pub use aura_os_super_agent_profile::{classify_intent, is_tier1, LOADABLE_DOMAINS};
+pub use aura_os_agent_templates::{classify_intent, is_tier1, LOADABLE_DOMAINS};
 
-use crate::tools::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use crate::tools::{AgentTool, AgentToolContext, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // LoadDomainToolsTool – meta-tool that signals the orchestration loop to
@@ -25,7 +24,7 @@ use crate::SuperAgentError;
 pub struct LoadDomainToolsTool;
 
 #[async_trait]
-impl SuperAgentTool for LoadDomainToolsTool {
+impl AgentTool for LoadDomainToolsTool {
     fn name(&self) -> &str {
         "load_domain_tools"
     }
@@ -58,8 +57,8 @@ impl SuperAgentTool for LoadDomainToolsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        _ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        _ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let domains: Vec<String> = input
             .get("domains")
             .and_then(|d| d.as_array())
@@ -95,7 +94,7 @@ mod tests {
     use aura_os_core::ToolDomain;
 
     use super::{classify_intent, LoadDomainToolsTool};
-    use crate::tools::SuperAgentTool;
+    use crate::tools::AgentTool;
 
     #[test]
     fn schedule_language_loads_process_domain() {

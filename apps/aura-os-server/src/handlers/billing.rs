@@ -180,8 +180,8 @@ mod tests {
     use aura_os_orgs::OrgService;
     use aura_os_projects::ProjectService;
     use aura_os_sessions::SessionService;
-    use aura_os_store::RocksStore;
-    use aura_os_super_agent::SuperAgentService;
+    use aura_os_store::SettingsStore;
+    use aura_os_agent_runtime::AgentRuntimeService;
     use aura_os_tasks::TaskService;
 
     use crate::HarnessHttpGateway;
@@ -248,8 +248,8 @@ mod tests {
     }
 
     fn build_test_state(billing_client: Arc<BillingClient>) -> (AppState, tempfile::TempDir) {
-        let db_dir = tempfile::tempdir().unwrap();
-        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let store_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
 
         let org_service = Arc::new(OrgService::new(store.clone()));
         let auth_service = Arc::new(AuthService::new());
@@ -274,7 +274,7 @@ mod tests {
         let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(64);
         let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
         let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
-        let super_agent_service = Arc::new(SuperAgentService::new(
+        let agent_runtime = Arc::new(AgentRuntimeService::new(
             "http://localhost:19080".to_string(),
             project_service.clone(),
             agent_service.clone(),
@@ -290,12 +290,12 @@ mod tests {
             store.clone(),
             event_broadcast.clone(),
             local_harness.clone(),
-            db_dir.path().to_path_buf(),
+            store_dir.path().to_path_buf(),
         ));
 
         (
             AppState {
-                data_dir: db_dir.path().to_path_buf(),
+                data_dir: store_dir.path().to_path_buf(),
                 store,
                 org_service,
                 auth_service,
@@ -325,9 +325,9 @@ mod tests {
                 task_output_cache: Arc::new(Mutex::new(HashMap::new())),
                 orbit_client: None,
                 validation_cache: Arc::new(dashmap::DashMap::new()),
-                super_agent_service,
+                agent_runtime,
             },
-            db_dir,
+            store_dir,
         )
     }
 
@@ -335,7 +335,7 @@ mod tests {
     async fn require_credits_caches_per_jwt() {
         let (billing_url, billing_state) = start_credit_server().await;
         let billing_client = Arc::new(BillingClient::with_base_url(billing_url));
-        let (state, _db_dir) = build_test_state(billing_client);
+        let (state, _store_dir) = build_test_state(billing_client);
 
         require_credits(&state, "tok-a").await.unwrap();
 

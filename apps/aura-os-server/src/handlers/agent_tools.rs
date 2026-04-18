@@ -46,9 +46,9 @@ pub(crate) async fn dispatch_agent_tool(
     headers: HeaderMap,
     body: Option<Json<Value>>,
 ) -> ApiResult<Json<Value>> {
-    let sas = state.super_agent_service.clone();
+    let sas = state.agent_runtime.clone();
 
-    let registry = aura_os_super_agent::tools::ToolRegistry::with_all_tools();
+    let registry = aura_os_agent_runtime::tools::ToolRegistry::with_all_tools();
     let tool = registry
         .get(&tool_name)
         .ok_or_else(|| ApiError::not_found(format!("unknown agent tool: {tool_name}")))?;
@@ -92,7 +92,7 @@ pub(crate) async fn dispatch_agent_tool(
 
 async fn resolve_org_id(
     headers: &HeaderMap,
-    _sas: &std::sync::Arc<aura_os_super_agent::SuperAgentService>,
+    _sas: &std::sync::Arc<aura_os_agent_runtime::AgentRuntimeService>,
     _jwt: &str,
     _user_id: &str,
 ) -> String {

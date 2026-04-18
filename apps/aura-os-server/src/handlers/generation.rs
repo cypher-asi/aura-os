@@ -21,7 +21,7 @@ const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
 fn router_url(state: &AppState) -> String {
-    state.super_agent_service.router_url.clone()
+    state.agent_runtime.router_url.clone()
 }
 
 /// Re-emit an upstream SSE frame from aura-router into our own SSE stream,

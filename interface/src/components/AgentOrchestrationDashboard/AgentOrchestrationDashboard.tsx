@@ -4,10 +4,10 @@ import type { BadgeVariant } from "@cypher-asi/zui";
 import { FolderOpen, Bot, Activity } from "lucide-react";
 import { api } from "../../api/client";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import type { Agent, SuperAgentOrchestration } from "../../types";
-import styles from "./SuperAgentDashboardPanel.module.css";
+import type { Agent, AgentOrchestration } from "../../types";
+import styles from "./AgentOrchestrationDashboard.module.css";
 
-interface SuperAgentDashboardPanelProps {
+interface AgentOrchestrationDashboardProps {
   agent: Agent;
 }
 
@@ -19,8 +19,8 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   pending: "pending",
 };
 
-export function SuperAgentDashboardPanel({ agent: _agent }: SuperAgentDashboardPanelProps) {
-  const [orchestrations, setOrchestrations] = useState<SuperAgentOrchestration[]>([]);
+export function AgentOrchestrationDashboard({ agent: _agent }: AgentOrchestrationDashboardProps) {
+  const [orchestrations, setOrchestrations] = useState<AgentOrchestration[]>([]);
   const projects = useProjectsListStore((s) => s.projects);
   const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
 

@@ -399,18 +399,18 @@ export interface RemoteVmState {
   created_at?: string
 }
 
-export interface SuperAgentOrchestration {
+export interface AgentOrchestration {
   orchestration_id: string;
   agent_id: string;
   org_id: string;
   intent: string;
-  plan: SuperAgentStep[];
+  plan: AgentOrchestrationStep[];
   status: OrchestrationStatus;
   created_at: string;
   updated_at: string;
 }
 
-export interface SuperAgentStep {
+export interface AgentOrchestrationStep {
   step_index: number;
   tool_name: string;
   tool_input: unknown;

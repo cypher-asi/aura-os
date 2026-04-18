@@ -4,19 +4,19 @@ use serde_json::json;
 use aura_os_core::{OrgId, ProjectId, ToolDomain};
 use aura_os_network::{CreateProjectRequest, UpdateProjectRequest};
 
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 fn require_network(
-    ctx: &SuperAgentContext,
-) -> Result<&aura_os_network::NetworkClient, SuperAgentError> {
+    ctx: &AgentToolContext,
+) -> Result<&aura_os_network::NetworkClient, AgentRuntimeError> {
     ctx.network_client
         .as_deref()
-        .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))
+        .ok_or_else(|| AgentRuntimeError::Internal("network client not available".into()))
 }
 
-fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
-    SuperAgentError::ToolError(format!("{action}: {e}"))
+fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
+    AgentRuntimeError::ToolError(format!("{action}: {e}"))
 }
 
 fn slugify(name: &str) -> String {
@@ -41,7 +41,7 @@ fn slugify(name: &str) -> String {
 pub struct CreateProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for CreateProjectTool {
+impl AgentTool for CreateProjectTool {
     fn name(&self) -> &str {
         "create_project"
     }
@@ -67,8 +67,8 @@ impl SuperAgentTool for CreateProjectTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let name = input["name"].as_str().unwrap_or_default().to_string();
         let org_id = input["org_id"].as_str().unwrap_or(&ctx.org_id).to_string();
@@ -91,7 +91,7 @@ impl SuperAgentTool for CreateProjectTool {
             .map_err(|e| tool_err("create_project", e))?;
 
         let orbit = ctx.orbit_client.as_deref().ok_or_else(|| {
-            SuperAgentError::ToolError(
+            AgentRuntimeError::ToolError(
                 "create_project: Orbit client not configured (ORBIT_BASE_URL not set); \
                  cannot create required Orbit repo"
                     .into(),
@@ -126,7 +126,7 @@ impl SuperAgentTool for CreateProjectTool {
 pub struct ImportProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for ImportProjectTool {
+impl AgentTool for ImportProjectTool {
     fn name(&self) -> &str {
         "import_project"
     }
@@ -152,10 +152,10 @@ impl SuperAgentTool for ImportProjectTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        _ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        _ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         Ok(ToolResult {
-            content: json!({ "message": "Project import is not yet supported via SuperAgent. Please use the web UI to import projects." }),
+            content: json!({ "message": "Project import is not yet supported via the agent runtime. Please use the web UI to import projects." }),
             is_error: false,
         })
     }
@@ -168,7 +168,7 @@ impl SuperAgentTool for ImportProjectTool {
 pub struct ListProjectsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListProjectsTool {
+impl AgentTool for ListProjectsTool {
     fn name(&self) -> &str {
         "list_projects"
     }
@@ -190,8 +190,8 @@ impl SuperAgentTool for ListProjectsTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         if let Some(network) = ctx.network_client.as_deref() {
             let projects = network
                 .list_projects_by_org(&ctx.org_id, &ctx.jwt)
@@ -222,7 +222,7 @@ impl SuperAgentTool for ListProjectsTool {
 pub struct GetProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for GetProjectTool {
+impl AgentTool for GetProjectTool {
     fn name(&self) -> &str {
         "get_project"
     }
@@ -246,11 +246,11 @@ impl SuperAgentTool for GetProjectTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id_str = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
 
         if let Some(network) = ctx.network_client.as_deref() {
             let project = network
@@ -265,7 +265,7 @@ impl SuperAgentTool for GetProjectTool {
 
         let pid: ProjectId = project_id_str
             .parse()
-            .map_err(|_| SuperAgentError::ToolError("invalid project_id".into()))?;
+            .map_err(|_| AgentRuntimeError::ToolError("invalid project_id".into()))?;
         let project = ctx
             .project_service
             .get_project(&pid)
@@ -284,7 +284,7 @@ impl SuperAgentTool for GetProjectTool {
 pub struct UpdateProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateProjectTool {
+impl AgentTool for UpdateProjectTool {
     fn name(&self) -> &str {
         "update_project"
     }
@@ -312,12 +312,12 @@ impl SuperAgentTool for UpdateProjectTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
         let req = UpdateProjectRequest {
             name: input["name"].as_str().map(String::from),
             description: input["description"].as_str().map(String::from),
@@ -346,7 +346,7 @@ impl SuperAgentTool for UpdateProjectTool {
 pub struct DeleteProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteProjectTool {
+impl AgentTool for DeleteProjectTool {
     fn name(&self) -> &str {
         "delete_project"
     }
@@ -370,12 +370,12 @@ impl SuperAgentTool for DeleteProjectTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
         network
             .delete_project(project_id, &ctx.jwt)
             .await
@@ -394,7 +394,7 @@ impl SuperAgentTool for DeleteProjectTool {
 pub struct ArchiveProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for ArchiveProjectTool {
+impl AgentTool for ArchiveProjectTool {
     fn name(&self) -> &str {
         "archive_project"
     }
@@ -418,14 +418,14 @@ impl SuperAgentTool for ArchiveProjectTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id_str = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
         let pid: ProjectId = project_id_str
             .parse()
-            .map_err(|_| SuperAgentError::ToolError("invalid project_id".into()))?;
+            .map_err(|_| AgentRuntimeError::ToolError("invalid project_id".into()))?;
         let project = ctx
             .project_service
             .archive_project(&pid)
@@ -444,7 +444,7 @@ impl SuperAgentTool for ArchiveProjectTool {
 pub struct GetProjectStatsTool;
 
 #[async_trait]
-impl SuperAgentTool for GetProjectStatsTool {
+impl AgentTool for GetProjectStatsTool {
     fn name(&self) -> &str {
         "get_project_stats"
     }
@@ -468,11 +468,11 @@ impl SuperAgentTool for GetProjectStatsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id_str = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
 
         if let Some(network) = ctx.network_client.as_deref() {
             let project = network
@@ -496,7 +496,7 @@ impl SuperAgentTool for GetProjectStatsTool {
 
         let pid: ProjectId = project_id_str
             .parse()
-            .map_err(|_| SuperAgentError::ToolError("invalid project_id".into()))?;
+            .map_err(|_| AgentRuntimeError::ToolError("invalid project_id".into()))?;
         let project = ctx
             .project_service
             .get_project(&pid)

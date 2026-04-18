@@ -4,8 +4,8 @@ use serde_json::json;
 use aura_os_core::ToolDomain;
 
 use super::helpers::{network_get, require_network, require_str, tool_err};
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. GetFleetStatusTool
@@ -14,7 +14,7 @@ use crate::SuperAgentError;
 pub struct GetFleetStatusTool;
 
 #[async_trait]
-impl SuperAgentTool for GetFleetStatusTool {
+impl AgentTool for GetFleetStatusTool {
     fn name(&self) -> &str {
         "get_fleet_status"
     }
@@ -36,12 +36,12 @@ impl SuperAgentTool for GetFleetStatusTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = ctx
             .network_client
             .as_ref()
-            .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))?;
+            .ok_or_else(|| AgentRuntimeError::Internal("network client not available".into()))?;
 
         let agents = network
             .list_agents(&ctx.jwt)
@@ -76,7 +76,7 @@ impl SuperAgentTool for GetFleetStatusTool {
 pub struct GetProgressReportTool;
 
 #[async_trait]
-impl SuperAgentTool for GetProgressReportTool {
+impl AgentTool for GetProgressReportTool {
     fn name(&self) -> &str {
         "get_progress_report"
     }
@@ -98,12 +98,12 @@ impl SuperAgentTool for GetProgressReportTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = ctx
             .network_client
             .as_ref()
-            .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))?;
+            .ok_or_else(|| AgentRuntimeError::Internal("network client not available".into()))?;
 
         let projects = network
             .list_projects_by_org(&ctx.org_id, &ctx.jwt)
@@ -138,7 +138,7 @@ impl SuperAgentTool for GetProgressReportTool {
 pub struct GetProjectCostTool;
 
 #[async_trait]
-impl SuperAgentTool for GetProjectCostTool {
+impl AgentTool for GetProjectCostTool {
     fn name(&self) -> &str {
         "get_project_cost"
     }
@@ -162,11 +162,11 @@ impl SuperAgentTool for GetProjectCostTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        _ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        _ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
 
         Ok(ToolResult {
             content: json!({
@@ -185,7 +185,7 @@ impl SuperAgentTool for GetProjectCostTool {
 pub struct GetLeaderboardTool;
 
 #[async_trait]
-impl SuperAgentTool for GetLeaderboardTool {
+impl AgentTool for GetLeaderboardTool {
     fn name(&self) -> &str {
         "get_leaderboard"
     }
@@ -209,8 +209,8 @@ impl SuperAgentTool for GetLeaderboardTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let path = if let Some(period) = input["period"].as_str() {
             format!("/api/leaderboard?period={period}")
@@ -228,7 +228,7 @@ impl SuperAgentTool for GetLeaderboardTool {
 pub struct GetUsageStatsTool;
 
 #[async_trait]
-impl SuperAgentTool for GetUsageStatsTool {
+impl AgentTool for GetUsageStatsTool {
     fn name(&self) -> &str {
         "get_usage_stats"
     }
@@ -252,8 +252,8 @@ impl SuperAgentTool for GetUsageStatsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let user_usage = network_get(network, "/api/users/me/usage", &ctx.jwt).await?;
 
@@ -280,7 +280,7 @@ impl SuperAgentTool for GetUsageStatsTool {
 pub struct ListSessionsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListSessionsTool {
+impl AgentTool for ListSessionsTool {
     fn name(&self) -> &str {
         "list_sessions"
     }
@@ -305,8 +305,8 @@ impl SuperAgentTool for ListSessionsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let agent_instance_id = require_str(&input, "agent_instance_id")?;
@@ -326,7 +326,7 @@ impl SuperAgentTool for ListSessionsTool {
 pub struct ListLogEntriesTool;
 
 #[async_trait]
-impl SuperAgentTool for ListLogEntriesTool {
+impl AgentTool for ListLogEntriesTool {
     fn name(&self) -> &str {
         "list_log_entries"
     }
@@ -348,8 +348,8 @@ impl SuperAgentTool for ListLogEntriesTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         network_get(network, "/api/log-entries", &ctx.jwt).await
     }

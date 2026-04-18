@@ -4,8 +4,8 @@ use serde_json::json;
 use aura_os_core::ToolDomain;
 
 use super::helpers::{network_delete, network_get, network_post, require_network, require_str};
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListFeedTool
@@ -14,7 +14,7 @@ use crate::SuperAgentError;
 pub struct ListFeedTool;
 
 #[async_trait]
-impl SuperAgentTool for ListFeedTool {
+impl AgentTool for ListFeedTool {
     fn name(&self) -> &str {
         "list_feed"
     }
@@ -42,8 +42,8 @@ impl SuperAgentTool for ListFeedTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let filter = input["filter"].as_str().unwrap_or("everything");
         network_get(network, &format!("/api/feed?filter={filter}"), &ctx.jwt).await
@@ -57,7 +57,7 @@ impl SuperAgentTool for ListFeedTool {
 pub struct CreatePostTool;
 
 #[async_trait]
-impl SuperAgentTool for CreatePostTool {
+impl AgentTool for CreatePostTool {
     fn name(&self) -> &str {
         "create_post"
     }
@@ -82,8 +82,8 @@ impl SuperAgentTool for CreatePostTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let title = require_str(&input, "title")?;
         let mut body = json!({ "title": title });
@@ -101,7 +101,7 @@ impl SuperAgentTool for CreatePostTool {
 pub struct GetPostTool;
 
 #[async_trait]
-impl SuperAgentTool for GetPostTool {
+impl AgentTool for GetPostTool {
     fn name(&self) -> &str {
         "get_post"
     }
@@ -125,8 +125,8 @@ impl SuperAgentTool for GetPostTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let post_id = require_str(&input, "post_id")?;
         network_get(network, &format!("/api/posts/{post_id}"), &ctx.jwt).await
@@ -140,7 +140,7 @@ impl SuperAgentTool for GetPostTool {
 pub struct AddCommentTool;
 
 #[async_trait]
-impl SuperAgentTool for AddCommentTool {
+impl AgentTool for AddCommentTool {
     fn name(&self) -> &str {
         "add_comment"
     }
@@ -165,8 +165,8 @@ impl SuperAgentTool for AddCommentTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let post_id = require_str(&input, "post_id")?;
         let content = require_str(&input, "content")?;
@@ -188,7 +188,7 @@ impl SuperAgentTool for AddCommentTool {
 pub struct DeleteCommentTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteCommentTool {
+impl AgentTool for DeleteCommentTool {
     fn name(&self) -> &str {
         "delete_comment"
     }
@@ -212,8 +212,8 @@ impl SuperAgentTool for DeleteCommentTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let comment_id = require_str(&input, "comment_id")?;
         network_delete(network, &format!("/api/comments/{comment_id}"), &ctx.jwt).await
@@ -227,7 +227,7 @@ impl SuperAgentTool for DeleteCommentTool {
 pub struct FollowProfileTool;
 
 #[async_trait]
-impl SuperAgentTool for FollowProfileTool {
+impl AgentTool for FollowProfileTool {
     fn name(&self) -> &str {
         "follow_profile"
     }
@@ -251,8 +251,8 @@ impl SuperAgentTool for FollowProfileTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let target_profile_id = require_str(&input, "target_profile_id")?;
         let body = json!({ "target_profile_id": target_profile_id });
@@ -267,7 +267,7 @@ impl SuperAgentTool for FollowProfileTool {
 pub struct UnfollowProfileTool;
 
 #[async_trait]
-impl SuperAgentTool for UnfollowProfileTool {
+impl AgentTool for UnfollowProfileTool {
     fn name(&self) -> &str {
         "unfollow_profile"
     }
@@ -291,8 +291,8 @@ impl SuperAgentTool for UnfollowProfileTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let target_profile_id = require_str(&input, "target_profile_id")?;
         network_delete(
@@ -311,7 +311,7 @@ impl SuperAgentTool for UnfollowProfileTool {
 pub struct ListFollowsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListFollowsTool {
+impl AgentTool for ListFollowsTool {
     fn name(&self) -> &str {
         "list_follows"
     }
@@ -333,8 +333,8 @@ impl SuperAgentTool for ListFollowsTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         network_get(network, "/api/follows", &ctx.jwt).await
     }

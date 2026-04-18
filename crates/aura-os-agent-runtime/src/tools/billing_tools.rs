@@ -4,8 +4,8 @@ use serde_json::json;
 use aura_os_core::ToolDomain;
 
 use super::helpers::{network_get, network_post, require_network};
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. GetCreditBalanceTool
@@ -14,7 +14,7 @@ use crate::SuperAgentError;
 pub struct GetCreditBalanceTool;
 
 #[async_trait]
-impl SuperAgentTool for GetCreditBalanceTool {
+impl AgentTool for GetCreditBalanceTool {
     fn name(&self) -> &str {
         "get_credit_balance"
     }
@@ -38,13 +38,13 @@ impl SuperAgentTool for GetCreditBalanceTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let balance = ctx
             .billing_client
             .get_balance(&ctx.jwt)
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("get_credit_balance: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("get_credit_balance: {e}")))?;
 
         Ok(ToolResult {
             content: json!({
@@ -64,7 +64,7 @@ impl SuperAgentTool for GetCreditBalanceTool {
 pub struct GetTransactionsTool;
 
 #[async_trait]
-impl SuperAgentTool for GetTransactionsTool {
+impl AgentTool for GetTransactionsTool {
     fn name(&self) -> &str {
         "get_transactions"
     }
@@ -88,8 +88,8 @@ impl SuperAgentTool for GetTransactionsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = input["org_id"].as_str().unwrap_or(&ctx.org_id);
         network_get(
@@ -108,7 +108,7 @@ impl SuperAgentTool for GetTransactionsTool {
 pub struct GetBillingAccountTool;
 
 #[async_trait]
-impl SuperAgentTool for GetBillingAccountTool {
+impl AgentTool for GetBillingAccountTool {
     fn name(&self) -> &str {
         "get_billing_account"
     }
@@ -132,8 +132,8 @@ impl SuperAgentTool for GetBillingAccountTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = input["org_id"].as_str().unwrap_or(&ctx.org_id);
         network_get(network, &format!("/api/orgs/{org_id}/account"), &ctx.jwt).await
@@ -147,7 +147,7 @@ impl SuperAgentTool for GetBillingAccountTool {
 pub struct PurchaseCreditsTool;
 
 #[async_trait]
-impl SuperAgentTool for PurchaseCreditsTool {
+impl AgentTool for PurchaseCreditsTool {
     fn name(&self) -> &str {
         "purchase_credits"
     }
@@ -172,13 +172,13 @@ impl SuperAgentTool for PurchaseCreditsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = input["org_id"].as_str().unwrap_or(&ctx.org_id);
         let amount_usd = input["amount_usd"]
             .as_f64()
-            .ok_or_else(|| SuperAgentError::ToolError("amount_usd is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("amount_usd is required".into()))?;
         let body = json!({ "amount_usd": amount_usd });
         network_post(
             network,

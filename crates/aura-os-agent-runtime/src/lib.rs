@@ -19,14 +19,14 @@ use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 use aura_os_tasks::TaskService;
 
-use events::SuperAgentEventListener;
-use tools::{SuperAgentContext, ToolRegistry};
+use events::AgentEventListener;
+use tools::{AgentToolContext, ToolRegistry};
 
 #[derive(Error, Debug)]
-pub enum SuperAgentError {
+pub enum AgentRuntimeError {
     #[error("LLM request failed: {0}")]
     LlmError(String),
     #[error("Tool execution failed: {0}")]
@@ -37,11 +37,11 @@ pub enum SuperAgentError {
     Internal(String),
 }
 
-pub struct SuperAgentService {
+pub struct AgentRuntimeService {
     pub tool_registry: ToolRegistry,
     pub router_url: String,
     pub http_client: reqwest::Client,
-    pub event_listener: SuperAgentEventListener,
+    pub event_listener: AgentEventListener,
     pub process_executor: Arc<aura_os_process::ProcessExecutor>,
     project_service: Arc<ProjectService>,
     agent_service: Arc<AgentService>,
@@ -54,7 +54,7 @@ pub struct SuperAgentService {
     network_client: Option<Arc<NetworkClient>>,
     storage_client: Option<Arc<StorageClient>>,
     orbit_client: Option<Arc<OrbitClient>>,
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     event_broadcast: broadcast::Sender<serde_json::Value>,
     /// Base URL of the locally running aura-os-server. Tools that need
     /// server-side side-effects (e.g. mirroring specs to disk) should route
@@ -62,7 +62,7 @@ pub struct SuperAgentService {
     local_server_base_url: Option<String>,
 }
 
-impl SuperAgentService {
+impl AgentRuntimeService {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         router_url: String,
@@ -77,7 +77,7 @@ impl SuperAgentService {
         network_client: Option<Arc<NetworkClient>>,
         storage_client: Option<Arc<StorageClient>>,
         orbit_client: Option<Arc<OrbitClient>>,
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
         _harness: Arc<dyn HarnessLink>,
         data_dir: std::path::PathBuf,
@@ -98,9 +98,9 @@ impl SuperAgentService {
         let mut tool_registry = ToolRegistry::with_tier1_tools();
         tool_registry.register_process_tools(process_executor.clone());
 
-        let event_listener = SuperAgentEventListener::new(100);
+        let event_listener = AgentEventListener::new(100);
         event_listener.spawn(event_broadcast.subscribe());
-        info!(router_url = %router_url, "SuperAgentService initialized");
+        info!(router_url = %router_url, "AgentRuntimeService initialized");
         Self {
             tool_registry,
             router_url,
@@ -160,8 +160,8 @@ impl SuperAgentService {
         info!("Process scheduler spawned");
     }
 
-    pub fn build_context(&self, user_id: &str, org_id: &str, jwt: &str) -> SuperAgentContext {
-        SuperAgentContext {
+    pub fn build_context(&self, user_id: &str, org_id: &str, jwt: &str) -> AgentToolContext {
+        AgentToolContext {
             user_id: user_id.to_string(),
             org_id: org_id.to_string(),
             jwt: jwt.to_string(),

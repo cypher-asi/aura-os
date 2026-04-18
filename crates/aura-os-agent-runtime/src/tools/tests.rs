@@ -12,10 +12,10 @@ mod tests {
     use aura_os_orgs::OrgService;
     use aura_os_projects::ProjectService;
     use aura_os_sessions::SessionService;
-    use aura_os_store::RocksStore;
+    use aura_os_store::SettingsStore;
     use aura_os_tasks::TaskService;
 
-    use crate::tools::{SuperAgentContext, SuperAgentTool, ToolRegistry};
+    use crate::tools::{AgentToolContext, AgentTool, ToolRegistry};
 
     #[derive(serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
@@ -23,11 +23,11 @@ mod tests {
         name: String,
     }
 
-    fn build_test_ctx(store: Arc<RocksStore>) -> SuperAgentContext {
+    fn build_test_ctx(store: Arc<SettingsStore>) -> AgentToolContext {
         let runtime_state: RuntimeAgentStateMap =
             Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()));
         let (tx, _) = broadcast::channel(16);
-        SuperAgentContext {
+        AgentToolContext {
             user_id: "test-user".into(),
             org_id: "test-org".into(),
             jwt: "test-jwt".into(),
@@ -54,9 +54,9 @@ mod tests {
         }
     }
 
-    fn temp_store() -> (tempfile::TempDir, Arc<RocksStore>) {
+    fn temp_store() -> (tempfile::TempDir, Arc<SettingsStore>) {
         let dir = tempfile::tempdir().unwrap();
-        let store = Arc::new(RocksStore::open(dir.path()).unwrap());
+        let store = Arc::new(SettingsStore::open(dir.path()).unwrap());
         (dir, store)
     }
 
@@ -286,7 +286,7 @@ mod tests {
                     "Tool '{}' should return is_error=true when offline, got success",
                     name
                 ),
-                Err(_) => {} // SuperAgentError::Internal is also acceptable
+                Err(_) => {} // AgentRuntimeError::Internal is also acceptable
             }
         }
     }

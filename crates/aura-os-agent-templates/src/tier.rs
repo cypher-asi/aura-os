@@ -1,15 +1,15 @@
-//! Tier-1 / tier-2 intent classifier for the CEO super-agent.
+//! Tier-1 / tier-2 intent classifier for CEO-preset agents.
 //!
-//! The super-agent exposes a large tool surface to the LLM; to keep each
-//! turn tractable the runtime only serializes a subset of tools based on
-//! the user's intent. [`classify_intent`] returns the set of
+//! A CEO-preset agent exposes a large tool surface to the LLM; to keep
+//! each turn tractable the runtime only serializes a subset of tools
+//! based on the user's intent. [`classify_intent`] returns the set of
 //! [`ToolDomain`]s that should be visible for a given message. Tier-1
 //! domains are always included; tier-2 domains are added when keywords
 //! in the message suggest them.
 //!
 //! This module is deliberately pure — no I/O, no async, no dependencies
 //! on service types — so the same rules can run in-process inside
-//! `aura-os-server` and as a harness [`TurnObserver`] in a different
+//! `aura-os-server` and as a harness `TurnObserver` in a different
 //! binary.
 
 use aura_os_core::ToolDomain;
@@ -24,7 +24,7 @@ pub const TIER1_DOMAINS: &[ToolDomain] = &[
 ];
 
 /// Domains that users can explicitly request via the `load_domain_tools`
-/// meta-tool. Matches the enum in the super-agent's tool schema.
+/// meta-tool. Matches the enum in the agent-runtime's tool schema.
 pub const LOADABLE_DOMAINS: &[&str] = &[
     "spec",
     "task",
@@ -38,7 +38,7 @@ pub const LOADABLE_DOMAINS: &[&str] = &[
 
 /// Tool names whose JSON arguments should stream eagerly to the client
 /// (`input_json_delta`). Must stay in sync with `is_streaming_tool_name`
-/// in `aura-os-super-agent::tools`.
+/// in `aura-os-agent-runtime::tools`.
 pub const STREAMING_TOOL_NAMES: &[&str] =
     &["create_spec", "update_spec", "write_file", "edit_file"];
 
@@ -128,8 +128,8 @@ fn strs(s: &[&str]) -> Vec<String> {
 /// Classify the user's message into the set of [`ToolDomain`]s that
 /// should be exposed this turn, using the canonical rule set.
 ///
-/// Bit-compatible with `aura_os_super_agent::tier::classify_intent`:
-/// same ordering, same deduplication, same case-insensitive matching.
+/// Same ordering, same deduplication, same case-insensitive matching as
+/// the legacy in-process classifier.
 pub fn classify_intent(message: &str) -> Vec<ToolDomain> {
     classify_intent_with(message, &default_classifier_rules())
 }

@@ -288,8 +288,8 @@ pub(crate) async fn summarize_session(
 
     let summary = generate_session_summary(
         storage,
-        &state.super_agent_service.http_client,
-        &state.super_agent_service.router_url,
+        &state.agent_runtime.http_client,
+        &state.agent_runtime.router_url,
         &jwt,
         &sid,
     )

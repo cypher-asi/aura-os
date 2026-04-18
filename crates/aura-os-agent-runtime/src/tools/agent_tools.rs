@@ -6,8 +6,8 @@ use aura_os_core::{AgentId, ToolDomain};
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str, tool_err,
 };
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListAgentsTool
@@ -16,7 +16,7 @@ use crate::SuperAgentError;
 pub struct ListAgentsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListAgentsTool {
+impl AgentTool for ListAgentsTool {
     fn name(&self) -> &str {
         "list_agents"
     }
@@ -38,8 +38,8 @@ impl SuperAgentTool for ListAgentsTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         if let Some(network) = ctx.network_client.as_deref() {
             let agents = network
                 .list_agents(&ctx.jwt)
@@ -69,7 +69,7 @@ impl SuperAgentTool for ListAgentsTool {
 pub struct GetAgentTool;
 
 #[async_trait]
-impl SuperAgentTool for GetAgentTool {
+impl AgentTool for GetAgentTool {
     fn name(&self) -> &str {
         "get_agent"
     }
@@ -93,11 +93,11 @@ impl SuperAgentTool for GetAgentTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let agent_id_str = input["agent_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("agent_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("agent_id is required".into()))?;
 
         if let Some(network) = ctx.network_client.as_deref() {
             let agent = network
@@ -112,7 +112,7 @@ impl SuperAgentTool for GetAgentTool {
 
         let aid: AgentId = agent_id_str
             .parse()
-            .map_err(|_| SuperAgentError::ToolError("invalid agent_id".into()))?;
+            .map_err(|_| AgentRuntimeError::ToolError("invalid agent_id".into()))?;
         let agent = ctx
             .agent_service
             .get_agent_local(&aid)
@@ -131,7 +131,7 @@ impl SuperAgentTool for GetAgentTool {
 pub struct AssignAgentToProjectTool;
 
 #[async_trait]
-impl SuperAgentTool for AssignAgentToProjectTool {
+impl AgentTool for AssignAgentToProjectTool {
     fn name(&self) -> &str {
         "assign_agent_to_project"
     }
@@ -156,15 +156,15 @@ impl SuperAgentTool for AssignAgentToProjectTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = input["project_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
         let agent_id = input["agent_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("agent_id is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("agent_id is required".into()))?;
 
         let body = json!({ "agent_id": agent_id });
         let url = format!("{}/api/projects/{}/agents", network.base_url(), project_id);
@@ -206,7 +206,7 @@ impl SuperAgentTool for AssignAgentToProjectTool {
 pub struct CreateAgentTool;
 
 #[async_trait]
-impl SuperAgentTool for CreateAgentTool {
+impl AgentTool for CreateAgentTool {
     fn name(&self) -> &str {
         "create_agent"
     }
@@ -235,8 +235,8 @@ impl SuperAgentTool for CreateAgentTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let Some(network) = ctx.network_client.as_deref() else {
             return Ok(ToolResult {
                 content: json!({ "error": "Creating agents requires network connectivity. Please connect to aura-network first." }),
@@ -266,7 +266,7 @@ impl SuperAgentTool for CreateAgentTool {
 pub struct UpdateAgentTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateAgentTool {
+impl AgentTool for UpdateAgentTool {
     fn name(&self) -> &str {
         "update_agent"
     }
@@ -295,8 +295,8 @@ impl SuperAgentTool for UpdateAgentTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let Some(network) = ctx.network_client.as_deref() else {
             return Ok(ToolResult {
                 content: json!({ "error": "Updating agents requires network connectivity. Please connect to aura-network first." }),
@@ -324,7 +324,7 @@ impl SuperAgentTool for UpdateAgentTool {
 pub struct DeleteAgentTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteAgentTool {
+impl AgentTool for DeleteAgentTool {
     fn name(&self) -> &str {
         "delete_agent"
     }
@@ -348,8 +348,8 @@ impl SuperAgentTool for DeleteAgentTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let Some(network) = ctx.network_client.as_deref() else {
             return Ok(ToolResult {
                 content: json!({ "error": "Deleting agents requires network connectivity. Please connect to aura-network first." }),
@@ -368,7 +368,7 @@ impl SuperAgentTool for DeleteAgentTool {
 pub struct ListAgentInstancesTool;
 
 #[async_trait]
-impl SuperAgentTool for ListAgentInstancesTool {
+impl AgentTool for ListAgentInstancesTool {
     fn name(&self) -> &str {
         "list_agent_instances"
     }
@@ -392,8 +392,8 @@ impl SuperAgentTool for ListAgentInstancesTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         network_get(
@@ -412,7 +412,7 @@ impl SuperAgentTool for ListAgentInstancesTool {
 pub struct UpdateAgentInstanceTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateAgentInstanceTool {
+impl AgentTool for UpdateAgentInstanceTool {
     fn name(&self) -> &str {
         "update_agent_instance"
     }
@@ -442,8 +442,8 @@ impl SuperAgentTool for UpdateAgentInstanceTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let agent_instance_id = require_str(&input, "agent_instance_id")?;
@@ -466,7 +466,7 @@ impl SuperAgentTool for UpdateAgentInstanceTool {
 pub struct DeleteAgentInstanceTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteAgentInstanceTool {
+impl AgentTool for DeleteAgentInstanceTool {
     fn name(&self) -> &str {
         "delete_agent_instance"
     }
@@ -491,8 +491,8 @@ impl SuperAgentTool for DeleteAgentInstanceTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let agent_instance_id = require_str(&input, "agent_instance_id")?;
@@ -512,7 +512,7 @@ impl SuperAgentTool for DeleteAgentInstanceTool {
 pub struct RemoteAgentActionTool;
 
 #[async_trait]
-impl SuperAgentTool for RemoteAgentActionTool {
+impl AgentTool for RemoteAgentActionTool {
     fn name(&self) -> &str {
         "remote_agent_action"
     }
@@ -541,8 +541,8 @@ impl SuperAgentTool for RemoteAgentActionTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let agent_id = require_str(&input, "agent_id")?;
         let action = require_str(&input, "action")?;

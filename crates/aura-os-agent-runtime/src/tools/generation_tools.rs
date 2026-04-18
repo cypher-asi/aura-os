@@ -4,8 +4,8 @@ use serde_json::json;
 use aura_os_core::ToolDomain;
 
 use super::helpers::require_str;
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 fn router_url() -> String {
     std::env::var("AURA_ROUTER_URL").unwrap_or_else(|_| "http://localhost:3100".to_string())
@@ -18,7 +18,7 @@ fn router_url() -> String {
 pub struct GenerateImageTool;
 
 #[async_trait]
-impl SuperAgentTool for GenerateImageTool {
+impl AgentTool for GenerateImageTool {
     fn name(&self) -> &str {
         "generate_image"
     }
@@ -43,8 +43,8 @@ impl SuperAgentTool for GenerateImageTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let prompt = require_str(&input, "prompt")?;
         let mut body = json!({ "prompt": prompt });
         if let Some(model) = input["model"].as_str() {
@@ -59,7 +59,7 @@ impl SuperAgentTool for GenerateImageTool {
             .json(&body)
             .send()
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("generate_image: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("generate_image: {e}")))?;
 
         if !resp.status().is_success() {
             let err = resp.text().await.unwrap_or_default();
@@ -72,7 +72,7 @@ impl SuperAgentTool for GenerateImageTool {
         let result: serde_json::Value = resp
             .json()
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("generate_image: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("generate_image: {e}")))?;
         Ok(ToolResult {
             content: result,
             is_error: false,
@@ -87,7 +87,7 @@ impl SuperAgentTool for GenerateImageTool {
 pub struct Generate3dModelTool;
 
 #[async_trait]
-impl SuperAgentTool for Generate3dModelTool {
+impl AgentTool for Generate3dModelTool {
     fn name(&self) -> &str {
         "generate_3d_model"
     }
@@ -111,8 +111,8 @@ impl SuperAgentTool for Generate3dModelTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let image_url = require_str(&input, "image_url")?;
         let body = json!({ "image_url": image_url });
 
@@ -124,7 +124,7 @@ impl SuperAgentTool for Generate3dModelTool {
             .json(&body)
             .send()
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("generate_3d_model: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("generate_3d_model: {e}")))?;
 
         if !resp.status().is_success() {
             let err = resp.text().await.unwrap_or_default();
@@ -137,7 +137,7 @@ impl SuperAgentTool for Generate3dModelTool {
         let result: serde_json::Value = resp
             .json()
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("generate_3d_model: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("generate_3d_model: {e}")))?;
         Ok(ToolResult {
             content: result,
             is_error: false,
@@ -152,7 +152,7 @@ impl SuperAgentTool for Generate3dModelTool {
 pub struct Get3dStatusTool;
 
 #[async_trait]
-impl SuperAgentTool for Get3dStatusTool {
+impl AgentTool for Get3dStatusTool {
     fn name(&self) -> &str {
         "get_3d_status"
     }
@@ -176,8 +176,8 @@ impl SuperAgentTool for Get3dStatusTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let task_id = require_str(&input, "task_id")?;
 
         let url = format!("{}/v1/generate-3d/{task_id}", router_url());
@@ -187,7 +187,7 @@ impl SuperAgentTool for Get3dStatusTool {
             .bearer_auth(&ctx.jwt)
             .send()
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("get_3d_status: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("get_3d_status: {e}")))?;
 
         if !resp.status().is_success() {
             let err = resp.text().await.unwrap_or_default();
@@ -200,7 +200,7 @@ impl SuperAgentTool for Get3dStatusTool {
         let result: serde_json::Value = resp
             .json()
             .await
-            .map_err(|e| SuperAgentError::ToolError(format!("get_3d_status: {e}")))?;
+            .map_err(|e| AgentRuntimeError::ToolError(format!("get_3d_status: {e}")))?;
         Ok(ToolResult {
             content: result,
             is_error: false,

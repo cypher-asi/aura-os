@@ -17,8 +17,8 @@ use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
-use aura_os_store::{RocksStore, StoreError};
-use aura_os_super_agent::SuperAgentService;
+use aura_os_store::{SettingsStore, StoreError};
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
@@ -126,7 +126,7 @@ struct CoreServices {
     billing_client: Arc<BillingClient>,
 }
 
-fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
+fn init_core_services(store: &Arc<SettingsStore>) -> CoreServices {
     CoreServices {
         org_service: Arc::new(OrgService::new(store.clone())),
         auth_service: Arc::new(AuthService::new()),
@@ -145,7 +145,7 @@ struct DomainServices {
 }
 
 fn init_domain_services(
-    store: &Arc<RocksStore>,
+    store: &Arc<SettingsStore>,
     network_client: &Option<Arc<NetworkClient>>,
     storage_client: &Option<Arc<StorageClient>>,
 ) -> DomainServices {
@@ -323,13 +323,13 @@ pub(crate) fn ensure_local_harness_running() {
     maybe_spawn_local_harness();
 }
 
-pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
-    let data_dir = db_path
+pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
+    let data_dir = store_path
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| Path::new(".").to_path_buf());
     let browser_settings_root = data_dir.join("browser");
-    let store = Arc::new(RocksStore::open(db_path)?);
+    let store = Arc::new(SettingsStore::open(store_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let feedback_network_client = NetworkClient::from_env_key("AURA_NETWORK_FEEDBACK_URL")
         .map(Arc::new)
@@ -374,8 +374,8 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         let port = std::env::var("AURA_SERVER_PORT").unwrap_or_else(|_| "3100".to_string());
         Some(format!("http://{host}:{port}"))
     });
-    let super_agent_service = Arc::new(
-        SuperAgentService::new(
+    let agent_runtime = Arc::new(
+        AgentRuntimeService::new(
             router_url,
             domain.project_service.clone(),
             domain.agent_service.clone(),
@@ -397,7 +397,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     );
 
     // Spawn scheduled process execution.
-    super_agent_service.spawn_scheduler();
+    agent_runtime.spawn_scheduler();
 
     spawn_health_checks(&storage_client, &network_client, &integrations_client);
     if let Some(ref client) = network_client {
@@ -449,6 +449,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client,
         validation_cache,
-        super_agent_service,
+        agent_runtime,
     })
 }

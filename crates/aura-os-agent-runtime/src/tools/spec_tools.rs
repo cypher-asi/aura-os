@@ -7,8 +7,8 @@ use super::helpers::{
     local_delete, local_post, local_put, network_delete, network_get, network_post, network_put,
     require_network, require_str,
 };
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListSpecsTool
@@ -17,7 +17,7 @@ use crate::SuperAgentError;
 pub struct ListSpecsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListSpecsTool {
+impl AgentTool for ListSpecsTool {
     fn name(&self) -> &str {
         "list_specs"
     }
@@ -41,8 +41,8 @@ impl SuperAgentTool for ListSpecsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         network_get(
@@ -61,7 +61,7 @@ impl SuperAgentTool for ListSpecsTool {
 pub struct GetSpecTool;
 
 #[async_trait]
-impl SuperAgentTool for GetSpecTool {
+impl AgentTool for GetSpecTool {
     fn name(&self) -> &str {
         "get_spec"
     }
@@ -86,8 +86,8 @@ impl SuperAgentTool for GetSpecTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
@@ -107,7 +107,7 @@ impl SuperAgentTool for GetSpecTool {
 pub struct CreateSpecTool;
 
 #[async_trait]
-impl SuperAgentTool for CreateSpecTool {
+impl AgentTool for CreateSpecTool {
     fn name(&self) -> &str {
         "create_spec"
     }
@@ -134,8 +134,8 @@ impl SuperAgentTool for CreateSpecTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id = require_str(&input, "project_id")?;
         let title = require_str(&input, "title")?;
         let body = json!({
@@ -163,7 +163,7 @@ impl SuperAgentTool for CreateSpecTool {
 pub struct UpdateSpecTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateSpecTool {
+impl AgentTool for UpdateSpecTool {
     fn name(&self) -> &str {
         "update_spec"
     }
@@ -191,8 +191,8 @@ impl SuperAgentTool for UpdateSpecTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
         let body = json!({
@@ -218,7 +218,7 @@ impl SuperAgentTool for UpdateSpecTool {
 pub struct DeleteSpecTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteSpecTool {
+impl AgentTool for DeleteSpecTool {
     fn name(&self) -> &str {
         "delete_spec"
     }
@@ -243,8 +243,8 @@ impl SuperAgentTool for DeleteSpecTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
         let path = format!("/api/projects/{project_id}/specs/{spec_id}");
@@ -265,7 +265,7 @@ impl SuperAgentTool for DeleteSpecTool {
 pub struct GenerateSpecsTool;
 
 #[async_trait]
-impl SuperAgentTool for GenerateSpecsTool {
+impl AgentTool for GenerateSpecsTool {
     fn name(&self) -> &str {
         "generate_specs"
     }
@@ -289,8 +289,8 @@ impl SuperAgentTool for GenerateSpecsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         network_post(
@@ -310,7 +310,7 @@ impl SuperAgentTool for GenerateSpecsTool {
 pub struct GenerateSpecsSummaryTool;
 
 #[async_trait]
-impl SuperAgentTool for GenerateSpecsSummaryTool {
+impl AgentTool for GenerateSpecsSummaryTool {
     fn name(&self) -> &str {
         "generate_specs_summary"
     }
@@ -334,8 +334,8 @@ impl SuperAgentTool for GenerateSpecsSummaryTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         network_post(

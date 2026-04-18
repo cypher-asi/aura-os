@@ -26,8 +26,8 @@ use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_storage::StorageTaskFileChangeSummary;
-use aura_os_store::RocksStore;
-use aura_os_super_agent::SuperAgentService;
+use aura_os_store::SettingsStore;
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
@@ -107,11 +107,11 @@ pub struct CachedSession {
 /// Thread-safe in-memory cache keyed by JWT string.
 pub type ValidationCache = Arc<DashMap<String, CachedSession>>;
 
-pub(crate) fn persist_zero_auth_session(store: &RocksStore, session: &ZeroAuthSession) {
+pub(crate) fn persist_zero_auth_session(store: &SettingsStore, session: &ZeroAuthSession) {
     store.cache_zero_auth_session(session);
 }
 
-pub(crate) fn clear_zero_auth_session(store: &RocksStore) {
+pub(crate) fn clear_zero_auth_session(store: &SettingsStore) {
     store.clear_zero_auth_session_cache();
 }
 
@@ -291,7 +291,7 @@ pub type CreditCacheRef = Arc<Mutex<HashMap<String, CreditCache>>>;
 #[derive(Clone)]
 pub struct AppState {
     pub data_dir: PathBuf,
-    pub store: Arc<RocksStore>,
+    pub store: Arc<SettingsStore>,
     pub org_service: Arc<OrgService>,
     pub auth_service: Arc<AuthService>,
     pub billing_client: Arc<BillingClient>,
@@ -342,7 +342,7 @@ pub struct AppState {
     pub orbit_client: Option<Arc<aura_os_network::OrbitClient>>,
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
-    pub super_agent_service: Arc<SuperAgentService>,
+    pub agent_runtime: Arc<AgentRuntimeService>,
 }
 
 impl AppState {

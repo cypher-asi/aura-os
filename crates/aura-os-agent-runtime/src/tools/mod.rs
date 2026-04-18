@@ -30,7 +30,7 @@ use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 use aura_os_tasks::TaskService;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ pub struct ToolResult {
 }
 
 #[async_trait]
-pub trait SuperAgentTool: Send + Sync {
+pub trait AgentTool: Send + Sync {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
     fn domain(&self) -> ToolDomain;
@@ -49,11 +49,11 @@ pub trait SuperAgentTool: Send + Sync {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, crate::SuperAgentError>;
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, crate::AgentRuntimeError>;
 }
 
-pub struct SuperAgentContext {
+pub struct AgentToolContext {
     pub user_id: String,
     pub org_id: String,
     pub jwt: String,
@@ -68,19 +68,19 @@ pub struct SuperAgentContext {
     pub network_client: Option<Arc<NetworkClient>>,
     pub storage_client: Option<Arc<StorageClient>>,
     pub orbit_client: Option<Arc<OrbitClient>>,
-    pub store: Arc<RocksStore>,
+    pub store: Arc<SettingsStore>,
     pub event_broadcast: broadcast::Sender<serde_json::Value>,
     /// Base URL (no trailing slash) of the aura-os-server instance running in
     /// this process. When set, tools that need server-side side-effects
     /// (e.g. spec disk mirrors) should POST/PUT/DELETE here instead of going
     /// directly to the remote router via `network_client`.
     pub local_server_base_url: Option<String>,
-    /// HTTP client reused for local-server calls. Shared with `SuperAgentService`.
+    /// HTTP client reused for local-server calls. Shared with `AgentRuntimeService`.
     pub local_http_client: reqwest::Client,
 }
 
 pub struct ToolRegistry {
-    tools: HashMap<String, Arc<dyn SuperAgentTool>>,
+    tools: HashMap<String, Arc<dyn AgentTool>>,
 }
 
 impl ToolRegistry {
@@ -216,26 +216,26 @@ impl ToolRegistry {
         self.register(Arc::new(process_tools::ListProcessRunsTool));
     }
 
-    pub fn register(&mut self, tool: Arc<dyn SuperAgentTool>) {
+    pub fn register(&mut self, tool: Arc<dyn AgentTool>) {
         self.tools.insert(tool.name().to_string(), tool);
     }
 
-    pub fn get(&self, name: &str) -> Option<&Arc<dyn SuperAgentTool>> {
+    pub fn get(&self, name: &str) -> Option<&Arc<dyn AgentTool>> {
         self.tools.get(name)
     }
 
-    pub fn list_tools(&self) -> Vec<&Arc<dyn SuperAgentTool>> {
+    pub fn list_tools(&self) -> Vec<&Arc<dyn AgentTool>> {
         self.tools.values().collect()
     }
 
-    pub fn tools_for_domains(&self, domains: &[ToolDomain]) -> Vec<&Arc<dyn SuperAgentTool>> {
+    pub fn tools_for_domains(&self, domains: &[ToolDomain]) -> Vec<&Arc<dyn AgentTool>> {
         self.tools
             .values()
             .filter(|t| domains.contains(&t.domain()))
             .collect()
     }
 
-    pub fn tool_definitions(&self, tools: &[&Arc<dyn SuperAgentTool>]) -> Vec<serde_json::Value> {
+    pub fn tool_definitions(&self, tools: &[&Arc<dyn AgentTool>]) -> Vec<serde_json::Value> {
         tools
             .iter()
             .map(|t| {
@@ -263,9 +263,9 @@ impl ToolRegistry {
 /// decide whether to emit snapshots).
 ///
 /// The canonical list now lives in
-/// [`aura_os_super_agent_profile::STREAMING_TOOL_NAMES`] so it can be
-/// shipped to a harness-hosted agent in the super-agent profile; this
+/// [`aura_os_agent_templates::STREAMING_TOOL_NAMES`] so it can be
+/// shipped to a harness-hosted agent in the agent template; this
 /// wrapper keeps the existing in-process API stable.
 pub(crate) fn is_streaming_tool_name(name: &str) -> bool {
-    aura_os_super_agent_profile::STREAMING_TOOL_NAMES.contains(&name)
+    aura_os_agent_templates::STREAMING_TOOL_NAMES.contains(&name)
 }

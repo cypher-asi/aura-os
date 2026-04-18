@@ -12,9 +12,9 @@ use aura_protocol::{
     InstalledTool, IntentClassifierRule, IntentClassifierSpec, ToolAuth,
 };
 
-use crate::prompt::super_agent_system_prompt;
-use aura_os_super_agent_profile::{
-    classify_intent_with, default_classifier_rules, SuperAgentProfile,
+use crate::prompt::ceo_system_prompt;
+use aura_os_agent_templates::{
+    classify_intent_with, default_classifier_rules, AgentTemplate,
 };
 
 /// URL path prefix every cross-agent tool is proxied through.
@@ -35,8 +35,8 @@ pub struct CeoAgentTemplate {
 }
 
 /// Build the CEO template for the given org. The system prompt is
-/// rendered using [`super_agent_system_prompt`] so it stays bit-compatible
-/// with previous builds.
+/// rendered using [`ceo_system_prompt`] so it stays bit-compatible with
+/// previous builds.
 pub fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoAgentTemplate {
     CeoAgentTemplate {
         name: "CEO".to_string(),
@@ -44,24 +44,24 @@ pub fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoAgentTemplate {
         personality:
             "Strategic, efficient, and proactive. I orchestrate your entire development operation."
                 .to_string(),
-        system_prompt: super_agent_system_prompt(org_name, org_id),
+        system_prompt: ceo_system_prompt(org_name, org_id),
         permissions: AgentPermissions::ceo_preset(),
         intent_classifier: Some(ceo_intent_classifier_spec()),
     }
 }
 
 /// The per-turn intent classifier spec used by the CEO preset. Mirrors
-/// the tier-1/tier-2 keyword rules the in-process super-agent used to
-/// apply, so harness-hosted CEOs narrow tool surface the same way.
+/// the tier-1/tier-2 keyword rules the in-process path used to apply,
+/// so harness-hosted CEOs narrow their tool surface the same way.
 pub fn ceo_intent_classifier_spec() -> IntentClassifierSpec {
-    let profile = SuperAgentProfile::ceo_default();
-    let tier1_domains = profile.tier1_domains_snake_case();
-    let classifier_rules = profile
+    let template = AgentTemplate::ceo_default();
+    let tier1_domains = template.tier1_domains_snake_case();
+    let classifier_rules = template
         .classifier_rules_snake_case()
         .into_iter()
         .map(|(domain, keywords)| IntentClassifierRule { domain, keywords })
         .collect();
-    let tool_domains = profile.tool_domains_snake_case();
+    let tool_domains = template.tool_domains_snake_case();
     IntentClassifierSpec {
         tier1_domains,
         classifier_rules,
@@ -92,7 +92,7 @@ pub fn ceo_classify_intent(message: &str) -> Vec<aura_os_core::ToolDomain> {
 pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledTool> {
     // CEO preset: full manifest, one InstalledTool per registered tool.
     if permissions.is_ceo_preset() {
-        return SuperAgentProfile::ceo_default()
+        return AgentTemplate::ceo_default()
             .tool_manifest
             .into_iter()
             .map(|entry| installed_tool_for(&entry.name))

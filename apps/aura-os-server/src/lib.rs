@@ -130,10 +130,10 @@ pub mod handlers_test_support {
         crate::handlers::agents::chat_pub::session_events_to_conversation_history(events)
     }
 
-    pub fn session_events_to_super_agent_history_pub(
+    pub fn session_events_to_agent_history_pub(
         events: &[SessionEvent],
     ) -> Vec<serde_json::Value> {
-        crate::handlers::agents::chat_pub::session_events_to_super_agent_history(events)
+        crate::handlers::agents::chat_pub::session_events_to_agent_history(events)
     }
 
     pub async fn load_current_session_events_for_agent_pub(

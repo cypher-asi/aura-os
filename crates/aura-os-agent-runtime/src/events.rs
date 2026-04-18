@@ -3,19 +3,19 @@ use tokio::sync::{broadcast, Mutex};
 use tracing::{debug, warn};
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub struct SuperAgentEvent {
+pub struct AgentEvent {
     pub event_type: String,
     pub summary: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub data: serde_json::Value,
 }
 
-pub struct SuperAgentEventListener {
-    events: Arc<Mutex<Vec<SuperAgentEvent>>>,
+pub struct AgentEventListener {
+    events: Arc<Mutex<Vec<AgentEvent>>>,
     max_events: usize,
 }
 
-impl SuperAgentEventListener {
+impl AgentEventListener {
     pub fn new(max_events: usize) -> Self {
         Self {
             events: Arc::new(Mutex::new(Vec::new())),
@@ -40,10 +40,10 @@ impl SuperAgentEventListener {
                         }
                     }
                     Err(broadcast::error::RecvError::Lagged(n)) => {
-                        warn!(skipped = n, "SuperAgent event listener lagged");
+                        warn!(skipped = n, "Agent event listener lagged");
                     }
                     Err(broadcast::error::RecvError::Closed) => {
-                        debug!("Event broadcast closed, stopping SuperAgent listener");
+                        debug!("Event broadcast closed, stopping agent event listener");
                         break;
                     }
                 }
@@ -51,17 +51,17 @@ impl SuperAgentEventListener {
         });
     }
 
-    pub async fn drain_events(&self) -> Vec<SuperAgentEvent> {
+    pub async fn drain_events(&self) -> Vec<AgentEvent> {
         let mut buf = self.events.lock().await;
         std::mem::take(&mut *buf)
     }
 
-    pub async fn peek_events(&self) -> Vec<SuperAgentEvent> {
+    pub async fn peek_events(&self) -> Vec<AgentEvent> {
         self.events.lock().await.clone()
     }
 }
 
-fn classify_event(value: &serde_json::Value) -> Option<SuperAgentEvent> {
+fn classify_event(value: &serde_json::Value) -> Option<AgentEvent> {
     let event_type = value.get("type").and_then(|t| t.as_str())?;
     let now = chrono::Utc::now();
 
@@ -156,7 +156,7 @@ fn classify_event(value: &serde_json::Value) -> Option<SuperAgentEvent> {
         _ => return None,
     };
 
-    Some(SuperAgentEvent {
+    Some(AgentEvent {
         event_type: filtered_type,
         summary,
         timestamp: now,

@@ -896,7 +896,7 @@ fn render_conversation_text(
 /// "tool_use without matching tool_result" 400 error on every subsequent
 /// prompt — which is exactly the class of bug that motivated this
 /// regression guard.
-pub fn session_events_to_super_agent_history(
+pub fn session_events_to_agent_history(
     events: &[SessionEvent],
 ) -> Vec<serde_json::Value> {
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
@@ -1784,7 +1784,7 @@ pub(crate) async fn send_agent_event_stream(
         } else {
             Vec::new()
         };
-        tools.extend(aura_os_super_agent::ceo::build_cross_agent_tools(
+        tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
             &agent.permissions,
         ));
         (!tools.is_empty()).then_some(tools)

@@ -659,7 +659,7 @@ async fn super_agent_history_strips_dangling_tool_use_block() {
     ];
 
     let history =
-        aura_os_server::handlers_test_support::session_events_to_super_agent_history_pub(&events);
+        aura_os_server::handlers_test_support::session_events_to_agent_history_pub(&events);
 
     let serialized = serde_json::to_string(&history).unwrap();
     assert!(

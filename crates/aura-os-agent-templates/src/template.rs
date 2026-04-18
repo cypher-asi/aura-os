@@ -1,7 +1,7 @@
-//! Portable, JSON-serializable profile that configures a generic harness
-//! agent to behave like today's CEO super-agent.
+//! Portable, JSON-serializable template that configures a generic harness
+//! agent to behave like today's CEO-preset agent.
 //!
-//! The profile captures everything the harness needs at startup to know
+//! The template captures everything the harness needs at startup to know
 //! (a) what system prompt to render, (b) which tool names belong to
 //! which [`ToolDomain`], (c) which domains are always-on vs load-on-
 //! demand, (d) which keywords promote which domains, and (e) which
@@ -12,12 +12,7 @@
 //! - serialized to JSON and POSTed to a remote harness,
 //! - stored next to the agent record,
 //! - or inlined as a Rust constant via
-//!   [`SuperAgentProfile::ceo_default`].
-//!
-//! Phase 2 uses this crate from the existing in-process super-agent
-//! path (bit-compatible with today's hard-coded values). Phase 3 will
-//! ship the same profile to a harness-hosted agent through the
-//! `HarnessClient` added in phase 1.
+//!   [`AgentTemplate::ceo_default`].
 
 use aura_os_core::ToolDomain;
 use serde::{Deserialize, Serialize};
@@ -29,7 +24,7 @@ use crate::tier::{default_classifier_rules, ClassifierRule, LOADABLE_DOMAINS, TI
 /// preset" flow can reference the exact same identifier.
 pub const CEO_PRESET_NAME: &str = "ceo";
 
-/// Ordered tool → domain assignment used by the super-agent to filter
+/// Ordered tool → domain assignment used by the agent-runtime to filter
 /// the exposed tool list each turn. The fixed ordering mirrors the
 /// `ToolRegistry::with_all_tools` wiring and guarantees deterministic
 /// JSON round-trips.
@@ -152,14 +147,14 @@ pub fn ceo_tool_manifest() -> Vec<ToolManifestEntry> {
         .collect()
 }
 
-/// A portable super-agent profile. Everything the harness needs to know
-/// to behave like an aura-os super-agent, shippable as one JSON blob.
+/// A portable agent template. Everything the harness needs to know to
+/// behave like a given preset, shippable as one JSON blob.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SuperAgentProfile {
+pub struct AgentTemplate {
     /// Human-readable preset name (e.g. `"ceo"`).
     pub preset: String,
     /// System prompt template. `{org_name}` and `{org_id}` placeholders
-    /// are replaced by [`SuperAgentProfile::render_system_prompt`].
+    /// are replaced by [`AgentTemplate::render_system_prompt`].
     pub system_prompt_template: String,
     /// Domains always exposed to the LLM.
     pub tier1_domains: Vec<ToolDomain>,
@@ -174,7 +169,7 @@ pub struct SuperAgentProfile {
     pub streaming_tool_names: Vec<String>,
 }
 
-impl SuperAgentProfile {
+impl AgentTemplate {
     /// The CEO preset — bit-compatible with today's hard-coded
     /// super-agent configuration.
     pub fn ceo_default() -> Self {
@@ -259,10 +254,10 @@ fn domain_to_snake_case(domain: &ToolDomain) -> String {
         .unwrap_or_default()
 }
 
-/// Raw template string used by [`SuperAgentProfile::ceo_default`].
+/// Raw template string used by [`AgentTemplate::ceo_default`].
 ///
 /// Kept identical (modulo the `{org_*}` placeholders) to the body of
-/// [`crate::prompt::super_agent_system_prompt`] so that in-process and
+/// [`crate::prompt::ceo_system_prompt`] so that in-process and
 /// harness-hosted agents render bit-identical prompts.
 fn ceo_system_prompt_template() -> String {
     r#"You are the CEO SuperAgent for the "{org_name}" organization in Aura OS.
@@ -303,19 +298,19 @@ mod tests {
     #[test]
     fn ceo_default_renders_bit_compatible_prompt() {
         let rendered =
-            SuperAgentProfile::ceo_default().render_system_prompt("Acme", "org-123");
-        let expected = crate::prompt::super_agent_system_prompt("Acme", "org-123");
+            AgentTemplate::ceo_default().render_system_prompt("Acme", "org-123");
+        let expected = crate::prompt::ceo_system_prompt("Acme", "org-123");
         assert_eq!(
             rendered, expected,
-            "profile-based prompt must match the legacy helper byte-for-byte"
+            "template-based prompt must match the legacy helper byte-for-byte"
         );
     }
 
     #[test]
     fn json_roundtrip_preserves_every_field() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         let json = serde_json::to_string(&profile).unwrap();
-        let back: SuperAgentProfile = serde_json::from_str(&json).unwrap();
+        let back: AgentTemplate = serde_json::from_str(&json).unwrap();
         assert_eq!(back.preset, profile.preset);
         assert_eq!(back.tier1_domains, profile.tier1_domains);
         assert_eq!(back.loadable_domains, profile.loadable_domains);
@@ -342,7 +337,7 @@ mod tests {
 
     #[test]
     fn tools_for_domains_filters_manifest() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         let spec_tools = profile.tools_for_domains(&[ToolDomain::Spec]);
         assert!(!spec_tools.is_empty());
         for t in &spec_tools {
@@ -354,7 +349,7 @@ mod tests {
 
     #[test]
     fn streaming_names_match_legacy_static_list() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         assert_eq!(
             profile.streaming_tool_names,
             vec![
@@ -368,13 +363,13 @@ mod tests {
 
     #[test]
     fn tier1_domains_match_tier_module_constant() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         assert_eq!(profile.tier1_domains, TIER1_DOMAINS);
     }
 
     #[test]
     fn tier1_domains_snake_case_matches_wire_strings() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         let strs = profile.tier1_domains_snake_case();
         // Exact set the harness `IntentClassifier` matches against.
         assert!(strs.contains(&"project".to_string()));
@@ -390,7 +385,7 @@ mod tests {
 
     #[test]
     fn classifier_rules_snake_case_preserves_keywords() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         let rules = profile.classifier_rules_snake_case();
         assert_eq!(rules.len(), profile.classifier_rules.len());
         for (i, (dom, kws)) in rules.iter().enumerate() {
@@ -403,7 +398,7 @@ mod tests {
 
     #[test]
     fn tool_domains_snake_case_covers_every_manifest_entry() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         let map = profile.tool_domains_snake_case();
         assert_eq!(map.len(), profile.tool_manifest.len());
         for entry in &profile.tool_manifest {
@@ -421,7 +416,7 @@ mod tests {
     /// classifier will silently fall back to tier-1-only behavior.
     #[test]
     fn wire_shape_matches_harness_intent_classifier_contract() {
-        let profile = SuperAgentProfile::ceo_default();
+        let profile = AgentTemplate::ceo_default();
         let v = serde_json::to_value(&profile).unwrap();
         let obj = v.as_object().expect("top-level must be object");
 

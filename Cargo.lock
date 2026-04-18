@@ -304,6 +304,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "aura-os-agent-runtime"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "aura-os-agent-templates",
+ "aura-os-agents",
+ "aura-os-billing",
+ "aura-os-core",
+ "aura-os-link",
+ "aura-os-network",
+ "aura-os-orgs",
+ "aura-os-process",
+ "aura-os-projects",
+ "aura-os-sessions",
+ "aura-os-storage",
+ "aura-os-store",
+ "aura-os-tasks",
+ "aura-protocol",
+ "chrono",
+ "futures-util",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "aura-os-agent-templates"
+version = "0.1.0"
+dependencies = [
+ "aura-os-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "aura-os-agents"
 version = "0.1.0"
 dependencies = [
@@ -527,6 +569,8 @@ name = "aura-os-server"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "aura-os-agent-runtime",
+ "aura-os-agent-templates",
  "aura-os-agents",
  "aura-os-auth",
  "aura-os-billing",
@@ -541,8 +585,6 @@ dependencies = [
  "aura-os-sessions",
  "aura-os-storage",
  "aura-os-store",
- "aura-os-super-agent",
- "aura-os-super-agent-profile",
  "aura-os-tasks",
  "aura-os-terminal",
  "aura-protocol",
@@ -618,48 +660,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
  "uuid",
-]
-
-[[package]]
-name = "aura-os-super-agent"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aura-os-agents",
- "aura-os-billing",
- "aura-os-core",
- "aura-os-link",
- "aura-os-network",
- "aura-os-orgs",
- "aura-os-process",
- "aura-os-projects",
- "aura-os-sessions",
- "aura-os-storage",
- "aura-os-store",
- "aura-os-super-agent-profile",
- "aura-os-tasks",
- "aura-protocol",
- "chrono",
- "futures-util",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "aura-os-super-agent-profile"
-version = "0.1.0"
-dependencies = [
- "aura-os-core",
- "serde",
- "serde_json",
 ]
 
 [[package]]

@@ -546,19 +546,19 @@ pub struct ZeroAuthSession {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SuperAgentOrchestration {
+pub struct AgentOrchestration {
     pub orchestration_id: uuid::Uuid,
     pub agent_id: AgentId,
     pub org_id: OrgId,
     pub intent: String,
-    pub plan: Vec<SuperAgentStep>,
+    pub plan: Vec<AgentOrchestrationStep>,
     pub status: crate::enums::OrchestrationStatus,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SuperAgentStep {
+pub struct AgentOrchestrationStep {
     pub step_index: u32,
     pub tool_name: String,
     pub tool_input: serde_json::Value,

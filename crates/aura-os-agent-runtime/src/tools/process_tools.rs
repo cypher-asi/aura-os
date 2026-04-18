@@ -6,23 +6,23 @@ use serde_json::json;
 use aura_os_core::{ProcessId, ProcessRunTrigger, ToolDomain};
 use aura_os_process::ProcessExecutor;
 
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
-fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
-    SuperAgentError::ToolError(format!("{action}: {e}"))
+fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
+    AgentRuntimeError::ToolError(format!("{action}: {e}"))
 }
 
 fn require_storage_client(
-    ctx: &SuperAgentContext,
+    ctx: &AgentToolContext,
     action: &str,
-) -> Result<Arc<aura_os_storage::StorageClient>, SuperAgentError> {
+) -> Result<Arc<aura_os_storage::StorageClient>, AgentRuntimeError> {
     ctx.storage_client
         .clone()
         .ok_or_else(|| tool_err(action, "aura-storage is not configured"))
 }
 
-fn default_project_id(ctx: &SuperAgentContext) -> Option<String> {
+fn default_project_id(ctx: &AgentToolContext) -> Option<String> {
     ctx.project_service
         .list_projects()
         .ok()
@@ -36,7 +36,7 @@ fn default_project_id(ctx: &SuperAgentContext) -> Option<String> {
 pub struct CreateProcessTool;
 
 #[async_trait]
-impl SuperAgentTool for CreateProcessTool {
+impl AgentTool for CreateProcessTool {
     fn name(&self) -> &str {
         "create_process"
     }
@@ -63,8 +63,8 @@ impl SuperAgentTool for CreateProcessTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let client = require_storage_client(ctx, "create_process")?;
         let name = input["name"]
             .as_str()
@@ -131,7 +131,7 @@ impl SuperAgentTool for CreateProcessTool {
 pub struct ListProcessesTool;
 
 #[async_trait]
-impl SuperAgentTool for ListProcessesTool {
+impl AgentTool for ListProcessesTool {
     fn name(&self) -> &str {
         "list_processes"
     }
@@ -149,8 +149,8 @@ impl SuperAgentTool for ListProcessesTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let client = require_storage_client(ctx, "list_processes")?;
         let processes = client
             .list_processes(&ctx.org_id, &ctx.jwt)
@@ -179,7 +179,7 @@ pub struct TriggerProcessTool {
 }
 
 #[async_trait]
-impl SuperAgentTool for TriggerProcessTool {
+impl AgentTool for TriggerProcessTool {
     fn name(&self) -> &str {
         "trigger_process"
     }
@@ -203,8 +203,8 @@ impl SuperAgentTool for TriggerProcessTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let id_str = input["process_id"]
             .as_str()
             .ok_or_else(|| tool_err("trigger_process", "process_id is required"))?;
@@ -230,7 +230,7 @@ impl SuperAgentTool for TriggerProcessTool {
 pub struct DeleteProcessTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteProcessTool {
+impl AgentTool for DeleteProcessTool {
     fn name(&self) -> &str {
         "delete_process"
     }
@@ -254,8 +254,8 @@ impl SuperAgentTool for DeleteProcessTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let client = require_storage_client(ctx, "delete_process")?;
         let id_str = input["process_id"]
             .as_str()
@@ -275,7 +275,7 @@ impl SuperAgentTool for DeleteProcessTool {
 pub struct ListProcessRunsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListProcessRunsTool {
+impl AgentTool for ListProcessRunsTool {
     fn name(&self) -> &str {
         "list_process_runs"
     }
@@ -299,8 +299,8 @@ impl SuperAgentTool for ListProcessRunsTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let client = require_storage_client(ctx, "list_process_runs")?;
         let id_str = input["process_id"]
             .as_str()

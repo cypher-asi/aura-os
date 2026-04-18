@@ -6,8 +6,8 @@ use aura_os_core::ToolDomain;
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListOrgsTool
@@ -16,7 +16,7 @@ use crate::SuperAgentError;
 pub struct ListOrgsTool;
 
 #[async_trait]
-impl SuperAgentTool for ListOrgsTool {
+impl AgentTool for ListOrgsTool {
     fn name(&self) -> &str {
         "list_orgs"
     }
@@ -38,8 +38,8 @@ impl SuperAgentTool for ListOrgsTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         network_get(network, "/api/orgs", &ctx.jwt).await
     }
@@ -52,7 +52,7 @@ impl SuperAgentTool for ListOrgsTool {
 pub struct CreateOrgTool;
 
 #[async_trait]
-impl SuperAgentTool for CreateOrgTool {
+impl AgentTool for CreateOrgTool {
     fn name(&self) -> &str {
         "create_org"
     }
@@ -77,8 +77,8 @@ impl SuperAgentTool for CreateOrgTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let mut body = json!({ "name": input["name"].as_str().unwrap_or_default() });
         if let Some(desc) = input["description"].as_str() {
@@ -95,7 +95,7 @@ impl SuperAgentTool for CreateOrgTool {
 pub struct GetOrgTool;
 
 #[async_trait]
-impl SuperAgentTool for GetOrgTool {
+impl AgentTool for GetOrgTool {
     fn name(&self) -> &str {
         "get_org"
     }
@@ -119,8 +119,8 @@ impl SuperAgentTool for GetOrgTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         network_get(network, &format!("/api/orgs/{org_id}"), &ctx.jwt).await
@@ -134,7 +134,7 @@ impl SuperAgentTool for GetOrgTool {
 pub struct UpdateOrgTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateOrgTool {
+impl AgentTool for UpdateOrgTool {
     fn name(&self) -> &str {
         "update_org"
     }
@@ -160,8 +160,8 @@ impl SuperAgentTool for UpdateOrgTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let mut body = json!({});
@@ -182,7 +182,7 @@ impl SuperAgentTool for UpdateOrgTool {
 pub struct ListMembersTool;
 
 #[async_trait]
-impl SuperAgentTool for ListMembersTool {
+impl AgentTool for ListMembersTool {
     fn name(&self) -> &str {
         "list_members"
     }
@@ -206,8 +206,8 @@ impl SuperAgentTool for ListMembersTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         network_get(network, &format!("/api/orgs/{org_id}/members"), &ctx.jwt).await
@@ -221,7 +221,7 @@ impl SuperAgentTool for ListMembersTool {
 pub struct UpdateMemberRoleTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateMemberRoleTool {
+impl AgentTool for UpdateMemberRoleTool {
     fn name(&self) -> &str {
         "update_member_role"
     }
@@ -247,8 +247,8 @@ impl SuperAgentTool for UpdateMemberRoleTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let user_id = require_str(&input, "user_id")?;
@@ -271,7 +271,7 @@ impl SuperAgentTool for UpdateMemberRoleTool {
 pub struct RemoveMemberTool;
 
 #[async_trait]
-impl SuperAgentTool for RemoveMemberTool {
+impl AgentTool for RemoveMemberTool {
     fn name(&self) -> &str {
         "remove_member"
     }
@@ -296,8 +296,8 @@ impl SuperAgentTool for RemoveMemberTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let user_id = require_str(&input, "user_id")?;
@@ -317,7 +317,7 @@ impl SuperAgentTool for RemoveMemberTool {
 pub struct ManageInvitesTool;
 
 #[async_trait]
-impl SuperAgentTool for ManageInvitesTool {
+impl AgentTool for ManageInvitesTool {
     fn name(&self) -> &str {
         "manage_invites"
     }
@@ -349,8 +349,8 @@ impl SuperAgentTool for ManageInvitesTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let action = require_str(&input, "action")?;

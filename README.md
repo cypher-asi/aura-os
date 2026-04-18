@@ -471,7 +471,8 @@ For the current release-build plan and workflow map, see:
 | **aura-os-link** | Harness abstraction: WebSocket bridge, automaton client, local/swarm harness |
 | **aura-os-terminal** | PTY-based terminal for agent command execution |
 | **aura-os-process** | Process canvas: executor, store, and scheduler for orchestration graphs |
-| **aura-os-super-agent** | LLM super-agent: executor, scheduler, prompt management, and tool registry |
+| **aura-os-agent-runtime** | In-process agent runtime: executor, scheduler, prompt management, and tool registry |
+| **aura-os-agent-templates** | Portable agent templates (CEO preset system prompt, classifier, tool manifest) |
 
 ### Interface
 
@@ -505,7 +506,8 @@ aura-os/
     aura-os-link/              # Harness / workspace bridge
     aura-os-terminal/          # Terminal emulation
     aura-os-process/           # Process orchestration
-    aura-os-super-agent/       # LLM agent and tool registry
+    aura-os-agent-runtime/     # In-process agent runtime + tool registry
+    aura-os-agent-templates/   # Portable agent templates (CEO preset)
   interface/                   # React + TypeScript SPA
     src/
       api/                     # API client and SSE streams

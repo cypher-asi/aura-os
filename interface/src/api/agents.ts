@@ -9,7 +9,7 @@ import type {
   Session,
   SessionEvent,
   Task,
-  SuperAgentOrchestration,
+  AgentOrchestration,
 } from "../types";
 import { apiFetch } from "./core";
 import { sendAgentEventStream, sendEventStream } from "./streams";
@@ -177,8 +177,8 @@ export const agentInstancesApi = {
 
 export const superAgentApi = {
   setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/super-agent/setup", { method: "POST" }),
-  listOrchestrations: () => apiFetch<SuperAgentOrchestration[]>("/api/super-agent/orchestrations"),
-  getOrchestration: (id: string) => apiFetch<SuperAgentOrchestration>(`/api/super-agent/orchestrations/${id}`),
+  listOrchestrations: () => apiFetch<AgentOrchestration[]>("/api/agent-orchestrations"),
+  getOrchestration: (id: string) => apiFetch<AgentOrchestration>(`/api/agent-orchestrations/${id}`),
 };
 
 export const sessionsApi = {

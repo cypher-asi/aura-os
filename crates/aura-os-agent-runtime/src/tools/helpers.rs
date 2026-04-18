@@ -2,32 +2,32 @@ use aura_os_network::NetworkClient;
 use serde_json::json;
 
 use super::ToolResult;
-use crate::SuperAgentError;
+use crate::AgentRuntimeError;
 
-pub fn require_network(ctx: &super::SuperAgentContext) -> Result<&NetworkClient, SuperAgentError> {
+pub fn require_network(ctx: &super::AgentToolContext) -> Result<&NetworkClient, AgentRuntimeError> {
     ctx.network_client
         .as_deref()
-        .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))
+        .ok_or_else(|| AgentRuntimeError::Internal("network client not available".into()))
 }
 
-pub fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
-    SuperAgentError::ToolError(format!("{action}: {e}"))
+pub fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
+    AgentRuntimeError::ToolError(format!("{action}: {e}"))
 }
 
 pub fn require_str<'a>(
     input: &'a serde_json::Value,
     field: &str,
-) -> Result<&'a str, SuperAgentError> {
+) -> Result<&'a str, AgentRuntimeError> {
     input[field]
         .as_str()
-        .ok_or_else(|| SuperAgentError::ToolError(format!("{field} is required")))
+        .ok_or_else(|| AgentRuntimeError::ToolError(format!("{field} is required")))
 }
 
 pub async fn network_get(
     network: &NetworkClient,
     path: &str,
     jwt: &str,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", network.base_url(), path);
     let resp = network
         .http_client()
@@ -35,7 +35,7 @@ pub async fn network_get(
         .bearer_auth(jwt)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
 
     if !resp.status().is_success() {
         let body = resp.text().await.unwrap_or_default();
@@ -48,7 +48,7 @@ pub async fn network_get(
     let body: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
     Ok(ToolResult {
         content: body,
         is_error: false,
@@ -60,7 +60,7 @@ pub async fn network_post(
     path: &str,
     jwt: &str,
     body: &serde_json::Value,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", network.base_url(), path);
     let resp = network
         .http_client()
@@ -69,7 +69,7 @@ pub async fn network_post(
         .json(body)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
 
     if !resp.status().is_success() {
         let body = resp.text().await.unwrap_or_default();
@@ -82,7 +82,7 @@ pub async fn network_post(
     let body: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
     Ok(ToolResult {
         content: body,
         is_error: false,
@@ -94,7 +94,7 @@ pub async fn network_put(
     path: &str,
     jwt: &str,
     body: &serde_json::Value,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", network.base_url(), path);
     let resp = network
         .http_client()
@@ -103,7 +103,7 @@ pub async fn network_put(
         .json(body)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
 
     if !resp.status().is_success() {
         let body = resp.text().await.unwrap_or_default();
@@ -116,7 +116,7 @@ pub async fn network_put(
     let body: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
     Ok(ToolResult {
         content: body,
         is_error: false,
@@ -127,7 +127,7 @@ pub async fn network_delete(
     network: &NetworkClient,
     path: &str,
     jwt: &str,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", network.base_url(), path);
     let resp = network
         .http_client()
@@ -135,7 +135,7 @@ pub async fn network_delete(
         .bearer_auth(jwt)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
 
     if !resp.status().is_success() {
         let body = resp.text().await.unwrap_or_default();
@@ -159,7 +159,7 @@ pub async fn network_delete(
 // the server can perform side-effects like mirroring specs to disk).
 // ---------------------------------------------------------------------------
 
-async fn parse_response(resp: reqwest::Response) -> Result<ToolResult, SuperAgentError> {
+async fn parse_response(resp: reqwest::Response) -> Result<ToolResult, AgentRuntimeError> {
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
@@ -189,7 +189,7 @@ pub async fn local_post(
     path: &str,
     jwt: &str,
     body: &serde_json::Value,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", base_url, path);
     let resp = client
         .post(&url)
@@ -197,7 +197,7 @@ pub async fn local_post(
         .json(body)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
     parse_response(resp).await
 }
 
@@ -207,7 +207,7 @@ pub async fn local_put(
     path: &str,
     jwt: &str,
     body: &serde_json::Value,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", base_url, path);
     let resp = client
         .put(&url)
@@ -215,7 +215,7 @@ pub async fn local_put(
         .json(body)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
     parse_response(resp).await
 }
 
@@ -224,13 +224,13 @@ pub async fn local_delete(
     client: &reqwest::Client,
     path: &str,
     jwt: &str,
-) -> Result<ToolResult, SuperAgentError> {
+) -> Result<ToolResult, AgentRuntimeError> {
     let url = format!("{}{}", base_url, path);
     let resp = client
         .delete(&url)
         .bearer_auth(jwt)
         .send()
         .await
-        .map_err(|e| SuperAgentError::ToolError(e.to_string()))?;
+        .map_err(|e| AgentRuntimeError::ToolError(e.to_string()))?;
     parse_response(resp).await
 }

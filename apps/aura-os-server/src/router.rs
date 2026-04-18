@@ -13,7 +13,7 @@ use tower_http::trace::TraceLayer;
 use crate::handlers::{
     agents, auth, billing, browser, dev_loop, feed, feedback, files, follows, generation,
     harness_proxy, leaderboard, log, marketplace, notes, org_tools, orgs, process, project_stats,
-    agent_tools, projects, remote_files, remote_terminal, specs, super_agent, swarm, system,
+    agent_bootstrap, agent_tools, projects, remote_files, remote_terminal, specs, swarm, system,
     tasks, terminal, users, ws,
 };
 use crate::state::AppState;
@@ -84,7 +84,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(social_routes())
         .merge(feedback_routes())
         .merge(system_routes())
-        .merge(super_agent_routes())
+        .merge(agent_bootstrap_routes())
         .merge(process_routes())
         .merge(generation_routes())
         .merge(harness_proxy_routes())
@@ -491,23 +491,23 @@ fn marketplace_routes() -> Router<AppState> {
         )
 }
 
-fn super_agent_routes() -> Router<AppState> {
+fn agent_bootstrap_routes() -> Router<AppState> {
     Router::new()
         .route(
             "/api/super-agent/setup",
-            post(super_agent::setup_ceo_agent),
+            post(agent_bootstrap::setup_ceo_agent),
         )
         .route(
-            "/api/super-agent/orchestrations",
-            get(super_agent::list_orchestrations),
+            "/api/agent-orchestrations",
+            get(agent_bootstrap::list_orchestrations),
         )
         .route(
-            "/api/super-agent/orchestrations/:orchestration_id",
-            get(super_agent::get_orchestration),
+            "/api/agent-orchestrations/:orchestration_id",
+            get(agent_bootstrap::get_orchestration),
         )
         .route(
             "/api/super-agent/events",
-            get(super_agent::list_pending_events),
+            get(agent_bootstrap::list_pending_events),
         )
         // Dispatcher that lets a harness-hosted agent execute
         // cross-agent tools (spawn_agent, control_agent, etc.) in
@@ -522,7 +522,7 @@ fn super_agent_routes() -> Router<AppState> {
         // editor's Local/Cloud toggle.
         .route(
             "/api/super_agent/harness/health",
-            get(super_agent::harness_health),
+            get(agent_bootstrap::harness_health),
         )
 }
 
@@ -764,4 +764,8 @@ fn system_routes() -> Router<AppState> {
         )
         .route("/ws/events", get(ws::ws_events))
         .route("/api/system/info", get(system::get_environment_info))
+        .route(
+            "/api/system/workspace_defaults",
+            get(system::get_workspace_defaults),
+        )
 }

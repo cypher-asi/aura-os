@@ -1597,8 +1597,8 @@ pub(crate) async fn start_loop(
         session_service: state.session_service.clone(),
         agent_instance_service: state.agent_instance_service.clone(),
         usage_reporting,
-        router_url: state.super_agent_service.router_url.clone(),
-        http_client: state.super_agent_service.http_client.clone(),
+        router_url: state.agent_runtime.router_url.clone(),
+        http_client: state.agent_runtime.http_client.clone(),
     });
 
     emit_domain_event(
@@ -2067,8 +2067,8 @@ pub(crate) async fn run_single_task(
             session_service: state.session_service.clone(),
             agent_instance_service: state.agent_instance_service.clone(),
             usage_reporting,
-            router_url: state.super_agent_service.router_url.clone(),
-            http_client: state.super_agent_service.http_client.clone(),
+            router_url: state.agent_runtime.router_url.clone(),
+            http_client: state.agent_runtime.http_client.clone(),
         });
     } else {
         warn!(

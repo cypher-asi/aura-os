@@ -6,8 +6,8 @@ use aura_os_core::ToolDomain;
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListTasksTool
@@ -16,7 +16,7 @@ use crate::SuperAgentError;
 pub struct ListTasksTool;
 
 #[async_trait]
-impl SuperAgentTool for ListTasksTool {
+impl AgentTool for ListTasksTool {
     fn name(&self) -> &str {
         "list_tasks"
     }
@@ -40,8 +40,8 @@ impl SuperAgentTool for ListTasksTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         network_get(
@@ -60,7 +60,7 @@ impl SuperAgentTool for ListTasksTool {
 pub struct ListTasksBySpecTool;
 
 #[async_trait]
-impl SuperAgentTool for ListTasksBySpecTool {
+impl AgentTool for ListTasksBySpecTool {
     fn name(&self) -> &str {
         "list_tasks_by_spec"
     }
@@ -85,8 +85,8 @@ impl SuperAgentTool for ListTasksBySpecTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
@@ -106,7 +106,7 @@ impl SuperAgentTool for ListTasksBySpecTool {
 pub struct GetTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for GetTaskTool {
+impl AgentTool for GetTaskTool {
     fn name(&self) -> &str {
         "get_task"
     }
@@ -131,8 +131,8 @@ impl SuperAgentTool for GetTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -152,7 +152,7 @@ impl SuperAgentTool for GetTaskTool {
 pub struct CreateTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for CreateTaskTool {
+impl AgentTool for CreateTaskTool {
     fn name(&self) -> &str {
         "create_task"
     }
@@ -180,8 +180,8 @@ impl SuperAgentTool for CreateTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let mut body = json!({
@@ -214,7 +214,7 @@ impl SuperAgentTool for CreateTaskTool {
 pub struct UpdateTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for UpdateTaskTool {
+impl AgentTool for UpdateTaskTool {
     fn name(&self) -> &str {
         "update_task"
     }
@@ -248,8 +248,8 @@ impl SuperAgentTool for UpdateTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -277,7 +277,7 @@ impl SuperAgentTool for UpdateTaskTool {
 pub struct DeleteTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for DeleteTaskTool {
+impl AgentTool for DeleteTaskTool {
     fn name(&self) -> &str {
         "delete_task"
     }
@@ -302,8 +302,8 @@ impl SuperAgentTool for DeleteTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -323,7 +323,7 @@ impl SuperAgentTool for DeleteTaskTool {
 pub struct ExtractTasksTool;
 
 #[async_trait]
-impl SuperAgentTool for ExtractTasksTool {
+impl AgentTool for ExtractTasksTool {
     fn name(&self) -> &str {
         "extract_tasks"
     }
@@ -347,8 +347,8 @@ impl SuperAgentTool for ExtractTasksTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         network_post(
@@ -368,7 +368,7 @@ impl SuperAgentTool for ExtractTasksTool {
 pub struct TransitionTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for TransitionTaskTool {
+impl AgentTool for TransitionTaskTool {
     fn name(&self) -> &str {
         "transition_task"
     }
@@ -394,8 +394,8 @@ impl SuperAgentTool for TransitionTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -418,7 +418,7 @@ impl SuperAgentTool for TransitionTaskTool {
 pub struct RetryTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for RetryTaskTool {
+impl AgentTool for RetryTaskTool {
     fn name(&self) -> &str {
         "retry_task"
     }
@@ -443,8 +443,8 @@ impl SuperAgentTool for RetryTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -465,7 +465,7 @@ impl SuperAgentTool for RetryTaskTool {
 pub struct RunTaskTool;
 
 #[async_trait]
-impl SuperAgentTool for RunTaskTool {
+impl AgentTool for RunTaskTool {
     fn name(&self) -> &str {
         "run_task"
     }
@@ -490,8 +490,8 @@ impl SuperAgentTool for RunTaskTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -512,7 +512,7 @@ impl SuperAgentTool for RunTaskTool {
 pub struct GetTaskOutputTool;
 
 #[async_trait]
-impl SuperAgentTool for GetTaskOutputTool {
+impl AgentTool for GetTaskOutputTool {
     fn name(&self) -> &str {
         "get_task_output"
     }
@@ -537,8 +537,8 @@ impl SuperAgentTool for GetTaskOutputTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;

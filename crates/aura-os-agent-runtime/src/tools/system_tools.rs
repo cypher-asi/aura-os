@@ -4,8 +4,8 @@ use serde_json::json;
 use aura_os_core::ToolDomain;
 
 use super::helpers::{network_get, network_post, require_network, require_str};
-use super::{SuperAgentContext, SuperAgentTool, ToolResult};
-use crate::SuperAgentError;
+use super::{AgentToolContext, AgentTool, ToolResult};
+use crate::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. BrowseFilesTool
@@ -14,7 +14,7 @@ use crate::SuperAgentError;
 pub struct BrowseFilesTool;
 
 #[async_trait]
-impl SuperAgentTool for BrowseFilesTool {
+impl AgentTool for BrowseFilesTool {
     fn name(&self) -> &str {
         "browse_files"
     }
@@ -38,8 +38,8 @@ impl SuperAgentTool for BrowseFilesTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let path = require_str(&input, "path")?;
         let body = json!({ "path": path });
@@ -54,7 +54,7 @@ impl SuperAgentTool for BrowseFilesTool {
 pub struct ReadFileTool;
 
 #[async_trait]
-impl SuperAgentTool for ReadFileTool {
+impl AgentTool for ReadFileTool {
     fn name(&self) -> &str {
         "read_file"
     }
@@ -78,8 +78,8 @@ impl SuperAgentTool for ReadFileTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let path = require_str(&input, "path")?;
         let body = json!({ "path": path });
@@ -94,7 +94,7 @@ impl SuperAgentTool for ReadFileTool {
 pub struct GetEnvironmentInfoTool;
 
 #[async_trait]
-impl SuperAgentTool for GetEnvironmentInfoTool {
+impl AgentTool for GetEnvironmentInfoTool {
     fn name(&self) -> &str {
         "get_environment_info"
     }
@@ -116,8 +116,8 @@ impl SuperAgentTool for GetEnvironmentInfoTool {
     async fn execute(
         &self,
         _input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         network_get(network, "/api/system/info", &ctx.jwt).await
     }
@@ -130,7 +130,7 @@ impl SuperAgentTool for GetEnvironmentInfoTool {
 pub struct GetRemoteAgentStateTool;
 
 #[async_trait]
-impl SuperAgentTool for GetRemoteAgentStateTool {
+impl AgentTool for GetRemoteAgentStateTool {
     fn name(&self) -> &str {
         "get_remote_agent_state"
     }
@@ -154,8 +154,8 @@ impl SuperAgentTool for GetRemoteAgentStateTool {
     async fn execute(
         &self,
         input: serde_json::Value,
-        ctx: &SuperAgentContext,
-    ) -> Result<ToolResult, SuperAgentError> {
+        ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
         let network = require_network(ctx)?;
         let agent_id = require_str(&input, "agent_id")?;
         network_get(
