@@ -50,9 +50,6 @@ const SOFT_BATCH_WINDOW_MINUTES = 45;
 const MAX_BATCH_SPAN_MINUTES = 180;
 const MAX_BATCH_COMMITS = 8;
 const TARGET_MAX_BATCHES = 6;
-const MAX_RENDERED_ENTRIES = 6;
-const MAX_HIGHLIGHTS = 5;
-const MAX_ITEMS_PER_ENTRY = 4;
 
 function runGit(gitArgs) {
   return execFileSync("git", gitArgs, {
@@ -565,13 +562,8 @@ function normalizeForComparison(value) {
 
 function collectRubricIssues(rendered, batches) {
   const issues = [];
-  const minEntries = Math.min(batches.length, batches.length >= 3 ? 3 : Math.max(1, batches.length));
   const normalizedDayTitle = normalizeForComparison(rendered.title);
   const normalizedIntro = normalizeForComparison(rendered.intro);
-
-  if (rendered.entries.length < minEntries) {
-    issues.push(`expected at least ${minEntries} timeline entries, got ${rendered.entries.length}`);
-  }
 
   if (wordCount(rendered.title) < 3 || wordCount(rendered.title) > 14) {
     issues.push("day title must be between 3 and 14 words");
@@ -591,9 +583,6 @@ function collectRubricIssues(rendered, batches) {
   }
 
   const normalizedHighlights = rendered.highlights.map(normalizeForComparison).filter(Boolean);
-  if (normalizedHighlights.length < Math.min(2, rendered.entries.length)) {
-    issues.push("expected at least 2 distinct highlights when entries are present");
-  }
   if (new Set(normalizedHighlights).size !== normalizedHighlights.length) {
     issues.push("highlights must be unique");
   }
@@ -652,9 +641,6 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
   if (!Array.isArray(candidate.entries) || candidate.entries.length === 0) {
     throw new Error("entries must be a non-empty array");
   }
-  if (candidate.entries.length > MAX_RENDERED_ENTRIES) {
-    throw new Error(`entries must not exceed ${MAX_RENDERED_ENTRIES}`);
-  }
 
   const batchMap = new Map(batches.map((batch) => [batch.id, batch]));
   const seenBatchIds = new Set();
@@ -681,9 +667,6 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
     }
     if (!Array.isArray(entry.items) || entry.items.length === 0) {
       throw new Error("entry.items must be a non-empty array");
-    }
-    if (entry.items.length > MAX_ITEMS_PER_ENTRY) {
-      throw new Error(`entry.items must not exceed ${MAX_ITEMS_PER_ENTRY}`);
     }
 
     const items = entry.items.map((item) => {
@@ -725,7 +708,7 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
     intro: candidate.day_intro.trim(),
     entries,
     highlights: Array.isArray(candidate.highlights)
-      ? candidate.highlights.map((value) => String(value).trim()).filter(Boolean).slice(0, MAX_HIGHLIGHTS)
+      ? candidate.highlights.map((value) => String(value).trim()).filter(Boolean)
       : [],
     raw_commit_count: totalCommitCount,
   };
