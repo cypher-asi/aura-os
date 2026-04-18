@@ -418,6 +418,281 @@
   z-index: 9999;
 }
 
+/* ── Permissions tab ── */
+
+.permsCeoCard {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent, #6366f1) 10%, transparent);
+}
+
+.permsCeoIcon {
+  color: var(--color-accent, #6366f1);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.permsCeoBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.permsSectionTitle {
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.permsSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.permsScopeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.permsScopeRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.permsScopeLabel {
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.permsChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permsChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border);
+  max-width: 100%;
+}
+
+.permsChipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.permsChipRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.permsChipRemove:hover {
+  opacity: 1;
+  color: var(--color-danger, #ef4444);
+}
+
+.permsAddButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 4px;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.permsAddButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-secondary);
+}
+
+.permsAddButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.permsEmpty {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.permsPickerWrapper {
+  position: relative;
+}
+
+.permsPicker {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  max-width: 260px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.permsPickerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+}
+
+.permsPickerItem:hover:not(:disabled) {
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.05));
+}
+
+.permsPickerItem:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.permsPickerEmpty {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.permsCapabilityRow {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 0;
+}
+
+.permsCapabilityIcon {
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+}
+
+.permsCapabilityText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.permsCapabilityLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.permsCapabilityDescription {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.permsProjectGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.permsProjectName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.permsProjectBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permsSaveBar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  align-items: center;
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+  backdrop-filter: blur(4px);
+  flex-wrap: wrap;
+}
+
+.permsSaveError {
+  color: var(--color-danger, #ef4444);
+  font-size: 11px;
+  margin-right: auto;
+  min-width: 0;
+}
+
+.permsFallbackToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.permsFallbackToggle input {
+  cursor: pointer;
+}
+
 /* ── Empty state for placeholder tabs ── */
 
 .tabEmptyState {

@@ -19,6 +19,7 @@ import { SkillPreview } from "./SkillPreview";
 import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
+import { PermissionsTab } from "./PermissionsTab";
 import type { Agent } from "../../../types";
 import { isSuperAgent } from "../../../types/permissions";
 import styles from "./AgentInfoPanel.module.css";
@@ -299,6 +300,9 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
 
         {effectiveTab === "chats" && <ChatsTab agent={a} projectBindings={projectBindings} />}
         {effectiveTab === "skills" && <SkillsTab agent={a} />}
+        {effectiveTab === "permissions" && (
+          <PermissionsTab agent={a} isOwnAgent={isOwnAgent} />
+        )}
         {effectiveTab === "projects" && (
           <ProjectsTab
             projectBindings={projectBindings}
