@@ -9,7 +9,16 @@ describe("BrowserAddressBar", () => {
     const input = screen.getByLabelText("URL");
     fireEvent.change(input, { target: { value: "http://localhost:5173" } });
     fireEvent.submit(input);
-    expect(onSubmit).toHaveBeenCalledWith("http://localhost:5173");
+    expect(onSubmit).toHaveBeenCalledWith("http://localhost:5173/");
+  });
+
+  it("normalizes bare domains on submit", () => {
+    const onSubmit = vi.fn();
+    render(<BrowserAddressBar value="" onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("URL");
+    fireEvent.change(input, { target: { value: "www.google.com" } });
+    fireEvent.submit(input);
+    expect(onSubmit).toHaveBeenCalledWith("https://www.google.com/");
   });
 
   it("pins the current URL when the pin button is clicked", () => {
@@ -22,7 +31,7 @@ describe("BrowserAddressBar", () => {
       />,
     );
     fireEvent.click(screen.getByLabelText("Pin as default"));
-    expect(onPin).toHaveBeenCalledWith("http://localhost:5173");
+    expect(onPin).toHaveBeenCalledWith("http://localhost:5173/");
   });
 
   it("unpins when already pinned", () => {
