@@ -484,7 +484,6 @@ function ProjectAgentChatPanel({
         isLoading={deferredLoading}
         historyResolved={historyResolved}
         errorMessage={historyError ? historyError : null}
-        emptyMessage={isSessionView ? "No events in this session" : undefined}
         initialHandoff={shouldUseCreateHandoff ? "create-agent" : undefined}
         onInitialHandoffReady={onInitialHandoffReady}
         scrollResetKey={panelKey}

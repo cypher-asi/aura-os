@@ -1,7 +1,5 @@
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { Cpu } from "lucide-react";
-import { PageEmptyState } from "@cypher-asi/zui";
 import { ResponsiveMainLane } from "../../../../components/ResponsiveMainLane";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
@@ -70,14 +68,7 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   if (!processId || !process) {
     return (
       <ResponsiveMainLane>
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <PageEmptyState
-            icon={<Cpu size={32} />}
-            title="Processes"
-            description="Select a process or create one to get started."
-          />
-          {children}
-        </div>
+        <div style={{ height: "100%" }}>{children}</div>
       </ResponsiveMainLane>
     );
   }
