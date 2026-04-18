@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   useAgentStore: vi.fn(),
   storeFetchAgents: vi.fn(),
   storeRemoveAgent: vi.fn(),
+  storePatchAgent: vi.fn(),
   pendingCreateAgentHandoff: null as { target: string; label?: string } | null,
   beginCreateAgentHandoff: vi.fn((target: string, label?: string) => {
     mocks.pendingCreateAgentHandoff = { target, label };
@@ -33,6 +34,7 @@ Object.assign(mocks.useAgentStore, {
   getState: () => ({
     fetchAgents: mocks.storeFetchAgents,
     removeAgent: mocks.storeRemoveAgent,
+    patchAgent: mocks.storePatchAgent,
   }),
 });
 
@@ -179,6 +181,25 @@ vi.mock("../../../stores/chat-history-store", () => ({
   agentHistoryKey: (agentId: string) => `agent:${agentId}`,
 }));
 
+vi.mock("../../../stores/auth-store", () => ({
+  useAuth: () => ({
+    user: { network_user_id: "user-1" },
+    isAuthenticated: true,
+  }),
+}));
+
+vi.mock("../../../stores/projects-list-store", () => ({
+  useProjectsListStore: Object.assign(
+    (selector: (state: { patchAgentTemplateFields: (agent: unknown) => void }) => unknown) =>
+      selector({ patchAgentTemplateFields: vi.fn() }),
+    {
+      getState: () => ({
+        patchAgentTemplateFields: vi.fn(),
+      }),
+    },
+  ),
+}));
+
 vi.mock("../../../stores/chat-handoff-store", () => ({
   useChatHandoffStore: (selector: (state: {
     pendingCreateAgentHandoff: typeof mocks.pendingCreateAgentHandoff;
@@ -226,6 +247,7 @@ describe("AgentList", () => {
     mocks.pendingCreateAgentHandoff = null;
     mocks.storeFetchAgents = vi.fn();
     mocks.storeRemoveAgent = vi.fn();
+    mocks.storePatchAgent = vi.fn();
     mocks.useAgentStore.mockImplementation((selector: (state: {
       togglePin: (agentId: string) => void;
       toggleFavorite: (agentId: string) => void;
