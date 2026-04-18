@@ -1,9 +1,10 @@
 //! Render a [`SuperAgentProfile`] into the wire payload a harness session
 //! needs to behave like an in-process super-agent.
 //!
-//! Phase 3 of the super-agent / harness unification plan: instead of
-//! running `SuperAgentStream` in `aura-os-server`, we hand a preloaded
-//! harness session the portable profile so the harness can:
+//! Phase 3 of the super-agent / harness unification plan: rather
+//! than running an in-process LLM loop in `aura-os-server` (the
+//! retired `SuperAgentStream` path), we hand a preloaded harness
+//! session the portable profile so the harness can:
 //!
 //! 1. render the system prompt (`SuperAgentProfile::render_system_prompt`),
 //! 2. install every tool as an [`aura_protocol::InstalledTool`] pointing

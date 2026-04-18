@@ -14,11 +14,10 @@
 //!    [`tokio::sync::mpsc::Receiver`] of typed
 //!    [`aura_protocol::OutboundMessage`]s.
 //!
-//! **Not wired into any live chat route yet.** Phase 4 will decide
-//! whether to switch `handle_super_agent_stream` over to this driver
-//! behind an env flag; for now the driver only ships with integration
-//! tests against a mock harness, so the remote path can be hardened
-//! independently of the in-process `SuperAgentStream`.
+//! As of Phase 6 this driver is the sole super-agent execution
+//! path; the legacy in-process `SuperAgentStream` loop has been
+//! deleted and every `HostMode::Harness` super-agent chat request
+//! flows through here via `dispatch_super_agent_via_harness`.
 
 use std::time::Duration;
 

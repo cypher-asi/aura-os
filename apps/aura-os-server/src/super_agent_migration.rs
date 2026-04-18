@@ -306,11 +306,15 @@ pub async fn migrate_legacy_super_agents(
         //    so `AURA_SUPER_AGENT_MIGRATE=off` skips seeding too.
         seed_record_log_for(state, &updated, &mut report).await;
 
-        // 4) Drop any stale in-memory conversation cache — the harness
-        //    path writes its own transcript and we don't want the old
-        //    legacy cache to shadow it on the first post-migration
-        //    turn.
-        clear_conversation_cache(state, agent_id).await;
+        // 4) Drop any stale in-memory conversation cache — the legacy
+        //    `AppState.super_agent_messages` cache was removed with
+        //    the in-process path (Phase 6 retirement), so this step
+        //    is now a no-op. The log line stays so the migration
+        //    report still reads the same across deploys.
+        tracing::trace!(
+            %agent_id,
+            "super-agent migrator: legacy conversation cache retired (no-op)"
+        );
 
         if outcome.skipped_opt_out {
             info!(
@@ -440,12 +444,6 @@ async fn seed_record_log_for(state: &AppState, agent: &Agent, report: &mut Migra
             report.seed_failed += 1;
         }
     }
-}
-
-async fn clear_conversation_cache(state: &AppState, agent_id: aura_os_core::AgentId) {
-    let key = format!("super_agent:{agent_id}");
-    let mut cache = state.super_agent_messages.lock().await;
-    cache.remove(&key);
 }
 
 #[cfg(test)]

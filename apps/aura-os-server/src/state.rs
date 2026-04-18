@@ -257,15 +257,10 @@ impl ChatSession {
 
 pub type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
 
-/// In-memory cache of super-agent conversation messages (full Claude API format
-/// including tool_use / tool_result blocks). Keyed by session key, e.g.
-/// `"super_agent:{agent_id}"`.
-pub type SuperAgentConversationCache = Arc<Mutex<HashMap<String, Vec<serde_json::Value>>>>;
-
 /// Tracks a single in-flight super-agent spawn. `generation` increases every
-/// time a new run supersedes a prior one (on reset or `new_session=true`), and
-/// is used to gate the final cache write so a stale task cannot overwrite a
-/// freshly-cleared context. `cancel` stops the proxy stream and tool loop
+/// time a new run supersedes a prior one (on reset or `new_session=true`),
+/// and is used so a late-completing bridge task can tell whether its
+/// registry entry has been superseded. `cancel` stops the harness bridge
 /// mid-flight when reset fires.
 pub struct SuperAgentRun {
     pub generation: u64,
@@ -361,13 +356,9 @@ pub struct AppState {
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
     pub super_agent_service: Arc<SuperAgentService>,
-    /// In-memory cache of super-agent conversation messages so multi-turn
-    /// context survives across requests (mirrors how the harness keeps state
-    /// for normal agents).
-    pub super_agent_messages: SuperAgentConversationCache,
-    /// In-flight super-agent runs keyed by `super_agent:{agent_id}`. Reset
-    /// uses this to cancel the running spawn and bump its generation so a
-    /// late cache write cannot reintroduce the cleared context.
+    /// In-flight super-agent harness bridges keyed by
+    /// `super_agent:{agent_id}`. Reset uses this to cancel the
+    /// running bridge so the SSE stream closes promptly.
     pub super_agent_runs: SuperAgentRunRegistry,
 }
 

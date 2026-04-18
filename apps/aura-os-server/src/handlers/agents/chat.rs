@@ -37,7 +37,7 @@ use crate::handlers::agents::workspace_tools::{
 };
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
-use crate::state::{AppState, AuthJwt, ChatSession, SuperAgentRun};
+use crate::state::{AppState, AuthJwt, ChatSession};
 
 use super::conversions::events_to_session_history;
 use super::runtime::{
@@ -779,14 +779,7 @@ pub(crate) async fn reset_agent_session(
     remove_live_session(&state, &session_key).await;
     let sa_key = format!("super_agent:{agent_id}");
     remove_live_session(&state, &sa_key).await;
-    // Cancel first so the spawned task stops reading from the proxy; then
-    // clear the cache. The generation bump guarantees any cache write that
-    // beats us to the lock from the cancelled task will be rejected.
     cancel_super_agent_run(&state, &sa_key).await;
-    {
-        let mut cache = state.super_agent_messages.lock().await;
-        cache.remove(&sa_key);
-    }
     let _ = setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true).await;
     info!(%agent_id, "Agent chat session reset");
     Ok(StatusCode::NO_CONTENT)
@@ -1791,8 +1784,9 @@ async fn resolve_org_for_super_agent(state: &AppState, jwt: &str) -> (String, St
 /// Harness-hosted super-agent dispatch. Assembles the pieces the
 /// [`super::super_agent_harness::handle_super_agent_via_harness`]
 /// handler needs (org resolution, conversation history,
-/// persistence) and delegates. Kept adjacent to
-/// `handle_super_agent_stream` so the two paths read as peers.
+/// persistence) and delegates. This is the only remaining
+/// super-agent entry path — the legacy in-process
+/// `handle_super_agent_stream` was retired in Phase 6.
 async fn dispatch_super_agent_via_harness(
     state: &AppState,
     jwt: &str,
@@ -1858,229 +1852,6 @@ async fn dispatch_super_agent_via_harness(
     .await
 }
 
-// Phase 6: this function stays compiled in by default (feature
-// `legacy_super_agent_stream` is ON) so existing deployments keep the
-// in-process route available. When the feature is flipped OFF during
-// the final rollout step, the dispatcher above short-circuits to an
-// error and this function becomes dead code — we allow that so
-// `--no-default-features` builds stay clean. A follow-up PR will
-// delete the function outright once the harness path has soaked.
-#[cfg_attr(not(feature = "legacy_super_agent_stream"), allow(dead_code))]
-async fn handle_super_agent_stream(
-    state: &AppState,
-    jwt: &str,
-    auth_session: &aura_os_core::ZeroAuthSession,
-    agent: &Agent,
-    body: SendChatRequest,
-) -> ApiResult<SseResponse> {
-    let agent_id = agent.agent_id;
-    let sas = &state.super_agent_service;
-    let user_id = auth_session.user_id.as_str();
-
-    // Resolve org: try network first, then derive from local projects
-    let (org_name, org_id) = resolve_org_for_super_agent(state, jwt).await;
-
-    let sa_ctx = Arc::new(sas.build_context(user_id, &org_id, jwt));
-
-    // Always generate a fresh system prompt with current org info
-    let system_prompt = aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
-
-    let user_content = body.content;
-    let requested_model = body.model;
-    let attachments = body.attachments;
-
-    let domains = aura_os_super_agent::tier::classify_intent(&user_content);
-    let domain_tools = sas.tool_registry.tools_for_domains(&domains);
-    let tool_defs = sas.tool_registry.tool_definitions(&domain_tools);
-
-    let session_key = format!("super_agent:{agent_id}");
-    let force_new = body.new_session.unwrap_or(false);
-    if force_new {
-        remove_live_session(state, &session_key).await;
-        cancel_super_agent_run(state, &session_key).await;
-        let mut cache = state.super_agent_messages.lock().await;
-        cache.remove(&session_key);
-    }
-
-    // Load conversation history: prefer in-memory cache (full Claude API
-    // format with tool blocks), fall back to the *current* storage session
-    // for cold starts (e.g. after server restart). We intentionally do NOT
-    // aggregate prior sessions — that would re-inject events the user
-    // already cleared via "Clear session" (which rotates to a fresh storage
-    // session via `setup_agent_chat_persistence(force_new=true)`). UI
-    // history endpoints still aggregate across sessions so prior messages
-    // remain visible in the chat timeline; only LLM context is scoped to
-    // the current session.
-    let conversation_history: Vec<serde_json::Value> = if force_new {
-        Vec::new()
-    } else {
-        let cache = state.super_agent_messages.lock().await;
-        if let Some(cached) = cache.get(&session_key) {
-            info!(%agent_id, cached_messages = cached.len(), "super agent: loaded conversation from in-memory cache");
-            cached.clone()
-        } else {
-            drop(cache);
-            let stored = load_current_session_events_for_agent(state, &agent_id, jwt).await;
-            if stored.is_empty() {
-                Vec::new()
-            } else {
-                info!(%agent_id, stored_events = stored.len(), "super agent: reconstructing conversation from current storage session (cold start)");
-                let bounded =
-                    slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
-                session_events_to_super_agent_history(&bounded)
-            }
-        }
-    };
-
-    let persist_ctx =
-        setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt, force_new).await;
-    if persist_ctx.is_none() {
-        warn!(%agent_id, "super agent chat: persistence context unavailable");
-    }
-
-    let (tx, _) = tokio::sync::broadcast::channel::<HarnessOutbound>(256);
-    let rx = tx.subscribe();
-
-    let persist_rx = persist_ctx.as_ref().map(|_| tx.subscribe());
-
-    if let Some(ref pctx) = persist_ctx {
-        persist_user_message(pctx, &user_content, &attachments);
-    }
-
-    // Register a fresh run under `session_key` with a new cancellation token
-    // and a monotonic generation. Any prior in-flight spawn is cancelled so
-    // its subsequent cache write (guarded by generation below) will be
-    // rejected even if it races past cancellation.
-    let cancel_token = tokio_util::sync::CancellationToken::new();
-    let generation = {
-        let mut runs = state.super_agent_runs.lock().await;
-        let next_gen = runs.get(&session_key).map(|r| r.generation + 1).unwrap_or(1);
-        if let Some(existing) = runs.insert(
-            session_key.clone(),
-            SuperAgentRun {
-                generation: next_gen,
-                cancel: cancel_token.clone(),
-                join: None,
-            },
-        ) {
-            existing.cancel.cancel();
-            if let Some(join) = existing.join {
-                join.abort();
-            }
-        }
-        next_gen
-    };
-
-    let stream_handle = aura_os_super_agent::stream::SuperAgentStream::new(
-        sas.router_url.clone(),
-        sas.http_client.clone(),
-        system_prompt,
-        tool_defs,
-        conversation_history,
-        sa_ctx,
-        Arc::new(aura_os_super_agent::tools::ToolRegistry::with_all_tools()),
-        tx,
-        requested_model,
-    )
-    .with_cancel(cancel_token.clone());
-
-    let content_for_run = user_content.clone();
-    let image_blocks_for_run: Option<Vec<serde_json::Value>> =
-        attachments.as_ref().and_then(|atts| {
-            let blocks: Vec<serde_json::Value> = atts
-                .iter()
-                .filter(|a| a.type_ == "image")
-                .map(|a| {
-                    serde_json::json!({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": a.media_type,
-                            "data": a.data,
-                        }
-                    })
-                })
-                .collect();
-            if blocks.is_empty() {
-                None
-            } else {
-                Some(blocks)
-            }
-        });
-    let messages_cache = state.super_agent_messages.clone();
-    let runs_registry = state.super_agent_runs.clone();
-    let cache_key = session_key.clone();
-    let run_cancel = cancel_token.clone();
-    let join = tokio::spawn(async move {
-        use aura_os_super_agent::stream::SuperAgentRunOutcome;
-        let outcome = stream_handle
-            .run(content_for_run, image_blocks_for_run)
-            .await;
-
-        // Only persist conversation if this spawn is still the authoritative
-        // run for `cache_key`. Any of the following means we discard:
-        //  - the run was cancelled (reset / superseded);
-        //  - a newer generation has been registered meanwhile;
-        //  - the registry entry was removed (explicit reset).
-        let mut runs = runs_registry.lock().await;
-        let is_current = runs
-            .get(&cache_key)
-            .map(|r| r.generation == generation)
-            .unwrap_or(false);
-        if is_current {
-            runs.remove(&cache_key);
-        }
-        drop(runs);
-
-        match outcome {
-            SuperAgentRunOutcome::Completed(messages)
-                if is_current && !run_cancel.is_cancelled() =>
-            {
-                messages_cache.lock().await.insert(cache_key, messages);
-            }
-            SuperAgentRunOutcome::Completed(_) => {
-                debug!(
-                    cache_key = %cache_key,
-                    generation,
-                    "super agent: discarding stale run result (superseded or cancelled)"
-                );
-            }
-            SuperAgentRunOutcome::Cancelled => {
-                debug!(
-                    cache_key = %cache_key,
-                    generation,
-                    "super agent: run ended via cancellation, cache untouched"
-                );
-            }
-        }
-    });
-
-    // Stash the join handle so reset can abort the task if the loop is
-    // blocked awaiting a long-running tool. The registry entry may already
-    // have been superseded by a newer spawn, in which case we just drop the
-    // join handle and rely on cancellation alone.
-    {
-        let mut runs = state.super_agent_runs.lock().await;
-        if let Some(run) = runs.get_mut(&session_key) {
-            if run.generation == generation {
-                run.join = Some(join);
-            }
-        }
-    }
-
-    if let (Some(pctx), Some(prx)) = (persist_ctx, persist_rx) {
-        spawn_chat_persist_task(prx, pctx);
-    }
-
-    let broadcast_stream = harness_broadcast_to_sse(rx);
-
-    let boxed: SseStream = Box::pin(broadcast_stream);
-    Ok((
-        SSE_NO_BUFFERING_HEADERS,
-        Sse::new(boxed).keep_alive(KeepAlive::default()),
-    ))
-}
-
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -2116,35 +1887,19 @@ pub(crate) async fn send_agent_event_stream(
                 .await;
             }
             HostMode::InProcess => {
-                #[cfg(feature = "legacy_super_agent_stream")]
-                {
-                    info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
-                    return handle_super_agent_stream(
-                        &state,
-                        &jwt,
-                        &auth_session,
-                        &agent,
-                        body,
-                    )
-                    .await;
-                }
-                #[cfg(not(feature = "legacy_super_agent_stream"))]
-                {
-                    // Phase 6 rollout step (b): once ops flip the
-                    // `legacy_super_agent_stream` feature OFF, any
-                    // record still carrying `host_mode:in_process`
-                    // fails loudly instead of silently running the
-                    // legacy loop. The fix is to migrate the record
-                    // (or drop the tag).
-                    warn!(
-                        %agent_id,
-                        "SuperAgent pinned to in_process but legacy_super_agent_stream feature is disabled"
-                    );
-                    drop(body);
-                    return Err(ApiError::internal(
-                        "legacy in-process super-agent path is disabled (legacy_super_agent_stream feature)",
-                    ));
-                }
+                // Phase 6 (retirement): the in-process SuperAgentStream
+                // path has been deleted. Any record still pinned with
+                // `host_mode:in_process` now fails loudly — the fix is
+                // to migrate the record (remove the pin) so it routes
+                // through the harness-hosted path.
+                warn!(
+                    %agent_id,
+                    "SuperAgent pinned to in_process, but the legacy in-process path has been retired"
+                );
+                drop(body);
+                return Err(ApiError::internal(
+                    "legacy in-process super-agent path has been retired; tag agent with host_mode:harness or use the ceo flow",
+                ));
             }
         }
     }
@@ -2169,10 +1924,6 @@ pub(crate) async fn send_agent_event_stream(
         let sa_key = format!("super_agent:{agent_id}");
         remove_live_session(&state, &sa_key).await;
         cancel_super_agent_run(&state, &sa_key).await;
-        {
-            let mut cache = state.super_agent_messages.lock().await;
-            cache.remove(&sa_key);
-        }
     }
     // LLM context rebuild on cold start: load only the current storage
     // session, not the full multi-session aggregate. See

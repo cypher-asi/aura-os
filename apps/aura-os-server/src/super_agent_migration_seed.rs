@@ -4,9 +4,12 @@
 //! The main migrator
 //! ([`crate::super_agent_migration::migrate_legacy_super_agents`]) stamps
 //! `host_mode:harness`, `preset:ceo`, and `migration:super_agent_v1` on
-//! every legacy super-agent record and clears the in-memory
-//! `super_agent_messages` cache. It does **not** write to the harness
-//! RocksDB itself because the harness is out-of-process.
+//! every legacy super-agent record. It does **not** write to the harness
+//! RocksDB itself because the harness is out-of-process. The in-memory
+//! `AppState.super_agent_messages` cache the migrator used to clear
+//! was retired with the in-process `SuperAgentStream` path in Phase 6,
+//! so the migration step is now just the record-tag update plus this
+//! record-log seed.
 //!
 //! This module fills that gap by POSTing the agent's recent aura-os
 //! `SessionEvent`s to the harness `/tx` endpoint in order so a

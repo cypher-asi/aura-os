@@ -2,52 +2,36 @@
 //!
 //! Phase 4 of the super-agent / harness unification plan wires the
 //! [`HarnessSuperAgentDriver`](crate::HarnessSuperAgentDriver) from
-//! phase 3 into the real chat surface. Operationally this adds a
-//! second branch to [`super::chat::send_agent_event_stream`]: when an
-//! agent opts in (via tag or env override) its turn is executed by an
-//! `aura-harness` node instead of the in-process
-//! `SuperAgentStream`, while everything downstream — persistence,
-//! cancellation, SSE framing — stays identical.
+//! phase 3 into the real chat surface. Every super-agent turn now
+//! executes on an `aura-harness` node via
+//! [`handle_super_agent_via_harness`] — persistence, cancellation,
+//! and SSE framing are shared with the rest of the agent chat
+//! pipeline.
 //!
-//! The in-process path remains the default; no live agent is rerouted
-//! without explicit opt-in. An opt-in is any of:
+//! # Host-mode routing
 //!
-//! - The agent's `tags` contains `"host_mode:harness"`; or
-//! - The env `AURA_SUPER_AGENT_HOST_MODE=harness` is set for the
-//!   server process (fleet-wide override, mainly for integration
-//!   tests and staging).
+//! The dispatcher in [`super::chat::send_agent_event_stream`] calls
+//! [`host_mode_for_agent`] to pick between [`HostMode::Harness`]
+//! (default) and [`HostMode::InProcess`]. The in-process variant
+//! exists only as a diagnostic: the legacy
+//! `SuperAgentStream` path has been retired (Phase 6 final step), so
+//! an agent that is still pinned with `host_mode:in_process` fails
+//! loudly instead of silently running the retired loop.
 //!
-//! The harness side already knows how to consume the payload shipped
-//! by [`aura_os_super_agent::harness_handoff::build_super_agent_session_init`]
-//! and runs the same tier classifier + tool dispatcher the in-process
-//! path uses, so user-visible behavior is intended to stay
-//! bit-compatible with the in-process route.
+//! Opt-in tags (both honored during migration and by newly-created
+//! agents):
 //!
-//! # Phase 6 rollout plan
+//! - `host_mode:harness` — route via the harness (default).
+//! - `host_mode:in_process` — legacy pin, now returns an error.
+//! - `AURA_SUPER_AGENT_HOST_MODE=harness` env — fleet-wide override,
+//!   still honored for integration tests and staging.
 //!
-//! The unification plan (`plans/unify_super_agents_into_harness_630aa7f8.plan.md`,
-//! section **"Phase 6 - Retire the super-agent type"**) stages the
-//! cutover across three deploys so every step is reversible:
-//!
-//! 1. **Deploy with `legacy_super_agent_stream` feature ON (current default).**
-//!    The
-//!    [`crate::super_agent_migration::migrate_legacy_super_agents`]
-//!    startup hook flips existing records to `host_mode:harness` and
-//!    stamps `migration:super_agent_v1`, while newly-created
-//!    super-agents default to the harness route via
-//!    [`crate::handlers::super_agent::setup_super_agent`]. Records
-//!    explicitly pinned with `host_mode:in_process` still work.
-//! 2. **Rebuild with `legacy_super_agent_stream` feature OFF.** The
-//!    dispatcher's `HostMode::InProcess` branch in `chat.rs` now
-//!    returns an error, so any straggler pinned to the legacy path
-//!    fails loudly instead of silently running the in-process loop.
-//!    Ops flip this once harness-parity metrics look good. Roll back
-//!    by rebuilding with the feature ON.
-//! 3. **Follow-up PR:** delete
-//!    [`aura_os_super_agent::stream::SuperAgentStream`],
-//!    `handle_super_agent_stream`, the in-memory
-//!    `AppState.super_agent_messages` cache, and the rest of the
-//!    legacy plumbing. Out of scope for this commit.
+//! The harness side consumes the payload shipped by
+//! [`aura_os_super_agent::harness_handoff::build_super_agent_session_init`]
+//! and the `/api/super_agent/tools/:name` dispatcher in
+//! [`crate::handlers::super_agent_tools`], so user-visible behavior
+//! stays bit-compatible with what the in-process route produced
+//! before retirement.
 
 use std::sync::Arc;
 
@@ -75,10 +59,13 @@ use super::chat::{
 /// How a super-agent turn should be executed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostMode {
-    /// Legacy path: run the LLM loop and dispatch tools inside
-    /// `aura-os-server` via [`aura_os_super_agent::stream::SuperAgentStream`].
+    /// Retired path: the legacy in-process `SuperAgentStream` loop
+    /// was removed in Phase 6. This variant survives only so that an
+    /// operator pin (`host_mode:in_process` tag) produces a clean
+    /// diagnostic instead of silently falling back to the harness
+    /// path, which would hide the misconfigured record.
     InProcess,
-    /// Phase 3+ path: delegate the loop to an `aura-harness` node and
+    /// Default path: delegate the loop to an `aura-harness` node and
     /// bridge events back through the shared `HarnessOutbound`
     /// broadcast.
     Harness,
@@ -135,22 +122,20 @@ pub struct HarnessSuperAgentTurn<'a> {
 /// Execute a single super-agent turn on an aura-harness node and
 /// return an SSE response streaming frames as they arrive.
 ///
-/// Mirrors [`super::chat::handle_super_agent_stream`]:
+/// The handler:
 ///
-/// - wires persistence via [`spawn_chat_persist_task`] so the existing
-///   transcript pipeline keeps working regardless of host mode,
+/// - wires persistence via [`spawn_chat_persist_task`] so the session
+///   transcript is written to storage regardless of host,
 /// - registers the run in `state.super_agent_runs` so a reset
 ///   (`cancel_super_agent_run`) can tear it down mid-flight,
 /// - produces a `broadcast::Receiver<HarnessOutbound>` that
 ///   [`super::chat::harness_broadcast_to_sse`] can consume unchanged.
 ///
-/// The harness path does **not** write into
-/// `AppState.super_agent_messages` — the harness records its own
-/// transcript in the kernel log, and on cold start the caller
-/// reconstructs the LLM context from session events (same as today's
-/// in-process path when the in-memory cache is empty). This keeps
-/// cache semantics from diverging while phase 6 still plans to
-/// delete the cache altogether.
+/// The harness records its own transcript in the kernel log, and on
+/// cold start the caller reconstructs the LLM context from session
+/// events — there is no in-process conversation cache (the legacy
+/// `super_agent_messages` cache was removed with the in-process
+/// path).
 pub async fn handle_super_agent_via_harness(
     params: HarnessSuperAgentTurn<'_>,
 ) -> ApiResult<SseResponse> {

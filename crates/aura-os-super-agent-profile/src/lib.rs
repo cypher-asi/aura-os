@@ -6,12 +6,14 @@
 //! for [`aura_os_core::ToolDomain`] and `serde`). This lets the same
 //! profile be:
 //!
-//! 1. consumed in-process by today's `SuperAgentStream` path
-//!    (via re-exports in `aura-os-super-agent`, preserving existing
-//!    call sites);
+//! 1. consumed by the harness-hosted super-agent dispatcher in
+//!    `aura-os-server` (via re-exports in `aura-os-super-agent`);
 //! 2. serialized as JSON and shipped to a harness-hosted agent so the
 //!    harness can render the same system prompt, classify intents with
 //!    the same rules, and filter tools by the same domain manifest.
+//!
+//! Historically (pre-Phase 6) the profile was also consumed by an
+//! in-process `SuperAgentStream` loop; that path has been retired.
 //!
 //! The public API is `pub` at the crate root via re-exports so
 //! consumers can write `aura_os_super_agent_profile::classify_intent`

@@ -1,9 +1,10 @@
 //! Prompt templates for the CEO super-agent.
 //!
-//! Extracted into the profile crate so that both the in-process
-//! `SuperAgentStream` path and a future harness-hosted path can build
-//! identical system prompts without dragging the whole
-//! `aura-os-super-agent` dependency graph along.
+//! Extracted into the profile crate so that the harness-hosted
+//! super-agent path can build system prompts without dragging the
+//! whole `aura-os-super-agent` dependency graph along. (The legacy
+//! in-process `SuperAgentStream` path that originally shared this
+//! prompt was retired in Phase 6.)
 
 /// Build the CEO super-agent system prompt for a given organization.
 ///

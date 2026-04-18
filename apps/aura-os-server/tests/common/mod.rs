@@ -339,7 +339,6 @@ pub fn build_test_app_from_store(
         orbit_client: None,
         validation_cache,
         super_agent_service,
-        super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
         super_agent_runs: Arc::new(Mutex::new(HashMap::new())),
     };
 

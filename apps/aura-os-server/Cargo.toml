@@ -50,19 +50,11 @@ uuid = { version = "1", features = ["v4"] }
 url = { version = "2", features = ["serde"] }
 
 [features]
-default = ["legacy_super_agent_stream"]
+default = []
 # Enables the real Chromium/CDP-backed browser backend. Requires a local
 # Chromium/Chrome executable at runtime; Chromium is launched lazily on
 # the first browser spawn so the server boots even without it.
 browser-cdp = ["aura-os-browser/cdp"]
-# Phase 6 rollout switch: when ON, agents tagged `host_mode:in_process`
-# (or legacy records that have not yet been migrated) are executed via
-# the in-process `SuperAgentStream`. When OFF, the in-process branch
-# returns an error and every super-agent turn is forced through the
-# harness route. The feature is ON by default so existing deployments
-# keep working; ops will flip it OFF as the final step of the Phase 6
-# rollout, once metrics confirm harness parity.
-legacy_super_agent_stream = []
 
 [dev-dependencies]
 tempfile = "3"
