@@ -1,0 +1,232 @@
+[
+  {
+    "sha": "1111111111111111111111111111111111111111",
+    "author": {
+      "name": "Aura Bot",
+      "email": "bot@aura.ai"
+    },
+    "committedAt": "2026-04-17T07:00:00.000Z",
+    "subject": "Persist pending chat messages across refresh",
+    "body": "",
+    "parents": [
+      "parent-1"
+    ],
+    "files": [
+      "interface/src/chat/pending.ts"
+    ],
+    "stats": {
+      "fileCount": 1,
+      "insertions": 42,
+      "deletions": 6
+    },
+    "committedAtMs": 1776409200000,
+    "cleanSubject": "Persist pending chat messages across refresh",
+    "keywords": [
+      "persist",
+      "pending",
+      "chat",
+      "messages",
+      "across",
+      "refresh"
+    ],
+    "fileGroups": [
+      "interface/src/chat"
+    ],
+    "primaryArea": "Interface",
+    "areas": [
+      "Interface"
+    ]
+  },
+  {
+    "sha": "2222222222222222222222222222222222222222",
+    "author": {
+      "name": "Aura Bot",
+      "email": "bot@aura.ai"
+    },
+    "committedAt": "2026-04-17T07:20:00.000Z",
+    "subject": "Deduplicate optimistic chat messages after stream recovery",
+    "body": "",
+    "parents": [
+      "parent-2"
+    ],
+    "files": [
+      "interface/src/chat/snapshot.ts"
+    ],
+    "stats": {
+      "fileCount": 1,
+      "insertions": 28,
+      "deletions": 4
+    },
+    "committedAtMs": 1776410400000,
+    "cleanSubject": "Deduplicate optimistic chat messages after stream recovery",
+    "keywords": [
+      "deduplicate",
+      "optimistic",
+      "chat",
+      "messages",
+      "after",
+      "stream",
+      "recovery"
+    ],
+    "fileGroups": [
+      "interface/src/chat"
+    ],
+    "primaryArea": "Interface",
+    "areas": [
+      "Interface"
+    ]
+  },
+  {
+    "sha": "3333333333333333333333333333333333333333",
+    "author": {
+      "name": "Release Bot",
+      "email": "release@aura.ai"
+    },
+    "committedAt": "2026-04-17T10:50:00.000Z",
+    "subject": "Retry changelog generation when cached session is stale",
+    "body": "",
+    "parents": [
+      "parent-3"
+    ],
+    "files": [
+      "infra/scripts/release/generate-daily-changelog.mjs"
+    ],
+    "stats": {
+      "fileCount": 1,
+      "insertions": 35,
+      "deletions": 5
+    },
+    "committedAtMs": 1776423000000,
+    "cleanSubject": "Retry changelog generation when cached session is stale",
+    "keywords": [
+      "retry",
+      "changelog",
+      "generation",
+      "cached",
+      "session",
+      "stale"
+    ],
+    "fileGroups": [
+      "infra/scripts/release"
+    ],
+    "primaryArea": "Release Infrastructure",
+    "areas": [
+      "Release Infrastructure"
+    ]
+  },
+  {
+    "sha": "4444444444444444444444444444444444444444",
+    "author": {
+      "name": "Release Bot",
+      "email": "release@aura.ai"
+    },
+    "committedAt": "2026-04-17T11:05:00.000Z",
+    "subject": "Validate changelog drafts against stricter release rubric",
+    "body": "",
+    "parents": [
+      "parent-4"
+    ],
+    "files": [
+      "infra/scripts/release/generate-daily-changelog.mjs"
+    ],
+    "stats": {
+      "fileCount": 1,
+      "insertions": 31,
+      "deletions": 3
+    },
+    "committedAtMs": 1776423900000,
+    "cleanSubject": "Validate changelog drafts against stricter release rubric",
+    "keywords": [
+      "validate",
+      "changelog",
+      "drafts",
+      "against",
+      "stricter",
+      "release",
+      "rubric"
+    ],
+    "fileGroups": [
+      "infra/scripts/release"
+    ],
+    "primaryArea": "Release Infrastructure",
+    "areas": [
+      "Release Infrastructure"
+    ]
+  },
+  {
+    "sha": "5555555555555555555555555555555555555555",
+    "author": {
+      "name": "Aura Bot",
+      "email": "bot@aura.ai"
+    },
+    "committedAt": "2026-04-17T16:10:00.000Z",
+    "subject": "Respect active model selection in manual loop controls",
+    "body": "",
+    "parents": [
+      "parent-5"
+    ],
+    "files": [
+      "interface/src/loop/control.ts"
+    ],
+    "stats": {
+      "fileCount": 1,
+      "insertions": 24,
+      "deletions": 2
+    },
+    "committedAtMs": 1776442200000,
+    "cleanSubject": "Respect active model selection in manual loop controls",
+    "keywords": [
+      "respect",
+      "active",
+      "model",
+      "selection",
+      "manual",
+      "loop",
+      "controls"
+    ],
+    "fileGroups": [
+      "interface/src/loop"
+    ],
+    "primaryArea": "Interface",
+    "areas": [
+      "Interface"
+    ]
+  },
+  {
+    "sha": "6666666666666666666666666666666666666666",
+    "author": {
+      "name": "Aura Bot",
+      "email": "desktop@aura.ai"
+    },
+    "committedAt": "2026-04-17T22:00:00.000Z",
+    "subject": "Surface clearer API errors in desktop chat",
+    "body": "",
+    "parents": [
+      "parent-6"
+    ],
+    "files": [
+      "apps/aura-os-desktop/src/chat/errors.ts"
+    ],
+    "stats": {
+      "fileCount": 1,
+      "insertions": 18,
+      "deletions": 4
+    },
+    "committedAtMs": 1776463200000,
+    "cleanSubject": "Surface clearer API errors in desktop chat",
+    "keywords": [
+      "surface",
+      "clearer",
+      "errors",
+      "desktop",
+      "chat"
+    ],
+    "fileGroups": [
+      "apps/aura-os-desktop/src"
+    ],
+    "primaryArea": "Desktop",
+    "areas": [
+      "Desktop"
+    ]
+  }
+]
