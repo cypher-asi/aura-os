@@ -5,7 +5,7 @@ use tracing::info;
 use crate::harness::{HarnessLink, HarnessSession, SessionConfig};
 use crate::harness_url::local_harness_base_url;
 use crate::ws_bridge::spawn_ws_bridge;
-use aura_protocol::{InboundMessage, OutboundMessage, SessionInit};
+use aura_protocol::{AgentPermissionsWire, InboundMessage, OutboundMessage, SessionInit};
 
 #[derive(Debug, Clone)]
 pub struct LocalHarness {
@@ -59,8 +59,7 @@ impl HarnessLink for LocalHarness {
                 agent_id: config.agent_id,
                 provider_config: config.provider_config,
                 intent_classifier: None,
-                agent_permissions: None,
-                preset: None,
+                agent_permissions: AgentPermissionsWire::default(),
             })))
             .context("local harness session_init send failed")?;
 

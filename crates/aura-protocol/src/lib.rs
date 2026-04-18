@@ -5,6 +5,22 @@
 //!
 //! This crate is consumed by both the harness server (`aura-node`) and
 //! any client implementation (e.g. `aura-os-link`).
+//!
+//! # Agent permissions model
+//!
+//! [`SessionInit::agent_permissions`] is **required** on every session.
+//! The harness enforces these permissions unconditionally — there is no
+//! role-based fallback, no named preset, and no legacy "no-permissions"
+//! default. Every caller opening a session must send an explicit
+//! [`AgentPermissionsWire`] value describing the scope + capability bundle
+//! the session is allowed to exercise.
+//!
+//! The single [`crate::SessionInit`] type drives all agent behavior: the
+//! free-text `role` field is a UI label with no system meaning; what an
+//! agent can actually do is determined entirely by its
+//! [`AgentPermissionsWire`] (capabilities + [`AgentScopeWire`]). Spawned
+//! child agents must carry a strict subset of their parent's permissions;
+//! see `aura_core::AgentPermissions::contains` on the harness side.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -109,20 +125,11 @@ pub struct SessionInit {
     /// `tool_definitions` (which are opaque to the classifier otherwise).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub intent_classifier: Option<IntentClassifierSpec>,
-    /// Phase 5: explicit `AgentPermissions` bundle for this session. When
-    /// set, the harness enforces scope + capability checks for cross-agent
-    /// tools (`spawn_agent`, `send_to_agent`, `agent_lifecycle`,
-    /// `get_agent_state`, `delegate_task`). When `None` the harness falls
-    /// back to [`Self::preset`] resolution, then to no-permissions
-    /// (enforcement off — legacy behavior).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub agent_permissions: Option<AgentPermissionsWire>,
-    /// Phase 5: named permission preset to apply when
-    /// [`Self::agent_permissions`] is `None`. Currently only `"ceo"` is
-    /// recognized by the harness and resolves to the CEO-superagent
-    /// preset. Unknown presets are ignored (enforcement stays off).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub preset: Option<String>,
+    /// Explicit [`AgentPermissionsWire`] bundle for this session. Required
+    /// on every session; the harness enforces scope + capability checks
+    /// unconditionally against these grants. See the module-level
+    /// "Agent permissions model" section for details.
+    pub agent_permissions: AgentPermissionsWire,
 }
 
 /// Wire-compatible mirror of `aura_core::AgentPermissions`.

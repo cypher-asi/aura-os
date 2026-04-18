@@ -20,7 +20,8 @@ use std::collections::HashMap;
 
 use aura_os_super_agent_profile::{SuperAgentProfile, ToolManifestEntry};
 use aura_protocol::{
-    IntentClassifierRule, IntentClassifierSpec, InstalledTool, SessionInit, ToolAuth,
+    AgentPermissionsWire, IntentClassifierRule, IntentClassifierSpec, InstalledTool, SessionInit,
+    ToolAuth,
 };
 
 /// URL path prefix every super-agent tool is proxied through.
@@ -180,8 +181,15 @@ pub fn build_super_agent_session_init(
         agent_id: None,
         provider_config: None,
         intent_classifier: Some(profile_to_intent_classifier_spec(profile)),
-        agent_permissions: None,
-        preset: None,
+        // TODO(subagent-B): populate real CEO permissions here. This is
+        // the bootstrap super-agent session and should carry
+        // `AgentPermissionsWire::from(AgentPermissions::ceo_preset())`
+        // so the harness grants universe scope + every capability.
+        // Empty-default placeholder keeps the file compiling after
+        // `agent_permissions` became a required SessionInit field; the
+        // aura-os backend subagent rewires this as part of the unified
+        // super-agent dispatch path.
+        agent_permissions: AgentPermissionsWire::default(),
     }
 }
 

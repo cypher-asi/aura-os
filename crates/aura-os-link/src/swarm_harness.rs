@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
-use aura_protocol::{InboundMessage, SessionInit};
+use aura_protocol::{AgentPermissionsWire, InboundMessage, SessionInit};
 
 use crate::harness::{HarnessLink, HarnessSession, SessionConfig};
 use crate::ws_bridge::spawn_ws_bridge;
@@ -284,8 +284,7 @@ impl HarnessLink for SwarmHarness {
                 agent_id: config.agent_id,
                 provider_config: config.provider_config,
                 intent_classifier: None,
-                agent_permissions: None,
-                preset: None,
+                agent_permissions: AgentPermissionsWire::default(),
             })))
             .context("swarm session_init send failed")?;
 
