@@ -22,6 +22,32 @@
 //! and runs the same tier classifier + tool dispatcher the in-process
 //! path uses, so user-visible behavior is intended to stay
 //! bit-compatible with the in-process route.
+//!
+//! # Phase 6 rollout plan
+//!
+//! The unification plan (`plans/unify_super_agents_into_harness_630aa7f8.plan.md`,
+//! section **"Phase 6 - Retire the super-agent type"**) stages the
+//! cutover across three deploys so every step is reversible:
+//!
+//! 1. **Deploy with `legacy_super_agent_stream` feature ON (current default).**
+//!    The
+//!    [`crate::super_agent_migration::migrate_legacy_super_agents`]
+//!    startup hook flips existing records to `host_mode:harness` and
+//!    stamps `migration:super_agent_v1`, while newly-created
+//!    super-agents default to the harness route via
+//!    [`crate::handlers::super_agent::setup_super_agent`]. Records
+//!    explicitly pinned with `host_mode:in_process` still work.
+//! 2. **Rebuild with `legacy_super_agent_stream` feature OFF.** The
+//!    dispatcher's `HostMode::InProcess` branch in `chat.rs` now
+//!    returns an error, so any straggler pinned to the legacy path
+//!    fails loudly instead of silently running the in-process loop.
+//!    Ops flip this once harness-parity metrics look good. Roll back
+//!    by rebuilding with the feature ON.
+//! 3. **Follow-up PR:** delete
+//!    [`aura_os_super_agent::stream::SuperAgentStream`],
+//!    `handle_super_agent_stream`, the in-memory
+//!    `AppState.super_agent_messages` cache, and the rest of the
+//!    legacy plumbing. Out of scope for this commit.
 
 use std::sync::Arc;
 
@@ -445,6 +471,7 @@ mod tests {
             profile_id: None,
             tags: tags.iter().map(|s| (*s).to_string()).collect(),
             is_pinned: false,
+            local_workspace_path: None,
             created_at: now,
             updated_at: now,
         }
@@ -469,6 +496,25 @@ mod tests {
         std::env::remove_var(HOST_MODE_ENV);
         let agent = mk_agent(&["HOST_MODE:HARNESS"]);
         assert_eq!(host_mode_for_agent(&agent), HostMode::Harness);
+    }
+
+    // Phase-6 routing parity: legacy super-agent record with the
+    // Phase-4 `host_mode:harness` tag must flip to the harness route,
+    // while one carrying the explicit `host_mode:in_process` operator
+    // override must stay on the legacy path — even though both records
+    // also carry the `super_agent` tag.
+    #[test]
+    fn phase6_harness_tag_wins_over_legacy_super_agent() {
+        std::env::remove_var(HOST_MODE_ENV);
+        let agent = mk_agent(&["super_agent", HARNESS_HOST_TAG]);
+        assert_eq!(host_mode_for_agent(&agent), HostMode::Harness);
+    }
+
+    #[test]
+    fn phase6_in_process_pin_stays_on_legacy_path() {
+        std::env::remove_var(HOST_MODE_ENV);
+        let agent = mk_agent(&["super_agent", "host_mode:in_process"]);
+        assert_eq!(host_mode_for_agent(&agent), HostMode::InProcess);
     }
 
     // Env-var tests are racy under cargo test's thread pool because

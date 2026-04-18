@@ -81,6 +81,14 @@ pub(crate) async fn setup_super_agent(
 
     let prompt = aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
 
+    // Phase 6: new super-agent records default to the harness route
+    // and advertise the CEO preset. See
+    // `plans/unify_super_agents_into_harness_630aa7f8.plan.md`
+    // → "Phase 6 - Retire the super-agent type". Operators can still
+    // opt individual records back to the legacy in-process path by
+    // swapping `host_mode:harness` for `host_mode:in_process` via the
+    // agent update endpoint (respected by
+    // `handlers::agents::super_agent_harness::host_mode_for_agent`).
     let net_req = aura_os_network::CreateAgentRequest {
         name: "CEO".to_string(),
         role: Some("super_agent".to_string()),
@@ -94,7 +102,11 @@ pub(crate) async fn setup_super_agent(
         harness: None,
         machine_type: Some("local".to_string()),
         org_id: Some(org_id),
-        tags: None,
+        tags: Some(vec![
+            "super_agent".to_string(),
+            crate::super_agent_migration::HOST_MODE_HARNESS_TAG.to_string(),
+            crate::super_agent_migration::PRESET_CEO_TAG.to_string(),
+        ]),
     };
 
     let net_agent = network

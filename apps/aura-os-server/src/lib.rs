@@ -13,6 +13,7 @@ mod network_bridge;
 pub(crate) mod persistence;
 pub(crate) mod router;
 pub(crate) mod state;
+pub mod super_agent_migration;
 
 pub use app_builder::build_app_state;
 pub use harness_client::{
@@ -27,6 +28,9 @@ pub use harness_super_agent_driver::{
 };
 pub use router::{build_local_api_cors_layer, create_router_with_interface};
 pub use state::{ActiveAutomaton, AppState, CachedSession, SuperAgentRun};
+pub use super_agent_migration::{
+    migrate_legacy_super_agents, MigrationError, MigrationReport,
+};
 
 /// Discover common user-level binary directories (pip `--user` scripts, `~/.local/bin`,
 /// etc.) and append any that exist but are missing from `PATH`.  Call once at startup

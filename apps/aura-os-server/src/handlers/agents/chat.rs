@@ -1858,6 +1858,14 @@ async fn dispatch_super_agent_via_harness(
     .await
 }
 
+// Phase 6: this function stays compiled in by default (feature
+// `legacy_super_agent_stream` is ON) so existing deployments keep the
+// in-process route available. When the feature is flipped OFF during
+// the final rollout step, the dispatcher above short-circuits to an
+// error and this function becomes dead code — we allow that so
+// `--no-default-features` builds stay clean. A follow-up PR will
+// delete the function outright once the harness path has soaked.
+#[cfg_attr(not(feature = "legacy_super_agent_stream"), allow(dead_code))]
 async fn handle_super_agent_stream(
     state: &AppState,
     jwt: &str,
@@ -2108,8 +2116,35 @@ pub(crate) async fn send_agent_event_stream(
                 .await;
             }
             HostMode::InProcess => {
-                info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
-                return handle_super_agent_stream(&state, &jwt, &auth_session, &agent, body).await;
+                #[cfg(feature = "legacy_super_agent_stream")]
+                {
+                    info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
+                    return handle_super_agent_stream(
+                        &state,
+                        &jwt,
+                        &auth_session,
+                        &agent,
+                        body,
+                    )
+                    .await;
+                }
+                #[cfg(not(feature = "legacy_super_agent_stream"))]
+                {
+                    // Phase 6 rollout step (b): once ops flip the
+                    // `legacy_super_agent_stream` feature OFF, any
+                    // record still carrying `host_mode:in_process`
+                    // fails loudly instead of silently running the
+                    // legacy loop. The fix is to migrate the record
+                    // (or drop the tag).
+                    warn!(
+                        %agent_id,
+                        "SuperAgent pinned to in_process but legacy_super_agent_stream feature is disabled"
+                    );
+                    drop(body);
+                    return Err(ApiError::internal(
+                        "legacy in-process super-agent path is disabled (legacy_super_agent_stream feature)",
+                    ));
+                }
             }
         }
     }
