@@ -12,9 +12,9 @@ use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
     agents, auth, billing, browser, dev_loop, feed, feedback, files, follows, generation,
-    harness_proxy, leaderboard, log, notes, org_tools, orgs, process, project_stats, projects,
-    remote_files, remote_terminal, specs, super_agent, super_agent_tools, swarm, system, tasks,
-    terminal, users, ws,
+    harness_proxy, leaderboard, log, marketplace, notes, org_tools, orgs, process, project_stats,
+    agent_tools, projects, remote_files, remote_terminal, specs, super_agent, swarm, system,
+    tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -89,6 +89,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(generation_routes())
         .merge(harness_proxy_routes())
         .merge(notes_routes())
+        .merge(marketplace_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -478,11 +479,23 @@ fn feedback_routes() -> Router<AppState> {
         )
 }
 
+fn marketplace_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/marketplace/agents",
+            get(marketplace::list_marketplace_agents),
+        )
+        .route(
+            "/api/marketplace/agents/:agent_id",
+            get(marketplace::get_marketplace_agent),
+        )
+}
+
 fn super_agent_routes() -> Router<AppState> {
     Router::new()
         .route(
             "/api/super-agent/setup",
-            post(super_agent::setup_super_agent),
+            post(super_agent::setup_ceo_agent),
         )
         .route(
             "/api/super-agent/orchestrations",
@@ -496,16 +509,17 @@ fn super_agent_routes() -> Router<AppState> {
             "/api/super-agent/events",
             get(super_agent::list_pending_events),
         )
-        // Phase 3: dispatcher that lets a harness-hosted super-agent
-        // execute in-process super-agent tools via a generic
-        // `InstalledTool` handoff (see
-        // `aura_os_super_agent::harness_handoff`).
+        // Dispatcher that lets a harness-hosted agent execute
+        // cross-agent tools (spawn_agent, control_agent, etc.) in
+        // process. Gated per-agent by `AgentPermissions::capabilities`
+        // at `send_agent_event_stream` build time — this route merely
+        // resolves the tool by name.
         .route(
-            "/api/super_agent/tools/:name",
-            post(super_agent_tools::dispatch_super_agent_tool),
+            "/api/agent_tools/:name",
+            post(agent_tools::dispatch_agent_tool),
         )
-        // Phase 4: non-blocking harness reachability probe for the
-        // super-agent editor's Local/Cloud host-mode toggle.
+        // Non-blocking harness reachability probe for the agent
+        // editor's Local/Cloud toggle.
         .route(
             "/api/super_agent/harness/health",
             get(super_agent::harness_health),

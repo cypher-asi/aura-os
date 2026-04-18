@@ -53,6 +53,8 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
         revenue_usd: 0.0,
         reputation: 0.0,
         local_workspace_path: None,
+        permissions: aura_os_core::AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }

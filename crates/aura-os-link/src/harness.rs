@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use tokio::sync::{broadcast, mpsc};
 
 use aura_protocol::{
-    ConversationMessage, InboundMessage, InstalledIntegration, OutboundMessage,
-    SessionProviderConfig,
+    AgentPermissionsWire, ConversationMessage, InboundMessage, InstalledIntegration,
+    IntentClassifierSpec, OutboundMessage, SessionProviderConfig,
 };
 
 #[derive(Default)]
@@ -32,6 +32,15 @@ pub struct SessionConfig {
     pub aura_org_id: Option<String>,
     /// Optional per-session provider override for Aura BYOK.
     pub provider_config: Option<SessionProviderConfig>,
+    /// Capability + scope bundle the harness must enforce for this
+    /// session. Defaults to [`AgentPermissionsWire::default`] (empty
+    /// capabilities, universe scope) when the caller does not populate
+    /// it; callers on the unified agent chat path always pass the
+    /// agent's `permissions` through.
+    pub agent_permissions: AgentPermissionsWire,
+    /// Optional per-turn intent classifier. CEO-style agents populate
+    /// this so the harness narrows the visible tool set each turn.
+    pub intent_classifier: Option<IntentClassifierSpec>,
 }
 
 pub struct HarnessSession {

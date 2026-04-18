@@ -44,24 +44,6 @@ async fn main() {
     let db_path = data_dir.join("db");
     let state = aura_os_server::build_app_state(&db_path).expect("failed to open database");
 
-    // Phase 6: flip legacy super-agent records to the harness route,
-    // best-effort. Runs once per boot; the `AURA_SUPER_AGENT_MIGRATE`
-    // env var controls whether this fires (`auto` = run, `off` = skip).
-    // Never panics — any per-agent failure is logged and the server
-    // keeps booting.
-    match aura_os_server::migrate_legacy_super_agents(&state).await {
-        Ok(report) => info!(
-            examined = report.examined,
-            migrated = report.migrated,
-            already_migrated = report.already_migrated,
-            skipped_opt_out = report.skipped_opt_out,
-            failed = report.failed,
-            skipped_via_env = report.skipped_via_env,
-            "super-agent migrator: summary"
-        ),
-        Err(err) => warn!(error = %err, "super-agent migrator: aborted"),
-    }
-
     let interface_dir = find_interface_dir();
     if let Some(ref dir) = interface_dir {
         info!(path = %dir.display(), "Serving interface");

@@ -16,7 +16,14 @@ pub(crate) struct SetupResponse {
     pub created: bool,
 }
 
-pub(crate) async fn setup_super_agent(
+/// Idempotent CEO-agent bootstrap.
+///
+/// Looks up the caller's first org, scans its agents for anyone already
+/// holding the full [`AgentPermissions::ceo_preset`] bundle, and either
+/// returns that record or creates a new one seeded with the preset via
+/// the standard `create_agent` network pipeline. There is deliberately
+/// no role or tag check — permissions are the single source of truth.
+pub(crate) async fn setup_ceo_agent(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     AuthSession(_session): AuthSession,
@@ -35,37 +42,9 @@ pub(crate) async fn setup_super_agent(
 
     if let Some(net_agent) = net_agents
         .iter()
-        .find(|a| a.role.as_deref() == Some("super_agent"))
+        .find(|a| a.permissions.is_ceo_preset())
     {
-        let fresh_prompt =
-            aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
-        let needs_update = net_agent
-            .system_prompt
-            .as_deref()
-            .map(|p| p.contains("Default Org") || !p.contains(&org_name))
-            .unwrap_or(true);
-
-        let source = if needs_update {
-            let update_req = aura_os_network::UpdateAgentRequest {
-                name: None,
-                role: None,
-                personality: None,
-                system_prompt: Some(fresh_prompt),
-                skills: None,
-                icon: None,
-                harness: None,
-                machine_type: None,
-                vm_id: None,
-                tags: None,
-            };
-            network
-                .update_agent(&net_agent.id, &jwt, &update_req)
-                .await
-                .ok()
-        } else {
-            None
-        };
-        let mut agent = agent_from_network(source.as_ref().unwrap_or(net_agent));
+        let mut agent = agent_from_network(net_agent);
         let _ = state.agent_service.apply_runtime_config(&mut agent);
         if agent.icon.is_none() {
             if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
@@ -79,34 +58,23 @@ pub(crate) async fn setup_super_agent(
         }));
     }
 
-    let prompt = aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
+    let template = aura_os_super_agent::ceo::ceo_agent_template(&org_name, &org_id);
 
-    // Phase 6: new super-agent records default to the harness route
-    // and advertise the CEO preset. See
-    // `plans/unify_super_agents_into_harness_630aa7f8.plan.md`
-    // → "Phase 6 - Retire the super-agent type". Operators can still
-    // opt individual records back to the legacy in-process path by
-    // swapping `host_mode:harness` for `host_mode:in_process` via the
-    // agent update endpoint (respected by
-    // `handlers::agents::super_agent_harness::host_mode_for_agent`).
     let net_req = aura_os_network::CreateAgentRequest {
-        name: "CEO".to_string(),
-        role: Some("super_agent".to_string()),
-        personality: Some(
-            "Strategic, efficient, and proactive. I orchestrate your entire development operation."
-                .to_string(),
-        ),
-        system_prompt: Some(prompt),
+        name: template.name,
+        role: Some(template.role),
+        personality: Some(template.personality),
+        system_prompt: Some(template.system_prompt),
         skills: None,
         icon: None,
         harness: None,
         machine_type: Some("local".to_string()),
         org_id: Some(org_id),
-        tags: Some(vec![
-            "super_agent".to_string(),
-            crate::super_agent_migration::HOST_MODE_HARNESS_TAG.to_string(),
-            crate::super_agent_migration::PRESET_CEO_TAG.to_string(),
-        ]),
+        tags: None,
+        listing_status: None,
+        expertise: None,
+        permissions: template.permissions,
+        intent_classifier: template.intent_classifier,
     };
 
     let net_agent = network
@@ -132,7 +100,7 @@ pub(crate) async fn setup_super_agent(
             .await;
     }
 
-    info!(agent_id = %agent.agent_id, "SuperAgent created");
+    info!(agent_id = %agent.agent_id, "CEO agent created");
     Ok(Json(SetupResponse {
         agent,
         created: true,

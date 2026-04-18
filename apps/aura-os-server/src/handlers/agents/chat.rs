@@ -21,8 +21,7 @@ const DEFAULT_AGENT_HISTORY_WINDOW_LIMIT: usize = 80;
 const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 
 use aura_os_core::{
-    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId,
-    SessionEvent,
+    AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId, SessionEvent,
 };
 use aura_os_link::{
     ConversationMessage, HarnessInbound, HarnessOutbound, MessageAttachment, SessionConfig,
@@ -56,16 +55,6 @@ pub(crate) struct ChatPersistCtx {
     session_id: String,
     project_agent_id: String,
     project_id: String,
-}
-
-impl ChatPersistCtx {
-    /// aura-os session id this persist context is writing into.
-    /// Exposed so the harness-hosted super-agent route can propagate
-    /// the session id into `SessionInit::aura_session_id` for cross-
-    /// system correlation.
-    pub(crate) fn session_id(&self) -> String {
-        self.session_id.clone()
-    }
 }
 
 async fn resolve_chat_session(
@@ -748,28 +737,6 @@ async fn remove_live_session(state: &AppState, key: &str) {
     reg.remove(key);
 }
 
-/// Cancel any in-flight super-agent spawn for `session_key` and bump its
-/// generation counter. Returns the new generation so the caller can register
-/// a freshly-spawned run under it. The generation is what lets the spawn's
-/// final cache write be rejected if it raced past cancellation.
-async fn cancel_super_agent_run(state: &AppState, session_key: &str) -> u64 {
-    let mut runs = state.super_agent_runs.lock().await;
-    let next_gen = runs.get(session_key).map(|r| r.generation + 1).unwrap_or(1);
-    if let Some(existing) = runs.remove(session_key) {
-        existing.cancel.cancel();
-        if let Some(join) = existing.join {
-            join.abort();
-        }
-        info!(
-            session_key,
-            prior_generation = existing.generation,
-            new_generation = next_gen,
-            "super agent: cancelled in-flight run"
-        );
-    }
-    next_gen
-}
-
 pub(crate) async fn reset_agent_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -777,9 +744,6 @@ pub(crate) async fn reset_agent_session(
 ) -> ApiResult<StatusCode> {
     let session_key = format!("agent:{agent_id}");
     remove_live_session(&state, &session_key).await;
-    let sa_key = format!("super_agent:{agent_id}");
-    remove_live_session(&state, &sa_key).await;
-    cancel_super_agent_run(&state, &sa_key).await;
     let _ = setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true).await;
     info!(%agent_id, "Agent chat session reset");
     Ok(StatusCode::NO_CONTENT)
@@ -1759,103 +1723,10 @@ async fn open_harness_chat_stream(
     ))
 }
 
-/// Resolve the active org for the super agent. Tries network first, then
-/// falls back to the org_id stored on local projects.
-async fn resolve_org_for_super_agent(state: &AppState, jwt: &str) -> (String, String) {
-    if let Some(ref client) = state.network_client {
-        if let Ok(orgs) = client.list_orgs(jwt).await {
-            if let Some(org) = orgs.first() {
-                return (org.name.clone(), org.id.clone());
-            }
-        }
-    }
-    // Fallback: derive org from local projects
-    if let Ok(projects) = state.project_service.list_projects() {
-        if let Some(p) = projects.first() {
-            let oid = p.org_id.to_string();
-            if oid != aura_os_core::OrgId::nil().to_string() {
-                return (String::new(), oid);
-            }
-        }
-    }
-    ("Default Org".into(), "default".into())
-}
-
-/// Harness-hosted super-agent dispatch. Assembles the pieces the
-/// [`super::super_agent_harness::handle_super_agent_via_harness`]
-/// handler needs (org resolution, conversation history,
-/// persistence) and delegates. This is the only remaining
-/// super-agent entry path — the legacy in-process
-/// `handle_super_agent_stream` was retired in Phase 6.
-async fn dispatch_super_agent_via_harness(
-    state: &AppState,
-    jwt: &str,
-    _auth_session: &aura_os_core::ZeroAuthSession,
-    agent: &Agent,
-    body: SendChatRequest,
-) -> ApiResult<SseResponse> {
-    use super::super_agent_harness::{handle_super_agent_via_harness, HarnessSuperAgentTurn};
-
-    let agent_id = agent.agent_id;
-    let force_new = body.new_session.unwrap_or(false);
-    let (org_name, org_id) = resolve_org_for_super_agent(state, jwt).await;
-
-    let conversation_history: Option<Vec<aura_protocol::ConversationMessage>> = if force_new {
-        None
-    } else {
-        let stored = load_current_session_events_for_agent(state, &agent_id, jwt).await;
-        if stored.is_empty() {
-            None
-        } else {
-            let bounded =
-                slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
-            Some(session_events_to_conversation_history(&bounded))
-        }
-    };
-
-    let persist_ctx =
-        setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt, force_new).await;
-    if persist_ctx.is_none() {
-        warn!(%agent_id, "super agent (harness): persistence context unavailable");
-    }
-    let aura_session_id = persist_ctx.as_ref().map(|c| c.session_id());
-
-    let protocol_attachments: Option<Vec<aura_protocol::MessageAttachment>> =
-        body.attachments.as_ref().map(|atts| {
-            atts.iter()
-                .map(|a| aura_protocol::MessageAttachment {
-                    type_: a.type_.clone(),
-                    media_type: a.media_type.clone(),
-                    data: a.data.clone(),
-                    name: a.name.clone(),
-                })
-                .collect()
-        });
-
-    let profile = Arc::new(aura_os_super_agent_profile::SuperAgentProfile::ceo_default());
-
-    handle_super_agent_via_harness(HarnessSuperAgentTurn {
-        state,
-        jwt,
-        agent,
-        org_name: &org_name,
-        org_id: &org_id,
-        user_content: body.content,
-        attachments: protocol_attachments,
-        model_override: body.model,
-        conversation_history,
-        force_new_session: force_new,
-        persist_ctx,
-        aura_session_id,
-        profile,
-    })
-    .await
-}
-
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    crate::state::AuthSession(auth_session): crate::state::AuthSession,
+    crate::state::AuthSession(_auth_session): crate::state::AuthSession,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
@@ -1868,41 +1739,6 @@ pub(crate) async fn send_agent_event_stream(
     };
     require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
-
-    if agent.role == "super_agent" || agent.tags.contains(&"super_agent".to_string()) {
-        use super::super_agent_harness::{host_mode_for_agent, HostMode};
-        match host_mode_for_agent(&agent) {
-            HostMode::Harness => {
-                info!(
-                    %agent_id,
-                    "SuperAgent detected (host_mode=harness) — routing to harness-hosted handler"
-                );
-                return dispatch_super_agent_via_harness(
-                    &state,
-                    &jwt,
-                    &auth_session,
-                    &agent,
-                    body,
-                )
-                .await;
-            }
-            HostMode::InProcess => {
-                // Phase 6 (retirement): the in-process SuperAgentStream
-                // path has been deleted. Any record still pinned with
-                // `host_mode:in_process` now fails loudly — the fix is
-                // to migrate the record (remove the pin) so it routes
-                // through the harness-hosted path.
-                warn!(
-                    %agent_id,
-                    "SuperAgent pinned to in_process, but the legacy in-process path has been retired"
-                );
-                drop(body);
-                return Err(ApiError::internal(
-                    "legacy in-process super-agent path has been retired; tag agent with host_mode:harness or use the ceo flow",
-                ));
-            }
-        }
-    }
 
     if agent.adapter_type != "aura_harness" {
         info!(%agent_id, adapter = %agent.adapter_type, "Routing direct agent chat through external runtime");
@@ -1921,9 +1757,6 @@ pub(crate) async fn send_agent_event_stream(
     let session_key = format!("agent:{agent_id}");
     if force_new {
         remove_live_session(&state, &session_key).await;
-        let sa_key = format!("super_agent:{agent_id}");
-        remove_live_session(&state, &sa_key).await;
-        cancel_super_agent_run(&state, &sa_key).await;
     }
     // LLM context rebuild on cold start: load only the current storage
     // session, not the full multi-session aggregate. See
@@ -1945,11 +1778,16 @@ pub(crate) async fn send_agent_event_stream(
 
     let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
-    let installed_tools = if let Some(org_id) = agent.org_id.as_ref() {
-        let tools = installed_workspace_app_tools(&state, org_id, &jwt).await;
+    let installed_tools = {
+        let mut tools = if let Some(org_id) = agent.org_id.as_ref() {
+            installed_workspace_app_tools(&state, org_id, &jwt).await
+        } else {
+            Vec::new()
+        };
+        tools.extend(aura_os_super_agent::ceo::build_cross_agent_tools(
+            &agent.permissions,
+        ));
         (!tools.is_empty()).then_some(tools)
-    } else {
-        None
     };
     let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
         let integrations =
@@ -1974,6 +1812,8 @@ pub(crate) async fn send_agent_event_stream(
         provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
         installed_tools,
         installed_integrations,
+        agent_permissions: (&agent.permissions).into(),
+        intent_classifier: agent.intent_classifier.clone(),
         ..Default::default()
     };
 

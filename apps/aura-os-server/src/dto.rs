@@ -119,6 +119,13 @@ pub(crate) struct CreateAgentRequest {
     /// for local machines; takes precedence over the project's folder.
     #[serde(default)]
     pub local_workspace_path: Option<String>,
+    /// Required capability + scope bundle for the new agent. Regular
+    /// agents pass [`aura_os_core::AgentPermissions::empty`]; the CEO
+    /// bootstrap passes [`aura_os_core::AgentPermissions::ceo_preset`].
+    pub permissions: aura_os_core::AgentPermissions,
+    /// Optional intent classifier spec (CEO-style agents only).
+    #[serde(default)]
+    pub intent_classifier: Option<aura_os_core::IntentClassifierSpec>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -155,6 +162,14 @@ pub(crate) struct UpdateAgentRequest {
     /// `Some(Some("..."))` sets a new path.
     #[serde(default, deserialize_with = "deserialize_patch_option")]
     pub local_workspace_path: Option<Option<String>>,
+    /// Optional replacement for the agent's capability bundle. `None`
+    /// leaves the existing permissions untouched.
+    #[serde(default)]
+    pub permissions: Option<aura_os_core::AgentPermissions>,
+    /// Optional replacement for the intent classifier spec. `None` leaves
+    /// the existing value untouched.
+    #[serde(default)]
+    pub intent_classifier: Option<aura_os_core::IntentClassifierSpec>,
 }
 
 // -- Marketplace DTOs --

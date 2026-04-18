@@ -186,7 +186,7 @@ pub enum CapabilityWire {
 /// `aura-tools::IntentClassifier::from_profile_json` deserializes, extended
 /// with `tool_domains` so the harness can answer "which domain does this
 /// tool belong to?" without hard-coding the mapping in its binary.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 pub struct IntentClassifierSpec {
     /// Domain names that are always visible (tier-1). Snake-case strings
@@ -201,7 +201,7 @@ pub struct IntentClassifierSpec {
 }
 
 /// One keyword → domain rule for [`IntentClassifierSpec`].
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "typescript", derive(TS), ts(export))]
 pub struct IntentClassifierRule {
     pub domain: String,

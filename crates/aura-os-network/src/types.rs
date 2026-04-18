@@ -1,4 +1,4 @@
-use aura_os_core::{ProfileId, UserId};
+use aura_os_core::{AgentPermissions, IntentClassifierSpec, ProfileId, UserId};
 use serde::{Deserialize, Serialize};
 
 /// Health check response from aura-network `GET /health`.
@@ -243,6 +243,28 @@ pub struct NetworkAgent {
     pub profile_id: Option<String>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+    /// Marketplace listing status. Serialized as `"closed"` / `"hireable"`;
+    /// absent on older records, so the server treats `None` as "closed".
+    #[serde(default)]
+    pub listing_status: Option<String>,
+    /// Marketplace expertise slugs.
+    #[serde(default)]
+    pub expertise: Option<Vec<String>>,
+    /// Aggregated marketplace stats. Computed server-side.
+    #[serde(default)]
+    pub jobs: Option<u64>,
+    #[serde(default)]
+    pub revenue_usd: Option<f64>,
+    #[serde(default)]
+    pub reputation: Option<f32>,
+    /// Required capability + scope bundle for this agent. Defaults to
+    /// empty when older aura-network records don't include it.
+    #[serde(default)]
+    pub permissions: AgentPermissions,
+    /// Optional keyword-driven intent classifier. Populated for CEO
+    /// bootstraps; `None` for regular agents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
     #[serde(default)]
     pub created_at: Option<String>,
     #[serde(default)]
@@ -281,6 +303,17 @@ pub struct CreateAgentRequest {
     pub org_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    /// Marketplace listing status. Accepts `"closed"` or `"hireable"`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listing_status: Option<String>,
+    /// Marketplace expertise slugs. Unknown slugs are rejected server-side.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expertise: Option<Vec<String>>,
+    /// Required capability + scope bundle for this agent.
+    pub permissions: AgentPermissions,
+    /// Optional intent classifier spec.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -307,6 +340,21 @@ pub struct UpdateAgentRequest {
     /// `None` means "don't change"; `Some(vec)` replaces the tag set wholesale.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
+    /// Marketplace listing status. Accepts `"closed"` or `"hireable"`.
+    /// `None` leaves the server value untouched.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listing_status: Option<String>,
+    /// Replaces the marketplace expertise set wholesale. `None` leaves it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expertise: Option<Vec<String>>,
+    /// Optional new permissions bundle. `None` leaves the server copy
+    /// untouched.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permissions: Option<AgentPermissions>,
+    /// Optional new intent classifier. `None` leaves the server copy
+    /// untouched.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
 }
 
 // ---------------------------------------------------------------------------

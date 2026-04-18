@@ -376,6 +376,7 @@ dependencies = [
 name = "aura-os-core"
 version = "0.2.0"
 dependencies = [
+ "aura-protocol",
  "chrono",
  "serde",
  "serde_json",

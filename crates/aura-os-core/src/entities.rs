@@ -12,6 +12,8 @@ use crate::ids::{
     SessionId, SpecId, TaskId, UserId,
 };
 use crate::listing_status::AgentListingStatus;
+use crate::permissions::AgentPermissions;
+use aura_protocol::IntentClassifierSpec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Project {
@@ -282,6 +284,16 @@ pub struct Agent {
     /// `local_workspace_path`. Not synced to aura-network.
     #[serde(default)]
     pub local_workspace_path: Option<String>,
+    /// Required capability + scope bundle. The harness enforces these
+    /// unconditionally on every session — there is no role-based
+    /// fallback. Regular agents carry [`AgentPermissions::empty`]; CEO
+    /// bootstraps carry [`AgentPermissions::ceo_preset`].
+    pub permissions: AgentPermissions,
+    /// Optional per-turn intent classifier. When present the harness
+    /// narrows the per-turn tool surface based on each user message.
+    /// Populated for CEO-style agents; `None` for regular agents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

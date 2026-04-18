@@ -21,7 +21,6 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
     let org_id: Option<OrgId> = net.org_id.as_ref().and_then(|s| s.parse().ok());
     let created_at = parse_dt(&net.created_at);
     let updated_at = parse_dt(&net.updated_at);
-    let is_super = net.role.as_deref() == Some("super_agent");
     let machine_type = net
         .machine_type
         .clone()
@@ -51,18 +50,16 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,
-        tags: if is_super {
-            vec!["super_agent".to_string()]
-        } else {
-            Vec::new()
-        },
-        is_pinned: is_super,
+        tags: Vec::new(),
+        is_pinned: false,
         listing_status: Default::default(),
         expertise: Vec::new(),
         jobs: 0,
         revenue_usd: 0.0,
         reputation: 0.0,
         local_workspace_path: None,
+        permissions: net.permissions.clone(),
+        intent_classifier: net.intent_classifier.clone(),
         created_at,
         updated_at,
     }
@@ -556,6 +553,8 @@ fn synthesize_agent_from_project_agent(
         revenue_usd: 0.0,
         reputation: 0.0,
         local_workspace_path: None,
+        permissions: AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
     })

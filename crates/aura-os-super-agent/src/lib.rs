@@ -1,5 +1,5 @@
+pub mod ceo;
 pub mod events;
-pub mod harness_handoff;
 pub mod prompt;
 pub mod state;
 pub mod tier;

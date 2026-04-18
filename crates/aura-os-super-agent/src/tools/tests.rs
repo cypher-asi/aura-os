@@ -328,6 +328,8 @@ mod tests {
             revenue_usd: 0.0,
             reputation: 0.0,
             local_workspace_path: None,
+            permissions: aura_os_core::AgentPermissions::empty(),
+            intent_classifier: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -376,6 +378,8 @@ mod tests {
             revenue_usd: 0.0,
             reputation: 0.0,
             local_workspace_path: None,
+            permissions: aura_os_core::AgentPermissions::empty(),
+            intent_classifier: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };

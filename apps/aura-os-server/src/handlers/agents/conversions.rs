@@ -37,8 +37,6 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or(created_at);
 
-    let is_super = net.role.as_deref() == Some("super_agent");
-
     let machine_type = net
         .machine_type
         .clone()
@@ -49,14 +47,7 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         "local_host".to_string()
     };
 
-    // Merge the stored tag list with role-derived tags. Older records may
-    // not carry an explicit "super_agent" tag in `tags`, but their role
-    // still implies it; de-duplicate so a record that has both doesn't
-    // end up with a duplicate entry.
-    let mut tags: Vec<String> = net.tags.clone().unwrap_or_default();
-    if is_super && !tags.iter().any(|t| t == "super_agent") {
-        tags.push("super_agent".to_string());
-    }
+    let tags: Vec<String> = net.tags.clone().unwrap_or_default();
 
     // Marketplace listing_status: prefer the typed field; fall back to the
     // legacy `listing_status:<value>` tag so agents written before Phase 3
@@ -100,7 +91,7 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         network_agent_id: net.id.parse().ok(),
         profile_id,
         tags,
-        is_pinned: is_super,
+        is_pinned: false,
         listing_status,
         expertise,
         jobs: net.jobs.unwrap_or(0),
@@ -109,6 +100,8 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         // Network-derived agents never carry a local override; populated later
         // from the local shadow if present.
         local_workspace_path: None,
+        permissions: net.permissions.clone(),
+        intent_classifier: net.intent_classifier.clone(),
         created_at,
         updated_at,
     }

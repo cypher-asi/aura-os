@@ -1,7 +1,10 @@
 pub mod entities;
 pub mod enums;
+pub mod expertise;
 pub mod helpers;
 pub mod ids;
+pub mod listing_status;
+pub mod permissions;
 pub mod rust_signatures;
 pub mod settings;
 
@@ -27,4 +30,11 @@ pub use ids::{
     ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId, ProjectId, SessionEventId,
     SessionId, SpecId, TaskId, UserId,
 };
+pub use permissions::{AgentPermissions, AgentScope, Capability};
 pub use settings::{SettingsEntry, SettingsValue};
+
+/// Re-export of the wire-shipped intent classifier spec used by the
+/// super-agent-style tool narrowing. Stored on `Agent` as an optional
+/// field so the regular chat path can hand the same value straight to
+/// the harness `SessionInit`.
+pub use aura_protocol::IntentClassifierSpec;

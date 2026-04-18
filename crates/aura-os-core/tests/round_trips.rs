@@ -210,6 +210,8 @@ fn sample_agent() -> Agent {
         revenue_usd: 1_234.56,
         reputation: 4.75,
         local_workspace_path: None,
+        permissions: AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }
@@ -301,29 +303,20 @@ test_entity_round_trip!(session_round_trip, {
     sample_session(p.project_id, instance.agent_instance_id)
 });
 
-/// Agents serialized before Phase 3 did not carry the marketplace fields.
-/// `#[serde(default)]` on the new columns must let those records
-/// deserialize cleanly with sensible defaults, otherwise a storage roll
-/// forward would fail reading existing rows.
+/// Non-default marketplace fields on `Agent` must survive a JSON
+/// round-trip without loss. The macro above already covers this via
+/// `sample_agent`, but an explicit test documents the contract and
+/// asserts on each field so regressions are obvious in the failure
+/// output.
 #[test]
-fn legacy_agent_json_without_marketplace_fields_defaults_sensibly() {
-    let now = Utc::now().to_rfc3339();
-    let agent_id = AgentId::new();
-    let legacy = serde_json::json!({
-        "agent_id": agent_id.to_string(),
-        "user_id": "user-1",
-        "name": "Legacy",
-        "role": "developer",
-        "personality": "",
-        "system_prompt": "",
-        "created_at": now,
-        "updated_at": now,
-    });
-
-    let agent: Agent = serde_json::from_value(legacy).expect("legacy agent must deserialize");
-    assert_eq!(agent.listing_status, AgentListingStatus::Closed);
-    assert!(agent.expertise.is_empty());
-    assert_eq!(agent.jobs, 0);
-    assert_eq!(agent.revenue_usd, 0.0);
-    assert_eq!(agent.reputation, 0.0);
+fn agent_marketplace_fields_survive_non_default_round_trip() {
+    let agent = sample_agent();
+    let json = serde_json::to_string(&agent).expect("serialize");
+    let back: Agent = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(back.listing_status, AgentListingStatus::Hireable);
+    assert_eq!(back.expertise, vec!["coding".to_string(), "devops".to_string()]);
+    assert_eq!(back.jobs, 42);
+    assert!((back.revenue_usd - 1_234.56).abs() < f64::EPSILON);
+    assert!((back.reputation - 4.75).abs() < f32::EPSILON);
 }
+

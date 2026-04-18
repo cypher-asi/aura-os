@@ -14,7 +14,7 @@ use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
-use super::marketplace_fields::normalize_marketplace_fields;
+use super::marketplace_fields::{merge_marketplace_tags, normalize_marketplace_fields};
 use tracing::{info, warn};
 
 const SWARM_AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -320,6 +320,8 @@ async fn persist_vm_id(
         tags: None,
         listing_status: None,
         expertise: None,
+        permissions: None,
+        intent_classifier: None,
     };
 
     let updated_net_agent = client
@@ -417,6 +419,8 @@ pub(crate) async fn create_agent(
         body.expertise.as_deref(),
     )?;
 
+    let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
+
     let net_req = aura_os_network::CreateAgentRequest {
         org_id: body.org_id.map(|id| id.to_string()),
         name: body.name.trim().to_string(),
@@ -427,9 +431,11 @@ pub(crate) async fn create_agent(
         icon: body.icon,
         machine_type: machine_type.clone(),
         harness: None,
-        tags: body.tags,
+        tags: dual_write_tags,
         listing_status: marketplace.listing_status,
         expertise: marketplace.expertise,
+        permissions: body.permissions,
+        intent_classifier: body.intent_classifier,
     };
 
     let net_agent = client
@@ -856,6 +862,8 @@ pub(crate) async fn update_agent(
         body.expertise.as_deref(),
     )?;
 
+    let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
+
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name.map(|value| value.trim().to_string()),
         role: body.role,
@@ -874,9 +882,11 @@ pub(crate) async fn update_agent(
         }),
         harness: None,
         vm_id: None,
-        tags: body.tags,
+        tags: dual_write_tags,
         listing_status: marketplace.listing_status,
         expertise: marketplace.expertise,
+        permissions: body.permissions,
+        intent_classifier: body.intent_classifier,
     };
     let net_agent = client
         .update_agent(&agent_id.to_string(), &jwt, &net_req)
