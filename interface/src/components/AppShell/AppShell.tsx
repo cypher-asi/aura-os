@@ -19,6 +19,9 @@ const OrgSettingsPanel = lazy(() =>
 const NewProjectModal = lazy(() =>
   import("../NewProjectModal").then((module) => ({ default: module.NewProjectModal })),
 );
+const AppsModal = lazy(() =>
+  import("../AppsModal").then((module) => ({ default: module.AppsModal })),
+);
 
 function ProjectCreationModalHost() {
   const navigate = useNavigate();
@@ -63,6 +66,7 @@ function AppContent() {
   const {
     orgSettingsOpen, orgInitialSection, closeOrgSettings,
     buyCreditsOpen, closeBuyCredits, openOrgBilling,
+    appsModalOpen, closeAppsModal,
   } = useUIModalStore(
     useShallow((s) => ({
       orgSettingsOpen: s.orgSettingsOpen,
@@ -71,6 +75,8 @@ function AppContent() {
       buyCreditsOpen: s.buyCreditsOpen,
       closeBuyCredits: s.closeBuyCredits,
       openOrgBilling: s.openOrgBilling,
+      appsModalOpen: s.appsModalOpen,
+      closeAppsModal: s.closeAppsModal,
     })),
   );
 
@@ -94,6 +100,11 @@ function AppContent() {
             onClose={closeBuyCredits}
             onOpenBilling={openOrgBilling}
           />
+        </LazyModalBoundary>
+      ) : null}
+      {appsModalOpen ? (
+        <LazyModalBoundary>
+          <AppsModal isOpen={appsModalOpen} onClose={closeAppsModal} />
         </LazyModalBoundary>
       ) : null}
       <ProjectCreationModalHost />

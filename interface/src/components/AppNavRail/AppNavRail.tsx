@@ -235,10 +235,12 @@ export function AppNavRail({
   const apps = useAppStore((s) => s.apps);
   const activeApp = useActiveApp();
   const taskbarAppOrder = useAppStore((s) => s.taskbarAppOrder);
+  const taskbarHiddenAppIds = useAppStore((s) => s.taskbarHiddenAppIds);
   const saveTaskbarAppOrder = useAppStore((s) => s.saveTaskbarAppOrder);
   const navigate = useNavigate();
   const includeSet = includeIds ? new Set(includeIds) : null;
   const excludeSet = new Set(excludeIds);
+  const hiddenSet = useMemo(() => new Set(taskbarHiddenAppIds), [taskbarHiddenAppIds]);
   const orderedApps = useMemo(
     () => (layout === "taskbar" ? getOrderedTaskbarApps(apps, taskbarAppOrder) : apps),
     [apps, layout, taskbarAppOrder],
@@ -247,6 +249,7 @@ export function AppNavRail({
     if (app.id === "desktop") return false;
     if (excludeSet.has(app.id)) return false;
     if (includeSet && !includeSet.has(app.id)) return false;
+    if (layout === "taskbar" && hiddenSet.has(app.id)) return false;
     return true;
   });
   const isRail = layout === "rail";

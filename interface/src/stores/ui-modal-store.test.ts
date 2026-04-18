@@ -7,6 +7,7 @@ beforeEach(() => {
     orgInitialSection: undefined,
     buyCreditsOpen: false,
     hostSettingsOpen: false,
+    appsModalOpen: false,
   });
 });
 
@@ -65,6 +66,19 @@ describe("ui-modal-store", () => {
       useUIModalStore.setState({ hostSettingsOpen: true });
       useUIModalStore.getState().closeHostSettings();
       expect(useUIModalStore.getState().hostSettingsOpen).toBe(false);
+    });
+  });
+
+  describe("openAppsModal / closeAppsModal", () => {
+    it("opens the apps modal", () => {
+      useUIModalStore.getState().openAppsModal();
+      expect(useUIModalStore.getState().appsModalOpen).toBe(true);
+    });
+
+    it("closes the apps modal", () => {
+      useUIModalStore.setState({ appsModalOpen: true });
+      useUIModalStore.getState().closeAppsModal();
+      expect(useUIModalStore.getState().appsModalOpen).toBe(false);
     });
   });
 });

@@ -6,6 +6,7 @@ interface UIModalState {
   orgInitialSection: "billing" | undefined;
   buyCreditsOpen: boolean;
   hostSettingsOpen: boolean;
+  appsModalOpen: boolean;
 
   openOrgSettings: () => void;
   closeOrgSettings: () => void;
@@ -14,6 +15,8 @@ interface UIModalState {
   closeBuyCredits: () => void;
   openHostSettings: () => void;
   closeHostSettings: () => void;
+  openAppsModal: () => void;
+  closeAppsModal: () => void;
 }
 
 export const useUIModalStore = create<UIModalState>()((set) => ({
@@ -21,6 +24,7 @@ export const useUIModalStore = create<UIModalState>()((set) => ({
   orgInitialSection: undefined,
   buyCreditsOpen: false,
   hostSettingsOpen: false,
+  appsModalOpen: false,
 
   openOrgSettings: () => set({ orgSettingsOpen: true }),
   closeOrgSettings: () => set({ orgSettingsOpen: false, orgInitialSection: undefined }),
@@ -29,6 +33,8 @@ export const useUIModalStore = create<UIModalState>()((set) => ({
   closeBuyCredits: () => set({ buyCreditsOpen: false }),
   openHostSettings: () => set({ hostSettingsOpen: true }),
   closeHostSettings: () => set({ hostSettingsOpen: false }),
+  openAppsModal: () => set({ appsModalOpen: true }),
+  closeAppsModal: () => set({ appsModalOpen: false }),
 }));
 
 if (typeof window !== "undefined") {

@@ -8,3 +8,4 @@ export const COLLAPSED_PROJECTS_KEY = "aura-collapsed-projects";
 export const PROJECT_ORDER_KEY = "aura-project-order";
 export const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
 export const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";
+export const TASKBAR_HIDDEN_APPS_KEY = "aura-taskbar-hidden-apps";

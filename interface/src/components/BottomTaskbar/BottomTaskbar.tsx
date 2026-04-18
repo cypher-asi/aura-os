@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Circle, CreditCard, ChevronRight, ChevronLeft, Settings } from "lucide-react";
+import {
+  Circle,
+  CreditCard,
+  ChevronRight,
+  ChevronLeft,
+  LayoutGrid,
+  Settings,
+} from "lucide-react";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useActiveApp } from "../../hooks/use-active-app";
 import { useAppUIStore } from "../../stores/app-ui-store";
@@ -25,6 +32,7 @@ function useClock() {
 export function BottomTaskbar() {
   const openBuyCredits = useUIModalStore((s) => s.openBuyCredits);
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
+  const openAppsModal = useUIModalStore((s) => s.openAppsModal);
   const activeApp = useActiveApp();
   const time = useClock();
   const navigate = useNavigate();
@@ -67,6 +75,12 @@ export function BottomTaskbar() {
           allowReorder
           excludeIds={["profile"]}
           {...(collapsed && { includeIds: ["agents", "projects"] })}
+        />
+        <TaskbarIconButton
+          icon={<LayoutGrid size={TASKBAR_ICON_SIZE} />}
+          title="Apps"
+          aria-label="Apps"
+          onClick={openAppsModal}
         />
         <TaskbarIconButton
           icon={

@@ -1,12 +1,20 @@
 import { create } from "zustand";
 import type { AuraApp } from "../apps/types";
 import { apps as registeredApps } from "../apps/registry";
-import { getTaskbarAppOrder, setTaskbarAppOrder } from "../utils/storage";
+import {
+  getTaskbarAppOrder,
+  getTaskbarHiddenAppIds,
+  setTaskbarAppOrder,
+  setTaskbarHiddenAppIds,
+} from "../utils/storage";
 
 interface AppState {
   apps: AuraApp[];
   taskbarAppOrder: string[];
+  taskbarHiddenAppIds: string[];
   saveTaskbarAppOrder: (nextOrder: string[]) => void;
+  saveTaskbarHiddenAppIds: (nextHidden: string[]) => void;
+  saveTaskbarAppsLayout: (nextOrder: string[], nextHidden: string[]) => void;
   reorderTaskbarApps: (activeId: string, overId: string) => void;
 }
 
@@ -49,6 +57,20 @@ function normalizeTaskbarAppOrder(apps: AuraApp[], savedIds: string[]): string[]
   return normalizedIds;
 }
 
+function normalizeTaskbarHiddenAppIds(apps: AuraApp[], savedIds: string[]): string[] {
+  // Only reorderable (non-pinned) apps can be hidden; `desktop` and `profile`
+  // live outside the reorderable strip and are always visible.
+  const reorderableIds = new Set(
+    apps.filter((app) => !isPinnedTaskbarApp(app)).map((app) => app.id),
+  );
+  const hidden: string[] = [];
+  for (const id of savedIds) {
+    if (!reorderableIds.has(id) || hidden.includes(id)) continue;
+    hidden.push(id);
+  }
+  return hidden;
+}
+
 function moveItem(ids: string[], fromIndex: number, toIndex: number): string[] {
   if (fromIndex === toIndex) return ids;
   const nextIds = [...ids];
@@ -62,13 +84,35 @@ function getInitialTaskbarAppOrder(): string[] {
   return normalizeTaskbarAppOrder(registeredApps, savedIds);
 }
 
+function getInitialTaskbarHiddenAppIds(): string[] {
+  const savedIds = typeof window === "undefined" ? [] : getTaskbarHiddenAppIds();
+  return normalizeTaskbarHiddenAppIds(registeredApps, savedIds);
+}
+
 export const useAppStore = create<AppState>()((set, get) => ({
   apps: registeredApps,
   taskbarAppOrder: getInitialTaskbarAppOrder(),
+  taskbarHiddenAppIds: getInitialTaskbarHiddenAppIds(),
   saveTaskbarAppOrder: (nextOrder: string[]) => {
     const normalizedOrder = normalizeTaskbarAppOrder(get().apps, nextOrder);
     setTaskbarAppOrder(normalizedOrder);
     set({ taskbarAppOrder: normalizedOrder });
+  },
+  saveTaskbarHiddenAppIds: (nextHidden: string[]) => {
+    const normalizedHidden = normalizeTaskbarHiddenAppIds(get().apps, nextHidden);
+    setTaskbarHiddenAppIds(normalizedHidden);
+    set({ taskbarHiddenAppIds: normalizedHidden });
+  },
+  saveTaskbarAppsLayout: (nextOrder: string[], nextHidden: string[]) => {
+    const apps = get().apps;
+    const normalizedOrder = normalizeTaskbarAppOrder(apps, nextOrder);
+    const normalizedHidden = normalizeTaskbarHiddenAppIds(apps, nextHidden);
+    setTaskbarAppOrder(normalizedOrder);
+    setTaskbarHiddenAppIds(normalizedHidden);
+    set({
+      taskbarAppOrder: normalizedOrder,
+      taskbarHiddenAppIds: normalizedHidden,
+    });
   },
   reorderTaskbarApps: (activeId: string, overId: string) => {
     if (activeId === overId) return;
