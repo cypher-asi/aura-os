@@ -47,6 +47,15 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         "local_host".to_string()
     };
 
+    // Merge the stored tag list with role-derived tags. Older records may
+    // not carry an explicit "super_agent" tag in `tags`, but their role
+    // still implies it; de-duplicate so a record that has both doesn't
+    // end up with a duplicate entry.
+    let mut tags: Vec<String> = net.tags.clone().unwrap_or_default();
+    if is_super && !tags.iter().any(|t| t == "super_agent") {
+        tags.push("super_agent".to_string());
+    }
+
     Agent {
         agent_id,
         user_id: net.user_id.clone(),
@@ -66,11 +75,7 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,
-        tags: if is_super {
-            vec!["super_agent".to_string()]
-        } else {
-            Vec::new()
-        },
+        tags,
         is_pinned: is_super,
         created_at,
         updated_at,

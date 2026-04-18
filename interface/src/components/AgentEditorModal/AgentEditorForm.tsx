@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Input, Textarea, Text } from "@cypher-asi/zui";
 import { ImagePlus, X, Monitor, Cloud } from "lucide-react";
 import type { OrgIntegration } from "../../types";
+import type { HostMode } from "./useAgentEditorForm";
+import { apiFetch } from "../../api/core";
 import {
   MODEL_RUNTIME_ADAPTERS,
   filterRuntimeCompatibleIntegrations,
@@ -113,6 +115,8 @@ export interface AgentEditorFormProps {
   setIntegrationId: (v: string) => void;
   defaultModel: string;
   setDefaultModel: (v: string) => void;
+  hostMode?: HostMode;
+  setHostMode?: (v: HostMode) => void;
   simplifyForMobileCreate: boolean;
   restrictCreateToAuraRuntimes: boolean;
   availableIntegrations: OrgIntegration[];
@@ -147,6 +151,8 @@ export function AgentEditorForm({
   setIntegrationId,
   defaultModel,
   setDefaultModel,
+  hostMode,
+  setHostMode,
   simplifyForMobileCreate,
   restrictCreateToAuraRuntimes,
   availableIntegrations,
@@ -256,6 +262,10 @@ export function AgentEditorForm({
           disabled={isSuperAgent}
         />
       </div>
+
+      {isSuperAgent && hostMode && setHostMode ? (
+        <HostModeFields hostMode={hostMode} setHostMode={setHostMode} />
+      ) : null}
 
       {restrictCreateToAuraRuntimes && simplifyForMobileCreate ? (
         <CompactEnvironmentPicker
@@ -551,6 +561,99 @@ function AuthFields({
   );
 }
 
+
+interface HarnessHealth {
+  reachable: boolean;
+  url: string;
+  latency_ms: number;
+  status?: number;
+  error?: string;
+}
+
+function HostModeFields({
+  hostMode,
+  setHostMode,
+}: {
+  hostMode: HostMode;
+  setHostMode: (v: HostMode) => void;
+}) {
+  const [health, setHealth] = useState<HarnessHealth | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+
+  useEffect(() => {
+    if (hostMode !== "cloud") return;
+    let cancelled = false;
+    setHealthLoading(true);
+    apiFetch("/api/super_agent/harness/health")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`health ${res.status}`);
+        return (await res.json()) as HarnessHealth;
+      })
+      .then((data) => {
+        if (!cancelled) setHealth(data);
+      })
+      .catch(() => {
+        if (!cancelled) setHealth(null);
+      })
+      .finally(() => {
+        if (!cancelled) setHealthLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hostMode]);
+
+  return (
+    <div className={styles.fieldGroup}>
+      <label className={styles.label}>Where does this SuperAgent run?</label>
+      <div className={styles.choiceGrid} role="radiogroup" aria-label="Host mode">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={hostMode === "local"}
+          className={`${styles.choiceCard} ${hostMode === "local" ? styles.choiceCardActive : ""}`}
+          onClick={() => setHostMode("local")}
+        >
+          <span className={styles.choiceTitle}>
+            <Monitor size={14} />
+            Run on this computer
+          </span>
+          <span className={styles.choiceBody}>
+            The super-agent loop runs in-process on aura-os-server. Lowest
+            latency; uses this machine's local tools.
+          </span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={hostMode === "cloud"}
+          className={`${styles.choiceCard} ${hostMode === "cloud" ? styles.choiceCardActive : ""}`}
+          onClick={() => setHostMode("cloud")}
+        >
+          <span className={styles.choiceTitle}>
+            <Cloud size={14} />
+            Run on Aura cloud
+          </span>
+          <span className={styles.choiceBody}>
+            The super-agent loop is delegated to the Aura harness node. Good
+            for keeping work going when your laptop is off.
+          </span>
+        </button>
+      </div>
+      {hostMode === "cloud" ? (
+        <Text variant="muted" size="sm">
+          {healthLoading
+            ? "Checking harness…"
+            : health
+              ? health.reachable
+                ? `Harness reachable at ${health.url} (${health.latency_ms}ms)`
+                : `Harness unreachable${health.error ? `: ${health.error}` : ""}`
+              : "Harness status unavailable."}
+        </Text>
+      ) : null}
+    </div>
+  );
+}
 
 function IntegrationPicker({
   integrationChoices,

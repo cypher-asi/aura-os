@@ -16,8 +16,8 @@ pub(crate) mod state;
 
 pub use app_builder::build_app_state;
 pub use harness_client::{
-    bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessTxKind,
-    SubmitTxResponse,
+    bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,
+    HarnessTxKind, SubmitTxResponse,
 };
 pub use harness_gateway::HarnessHttpGateway;
 pub use harness_super_agent_driver::{

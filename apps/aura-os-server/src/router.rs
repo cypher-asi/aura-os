@@ -504,6 +504,12 @@ fn super_agent_routes() -> Router<AppState> {
             "/api/super_agent/tools/:name",
             post(super_agent_tools::dispatch_super_agent_tool),
         )
+        // Phase 4: non-blocking harness reachability probe for the
+        // super-agent editor's Local/Cloud host-mode toggle.
+        .route(
+            "/api/super_agent/harness/health",
+            get(super_agent::harness_health),
+        )
 }
 
 fn process_routes() -> Router<AppState> {

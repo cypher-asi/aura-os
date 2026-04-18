@@ -69,6 +69,25 @@ pub struct GetHeadResponse {
     pub head_seq: u64,
 }
 
+/// Result of a non-authoritative reachability check against a harness node.
+///
+/// Exposed by [`HarnessClient::probe`] so the UI can render a "Cloud target
+/// reachable" pill on the agent editor. The probe deliberately tolerates a
+/// 404 on the placeholder endpoint it hits: if a well-formed HTTP response
+/// came back at all the harness is up, even when the probed resource itself
+/// doesn't exist.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessProbeResult {
+    pub reachable: bool,
+    pub url: String,
+    pub latency_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 /// Errors produced by [`HarnessClient`].
 #[derive(Debug, thiserror::Error)]
 pub enum HarnessClientError {
@@ -229,6 +248,60 @@ impl HarnessClient {
             });
         }
         Ok(resp.json().await?)
+    }
+
+    /// Cheap reachability probe used by the UI to render a "target
+    /// available" pill next to the Local/Cloud host-mode picker.
+    ///
+    /// This is **not** in the chat hot path. It's issued on demand when the
+    /// operator opens the super-agent editor and wants visual confirmation
+    /// that the configured `LOCAL_HARNESS_URL` (or future per-agent
+    /// `harness_url`) answers. Any well-formed HTTP response — including a
+    /// 404 on the placeholder endpoint — counts as "reachable"; only
+    /// transport errors flip `reachable` to false.
+    ///
+    /// The probed path is `GET /agents/:nil/head` rather than `GET /`
+    /// because the axum-based aura-node does not currently expose a bare
+    /// root endpoint and we don't want the probe to spuriously fail if a
+    /// future maintainer adds or removes one. The head endpoint is
+    /// stable, cheap, and authenticated, which also doubles as a JWT
+    /// forwarding check.
+    #[instrument(skip(self, jwt))]
+    pub async fn probe(&self, jwt: Option<&str>) -> HarnessProbeResult {
+        let nil = uuid::Uuid::nil().to_string();
+        let url = format!("{}/agents/{}/head", self.base_url, nil);
+        let start = std::time::Instant::now();
+        let mut req = self.http.get(&url);
+        if let Some(jwt) = jwt {
+            match bearer_value(jwt) {
+                Ok(v) => req = req.header(AUTHORIZATION, v),
+                Err(e) => {
+                    return HarnessProbeResult {
+                        reachable: false,
+                        url: self.base_url.clone(),
+                        latency_ms: start.elapsed().as_millis() as u64,
+                        status: None,
+                        error: Some(format!("invalid jwt header: {e}")),
+                    };
+                }
+            }
+        }
+        match req.send().await {
+            Ok(resp) => HarnessProbeResult {
+                reachable: true,
+                url: self.base_url.clone(),
+                latency_ms: start.elapsed().as_millis() as u64,
+                status: Some(resp.status().as_u16()),
+                error: None,
+            },
+            Err(err) => HarnessProbeResult {
+                reachable: false,
+                url: self.base_url.clone(),
+                latency_ms: start.elapsed().as_millis() as u64,
+                status: None,
+                error: Some(err.to_string()),
+            },
+        }
     }
 
     /// Open the `/stream` WebSocket, forwarding the JWT as a `Bearer`

@@ -242,6 +242,8 @@ pub struct NetworkAgent {
     #[serde(default)]
     pub profile_id: Option<String>,
     #[serde(default)]
+    pub tags: Option<Vec<String>>,
+    #[serde(default)]
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
@@ -277,6 +279,8 @@ pub struct CreateAgentRequest {
     pub machine_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -300,6 +304,9 @@ pub struct UpdateAgentRequest {
     pub machine_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vm_id: Option<String>,
+    /// `None` means "don't change"; `Some(vec)` replaces the tag set wholesale.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 // ---------------------------------------------------------------------------

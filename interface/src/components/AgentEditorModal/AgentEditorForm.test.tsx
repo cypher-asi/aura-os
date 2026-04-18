@@ -1,6 +1,18 @@
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { AgentEditorForm, type AgentEditorFormProps } from "./AgentEditorForm";
+import { mergeHostModeTag, HOST_MODE_HARNESS_TAG } from "./useAgentEditorForm";
+
+vi.mock("../../api/core", () => ({
+  apiFetch: vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({ reachable: true, url: "http://localhost:8787", latency_ms: 5 }),
+    } as unknown as Response),
+  ),
+}));
 
 vi.mock("@cypher-asi/zui", () => ({
   Input: ({ value, onChange, placeholder }: { value?: string; onChange?: (e: { target: { value: string } }) => void; placeholder?: string }) => (
@@ -105,6 +117,44 @@ describe("AgentEditorForm", () => {
     expect(screen.queryByText("Primary Anthropic")).not.toBeInTheDocument();
   });
 
+  it("renders the Local/Cloud host toggle only for super-agents", () => {
+    const { rerender } = render(<AgentEditorForm {...makeProps()} />);
+    expect(
+      screen.queryByText("Where does this SuperAgent run?"),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <AgentEditorForm
+        {...makeProps({
+          isSuperAgent: true,
+          hostMode: "local",
+          setHostMode: vi.fn(),
+        })}
+      />,
+    );
+    expect(
+      screen.getByText("Where does this SuperAgent run?"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Run on this computer")).toBeInTheDocument();
+    expect(screen.getByText("Run on Aura cloud")).toBeInTheDocument();
+  });
+
+  it("invokes setHostMode when the user flips Local -> Cloud", () => {
+    const setHostMode = vi.fn();
+    render(
+      <AgentEditorForm
+        {...makeProps({
+          isSuperAgent: true,
+          hostMode: "local",
+          setHostMode,
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Run on Aura cloud").closest("button")!);
+    expect(setHostMode).toHaveBeenCalledWith("cloud");
+  });
+
   it("shows runtime and credential controls for non-default setups", () => {
     render(
       <AgentEditorForm
@@ -121,5 +171,41 @@ describe("AgentEditorForm", () => {
     expect(screen.getByText("Credentials")).toBeInTheDocument();
     expect(screen.getByText("Runs On")).toBeInTheDocument();
     expect(screen.getByText("Codex")).toBeInTheDocument();
+  });
+});
+
+describe("mergeHostModeTag", () => {
+  it("adds the harness tag when switching to cloud", () => {
+    const next = mergeHostModeTag(["super_agent"], "cloud");
+    expect(next).toEqual(["super_agent", HOST_MODE_HARNESS_TAG]);
+  });
+
+  it("removes the harness tag when switching to local", () => {
+    const next = mergeHostModeTag(
+      ["super_agent", HOST_MODE_HARNESS_TAG],
+      "local",
+    );
+    expect(next).toEqual(["super_agent"]);
+  });
+
+  it("preserves unrelated tags verbatim", () => {
+    const next = mergeHostModeTag(
+      ["super_agent", "feature:beta", HOST_MODE_HARNESS_TAG],
+      "local",
+    );
+    expect(next).toEqual(["super_agent", "feature:beta"]);
+  });
+
+  it("is idempotent when cloud is selected twice", () => {
+    const first = mergeHostModeTag(["super_agent"], "cloud");
+    const second = mergeHostModeTag(first, "cloud");
+    expect(second).toEqual(first);
+  });
+
+  it("never mutates the input array", () => {
+    const input = ["super_agent", HOST_MODE_HARNESS_TAG];
+    const snapshot = [...input];
+    mergeHostModeTag(input, "local");
+    expect(input).toEqual(snapshot);
   });
 });

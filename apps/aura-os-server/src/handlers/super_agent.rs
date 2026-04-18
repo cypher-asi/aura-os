@@ -7,6 +7,7 @@ use aura_os_core::{Agent, SuperAgentOrchestration};
 
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::agent_from_network;
+use crate::harness_client::HarnessClient;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 #[derive(Serialize)]
@@ -55,6 +56,7 @@ pub(crate) async fn setup_super_agent(
                 harness: None,
                 machine_type: None,
                 vm_id: None,
+                tags: None,
             };
             network
                 .update_agent(&net_agent.id, &jwt, &update_req)
@@ -92,6 +94,7 @@ pub(crate) async fn setup_super_agent(
         harness: None,
         machine_type: Some("local".to_string()),
         org_id: Some(org_id),
+        tags: None,
     };
 
     let net_agent = network
@@ -156,4 +159,19 @@ pub(crate) async fn list_pending_events(
 ) -> ApiResult<Json<Vec<aura_os_super_agent::events::SuperAgentEvent>>> {
     let events = state.super_agent_service.event_listener.peek_events().await;
     Ok(Json(events))
+}
+
+/// GET `/api/super_agent/harness/health` — report whether the configured
+/// harness URL is reachable so the super-agent editor can show a Cloud
+/// health pill. Purely advisory; never blocks chat.
+///
+/// Forwards the caller's JWT so the probed endpoint behaves the same way
+/// it would during a real hand-off (this doubles as a JWT-forwarding
+/// sanity check for Phase 4's remote-harness flow).
+pub(crate) async fn harness_health(
+    State(_state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> Json<crate::harness_client::HarnessProbeResult> {
+    let client = HarnessClient::from_env();
+    Json(client.probe(Some(&jwt)).await)
 }

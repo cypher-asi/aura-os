@@ -316,6 +316,7 @@ async fn persist_vm_id(
         harness: None,
         machine_type: None,
         vm_id: Some(vm_id.to_string()),
+        tags: None,
     };
 
     let updated_net_agent = client
@@ -418,6 +419,7 @@ pub(crate) async fn create_agent(
         icon: body.icon,
         machine_type: machine_type.clone(),
         harness: None,
+        tags: body.tags,
     };
 
     let net_agent = client
@@ -839,6 +841,11 @@ pub(crate) async fn update_agent(
         }),
         harness: None,
         vm_id: None,
+        // `body.tags == Some(vec)` replaces the tag set wholesale; `None`
+        // leaves the aura-network-stored tags untouched (see UpdateAgentRequest
+        // docs). This preserves host-mode / role tags on partial PUTs that
+        // don't mention them.
+        tags: body.tags,
     };
     let net_agent = client
         .update_agent(&agent_id.to_string(), &jwt, &net_req)

@@ -92,6 +92,8 @@ pub(crate) struct CreateAgentRequest {
     pub integration_id: Option<String>,
     #[serde(default)]
     pub default_model: Option<String>,
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,6 +115,9 @@ pub(crate) struct UpdateAgentRequest {
     pub integration_id: Option<Option<String>>,
     #[serde(default)]
     pub default_model: Option<Option<String>>,
+    /// Replacement tag set. `None` leaves existing tags untouched; `Some` overwrites.
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 // -- AgentInstance DTOs (project-level) --

@@ -45,6 +45,7 @@ export const agentTemplatesApi = {
     auth_source?: string;
     integration_id?: string | null;
     default_model?: string | null;
+    tags?: string[];
   }) =>
     apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
   get: (agentId: AgentId, options?: ApiRequestOptions) =>
@@ -62,6 +63,7 @@ export const agentTemplatesApi = {
     auth_source?: string;
     integration_id?: string | null;
     default_model?: string | null;
+    tags?: string[];
   }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),

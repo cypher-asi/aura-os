@@ -12,6 +12,13 @@ import {
 } from "../../lib/integrationCatalog";
 import { useOrgStore } from "../../stores/org-store";
 
+export type HostMode = "local" | "cloud";
+
+/// Tag string that marks a super-agent as harness-hosted ("cloud"). Mirrors
+/// `HARNESS_HOST_TAG` in aura-os-server so the UI and server agree on the
+/// wire format for the Phase 4 Local/Cloud toggle.
+export const HOST_MODE_HARNESS_TAG = "host_mode:harness";
+
 interface AgentEditorFormResult {
   name: string;
   setName: (v: string) => void;
@@ -36,6 +43,8 @@ interface AgentEditorFormResult {
   setIntegrationId: (v: string) => void;
   defaultModel: string;
   setDefaultModel: (v: string) => void;
+  hostMode: HostMode;
+  setHostMode: (v: HostMode) => void;
   simplifyForMobileCreate: boolean;
   restrictCreateToAuraRuntimes: boolean;
   availableIntegrations: OrgIntegration[];
@@ -106,6 +115,10 @@ export function useAgentEditorForm(
   const [showAdvancedRuntime, setShowAdvancedRuntime] = useState(false);
   const [integrationId, setIntegrationId] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
+  // Local vs Cloud host mode for super-agents. Brand-new agents default to
+  // "local" (in-process super-agent path). Existing agents load from their
+  // tag set so toggling the UI round-trips through `host_mode:harness`.
+  const [hostMode, setHostMode] = useState<HostMode>("local");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
@@ -134,6 +147,11 @@ export function useAgentEditorForm(
       setAuthSource(agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id));
       setIntegrationId(agent.integration_id ?? "");
       setDefaultModel(agent.default_model ?? "");
+      setHostMode(
+        agent.tags?.some((t) => t.toLowerCase() === HOST_MODE_HARNESS_TAG)
+          ? "cloud"
+          : "local",
+      );
       setShowAdvancedRuntime(
         !isDefaultCreateRuntime(
           agent.adapter_type ?? "aura_harness",
@@ -152,6 +170,7 @@ export function useAgentEditorForm(
       setShowAdvancedRuntime(false);
       setIntegrationId("");
       setDefaultModel("");
+      setHostMode("local");
     }
     setError(""); setNameError("");
   }, [isOpen, agent, isMobileLayout]);
@@ -325,6 +344,13 @@ export function useAgentEditorForm(
       const machineType = adapterType === "aura_harness"
         ? environment === "swarm_microvm" ? "remote" : "local"
         : "local";
+      // Only super-agents are affected by the host-mode toggle today; the
+      // toggle is hidden for regular agents, but we still strip any stale
+      // `host_mode:harness` tag they may have inherited so they can't be
+      // silently migrated. Other tags are preserved verbatim.
+      const tagsPayload = isSuperAgent
+        ? mergeHostModeTag(agent?.tags, hostMode)
+        : undefined;
       const payload = {
         org_id: agent?.org_id ?? activeOrg?.org_id,
         name: trimmedName, role: isSuperAgent ? "super_agent" : role.trim(),
@@ -336,6 +362,7 @@ export function useAgentEditorForm(
         auth_source: authSource,
         integration_id: authSource === "org_integration" ? (integrationId || null) : null,
         default_model: defaultModel.trim() || null,
+        ...(tagsPayload !== undefined ? { tags: tagsPayload } : {}),
       };
       const saved = agent
         ? await api.agents.update(agent.agent_id, payload)
@@ -347,7 +374,7 @@ export function useAgentEditorForm(
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, agent, activeOrg?.org_id, isMobileLayout, onSaved, closeOnSave, onClose]);
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, hostMode, agent, activeOrg?.org_id, isMobileLayout, onSaved, closeOnSave, onClose]);
 
   const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent") || false;
 
@@ -357,6 +384,7 @@ export function useAgentEditorForm(
     adapterType, setAdapterType, environment, setEnvironment,
     authSource, setAuthSource, showAdvancedRuntime, setShowAdvancedRuntime,
     integrationId, setIntegrationId, defaultModel, setDefaultModel,
+    hostMode, setHostMode,
     simplifyForMobileCreate, restrictCreateToAuraRuntimes,
     availableIntegrations: integrations,
     saving, error, nameError, setNameError,
@@ -365,4 +393,21 @@ export function useAgentEditorForm(
     handleSave, handleClose, handleFileSelect, handleCropConfirm, handleCropClose,
     handleAvatarClick, handleAvatarRemove, handleChangeImage,
   };
+}
+
+/// Produce the tag vector to send on save given an existing agent's tags and
+/// a selected host mode. Returns a new array; never mutates the input. Any
+/// non-host-mode tags (e.g. `super_agent`, future feature flags) are
+/// preserved verbatim; only the `host_mode:*` entries are rewritten.
+export function mergeHostModeTag(
+  existing: readonly string[] | undefined,
+  hostMode: HostMode,
+): string[] {
+  const kept = (existing ?? []).filter(
+    (t) => !t.toLowerCase().startsWith("host_mode:"),
+  );
+  if (hostMode === "cloud") {
+    kept.push(HOST_MODE_HARNESS_TAG);
+  }
+  return kept;
 }
