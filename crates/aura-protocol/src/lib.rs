@@ -429,6 +429,15 @@ pub struct AssistantMessageEnd {
     pub stop_reason: String,
     pub usage: SessionUsage,
     pub files_changed: FilesChanged,
+    /// Phase 5 billing roll-up: the originating user whose budget
+    /// should absorb this turn's cost. When `None`, the immediate
+    /// agent owner is billed (today's behavior). Populated by the
+    /// harness when a spawned agent's work should roll up to the
+    /// ancestor user via `walk_parent_chain`. Strictly additive —
+    /// older harness builds never set this field; older clients
+    /// ignore it on deserialize.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub originating_user_id: Option<String>,
 }
 
 /// Token usage information for a session.

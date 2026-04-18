@@ -162,6 +162,7 @@ pub(crate) async fn send_external_agent_event_stream(
             stop_reason: "end_turn".to_string(),
             usage: outcome.usage,
             files_changed: FilesChanged::default(),
+            originating_user_id: None,
         }),
     ];
 
@@ -945,6 +946,7 @@ async fn stream_codex_project_turn(
             stop_reason: "end_turn".to_string(),
             usage,
             files_changed: FilesChanged::default(),
+            originating_user_id: None,
         }),
     );
 
@@ -1154,6 +1156,7 @@ async fn stream_claude_project_turn(
             stop_reason: "end_turn".to_string(),
             usage,
             files_changed: FilesChanged::default(),
+            originating_user_id: None,
         }),
     );
 

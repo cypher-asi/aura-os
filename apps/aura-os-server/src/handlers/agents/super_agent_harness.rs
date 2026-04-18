@@ -577,6 +577,7 @@ mod tests {
                 stop_reason: "end_turn".into(),
                 usage: SessionUsage::default(),
                 files_changed: FilesChanged::default(),
+                originating_user_id: None,
             }))
             .await
             .unwrap();

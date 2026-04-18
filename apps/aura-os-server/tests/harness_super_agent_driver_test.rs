@@ -104,6 +104,7 @@ async fn serve_super_agent_session(
                 stop_reason: "end_turn".into(),
                 usage: SessionUsage::default(),
                 files_changed: FilesChanged::default(),
+                originating_user_id: None,
             });
             socket
                 .send(Message::Text(serde_json::to_string(&end).unwrap().into()))

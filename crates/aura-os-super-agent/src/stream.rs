@@ -489,6 +489,7 @@ impl SuperAgentStream {
                             provider: "anthropic".into(),
                         },
                         files_changed: FilesChanged::default(),
+                        originating_user_id: None,
                     }));
                     return SuperAgentRunOutcome::Completed(self.messages);
                 }
@@ -501,6 +502,7 @@ impl SuperAgentStream {
         self.emit(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
             message_id: msg_id,
             stop_reason: "max_turns".into(),
+            originating_user_id: None,
             usage: SessionUsage {
                 input_tokens: last_turn_usage.input_tokens,
                 output_tokens: last_turn_usage.output_tokens,
