@@ -31,7 +31,7 @@ pub mod session;
 
 pub use backend::{BrowserBackend, StubBackend};
 #[cfg(feature = "cdp")]
-pub use cdp_backend::CdpBackend;
+pub use cdp_backend::{CdpBackend, CdpBackendConfig};
 pub use config::{BrowserConfig, ResolveOptions, SpawnOptions};
 pub use error::Error;
 pub use manager::{BrowserManager, SessionInfo};

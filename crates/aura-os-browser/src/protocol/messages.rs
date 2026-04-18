@@ -60,6 +60,10 @@ pub enum ClientMsg {
         /// CDP modifier mask.
         #[serde(default)]
         modifiers: u32,
+        /// Windows virtual-key code (CDP's `windowsVirtualKeyCode`). When
+        /// absent the backend falls back to `key` / `code`.
+        #[serde(default)]
+        windows_virtual_key_code: Option<u32>,
     },
     /// Forward a wheel event (coalesced on the client before sending).
     Wheel {

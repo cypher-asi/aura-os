@@ -103,10 +103,14 @@ fn build_browser_manager(settings_root: PathBuf) -> Arc<aura_os_browser::Browser
 
     #[cfg(feature = "browser-cdp")]
     {
-        info!("browser: initialising CDP backend (Chromium launched lazily)");
+        let cdp_config = aura_os_browser::CdpBackendConfig::from_env();
+        info!(
+            sandbox_disabled = cdp_config.disable_sandbox,
+            "browser: initialising CDP backend (Chromium launched lazily)"
+        );
         return Arc::new(aura_os_browser::BrowserManager::with_backend(
             config,
-            Arc::new(aura_os_browser::CdpBackend::new()),
+            Arc::new(aura_os_browser::CdpBackend::with_config(cdp_config)),
         ));
     }
     #[allow(unreachable_code)]

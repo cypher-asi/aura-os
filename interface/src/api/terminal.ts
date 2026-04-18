@@ -34,11 +34,18 @@ export async function spawnTerminal(opts: {
   cols: number;
   rows: number;
   cwd?: string;
+  projectId?: string;
 }): Promise<SpawnTerminalResponse> {
+  const body: Record<string, unknown> = {
+    cols: opts.cols,
+    rows: opts.rows,
+  };
+  if (opts.cwd) body.cwd = opts.cwd;
+  if (opts.projectId) body.project_id = opts.projectId;
   const res = await fetch(resolveApiUrl("/api/terminal"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(opts),
+    body: JSON.stringify(body),
   });
   if (!res.ok) await throwApiError(res);
   return res.json();

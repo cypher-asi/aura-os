@@ -11,15 +11,17 @@ function TerminalWrapper({
   focused,
   cwd,
   remoteAgentId,
+  projectId,
   onHook,
 }: {
   visible: boolean;
   focused: boolean;
   cwd?: string;
   remoteAgentId?: string;
+  projectId?: string;
   onHook: (hook: UseTerminalReturn) => void;
 }) {
-  const hook = useTerminal({ cwd, remoteAgentId });
+  const hook = useTerminal({ cwd, remoteAgentId, projectId });
 
   useEffect(() => {
     onHook(hook);
@@ -40,6 +42,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
     registerHook,
     cwd,
     remoteAgentId,
+    projectId,
     targetVersion,
   } = useTerminalPanelStore(
     useShallow((s) => ({
@@ -52,6 +55,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
       registerHook: s.registerHook,
       cwd: s.cwd,
       remoteAgentId: s.remoteAgentId,
+      projectId: s.projectId,
       targetVersion: s.targetVersion,
     })),
   );
@@ -69,6 +73,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
                 focused={isActive}
                 cwd={cwd}
                 remoteAgentId={remoteAgentId}
+                projectId={projectId}
                 onHook={(hook) => registerHook(t.id, hook)}
               />
             );
@@ -101,6 +106,7 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
               focused={isActive && !collapsed && contentReady}
               cwd={cwd}
               remoteAgentId={remoteAgentId}
+              projectId={projectId}
               onHook={(hook) => registerHook(t.id, hook)}
             />
           );

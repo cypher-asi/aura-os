@@ -43,6 +43,13 @@ pub struct TerminalInfo {
     pub rows: u16,
     pub cwd: String,
     pub created_at: u64,
+    /// Optional project this terminal belongs to. Used by passive
+    /// consumers (e.g. dev-server URL discovery) that want to attribute
+    /// terminal output to a specific project context. Stored as a
+    /// stringified UUID so this crate doesn't need to depend on
+    /// `aura-os-core`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
 }
 
 struct TerminalSession {
@@ -151,6 +158,19 @@ impl TerminalManager {
     }
 
     pub fn spawn(&self, cols: u16, rows: u16, cwd: Option<String>) -> Result<TerminalInfo, String> {
+        self.spawn_with_project(cols, rows, cwd, None)
+    }
+
+    /// Spawn a terminal tagged with an optional project id. Callers that
+    /// want the terminal to participate in per-project discovery should
+    /// prefer this over [`Self::spawn`].
+    pub fn spawn_with_project(
+        &self,
+        cols: u16,
+        rows: u16,
+        cwd: Option<String>,
+        project_id: Option<String>,
+    ) -> Result<TerminalInfo, String> {
         let shell = default_shell();
         let working_dir = cwd.unwrap_or_else(default_cwd);
         let PtyComponents {
@@ -172,6 +192,7 @@ impl TerminalManager {
             rows,
             cwd: working_dir,
             created_at: now,
+            project_id,
         };
         let session = TerminalSession {
             _child: child,
@@ -232,6 +253,14 @@ impl TerminalManager {
         } else {
             Err(format!("Terminal {id} not found"))
         }
+    }
+
+    /// Look up the project id associated with a terminal, if any.
+    pub fn project_id_of(&self, id: TerminalId) -> Option<String> {
+        self.sessions
+            .lock()
+            .ok()
+            .and_then(|s| s.get(&id).and_then(|session| session.info.project_id.clone()))
     }
 
     pub fn list(&self) -> Vec<TerminalInfo> {

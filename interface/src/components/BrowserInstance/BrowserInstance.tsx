@@ -21,6 +21,26 @@ export interface BrowserInstanceProps {
   height: number;
 }
 
+/**
+ * Translate backend spawn failures into a short, user-readable message.
+ * The structured error codes come from `aura_os_browser::Error` via the
+ * REST layer's JSON payload.
+ */
+function friendlyBrowserError(err: Error): string {
+  const msg = err.message.toLowerCase();
+  if (
+    msg.includes("chromium_launch") ||
+    msg.includes("chrome") ||
+    msg.includes("no such file")
+  ) {
+    return "Could not start Chromium. Install Google Chrome or Chromium, or set BROWSER_EXECUTABLE_PATH.";
+  }
+  if (msg.includes("network") || msg.includes("websocket")) {
+    return "Lost connection to the browser backend. Retrying…";
+  }
+  return err.message || "Failed to start browser session.";
+}
+
 function mergeDetected(
   settings: ProjectBrowserSettings | undefined,
   extra: DetectedUrl[],
@@ -51,6 +71,7 @@ export function BrowserInstance({
   const workerRef = useRef<Worker | null>(null);
   const [nav, setNav] = useState<NavState | null>(null);
   const [recentDetected, setRecentDetected] = useState<DetectedUrl[]>([]);
+  const [spawnError, setSpawnError] = useState<string | null>(null);
 
   const handleWorkerReady = useCallback((worker: Worker) => {
     workerRef.current = worker;
@@ -85,8 +106,19 @@ export function BrowserInstance({
     onNav: handleNav,
     onSpawned: (resp) => {
       setServerId(clientId, resp.id);
+      setSpawnError(null);
+    },
+    onError: (err) => {
+      setSpawnError(friendlyBrowserError(err));
     },
   });
+
+  const browserSend = browser.send;
+  const browserConnected = browser.connected;
+  useEffect(() => {
+    if (!browserConnected) return;
+    browserSend({ type: "resize", width, height });
+  }, [browserConnected, browserSend, width, height]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -182,12 +214,15 @@ export function BrowserInstance({
         width={width}
         height={height}
         onWorkerReady={handleWorkerReady}
+        onClientMsg={browser.send}
         placeholder={
-          browser.connected
-            ? undefined
-            : browser.spawning
-              ? "Starting browser session…"
-              : "Connecting…"
+          spawnError
+            ? spawnError
+            : browser.connected
+              ? undefined
+              : browser.spawning
+                ? "Starting browser session…"
+                : "Connecting…"
         }
       />
     </div>

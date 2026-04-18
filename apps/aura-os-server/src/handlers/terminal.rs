@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::str::FromStr;
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, State};
@@ -8,8 +9,10 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
+use aura_os_browser::session::discovery::extract_localhost_urls;
+use aura_os_core::ProjectId;
 use aura_os_terminal::TerminalId;
 
 use crate::state::AppState;
@@ -19,6 +22,8 @@ pub(crate) struct SpawnRequest {
     cols: Option<u16>,
     rows: Option<u16>,
     cwd: Option<String>,
+    #[serde(default)]
+    project_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -34,7 +39,10 @@ pub(crate) async fn spawn_terminal(
     let cols = body.cols.unwrap_or(80);
     let rows = body.rows.unwrap_or(24);
 
-    match state.terminal_manager.spawn(cols, rows, body.cwd) {
+    match state
+        .terminal_manager
+        .spawn_with_project(cols, rows, body.cwd, body.project_id)
+    {
         Ok(info) => {
             let resp = SpawnResponse {
                 id: info.id.to_string(),
@@ -144,6 +152,12 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
         }
     };
 
+    let project_id: Option<ProjectId> = state
+        .terminal_manager
+        .project_id_of(id)
+        .and_then(|s| ProjectId::from_str(&s).ok());
+    let mut scanner = UrlLineScanner::default();
+
     let (output_tx, mut output_rx) = mpsc::channel::<Vec<u8>>(256);
     let (exit_tx, mut exit_rx) = mpsc::channel::<i32>(1);
     tokio::task::spawn_blocking(move || {
@@ -153,6 +167,7 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
     loop {
         tokio::select! {
             Some(data) = output_rx.recv() => {
+                scan_output_for_urls(&state, project_id.as_ref(), &mut scanner, &data).await;
                 let msg = serde_json::json!({"type": "output", "data": B64.encode(&data)});
                 if socket.send(Message::Text(msg.to_string())).await.is_err() { break; }
             }
@@ -176,6 +191,83 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
 
     let _ = state.terminal_manager.kill(id);
     info!(%id, "Terminal WebSocket disconnected");
+}
+
+/// Buffers terminal output into lines and yields completed ones for
+/// passive URL scanning. ANSI escape codes are stripped best-effort before
+/// matching. Oversized lines are capped at 8 KiB so a malformed program
+/// can't grow the buffer unbounded.
+#[derive(Default)]
+struct UrlLineScanner {
+    buf: String,
+}
+
+const SCANNER_LINE_CAP: usize = 8 * 1024;
+
+impl UrlLineScanner {
+    /// Feed a chunk of raw PTY bytes; returns completed lines.
+    fn feed(&mut self, bytes: &[u8]) -> Vec<String> {
+        let text = String::from_utf8_lossy(bytes);
+        let mut lines = Vec::new();
+        for ch in text.chars() {
+            if ch == '\n' {
+                let stripped = strip_ansi(&self.buf);
+                lines.push(stripped);
+                self.buf.clear();
+            } else if ch != '\r' && self.buf.len() < SCANNER_LINE_CAP {
+                self.buf.push(ch);
+            }
+        }
+        lines
+    }
+}
+
+/// Minimal ANSI CSI stripper — we only care about producing a string
+/// whose URL substrings aren't split across escape sequences.
+fn strip_ansi(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let bytes = input.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == 0x1b && i + 1 < bytes.len() && bytes[i + 1] == b'[' {
+            i += 2;
+            while i < bytes.len() {
+                let b = bytes[i];
+                i += 1;
+                if (0x40..=0x7e).contains(&b) {
+                    break;
+                }
+            }
+        } else {
+            out.push(bytes[i] as char);
+            i += 1;
+        }
+    }
+    out
+}
+
+async fn scan_output_for_urls(
+    state: &AppState,
+    project_id: Option<&ProjectId>,
+    scanner: &mut UrlLineScanner,
+    bytes: &[u8],
+) {
+    if project_id.is_none() {
+        // Avoid line buffering for untagged terminals; nothing to persist.
+        return;
+    }
+    for line in scanner.feed(bytes) {
+        for entry in extract_localhost_urls(&line) {
+            if let Err(err) = state
+                .browser_manager
+                .settings()
+                .record_detected(project_id, entry)
+                .await
+            {
+                debug!(%err, "failed to record detected URL from terminal output");
+            }
+        }
+    }
 }
 
 fn read_pty_loop(

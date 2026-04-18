@@ -7,21 +7,29 @@
 //!
 //! - A single long-lived [`chromiumoxide::Browser`] is launched lazily on
 //!   first [`start_session`](BrowserBackend::start_session). All sessions
-//!   share the same Chromium process via fresh page targets.
+//!   share the same Chromium process via fresh page targets. When the
+//!   last session closes, a grace-period timer optionally shuts Chromium
+//!   down so the process footprint follows demand.
 //! - Each session owns a per-session command channel and a task that
 //!   `select!`s over:
 //!   - CDP screencast frames → [`ServerEvent::Frame`]
-//!   - CDP `frameNavigated` / `loadEventFired` events → [`ServerEvent::Nav`]
-//!   - our own command channel (dispatch / ack / resize / …)
+//!   - CDP navigation events → [`ServerEvent::Nav`]
+//!   - our own command channel (dispatch / ack / resize / stop)
 //!   - the session cancel token
-//! - On session end we fire [`ServerEvent::Exit`] on the events channel so
-//!   the WebSocket handler can shut the client cleanly.
+//! - Frame ack is client-driven: we do *not* ack a CDP frame until the
+//!   web client has acked it over the WS. This gives real backpressure
+//!   on slow networks so we don't flood the socket.
+//! - On session end we fire [`ServerEvent::Exit`] on the events channel
+//!   so the WebSocket handler can shut the client cleanly.
 //!
-//! Failure of the CDP command from a dispatched [`ClientMsg`] is logged
-//! but never closes the session; the client can retry. Browser launch
-//! errors bubble up so the manager can fall back to [`crate::StubBackend`].
+//! Failure of a dispatched [`ClientMsg`] is logged but never closes the
+//! session; the client can retry. Browser launch errors bubble up.
 
+use std::collections::VecDeque;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use base64::Engine;
@@ -31,7 +39,8 @@ use chromiumoxide::cdp::browser_protocol::input::{
     MouseButton as CdpMouseButton,
 };
 use chromiumoxide::cdp::browser_protocol::page::{
-    EventFrameNavigated, EventLoadEventFired, EventScreencastFrame, ReloadParams,
+    EventFrameNavigated, EventFrameStartedLoading, EventFrameStoppedLoading, EventLoadEventFired,
+    EventScreencastFrame, GetNavigationHistoryParams, NavigateToHistoryEntryParams, ReloadParams,
     ScreencastFrameAckParams, StartScreencastFormat, StartScreencastParams, StopScreencastParams,
 };
 use chromiumoxide::{Browser, BrowserConfig as ChromiumBrowserConfig, Page};
@@ -39,6 +48,7 @@ use dashmap::DashMap;
 use futures_util::StreamExt;
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
+use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use url::Url;
@@ -50,14 +60,67 @@ use crate::protocol::{ClientMsg, MouseButton, MouseEventKind, NavState, ServerEv
 use crate::session::SessionId;
 
 const DISPATCH_CHANNEL_CAP: usize = 32;
+/// How many un-acked frames a client may have outstanding before the
+/// backend stops forwarding new frames and drops the oldest pending CDP
+/// ack. Tuned for a snappy feel on LANs while absorbing brief bursts.
+const MAX_INFLIGHT_FRAMES: usize = 4;
+/// How long to wait after the last session exits before shutting Chromium
+/// down. A short grace period avoids restart churn when the user spawns a
+/// new session right after closing the last one.
+const CHROMIUM_IDLE_GRACE: Duration = Duration::from_secs(15);
+
+/// Runtime configuration for [`CdpBackend`].
+///
+/// Defaults are sensible: sandbox enabled everywhere the kernel supports
+/// it, no proxy, no persistent profile. Override from environment at
+/// startup with [`Self::from_env`].
+#[derive(Debug, Clone, Default)]
+pub struct CdpBackendConfig {
+    /// Path to a Chromium/Chrome binary. When `None` chromiumoxide tries
+    /// to auto-discover one.
+    pub executable_path: Option<PathBuf>,
+    /// Persistent profile/user-data directory. When `None` each launch
+    /// gets a fresh temp directory.
+    pub user_data_dir: Option<PathBuf>,
+    /// Outgoing proxy server, e.g. `http://proxy.local:3128`.
+    pub proxy_server: Option<String>,
+    /// Pass `--no-sandbox` to Chromium. Needed in most container images
+    /// but disabled by default so local dev uses the safer sandbox.
+    pub disable_sandbox: bool,
+    /// How long after the last session exits to wait before shutting
+    /// Chromium down. `None` keeps it alive forever (legacy behaviour).
+    pub idle_shutdown: Option<Duration>,
+}
+
+impl CdpBackendConfig {
+    /// Pull configuration from environment variables.
+    ///
+    /// Recognised keys:
+    /// - `BROWSER_EXECUTABLE_PATH` — path to Chromium/Chrome.
+    /// - `BROWSER_USER_DATA_DIR` — persistent profile directory.
+    /// - `BROWSER_PROXY_SERVER` — proxy server URL.
+    /// - `BROWSER_DISABLE_SANDBOX` — `1`/`true` to pass `--no-sandbox`.
+    pub fn from_env() -> Self {
+        let executable_path = std::env::var_os("BROWSER_EXECUTABLE_PATH").map(PathBuf::from);
+        let user_data_dir = std::env::var_os("BROWSER_USER_DATA_DIR").map(PathBuf::from);
+        let proxy_server = std::env::var("BROWSER_PROXY_SERVER").ok();
+        let disable_sandbox = std::env::var("BROWSER_DISABLE_SANDBOX")
+            .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "on"))
+            .unwrap_or(false);
+        Self {
+            executable_path,
+            user_data_dir,
+            proxy_server,
+            disable_sandbox,
+            idle_shutdown: Some(CHROMIUM_IDLE_GRACE),
+        }
+    }
+}
 
 /// Command forwarded from the public trait methods to the per-session task.
 enum SessionCommand {
     Client(ClientMsg),
-    /// Client ack of a frame sequence. CDP ack is sent at send-time so this
-    /// is purely advisory today; we keep it so flow-control can be added
-    /// without a trait change.
-    Ack(#[allow(dead_code)] u32),
+    Ack(u32),
     Stop,
 }
 
@@ -73,8 +136,12 @@ pub struct CdpBackend {
 }
 
 struct CdpBackendInner {
+    config: CdpBackendConfig,
     launcher: Mutex<Option<Arc<Browser>>>,
     sessions: DashMap<SessionId, SessionState>,
+    /// Monotonic generation counter used to cancel stale idle-shutdown
+    /// timers when a new session starts during the grace period.
+    shutdown_gen: AtomicU64,
 }
 
 impl std::fmt::Debug for CdpBackend {
@@ -86,23 +153,42 @@ impl std::fmt::Debug for CdpBackend {
 }
 
 impl CdpBackend {
-    /// Build an empty `CdpBackend`. Chromium is launched lazily on the
-    /// first `start_session` call so the server boots even when Chrome is
-    /// absent; if the launch fails, the error is surfaced there.
+    /// Build a `CdpBackend` with default configuration.
     pub fn new() -> Self {
+        Self::with_config(CdpBackendConfig::default())
+    }
+
+    /// Build a `CdpBackend` with the supplied configuration.
+    pub fn with_config(config: CdpBackendConfig) -> Self {
         Self {
             inner: Arc::new(CdpBackendInner {
+                config,
                 launcher: Mutex::new(None),
                 sessions: DashMap::new(),
+                shutdown_gen: AtomicU64::new(0),
             }),
         }
     }
 
     async fn browser(&self) -> Result<Arc<Browser>, Error> {
         let mut guard = self.inner.launcher.lock().await;
+        // Bump the generation so any pending idle-shutdown timer aborts.
+        self.inner.shutdown_gen.fetch_add(1, Ordering::SeqCst);
         if guard.is_none() {
-            let config = ChromiumBrowserConfig::builder()
-                .no_sandbox()
+            let mut builder = ChromiumBrowserConfig::builder();
+            if let Some(path) = &self.inner.config.executable_path {
+                builder = builder.chrome_executable(path);
+            }
+            if let Some(dir) = &self.inner.config.user_data_dir {
+                builder = builder.user_data_dir(dir);
+            }
+            if let Some(proxy) = &self.inner.config.proxy_server {
+                builder = builder.arg(format!("--proxy-server={proxy}"));
+            }
+            if self.inner.config.disable_sandbox {
+                builder = builder.no_sandbox();
+            }
+            let config = builder
                 .build()
                 .map_err(|e| Error::backend("chromium_config", e.to_string()))?;
             let (browser, mut handler) = Browser::launch(config)
@@ -121,6 +207,47 @@ impl CdpBackend {
         Ok(Arc::clone(
             guard.as_ref().expect("browser just initialised"),
         ))
+    }
+
+    /// Spawn an async task that waits for the idle grace period and, if
+    /// no session has appeared in the meantime, shuts the shared browser
+    /// down. Called from `stop_session` after removing the session.
+    fn schedule_idle_shutdown(&self) {
+        let Some(grace) = self.inner.config.idle_shutdown else {
+            return;
+        };
+        if !self.inner.sessions.is_empty() {
+            return;
+        }
+        let inner = Arc::clone(&self.inner);
+        let gen = inner.shutdown_gen.fetch_add(1, Ordering::SeqCst) + 1;
+        tokio::spawn(async move {
+            sleep(grace).await;
+            if inner.shutdown_gen.load(Ordering::SeqCst) != gen {
+                return;
+            }
+            if !inner.sessions.is_empty() {
+                return;
+            }
+            let mut guard = inner.launcher.lock().await;
+            if let Some(browser_arc) = guard.take() {
+                // Best-effort: if other Arcs still live, skip the close so
+                // we don't tear the process out from under a pending task.
+                match Arc::try_unwrap(browser_arc) {
+                    Ok(mut browser) => {
+                        if let Err(err) = browser.close().await {
+                            debug!(%err, "browser.close failed during idle shutdown");
+                        }
+                        let _ = browser.wait().await;
+                        info!("headless Chromium shut down after idle grace period");
+                    }
+                    Err(arc) => {
+                        // Put it back; a session task is still holding a ref.
+                        *guard = Some(arc);
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -163,11 +290,16 @@ impl BrowserBackend for CdpBackend {
 
         let (tx, rx) = mpsc::channel(DISPATCH_CHANNEL_CAP);
         let quality = opts.frame_quality.unwrap_or(75) as i64;
-        let max_w = opts.width as i64;
-        let max_h = opts.height as i64;
 
         let task = tokio::spawn(run_session_loop(
-            id, page, events, rx, cancel, quality, max_w, max_h,
+            id,
+            page,
+            events,
+            rx,
+            cancel,
+            quality,
+            opts.width,
+            opts.height,
         ));
 
         self.inner.sessions.insert(id, SessionState { tx, task });
@@ -200,6 +332,7 @@ impl BrowserBackend for CdpBackend {
                 debug!(%id, ?err, "session task join failed");
             }
         }
+        self.schedule_idle_shutdown();
         Ok(())
     }
 }
@@ -212,6 +345,35 @@ async fn set_viewport(page: &Page, width: u16, height: u16) -> Result<(), Error>
     Ok(())
 }
 
+async fn start_screencast(
+    page: &Page,
+    quality: i64,
+    width: u16,
+    height: u16,
+) -> Result<(), Error> {
+    let params = StartScreencastParams {
+        format: Some(StartScreencastFormat::Jpeg),
+        quality: Some(quality),
+        max_width: Some(width as i64),
+        max_height: Some(height as i64),
+        every_nth_frame: Some(1),
+    };
+    page.execute(params)
+        .await
+        .map_err(|e| Error::backend("startScreencast", e.to_string()))?;
+    Ok(())
+}
+
+/// Running loading/navigation-history snapshot kept in sync with CDP
+/// events so [`build_nav_state`] can serve accurate `NavState`s without a
+/// round-trip per event.
+#[derive(Debug, Default)]
+struct NavTracker {
+    loading: bool,
+    current_url: String,
+    current_title: Option<String>,
+}
+
 /// Main per-session event pump. Owns the [`Page`] and translates between
 /// CDP streams and our [`ServerEvent`] / [`ClientMsg`] channels.
 #[allow(clippy::too_many_arguments)]
@@ -222,17 +384,10 @@ async fn run_session_loop(
     mut commands: mpsc::Receiver<SessionCommand>,
     cancel: CancellationToken,
     quality: i64,
-    max_w: i64,
-    max_h: i64,
+    mut width: u16,
+    mut height: u16,
 ) {
-    let screencast = StartScreencastParams {
-        format: Some(StartScreencastFormat::Jpeg),
-        quality: Some(quality),
-        max_width: Some(max_w),
-        max_height: Some(max_h),
-        every_nth_frame: Some(1),
-    };
-    if let Err(err) = page.execute(screencast).await {
+    if let Err(err) = start_screencast(&page, quality, width, height).await {
         warn!(%id, %err, "startScreencast failed; continuing without frames");
     }
 
@@ -260,8 +415,26 @@ async fn run_session_loop(
             return;
         }
     };
+    let mut started_stream = match page.event_listener::<EventFrameStartedLoading>().await {
+        Ok(s) => s,
+        Err(err) => {
+            warn!(%id, %err, "frameStartedLoading subscribe failed; loading state will be coarse");
+            let _ = events.send(ServerEvent::Exit { code: 1 }).await;
+            return;
+        }
+    };
+    let mut stopped_stream = match page.event_listener::<EventFrameStoppedLoading>().await {
+        Ok(s) => s,
+        Err(err) => {
+            warn!(%id, %err, "frameStoppedLoading subscribe failed; loading state will be coarse");
+            let _ = events.send(ServerEvent::Exit { code: 1 }).await;
+            return;
+        }
+    };
 
     let mut seq: u32 = 0;
+    let mut pending_acks: VecDeque<PendingFrame> = VecDeque::new();
+    let mut tracker = NavTracker::default();
 
     loop {
         tokio::select! {
@@ -273,36 +446,45 @@ async fn run_session_loop(
                 match maybe_cmd {
                     Some(SessionCommand::Stop) | None => break,
                     Some(SessionCommand::Client(msg)) => {
+                        if let ClientMsg::Resize { width: w, height: h } = &msg {
+                            width = *w;
+                            height = *h;
+                        }
+                        let was_resize = matches!(msg, ClientMsg::Resize { .. });
                         if let Err(err) = apply_client_msg(&page, msg).await {
                             warn!(%id, %err, "apply_client_msg failed");
                         }
+                        if was_resize {
+                            // Screencast frames are bound to the CSS size
+                            // captured at startScreencast time; restart so
+                            // the client receives correctly-sized frames.
+                            let _ = page.execute(StopScreencastParams::default()).await;
+                            if let Err(err) = start_screencast(&page, quality, width, height).await {
+                                warn!(%id, %err, "restartScreencast after resize failed");
+                            }
+                        }
                     }
-                    Some(SessionCommand::Ack(_)) => {
-                        // Ack is handled per-frame via CDP immediately after
-                        // we send the frame to the client; we do not need
-                        // the client's explicit ack to unblock CDP.
+                    Some(SessionCommand::Ack(client_seq)) => {
+                        drain_acks_up_to(&page, &mut pending_acks, client_seq).await;
                     }
                 }
             }
-            maybe_frame = frame_stream.next() => {
+            maybe_frame = frame_stream.next(), if pending_acks.len() < MAX_INFLIGHT_FRAMES => {
                 let Some(frame) = maybe_frame else { break };
                 let frame = (*frame).clone();
                 seq = seq.wrapping_add(1);
 
-                if let Err(err) = page
-                    .execute(ScreencastFrameAckParams::new(frame.session_id))
-                    .await
-                {
-                    debug!(%id, %err, "screencastFrameAck failed");
-                }
-
                 let jpeg = decode_screencast_data(&frame.data);
-                let (width, height) = (
+                let (w, h) = (
                     frame.metadata.device_width.round() as u16,
                     frame.metadata.device_height.round() as u16,
                 );
+                pending_acks.push_back(PendingFrame {
+                    client_seq: seq,
+                    cdp_session_id: frame.session_id,
+                });
                 if events
-                    .send(ServerEvent::Frame { seq, width, height, jpeg })
+                    .send(ServerEvent::Frame { seq, width: w, height: h, jpeg })
                     .await
                     .is_err()
                 {
@@ -311,13 +493,25 @@ async fn run_session_loop(
             }
             maybe_nav = nav_stream.next() => {
                 if let Some(nav) = maybe_nav {
-                    let nav_state = build_nav_state(&page, Some(&nav.frame.url)).await;
-                    let _ = events.send(ServerEvent::Nav(nav_state)).await;
+                    tracker.current_url = nav.frame.url.clone();
+                    let state = build_nav_state(&page, &tracker).await;
+                    let _ = events.send(ServerEvent::Nav(state)).await;
                 }
             }
             _ = load_stream.next() => {
-                let nav_state = build_nav_state(&page, None).await;
-                let _ = events.send(ServerEvent::Nav(nav_state)).await;
+                tracker.loading = false;
+                let state = build_nav_state(&page, &tracker).await;
+                let _ = events.send(ServerEvent::Nav(state)).await;
+            }
+            _ = started_stream.next() => {
+                tracker.loading = true;
+                let state = build_nav_state(&page, &tracker).await;
+                let _ = events.send(ServerEvent::Nav(state)).await;
+            }
+            _ = stopped_stream.next() => {
+                tracker.loading = false;
+                let state = build_nav_state(&page, &tracker).await;
+                let _ = events.send(ServerEvent::Nav(state)).await;
             }
         }
     }
@@ -330,6 +524,25 @@ async fn run_session_loop(
     }
     let _ = events.send(ServerEvent::Exit { code: 0 }).await;
     info!(%id, "CDP session loop exited");
+}
+
+#[derive(Debug)]
+struct PendingFrame {
+    client_seq: u32,
+    cdp_session_id: i64,
+}
+
+async fn drain_acks_up_to(page: &Page, queue: &mut VecDeque<PendingFrame>, client_seq: u32) {
+    while let Some(front) = queue.front() {
+        if front.client_seq > client_seq {
+            break;
+        }
+        let cdp_id = front.cdp_session_id;
+        queue.pop_front();
+        if let Err(err) = page.execute(ScreencastFrameAckParams::new(cdp_id)).await {
+            debug!(%err, "screencastFrameAck failed");
+        }
+    }
 }
 
 fn decode_screencast_data(data: &chromiumoxide::types::Binary) -> bytes::Bytes {
@@ -351,21 +564,38 @@ fn is_base64_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'+' || b == b'/' || b == b'=' || b == b'\n' || b == b'\r'
 }
 
-async fn build_nav_state(page: &Page, url_hint: Option<&str>) -> NavState {
-    let url = match url_hint {
-        Some(u) => u.to_string(),
-        None => page.url().await.ok().flatten().unwrap_or_default(),
+async fn build_nav_state(page: &Page, tracker: &NavTracker) -> NavState {
+    let history = page
+        .execute(GetNavigationHistoryParams::default())
+        .await
+        .ok()
+        .map(|resp| resp.result.clone());
+
+    let (can_go_back, can_go_forward) = match &history {
+        Some(h) => {
+            let idx = h.current_index;
+            let len = h.entries.len() as i64;
+            (idx > 0, idx + 1 < len)
+        }
+        None => (false, false),
     };
-    let title = page.get_title().await.ok().flatten();
-    // chromiumoxide doesn't expose history length trivially; leave these
-    // conservative. The client can still wire back/forward buttons and the
-    // CDP call will simply no-op if there is nothing to navigate to.
+
+    let url = if tracker.current_url.is_empty() {
+        page.url().await.ok().flatten().unwrap_or_default()
+    } else {
+        tracker.current_url.clone()
+    };
+    let title = match &tracker.current_title {
+        Some(t) => Some(t.clone()),
+        None => page.get_title().await.ok().flatten(),
+    };
+
     NavState {
         url,
         title,
-        can_go_back: true,
-        can_go_forward: true,
-        loading: false,
+        can_go_back,
+        can_go_forward,
+        loading: tracker.loading,
     }
 }
 
@@ -377,16 +607,10 @@ async fn apply_client_msg(page: &Page, msg: ClientMsg) -> Result<(), Error> {
                 .map_err(|e| Error::backend("goto", e.to_string()))?;
         }
         ClientMsg::Back => {
-            let _ = page
-                .evaluate("history.back()")
-                .await
-                .map_err(|e| Error::backend("history.back", e.to_string()))?;
+            navigate_history_relative(page, -1).await?;
         }
         ClientMsg::Forward => {
-            let _ = page
-                .evaluate("history.forward()")
-                .await
-                .map_err(|e| Error::backend("history.forward", e.to_string()))?;
+            navigate_history_relative(page, 1).await?;
         }
         ClientMsg::Reload => {
             page.execute(ReloadParams::default())
@@ -464,6 +688,7 @@ async fn apply_client_msg(page: &Page, msg: ClientMsg) -> Result<(), Error> {
             code,
             text,
             modifiers,
+            windows_virtual_key_code,
         } => {
             let ty = if event.eq_ignore_ascii_case("down") {
                 DispatchKeyEventType::KeyDown
@@ -479,7 +704,7 @@ async fn apply_client_msg(page: &Page, msg: ClientMsg) -> Result<(), Error> {
                 key_identifier: None,
                 code: Some(code),
                 key: Some(key),
-                windows_virtual_key_code: None,
+                windows_virtual_key_code: windows_virtual_key_code.map(|v| v as i64),
                 native_virtual_key_code: None,
                 auto_repeat: None,
                 is_keypad: None,
@@ -492,6 +717,24 @@ async fn apply_client_msg(page: &Page, msg: ClientMsg) -> Result<(), Error> {
                 .map_err(|e| Error::backend("dispatchKeyEvent", e.to_string()))?;
         }
     }
+    Ok(())
+}
+
+async fn navigate_history_relative(page: &Page, offset: i64) -> Result<(), Error> {
+    let history = page
+        .execute(GetNavigationHistoryParams::default())
+        .await
+        .map_err(|e| Error::backend("getNavigationHistory", e.to_string()))?;
+    let idx = history.result.current_index;
+    let target = idx + offset;
+    if target < 0 || target >= history.result.entries.len() as i64 {
+        // Legitimate no-op: user hit Back at the start of history etc.
+        return Ok(());
+    }
+    let entry_id = history.result.entries[target as usize].id;
+    page.execute(NavigateToHistoryEntryParams::new(entry_id))
+        .await
+        .map_err(|e| Error::backend("navigateToHistoryEntry", e.to_string()))?;
     Ok(())
 }
 
@@ -545,5 +788,30 @@ mod tests {
         for b in [b'!', b'@', 0x00, 0xFF] {
             assert!(!is_base64_char(b));
         }
+    }
+
+    #[test]
+    fn config_from_env_respects_booleans() {
+        std::env::set_var("BROWSER_DISABLE_SANDBOX", "1");
+        let cfg = CdpBackendConfig::from_env();
+        assert!(cfg.disable_sandbox);
+        std::env::set_var("BROWSER_DISABLE_SANDBOX", "no");
+        let cfg = CdpBackendConfig::from_env();
+        assert!(!cfg.disable_sandbox);
+        std::env::remove_var("BROWSER_DISABLE_SANDBOX");
+    }
+
+    #[test]
+    fn config_from_env_default_is_safe() {
+        std::env::remove_var("BROWSER_DISABLE_SANDBOX");
+        std::env::remove_var("BROWSER_EXECUTABLE_PATH");
+        std::env::remove_var("BROWSER_USER_DATA_DIR");
+        std::env::remove_var("BROWSER_PROXY_SERVER");
+        let cfg = CdpBackendConfig::from_env();
+        assert!(!cfg.disable_sandbox);
+        assert!(cfg.executable_path.is_none());
+        assert!(cfg.user_data_dir.is_none());
+        assert!(cfg.proxy_server.is_none());
+        assert_eq!(cfg.idle_shutdown, Some(CHROMIUM_IDLE_GRACE));
     }
 }

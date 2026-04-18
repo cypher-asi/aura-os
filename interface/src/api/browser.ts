@@ -142,6 +142,8 @@ export type BrowserClientMsg =
       code: string;
       text?: string | null;
       modifiers?: number;
+      /** Windows virtual-key code for non-printable keys. */
+      windows_virtual_key_code?: number;
     }
   | {
       type: "wheel";
