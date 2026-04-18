@@ -320,4 +320,58 @@ mod tests {
         let profile = SuperAgentProfile::ceo_default();
         assert_eq!(profile.tier1_domains, TIER1_DOMAINS);
     }
+
+    /// Contract test: the JSON wire shape must match what
+    /// `aura-tools::IntentClassifier::from_profile_json` expects
+    /// (`tier1_domains: [String]` + `classifier_rules: [{domain,
+    /// keywords}]`). Phase 3 will ship this exact JSON to a
+    /// harness-hosted agent; if this test fails, the harness
+    /// classifier will silently fall back to tier-1-only behavior.
+    #[test]
+    fn wire_shape_matches_harness_intent_classifier_contract() {
+        let profile = SuperAgentProfile::ceo_default();
+        let v = serde_json::to_value(&profile).unwrap();
+        let obj = v.as_object().expect("top-level must be object");
+
+        let tier1 = obj
+            .get("tier1_domains")
+            .expect("tier1_domains must exist")
+            .as_array()
+            .expect("tier1_domains must be an array");
+        for d in tier1 {
+            assert!(
+                d.is_string(),
+                "tier1_domains entries must be snake_case strings, got {d:?}"
+            );
+        }
+
+        let rules = obj
+            .get("classifier_rules")
+            .expect("classifier_rules must exist")
+            .as_array()
+            .expect("classifier_rules must be an array");
+        for rule in rules {
+            let r = rule.as_object().expect("rule must be object");
+            assert!(r.get("domain").and_then(|d| d.as_str()).is_some(),
+                "each rule must expose `domain: string`, got {rule:?}");
+            let kws = r
+                .get("keywords")
+                .and_then(|k| k.as_array())
+                .expect("each rule must expose `keywords: [string]`");
+            for k in kws {
+                assert!(k.is_string(), "keyword must be string, got {k:?}");
+            }
+        }
+
+        // Sanity: tier1 contents should serialize as the documented
+        // snake_case names the harness classifier matches on.
+        let tier1_strs: Vec<&str> =
+            tier1.iter().filter_map(serde_json::Value::as_str).collect();
+        for expected in ["project", "agent", "execution", "monitoring"] {
+            assert!(
+                tier1_strs.contains(&expected),
+                "tier1_domains missing {expected}: {tier1_strs:?}"
+            );
+        }
+    }
 }
