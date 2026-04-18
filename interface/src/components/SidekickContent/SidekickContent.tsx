@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { cn } from "@cypher-asi/zui";
@@ -25,6 +25,8 @@ import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { InfoPanel } from "./InfoPanel";
 import styles from "../Sidekick/Sidekick.module.css";
+
+const BrowserPanel = lazy(() => import("../BrowserPanel"));
 import overlayStyles from "../PreviewOverlay/PreviewOverlay.module.css";
 
 const SEARCH_PLACEHOLDERS: Record<string, string> = {
@@ -104,7 +106,11 @@ export function SidekickContent() {
     );
   }
 
-  const searchable = activeTab !== "stats" && activeTab !== "run" && activeTab !== "terminal";
+  const searchable =
+    activeTab !== "stats" &&
+    activeTab !== "run" &&
+    activeTab !== "terminal" &&
+    activeTab !== "browser";
 
   const filesContent = canBrowseFiles ? (
     <FileExplorer
@@ -120,6 +126,10 @@ export function SidekickContent() {
   const activeContent =
     activeTab === "terminal" ? (
       <TerminalSidekickPane />
+    ) : activeTab === "browser" ? (
+      <Suspense fallback={null}>
+        <BrowserPanel projectId={projectId} />
+      </Suspense>
     ) : activeTab === "run" ? (
       <RunSidekickPane />
     ) : activeTab === "specs" ? (
@@ -170,8 +180,12 @@ export function SidekickContent() {
         />
       )}
       <div className={styles.sidekickContent}>
-        {(activeTab === "run" || activeTab === "terminal") && activeContent}
-        {activeTab !== "log" && activeTab !== "run" && activeTab !== "terminal" && (
+        {(activeTab === "run" || activeTab === "terminal" || activeTab === "browser") &&
+          activeContent}
+        {activeTab !== "log" &&
+          activeTab !== "run" &&
+          activeTab !== "terminal" &&
+          activeTab !== "browser" && (
           <div className={styles.tabContentShell}>
             <div ref={tabContentRef} className={styles.tabContent}>
               {activeContent}

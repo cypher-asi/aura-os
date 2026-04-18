@@ -11,9 +11,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, dev_loop, feed, feedback, files, follows, generation, harness_proxy,
-    leaderboard, log, notes, org_tools, orgs, process, project_stats, projects, remote_files,
-    remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
+    agents, auth, billing, browser, dev_loop, feed, feedback, files, follows, generation,
+    harness_proxy, leaderboard, log, notes, org_tools, orgs, process, project_stats, projects,
+    remote_files, remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -715,6 +715,20 @@ fn system_routes() -> Router<AppState> {
         )
         .route("/api/terminal/:id", delete(terminal::kill_terminal))
         .route("/ws/terminal/:id", get(terminal::ws_terminal))
+        .route(
+            "/api/browser",
+            post(browser::spawn_browser).get(browser::list_browsers),
+        )
+        .route("/api/browser/:id", delete(browser::kill_browser))
+        .route(
+            "/api/browser/projects/:project_id/settings",
+            get(browser::get_project_settings).put(browser::update_project_settings),
+        )
+        .route(
+            "/api/browser/projects/:project_id/detect",
+            post(browser::run_detect),
+        )
+        .route("/ws/browser/:id", get(browser::ws_browser))
         .route(
             "/ws/agents/:agent_id/remote_agent/terminal",
             get(remote_terminal::ws_remote_terminal),

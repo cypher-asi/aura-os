@@ -325,6 +325,7 @@ pub fn build_test_app_from_store(
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         event_broadcast,
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
+        browser_manager: Arc::new(aura_os_browser::BrowserManager::new(aura_os_browser::BrowserConfig::default())),
         feedback_network_client: network_client.clone(),
         network_client,
         storage_client,

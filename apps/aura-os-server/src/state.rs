@@ -28,6 +28,7 @@ use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_store::RocksStore;
 use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
+use aura_os_browser::BrowserManager;
 use aura_os_terminal::TerminalManager;
 
 use crate::error::ApiError;
@@ -321,6 +322,8 @@ pub struct AppState {
     pub swarm_harness: Arc<dyn HarnessLink>,
     pub harness_sessions: HarnessSessionRegistry,
     pub terminal_manager: Arc<TerminalManager>,
+    /// In-app browser sessions + project-aware URL resolver.
+    pub browser_manager: Arc<BrowserManager>,
     /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
     pub network_client: Option<Arc<NetworkClient>>,
     /// Optional aura-network client dedicated to the Feedback app. Falls back

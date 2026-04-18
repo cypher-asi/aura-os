@@ -309,6 +309,7 @@ mod tests {
                 swarm_harness,
                 harness_sessions: Arc::new(Mutex::new(HashMap::new())),
                 terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
+                browser_manager: Arc::new(aura_os_browser::BrowserManager::new(aura_os_browser::BrowserConfig::default())),
                 network_client: None,
                 feedback_network_client: None,
                 storage_client: None,

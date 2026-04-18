@@ -7,6 +7,7 @@ import { createSidekickSlice, type SidekickSliceState } from "./shared/sidekick-
 
 export type SidekickTab =
   | "terminal"
+  | "browser"
   | "run"
   | "specs"
   | "tasks"

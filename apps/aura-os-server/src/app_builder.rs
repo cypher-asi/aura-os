@@ -302,6 +302,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| Path::new(".").to_path_buf());
+    let browser_settings_root = data_dir.join("browser");
     let store = Arc::new(RocksStore::open(db_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let feedback_network_client = NetworkClient::from_env_key("AURA_NETWORK_FEEDBACK_URL")
@@ -406,6 +407,10 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         chat_sessions: Arc::new(Mutex::new(HashMap::new())),
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
+        browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
+            aura_os_browser::BrowserConfig::default()
+                .with_settings_root(browser_settings_root.clone()),
+        )),
         network_client,
         feedback_network_client,
         storage_client,

@@ -1,0 +1,128 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border, #2a2a2a);
+  background: var(--color-bg-subtle, #141414);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm, 4px);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #9a9a9a);
+  cursor: pointer;
+}
+
+.navButton:hover {
+  color: var(--color-text, #ededed);
+  background: var(--color-bg-hover, #1e1e1e);
+}
+
+.navButton[aria-disabled="true"],
+.navButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.inputWrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  flex: 1 1 auto;
+  height: 28px;
+  padding: 0 64px 0 10px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--color-border, #2a2a2a);
+  background: var(--color-bg, #0f0f0f);
+  color: var(--color-text, #ededed);
+  font-size: 12px;
+  font-family: var(--font-sans, system-ui);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent, #4c8bf5);
+}
+
+.inputActions {
+  position: absolute;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm, 4px);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #9a9a9a);
+  cursor: pointer;
+}
+
+.actionButton:hover {
+  color: var(--color-text, #ededed);
+  background: var(--color-bg-hover, #1e1e1e);
+}
+
+.actionButton[aria-pressed="true"] {
+  color: var(--color-accent, #4c8bf5);
+}
+
+.detectedMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 4px;
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-bg-elevated, #1a1a1a);
+  border: 1px solid var(--color-border, #2a2a2a);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detectedItem {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: var(--radius-sm, 4px);
+  border: none;
+  background: transparent;
+  color: var(--color-text, #ededed);
+  cursor: pointer;
+  text-align: left;
+}
+
+.detectedItem:hover {
+  background: var(--color-bg-hover, #1e1e1e);
+}
+
+.detectedEmpty {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted, #9a9a9a);
+}
