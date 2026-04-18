@@ -58,6 +58,10 @@ export function BottomTaskbar() {
             }
           }}
         />
+        <FavoriteAgentsStrip />
+      </div>
+
+      <div className={styles.center}>
         <AppNavRail
           layout="taskbar"
           allowReorder
@@ -75,10 +79,6 @@ export function BottomTaskbar() {
           onClick={toggleAppsCollapsed}
           aria-label={collapsed ? "Expand apps" : "Collapse apps"}
         />
-      </div>
-
-      <div className={styles.center}>
-        <FavoriteAgentsStrip />
       </div>
 
       <div className={styles.right}>
