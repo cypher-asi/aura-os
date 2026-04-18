@@ -166,7 +166,13 @@ function ProcessCanvasInner({
         multiSelectionKeyCode="Control"
         style={{ background: "var(--color-bg, #0d0d1a)" }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={GRID} size={1} color="#444" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={GRID}
+          size={1}
+          color="#444"
+          className={styles.dotBackground}
+        />
         <Controls
           showInteractive={false}
           style={{

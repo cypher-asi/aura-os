@@ -1,3 +1,16 @@
+.dotBackground {
+  animation: dotBackgroundFadeIn 400ms ease-out both;
+}
+
+@keyframes dotBackgroundFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .flowControls button {
   background: transparent !important;
   color: var(--color-text-muted, #666) !important;
