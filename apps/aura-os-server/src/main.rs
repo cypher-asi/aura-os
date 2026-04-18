@@ -17,6 +17,28 @@ fn default_data_dir() -> PathBuf {
         .join("aura")
 }
 
+/// One-shot migration: the local settings store used to live in `<data>/db/`
+/// (when it was briefly backed by RocksDB). It's now plain JSON under
+/// `<data>/store/`. If the old path exists and the new one doesn't, rename.
+fn migrate_legacy_db_dir(data_dir: &std::path::Path, store_path: &std::path::Path) {
+    let legacy = data_dir.join("db");
+    if legacy.exists() && !store_path.exists() {
+        match std::fs::rename(&legacy, store_path) {
+            Ok(()) => info!(
+                from = %legacy.display(),
+                to = %store_path.display(),
+                "migrated legacy db/ directory to store/"
+            ),
+            Err(err) => warn!(
+                error = %err,
+                from = %legacy.display(),
+                to = %store_path.display(),
+                "failed to migrate legacy db/ directory; continuing with fresh store/"
+            ),
+        }
+    }
+}
+
 fn find_interface_dir() -> Option<PathBuf> {
     let candidates = [
         PathBuf::from("interface/dist"),
@@ -41,8 +63,10 @@ async fn main() {
     let data_dir = default_data_dir();
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
 
-    let db_path = data_dir.join("db");
-    let state = aura_os_server::build_app_state(&db_path).expect("failed to open database");
+    let store_path = data_dir.join("store");
+    migrate_legacy_db_dir(&data_dir, &store_path);
+    let state =
+        aura_os_server::build_app_state(&store_path).expect("failed to open local settings store");
 
     let interface_dir = find_interface_dir();
     if let Some(ref dir) = interface_dir {

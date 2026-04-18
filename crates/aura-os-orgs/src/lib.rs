@@ -4,7 +4,7 @@ pub use error::OrgError;
 use std::sync::Arc;
 
 use aura_os_core::*;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 use chrono::Utc;
 
 const ORG_BILLING_KEY_PREFIX: &str = "org_billing:";
@@ -33,7 +33,7 @@ fn org_integration_secret_key(integration_id: &str) -> String {
 }
 
 pub struct OrgService {
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
 }
 
 #[derive(Debug, Clone)]
@@ -44,7 +44,7 @@ pub enum IntegrationSecretUpdate {
 }
 
 impl OrgService {
-    pub fn new(store: Arc<RocksStore>) -> Self {
+    pub fn new(store: Arc<SettingsStore>) -> Self {
         Self { store }
     }
 
@@ -329,8 +329,8 @@ mod tests {
 
     #[test]
     fn sync_integration_shadow_preserves_canonical_metadata_without_secret() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let store_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
         let service = OrgService::new(store);
         let org_id = OrgId::new();
         let integration = sample_integration(org_id, "integration-1", true);
@@ -354,8 +354,8 @@ mod tests {
 
     #[test]
     fn sync_integrations_shadow_prunes_local_secrets_for_canonical_entries() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let store_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
         let service = OrgService::new(store);
         let org_id = OrgId::new();
 

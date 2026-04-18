@@ -116,7 +116,7 @@ pub async fn start_mock_storage() -> (String, SessionDb) {
 }
 
 pub fn make_session_service(
-    store: &Arc<aura_os_store::RocksStore>,
+    store: &Arc<aura_os_store::SettingsStore>,
     storage_url: &str,
     rollover_threshold: f64,
 ) -> SessionService {
@@ -125,7 +125,7 @@ pub fn make_session_service(
         .with_storage_client(Some(storage))
 }
 
-pub fn store_test_jwt(store: &aura_os_store::RocksStore) {
+pub fn store_test_jwt(store: &aura_os_store::SettingsStore) {
     let session = serde_json::to_vec(&ZeroAuthSession {
         user_id: "u1".into(),
         network_user_id: None,

@@ -439,7 +439,7 @@ mod tests {
     async fn should_rollover_at_threshold() {
         let tmp = tempfile::TempDir::new().expect("temp dir should be created");
         let store =
-            Arc::new(aura_os_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
+            Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let below = Session {
@@ -477,7 +477,7 @@ mod tests {
     async fn create_session_returns_active_session() {
         let tmp = tempfile::TempDir::new().expect("temp dir should be created");
         let store =
-            Arc::new(aura_os_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
+            Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let pid = ProjectId::new();

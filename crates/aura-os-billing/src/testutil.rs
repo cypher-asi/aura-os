@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use aura_os_core::ZeroAuthSession;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 
 use crate::client::BillingClient;
 
@@ -103,7 +103,7 @@ pub fn billing_client_for_url(url: &str) -> BillingClient {
     BillingClient::with_base_url(url.to_string())
 }
 
-pub fn store_zero_auth_session(store: &RocksStore) {
+pub fn store_zero_auth_session(store: &SettingsStore) {
     let session = serde_json::to_vec(&ZeroAuthSession {
         user_id: "u1".into(),
         network_user_id: None,

@@ -8,7 +8,7 @@ use tracing::debug;
 
 use aura_os_core::*;
 use aura_os_network::NetworkClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 
 fn parse_rfc3339_or_now(raw: Option<&str>) -> DateTime<Utc> {
     raw.and_then(|v| DateTime::parse_from_rfc3339(v).ok())
@@ -183,7 +183,7 @@ pub struct UpdateProjectInput {
 
 pub struct ProjectService {
     network_client: Option<Arc<NetworkClient>>,
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
 }
 
 impl ProjectService {
@@ -224,7 +224,7 @@ impl ProjectService {
         Ok(projects)
     }
 
-    pub fn new(store: Arc<RocksStore>) -> Self {
+    pub fn new(store: Arc<SettingsStore>) -> Self {
         Self {
             network_client: None,
             store,
@@ -233,7 +233,7 @@ impl ProjectService {
 
     pub fn new_with_network(
         network_client: Option<Arc<NetworkClient>>,
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
     ) -> Self {
         Self {
             network_client,

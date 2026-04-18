@@ -1,9 +1,9 @@
 use aura_os_store::*;
 use tempfile::TempDir;
 
-fn open_temp_store() -> (RocksStore, TempDir) {
+fn open_temp_store() -> (SettingsStore, TempDir) {
     let dir = TempDir::new().expect("failed to create temp dir");
-    let store = RocksStore::open(dir.path()).expect("failed to open store");
+    let store = SettingsStore::open(dir.path()).expect("failed to open store");
     (store, dir)
 }
 

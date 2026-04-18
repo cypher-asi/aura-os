@@ -1,9 +1,9 @@
 use aura_os_core::{JwtProvider, ZeroAuthSession};
 
 use crate::error::{StoreError, StoreResult};
-use crate::store::RocksStore;
+use crate::store::SettingsStore;
 
-impl JwtProvider for RocksStore {
+impl JwtProvider for SettingsStore {
     fn get_jwt(&self) -> Option<String> {
         self.session_cache
             .read()
@@ -13,7 +13,7 @@ impl JwtProvider for RocksStore {
     }
 }
 
-impl RocksStore {
+impl SettingsStore {
     pub fn cache_zero_auth_session(&self, session: &ZeroAuthSession) {
         *self.session_cache.write().expect("store lock poisoned") = Some(session.clone());
     }

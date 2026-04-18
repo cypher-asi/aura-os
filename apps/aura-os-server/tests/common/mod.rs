@@ -23,11 +23,11 @@ use aura_os_projects::ProjectService;
 use aura_os_server::AppState;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
-use aura_os_super_agent::SuperAgentService;
+use aura_os_store::SettingsStore;
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 
-pub fn store_zero_auth_session(store: &RocksStore) {
+pub fn store_zero_auth_session(store: &SettingsStore) {
     let session = serde_json::to_vec(&ZeroAuthSession {
         user_id: "u1".into(),
         network_user_id: None,
@@ -53,25 +53,25 @@ pub async fn build_test_app_with_storage(
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
     let storage = Arc::new(StorageClient::with_base_url(&storage_url));
 
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let (app, state) = build_test_app_from_store(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         None,
         Some(storage.clone()),
         None,
         None,
     );
-    (app, state, storage, db_dir)
+    (app, state, storage, store_dir)
 }
 
 #[allow(dead_code)]
 pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir) {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let now = chrono::Utc::now().to_rfc3339();
@@ -217,17 +217,17 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
 
     let (app, state) = build_test_app_from_store(
         store.clone(),
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         Some(Arc::new(NetworkClient::with_base_url(&net_url))),
         Some(Arc::new(StorageClient::with_base_url(&storage_url))),
         None,
         None,
     );
-    (app, state, db_dir)
+    (app, state, store_dir)
 }
 
 pub fn build_test_app_from_store(
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     data_dir: std::path::PathBuf,
     network_client: Option<Arc<NetworkClient>>,
     storage_client: Option<Arc<StorageClient>>,
@@ -288,7 +288,7 @@ pub fn build_test_app_from_store(
         },
     );
 
-    let super_agent_service = Arc::new(SuperAgentService::new(
+    let agent_runtime = Arc::new(AgentRuntimeService::new(
         "http://localhost:19080".to_string(),
         project_service.clone(),
         agent_service.clone(),
@@ -338,7 +338,7 @@ pub fn build_test_app_from_store(
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client: None,
         validation_cache,
-        super_agent_service,
+        agent_runtime,
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);
@@ -347,28 +347,28 @@ pub fn build_test_app_from_store(
 
 #[allow(dead_code)]
 pub fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     let (app, state) =
-        build_test_app_from_store(store, db_dir.path().to_path_buf(), None, None, None, None);
-    (app, state, db_dir)
+        build_test_app_from_store(store, store_dir.path().to_path_buf(), None, None, None, None);
+    (app, state, store_dir)
 }
 
 #[allow(dead_code)]
 pub fn build_test_app_with_billing_client(
     billing_client: Arc<BillingClient>,
 ) -> (Router, AppState, tempfile::TempDir) {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     let (app, state) = build_test_app_from_store(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         None,
         None,
         None,
         Some(billing_client),
     );
-    (app, state, db_dir)
+    (app, state, store_dir)
 }
 
 pub const TEST_JWT: &str = "test-token";

@@ -642,9 +642,9 @@ mod tests {
 
     #[tokio::test]
     async fn installed_workspace_app_tools_include_saved_provider_tools() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         state
@@ -701,9 +701,9 @@ mod tests {
 
     #[tokio::test]
     async fn installed_workspace_integrations_include_enabled_runtime_capabilities() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         state
@@ -767,9 +767,9 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
         }
         crate::handlers::trusted_mcp::set_script_override_for_tests(script_path);
 
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         state
@@ -914,9 +914,9 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
 
     #[tokio::test]
     async fn canonical_secret_source_wins_over_local_shadow() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let mut state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         let integration = state
@@ -947,9 +947,9 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
 
     #[tokio::test]
     async fn canonical_secret_falls_back_to_local_shadow_when_missing() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let mut state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         let integration = state
@@ -979,9 +979,9 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
 
     #[tokio::test]
     async fn jwt_backed_integrations_for_org_uses_public_routes() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let mut state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
         let canonical = OrgIntegration {
             integration_id: "canonical-brave".to_string(),
@@ -1016,9 +1016,9 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
 
     #[tokio::test]
     async fn jwt_backed_secret_load_uses_public_routes() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let mut state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
         let integration = state
             .org_service
@@ -1052,9 +1052,9 @@ printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSc
 
     #[tokio::test]
     async fn active_workspace_tools_for_org_prefers_canonical_provider_list() {
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let mut state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         state
@@ -1125,9 +1125,9 @@ exit 1
         }
         crate::handlers::trusted_mcp::set_script_override_for_tests(script_path);
 
-        let db_dir = tempfile::tempdir().unwrap();
-        let db_path = db_dir.path().join("settings.db");
-        let state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let state = crate::build_app_state(&store_path).expect("build app state");
         let org_id = OrgId::new();
 
         state

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use aura_os_core::*;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 use aura_os_tasks::TaskService;
 
 use super::helpers::{create_task, setup, CreateTestTask};
@@ -82,7 +82,7 @@ async fn claim_ordering_respects_order_index() {
 #[tokio::test]
 async fn claim_ordering_multi_spec() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(RocksStore::open(tmp.path()).expect("RocksStore should open"));
+    let store = Arc::new(SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
     aura_os_billing::testutil::store_zero_auth_session(&store);
 
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
