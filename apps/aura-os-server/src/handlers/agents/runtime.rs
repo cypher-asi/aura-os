@@ -1379,6 +1379,8 @@ async fn resolve_or_create_project_agent_instance_id(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
         harness: None,
+        permissions: Some(agent.permissions.clone()),
+        intent_classifier: agent.intent_classifier.clone(),
     };
 
     let created = storage

@@ -636,6 +636,7 @@ name = "aura-os-storage"
 version = "0.1.0"
 dependencies = [
  "aura-os-core",
+ "aura-protocol",
  "axum",
  "chrono",
  "reqwest 0.11.27",

@@ -166,6 +166,8 @@ pub(crate) async fn create_agent_instance(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
         harness: None,
+        permissions: Some(agent.permissions.clone()),
+        intent_classifier: agent.intent_classifier.clone(),
     };
     let storage_agent = storage
         .create_project_agent(&project_id.to_string(), &jwt, &req)

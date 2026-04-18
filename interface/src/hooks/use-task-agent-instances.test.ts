@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { useTaskAgentInstances } from "./use-task-agent-instances";
 import type { Task, AgentInstance } from "../types";
+import { emptyAgentPermissions } from "../types/permissions-wire";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -51,9 +52,11 @@ function makeAgentInstance(id: string): AgentInstance {
     current_session_id: null,
     total_input_tokens: 0,
     total_output_tokens: 0,
+    permissions: emptyAgentPermissions(),
+    intent_classifier: null,
     created_at: "2025-01-01",
     updated_at: "2025-01-01",
-  };
+  } as AgentInstance;
 }
 
 describe("useTaskAgentInstances", () => {

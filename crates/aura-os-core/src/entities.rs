@@ -342,6 +342,16 @@ pub struct AgentInstance {
     pub total_output_tokens: u64,
     #[serde(default)]
     pub model: Option<String>,
+    /// Snapshot of the parent Agent's permissions at instance-creation
+    /// time. The harness enforces these unconditionally for any session
+    /// opened against this instance. Persisted via the storage DTO so a
+    /// cold reload doesn't silently fall back to an empty bundle when
+    /// the parent Agent lookup fails (e.g. offline / network error).
+    #[serde(default)]
+    pub permissions: AgentPermissions,
+    /// Snapshot of the parent Agent's intent classifier, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

@@ -10,7 +10,7 @@ use aura_os_core::parse_dt;
 use aura_os_core::*;
 use aura_os_network::NetworkAgent;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 
 pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentState>>>;
 
@@ -74,7 +74,7 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
 // ---------------------------------------------------------------------------
 
 pub struct AgentService {
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     network_client: Option<Arc<aura_os_network::NetworkClient>>,
 }
 
@@ -88,7 +88,7 @@ impl AgentService {
     }
 
     pub fn new(
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
         network_client: Option<Arc<aura_os_network::NetworkClient>>,
     ) -> Self {
         Self {
@@ -254,7 +254,7 @@ impl AgentService {
 // ---------------------------------------------------------------------------
 
 pub struct AgentInstanceService {
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     storage_client: Option<Arc<StorageClient>>,
     network_client: Option<Arc<aura_os_network::NetworkClient>>,
     runtime_state: RuntimeAgentStateMap,
@@ -262,7 +262,7 @@ pub struct AgentInstanceService {
 
 impl AgentInstanceService {
     pub fn new(
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
         storage_client: Option<Arc<StorageClient>>,
         runtime_state: RuntimeAgentStateMap,
         network_client: Option<Arc<aura_os_network::NetworkClient>>,
@@ -365,6 +365,8 @@ impl AgentInstanceService {
             skills: Some(agent.skills.clone()),
             icon: agent.icon.clone(),
             harness: None,
+            permissions: Some(agent.permissions.clone()),
+            intent_classifier: agent.intent_classifier.clone(),
         };
         let spa = storage
             .create_project_agent(&project_id.to_string(), &jwt, &req)
@@ -648,6 +650,17 @@ pub fn merge_agent_instance(
         total_input_tokens: spa.total_input_tokens.unwrap_or(0),
         total_output_tokens: spa.total_output_tokens.unwrap_or(0),
         model: spa.model.clone(),
+        // Prefer the live parent Agent's permissions when available so
+        // template edits propagate to fresh sessions. Fall back to the
+        // snapshot persisted on the storage record so offline / 404
+        // paths don't silently drop to an empty bundle.
+        permissions: agent
+            .map(|a| a.permissions.clone())
+            .or_else(|| spa.permissions.clone())
+            .unwrap_or_default(),
+        intent_classifier: agent
+            .and_then(|a| a.intent_classifier.clone())
+            .or_else(|| spa.intent_classifier.clone()),
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
     }
@@ -678,6 +691,8 @@ mod tests {
             model: None,
             total_input_tokens: None,
             total_output_tokens: None,
+            permissions: None,
+            intent_classifier: None,
             created_at: None,
             updated_at: None,
         };

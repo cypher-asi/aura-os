@@ -8,6 +8,7 @@ test-utils = ["dep:axum", "dep:uuid", "dep:tokio"]
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
+aura-protocol = { path = "../aura-protocol" }
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }

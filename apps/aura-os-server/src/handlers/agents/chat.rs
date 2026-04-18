@@ -1917,11 +1917,16 @@ pub(crate) async fn send_event_stream(
                 .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         });
-    let installed_tools = if let Some(org_id) = instance.org_id.as_ref() {
-        let tools = installed_workspace_app_tools(&state, org_id, &jwt).await;
+    let installed_tools = {
+        let mut tools = if let Some(org_id) = instance.org_id.as_ref() {
+            installed_workspace_app_tools(&state, org_id, &jwt).await
+        } else {
+            Vec::new()
+        };
+        tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
+            &instance.permissions,
+        ));
         (!tools.is_empty()).then_some(tools)
-    } else {
-        None
     };
     let installed_integrations = if let Some(org_id) = instance.org_id.as_ref() {
         let integrations =
@@ -1947,6 +1952,8 @@ pub(crate) async fn send_event_stream(
         provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
         installed_tools,
         installed_integrations,
+        agent_permissions: (&instance.permissions).into(),
+        intent_classifier: instance.intent_classifier.clone(),
         ..Default::default()
     };
 

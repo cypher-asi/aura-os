@@ -396,6 +396,8 @@ async fn create_project_agent(
         model: None,
         total_input_tokens: None,
         total_output_tokens: None,
+        permissions: req.permissions,
+        intent_classifier: req.intent_classifier,
         created_at: Some(now.clone()),
         updated_at: Some(now),
     };

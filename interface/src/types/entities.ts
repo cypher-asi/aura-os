@@ -184,6 +184,8 @@ export interface AgentInstance {
   total_input_tokens: number;
   total_output_tokens: number;
   model?: string;
+  permissions: AgentPermissions;
+  intent_classifier?: IntentClassifierSpec | null;
   created_at: string;
   updated_at: string;
 }

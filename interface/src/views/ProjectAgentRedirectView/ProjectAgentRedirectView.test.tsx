@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { AgentInstance } from "../../types";
+import { emptyAgentPermissions } from "../../types/permissions-wire";
 
 const mockNavigate = vi.fn();
 const mockRefreshProjectAgents = vi.fn();
@@ -57,6 +58,8 @@ function makeAgent(overrides: Partial<AgentInstance> = {}): AgentInstance {
     current_session_id: null,
     total_input_tokens: 0,
     total_output_tokens: 0,
+    permissions: emptyAgentPermissions(),
+    intent_classifier: null,
     created_at: "2026-04-13T10:00:00.000Z",
     updated_at: "2026-04-13T10:00:00.000Z",
     ...overrides,

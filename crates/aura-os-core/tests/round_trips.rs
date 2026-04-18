@@ -243,6 +243,8 @@ fn sample_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInsta
         total_input_tokens: 0,
         total_output_tokens: 0,
         model: None,
+        permissions: aura_os_core::AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }

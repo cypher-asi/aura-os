@@ -55,6 +55,8 @@ async fn project_agent_create_list_get_update_delete() {
                 skills: Some(vec!["code".into(), "plan".into()]),
                 icon: None,
                 harness: None,
+                permissions: None,
+                intent_classifier: None,
             },
         )
         .await
@@ -557,6 +559,8 @@ async fn end_to_end_project_chat_and_task_flow() {
                 skills: None,
                 icon: None,
                 harness: None,
+                permissions: None,
+                intent_classifier: None,
             },
         )
         .await

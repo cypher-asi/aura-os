@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentInstance, Project, Spec, Task } from "../types";
+import { emptyAgentPermissions } from "../types/permissions-wire";
 import {
   mergeSpecIntoProjectLayout,
   mergeTaskIntoProjectLayout,
@@ -33,6 +34,8 @@ function makeAgent(overrides: Partial<AgentInstance> = {}): AgentInstance {
     current_session_id: null,
     total_input_tokens: 0,
     total_output_tokens: 0,
+    permissions: emptyAgentPermissions(),
+    intent_classifier: null,
     created_at: "2026-04-13T10:00:00.000Z",
     updated_at: "2026-04-13T10:00:00.000Z",
     ...overrides,

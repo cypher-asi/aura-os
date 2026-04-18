@@ -351,6 +351,8 @@ async fn standalone_agent_events_support_recent_window() {
                 skills: Some(vec![]),
                 icon: None,
                 harness: None,
+                permissions: None,
+                intent_classifier: None,
             },
         )
         .await
@@ -502,6 +504,8 @@ async fn current_session_loader_excludes_prior_sessions_for_agent() {
                 skills: Some(vec![]),
                 icon: None,
                 harness: None,
+                permissions: None,
+                intent_classifier: None,
             },
         )
         .await
