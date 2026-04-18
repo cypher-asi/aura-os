@@ -8,6 +8,7 @@ import {
   Badge,
 } from "@cypher-asi/zui";
 import { lazy, Suspense } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
@@ -23,13 +24,22 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
-  const isAuthenticated = useAuthStore((s) => s.user !== null);
+  const { isAuthenticated, isLoading } = useAuthStore(
+    useShallow((s) => ({
+      isAuthenticated: s.user !== null,
+      isLoading: s.isLoading,
+    })),
+  );
   const f = useLoginForm();
 
-  // Authenticated users land here briefly on app open when the persisted URL
-  // was /login. Render nothing so the login chrome never flashes — the redirect
-  // useEffect inside useLoginForm will navigate away on mount.
-  if (isAuthenticated) {
+  // Suppress the login chrome while auth is still unresolved (sync localStorage
+  // mirror empty but IndexedDB still holds a session — e.g. post-upgrade, PWA
+  // eviction, cross-tab writes) or for already-authenticated users landing on a
+  // persisted /login URL. `useLoginForm`'s redirect effect navigates away once
+  // `user` arrives; `restoreSession` flips `isLoading` off when no session
+  // exists, at which point the form renders normally. Matches the "don't paint
+  // until we know" gate that RequireAuth uses for protected routes.
+  if (isAuthenticated || isLoading) {
     return null;
   }
 
