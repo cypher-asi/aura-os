@@ -157,20 +157,6 @@ export function useAgentEditorForm(
   }, [isOpen, agent, isMobileLayout]);
 
   useEffect(() => {
-    if (adapterType !== "aura_harness") {
-      return;
-    }
-
-    if (authSource !== "aura_managed") {
-      setAuthSource("aura_managed");
-    }
-
-    if (integrationId) {
-      setIntegrationId("");
-    }
-  }, [adapterType, authSource, integrationId]);
-
-  useEffect(() => {
     if (!restrictCreateToAuraRuntimes) {
       return;
     }

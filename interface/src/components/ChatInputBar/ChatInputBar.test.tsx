@@ -152,7 +152,7 @@ describe("ChatInputBar", () => {
 
     await user.click(screen.getByText("Opus 4.6"));
     expect(screen.getByText("Opus 4.7")).toBeInTheDocument();
-    expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
+    expect(screen.getByText("GPT-OSS 120B")).toBeInTheDocument();
 
     await user.click(screen.getByText("Sonnet 4.6"));
     expect(mockSetSelectedModel).toHaveBeenCalledWith("test-stream", "aura-claude-sonnet-4-6", undefined);
@@ -164,7 +164,7 @@ describe("ChatInputBar", () => {
     render(<ChatInputBar {...makeProps({ adapterType: "codex" })} />);
 
     await user.click(screen.getByText("Codex"));
-    expect(screen.queryByText("Haiku 4.5")).not.toBeInTheDocument();
+    expect(screen.queryByText("GPT-OSS 120B")).not.toBeInTheDocument();
   });
 
   it("renders attachment previews", () => {

@@ -133,6 +133,33 @@ describe("useAgentEditorForm", () => {
     expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
+  it("preserves existing org integration auth while editing a harness agent", () => {
+    mockOrgState.integrations = [
+      {
+        integration_id: "int-1",
+        provider: "anthropic",
+        default_model: "claude-sonnet-4-6",
+        name: "Anthropic Team",
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useAgentEditorForm(
+        true,
+        makeAgent({
+          adapter_type: "aura_harness",
+          auth_source: "org_integration",
+          integration_id: "int-1",
+        }),
+        vi.fn(),
+        vi.fn(),
+      ),
+    );
+
+    expect(result.current.authSource).toBe("org_integration");
+    expect(result.current.integrationId).toBe("int-1");
+  });
+
   it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
     const { result } = renderHook(() =>
       useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),

@@ -7,11 +7,18 @@ export interface ModelOption {
   mode: GenerationMode;
 }
 
+const LEGACY_HIDDEN_CHAT_MODELS: ModelOption[] = [
+  { id: "aura-claude-haiku-4-5", label: "Haiku 4.5", tier: "haiku", mode: "chat" },
+  { id: "aura-gpt-4.1", label: "GPT-4.1", tier: "gpt", mode: "chat" },
+  { id: "aura-o3", label: "o3", tier: "gpt", mode: "chat" },
+  { id: "aura-o4-mini", label: "o4-mini", tier: "gpt", mode: "chat" },
+  { id: "aura-qwen2-5-coder-7b", label: "Qwen2.5 Coder 7B", tier: "haiku", mode: "chat" },
+];
+
 export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   { id: "aura-claude-sonnet-4-6", label: "Sonnet 4.6", tier: "sonnet", mode: "chat" },
   { id: "aura-claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
   { id: "aura-claude-opus-4-7", label: "Opus 4.7", tier: "opus", mode: "chat" },
-  { id: "aura-claude-haiku-4-5", label: "Haiku 4.5", tier: "haiku", mode: "chat" },
   { id: "aura-gpt-5-4", label: "GPT-5.4", tier: "gpt", mode: "chat" },
   { id: "aura-gpt-5-4-mini", label: "GPT-5.4 mini", tier: "gpt", mode: "chat" },
   { id: "aura-gpt-5-4-nano", label: "GPT-5.4 nano", tier: "gpt", mode: "chat" },
@@ -32,6 +39,11 @@ export const AVAILABLE_MODELS: ModelOption[] = [
   ...IMAGE_MODELS,
 ];
 
+const KNOWN_MODELS: ModelOption[] = [
+  ...AVAILABLE_MODELS,
+  ...LEGACY_HIDDEN_CHAT_MODELS,
+];
+
 const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-claude-opus-4-6": "aura-claude-opus-4-6",
   "claude-opus-4-7": "aura-claude-opus-4-7",
@@ -41,23 +53,23 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-claude-haiku-4-5": "aura-claude-haiku-4-5",
   "claude-haiku-4-5": "aura-claude-haiku-4-5",
   "claude-haiku-4-5-20251001": "aura-claude-haiku-4-5",
-  "aura-gpt-4.1": "aura-gpt-5-4",
+  "aura-gpt-4.1": "aura-gpt-4.1",
+  "gpt-4.1": "aura-gpt-4.1",
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
-  "gpt-4.1": "aura-gpt-5-4",
-  "aura-o3": "aura-gpt-5-4",
-  o3: "aura-gpt-5-4",
-  "aura-o4-mini": "aura-gpt-5-4-mini",
-  "o4-mini": "aura-gpt-5-4-mini",
+  "aura-o3": "aura-o3",
+  o3: "aura-o3",
+  "aura-o4-mini": "aura-o4-mini",
+  "o4-mini": "aura-o4-mini",
   "aura-kimi-k2-5": "aura-kimi-k2-5",
   "aura-deepseek-v3-2": "aura-deepseek-v3-2",
   "aura-oss-120b": "aura-oss-120b",
-  "aura-qwen2-5-coder-7b": "aura-kimi-k2-5",
+  "aura-qwen2-5-coder-7b": "aura-qwen2-5-coder-7b",
   "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
   "accounts/fireworks/models/deepseek-v3p2": "aura-deepseek-v3-2",
   "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",
-  "accounts/fireworks/models/qwen2p5-coder-7b": "aura-kimi-k2-5",
+  "accounts/fireworks/models/qwen2p5-coder-7b": "aura-qwen2-5-coder-7b",
 };
 
 function normalizeManagedModelId(modelId?: string | null): string | null {
@@ -104,7 +116,7 @@ export function getDefaultModelForMode(mode: GenerationMode): ModelOption {
 
 export function getModelMode(modelId: string): GenerationMode {
   const normalized = normalizeManagedModelId(modelId);
-  return AVAILABLE_MODELS.find((m) => m.id === normalized)?.mode ?? "chat";
+  return KNOWN_MODELS.find((m) => m.id === normalized)?.mode ?? "chat";
 }
 
 function storageKey(adapterType?: string): string {
@@ -132,7 +144,7 @@ export function defaultModelForAdapter(
 ): string {
   const models = availableModelsForAdapter(adapterType);
   const normalizedExplicit = normalizeManagedModelId(explicitDefault?.trim());
-  if (normalizedExplicit) {
+  if (normalizedExplicit && KNOWN_MODELS.some((m) => m.id === normalizedExplicit)) {
     return normalizedExplicit;
   }
   return models[0]?.id ?? DEFAULT_MODEL.id;
@@ -143,7 +155,7 @@ export function loadPersistedModel(
   explicitDefault?: string | null,
 ): string {
   try {
-    const models = availableModelsForAdapter(adapterType);
+    const models = [...availableModelsForAdapter(adapterType), ...LEGACY_HIDDEN_CHAT_MODELS];
     const stored = normalizeManagedModelId(localStorage.getItem(storageKey(adapterType)));
     if (stored && models.some((m) => m.id === stored)) return stored;
   } catch {
@@ -178,7 +190,9 @@ export function modelLabel(
   const models = availableModelsForAdapter(adapterType);
   return (
     models.find((m) => m.id === normalizedModelId)?.label ??
+    KNOWN_MODELS.find((m) => m.id === normalizedModelId)?.label ??
     models.find((m) => m.id === normalizedDefault)?.label ??
+    KNOWN_MODELS.find((m) => m.id === normalizedDefault)?.label ??
     normalizedDefault ??
     DEFAULT_MODEL.label
   );

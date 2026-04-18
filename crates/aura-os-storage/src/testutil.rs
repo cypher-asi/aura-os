@@ -6,11 +6,12 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::{get, post},
     Json, Router,
 };
 use chrono::Utc;
+use serde::Deserialize;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
@@ -33,6 +34,12 @@ pub type SharedDb = Arc<Mutex<MockStorageDb>>;
 
 fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
+}
+
+#[derive(Debug, Deserialize)]
+struct EventListQuery {
+    limit: Option<usize>,
+    offset: Option<usize>,
 }
 
 // ---------------------------------------------------------------------------
@@ -478,13 +485,18 @@ async fn create_event(
 
 async fn list_events(
     Path(session_id): Path<String>,
+    Query(query): Query<EventListQuery>,
     State(db): State<SharedDb>,
 ) -> Json<Vec<StorageSessionEvent>> {
     let db = db.lock().await;
+    let limit = query.limit.unwrap_or(100).clamp(1, 500);
+    let offset = query.offset.unwrap_or(0);
     let evts: Vec<_> = db
         .events
         .iter()
         .filter(|e| e.session_id.as_deref() == Some(&session_id))
+        .skip(offset)
+        .take(limit)
         .cloned()
         .collect();
     Json(evts)
