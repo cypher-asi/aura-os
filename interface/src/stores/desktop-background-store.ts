@@ -11,6 +11,7 @@ interface PersistedState {
 }
 
 interface DesktopBackgroundState extends PersistedState {
+  hydrated: boolean;
   setColor: (color: string) => void;
   setImage: (dataUrl: string) => void;
   clearBackground: () => void;
@@ -76,31 +77,37 @@ function persistSync(state: PersistedState): void {
   idbSet(state);
 }
 
+const initialPersisted = loadSync();
+
 export const useDesktopBackgroundStore = create<DesktopBackgroundState>()((set) => ({
-  ...loadSync(),
+  ...initialPersisted,
+  hydrated: initialPersisted.mode !== "image",
 
   setColor: (color) => {
     const next: PersistedState = { mode: "color", color, imageDataUrl: "" };
     persistSync(next);
-    set(next);
+    set({ ...next, hydrated: true });
   },
 
   setImage: (dataUrl) => {
     const next: PersistedState = { mode: "image", color: "", imageDataUrl: dataUrl };
     persistSync(next);
-    set(next);
+    set({ ...next, hydrated: true });
   },
 
   clearBackground: () => {
     persistSync(DEFAULTS);
-    set(DEFAULTS);
+    set({ ...DEFAULTS, hydrated: true });
   },
 }));
 
 idbGet().then((saved) => {
-  if (!saved) return;
   const current = useDesktopBackgroundStore.getState();
-  if (saved.mode === "image" && saved.imageDataUrl && !current.imageDataUrl) {
-    useDesktopBackgroundStore.setState(saved);
+  if (saved && saved.mode === "image" && saved.imageDataUrl && !current.imageDataUrl) {
+    useDesktopBackgroundStore.setState({ ...saved, hydrated: true });
+    return;
+  }
+  if (!current.hydrated) {
+    useDesktopBackgroundStore.setState({ hydrated: true });
   }
 });

@@ -70,8 +70,10 @@ function BackgroundLayer() {
   const mode = useDesktopBackgroundStore((s) => s.mode);
   const color = useDesktopBackgroundStore((s) => s.color);
   const imageDataUrl = useDesktopBackgroundStore((s) => s.imageDataUrl);
+  const hydrated = useDesktopBackgroundStore((s) => s.hydrated);
 
-  if (mode === "none") return null;
+  if (!hydrated || mode === "none") return null;
+  if (mode === "image" && !imageDataUrl) return null;
 
   const style: React.CSSProperties =
     mode === "color"
@@ -193,9 +195,11 @@ export function DesktopShell() {
   const [sidekickPanelTarget, setSidekickPanelTarget] =
     useState<HTMLDivElement | null>(null);
   const openDesktopWindowCount = useDesktopWindowStore((state) => Object.keys(state.windows).length);
+  const backgroundHydrated = useDesktopBackgroundStore((s) => s.hydrated);
   const { MainPanel } = activeApp;
   const ActiveProvider = activeApp.Provider ?? Fragment;
   const isDesktop = activeApp.id === "desktop";
+  const desktopModeActive = isDesktop && backgroundHydrated;
   const sidekickProfile = getSidekickLayoutProfile(activeApp.id);
   const hasActiveSidekick = Boolean(activeApp.SidekickPanel) && !isDesktop;
   const sidekickHostCollapsed = sidekickCollapsed || !hasActiveSidekick;
@@ -289,7 +293,7 @@ export function DesktopShell() {
 
   return (
     <>
-      <div className={styles.desktopShell} data-desktop-mode={isDesktop || undefined}>
+      <div className={styles.desktopShell} data-desktop-mode={desktopModeActive || undefined}>
         <BackgroundLayer />
         <Topbar
           className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}

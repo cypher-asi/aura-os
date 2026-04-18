@@ -8,10 +8,6 @@
   background: var(--color-bg);
 }
 
-.desktopShell[data-desktop-mode] {
-  background: transparent;
-}
-
 .backgroundLayer {
   position: absolute;
   inset: 0;
@@ -31,6 +27,11 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
+  background: var(--color-bg);
+}
+
+:global([data-desktop-mode]) .desktopContent {
+  background: transparent;
 }
 
 .mainPanelHost {
@@ -40,15 +41,10 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
-  background: var(--color-bg);
 }
 
 .mainPanelHostWithSidekick {
   box-shadow: inset -1px 0 0 0 var(--color-border);
-}
-
-:global([data-desktop-mode]) .mainPanelHost {
-  background: transparent;
 }
 
 .windowLayerHost {
