@@ -33,8 +33,7 @@ import { LeftMenu } from "../../features/left-menu";
 import {
   SIDEKICK_MAX_WIDTH,
   SIDEKICK_MIN_WIDTH,
-  getSidekickLayoutProfile,
-  getSidekickTransitionTargetWidth,
+  getSidekickTargetWidth,
   persistSidekickWidth,
   readStoredSidekickWidth,
 } from "./desktop-shell-sidekick";
@@ -186,9 +185,9 @@ export function DesktopShell() {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const mainPanelRef = useRef<HTMLDivElement>(null);
   const sidekickResizeControlsRef = useRef<LaneResizeControls | null>(null);
-  const previousSidekickProfileRef = useRef<"shared" | "projects" | null>(null);
+  const previousSidekickAppIdRef = useRef<string | null>(null);
   const [sidekickInitialWidth] = useState(() =>
-    readStoredSidekickWidth(getSidekickLayoutProfile(activeApp.id)),
+    readStoredSidekickWidth(activeApp.id),
   );
   const [sidekickHeaderTarget, setSidekickHeaderTarget] =
     useState<HTMLDivElement | null>(null);
@@ -200,7 +199,6 @@ export function DesktopShell() {
   const ActiveProvider = activeApp.Provider ?? Fragment;
   const isDesktop = activeApp.id === "desktop";
   const desktopModeActive = isDesktop && backgroundHydrated;
-  const sidekickProfile = getSidekickLayoutProfile(activeApp.id);
   const hasActiveSidekick = Boolean(activeApp.SidekickPanel) && !isDesktop;
   const sidekickHostCollapsed = sidekickCollapsed || !hasActiveSidekick;
   const showSidekickHeader = hasActiveSidekick && Boolean(activeApp.SidekickTaskbar);
@@ -225,9 +223,9 @@ export function DesktopShell() {
 
   const handleSidekickResizeEnd = useCallback(
     (size: number) => {
-      persistSidekickWidth(sidekickProfile, size);
+      persistSidekickWidth(activeApp.id, size);
     },
-    [sidekickProfile],
+    [activeApp.id],
   );
 
 
@@ -266,16 +264,35 @@ export function DesktopShell() {
     };
   }, []);
 
+  // Retarget the sidekick Lane whenever the active app changes so each app
+  // restores the width the user chose for it.
+  //
+  // We intentionally skip the very first render: `sidekickInitialWidth` (used
+  // as the Lane's `defaultWidth`) already reflects the initial app's stored
+  // width, so running a setSize on mount would be a no-op at best and, at
+  // worst, fire before the outlet has laid out.
+  //
+  // We rely on `sidekickResizeControlsRef` (populated by the Lane's own
+  // layout effect) and `mainPanelRef` being wired before this effect runs.
+  // The outlet can still be settling (main panel width momentarily 0) right
+  // after a route change, so we retry across a few animation frames before
+  // falling back to a ResizeObserver for the main panel. This is what makes
+  // the first visit to an app reliably retarget.
   useLayoutEffect(() => {
-    const previousSidekickProfile = previousSidekickProfileRef.current;
-    previousSidekickProfileRef.current = sidekickProfile;
+    const previousAppId = previousSidekickAppIdRef.current;
+    previousSidekickAppIdRef.current = activeApp.id;
 
-    const isCrossingProjectsBoundary =
-      sidekickProfile === "projects" || previousSidekickProfile === "projects";
-    if (!isCrossingProjectsBoundary) return;
-    if (previousSidekickProfile === sidekickProfile) return;
+    if (previousAppId === null) return;
+    if (previousAppId === activeApp.id) return;
 
-    const syncProjectsSidekickWidth = () => {
+    let cancelled = false;
+    let rafId: number | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    const applyTarget = () => {
+      if (cancelled) return false;
       const mainPanelHost = mainPanelRef.current;
       const sidekickResizeControls = sidekickResizeControlsRef.current;
       if (!mainPanelHost || !sidekickResizeControls) return false;
@@ -287,22 +304,41 @@ export function DesktopShell() {
         ? 0
         : sidekickResizeControls.getSize();
       sidekickResizeControls.setSize(
-        getSidekickTransitionTargetWidth(
-          sidekickProfile,
+        getSidekickTargetWidth(activeApp.id, {
           mainWidth,
           currentSidekickWidth,
-        ),
+        }),
       );
       return true;
     };
 
-    if (syncProjectsSidekickWidth()) return;
+    const schedule = () => {
+      if (cancelled) return;
+      if (applyTarget()) return;
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        rafId = requestAnimationFrame(schedule);
+        return;
+      }
+      const mainPanelHost = mainPanelRef.current;
+      if (!mainPanelHost || typeof ResizeObserver === "undefined") return;
+      resizeObserver = new ResizeObserver(() => {
+        if (applyTarget()) {
+          resizeObserver?.disconnect();
+          resizeObserver = null;
+        }
+      });
+      resizeObserver.observe(mainPanelHost);
+    };
 
-    const rafId = requestAnimationFrame(() => {
-      syncProjectsSidekickWidth();
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [sidekickCollapsed, sidekickProfile]);
+    schedule();
+
+    return () => {
+      cancelled = true;
+      if (rafId != null) cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
+    };
+  }, [activeApp.id, sidekickCollapsed]);
 
   return (
     <>
