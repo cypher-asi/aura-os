@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../../components/EmptyState";
-import { TaskStatusIcon } from "../../../components/TaskStatusIcon";
 import { api } from "../../../api/client";
 import { type AnnotatedSession } from "./agent-info-utils";
 import {
@@ -11,7 +10,6 @@ import {
 } from "../../../components/SidekickItemContextMenu";
 import type { ExplorerNodeWithSuffix } from "../../../lib/zui-compat";
 import type { Agent } from "../../../types";
-import { displaySessionStatus } from "../../../views/SessionList/displaySessionStatus";
 import viewStyles from "../../../views/aura.module.css";
 import styles from "./AgentInfoPanel.module.css";
 
@@ -154,11 +152,9 @@ export function ChatsTab({
         const label = summary
           ? `S${number} · ${truncate(summary, 80)}`
           : `S${number}`;
-        const status = displaySessionStatus(session.status, index === 0);
         return {
           id: session.session_id,
           label,
-          suffix: <TaskStatusIcon status={status} />,
           metadata: { type: "session" },
         };
       });
