@@ -45,6 +45,7 @@ function formatZeroProRefreshError(err: unknown): string {
 interface AuthState {
   user: ZeroUser | null;
   isLoading: boolean;
+  hasResolvedInitialSession: boolean;
   zeroProRefreshError: string | null;
   restoreSession: () => Promise<void>;
   refreshSession: () => Promise<AuthSession>;
@@ -61,17 +62,23 @@ interface AuthState {
  */
 function getInitialAuthState(): Pick<
   AuthState,
-  "user" | "isLoading" | "zeroProRefreshError"
+  "user" | "isLoading" | "hasResolvedInitialSession" | "zeroProRefreshError"
 > {
   const cached = getStoredSession();
   if (cached) {
     return {
       user: sessionToUser(cached),
       isLoading: false,
+      hasResolvedInitialSession: false,
       zeroProRefreshError: getZeroProRefreshError(cached),
     };
   }
-  return { user: null, isLoading: true, zeroProRefreshError: null };
+  return {
+    user: null,
+    isLoading: true,
+    hasResolvedInitialSession: false,
+    zeroProRefreshError: null,
+  };
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -113,9 +120,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
         set({ zeroProRefreshError: formatZeroProRefreshError(err) });
       }
     } finally {
-      if (!hadCachedSession) {
-        set({ isLoading: false });
-      }
+      set({
+        isLoading: false,
+        hasResolvedInitialSession: true,
+      });
       markAuthRestoreComplete();
     }
   },
@@ -150,6 +158,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await setStoredAuth(session);
     set({
       user: sessionToUser(session),
+      hasResolvedInitialSession: true,
       zeroProRefreshError: getZeroProRefreshError(session),
     });
     await loadAndRunShellRealtimeBootstrap();
@@ -161,6 +170,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await setStoredAuth(session);
     set({
       user: sessionToUser(session),
+      hasResolvedInitialSession: true,
       zeroProRefreshError: getZeroProRefreshError(session),
     });
     await loadAndRunShellRealtimeBootstrap();
@@ -171,7 +181,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     await authApi.logout();
     await clearStoredAuth();
     disconnectEventSocket();
-    set({ user: null, zeroProRefreshError: null });
+    set({ user: null, hasResolvedInitialSession: true, zeroProRefreshError: null });
     window.location.href = "/login";
   },
 }));
@@ -186,6 +196,7 @@ export function useAuth() {
       user: s.user,
       isAuthenticated: s.user !== null,
       isLoading: s.isLoading,
+      hasResolvedInitialSession: s.hasResolvedInitialSession,
       zeroProRefreshError: s.zeroProRefreshError,
       refreshSession: s.refreshSession,
       login: s.login,

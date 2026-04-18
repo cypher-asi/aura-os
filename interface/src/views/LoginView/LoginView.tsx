@@ -24,22 +24,19 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
-  const { isAuthenticated, isLoading } = useAuthStore(
+  const { isAuthenticated, hasResolvedInitialSession } = useAuthStore(
     useShallow((s) => ({
       isAuthenticated: s.user !== null,
-      isLoading: s.isLoading,
+      hasResolvedInitialSession: s.hasResolvedInitialSession,
     })),
   );
   const f = useLoginForm();
 
-  // Suppress the login chrome while auth is still unresolved (sync localStorage
-  // mirror empty but IndexedDB still holds a session — e.g. post-upgrade, PWA
-  // eviction, cross-tab writes) or for already-authenticated users landing on a
-  // persisted /login URL. `useLoginForm`'s redirect effect navigates away once
-  // `user` arrives; `restoreSession` flips `isLoading` off when no session
-  // exists, at which point the form renders normally. Matches the "don't paint
-  // until we know" gate that RequireAuth uses for protected routes.
-  if (isAuthenticated || isLoading) {
+  // Suppress the login chrome until the first startup auth restore finishes, or
+  // if we already know the user is authenticated. This avoids painting the form
+  // during the desktop cold-start window where the sync localStorage mirror is
+  // empty but IndexedDB still holds a valid session.
+  if (isAuthenticated || !hasResolvedInitialSession) {
     return null;
   }
 
