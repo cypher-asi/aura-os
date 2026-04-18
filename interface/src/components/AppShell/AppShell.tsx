@@ -8,6 +8,7 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../MobileShell";
+import { signalDesktopReady } from "../../lib/desktop-ready";
 import { markShellVisible } from "../../lib/perf/startup-perf";
 
 const BuyCreditsModal = lazy(() =>
@@ -115,6 +116,7 @@ function AppContent() {
 export function AppShell() {
   useLayoutEffect(() => {
     markShellVisible();
+    signalDesktopReady();
   }, []);
 
   return (

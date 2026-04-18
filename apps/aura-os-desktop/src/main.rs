@@ -30,6 +30,7 @@ const DEFAULT_FRONTEND_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_FRONTEND_PORT: u16 = 5173;
 const HOST_STORAGE_KEY: &str = "aura-host-origin";
 const FRONTEND_DEV_SERVER_POLL_INTERVAL: Duration = Duration::from_secs(1);
+const WINDOW_SHOW_FALLBACK_DELAY: Duration = Duration::from_secs(3);
 const VITE_CLI_RELATIVE_PATH: &str = "node_modules/vite/bin/vite.js";
 
 #[derive(Debug)]
@@ -1258,7 +1259,7 @@ mod tests {
         let script = build_initialization_script(Some("http://127.0.0.1:19847"));
         assert!(script.contains("aura-host-origin"));
         assert!(script.contains("http://127.0.0.1:19847"));
-        assert!(script.contains("window.ipc.postMessage('ready')"));
+        assert!(!script.contains("window.ipc.postMessage('ready')"));
     }
 
     #[test]
@@ -1320,23 +1321,16 @@ fn create_main_window(
     (window, id)
 }
 
-const READY_SCRIPT: &str = "\
-    if (document.readyState === 'loading') { \
-        document.addEventListener('DOMContentLoaded', function() { window.ipc.postMessage('ready'); }); \
-    } else { \
-        window.ipc.postMessage('ready'); \
-    }";
-
 fn build_initialization_script(host_origin: Option<&str>) -> String {
     match host_origin {
         Some(origin) => {
             let host_literal = serde_json::to_string(origin)
                 .expect("failed to serialize host origin for initialization script");
             format!(
-                "try {{ window.localStorage.setItem('{HOST_STORAGE_KEY}', {host_literal}); }} catch {{}}; {READY_SCRIPT}"
+                "try {{ window.localStorage.setItem('{HOST_STORAGE_KEY}', {host_literal}); }} catch {{}};"
             )
         }
-        None => READY_SCRIPT.to_string(),
+        None => String::new(),
     }
 }
 
@@ -1390,7 +1384,7 @@ fn spawn_fallback_show_timer(proxy: EventLoopProxy<UserEvent>, window_id: Window
         return;
     }
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(WINDOW_SHOW_FALLBACK_DELAY);
         let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
     });
 }

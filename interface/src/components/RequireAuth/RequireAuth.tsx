@@ -5,15 +5,7 @@ import { useAuth } from "../../stores/auth-store";
 import styles from "./RequireAuth.module.css";
 
 export function RequireAuth() {
-  const {
-    user,
-    isAuthenticated,
-    isLoading,
-    hasResolvedInitialSession,
-    zeroProRefreshError,
-    refreshSession,
-    logout,
-  } = useAuth();
+  const { user, isAuthenticated, isLoading, zeroProRefreshError, refreshSession, logout } = useAuth();
   const location = useLocation();
   const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
@@ -39,7 +31,7 @@ export function RequireAuth() {
     );
   }
 
-  if (!hasResolvedInitialSession) {
+  if (isLoading && !isAuthenticated) {
     return (
       <div className={styles.loadingScreen}>
         <div style={{ textAlign: "center", maxWidth: 400 }}>

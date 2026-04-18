@@ -104,11 +104,7 @@ function expectedUser(session: AuthSession): ZeroUser {
 }
 
 beforeEach(async () => {
-  useAuthStore.setState({
-    user: null,
-    isLoading: true,
-    hasResolvedInitialSession: false,
-  });
+  useAuthStore.setState({ user: null, isLoading: true });
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
   await clearStoredAuth();
@@ -124,10 +120,6 @@ describe("auth-store", () => {
     it("starts loading", () => {
       expect(useAuthStore.getState().isLoading).toBe(true);
     });
-
-    it("starts with initial auth unresolved", () => {
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(false);
-    });
   });
 
   describe("restoreSession", () => {
@@ -139,7 +131,6 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("falls back to cached session when getSession fails", async () => {
@@ -154,7 +145,6 @@ describe("auth-store", () => {
       );
       expect(useAuthStore.getState().zeroProRefreshError).toBe("validation failed");
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("clears the cached user when getSession returns 401", async () => {
@@ -167,7 +157,6 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("clears user on 401 from getSession", async () => {
@@ -181,7 +170,6 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
       expect(window.localStorage.getItem("aura-jwt")).toBeNull();
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("does not clear user on non-401 errors when cached session exists", async () => {
@@ -194,7 +182,6 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
       expect(useAuthStore.getState().zeroProRefreshError).toBe("network error");
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
   });
 
@@ -206,7 +193,6 @@ describe("auth-store", () => {
 
       expect(mockApi.login).toHaveBeenCalledWith("a@b.com", "pass");
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("propagates errors", async () => {
@@ -223,7 +209,6 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().zeroProRefreshError).toBe(
         "Unable to verify ZERO Pro status right now.",
       );
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
   });
 
@@ -233,11 +218,7 @@ describe("auth-store", () => {
         ...mockSession,
         is_zero_pro: true,
       };
-      useAuthStore.setState({
-        user: expectedUser(mockSession),
-        isLoading: false,
-        hasResolvedInitialSession: true,
-      });
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
       mockApi.validate.mockResolvedValue(validatedSession);
 
       await useAuthStore.getState().refreshSession();
@@ -245,15 +226,10 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().user).toEqual(expectedUser(validatedSession));
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("keeps a verification error from validate without logging the user out", async () => {
-      useAuthStore.setState({
-        user: expectedUser(mockSession),
-        isLoading: false,
-        hasResolvedInitialSession: true,
-      });
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
       mockApi.validate.mockResolvedValue(sessionWithZeroProError);
 
       await useAuthStore.getState().refreshSession();
@@ -263,22 +239,16 @@ describe("auth-store", () => {
         "Unable to verify ZERO Pro status right now.",
       );
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("clears the user on 401", async () => {
-      useAuthStore.setState({
-        user: expectedUser(mockSession),
-        isLoading: false,
-        hasResolvedInitialSession: true,
-      });
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
       mockApi.validate.mockRejectedValue(new ApiClientError(401, { error: "unauth" }));
 
       await expect(useAuthStore.getState().refreshSession()).rejects.toThrow("unauth");
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
   });
 
@@ -289,7 +259,6 @@ describe("auth-store", () => {
       await useAuthStore.getState().register("a@b.com", "pass", "Test", "INVITE");
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("preserves a zero pro verification error from registration", async () => {
@@ -301,7 +270,6 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().zeroProRefreshError).toBe(
         "Unable to verify ZERO Pro status right now.",
       );
-      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
   });
 

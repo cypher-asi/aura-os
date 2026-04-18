@@ -7,11 +7,12 @@ import {
   Topbar,
   Badge,
 } from "@cypher-asi/zui";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useLayoutEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
+import { signalDesktopReady } from "../../lib/desktop-ready";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
 import { useAuthStore } from "../../stores/auth-store";
@@ -24,19 +25,24 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
-  const { isAuthenticated, hasResolvedInitialSession } = useAuthStore(
+  const { isAuthenticated, isLoading } = useAuthStore(
     useShallow((s) => ({
       isAuthenticated: s.user !== null,
-      hasResolvedInitialSession: s.hasResolvedInitialSession,
+      isLoading: s.isLoading,
     })),
   );
   const f = useLoginForm();
 
-  // Suppress the login chrome until the first startup auth restore finishes, or
-  // if we already know the user is authenticated. This avoids painting the form
-  // during the desktop cold-start window where the sync localStorage mirror is
-  // empty but IndexedDB still holds a valid session.
-  if (isAuthenticated || !hasResolvedInitialSession) {
+  useLayoutEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      signalDesktopReady();
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Authenticated users land here briefly on app open when the persisted URL
+  // was /login. Render nothing so the login chrome never flashes — the redirect
+  // useEffect inside useLoginForm will navigate away on mount.
+  if (isAuthenticated || isLoading) {
     return null;
   }
 
