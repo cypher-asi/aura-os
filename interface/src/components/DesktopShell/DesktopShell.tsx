@@ -289,7 +289,7 @@ export function DesktopShell() {
 
   return (
     <>
-      <div className={styles.desktopShell} data-desktop-mode>
+      <div className={styles.desktopShell} data-desktop-mode={isDesktop || undefined}>
         <BackgroundLayer />
         <Topbar
           className={`titlebar-drag ${styles.topbarAlignRail} ${styles.topbarBlur}`}

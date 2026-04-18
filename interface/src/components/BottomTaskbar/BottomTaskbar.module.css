@@ -7,17 +7,13 @@
   height: var(--control-height-sm);
   min-height: var(--control-height-sm);
   border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
   flex-shrink: 0;
   box-sizing: border-box;
   padding: 0 var(--space-2) 0 0;
   column-gap: var(--space-2);
-}
-
-:global([data-desktop-mode]) .bar {
-  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
-  backdrop-filter: blur(40px) saturate(1.4);
-  -webkit-backdrop-filter: blur(40px) saturate(1.4);
 }
 
 .left {
