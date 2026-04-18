@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Input, Textarea, Text } from "@cypher-asi/zui";
-import { ImagePlus, X, Monitor, Cloud } from "lucide-react";
+import { ImagePlus, X, Monitor, Cloud, Globe2, Lock } from "lucide-react";
 import type { OrgIntegration } from "../../types";
 import type { HostMode } from "./useAgentEditorForm";
+import type { AgentListingStatus } from "../../apps/marketplace/listing-status";
 import { apiFetch } from "../../api/core";
 import {
   MODEL_RUNTIME_ADAPTERS,
@@ -117,6 +118,8 @@ export interface AgentEditorFormProps {
   setDefaultModel: (v: string) => void;
   hostMode?: HostMode;
   setHostMode?: (v: HostMode) => void;
+  listingStatus: AgentListingStatus;
+  setListingStatus: (v: AgentListingStatus) => void;
   simplifyForMobileCreate: boolean;
   restrictCreateToAuraRuntimes: boolean;
   availableIntegrations: OrgIntegration[];
@@ -153,6 +156,8 @@ export function AgentEditorForm({
   setDefaultModel,
   hostMode,
   setHostMode,
+  listingStatus,
+  setListingStatus,
   simplifyForMobileCreate,
   restrictCreateToAuraRuntimes,
   availableIntegrations,
@@ -347,6 +352,11 @@ export function AgentEditorForm({
               {authReadiness.message}
             </Text>
           </div>
+
+          <ListingStatusField
+            listingStatus={listingStatus}
+            setListingStatus={setListingStatus}
+          />
         </>
       )}
 
@@ -373,6 +383,52 @@ export function AgentEditorForm({
 // ---------------------------------------------------------------------------
 // Advanced sub-components (used only in edit / advanced mode)
 // ---------------------------------------------------------------------------
+
+function ListingStatusField({
+  listingStatus,
+  setListingStatus,
+}: {
+  listingStatus: AgentListingStatus;
+  setListingStatus: (v: AgentListingStatus) => void;
+}) {
+  return (
+    <div className={styles.fieldGroup}>
+      <label className={styles.label}>Visibility</label>
+      <div className={styles.choiceGrid} role="radiogroup" aria-label="Visibility">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={listingStatus === "closed"}
+          className={`${styles.choiceCard} ${listingStatus === "closed" ? styles.choiceCardActive : ""}`}
+          onClick={() => setListingStatus("closed")}
+        >
+          <span className={styles.choiceTitle}>
+            <Lock size={14} />
+            Closed
+          </span>
+          <span className={styles.choiceBody}>
+            Only you and your organization can see this agent.
+          </span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={listingStatus === "hireable"}
+          className={`${styles.choiceCard} ${listingStatus === "hireable" ? styles.choiceCardActive : ""}`}
+          onClick={() => setListingStatus("hireable")}
+        >
+          <span className={styles.choiceTitle}>
+            <Globe2 size={14} />
+            Hireable
+          </span>
+          <span className={styles.choiceBody}>
+            Show this agent in the Marketplace so other users can hire it.
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function RuntimeFields({
   adapterType,

@@ -11,6 +11,8 @@ export interface CreateProjectRequest {
   orbit_base_url?: string;
   orbit_owner?: string;
   orbit_repo?: string;
+  /** Local-only working directory (absolute OS path). */
+  local_workspace_path?: string | null;
 }
 
 export interface UpdateProjectRequest {
@@ -21,6 +23,13 @@ export interface UpdateProjectRequest {
   orbit_base_url?: string;
   orbit_owner?: string;
   orbit_repo?: string;
+  /**
+   * Patch semantics for the local workspace override:
+   * - `undefined` (omitted): leave the stored value unchanged.
+   * - `null` or `""`: clear the override.
+   * - `string`: set the override to this absolute path.
+   */
+  local_workspace_path?: string | null;
 }
 
 export interface OrbitRepo {
@@ -56,6 +65,7 @@ export interface CreateImportedProjectRequest {
   orbit_base_url?: string;
   orbit_owner?: string;
   orbit_repo?: string;
+  local_workspace_path?: string | null;
 }
 
 export interface ProjectStatsData {

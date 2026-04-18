@@ -14,6 +14,7 @@ use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
+use super::marketplace_fields::normalize_marketplace_fields;
 use tracing::{info, warn};
 
 const SWARM_AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -317,6 +318,8 @@ async fn persist_vm_id(
         machine_type: None,
         vm_id: Some(vm_id.to_string()),
         tags: None,
+        listing_status: None,
+        expertise: None,
     };
 
     let updated_net_agent = client
@@ -409,6 +412,11 @@ pub(crate) async fn create_agent(
         "local".to_string()
     });
 
+    let marketplace = normalize_marketplace_fields(
+        body.listing_status.as_deref(),
+        body.expertise.as_deref(),
+    )?;
+
     let net_req = aura_os_network::CreateAgentRequest {
         org_id: body.org_id.map(|id| id.to_string()),
         name: body.name.trim().to_string(),
@@ -420,6 +428,8 @@ pub(crate) async fn create_agent(
         machine_type: machine_type.clone(),
         harness: None,
         tags: body.tags,
+        listing_status: marketplace.listing_status,
+        expertise: marketplace.expertise,
     };
 
     let net_agent = client
@@ -436,6 +446,15 @@ pub(crate) async fn create_agent(
         .agent_service
         .apply_runtime_config(&mut agent)
         .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    let submitted_local_workspace_path = body.local_workspace_path.as_ref().and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+    agent.local_workspace_path = submitted_local_workspace_path.clone();
     let _ = state.agent_service.save_agent_shadow(&agent);
 
     let is_remote = HarnessMode::from_machine_type(machine_type.as_deref().unwrap_or("remote"))
@@ -444,6 +463,10 @@ pub(crate) async fn create_agent(
     if is_remote {
         let reprovisioned = provision_remote_agent(&state, client, &jwt, &net_agent).await?;
         agent = reprovisioned.agent;
+        // Preserve the user-supplied local override even though it doesn't
+        // apply to remote agents today — keeps the value stable if the user
+        // later converts the agent back to local.
+        agent.local_workspace_path = submitted_local_workspace_path;
     }
 
     let _ = state.agent_service.save_agent_shadow(&agent);
@@ -823,6 +846,16 @@ pub(crate) async fn update_agent(
         Some(Some(url)) => Some(url.clone()),
         _ => None,
     };
+    // `body.tags == Some(vec)` replaces the tag set wholesale; `None` leaves
+    // the aura-network-stored tags untouched so host-mode / role tags survive
+    // partial PUTs. Marketplace fields (`listing_status`, `expertise`) are
+    // sent as typed columns on the network request — see Phase 3 migration
+    // for the schema change.
+    let marketplace = normalize_marketplace_fields(
+        body.listing_status.as_deref(),
+        body.expertise.as_deref(),
+    )?;
+
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name.map(|value| value.trim().to_string()),
         role: body.role,
@@ -841,11 +874,9 @@ pub(crate) async fn update_agent(
         }),
         harness: None,
         vm_id: None,
-        // `body.tags == Some(vec)` replaces the tag set wholesale; `None`
-        // leaves the aura-network-stored tags untouched (see UpdateAgentRequest
-        // docs). This preserves host-mode / role tags on partial PUTs that
-        // don't mention them.
         tags: body.tags,
+        listing_status: marketplace.listing_status,
+        expertise: marketplace.expertise,
     };
     let net_agent = client
         .update_agent(&agent_id.to_string(), &jwt, &net_req)
@@ -869,6 +900,22 @@ pub(crate) async fn update_agent(
                 .and_then(|s| s.icon)
         });
     }
+    // Patch-style semantics for the local override:
+    //   None            -> preserve existing value
+    //   Some(None)      -> clear it
+    //   Some(Some(p))   -> set it (trim; treat empty as clear)
+    agent.local_workspace_path = match body.local_workspace_path {
+        None => existing.local_workspace_path.clone(),
+        Some(None) => None,
+        Some(Some(value)) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }
+    };
     let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }

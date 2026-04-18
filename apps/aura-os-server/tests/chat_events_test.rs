@@ -332,6 +332,7 @@ async fn standalone_agent_events_support_recent_window() {
             description: "Project for agent history tests".into(),
             build_command: None,
             test_command: None,
+            local_workspace_path: None,
         })
         .expect("create local project");
 
@@ -482,6 +483,7 @@ async fn current_session_loader_excludes_prior_sessions_for_agent() {
             description: "Regression for LLM context re-injection".into(),
             build_command: None,
             test_command: None,
+            local_workspace_path: None,
         })
         .expect("create project");
 

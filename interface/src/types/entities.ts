@@ -31,6 +31,12 @@ export interface Project {
   orbit_base_url?: string;
   orbit_owner?: string;
   orbit_repo?: string;
+  /**
+   * Local-only, per-machine override for the project's working directory.
+   * Absolute OS path. Never synced to aura-network; local agents and the
+   * project terminal default to this folder when set.
+   */
+  local_workspace_path?: string | null;
 }
 
 export interface Spec {
@@ -114,6 +120,12 @@ export interface Agent {
   profile_id?: string;
   tags: string[];
   is_pinned: boolean;
+  /**
+   * Local-only override for the agent's working directory, applied only when
+   * the agent runs on a local machine. Takes precedence over the project's
+   * `local_workspace_path` when both are set.
+   */
+  local_workspace_path?: string | null;
   created_at: string;
   updated_at: string;
 }

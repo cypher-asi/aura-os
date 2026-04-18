@@ -46,6 +46,13 @@ export const agentTemplatesApi = {
     integration_id?: string | null;
     default_model?: string | null;
     tags?: string[];
+    /** Marketplace listing status. Phase 2: sent alongside the legacy
+     * `listing_status:` tag so the server can validate centrally. */
+    listing_status?: string;
+    /** Marketplace expertise slugs. The server folds them into `tags`. */
+    expertise?: string[];
+    /** Local-only per-agent working directory override (absolute OS path). */
+    local_workspace_path?: string | null;
   }) =>
     apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
   get: (agentId: AgentId, options?: ApiRequestOptions) =>
@@ -64,6 +71,15 @@ export const agentTemplatesApi = {
     integration_id?: string | null;
     default_model?: string | null;
     tags?: string[];
+    listing_status?: string;
+    expertise?: string[];
+    /**
+     * Patch semantics for the local workspace override:
+     * - `undefined` (omitted): leave the stored value unchanged.
+     * - `null` or `""`: clear the override.
+     * - `string`: set the override to this absolute path.
+     */
+    local_workspace_path?: string | null;
   }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),

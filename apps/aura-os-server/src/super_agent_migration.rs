@@ -345,6 +345,8 @@ async fn push_tags_upstream(state: &AppState, agent: &Agent) {
         machine_type: None,
         vm_id: None,
         tags: Some(agent.tags.clone()),
+        listing_status: None,
+        expertise: None,
     };
 
     match network.update_agent(&net_id, &jwt.access_token, &req).await {
@@ -472,6 +474,11 @@ mod tests {
             profile_id: None,
             tags: Vec::new(),
             is_pinned: false,
+            listing_status: Default::default(),
+            expertise: Vec::new(),
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
             local_workspace_path: None,
             created_at: now,
             updated_at: now,
@@ -539,6 +546,11 @@ mod tests {
             profile_id: None,
             tags,
             is_pinned: false,
+            listing_status: Default::default(),
+            expertise: Vec::new(),
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
             local_workspace_path: None,
             created_at: now,
             updated_at: now,

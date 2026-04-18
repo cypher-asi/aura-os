@@ -790,6 +790,8 @@ fn update_agent_request_serializes_vm_id() {
         machine_type: None,
         vm_id: Some("pod-123".to_string()),
         tags: None,
+        listing_status: None,
+        expertise: None,
     };
     let val = serde_json::to_value(&req).unwrap();
     assert_eq!(val["vmId"], "pod-123");
@@ -816,6 +818,8 @@ fn update_agent_request_skips_none_vm_id() {
         machine_type: None,
         vm_id: None,
         tags: None,
+        listing_status: None,
+        expertise: None,
     };
     let val = serde_json::to_value(&req).unwrap();
     let obj = val.as_object().unwrap();

@@ -94,6 +94,8 @@ pub(crate) fn project_from_network(
         orbit_base_url: prefer_network(&net.orbit_base_url, local, |p| &p.orbit_base_url),
         orbit_owner: prefer_network(&net.orbit_owner, local, |p| &p.orbit_owner),
         orbit_repo: prefer_network(&net.orbit_repo, local, |p| &p.orbit_repo),
+        // Local-only: never sent by aura-network.
+        local_workspace_path: local.and_then(|p| p.local_workspace_path.clone()),
     })
 }
 
@@ -148,11 +150,18 @@ pub(crate) fn resolve_project_workspace_path_for_machine(
     project_name: Option<&str>,
     machine_type: &str,
 ) -> Option<String> {
+    let project_local_path = state
+        .project_service
+        .get_project(project_id)
+        .ok()
+        .and_then(|p| p.local_workspace_path);
     Some(resolve_workspace_path(
         machine_type,
         project_id,
         &state.data_dir,
         project_name.unwrap_or(""),
+        project_local_path.as_deref(),
+        None,
     ))
 }
 
@@ -292,6 +301,7 @@ pub(super) fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput
         description: req.description.clone(),
         build_command: req.build_command.clone(),
         test_command: req.test_command.clone(),
+        local_workspace_path: normalize_optional_path(&req.local_workspace_path),
     }
 }
 
@@ -377,7 +387,17 @@ pub(super) fn build_local_shadow(project_id: ProjectId, req: &CreateProjectReque
         orbit_base_url: req.orbit_base_url.clone(),
         orbit_owner: req.orbit_owner.clone(),
         orbit_repo: req.orbit_repo.clone(),
+        local_workspace_path: normalize_optional_path(&req.local_workspace_path),
     }
+}
+
+/// Trim and empty-collapse an optional path. Used to turn empty-string inputs
+/// (common from web forms) into a proper `None`.
+pub(crate) fn normalize_optional_path(value: &Option<String>) -> Option<String> {
+    value
+        .as_ref()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]

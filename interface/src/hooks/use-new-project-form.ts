@@ -33,6 +33,12 @@ export interface NewProjectFormState {
   orbitReposLoading: boolean;
   selectedOrbitRepo: OrbitRepo | null;
   setSelectedOrbitRepo: (repo: OrbitRepo | null) => void;
+  /**
+   * Optional local-only folder override. Empty string means "use default"
+   * (`{data_dir}/workspaces/{project_id}`). Never synced to aura-network.
+   */
+  localWorkspacePath: string;
+  setLocalWorkspacePath: (path: string) => void;
   loading: boolean;
   error: string;
   nameError: string;
@@ -120,6 +126,7 @@ export function useNewProjectForm(
   const [orbitRepoName, setOrbitRepoName] = useState("");
   const [orbitRepoMode, setOrbitRepoMode] = useState<OrbitRepoMode>("default");
   const [selectedOrbitRepo, setSelectedOrbitRepo] = useState<OrbitRepo | null>(null);
+  const [localWorkspacePath, setLocalWorkspacePath] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
@@ -128,7 +135,10 @@ export function useNewProjectForm(
     setNameRaw(value);
   }, []);
 
-  const { storedDraft, clearDraft } = useNewProjectDraft(isOpen, { name, folderPath: "" });
+  const { storedDraft, clearDraft } = useNewProjectDraft(isOpen, {
+    name,
+    folderPath: localWorkspacePath,
+  });
   const { orbitRepos, orbitReposLoading, resetOrbitRepos } = useOrbitRepos(isOpen, orbitRepoMode, isAuthenticated);
 
   const draftAppliedRef = useRef(false);
@@ -136,6 +146,7 @@ export function useNewProjectForm(
     if (draftAppliedRef.current || !storedDraft) return;
     draftAppliedRef.current = true;
     if (storedDraft.name) setNameRaw(storedDraft.name);
+    if (storedDraft.folderPath) setLocalWorkspacePath(storedDraft.folderPath);
   }, [storedDraft]);
 
   const orbitOwner = activeOrg?.org_id ?? user?.user_id ?? null;
@@ -152,6 +163,7 @@ export function useNewProjectForm(
     setNameRaw("");
     setOrbitRepoName(""); setOrbitRepoMode("default");
     resetOrbitRepos(); setSelectedOrbitRepo(null);
+    setLocalWorkspacePath("");
     setLoading(false); setError(""); setNameError("");
     clearDraft(); void clearNewProjectDraftFiles();
   }, [clearDraft, resetOrbitRepos]);
@@ -171,11 +183,13 @@ export function useNewProjectForm(
       if (!resolvedOrgId) { setError("No team found. Log out and back in to create a default team."); return; }
       const orbitFields = buildOrbitFields(orbitRepoMode, orbitRepoName, proposedRepoSlug, selectedOrbitRepo, orbitOwner);
 
+      const trimmedLocalPath = localWorkspacePath.trim();
       const project = await api.createProject({
         org_id: resolvedOrgId,
         name: name.trim(),
         description: "",
         ...orbitFields,
+        ...(trimmedLocalPath ? { local_workspace_path: trimmedLocalPath } : {}),
       });
 
       reset(); onCreated(project);
@@ -184,6 +198,7 @@ export function useNewProjectForm(
     } finally { setLoading(false); }
   }, [name, orbitRepoMode,
       selectedOrbitRepo, orbitRepoName, proposedRepoSlug, orbitOwner,
+      localWorkspacePath,
       resolvedOrgId, reset, onCreated, projects]);
 
   const submitBlocker = useMemo(() => {
@@ -200,6 +215,7 @@ export function useNewProjectForm(
     orbitRepoMode, setOrbitRepoMode,
     orbitRepoName, setOrbitRepoName, orbitRepos, orbitReposLoading,
     selectedOrbitRepo, setSelectedOrbitRepo,
+    localWorkspacePath, setLocalWorkspacePath,
     loading, error, nameError, setNameError,
     orbitOwner, proposedRepoSlug, displayRepoName, isAuthenticated,
     submitBlocker, canSubmit,

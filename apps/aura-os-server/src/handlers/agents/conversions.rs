@@ -3,6 +3,8 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 use tracing::warn;
 
+use aura_os_core::expertise;
+use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::parse_dt;
 use aura_os_core::{
     Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, ProfileId, ProjectId,
@@ -56,6 +58,28 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         tags.push("super_agent".to_string());
     }
 
+    // Marketplace listing_status: prefer the typed field; fall back to the
+    // legacy `listing_status:<value>` tag so agents written before Phase 3
+    // still render correctly. Unknown values default to Closed.
+    let listing_status = net
+        .listing_status
+        .as_deref()
+        .and_then(|raw| AgentListingStatus::from_str(raw).ok())
+        .or_else(|| listing_status_from_tags(&tags))
+        .unwrap_or_default();
+
+    // Marketplace expertise: prefer the typed field; fall back to the
+    // `expertise:<slug>` tag encoding. Unknown slugs are filtered out so
+    // stale client data cannot introduce invalid slugs on read.
+    let expertise: Vec<String> = match net.expertise.as_ref() {
+        Some(slugs) => slugs
+            .iter()
+            .filter(|slug| expertise::is_valid_slug(slug))
+            .cloned()
+            .collect(),
+        None => expertise_from_tags(&tags),
+    };
+
     Agent {
         agent_id,
         user_id: net.user_id.clone(),
@@ -77,15 +101,50 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         profile_id,
         tags,
         is_pinned: is_super,
+        listing_status,
+        expertise,
+        jobs: net.jobs.unwrap_or(0),
+        revenue_usd: net.revenue_usd.unwrap_or(0.0),
+        reputation: net.reputation.unwrap_or(0.0),
+        // Network-derived agents never carry a local override; populated later
+        // from the local shadow if present.
+        local_workspace_path: None,
         created_at,
         updated_at,
     }
 }
 
+/// Parse `listing_status:<value>` from a tag list. Retained only as a
+/// backward-compatibility fallback for agents that predate Phase 3.
+fn listing_status_from_tags(tags: &[String]) -> Option<AgentListingStatus> {
+    for tag in tags {
+        if let Some(raw) =
+            tag.strip_prefix(aura_os_core::listing_status::LISTING_STATUS_TAG_PREFIX)
+        {
+            if let Ok(parsed) = AgentListingStatus::from_str(raw) {
+                return Some(parsed);
+            }
+        }
+    }
+    None
+}
+
+/// Parse `expertise:<slug>` entries from a tag list, filtering out any
+/// unknown slugs so the server never forwards invalid data to clients.
+fn expertise_from_tags(tags: &[String]) -> Vec<String> {
+    tags.iter()
+        .filter_map(|tag| tag.strip_prefix(expertise::EXPERTISE_TAG_PREFIX))
+        .filter(|slug| expertise::is_valid_slug(slug))
+        .map(|slug| slug.to_string())
+        .collect()
+}
+
 /// Compute a workspace path hint for an agent instance.
 ///
-/// For **local** agents the server is the authority: prefer the stored absolute
-/// `project_folder`; fall back to `{data_dir}/workspaces/{slug}`.
+/// For **local** agents the server is the authority. Resolution order:
+///   1. `agent_local_path` — per-agent override from the agent template shadow.
+///   2. `project_local_path` — per-project override from the project shadow.
+///   3. `{data_dir}/workspaces/{project_id}` — canonical default.
 ///
 /// For **remote / swarm** agents the harness is the authoritative source (via
 /// `AutomatonClient::resolve_workspace`). This function returns a best-guess
@@ -97,8 +156,20 @@ pub(crate) fn resolve_workspace_path(
     project_id: &ProjectId,
     data_dir: &std::path::Path,
     project_name: &str,
+    project_local_path: Option<&str>,
+    agent_local_path: Option<&str>,
 ) -> String {
+    fn non_empty(value: Option<&str>) -> Option<&str> {
+        value.map(str::trim).filter(|s| !s.is_empty())
+    }
+
     if machine_type == "local" {
+        if let Some(path) = non_empty(agent_local_path) {
+            return path.to_string();
+        }
+        if let Some(path) = non_empty(project_local_path) {
+            return path.to_string();
+        }
         super::super::projects_helpers::canonical_workspace_path(data_dir, project_id)
             .to_string_lossy()
             .to_string()

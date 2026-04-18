@@ -25,6 +25,7 @@ pub fn make_project(name: &str, _folder: &str) -> Project {
         orbit_base_url: None,
         orbit_owner: None,
         orbit_repo: None,
+        local_workspace_path: None,
     }
 }
 

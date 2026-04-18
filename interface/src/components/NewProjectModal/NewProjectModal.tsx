@@ -1,6 +1,7 @@
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useNewProjectForm } from "../../hooks/use-new-project-form";
+import { FolderPickerField } from "../FolderPickerField";
 import styles from "./NewProjectModal.module.css";
 
 interface NewProjectModalProps {
@@ -65,6 +66,14 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             </Text>
           )}
         </div>
+
+        <FolderPickerField
+          label="Local workspace folder (optional)"
+          value={form.localWorkspacePath}
+          onChange={form.setLocalWorkspacePath}
+          disabled={form.loading}
+          defaultHint="Leave blank to use the default Aura-managed workspace folder."
+        />
 
         {form.error && (
           <Text variant="muted" size="sm" className={styles.dangerText}>

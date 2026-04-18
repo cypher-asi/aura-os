@@ -179,6 +179,7 @@ pub(crate) async fn create_imported_project(
         orbit_base_url,
         orbit_owner,
         orbit_repo,
+        local_workspace_path,
     } = req;
 
     let local_req = CreateProjectRequest {
@@ -192,6 +193,7 @@ pub(crate) async fn create_imported_project(
         orbit_base_url,
         orbit_owner,
         orbit_repo,
+        local_workspace_path,
     };
 
     let (status, Json(project)) = create_project_impl(&state, &local_req, None, &jwt).await?;
@@ -303,6 +305,16 @@ pub(crate) async fn update_project(
         description: req.description.clone(),
         build_command: req.build_command.clone(),
         test_command: req.test_command.clone(),
+        local_workspace_path: req.local_workspace_path.clone().map(|inner| {
+            inner.and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            })
+        }),
     };
     let project = state
         .project_service

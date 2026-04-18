@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::*;
 use chrono::Utc;
 
@@ -104,6 +105,12 @@ mod session_status_serde {
     test_enum_variant!(rolled_over, SessionStatus::RolledOver, "rolled_over");
 }
 
+mod agent_listing_status_serde {
+    use super::*;
+    test_enum_variant!(closed, AgentListingStatus::Closed, "closed");
+    test_enum_variant!(hireable, AgentListingStatus::Hireable, "hireable");
+}
+
 // ---------------------------------------------------------------------------
 // Entity struct serde round-trips
 // ---------------------------------------------------------------------------
@@ -128,6 +135,7 @@ fn sample_project() -> Project {
         orbit_base_url: None,
         orbit_owner: None,
         orbit_repo: None,
+        local_workspace_path: None,
     }
 }
 
@@ -196,6 +204,12 @@ fn sample_agent() -> Agent {
         profile_id: None,
         tags: vec![],
         is_pinned: false,
+        listing_status: AgentListingStatus::Hireable,
+        expertise: vec!["coding".into(), "devops".into()],
+        jobs: 42,
+        revenue_usd: 1_234.56,
+        reputation: 4.75,
+        local_workspace_path: None,
         created_at: now,
         updated_at: now,
     }
@@ -286,3 +300,30 @@ test_entity_round_trip!(session_round_trip, {
     let instance = sample_agent_instance(p.project_id, a.agent_id);
     sample_session(p.project_id, instance.agent_instance_id)
 });
+
+/// Agents serialized before Phase 3 did not carry the marketplace fields.
+/// `#[serde(default)]` on the new columns must let those records
+/// deserialize cleanly with sensible defaults, otherwise a storage roll
+/// forward would fail reading existing rows.
+#[test]
+fn legacy_agent_json_without_marketplace_fields_defaults_sensibly() {
+    let now = Utc::now().to_rfc3339();
+    let agent_id = AgentId::new();
+    let legacy = serde_json::json!({
+        "agent_id": agent_id.to_string(),
+        "user_id": "user-1",
+        "name": "Legacy",
+        "role": "developer",
+        "personality": "",
+        "system_prompt": "",
+        "created_at": now,
+        "updated_at": now,
+    });
+
+    let agent: Agent = serde_json::from_value(legacy).expect("legacy agent must deserialize");
+    assert_eq!(agent.listing_status, AgentListingStatus::Closed);
+    assert!(agent.expertise.is_empty());
+    assert_eq!(agent.jobs, 0);
+    assert_eq!(agent.revenue_usd, 0.0);
+    assert_eq!(agent.reputation, 0.0);
+}

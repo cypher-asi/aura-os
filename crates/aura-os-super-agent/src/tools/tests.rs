@@ -322,6 +322,12 @@ mod tests {
             profile_id: None,
             tags: vec![],
             is_pinned: false,
+            listing_status: Default::default(),
+            expertise: vec![],
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -364,6 +370,12 @@ mod tests {
             profile_id: None,
             tags: vec![],
             is_pinned: false,
+            listing_status: Default::default(),
+            expertise: vec![],
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -390,6 +402,7 @@ mod tests {
             description: "desc".into(),
             build_command: None,
             test_command: None,
+            local_workspace_path: None,
         };
         let project = ctx.project_service.create_project(input).unwrap();
 
@@ -417,6 +430,7 @@ mod tests {
             description: "d".into(),
             build_command: None,
             test_command: None,
+            local_workspace_path: None,
         };
         let project = ctx.project_service.create_project(input).unwrap();
 
@@ -526,6 +540,7 @@ mod tests {
             description: "d".into(),
             build_command: None,
             test_command: None,
+            local_workspace_path: None,
         };
         let project = ctx.project_service.create_project(input).unwrap();
 

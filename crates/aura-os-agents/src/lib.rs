@@ -57,6 +57,12 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
             Vec::new()
         },
         is_pinned: is_super,
+        listing_status: Default::default(),
+        expertise: Vec::new(),
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
         created_at,
         updated_at,
     }
@@ -159,6 +165,16 @@ impl AgentService {
             } else {
                 "local".to_string()
             };
+        }
+        // Local-only fields never ride on the network record; preserve
+        // whatever is stored in the shadow so network round-trips don't
+        // wipe user-set values like `local_workspace_path`.
+        if agent.local_workspace_path.is_none() {
+            if let Ok(bytes) = self.store.get_setting(&Self::agent_key(&agent.agent_id)) {
+                if let Ok(shadow) = serde_json::from_slice::<Agent>(&bytes) {
+                    agent.local_workspace_path = shadow.local_workspace_path;
+                }
+            }
         }
         Ok(())
     }
@@ -534,6 +550,12 @@ fn synthesize_agent_from_project_agent(
         profile_id: None,
         tags: Vec::new(),
         is_pinned: false,
+        listing_status: Default::default(),
+        expertise: Vec::new(),
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
     })

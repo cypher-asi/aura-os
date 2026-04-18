@@ -14,6 +14,9 @@ pub(crate) struct CreateProjectRequest {
     pub orbit_base_url: Option<String>,
     pub orbit_owner: Option<String>,
     pub orbit_repo: Option<String>,
+    /// Local-only, per-machine project working directory. Absolute OS path.
+    #[serde(default)]
+    pub local_workspace_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,6 +30,12 @@ pub(crate) struct UpdateProjectRequest {
     pub orbit_base_url: Option<String>,
     pub orbit_owner: Option<String>,
     pub orbit_repo: Option<String>,
+    /// Patch for the local workspace folder.
+    /// - Absent: leaves the stored value unchanged.
+    /// - `Some("")` or `Some(null)` (via `Some(None)`): clears the override.
+    /// - `Some(Some("..."))`: sets a new path.
+    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    pub local_workspace_path: Option<Option<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,6 +58,8 @@ pub(crate) struct CreateImportedProjectRequest {
     pub orbit_base_url: Option<String>,
     pub orbit_owner: Option<String>,
     pub orbit_repo: Option<String>,
+    #[serde(default)]
+    pub local_workspace_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,6 +105,20 @@ pub(crate) struct CreateAgentRequest {
     pub default_model: Option<String>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+    /// Marketplace discoverability: `closed` (default) or `hireable`. Encoded
+    /// as a `listing_status:<value>` tag on the stored agent until Phase 3
+    /// promotes it to a dedicated column on the network agent record.
+    #[serde(default)]
+    pub listing_status: Option<String>,
+    /// Marketplace expertise slugs. Validated against
+    /// [`aura_os_core::expertise::ALLOWED_SLUGS`] and persisted as
+    /// `expertise:<slug>` tags. Dedupe is applied server-side.
+    #[serde(default)]
+    pub expertise: Option<Vec<String>>,
+    /// Per-agent local working directory override (absolute path). Applied only
+    /// for local machines; takes precedence over the project's folder.
+    #[serde(default)]
+    pub local_workspace_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,6 +143,52 @@ pub(crate) struct UpdateAgentRequest {
     /// Replacement tag set. `None` leaves existing tags untouched; `Some` overwrites.
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+    /// Marketplace discoverability override. `None` leaves the existing
+    /// `listing_status:*` tag untouched; `Some(value)` replaces it.
+    #[serde(default)]
+    pub listing_status: Option<String>,
+    /// Replacement expertise set. `None` leaves existing `expertise:*` tags
+    /// untouched; `Some` replaces all of them.
+    #[serde(default)]
+    pub expertise: Option<Vec<String>>,
+    /// `None` leaves the value unchanged. `Some(None)` clears the override.
+    /// `Some(Some("..."))` sets a new path.
+    #[serde(default, deserialize_with = "deserialize_patch_option")]
+    pub local_workspace_path: Option<Option<String>>,
+}
+
+// -- Marketplace DTOs --
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct MarketplaceAgent {
+    pub agent: Agent,
+    pub description: String,
+    pub jobs: u64,
+    pub revenue_usd: f64,
+    pub reputation: f32,
+    pub creator_display_name: String,
+    pub creator_user_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cover_image_url: Option<String>,
+    pub listed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ListMarketplaceAgentsQuery {
+    #[serde(default)]
+    pub sort: Option<String>,
+    #[serde(default)]
+    pub expertise: Option<String>,
+    #[serde(default)]
+    pub limit: Option<u32>,
+    #[serde(default)]
+    pub offset: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ListMarketplaceAgentsResponse {
+    pub agents: Vec<MarketplaceAgent>,
+    pub total: u64,
 }
 
 // -- AgentInstance DTOs (project-level) --

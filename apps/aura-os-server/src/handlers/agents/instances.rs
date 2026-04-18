@@ -47,6 +47,12 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
         profile_id: None,
         tags: vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()],
         is_pinned: false,
+        listing_status: Default::default(),
+        expertise: Vec::new(),
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
         created_at: now,
         updated_at: now,
     }
@@ -65,14 +71,30 @@ fn general_agent_runtime_config() -> AgentRuntimeConfig {
 fn attach_workspace_path(
     state: &AppState,
     project_id: &ProjectId,
-    project_name: &str,
+    project: Option<&aura_os_core::Project>,
     instance: &mut AgentInstance,
 ) {
+    let project_local_path = project.and_then(|p| p.local_workspace_path.as_deref());
+    let project_name = project.map(|p| p.name.as_str()).unwrap_or("");
+    // Load the agent template shadow so we can apply its `local_workspace_path`
+    // override when resolving for a local instance. Falls back gracefully when
+    // the template isn't cached locally.
+    let agent_local_path = if instance.machine_type == "local" {
+        state
+            .agent_service
+            .get_agent_local(&instance.agent_id)
+            .ok()
+            .and_then(|a| a.local_workspace_path)
+    } else {
+        None
+    };
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
         project_id,
         &state.data_dir,
         project_name,
+        project_local_path,
+        agent_local_path.as_deref(),
     ));
 }
 
@@ -149,15 +171,7 @@ pub(crate) async fn create_agent_instance(
         .map_err(map_storage_error)?;
 
     let mut instance = merge_agent_instance(&storage_agent, Some(&agent), None);
-    attach_workspace_path(
-        &state,
-        &project_id,
-        project
-            .as_ref()
-            .map(|entry| entry.name.as_str())
-            .unwrap_or(""),
-        &mut instance,
-    );
+    attach_workspace_path(&state, &project_id, project.as_ref(), &mut instance);
     Ok(Json(instance))
 }
 
@@ -180,14 +194,13 @@ pub(crate) async fn list_agent_instances(
     let agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
 
     let project = state.project_service.get_project(&project_id).ok();
-    let project_name = project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
 
     let instances: Vec<AgentInstance> = storage_agents
         .iter()
         .map(|spa| {
             let agent = spa.agent_id.as_deref().and_then(|aid| agent_map.get(aid));
             let mut instance = merge_agent_instance(spa, agent, None);
-            attach_workspace_path(&state, &project_id, &project_name, &mut instance);
+            attach_workspace_path(&state, &project_id, project.as_ref(), &mut instance);
             instance
         })
         .collect();
@@ -224,12 +237,7 @@ pub(crate) async fn get_agent_instance(
     let resolved_project_id = proj_id_str
         .parse::<aura_os_core::ProjectId>()
         .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
-    attach_workspace_path(
-        &state,
-        &resolved_project_id,
-        project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-        &mut instance,
-    );
+    attach_workspace_path(&state, &resolved_project_id, project.as_ref(), &mut instance);
     Ok(Json(instance))
 }
 
@@ -324,12 +332,7 @@ pub(crate) async fn update_agent_instance(
     let resolved_project_id = proj_id_str
         .parse::<aura_os_core::ProjectId>()
         .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
-    attach_workspace_path(
-        &state,
-        &resolved_project_id,
-        project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-        &mut instance,
-    );
+    attach_workspace_path(&state, &resolved_project_id, project.as_ref(), &mut instance);
     Ok(Json(instance))
 }
 

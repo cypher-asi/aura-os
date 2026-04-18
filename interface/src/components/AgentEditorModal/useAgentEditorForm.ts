@@ -11,6 +11,13 @@ import {
   supportsOrgIntegrationAuth,
 } from "../../lib/integrationCatalog";
 import { useOrgStore } from "../../stores/org-store";
+import {
+  DEFAULT_LISTING_STATUS,
+  listingStatusFromTags,
+  mergeListingStatusTag,
+  type AgentListingStatus,
+} from "../../apps/marketplace/listing-status";
+import { expertiseSlugsFromTags } from "../../apps/marketplace/marketplace-expertise";
 
 export type HostMode = "local" | "cloud";
 
@@ -43,8 +50,17 @@ interface AgentEditorFormResult {
   setIntegrationId: (v: string) => void;
   defaultModel: string;
   setDefaultModel: (v: string) => void;
+  /**
+   * Optional local-only folder override for this agent template. Takes
+   * precedence over the project's `local_workspace_path`. Empty string means
+   * "inherit from project / use default".
+   */
+  localWorkspacePath: string;
+  setLocalWorkspacePath: (v: string) => void;
   hostMode: HostMode;
   setHostMode: (v: HostMode) => void;
+  listingStatus: AgentListingStatus;
+  setListingStatus: (v: AgentListingStatus) => void;
   simplifyForMobileCreate: boolean;
   restrictCreateToAuraRuntimes: boolean;
   availableIntegrations: OrgIntegration[];
@@ -115,10 +131,13 @@ export function useAgentEditorForm(
   const [showAdvancedRuntime, setShowAdvancedRuntime] = useState(false);
   const [integrationId, setIntegrationId] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
+  const [localWorkspacePath, setLocalWorkspacePath] = useState("");
+  const [initialLocalWorkspacePath, setInitialLocalWorkspacePath] = useState("");
   // Local vs Cloud host mode for super-agents. Brand-new agents default to
   // "local" (in-process super-agent path). Existing agents load from their
   // tag set so toggling the UI round-trips through `host_mode:harness`.
   const [hostMode, setHostMode] = useState<HostMode>("local");
+  const [listingStatus, setListingStatus] = useState<AgentListingStatus>(DEFAULT_LISTING_STATUS);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
@@ -147,11 +166,14 @@ export function useAgentEditorForm(
       setAuthSource(agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id));
       setIntegrationId(agent.integration_id ?? "");
       setDefaultModel(agent.default_model ?? "");
+      setLocalWorkspacePath(agent.local_workspace_path ?? "");
+      setInitialLocalWorkspacePath(agent.local_workspace_path ?? "");
       setHostMode(
         agent.tags?.some((t) => t.toLowerCase() === HOST_MODE_HARNESS_TAG)
           ? "cloud"
           : "local",
       );
+      setListingStatus(listingStatusFromTags(agent.tags));
       setShowAdvancedRuntime(
         !isDefaultCreateRuntime(
           agent.adapter_type ?? "aura_harness",
@@ -170,7 +192,10 @@ export function useAgentEditorForm(
       setShowAdvancedRuntime(false);
       setIntegrationId("");
       setDefaultModel("");
+      setLocalWorkspacePath("");
+      setInitialLocalWorkspacePath("");
       setHostMode("local");
+      setListingStatus(DEFAULT_LISTING_STATUS);
     }
     setError(""); setNameError("");
   }, [isOpen, agent, isMobileLayout]);
@@ -348,9 +373,36 @@ export function useAgentEditorForm(
       // toggle is hidden for regular agents, but we still strip any stale
       // `host_mode:harness` tag they may have inherited so they can't be
       // silently migrated. Other tags are preserved verbatim.
-      const tagsPayload = isSuperAgent
+      const tagsAfterHostMode = isSuperAgent
         ? mergeHostModeTag(agent?.tags, hostMode)
+        : agent?.tags;
+      // Persist the marketplace listing status as an `expertise:`-style tag
+      // until Phase 3 adds a real `listing_status` column on the network
+      // agent record. `mergeListingStatusTag` strips any prior listing
+      // tags before reapplying the current choice.
+      const shouldPatchTags = isSuperAgent || listingStatus !== DEFAULT_LISTING_STATUS ||
+        (agent?.tags?.some((t) => t.toLowerCase().startsWith("listing_status:")) ?? false);
+      const tagsPayload = shouldPatchTags
+        ? mergeListingStatusTag(tagsAfterHostMode, listingStatus)
         : undefined;
+      // Send `listing_status` and `expertise` as first-class fields so the
+      // server validates them against the canonical slug list (Phase 2). The
+      // legacy `tags` encoding remains for backwards compatibility until
+      // Phase 3 promotes both fields to dedicated network columns.
+      const expertiseSlugs = expertiseSlugsFromTags(agent?.tags);
+      // `local_workspace_path` is local-only and uses patch semantics: for
+      // update we only include it when it actually changed (including
+      // clearing it via `null`); for create we only include it when set.
+      const trimmedLocalPath = localWorkspacePath.trim();
+      const localPathChanged =
+        trimmedLocalPath !== (initialLocalWorkspacePath ?? "").trim();
+      const localWorkspacePatch: { local_workspace_path?: string | null } = agent
+        ? localPathChanged
+          ? { local_workspace_path: trimmedLocalPath ? trimmedLocalPath : null }
+          : {}
+        : trimmedLocalPath
+          ? { local_workspace_path: trimmedLocalPath }
+          : {};
       const payload = {
         org_id: agent?.org_id ?? activeOrg?.org_id,
         name: trimmedName, role: isSuperAgent ? "super_agent" : role.trim(),
@@ -363,6 +415,9 @@ export function useAgentEditorForm(
         integration_id: authSource === "org_integration" ? (integrationId || null) : null,
         default_model: defaultModel.trim() || null,
         ...(tagsPayload !== undefined ? { tags: tagsPayload } : {}),
+        listing_status: listingStatus,
+        ...(expertiseSlugs.length > 0 ? { expertise: expertiseSlugs } : {}),
+        ...localWorkspacePatch,
       };
       const saved = agent
         ? await api.agents.update(agent.agent_id, payload)
@@ -374,7 +429,7 @@ export function useAgentEditorForm(
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, hostMode, agent, activeOrg?.org_id, isMobileLayout, onSaved, closeOnSave, onClose]);
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, localWorkspacePath, initialLocalWorkspacePath, hostMode, listingStatus, agent, activeOrg?.org_id, isMobileLayout, onSaved, closeOnSave, onClose]);
 
   const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent") || false;
 
@@ -384,7 +439,9 @@ export function useAgentEditorForm(
     adapterType, setAdapterType, environment, setEnvironment,
     authSource, setAuthSource, showAdvancedRuntime, setShowAdvancedRuntime,
     integrationId, setIntegrationId, defaultModel, setDefaultModel,
+    localWorkspacePath, setLocalWorkspacePath,
     hostMode, setHostMode,
+    listingStatus, setListingStatus,
     simplifyForMobileCreate, restrictCreateToAuraRuntimes,
     availableIntegrations: integrations,
     saving, error, nameError, setNameError,

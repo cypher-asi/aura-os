@@ -48,6 +48,8 @@ function makeProps(overrides: Partial<AgentEditorFormProps> = {}): AgentEditorFo
     setIntegrationId: vi.fn(),
     defaultModel: "",
     setDefaultModel: vi.fn(),
+    listingStatus: "closed",
+    setListingStatus: vi.fn(),
     simplifyForMobileCreate: false,
     restrictCreateToAuraRuntimes: true,
     availableIntegrations: [],
