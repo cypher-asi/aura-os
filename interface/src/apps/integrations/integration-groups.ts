@@ -2,6 +2,7 @@ import {
   INTEGRATION_CATALOG,
   type IntegrationDefinition,
 } from "../../lib/integrationCatalog";
+import { isSettingsProviderSelectionEnabled } from "../../lib/featureFlags";
 
 /**
  * Display groups for the Integrations app left-menu.
@@ -78,8 +79,14 @@ export function getIntegrationGroupId(provider: string): IntegrationGroupId {
 /**
  * Returns the ordered groups populated with their providers. Groups with no
  * providers are skipped so empty categories don't clutter the left menu.
+ *
+ * The "Providers" group (shared AI model credentials) is gated behind the
+ * `VITE_ENABLE_SETTINGS_PROVIDER_SELECTION` flag — the same flag that already
+ * guards workspace_connection provider selection in the Team Settings form
+ * — so both surfaces stay in sync.
  */
 export function getIntegrationGroups(): IntegrationGroup[] {
+  const providersEnabled = isSettingsProviderSelectionEnabled();
   const byGroup = new Map<IntegrationGroupId, IntegrationDefinition[]>();
   for (const definition of INTEGRATION_CATALOG) {
     const groupId = getIntegrationGroupId(definition.id);
@@ -89,6 +96,7 @@ export function getIntegrationGroups(): IntegrationGroup[] {
   }
 
   return GROUP_ORDER.flatMap(({ id, title }) => {
+    if (id === "providers" && !providersEnabled) return [];
     const providers = byGroup.get(id);
     if (!providers || providers.length === 0) return [];
     return [{ id, title, providers }];
