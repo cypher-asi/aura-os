@@ -2,46 +2,22 @@
 import { lazy } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { AgentChatView } from "../../components/AgentChatView";
 import { MobileOrganizationView } from "../../views/MobileOrganizationView";
+import { ExecutionView } from "../../views/ExecutionView";
+import { ProjectAgentDetailsView } from "../../views/ProjectAgentDetailsView";
+import { ProjectAgentRedirectView } from "../../views/ProjectAgentRedirectView";
+import { ProjectAgentSetupView } from "../../views/ProjectAgentSetupView/ProjectAgentSetupView";
+import { ProjectFilesView } from "../../views/ProjectFilesView";
+import { ProjectLayout } from "../../views/ProjectLayout";
+import { ProjectProcessView } from "../../views/ProjectProcessView";
+import { ProjectRootRedirectView } from "../../views/ProjectRootRedirectView";
+import { ProjectStatsView } from "../../views/ProjectStatsView";
+import { ProjectTasksView } from "../../views/ProjectTasksView";
+import { ProjectWorkView } from "../../views/ProjectWorkView";
 
 const HomeView = lazy(() => import("../../views/HomeView").then((m) => ({ default: m.HomeView })));
 const SettingsView = lazy(() => import("../../views/SettingsView").then((m) => ({ default: m.SettingsView })));
-const ProjectLayout = lazy(() =>
-  import("../../views/ProjectLayout").then((m) => ({ default: m.ProjectLayout })),
-);
-const ProjectRootRedirectView = lazy(() =>
-  import("../../views/ProjectRootRedirectView").then((m) => ({ default: m.ProjectRootRedirectView })),
-);
-const ProjectAgentRedirectView = lazy(() =>
-  import("../../views/ProjectAgentRedirectView").then((m) => ({ default: m.ProjectAgentRedirectView })),
-);
-const ProjectAgentSetupView = lazy(() =>
-  import("../../views/ProjectAgentSetupView/ProjectAgentSetupView").then((m) => ({
-    default: m.ProjectAgentSetupView,
-  })),
-);
-const ProjectAgentDetailsView = lazy(() =>
-  import("../../views/ProjectAgentDetailsView").then((m) => ({ default: m.ProjectAgentDetailsView })),
-);
-const AgentChatView = lazy(() =>
-  import("../../components/AgentChatView").then((m) => ({ default: m.AgentChatView })),
-);
-const ExecutionView = lazy(() => import("../../views/ExecutionView").then((m) => ({ default: m.ExecutionView })));
-const ProjectWorkView = lazy(() =>
-  import("../../views/ProjectWorkView").then((m) => ({ default: m.ProjectWorkView })),
-);
-const ProjectTasksView = lazy(() =>
-  import("../../views/ProjectTasksView").then((m) => ({ default: m.ProjectTasksView })),
-);
-const ProjectFilesView = lazy(() =>
-  import("../../views/ProjectFilesView").then((m) => ({ default: m.ProjectFilesView })),
-);
-const ProjectProcessView = lazy(() =>
-  import("../../views/ProjectProcessView").then((m) => ({ default: m.ProjectProcessView })),
-);
-const ProjectStatsView = lazy(() =>
-  import("../../views/ProjectStatsView").then((m) => ({ default: m.ProjectStatsView })),
-);
 
 function MobileOrganizationRoute() {
   const { isMobileLayout } = useAuraCapabilities();

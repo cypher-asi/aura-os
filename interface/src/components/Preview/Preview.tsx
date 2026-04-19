@@ -152,6 +152,7 @@ export function PreviewHeader() {
           iconOnly
           icon={<ArrowLeft size={14} />}
           aria-label="Back"
+          className={styles.previewHeaderButton}
           onClick={goBackPreview}
         />
       )}
@@ -165,6 +166,7 @@ export function PreviewHeader() {
         iconOnly
         icon={<X size={14} />}
         aria-label="Close"
+        className={styles.previewHeaderButton}
         onClick={closePreview}
       />
     </div>
@@ -287,7 +289,7 @@ export function PreviewContent() {
   }, [resetKey, shouldAutoScroll]);
 
   return (
-    <div ref={bodyRef} className={styles.previewBody}>
+    <div ref={bodyRef} className={styles.previewBody} data-testid="preview-body">
       {displayItem?.kind === "spec" && <SpecPreview spec={displayItem.spec} />}
       {displayItem?.kind === "specs_overview" && <SpecsOverviewPreview specs={displayItem.specs} />}
       {displayItem?.kind === "task" && <TaskPreview task={displayItem.task} />}

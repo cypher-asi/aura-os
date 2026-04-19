@@ -2,7 +2,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 10%, transparent) 0%, transparent 42%),
     linear-gradient(
@@ -15,65 +15,17 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding-bottom: 32px;
-}
-
-.hero {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.heroEyebrow {
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-.title {
-  font-size: clamp(1.36rem, 4vw, 1.74rem);
-  font-weight: 700;
-  line-height: 1.04;
-  color: var(--color-text);
-}
-
-.description {
-  font-size: 0.92rem;
-  line-height: 1.5;
-  color: var(--color-text-secondary);
-  max-width: 28rem;
-}
-
-.heroMetrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-.heroMetric {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
-  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  font-weight: 600;
+  gap: 14px;
+  padding-bottom: 28px;
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
-  border-radius: 22px;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: 20px;
   background: color-mix(in srgb, var(--color-bg-surface) 94%, transparent);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
 }
@@ -96,7 +48,7 @@
 }
 
 .sectionHeading {
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--color-text);
 }
@@ -118,8 +70,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  border-radius: 20px;
+  padding: 14px;
+  border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
   background:
     linear-gradient(
@@ -139,7 +91,7 @@
 
 .resumeTitle,
 .emptyWorkspaceTitle {
-  font-size: 1.08rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
   color: var(--color-text);
@@ -171,9 +123,18 @@
 }
 
 .resumeActions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+}
+
+.resumeActionButton {
+  width: 100%;
+}
+
+.primaryActionButton {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .projectList,
@@ -189,7 +150,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 15px 16px;
+  padding: 14px 15px;
   border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
   border-radius: 18px;
   background: color-mix(in srgb, var(--color-bg) 82%, var(--color-bg-surface));
@@ -235,7 +196,7 @@
 
 .projectTitle,
 .orgName {
-  font-size: 0.98rem;
+  font-size: 0.94rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -268,17 +229,18 @@
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .actionButton {
+  width: 100%;
   justify-content: flex-start;
 }
 
 .footerActions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding-top: 10px;
   border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
   opacity: 0.86;

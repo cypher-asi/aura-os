@@ -1,10 +1,9 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
   min-height: 0;
   flex: 1;
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-3) calc(var(--space-6) + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -12,20 +11,13 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-height: 0;
-}
-
-.executionSection {
-  margin-bottom: 72px;
-}
-
-.executionSection + .section {
-  margin-top: var(--space-6);
+  flex: 0 0 auto;
 }
 
 .section + .section {
-  margin-top: var(--space-5);
+  margin-top: var(--space-4);
 }
 
 .sectionCard {
@@ -39,12 +31,17 @@
 }
 
 .sectionLabel {
-  padding: 0 var(--space-1);
   color: var(--color-text-secondary);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.sectionCardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .sectionBody {
@@ -69,8 +66,8 @@
   align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
-  min-height: 72px;
-  padding: 16px;
+  min-height: 64px;
+  padding: 14px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
@@ -125,21 +122,27 @@
 
 .executionCard {
   gap: var(--space-4);
-  position: relative;
   background:
     linear-gradient(
       180deg,
       color-mix(in srgb, var(--color-bg-surface) 99%, transparent) 0%,
       color-mix(in srgb, var(--color-bg-surface) 95%, transparent) 100%
     );
+  overflow: hidden;
 }
 
-.executionCardSingleAction {
-  padding-bottom: 92px;
+.executionActionCard {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg-surface) 96%, transparent) 0%,
+      color-mix(in srgb, var(--color-bg-surface) 92%, transparent) 100%
+    );
 }
 
-.executionCardDualActions {
-  padding-bottom: 150px;
+.executionActionCardSingle,
+.executionActionCardDual {
+  overflow: hidden;
 }
 
 .executionSummaryTop {
@@ -196,23 +199,10 @@
 }
 
 .executionActions {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: 12px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-bg) 22%, var(--color-bg-surface)) 0%,
-      color-mix(in srgb, var(--color-bg-surface) 98%, transparent) 100%
-    );
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+  width: 100%;
 }
 
 .executionControlRow {
@@ -229,7 +219,7 @@
   align-self: stretch;
   min-height: 48px;
   padding: 0 16px;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
   background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
   color: var(--color-text);
@@ -295,8 +285,8 @@
   align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
-  min-height: 72px;
-  padding: 16px;
+  min-height: 64px;
+  padding: 14px;
   border-radius: var(--radius-xl);
   border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
   background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);

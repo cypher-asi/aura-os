@@ -50,10 +50,12 @@ body:has([role="dialog"][aria-modal="true"]) {
   #root {
     overscroll-behavior-y: none;
   }
+}
 
-  select {
-    font-size: 16px !important;
-  }
+html[data-mobile-client="true"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
+html[data-mobile-client="true"] textarea,
+html[data-mobile-client="true"] select {
+  font-size: 16px !important;
 }
 
 .titlebar-drag {

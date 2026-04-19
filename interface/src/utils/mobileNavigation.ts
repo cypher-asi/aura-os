@@ -1,4 +1,4 @@
-export type MobileProjectDestination = "agent" | "execution" | "tasks" | "stats" | "process" | "skills" | "feed" | null;
+export type MobileProjectDestination = "agent" | "execution" | "tasks" | "files" | "stats" | "process" | "skills" | "feed" | null;
 export type MobileShellMode = "global" | "project";
 const RESERVED_PROJECT_PATHS = new Set(["organization", "settings"]);
 
@@ -39,6 +39,9 @@ export function getMobileProjectDestination(pathname: string): MobileProjectDest
   }
   if (suffix === "tasks") {
     return "tasks";
+  }
+  if (suffix === "files") {
+    return "files";
   }
   if (suffix === "process") {
     return "process";

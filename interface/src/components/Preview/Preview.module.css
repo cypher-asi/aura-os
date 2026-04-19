@@ -3,11 +3,17 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  height: var(--control-height-sm, 32px);
-  min-height: var(--control-height-sm, 32px);
+  min-height: 44px;
   padding: 0 var(--space-2) 0 var(--space-3);
   border-bottom: 1px solid var(--color-border);
   box-sizing: border-box;
+}
+
+.previewHeaderButton {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .previewTitle {
@@ -43,6 +49,7 @@
 
 .previewBody {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-3) 0;
 }

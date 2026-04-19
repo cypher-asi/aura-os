@@ -11,7 +11,7 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
-import { projectWorkRoute, projectStatsRoute, projectTasksRoute, projectProcessRoute } from "../../utils/mobileNavigation";
+import { projectFilesRoute, projectWorkRoute, projectStatsRoute, projectTasksRoute, projectProcessRoute } from "../../utils/mobileNavigation";
 import { resolveProjectAgentPath } from "./mobile-shell-utils";
 import type { MobileShellState } from "./useMobileShellState";
 import styles from "./MobileShell.module.css";
@@ -23,6 +23,10 @@ function resolveGlobalProjectPath(state: MobileShellState) {
 
   if (state.mobileDestination === "execution" && state.mobileTargetProjectId) {
     return projectWorkRoute(state.mobileTargetProjectId);
+  }
+
+  if (state.mobileDestination === "files" && state.mobileTargetProjectId) {
+    return projectFilesRoute(state.mobileTargetProjectId);
   }
 
   if (state.mobileDestination === "process" && state.mobileTargetProjectId) {
@@ -315,7 +319,12 @@ export function PreviewSheetContent({ PreviewPanel, PreviewHeader }: { PreviewPa
   return (
     <div className={styles.mobileDrawerContent}>
       {PreviewHeader && <div className={styles.mobileContextHeader}><PreviewHeader /></div>}
-      <div className={styles.mobileDrawerBody}><PreviewPanel /></div>
+      <div
+        className={`${styles.mobileDrawerBody} ${styles.mobilePreviewDrawerBody}`}
+        data-testid="preview-drawer-body"
+      >
+        <PreviewPanel />
+      </div>
     </div>
   );
 }

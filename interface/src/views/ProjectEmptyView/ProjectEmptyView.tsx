@@ -17,10 +17,10 @@ interface ProjectEmptyViewProps {
  */
 export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
   const navigate = useNavigate();
-  const { isMobileLayout } = useAuraCapabilities();
+  const { isMobileClient, isMobileLayout } = useAuraCapabilities();
   const ctx = useProjectActions();
 
-  if (isMobileLayout && ctx) {
+  if (isMobileClient && isMobileLayout && ctx) {
     const { project } = ctx;
 
     return (

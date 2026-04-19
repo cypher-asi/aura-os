@@ -5,6 +5,7 @@
   flex-direction: column;
   gap: 18px;
   padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+  background: var(--color-bg);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;

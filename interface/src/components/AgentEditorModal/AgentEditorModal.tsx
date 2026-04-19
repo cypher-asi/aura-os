@@ -10,12 +10,15 @@ interface AgentEditorModalProps {
   isOpen: boolean;
   agent?: Agent;
   onClose: () => void;
-  onSaved: (agent: Agent) => void;
+  onSaved: (agent: Agent) => void | Promise<void>;
   titleOverride?: string;
   submitLabelOverride?: string;
   closeLabelOverride?: string;
   closeOnSave?: boolean;
   isTransitioning?: boolean;
+  forceRemoteOnlyCreate?: boolean;
+  mobilePresentation?: "sheet" | "inline";
+  showCloseAction?: boolean;
 }
 
 export function AgentEditorModal({
@@ -28,10 +31,14 @@ export function AgentEditorModal({
   closeLabelOverride,
   closeOnSave = true,
   isTransitioning = false,
+  forceRemoteOnlyCreate = false,
+  mobilePresentation = "sheet",
+  showCloseAction = true,
 }: AgentEditorModalProps) {
   const { isMobileLayout } = useAuraCapabilities();
-  const form = useAgentEditorForm(isOpen, agent, onClose, onSaved, closeOnSave);
+  const form = useAgentEditorForm(isOpen, agent, onClose, onSaved, closeOnSave, forceRemoteOnlyCreate);
   const isEditing = !!agent;
+  const isInlineMobile = isMobileLayout && mobilePresentation === "inline";
   const title = titleOverride ?? (isEditing ? "Edit Agent" : "Create Agent");
   const submitLabel = submitLabelOverride ?? (isEditing ? "Save Changes" : "Create Agent");
   const closeLabel = closeLabelOverride ?? "Cancel";
@@ -73,13 +80,15 @@ export function AgentEditorModal({
   );
   const actionButtons = (
     <>
-      <Button
-        variant="ghost"
-        onClick={form.handleClose}
-        disabled={isPending}
-      >
-        {closeLabel}
-      </Button>
+      {showCloseAction ? (
+        <Button
+          variant="ghost"
+          onClick={form.handleClose}
+          disabled={isPending}
+        >
+          {closeLabel}
+        </Button>
+      ) : null}
       <Button
         variant="primary"
         onClick={form.handleSave}
@@ -106,7 +115,16 @@ export function AgentEditorModal({
 
   return (
     <>
-      {isMobileLayout ? (
+      {isInlineMobile ? (
+        <div className={styles.inlineSurface}>
+          <div className={styles.inlineScroll}>
+            {formFields}
+          </div>
+          <div className={styles.inlineFooter}>
+            {actionButtons}
+          </div>
+        </div>
+      ) : isMobileLayout ? (
         <Drawer
           side="bottom"
           isOpen={isOpen}
@@ -119,10 +137,10 @@ export function AgentEditorModal({
         >
           <div className={styles.mobileSheetBody}>
             <div className={styles.mobileSheetScroll}>
-              <div className={styles.mobileHeaderActions}>
-                {actionButtons}
-              </div>
               {formFields}
+            </div>
+            <div className={styles.mobileSheetFooter}>
+              {actionButtons}
             </div>
           </div>
         </Drawer>

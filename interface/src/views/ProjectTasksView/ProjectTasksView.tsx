@@ -52,6 +52,7 @@ export function ProjectTasksView() {
   ));
   const { tasks, liveTaskIds, loopActive } = useMobileTasks(projectId ?? "");
   const [selectedSegment, setSelectedSegment] = useState<TaskSegmentId>("ready");
+  const [hasUserSelectedSegment, setHasUserSelectedSegment] = useState(false);
 
   const agentNameById = useMemo(
     () => new Map(projectAgents.map((agent) => [agent.agent_instance_id, agent.name])),
@@ -84,10 +85,15 @@ export function ProjectTasksView() {
   );
 
   useEffect(() => {
-    if (segmentCounts[selectedSegment] > 0) return;
+    setSelectedSegment("ready");
+    setHasUserSelectedSegment(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (hasUserSelectedSegment) return;
     const nextSegment = SEGMENT_ORDER.find((segment) => segmentCounts[segment] > 0) ?? "ready";
     setSelectedSegment(nextSegment);
-  }, [selectedSegment, segmentCounts]);
+  }, [hasUserSelectedSegment, segmentCounts]);
 
   if (!projectId) {
     return null;
@@ -116,7 +122,10 @@ export function ProjectTasksView() {
               role="tab"
               aria-selected={selected}
               className={`${styles.segmentButton} ${selected ? styles.segmentButtonActive : ""}`}
-              onClick={() => setSelectedSegment(segment)}
+              onClick={() => {
+                setHasUserSelectedSegment(true);
+                setSelectedSegment(segment);
+              }}
             >
               <span className={styles.segmentLabel}>{segment[0].toUpperCase() + segment.slice(1)}</span>
               <span className={styles.segmentCount}>{segmentCounts[segment]}</span>
