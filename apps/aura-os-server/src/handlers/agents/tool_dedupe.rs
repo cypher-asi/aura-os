@@ -22,11 +22,14 @@
 //! 2. Collisions between a tool the server ships in `installed_tools`
 //!    and a native tool the external harness sidecar (`aura_node`)
 //!    registers itself before forwarding to Anthropic. This repo
-//!    doesn't host the sidecar, but the desktop launcher always spawns
-//!    it with `ENABLE_FS_TOOLS=true` / `ENABLE_CMD_TOOLS=true`, which
-//!    registers filesystem/env tools under the exact names
-//!    (`read_file`, `browse_files`, `get_environment_info`) that
-//!    `ceo_tool_manifest` also emits. Handled by
+//!    doesn't host the sidecar; its source lives at
+//!    `C:\code\aura-harness\crates\aura-tools\src\definitions.rs`.
+//!    At session init the harness builds `tool_definitions` as
+//!    `visible_tools(ToolProfile::Agent) + installed_tools` via a
+//!    raw `push` (see `aura-harness/crates/aura-node/src/session/
+//!    ws_handler.rs::populate_tool_definitions`) — NO dedupe — so any
+//!    name we ship that also appears in the harness `Agent` profile
+//!    round-trips to Anthropic twice. Handled by
 //!    [`strip_harness_native_tool_names`].
 //!
 //! The `info!` emitted here gives us the full list the server actually
@@ -38,23 +41,78 @@ use aura_os_link::InstalledTool;
 use tracing::{info, warn};
 
 /// Tool names the external harness sidecar (`aura_node`) registers
-/// natively whenever it's launched with the default env flags the
-/// desktop launcher sets (`ENABLE_FS_TOOLS=true`). If we also ship
-/// an `InstalledTool` with any of these names in `installed_tools`,
-/// the sidecar merges both into the Anthropic `tools[]` payload,
-/// Anthropic sees a name appearing twice, and the whole request 400s
-/// with `"tools: Tool names must be unique."`.
+/// statically in its [`ToolCatalog`] under
+/// `visible_tools(ToolProfile::Agent, _)`. If the server also ships
+/// an `InstalledTool` with any of these names, the sidecar's
+/// `populate_tool_definitions` pushes both copies into the session
+/// `tool_definitions` without deduping, and the Messages API 400s
+/// on the very first turn with
+/// `"tools: Tool names must be unique."`.
 ///
-/// Keep this list aligned with the server-side implementations in
-/// `crates/aura-os-agent-runtime/src/tools/system_tools.rs` — every
-/// entry here has a working server-side dispatcher fallback for
-/// contexts where the sidecar is NOT present (for example pure
-/// `SwarmHarness` mode), so dropping the installed tool only costs
-/// Anthropic's tool-schema advertising, not capability.
+/// Source of truth: `C:\code\aura-harness\crates\aura-tools\src\
+/// definitions.rs` at the time of this commit. Groups map 1:1 to the
+/// free functions in that module so it's easy to keep in sync when a
+/// harness release adds or removes a tool.
+///
+/// NOTE: do NOT add server-only names (for example `browse_files`,
+/// `get_environment_info`) to this list. The harness does not
+/// register them, so stripping them here would silently remove the
+/// tool from the model's schema without a replacement.
 const HARNESS_NATIVE_TOOL_NAMES: &[&str] = &[
+    // core_tool_definitions + stat_file from builtin_tools
     "read_file",
-    "browse_files",
-    "get_environment_info",
+    "write_file",
+    "edit_file",
+    "delete_file",
+    "list_files",
+    "stat_file",
+    "run_command",
+    "search_code",
+    "find_files",
+    // chat_management_tools: spec_tool_definitions
+    "list_specs",
+    "get_spec",
+    "create_spec",
+    "update_spec",
+    "delete_spec",
+    // chat_management_tools: task_tool_definitions
+    "list_tasks",
+    "create_task",
+    "update_task",
+    "delete_task",
+    "transition_task",
+    "run_task",
+    // chat_management_tools: project_tool_definitions
+    "get_project",
+    "update_project",
+    // chat_management_tools: dev_loop_tool_definitions
+    "start_dev_loop",
+    "pause_dev_loop",
+    "stop_dev_loop",
+    // chat_management_tools: orbit_tool_definitions
+    "orbit_push",
+    "orbit_create_repo",
+    "orbit_list_repos",
+    "orbit_list_branches",
+    "orbit_create_branch",
+    "orbit_list_commits",
+    "orbit_get_diff",
+    "orbit_create_pr",
+    "orbit_list_prs",
+    "orbit_merge_pr",
+    // chat_management_tools: network_tool_definitions
+    "post_to_feed",
+    "list_projects",
+    "check_budget",
+    "record_usage",
+    // cross_agent_catalog_entries — capability-gated in the harness
+    // but the CEO preset holds the matching caps so the harness
+    // unhides them, which is exactly the case that 400s today.
+    "spawn_agent",
+    "send_to_agent",
+    "agent_lifecycle",
+    "get_agent_state",
+    "delegate_task",
 ];
 
 /// Drop any `InstalledTool` whose name is claimed natively by the
@@ -191,46 +249,91 @@ mod tests {
     }
 
     #[test]
-    fn strip_harness_native_drops_fs_tool_names_the_sidecar_registers_itself() {
-        // Regression: the desktop sidecar launcher starts `aura_node`
-        // with `ENABLE_FS_TOOLS=true`, which registers `read_file`,
-        // `browse_files`, and `get_environment_info` natively. The
-        // ceo_tool_manifest also emits these names, so without this
-        // strip the sidecar forwards BOTH copies to Anthropic and the
-        // whole request 400s with `tools: Tool names must be unique.`.
+    fn strip_harness_native_drops_every_name_the_sidecar_catalog_registers() {
+        // Regression for the CEO-chat 400: after a previous partial
+        // fix only stripped 3 fs names, Anthropic still 400'd because
+        // `list_specs`, `get_spec`, `start_dev_loop`, `send_to_agent`,
+        // etc. ALSO show up in the harness's own
+        // `visible_tools(ToolProfile::Agent, _)` and get pushed again
+        // by `populate_tool_definitions` without dedupe. Strip every
+        // harness catalog name, keep server-only names untouched.
         let mut tools = vec![
-            tool_named("list_specs"),
-            tool_named("read_file"),
-            tool_named("browse_files"),
-            tool_named("send_to_agent"),
-            tool_named("get_environment_info"),
+            tool_named("list_org_integrations"), // server-only, keep
+            tool_named("read_file"),             // harness core, drop
+            tool_named("list_specs"),            // harness chat, drop
+            tool_named("get_spec"),              // harness chat, drop
+            tool_named("create_spec"),
+            tool_named("update_spec"),
+            tool_named("delete_spec"),
+            tool_named("start_dev_loop"),
+            tool_named("pause_dev_loop"),
+            tool_named("stop_dev_loop"),
+            tool_named("send_to_agent"), // harness cross-agent, drop
+            tool_named("list_agents"),   // server-only, keep
+            tool_named("create_project"), // server-only, keep
+            tool_named("list_projects"), // harness network, drop
         ];
 
         let dropped = strip_harness_native_tool_names(&mut tools);
 
+        let expected_dropped = vec![
+            "read_file".to_string(),
+            "list_specs".to_string(),
+            "get_spec".to_string(),
+            "create_spec".to_string(),
+            "update_spec".to_string(),
+            "delete_spec".to_string(),
+            "start_dev_loop".to_string(),
+            "pause_dev_loop".to_string(),
+            "stop_dev_loop".to_string(),
+            "send_to_agent".to_string(),
+            "list_projects".to_string(),
+        ];
         assert_eq!(
-            dropped,
-            vec![
-                "read_file".to_string(),
-                "browse_files".to_string(),
-                "get_environment_info".to_string(),
-            ],
-            "all three harness-native names must be dropped in input order"
+            dropped, expected_dropped,
+            "every name the harness already has in ToolProfile::Agent must be dropped in input order"
         );
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
         assert_eq!(
             names,
-            vec!["list_specs", "send_to_agent"],
-            "only non-native tools should survive"
+            vec!["list_org_integrations", "list_agents", "create_project"],
+            "server-only names must survive the strip"
+        );
+    }
+
+    #[test]
+    fn strip_harness_native_does_not_drop_server_only_system_tool_names() {
+        // Regression: a previous version of this list wrongly included
+        // `browse_files` and `get_environment_info`, names that are
+        // defined only in `aura-os-agent-templates::ceo_tool_manifest`
+        // and NOT in the harness catalog. Stripping them silently
+        // removed real capability from the model's schema. Keep them
+        // off the native list.
+        let mut tools = vec![
+            tool_named("browse_files"),
+            tool_named("get_environment_info"),
+            tool_named("generate_image"),
+        ];
+
+        let dropped = strip_harness_native_tool_names(&mut tools);
+
+        assert!(
+            dropped.is_empty(),
+            "server-only names must never be classified as harness-native, dropped={dropped:?}"
+        );
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["browse_files", "get_environment_info", "generate_image"]
         );
     }
 
     #[test]
     fn strip_harness_native_is_a_noop_when_no_native_names_present() {
         let mut tools = vec![
-            tool_named("list_specs"),
-            tool_named("send_to_agent"),
-            tool_named("create_spec"),
+            tool_named("list_org_integrations"),
+            tool_named("generate_image"),
+            tool_named("create_process"),
         ];
 
         let dropped = strip_harness_native_tool_names(&mut tools);
@@ -240,7 +343,10 @@ mod tests {
             "strip must not touch anything when no harness-native names are present, dropped={dropped:?}"
         );
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
-        assert_eq!(names, vec!["list_specs", "send_to_agent", "create_spec"]);
+        assert_eq!(
+            names,
+            vec!["list_org_integrations", "generate_image", "create_process"]
+        );
     }
 
     #[test]
