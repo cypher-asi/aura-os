@@ -2,21 +2,21 @@
   {
     "date": "2026-04-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.303.1",
-    "title": "A unified agent model, a built-in browser, and a flash-free desktop boot",
-    "intro": "Today's nightly is a heavy one. The long-running super-agent refactor finally lands: there is now a single Agent model gated by explicit AgentPermissions, with the CEO's LLM loop running entirely through the harness. A new in-app browser ships behind a real Chromium/CDP backend, a Talent Marketplace app goes in end-to-end, and a long chain of fixes stabilizes CEO chat — from context bloat and tool-name collisions all the way to unreachable loopback callbacks on remote harnesses. On the desktop side, an entire day of iteration on the startup sequence ends with a flash-free boot, hidden Windows consoles, and auth injected directly from the on-disk store.",
+    "version": "0.1.0-nightly.304.1",
+    "title": "Unified agents, harness-hosted CEOs, and a Talent Marketplace",
+    "intro": "A heavy day across the stack: the super-agent system was collapsed into a single permissions-driven Agent model running through the harness, a full in-app headless browser and Talent Marketplace shipped, the CEO chat pipeline was rebuilt around real cross-agent tools, and a long desktop boot-flash investigation finally ended with auth bootstrapped from the on-disk store. Release tooling also moved to a dedicated workflow.",
     "entryCount": 6,
     "highlights": [
-      "Unified Agent model with required AgentPermissions replaces the super-agent path",
-      "In-app Chromium browser ships in the projects sidekick",
-      "Talent Marketplace app lands end-to-end",
-      "CEO chat: tool dispatch, context usage, and cross-agent messaging hardened",
-      "Desktop cold start is finally flash-free on Windows and macOS",
-      "Release changelog publishing moves to its own hardened workflow"
+      "Single Agent model with required permissions replaces the super-agent path",
+      "Headless browser sidekick with Chromium CDP backend",
+      "Agent Talent Marketplace app scaffolded end-to-end",
+      "CEO chat rewired: real tool schemas, dedupe, auth stamping, context slimming",
+      "Desktop boot flash eliminated via Rust-injected auth and first-paint window reveal",
+      "Release changelog publishing moved to its own hardened workflow"
     ],
-    "rawCommitCount": 138,
-    "generatedAt": "2026-04-19T11:14:11.537Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.303.1",
+    "rawCommitCount": 139,
+    "generatedAt": "2026-04-19T18:08:50.593Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.304.1",
     "path": "history/2026-04-19.json"
   },
   {
