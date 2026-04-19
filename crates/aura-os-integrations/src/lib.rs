@@ -449,8 +449,26 @@ fn legacy_org_integration_tool_manifest_entries() -> &'static [OrgIntegrationToo
     })
 }
 
+/// Base URL the aura-os-server advertises for self-callbacks.
+///
+/// Used to stamp cross-agent tool endpoints (see
+/// [`aura_os_agent_tools::ceo::absolutize_agent_tool_endpoints`]) so the
+/// harness — which executes `InstalledTool` calls from a separate process
+/// or host (e.g. `aura-swarm` on Render) — can reach the server at a
+/// publicly routable URL rather than loopback.
+///
+/// Reads `AURA_SERVER_BASE_URL` (the single source of truth shared with
+/// [`apps/aura-os-server/src/app_builder.rs`](../../../apps/aura-os-server/src/app_builder.rs),
+/// where it also feeds `AgentRuntimeService.local_server_base_url` used
+/// by the `send_to_agent` tool). Any deployment where the harness runs
+/// on a different host MUST set this env var to the server's public URL
+/// — otherwise cross-agent tool callbacks fail with
+/// `external tool callback unreachable: http://127.0.0.1:...`.
+///
+/// Falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>` for
+/// local-dev where the server and harness share a loopback interface.
 pub fn control_plane_api_base_url() -> String {
-    if let Some(url) = std::env::var("AURA_CONTROL_PLANE_API_BASE_URL")
+    if let Some(url) = std::env::var("AURA_SERVER_BASE_URL")
         .ok()
         .map(|value| value.trim().trim_end_matches('/').to_string())
         .filter(|value| !value.is_empty())
@@ -848,5 +866,119 @@ mod tests {
             url.query_pairs().find(|(key, _)| key == "access_token"),
             Some(("access_token".into(), "buf_test".into()))
         );
+    }
+
+    // ------------------------------------------------------------------
+    // control_plane_api_base_url()
+    // ------------------------------------------------------------------
+    //
+    // These tests mutate process-wide env vars, so they take a shared
+    // mutex and must snapshot/restore every variable they touch.
+    // `AURA_SERVER_BASE_URL` is read by `app_builder.rs` at server
+    // startup; leaking a stale value from a test into another test
+    // (or the wider suite) would poison unrelated runs.
+
+    use std::sync::Mutex;
+
+    static CONTROL_PLANE_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    struct EnvGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, prev }
+        }
+
+        fn unset(key: &'static str) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::remove_var(key);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.prev {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+
+    #[test]
+    fn control_plane_uses_aura_server_base_url_when_set() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "https://aura.example.com");
+    }
+
+    #[test]
+    fn control_plane_trims_trailing_slash_from_base_url() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com/");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "https://aura.example.com");
+    }
+
+    #[test]
+    fn control_plane_falls_back_to_host_and_port_when_base_url_missing() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::set("AURA_SERVER_HOST", "10.0.0.5");
+        let _port = EnvGuard::set("AURA_SERVER_PORT", "9000");
+
+        assert_eq!(control_plane_api_base_url(), "http://10.0.0.5:9000");
+    }
+
+    #[test]
+    fn control_plane_fallback_normalizes_wildcard_host_to_loopback() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::set("AURA_SERVER_HOST", "0.0.0.0");
+        let _port = EnvGuard::set("AURA_SERVER_PORT", "3100");
+
+        assert_eq!(control_plane_api_base_url(), "http://127.0.0.1:3100");
+    }
+
+    #[test]
+    fn control_plane_uses_default_port_when_unset() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "http://127.0.0.1:3100");
+    }
+
+    #[test]
+    fn control_plane_ignores_empty_base_url() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "   ");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "http://127.0.0.1:3100");
     }
 }
