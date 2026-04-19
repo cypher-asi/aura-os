@@ -104,7 +104,11 @@ function expectedUser(session: AuthSession): ZeroUser {
 }
 
 beforeEach(async () => {
-  useAuthStore.setState({ user: null, isLoading: true });
+  useAuthStore.setState({
+    user: null,
+    isLoading: true,
+    hasResolvedInitialSession: false,
+  });
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
   await clearStoredAuth();
@@ -120,6 +124,10 @@ describe("auth-store", () => {
     it("starts loading", () => {
       expect(useAuthStore.getState().isLoading).toBe(true);
     });
+
+    it("starts with unresolved initial session", () => {
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(false);
+    });
   });
 
   describe("restoreSession", () => {
@@ -131,6 +139,7 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("falls back to cached session when getSession fails", async () => {
@@ -145,6 +154,7 @@ describe("auth-store", () => {
       );
       expect(useAuthStore.getState().zeroProRefreshError).toBe("validation failed");
       expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("clears the cached user when getSession returns 401", async () => {
@@ -157,6 +167,7 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("clears user on 401 from getSession", async () => {
@@ -193,6 +204,7 @@ describe("auth-store", () => {
 
       expect(mockApi.login).toHaveBeenCalledWith("a@b.com", "pass");
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
 
     it("propagates errors", async () => {
@@ -281,6 +293,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().logout();
 
       expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
     });
   });
 });

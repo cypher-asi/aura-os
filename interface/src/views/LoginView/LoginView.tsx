@@ -25,24 +25,27 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
-  const { isAuthenticated, isLoading } = useAuthStore(
+  const { isAuthenticated, isLoading, hasResolvedInitialSession } = useAuthStore(
     useShallow((s) => ({
       isAuthenticated: s.user !== null,
       isLoading: s.isLoading,
+      hasResolvedInitialSession: s.hasResolvedInitialSession,
     })),
   );
   const f = useLoginForm();
 
   useLayoutEffect(() => {
-    if (!isAuthenticated && !isLoading) {
+    if (!isAuthenticated && !isLoading && hasResolvedInitialSession) {
       signalDesktopReady();
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, hasResolvedInitialSession]);
 
-  // Authenticated users land here briefly on app open when the persisted URL
-  // was /login. Render nothing so the login chrome never flashes — the redirect
-  // useEffect inside useLoginForm will navigate away on mount.
-  if (isAuthenticated || isLoading) {
+  // Suppress the login chrome until the first boot-time session restore has
+  // finished, or whenever we already know the user is authenticated. Without
+  // the `hasResolvedInitialSession` gate, authenticated users who land on
+  // `/login` (e.g. a persisted URL, a browser reload) can see the form paint
+  // for one frame before `useLoginForm`'s redirect effect commits.
+  if (isAuthenticated || isLoading || !hasResolvedInitialSession) {
     return null;
   }
 

@@ -5,6 +5,7 @@ const { authState, loginFormStub } = vi.hoisted(() => ({
   authState: {
     user: null as { user_id: string } | null,
     isLoading: true as boolean,
+    hasResolvedInitialSession: false as boolean,
   },
   loginFormStub: {
     activeTab: "signin" as const,
@@ -95,12 +96,14 @@ import { LoginView } from "./LoginView";
 beforeEach(() => {
   authState.user = null;
   authState.isLoading = true;
+  authState.hasResolvedInitialSession = false;
 });
 
 describe("LoginView", () => {
   it("renders nothing while auth is still loading (sync cache miss, IDB hydrate pending)", () => {
     authState.user = null;
     authState.isLoading = true;
+    authState.hasResolvedInitialSession = false;
 
     const { container } = render(<LoginView />);
 
@@ -111,6 +114,18 @@ describe("LoginView", () => {
   it("renders nothing for already-authenticated users landing on /login", () => {
     authState.user = { user_id: "u1" };
     authState.isLoading = false;
+    authState.hasResolvedInitialSession = false;
+
+    const { container } = render(<LoginView />);
+
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("login-form")).toBeNull();
+  });
+
+  it("renders nothing before first session restore resolves, even when isLoading is already false (cached-session /login cold start)", () => {
+    authState.user = null;
+    authState.isLoading = false;
+    authState.hasResolvedInitialSession = false;
 
     const { container } = render(<LoginView />);
 
@@ -121,6 +136,7 @@ describe("LoginView", () => {
   it("renders the login form once auth restore completes with no session", () => {
     authState.user = null;
     authState.isLoading = false;
+    authState.hasResolvedInitialSession = true;
 
     render(<LoginView />);
 
