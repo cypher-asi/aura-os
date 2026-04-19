@@ -304,6 +304,58 @@ async fn chat_event_persistence_full_cycle() {
 }
 
 #[tokio::test]
+async fn list_events_without_explicit_limit_fetches_full_history_across_pages() {
+    let sc = client().await;
+    let pai = uuid::Uuid::new_v4().to_string();
+    let pid = uuid::Uuid::new_v4().to_string();
+
+    let session = sc
+        .create_session(
+            &pai,
+            JWT,
+            &CreateSessionRequest {
+                project_id: pid.clone(),
+                org_id: None,
+                model: None,
+                status: Some("active".into()),
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    for seq in 0..125 {
+        sc.create_event(
+            &session.id,
+            JWT,
+            &CreateSessionEventRequest {
+                event_type: "text_delta".into(),
+                sender: Some("agent".into()),
+                project_id: Some(pid.clone()),
+                agent_id: Some(pai.clone()),
+                org_id: None,
+                user_id: None,
+                content: Some(serde_json::json!({
+                    "message_id": "m-1",
+                    "text": format!("chunk-{seq}"),
+                    "seq": seq,
+                })),
+                session_id: Some(session.id.clone()),
+            },
+        )
+        .await
+        .unwrap();
+    }
+
+    let all_events = sc.list_events(&session.id, JWT, None, None).await.unwrap();
+    assert_eq!(all_events.len(), 125);
+
+    let first_page = sc.list_events(&session.id, JWT, Some(100), None).await.unwrap();
+    assert_eq!(first_page.len(), 100);
+}
+
+#[tokio::test]
 async fn task_event_persistence() {
     let sc = client().await;
     let pai = uuid::Uuid::new_v4().to_string();

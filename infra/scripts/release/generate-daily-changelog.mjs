@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 function parseArgs(argv) {
   const args = {};
@@ -32,24 +33,23 @@ const version = args.version ? String(args.version) : null;
 const releaseUrl = String(args["release-url"] || "");
 const timeZone = String(args.timezone || process.env.CHANGELOG_TIMEZONE || "America/Los_Angeles");
 const repoName = String(args.repo || path.basename(repoDir));
-const promptVersion = 2;
+const promptVersion = 3;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim() || "";
-const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-20250514";
+const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
+const anthropicMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_MAX_TOKENS || "", 10) || 4096;
+const anthropicRetryMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_RETRY_MAX_TOKENS || "", 10) || 6144;
+const STRICT_TOOL_SUPPORTED_MODELS = [
+  "claude-opus-4-6",
+  "claude-sonnet-4-6",
+  "claude-opus-4-5",
+  "claude-sonnet-4-5",
+  "claude-opus-4-1",
+];
 const BATCH_WINDOW_MINUTES = 120;
 const SOFT_BATCH_WINDOW_MINUTES = 45;
 const MAX_BATCH_SPAN_MINUTES = 180;
 const MAX_BATCH_COMMITS = 8;
-const TARGET_MAX_BATCHES = 8;
-
-if (!fs.existsSync(repoDir)) {
-  console.error(`repo directory not found: ${repoDir}`);
-  process.exit(1);
-}
-
-if (!fs.existsSync(pagesDir)) {
-  console.error(`pages directory not found: ${pagesDir}`);
-  process.exit(1);
-}
+const TARGET_MAX_BATCHES = 6;
 
 function runGit(gitArgs) {
   return execFileSync("git", gitArgs, {
@@ -419,128 +419,168 @@ function shouldIgnoreCommitForRendering(commit) {
   return false;
 }
 
-function buildHeadlineFromBatch(batch) {
-  const topArea = batch.area_summary[0]?.area || "Product";
-  const secondArea = batch.area_summary[1]?.area || "";
-  const topSubjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 2);
-  if (topArea === "Release Infrastructure") {
-    return batch.commits.length > 1
-      ? "Release Pipeline Reliability Improvements"
-      : "Release Workflow Improvements";
-  }
-  if (topArea === "Interface" && secondArea === "Core Rust") {
-    return "Interface and Runtime Flow Improvements";
-  }
-  if (topArea === "Interface") {
-    return batch.commits.length > 1
-      ? "Interface and Chat Experience Improvements"
-      : toTitleCase(topSubjects[0] || "Interface improvements");
-  }
-  if (topArea === "Core Rust") {
-    return batch.commits.length > 1
-      ? "Core Runtime Improvements"
-      : toTitleCase(topSubjects[0] || "Core runtime improvements");
-  }
-  if (topArea === "Docs") {
-    return "Documentation Improvements";
-  }
-  if (topSubjects.length === 0) {
-    return `${topArea} updates`;
-  }
-  if (topSubjects.length === 1) {
-    return toTitleCase(topSubjects[0]);
-  }
-  return `${toTitleCase(topSubjects[0])} and ${toTitleCase(topSubjects[1])}`;
-}
-
-function buildBatchSummary(batch) {
-  const topArea = batch.area_summary[0]?.area || "Product";
-  const secondArea = batch.area_summary[1]?.area || "";
-  const subjectCount = unique(batch.commits.map((commit) => commit.cleanSubject)).length;
-
-  if (topArea === "Release Infrastructure") {
-    return `${subjectCount} related release, CI, signing, or packaging fixes were consolidated into one broader reliability update.`;
-  }
-  if (topArea === "Interface" && secondArea === "Core Rust") {
-    return `${subjectCount} related interface and runtime changes landed together to smooth tool flows, chat behavior, and day-to-day product interactions.`;
-  }
-  if (topArea === "Interface") {
-    return `${subjectCount} related interface changes landed together across chat, settings, workflow, and product surfaces.`;
-  }
-  if (topArea === "Core Rust") {
-    return `${subjectCount} related runtime and backend changes landed together to improve underlying product behavior.`;
-  }
-  if (topArea === "Docs") {
-    return `${subjectCount} documentation updates landed together in support of the product and release flow.`;
-  }
-
-  const subjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 2);
-  if (subjects.length > 1) {
-    return `${subjects[0]}. ${subjects[1]}.`;
-  }
-  return `${subjects[0] || `${batch.commits.length} related updates shipped.`}`;
-}
-
-function buildDeterministicFallback({ dateKey, commits, repo, channel: currentChannel, currentVersion, batches, tz }) {
-  const entries = batches.map((batch) => {
-    const title = buildHeadlineFromBatch(batch);
-    const subjects = unique(batch.commits.map((commit) => commit.cleanSubject)).slice(0, 4);
-    const summary = buildBatchSummary(batch);
-
-    return {
-      time_label: batch.time_label,
-      started_at: batch.started_at,
-      ended_at: batch.ended_at,
-      title,
-      summary,
-      items: subjects.map((text) => {
-        const sources = batch.commits.filter((commit) => commit.cleanSubject === text);
-        return {
-          text,
-          commit_shas: sources.map((commit) => commit.sha),
-          confidence: "medium",
-        };
-      }),
-    };
-  });
-
-  const title = `${entries.length} update${entries.length === 1 ? "" : "s"} shipped`;
-  const intro = `This ${currentChannel} timeline for ${repo} groups ${commits.length} notable commit${commits.length === 1 ? "" : "s"} into ${entries.length} broader update${entries.length === 1 ? "" : "s"} on ${formatDateInTimeZone(new Date(`${dateKey}T12:00:00Z`), tz)}${currentVersion ? ` for \`${currentVersion}\`` : ""}.`;
-  const highlights = unique(entries.map((entry) => entry.title)).slice(0, 4);
+function buildChangelogTool(batchIds) {
+  const defaultBatchId = batchIds[0] || "entry-1";
 
   return {
-    date: dateKey,
-    repo,
-    channel: currentChannel,
-    version: currentVersion,
-    title,
-    intro,
-    entries,
-    highlights,
-    raw_commit_count: commits.length,
+    name: "submit_daily_changelog",
+    description: [
+      "Submit the final structured daily changelog narrative for Aura.",
+      "Use this exactly once for the final answer after reviewing all provided release batches, commit summaries, and diff excerpts.",
+      "Only return fields defined by the schema. Do not include date, channel, version, timestamps, or counts because those are computed by the caller.",
+      "Each entry must map to one provided batch_id and stay faithful to that batch's time window and evidence.",
+      "Use a readable number of entries, omit only truly low-signal batches, and keep every bullet directly supported by the listed commits or excerpts.",
+      "Each item's commit_shas must only reference commits from the same batch_id.",
+    ].join(" "),
+    strict: true,
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        day_title: {
+          type: "string",
+          description: "A compact day-level headline for the release.",
+        },
+        day_intro: {
+          type: "string",
+          description: "A short introductory paragraph for the day.",
+        },
+        highlights: {
+          type: "array",
+          description: "Short highlight pills summarizing the strongest takeaways.",
+          items: {
+            type: "string",
+          },
+        },
+        entries: {
+          type: "array",
+          description: "A curated set of timeline entries mapped to provided batch IDs.",
+          minItems: 1,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              batch_id: {
+                type: "string",
+                enum: batchIds,
+                description: "The exact batch id being summarized.",
+              },
+              title: {
+                type: "string",
+                description: "A concise title for this timeline entry.",
+              },
+              summary: {
+                type: "string",
+                description: "A short summary sentence for the entry.",
+              },
+              items: {
+                type: "array",
+                minItems: 1,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    text: {
+                      type: "string",
+                      description: "A concise, evidence-backed bullet.",
+                    },
+                    commit_shas: {
+                      type: "array",
+                      description: "Commit SHAs from the same batch that support this bullet.",
+                      minItems: 1,
+                      items: {
+                        type: "string",
+                      },
+                    },
+                    confidence: {
+                      type: "string",
+                      enum: ["high", "medium"],
+                    },
+                  },
+                  required: ["text", "commit_shas", "confidence"],
+                },
+              },
+            },
+            required: ["batch_id", "title", "summary", "items"],
+          },
+        },
+      },
+      required: ["day_title", "day_intro", "highlights", "entries"],
+    },
+    input_examples: [
+      {
+        day_title: "Interface reliability and release tooling improvements",
+        day_intro: "This release focused on higher-confidence product polish and release workflow stability across the day.",
+        highlights: [
+          "Improved chat and workflow reliability",
+          "Release tooling got more resilient",
+        ],
+        entries: [
+          {
+            batch_id: defaultBatchId,
+            title: "Workflow reliability improvements",
+            summary: "Related changes tightened workflow behavior and reduced regressions.",
+            items: [
+              {
+                text: "Improved workflow behavior with a tighter end-to-end update.",
+                commit_shas: ["example-sha-1"],
+                confidence: "medium",
+              },
+            ],
+          },
+        ],
+      },
+    ],
   };
 }
 
-function validateRenderedEntry(candidate, commitShas) {
-  if (!candidate || typeof candidate !== "object") {
-    throw new Error("LLM did not return a JSON object");
-  }
+function findToolUseInput(responseJson, toolName) {
+  const content = Array.isArray(responseJson?.content) ? responseJson.content : [];
+  const block = content.find((item) => item?.type === "tool_use" && item?.name === toolName);
+  return block?.input;
+}
 
-  const validShas = new Set(commitShas);
-  if (typeof candidate.title !== "string" || !candidate.title.trim()) {
-    throw new Error("title must be a non-empty string");
+function assertStrictToolModelSupport(model) {
+  if (STRICT_TOOL_SUPPORTED_MODELS.includes(model)) {
+    return true;
   }
-  if (typeof candidate.intro !== "string" || !candidate.intro.trim()) {
-    throw new Error("intro must be a non-empty string");
+  console.warn(
+    `Warning: model ${model} is not in the strict-tool allowlist (${STRICT_TOOL_SUPPORTED_MODELS.join(", ")}); continuing anyway.`,
+  );
+  return false;
+}
+
+function validateRenderedEntry(candidate, batches, totalCommitCount) {
+  if (!candidate || typeof candidate !== "object") {
+    throw new Error("LLM did not return a tool input object");
+  }
+  if (typeof candidate.day_title !== "string" || !candidate.day_title.trim()) {
+    throw new Error("day_title must be a non-empty string");
+  }
+  if (typeof candidate.day_intro !== "string" || !candidate.day_intro.trim()) {
+    throw new Error("day_intro must be a non-empty string");
   }
   if (!Array.isArray(candidate.entries) || candidate.entries.length === 0) {
     throw new Error("entries must be a non-empty array");
   }
 
+  const batchMap = new Map(batches.map((batch) => [batch.id, batch]));
+  const seenBatchIds = new Set();
   const entries = candidate.entries.map((entry) => {
     if (!entry || typeof entry !== "object") {
       throw new Error("entry must be an object");
     }
+    if (typeof entry.batch_id !== "string" || !batchMap.has(entry.batch_id)) {
+      throw new Error(`entry.batch_id must reference a known batch (${entry?.batch_id || "missing"})`);
+    }
+    if (seenBatchIds.has(entry.batch_id)) {
+      throw new Error(`entry.batch_id must be unique (${entry.batch_id})`);
+    }
+    seenBatchIds.add(entry.batch_id);
+
+    const batch = batchMap.get(entry.batch_id);
+    const validShas = new Set(batch.commits.map((commit) => commit.sha));
+
     if (typeof entry.title !== "string" || !entry.title.trim()) {
       throw new Error("entry.title must be a non-empty string");
     }
@@ -550,66 +590,65 @@ function validateRenderedEntry(candidate, commitShas) {
     if (!Array.isArray(entry.items) || entry.items.length === 0) {
       throw new Error("entry.items must be a non-empty array");
     }
-    if (typeof entry.time_label !== "string" || !entry.time_label.trim()) {
-      throw new Error("entry.time_label must be a non-empty string");
-    }
-    if (typeof entry.started_at !== "string" || !entry.started_at.trim()) {
-      throw new Error("entry.started_at must be a non-empty string");
+
+    const items = entry.items.map((item) => {
+      if (!item || typeof item !== "object") {
+        throw new Error("entry item must be an object");
+      }
+      if (typeof item.text !== "string" || !item.text.trim()) {
+        throw new Error("entry item text must be a non-empty string");
+      }
+      const shas = Array.isArray(item.commit_shas)
+        ? item.commit_shas.map((sha) => String(sha)).filter((sha) => validShas.has(sha))
+        : [];
+      if (shas.length === 0) {
+        throw new Error(`entry item must cite at least one SHA from batch ${entry.batch_id}`);
+      }
+      return {
+        text: item.text.trim(),
+        commit_shas: unique(shas),
+        confidence: item.confidence === "high" ? "high" : "medium",
+      };
+    }).filter((item) => item.text);
+
+    if (items.length === 0) {
+      throw new Error(`entry ${entry.batch_id} did not contain any valid items`);
     }
 
     return {
-      time_label: entry.time_label.trim(),
-      started_at: entry.started_at.trim(),
-      ended_at: entry.ended_at ? String(entry.ended_at).trim() : entry.started_at.trim(),
+      time_label: batch.time_label,
+      started_at: batch.started_at,
+      ended_at: batch.ended_at,
       title: entry.title.trim(),
       summary: entry.summary.trim(),
-      items: entry.items.map((item) => {
-        if (!item || typeof item !== "object") {
-          throw new Error("entry item must be an object");
-        }
-        if (typeof item.text !== "string" || !item.text.trim()) {
-          throw new Error("entry item text must be a non-empty string");
-        }
-        const shas = Array.isArray(item.commit_shas)
-          ? item.commit_shas.map((sha) => String(sha)).filter((sha) => validShas.has(sha))
-          : [];
-        return {
-          text: item.text.trim(),
-          commit_shas: shas,
-          confidence: item.confidence === "high" ? "high" : "medium",
-        };
-      }).filter((item) => item.text),
+      items,
     };
-  }).filter((entry) => entry.items.length > 0);
+  });
 
-  if (entries.length === 0) {
-    throw new Error("No valid entries returned");
-  }
-
-  return {
-    date: String(candidate.date || ""),
-    repo: String(candidate.repo || ""),
-    channel: String(candidate.channel || ""),
-    version: candidate.version ? String(candidate.version) : null,
-    title: candidate.title.trim(),
-    intro: candidate.intro.trim(),
+  const rendered = {
+    title: candidate.day_title.trim(),
+    intro: candidate.day_intro.trim(),
     entries,
     highlights: Array.isArray(candidate.highlights)
-      ? candidate.highlights.map((value) => String(value).trim()).filter(Boolean).slice(0, 5)
+      ? candidate.highlights.map((value) => String(value).trim()).filter(Boolean)
       : [],
-    raw_commit_count: Number(candidate.raw_commit_count) || commitShas.length,
+    raw_commit_count: totalCommitCount,
   };
+
+  return rendered;
 }
 
 async function generateWithAnthropic(bundle) {
+  assertStrictToolModelSupport(anthropicModel);
+  const toolName = "submit_daily_changelog";
+  const tool = buildChangelogTool(bundle.batches.map((batch) => batch.id));
   const systemPrompt = [
     "You are writing a polished daily product changelog timeline for Aura.",
-    "Aim for a day page with multiple time-stamped headline entries rather than one giant headline.",
     "Use the release metadata, batched commit history, file-level context, and selected diff excerpts to produce user-facing timeline entries.",
     "Write like a product editor, not like a git log summarizer.",
     "Focus on meaningful product, developer-experience, release, reliability, and platform changes.",
     "Prefer concrete user-visible or operator-visible outcomes over implementation details.",
-    "Each timeline entry should correspond to one batched theme and time window.",
+    "Each timeline entry should correspond to one provided batch_id and time window.",
     "Do not merge work that is far apart in time just because it shares a topic.",
     "Use commit messages and diffs together; do not rely on commit titles alone.",
     "Merge related commits inside a batch into stronger outcome-oriented bullets.",
@@ -623,7 +662,9 @@ async function generateWithAnthropic(bundle) {
     "Do not invent features or claims that are not supported by the input.",
     "If evidence is weak, omit the item.",
     "If the day mostly contains infrastructure or release work, say that clearly rather than pretending it was a feature release.",
-    "Return valid JSON only, with no markdown fences or extra explanation.",
+    "Never use generic filler like 'X updates shipped', 'related changes landed together', or repetitive repeated headings across multiple entries.",
+    "Every accepted output must feel publication-ready, with concrete headlines, concrete summaries, and distinct entries.",
+    `Call the ${toolName} tool exactly once with the final structured changelog.`,
   ].join(" ");
 
   const userPrompt = [
@@ -636,40 +677,12 @@ async function generateWithAnthropic(bundle) {
     "Desired style:",
     "- one compact day title",
     "- one short day intro paragraph",
-    "- 2 to 6 time-stamped timeline entries",
-    "- each timeline entry should have a headline, short summary, and 1 to 4 concise bullets",
+    "- a readable set of timeline entries selected from the provided batches",
+    "- each timeline entry should map to exactly one provided batch_id and have a headline, short summary, and 1 to 4 concise bullets",
     "- entries should be specific and meaningful",
     "- if there are important release or reliability changes, include them as their own timeline entries",
     "- write like an editorial product changelog, not a cleaned-up commit dump",
     "- use coherent release themes, polished phrasing, and compact but meaningful entries",
-    "",
-    "JSON schema:",
-    "{",
-    '  "date": "YYYY-MM-DD",',
-    '  "repo": "string",',
-    '  "channel": "string",',
-    '  "version": "string|null",',
-    '  "title": "string",',
-    '  "intro": "string",',
-    '  "entries": [',
-    "    {",
-    '      "time_label": "string",',
-    '      "started_at": "ISO-8601 string",',
-    '      "ended_at": "ISO-8601 string",',
-      '      "title": "string",',
-    '      "summary": "string",',
-      '      "items": [',
-    "        {",
-    '          "text": "string",',
-    '          "commit_shas": ["string"],',
-    '          "confidence": "high|medium"',
-    "        }",
-    "      ]",
-    "    }",
-    "  ],",
-    '  "highlights": ["string"],',
-    '  "raw_commit_count": 0',
-    "}",
     "",
     "Important constraints:",
     "- Every bullet must be traceable to one or more commit SHAs.",
@@ -677,14 +690,15 @@ async function generateWithAnthropic(bundle) {
     "- Prefer fewer, stronger bullets over many weak ones.",
     "- A bullet may cite multiple commit SHAs when several commits combine into one shipped outcome.",
     "- Prefer summarizing the combined effect of related work over listing commit-by-commit changes.",
-    "- Keep each timeline entry faithful to its provided batch and time window.",
-    "- Do not merge two distant batches into one headline just because they share a topic.",
+    "- Keep each timeline entry faithful to its provided batch_id and time window.",
+    "- Do not merge two distinct batch_ids into one entry.",
     "- Do not repeat raw commit titles or conventional-commit phrasing unless the exact wording is genuinely the clearest option.",
     "- Exclude merge commits and low-signal maintenance unless they materially affected shipping, reliability, or user experience.",
     "- Skip pure merge messages like 'Merge branch main' entirely.",
     "- If several commits represent one release-debugging thread, compress them into one broader reliability bullet instead of enumerating each micro-fix.",
     "- Do not mention tests, formatting, or internal cleanup unless they clearly improved user-facing behavior or release confidence.",
     "- Mention platform names when relevant: Desktop, Mac, Windows, Linux, iOS, Android, Release Infrastructure, Website.",
+    `- Return the final answer by calling the ${toolName} tool, not as freeform text.`,
     "",
     "Release bundle:",
     JSON.stringify(bundle, null, 2),
@@ -692,7 +706,9 @@ async function generateWithAnthropic(bundle) {
 
   let lastError = null;
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  const maxTokensByAttempt = [anthropicMaxTokens, anthropicRetryMaxTokens];
+
+  for (let attempt = 1; attempt <= maxTokensByAttempt.length; attempt += 1) {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -702,15 +718,17 @@ async function generateWithAnthropic(bundle) {
       },
       body: JSON.stringify({
         model: anthropicModel,
-        max_tokens: 2200,
+        max_tokens: maxTokensByAttempt[attempt - 1],
         temperature: 0.2,
         system: systemPrompt,
+        tools: [tool],
+        tool_choice: { type: "any" },
         messages: [
           {
             role: "user",
             content: attempt === 1
               ? userPrompt
-              : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nReturn corrected JSON only.`,
+              : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nCall the tool again with corrected input.`,
           },
         ],
       }),
@@ -722,22 +740,15 @@ async function generateWithAnthropic(bundle) {
     }
 
     const json = await response.json();
-    const text = Array.isArray(json.content)
-      ? json.content
-          .filter((item) => item?.type === "text")
-          .map((item) => item.text)
-          .join("\n")
-      : "";
-
     try {
-      const cleaned = text
-        .trim()
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/\s*```$/, "");
-      return JSON.parse(cleaned);
+      const input = findToolUseInput(json, toolName);
+      if (!input) {
+        throw new Error(`Model did not return a ${toolName} tool call`);
+      }
+      return input;
     } catch (error) {
-      lastError = `Could not parse model response as JSON: ${error}`;
+      const stopReason = json?.stop_reason ? ` (stop_reason=${json.stop_reason})` : "";
+      lastError = `Could not validate model tool output${stopReason}: ${error}`;
     }
   }
 
@@ -789,201 +800,224 @@ function computeBootstrapCommits(currentSha) {
     .filter(Boolean);
 }
 
-const now = new Date();
-const dateKey = formatDateInTimeZone(now, timeZone);
-const currentSha = sanitizeText(args["current-sha"] || runGit(["rev-parse", "HEAD"]));
+async function main() {
+  if (!fs.existsSync(repoDir)) {
+    console.error(`repo directory not found: ${repoDir}`);
+    process.exit(1);
+  }
 
-const channelDir = path.join(pagesDir, "changelog", channel);
-const historyDir = path.join(channelDir, "history");
-const latestPath = path.join(channelDir, "latest.json");
-const latestMdPath = path.join(channelDir, "latest.md");
-const todayJsonPath = path.join(historyDir, `${dateKey}.json`);
-const todayMdPath = path.join(historyDir, `${dateKey}.md`);
-const existingToday = readJsonIfExists(todayJsonPath);
-const latestExisting = readJsonIfExists(latestPath);
-const previousSha = sanitizeText(latestExisting?.lastIncludedSha || "");
+  if (!fs.existsSync(pagesDir)) {
+    console.error(`pages directory not found: ${pagesDir}`);
+    process.exit(1);
+  }
 
-let newCommitShas = [];
-if (previousSha && previousSha !== currentSha) {
-  try {
-    execFileSync("git", ["merge-base", "--is-ancestor", previousSha, currentSha], {
-      cwd: repoDir,
-      stdio: "ignore",
-    });
-    newCommitShas = runGit(["rev-list", "--reverse", `${previousSha}..${currentSha}`])
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-  } catch {
+  const now = new Date();
+  const dateKey = formatDateInTimeZone(now, timeZone);
+  const currentSha = sanitizeText(args["current-sha"] || runGit(["rev-parse", "HEAD"]));
+
+  const channelDir = path.join(pagesDir, "changelog", channel);
+  const historyDir = path.join(channelDir, "history");
+  const latestPath = path.join(channelDir, "latest.json");
+  const latestMdPath = path.join(channelDir, "latest.md");
+  const todayJsonPath = path.join(historyDir, `${dateKey}.json`);
+  const todayMdPath = path.join(historyDir, `${dateKey}.md`);
+  const existingToday = readJsonIfExists(todayJsonPath);
+  const latestExisting = readJsonIfExists(latestPath);
+  const previousSha = sanitizeText(latestExisting?.lastIncludedSha || "");
+
+  let newCommitShas = [];
+  if (previousSha && previousSha !== currentSha) {
+    try {
+      execFileSync("git", ["merge-base", "--is-ancestor", previousSha, currentSha], {
+        cwd: repoDir,
+        stdio: "ignore",
+      });
+      newCommitShas = runGit(["rev-list", "--reverse", `${previousSha}..${currentSha}`])
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+    } catch {
+      newCommitShas = computeBootstrapCommits(currentSha);
+    }
+  } else if (!previousSha) {
     newCommitShas = computeBootstrapCommits(currentSha);
   }
-} else if (!previousSha) {
-  newCommitShas = computeBootstrapCommits(currentSha);
-}
 
-const existingCommits = Array.isArray(existingToday?.rawCommits) ? existingToday.rawCommits : [];
-const existingShas = new Set(existingCommits.map((commit) => commit.sha));
-const uniqueNewShas = newCommitShas.filter((sha) => !existingShas.has(sha));
-const appendedCommits = uniqueNewShas.map(collectCommit);
-const allCommits = [...existingCommits, ...appendedCommits];
-const filteredCommits = allCommits.filter((commit) => !shouldIgnoreCommitForRendering(commit));
-const renderableCommits = filteredCommits.length > 0 ? filteredCommits : allCommits;
+  const existingCommits = Array.isArray(existingToday?.rawCommits) ? existingToday.rawCommits : [];
+  const existingShas = new Set(existingCommits.map((commit) => commit.sha));
+  const uniqueNewShas = newCommitShas.filter((sha) => !existingShas.has(sha));
+  const appendedCommits = uniqueNewShas.map(collectCommit);
+  const allCommits = [...existingCommits, ...appendedCommits];
+  const filteredCommits = allCommits.filter((commit) => !shouldIgnoreCommitForRendering(commit));
+  const renderableCommits = filteredCommits.length > 0 ? filteredCommits : allCommits;
 
-if (allCommits.length === 0) {
-  console.error("No commits available to generate changelog entry");
-  process.exit(1);
-}
-
-const allCommitShas = renderableCommits.map((commit) => commit.sha);
-const sortedAreas = summarizeAreas(renderableCommits);
-const timeBatches = batchCommits(renderableCommits, timeZone);
-const selectedCommitExcerpts = [...renderableCommits]
-  .sort((a, b) => scoreCommit(b) - scoreCommit(a))
-  .slice(0, 8)
-  .map((commit) => ({
-    sha: commit.sha,
-    subject: commit.subject,
-    primaryArea: commit.primaryArea,
-    excerpt: collectPatchExcerpt(commit.sha),
-  }));
-
-const aggregateStats = renderableCommits.reduce((acc, commit) => {
-  acc.insertions += commit.stats.insertions;
-  acc.deletions += commit.stats.deletions;
-  acc.files += commit.stats.fileCount;
-  return acc;
-}, { insertions: 0, deletions: 0, files: 0 });
-
-const artifactSummaries = collectArtifactSummaries(artifactsDir);
-const bundle = {
-  prompt_version: promptVersion,
-  repo: repoName,
-  channel,
-  version,
-  date: dateKey,
-  release_url: releaseUrl || null,
-  current_sha: currentSha,
-  previous_processed_sha: previousSha || null,
-  new_commit_count: uniqueNewShas.length,
-  total_daily_commit_count: renderableCommits.length,
-  raw_daily_commit_count: allCommits.length,
-  aggregate_stats: aggregateStats,
-  top_areas: sortedAreas,
-  batches: timeBatches.map((batch) => ({
-    id: batch.id,
-    time_label: batch.time_label,
-    started_at: batch.started_at,
-    ended_at: batch.ended_at,
-    commit_count: batch.commits.length,
-    top_areas: batch.area_summary,
-    commits: batch.commits.map((commit) => ({
-      sha: commit.sha,
-      committed_at: commit.committedAt,
-      subject: commit.subject,
-      body: commit.body,
-      primary_area: commit.primaryArea,
-      areas: commit.areas,
-      files: commit.files.slice(0, 20),
-      stats: commit.stats,
-    })),
-  })),
-  selected_patch_excerpts: selectedCommitExcerpts,
-  release_artifacts: artifactSummaries,
-};
-
-let rendered;
-let generator = "fallback";
-let generationError = null;
-
-if (anthropicApiKey) {
-  try {
-    const candidate = await generateWithAnthropic(bundle);
-    rendered = validateRenderedEntry(candidate, allCommitShas);
-    generator = "anthropic";
-  } catch (error) {
-    generationError = String(error);
+  if (allCommits.length === 0) {
+    console.error("No commits available to generate changelog entry");
+    process.exit(1);
   }
-}
 
-if (!rendered) {
-  rendered = buildDeterministicFallback({
-    dateKey,
-    commits: renderableCommits,
+  const allCommitShas = renderableCommits.map((commit) => commit.sha);
+  const sortedAreas = summarizeAreas(renderableCommits);
+  const timeBatches = batchCommits(renderableCommits, timeZone);
+  const selectedCommitExcerpts = [...renderableCommits]
+    .sort((a, b) => scoreCommit(b) - scoreCommit(a))
+    .slice(0, 8)
+    .map((commit) => ({
+      sha: commit.sha,
+      subject: commit.subject,
+      primaryArea: commit.primaryArea,
+      excerpt: collectPatchExcerpt(commit.sha),
+    }));
+
+  const aggregateStats = renderableCommits.reduce((acc, commit) => {
+    acc.insertions += commit.stats.insertions;
+    acc.deletions += commit.stats.deletions;
+    acc.files += commit.stats.fileCount;
+    return acc;
+  }, { insertions: 0, deletions: 0, files: 0 });
+
+  const artifactSummaries = collectArtifactSummaries(artifactsDir);
+  const bundle = {
+    prompt_version: promptVersion,
     repo: repoName,
     channel,
-    currentVersion: version,
-    batches: timeBatches,
-    tz: timeZone,
-  });
+    version,
+    date: dateKey,
+    release_url: releaseUrl || null,
+    current_sha: currentSha,
+    previous_processed_sha: previousSha || null,
+    new_commit_count: uniqueNewShas.length,
+    total_daily_commit_count: renderableCommits.length,
+    raw_daily_commit_count: allCommits.length,
+    aggregate_stats: aggregateStats,
+    top_areas: sortedAreas,
+    batches: timeBatches.map((batch) => ({
+      id: batch.id,
+      time_label: batch.time_label,
+      started_at: batch.started_at,
+      ended_at: batch.ended_at,
+      commit_count: batch.commits.length,
+      top_areas: batch.area_summary,
+      commits: batch.commits.map((commit) => ({
+        sha: commit.sha,
+        committed_at: commit.committedAt,
+        subject: commit.subject,
+        body: commit.body,
+        primary_area: commit.primaryArea,
+        areas: commit.areas,
+        files: commit.files.slice(0, 20),
+        stats: commit.stats,
+      })),
+    })),
+    selected_patch_excerpts: selectedCommitExcerpts,
+    release_artifacts: artifactSummaries,
+  };
+
+  let rendered;
+  const generator = "anthropic";
+  let generationError = null;
+
+  if (!anthropicApiKey) {
+    console.error("ANTHROPIC_API_KEY is required for changelog generation");
+    process.exit(1);
+  }
+
+  try {
+    const candidate = await generateWithAnthropic(bundle);
+    rendered = validateRenderedEntry(candidate, timeBatches, renderableCommits.length);
+  } catch (error) {
+    generationError = String(error);
+    console.error(JSON.stringify({
+      error: "changelog_generation_failed",
+      date: dateKey,
+      channel,
+      version,
+      currentSha,
+      batchCount: timeBatches.length,
+      filteredCommitCount: renderableCommits.length,
+      generationError,
+    }, null, 2));
+    process.exit(1);
+  }
+
+  const doc = {
+    schemaVersion: 1,
+    promptVersion,
+    generator,
+    generationError,
+    generatedAt: now.toISOString(),
+    repo: repoName,
+    channel,
+    version,
+    date: dateKey,
+    releaseUrl: releaseUrl || null,
+    lastIncludedSha: currentSha,
+    previousProcessedSha: previousSha || null,
+    commitShas: allCommitShas,
+    rawCommitCount: allCommits.length,
+    filteredCommitCount: renderableCommits.length,
+    rawCommits: allCommits,
+    batchCount: timeBatches.length,
+    artifactSummaries,
+    rendered,
+  };
+
+  writeJson(todayJsonPath, doc);
+  writeJson(latestPath, doc);
+
+  const markdown = renderMarkdown(doc);
+  fs.mkdirSync(path.dirname(todayMdPath), { recursive: true });
+  fs.writeFileSync(todayMdPath, markdown);
+  fs.writeFileSync(latestMdPath, markdown);
+
+  const indexEntries = fs.readdirSync(historyDir)
+    .filter((name) => name.endsWith(".json"))
+    .sort()
+    .reverse()
+    .map((name) => {
+      const filePath = path.join(historyDir, name);
+      const entry = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      return {
+        date: entry.date,
+        channel: entry.channel,
+        version: entry.version,
+        title: entry.rendered?.title || "",
+        intro: entry.rendered?.intro || "",
+        entryCount: Array.isArray(entry.rendered?.entries) ? entry.rendered.entries.length : 0,
+        highlights: Array.isArray(entry.rendered?.highlights) ? entry.rendered.highlights : [],
+        rawCommitCount: entry.rawCommitCount || 0,
+        generatedAt: entry.generatedAt,
+        releaseUrl: entry.releaseUrl || null,
+        path: `history/${name}`,
+      };
+    });
+  writeJson(path.join(channelDir, "index.json"), indexEntries);
+
+  console.log(JSON.stringify({
+    date: dateKey,
+    channel,
+    version,
+    generatedAt: doc.generatedAt,
+    generator,
+    generationError,
+    rawCommitCount: doc.rawCommitCount,
+    lastIncludedSha: doc.lastIncludedSha,
+    files: {
+      latestJson: path.relative(pagesDir, latestPath),
+      latestMd: path.relative(pagesDir, latestMdPath),
+      historyJson: path.relative(pagesDir, todayJsonPath),
+      historyMd: path.relative(pagesDir, todayMdPath),
+      indexJson: path.relative(pagesDir, path.join(channelDir, "index.json")),
+    },
+  }, null, 2));
 }
 
-const doc = {
-  schemaVersion: 1,
-  promptVersion,
-  generator,
-  generationError,
-  generatedAt: now.toISOString(),
-  repo: repoName,
-  channel,
-  version,
-  date: dateKey,
-  releaseUrl: releaseUrl || null,
-  lastIncludedSha: currentSha,
-  previousProcessedSha: previousSha || null,
-  commitShas: allCommitShas,
-  rawCommitCount: allCommits.length,
-  filteredCommitCount: renderableCommits.length,
-  rawCommits: allCommits,
-  batchCount: timeBatches.length,
-  artifactSummaries,
-  rendered,
+export {
+  assertStrictToolModelSupport,
+  batchCommits,
+  validateRenderedEntry,
 };
 
-writeJson(todayJsonPath, doc);
-writeJson(latestPath, doc);
-
-const markdown = renderMarkdown(doc);
-fs.mkdirSync(path.dirname(todayMdPath), { recursive: true });
-fs.writeFileSync(todayMdPath, markdown);
-fs.writeFileSync(latestMdPath, markdown);
-
-const indexEntries = fs.readdirSync(historyDir)
-  .filter((name) => name.endsWith(".json"))
-  .sort()
-  .reverse()
-  .map((name) => {
-    const filePath = path.join(historyDir, name);
-    const entry = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    return {
-      date: entry.date,
-      channel: entry.channel,
-      version: entry.version,
-      title: entry.rendered?.title || "",
-      intro: entry.rendered?.intro || "",
-      entryCount: Array.isArray(entry.rendered?.entries) ? entry.rendered.entries.length : 0,
-      highlights: Array.isArray(entry.rendered?.highlights) ? entry.rendered.highlights : [],
-      rawCommitCount: entry.rawCommitCount || 0,
-      generatedAt: entry.generatedAt,
-      releaseUrl: entry.releaseUrl || null,
-      path: `history/${name}`,
-    };
-  });
-writeJson(path.join(channelDir, "index.json"), indexEntries);
-
-console.log(JSON.stringify({
-  date: dateKey,
-  channel,
-  version,
-  generatedAt: doc.generatedAt,
-  generator,
-  generationError,
-  rawCommitCount: doc.rawCommitCount,
-  lastIncludedSha: doc.lastIncludedSha,
-  files: {
-    latestJson: path.relative(pagesDir, latestPath),
-    latestMd: path.relative(pagesDir, latestMdPath),
-    historyJson: path.relative(pagesDir, todayJsonPath),
-    historyMd: path.relative(pagesDir, todayMdPath),
-    indexJson: path.relative(pagesDir, path.join(channelDir, "index.json")),
-  },
-}, null, 2));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

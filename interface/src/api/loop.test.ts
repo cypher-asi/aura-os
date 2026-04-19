@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { loopApi } from "./loop";
 import { ApiClientError } from "./core";
 
+vi.mock("../lib/host-config", () => ({
+  resolveApiUrl: (path: string) => path,
+}));
+
 function mockFetch(status: number, body: unknown) {
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -35,6 +39,16 @@ describe("loopApi", () => {
     await loopApi.startLoop("p1" as string, "ai1");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/projects/p1/loop/start?agent_instance_id=ai1",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("startLoop includes explicit model override when provided", async () => {
+    const fetchMock = mockFetch(200, loopStatus);
+    globalThis.fetch = fetchMock;
+    await loopApi.startLoop("p1" as string, "ai1", "aura-gpt-4.1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/loop/start?agent_instance_id=ai1&model=aura-gpt-4.1",
       expect.objectContaining({ method: "POST" }),
     );
   });

@@ -36,6 +36,7 @@ import { useContextUsageStore } from "../../stores/context-usage-store";
 export interface DispatchDeps {
   projectId: string;
   agentInstanceId: string | undefined;
+  selectedModel?: string | null;
   refs: ReturnType<typeof useStreamCore>["refs"];
   setters: ReturnType<typeof useStreamCore>["setters"];
   abortRef: ReturnType<typeof useStreamCore>["abortRef"];
@@ -53,6 +54,7 @@ async function bridgeLoopToolResult(
   isError: boolean,
   projectId: string,
   agentInstanceId: string | undefined,
+  selectedModel: string | null | undefined,
 ) {
   if (isError) return;
   switch (name) {
@@ -63,7 +65,7 @@ async function bridgeLoopToolResult(
           if (status.paused) await api.resumeLoop(projectId, agentInstanceId);
           return;
         }
-        await api.startLoop(projectId, agentInstanceId);
+        await api.startLoop(projectId, agentInstanceId, selectedModel);
       } catch {
         /* ignore; automation bar / WS will reflect server state */
       }
@@ -83,7 +85,7 @@ async function bridgeLoopToolResult(
 
 export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
   const {
-    projectId, agentInstanceId, refs, setters, abortRef, coreKey,
+    projectId, agentInstanceId, selectedModel, refs, setters, abortRef, coreKey,
     setProgressText, sidekickRef, projectCtxRef,
     pendingSpecIdsRef, pendingTaskIdsRef,
   } = deps;
@@ -119,7 +121,7 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.ToolResult: {
         const c = event.content as { id: string; name: string; result: string; is_error: boolean };
         coreHandleToolResult(refs, setters, c);
-        void bridgeLoopToolResult(c.name, c.is_error, projectId, agentInstanceId);
+        void bridgeLoopToolResult(c.name, c.is_error, projectId, agentInstanceId, selectedModel);
         if (c.name === "create_spec") {
           if (c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
           else promotePendingSpec(c, projectId, sidekickRef.current, pendingSpecIdsRef);

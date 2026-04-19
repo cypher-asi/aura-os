@@ -101,6 +101,7 @@ describe("AgentEditorForm", () => {
 
     expect(screen.queryByRole("button", { name: "Use organization connection instead" })).not.toBeInTheDocument();
     expect(screen.queryByText("Primary Anthropic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anthropic API")).not.toBeInTheDocument();
   });
 
   it("renders a read-only permissions summary for super-agents only", () => {

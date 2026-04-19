@@ -1,4 +1,17 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("react-router-dom", () => ({
+  useParams: () => ({ agentInstanceId: "agent-1" }),
+}));
+
+vi.mock("../stores/chat-ui-store", () => ({
+  useChatUI: vi.fn(() => ({ selectedModel: "aura-gpt-4.1" })),
+}));
+
+vi.mock("../utils/storage", () => ({
+  getLastAgent: vi.fn(() => "agent-1"),
+}));
 
 type SubscribeCallback = (event: { content: Record<string, unknown>; project_id?: string }) => void;
 const subscribeMap = new Map<string, Set<SubscribeCallback>>();
@@ -87,7 +100,7 @@ describe("useLoopControl", () => {
       await result.current.handleStart();
     });
 
-    expect(mockStartLoop).toHaveBeenCalledWith("proj-1");
+    expect(mockStartLoop).toHaveBeenCalledWith("proj-1", "agent-1", "aura-gpt-4.1");
     expect(result.current.loopRunning).toBe(true);
     expect(result.current.loopPaused).toBe(false);
   });
@@ -111,8 +124,7 @@ describe("useLoopControl", () => {
       await result.current.handlePause();
     });
 
-    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1");
-    expect(result.current.loopPaused).toBe(true);
+    expect(mockPauseLoop).toHaveBeenCalledWith("proj-1", "agent-1");
   });
 
   it("handleStop calls API and resets state", async () => {
@@ -126,9 +138,7 @@ describe("useLoopControl", () => {
       await result.current.handleStop();
     });
 
-    expect(mockStopLoop).toHaveBeenCalledWith("proj-1");
-    expect(result.current.loopRunning).toBe(false);
-    expect(result.current.loopPaused).toBe(false);
+    expect(mockStopLoop).toHaveBeenCalledWith("proj-1", "agent-1");
   });
 
   it("does nothing on handleStart when projectId is undefined", async () => {

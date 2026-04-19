@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { tasksApi } from "./tasks";
 import { ApiClientError } from "./core";
 
+vi.mock("../lib/host-config", () => ({
+  resolveApiUrl: (path: string) => path,
+}));
+
 function mockFetch(status: number, body: unknown) {
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -93,6 +97,16 @@ describe("tasksApi", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/projects/p1/tasks/t1",
       expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("runTask includes explicit model override when provided", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await tasksApi.runTask("p1" as string, "t1" as string, "ai1", "aura-o4-mini");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/tasks/t1/run?agent_instance_id=ai1&model=aura-o4-mini",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 

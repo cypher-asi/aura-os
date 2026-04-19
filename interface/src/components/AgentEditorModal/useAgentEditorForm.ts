@@ -286,6 +286,13 @@ export function useAgentEditorForm(
     }
 
     const requiredProviders = new Set(runtimeAuthProvidersForAdapter(adapterType));
+    // Adapter has no runtime-compatible providers in the catalog (e.g. legacy
+    // `aura_harness` hosted agents pointing at an Anthropic org integration).
+    // We must not clobber the operator's saved integration here just because
+    // the current catalog no longer advertises a runtime route for it.
+    if (requiredProviders.size === 0) {
+      return;
+    }
     const selected = integrations.find((integration) => integration.integration_id === integrationId);
     if (!selected || !requiredProviders.has(selected.provider)) {
       const remembered = rememberedIntegrationIdsRef.current[adapterType];

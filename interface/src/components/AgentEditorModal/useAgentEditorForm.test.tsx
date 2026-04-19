@@ -137,26 +137,6 @@ describe("useAgentEditorForm", () => {
     expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
-  it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
-    );
-
-    act(() => {
-      result.current.setAdapterType("claude_code");
-      result.current.setAuthSource("org_integration");
-      result.current.setIntegrationId("int-anthropic");
-      result.current.setDefaultModel("claude-opus-4-6");
-    });
-
-    await waitFor(() => {
-      expect(result.current.adapterType).toBe("aura_harness");
-      expect(result.current.authSource).toBe("aura_managed");
-      expect(result.current.integrationId).toBe("");
-      expect(result.current.defaultModel).toBe("");
-    });
-  });
-
   it("preserves a legacy org-backed agent while editing", async () => {
     mockOrgState.integrations = [
       {
@@ -185,6 +165,26 @@ describe("useAgentEditorForm", () => {
       expect(result.current.authSource).toBe("org_integration");
       expect(result.current.integrationId).toBe("int-anthropic");
       expect(result.current.restrictCreateToAuraRuntimes).toBe(false);
+    });
+  });
+
+  it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
+    const { result } = renderHook(() =>
+      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+    );
+
+    act(() => {
+      result.current.setAdapterType("claude_code");
+      result.current.setAuthSource("org_integration");
+      result.current.setIntegrationId("int-anthropic");
+      result.current.setDefaultModel("claude-opus-4-6");
+    });
+
+    await waitFor(() => {
+      expect(result.current.adapterType).toBe("aura_harness");
+      expect(result.current.authSource).toBe("aura_managed");
+      expect(result.current.integrationId).toBe("");
+      expect(result.current.defaultModel).toBe("");
     });
   });
 

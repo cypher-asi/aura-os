@@ -792,6 +792,8 @@ fn update_agent_request_serializes_vm_id() {
         tags: None,
         listing_status: None,
         expertise: None,
+        permissions: None,
+        intent_classifier: None,
     };
     let val = serde_json::to_value(&req).unwrap();
     assert_eq!(val["vmId"], "pod-123");
@@ -820,6 +822,8 @@ fn update_agent_request_skips_none_vm_id() {
         tags: None,
         listing_status: None,
         expertise: None,
+        permissions: None,
+        intent_classifier: None,
     };
     let val = serde_json::to_value(&req).unwrap();
     let obj = val.as_object().unwrap();

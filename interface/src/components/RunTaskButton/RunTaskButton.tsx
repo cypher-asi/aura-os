@@ -4,6 +4,8 @@ import { Button } from "@cypher-asi/zui";
 import { Loader2, Play } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useProjectActions } from "../../stores/project-action-store";
+import { useChatUI } from "../../stores/chat-ui-store";
+import { projectChatHistoryKey } from "../../stores/chat-history-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import styles from "../Preview/Preview.module.css";
@@ -12,6 +14,9 @@ export function RunTaskButton({ task }: { task: import("../../types").Task }) {
   const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
+  const streamKey =
+    projectId && agentInstanceId ? projectChatHistoryKey(projectId, agentInstanceId) : null;
+  const { selectedModel } = useChatUI(streamKey ?? "__task-run-task-button__");
   const loopActive = useLoopActive(projectId);
   const { liveStatus } = useTaskStatus(task.task_id, task.status);
   const [running, setRunning] = useState(false);
@@ -24,13 +29,13 @@ export function RunTaskButton({ task }: { task: import("../../types").Task }) {
     if (!projectId || running) return;
     setRunning(true);
     try {
-      await api.runTask(projectId, task.task_id, agentInstanceId);
+      await api.runTask(projectId, task.task_id, agentInstanceId, selectedModel);
     } catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err);
       setRunning(false);
     }
-  }, [running, agentInstanceId, projectId, task.task_id]);
+  }, [running, agentInstanceId, projectId, selectedModel, task.task_id]);
 
   const effectiveStatus =
     (liveStatus ?? task.status) === "in_progress" && !loopActive && liveStatus === null

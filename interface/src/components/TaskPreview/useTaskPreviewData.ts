@@ -9,6 +9,8 @@ import { useTaskAgentInstances } from "../../hooks/use-task-agent-instances";
 import { useTaskStream } from "../../hooks/use-task-stream";
 import { useStreamingText } from "../../hooks/stream/hooks";
 import { useTaskOutputHydration } from "../../hooks/use-task-output-hydration";
+import { useChatUI } from "../../stores/chat-ui-store";
+import { projectChatHistoryKey } from "../../stores/chat-history-store";
 
 function useElapsedTime(active: boolean): number {
   const startRef = useRef<number | null>(null);
@@ -32,6 +34,11 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const pushPreview = useSidekickStore((s) => s.pushPreview);
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
+  const chatStreamKey =
+    projectId && routeAgentInstanceId
+      ? projectChatHistoryKey(projectId, routeAgentInstanceId)
+      : null;
+  const { selectedModel } = useChatUI(chatStreamKey ?? "__task-preview__");
   const [retrying, setRetrying] = useState(false);
 
   const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id, task.status);
@@ -40,11 +47,11 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const effectiveStatus = liveStatus ?? task.status;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
-  const { streamKey } = useTaskStream(task.task_id, isActive);
+  const { streamKey: taskStreamKey } = useTaskStream(task.task_id, isActive);
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
   const elapsed = useElapsedTime(isActive);
 
-  const streamBuf = useStreamingText(streamKey);
+  const streamBuf = useStreamingText(taskStreamKey);
   const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
   useTaskOutputHydration(projectId, task, isActive, isTerminal, streamBuf, seedTaskOutput);
 
@@ -60,10 +67,12 @@ export function useTaskPreviewData(task: import("../../types").Task) {
     try {
       await api.retryTask(projectId, task.task_id);
       setLiveStatus("ready"); setFailReason(null);
-      try { await api.runTask(projectId, task.task_id, routeAgentInstanceId); } catch { /* reset to Ready */ }
+      try {
+        await api.runTask(projectId, task.task_id, routeAgentInstanceId, selectedModel);
+      } catch { /* reset to Ready */ }
     } catch (err) { console.error("Retry failed:", err); }
     finally { setRetrying(false); }
-  }, [projectId, retrying, routeAgentInstanceId, task.task_id, setLiveStatus, setFailReason]);
+  }, [projectId, retrying, routeAgentInstanceId, selectedModel, task.task_id, setLiveStatus, setFailReason]);
 
   const handleViewSession = useCallback(async () => {
     if (!projectId || !effectiveSessionId) return;
@@ -88,7 +97,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
     taskOutput, effectiveStatus, effectiveSessionId, isActive, isTerminal,
     elapsed, failReason, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
-    fileOps, notes, showNotes, streamKey,
+    fileOps, notes, showNotes, streamKey: taskStreamKey,
   };
 }
 
@@ -96,6 +105,9 @@ export function useRunTaskData(task: import("../../types").Task) {
   const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
+  const streamKey =
+    projectId && agentInstanceId ? projectChatHistoryKey(projectId, agentInstanceId) : null;
+  const { selectedModel } = useChatUI(streamKey ?? "__task-preview-run__");
   const { liveStatus } = useTaskStatus(task.task_id, task.status);
   const [running, setRunning] = useState(false);
 
@@ -104,12 +116,12 @@ export function useRunTaskData(task: import("../../types").Task) {
   const handleRun = useCallback(async () => {
     if (!projectId || running) return;
     setRunning(true);
-    try { await api.runTask(projectId, task.task_id, agentInstanceId); }
+    try { await api.runTask(projectId, task.task_id, agentInstanceId, selectedModel); }
     catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err); setRunning(false);
     }
-  }, [running, agentInstanceId, projectId, task.task_id]);
+  }, [running, agentInstanceId, projectId, selectedModel, task.task_id]);
 
   const effectiveStatus = liveStatus ?? task.status;
 
