@@ -191,6 +191,25 @@ impl AgentService {
             .delete_setting(&Self::agent_key(agent_id))
             .map_err(AgentError::Store)
     }
+
+    /// Convert a batch of network-shape agents to core agents and
+    /// persist them to the local shadow store.
+    ///
+    /// Invoked from tool paths (`list_agents`, `get_agent`) so that the
+    /// catalog the LLM just saw is mirrored locally. Downstream code
+    /// like `send_agent_event_stream` falls back to `get_agent_local`
+    /// when aura-network resolution fails; without this hydration, the
+    /// fallback is always empty and a transient network hiccup surfaces
+    /// as a user-visible 404. Failures to persist individual rows are
+    /// swallowed intentionally — this is a cache, not the source of
+    /// truth, and we don't want a flaky store to break the tool call.
+    pub fn hydrate_shadow_from_network(&self, agents: &[NetworkAgent]) {
+        for net in agents {
+            let mut agent = network_agent_to_core(net);
+            let _ = self.apply_runtime_config(&mut agent);
+            let _ = self.save_agent_shadow(&agent);
+        }
+    }
     fn list_local_agents(&self) -> Result<Vec<Agent>, AgentError> {
         let entries = self
             .store
@@ -241,6 +260,39 @@ impl AgentService {
         let jwt = self.get_jwt()?;
         let net = client
             .get_agent(&agent_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_os_network::NetworkError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Network(e),
+            })?;
+        let mut agent = network_agent_to_core(&net);
+        let _ = self.apply_runtime_config(&mut agent);
+        let _ = self.save_agent_shadow(&agent);
+        Ok(agent)
+    }
+
+    /// Get agent from aura-network using an explicit JWT.
+    ///
+    /// Prefer this over `get_agent_async` on request-scoped code paths:
+    /// it avoids reading `SettingsStore::get_jwt()` (a shared in-memory
+    /// cache that can race when multiple users hit the server), ensures
+    /// the target agent is resolved with the **caller's** credentials,
+    /// and still updates the local shadow on success so subsequent
+    /// offline / fallback reads work. A `NotFound` upstream is mapped
+    /// to `AgentError::NotFound`; other network failures surface as
+    /// `AgentError::Network` so callers can distinguish "agent doesn't
+    /// exist" from "aura-network is flaky".
+    pub async fn get_agent_with_jwt(
+        &self,
+        jwt: &str,
+        agent_id: &AgentId,
+    ) -> Result<Agent, AgentError> {
+        let client = self
+            .network_client
+            .as_ref()
+            .ok_or_else(|| AgentError::Parse("aura-network is not configured".into()))?;
+        let net = client
+            .get_agent(&agent_id.to_string(), jwt)
             .await
             .map_err(|e| match &e {
                 aura_os_network::NetworkError::Server { status: 404, .. } => AgentError::NotFound,

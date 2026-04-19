@@ -1884,12 +1884,40 @@ pub(crate) async fn send_agent_event_stream(
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
-    let agent = match state.agent_service.get_agent_async("", &agent_id).await {
+    // Resolve the target agent with the *caller's* JWT rather than the
+    // ambient `SettingsStore::get_jwt()` cache. The cache is shared
+    // in-memory state that races under concurrent requests (e.g. the
+    // UI polling `remote_agent/state` for 12 agents in parallel while
+    // the CEO issues `send_to_agent`), which previously caused
+    // `get_agent_async` to query aura-network with the wrong bearer
+    // and surface spurious 404s. The local shadow is only used as a
+    // strict `NotFound` fallback; any other upstream failure bubbles
+    // up as a 5xx so we don't mask transient network issues behind
+    // "agent not found".
+    let agent = match state
+        .agent_service
+        .get_agent_with_jwt(&jwt, &agent_id)
+        .await
+    {
         Ok(a) => a,
-        Err(_) => state
+        Err(aura_os_agents::AgentError::NotFound) => state
             .agent_service
             .get_agent_local(&agent_id)
-            .map_err(|e| ApiError::not_found(format!("agent not found: {e}")))?,
+            .map_err(|_| {
+                warn!(
+                    %agent_id,
+                    "agent resolution failed: not in network or local shadow",
+                );
+                ApiError::not_found(format!(
+                    "agent {agent_id} not found in network or local shadow"
+                ))
+            })?,
+        Err(e) => {
+            warn!(%agent_id, error = %e, "agent resolution failed via network");
+            return Err(ApiError::internal(format!(
+                "resolving agent {agent_id}: {e}"
+            )));
+        }
     };
     require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");

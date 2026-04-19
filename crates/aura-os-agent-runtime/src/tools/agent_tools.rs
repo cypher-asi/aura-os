@@ -111,6 +111,12 @@ impl AgentTool for ListAgentsTool {
                 .list_agents(&ctx.jwt)
                 .await
                 .map_err(|e| tool_err("list_agents", e))?;
+            // Seed the local agent shadow with every discovered agent.
+            // Without this, `send_agent_event_stream`'s fallback path
+            // (`get_agent_local`) has nothing to return when the
+            // network lookup transiently flakes, turning a recoverable
+            // timeout into a spurious 404 for the CEO's `send_to_agent`.
+            ctx.agent_service.hydrate_shadow_from_network(&agents);
             let value = serde_json::to_value(&agents).unwrap_or_default();
             cache_put(
                 &LIST_AGENTS_CACHE,
@@ -184,6 +190,11 @@ impl AgentTool for GetAgentTool {
                 .get_agent(agent_id_str, &ctx.jwt)
                 .await
                 .map_err(|e| tool_err("get_agent", e))?;
+            // Persist to the local shadow so downstream resolvers
+            // (e.g. `send_agent_event_stream`) have a fallback row if
+            // aura-network flakes on the next request.
+            ctx.agent_service
+                .hydrate_shadow_from_network(std::slice::from_ref(&agent));
             let value = serde_json::to_value(&agent).unwrap_or_default();
             cache_put(
                 &GET_AGENT_CACHE,
