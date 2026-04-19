@@ -103,8 +103,7 @@ test("buildAnthropicRequestBody omits deprecated temperature and preserves tool 
     systemPrompt: "system prompt",
     tool: { name: "submit_daily_changelog", input_schema: { type: "object" } },
     userPrompt: "user prompt",
-    lastError: null,
-    attempt: 1,
+    retryInstruction: null,
   });
 
   assert.equal(request.model, "claude-sonnet-4-6");
@@ -115,15 +114,14 @@ test("buildAnthropicRequestBody omits deprecated temperature and preserves tool 
   assert.equal("temperature" in request, false);
 });
 
-test("buildAnthropicRequestBody includes retry guidance on later attempts", () => {
+test("buildAnthropicRequestBody includes retry guidance when requested", () => {
   const request = buildAnthropicRequestBody({
     model: "claude-sonnet-4-6",
     maxTokens: 6144,
     systemPrompt: "system prompt",
     tool: { name: "submit_daily_changelog", input_schema: { type: "object" } },
     userPrompt: "user prompt",
-    lastError: "validation failed",
-    attempt: 2,
+    retryInstruction: "validation failed",
   });
 
   assert.match(request.messages[0].content, /validation failed/);

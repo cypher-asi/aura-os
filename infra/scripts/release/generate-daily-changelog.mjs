@@ -36,8 +36,9 @@ const repoName = String(args.repo || path.basename(repoDir));
 const promptVersion = 3;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim() || "";
 const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-opus-4-7";
-const anthropicMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_MAX_TOKENS || "", 10) || 4096;
-const anthropicRetryMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_RETRY_MAX_TOKENS || "", 10) || 6144;
+const anthropicMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_MAX_TOKENS || "", 10) || 8192;
+const anthropicRetryMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_RETRY_MAX_TOKENS || "", 10) || 16384;
+const anthropicFinalMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_FINAL_MAX_TOKENS || "", 10) || 24576;
 const STRICT_TOOL_SUPPORTED_MODELS = [
   "claude-opus-4-7",
   "claude-opus-4-6",
@@ -541,7 +542,11 @@ function findToolUseInput(responseJson, toolName) {
   return block?.input;
 }
 
-function buildAnthropicRequestBody({ model, maxTokens, systemPrompt, tool, userPrompt, lastError, attempt }) {
+function buildAnthropicRequestBody({ model, maxTokens, systemPrompt, tool, userPrompt, retryInstruction }) {
+  const content = retryInstruction
+    ? `${userPrompt}\n\nThe previous response failed validation with this error:\n${retryInstruction}\n\nCall the tool again with corrected input.`
+    : userPrompt;
+
   return {
     model,
     max_tokens: maxTokens,
@@ -551,12 +556,26 @@ function buildAnthropicRequestBody({ model, maxTokens, systemPrompt, tool, userP
     messages: [
       {
         role: "user",
-        content: attempt === 1
-          ? userPrompt
-          : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nCall the tool again with corrected input.`,
+        content,
       },
     ],
   };
+}
+
+function summarizeToolInput(input) {
+  if (!input || typeof input !== "object") {
+    return "tool_input=missing_or_non_object";
+  }
+
+  const keys = Object.keys(input).sort();
+  let entriesSummary = "missing";
+  if (Array.isArray(input.entries)) {
+    entriesSummary = `array(${input.entries.length})`;
+  } else if ("entries" in input) {
+    entriesSummary = typeof input.entries;
+  }
+
+  return `tool_input_keys=${keys.join(",")} entries=${entriesSummary}`;
 }
 
 function assertStrictToolModelSupport(model) {
@@ -657,7 +676,7 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
   return rendered;
 }
 
-async function generateWithAnthropic(bundle) {
+async function generateWithAnthropic(bundle, totalCommitCount) {
   assertStrictToolModelSupport(anthropicModel);
   const toolName = "submit_daily_changelog";
   const tool = buildChangelogTool(bundle.batches.map((batch) => batch.id));
@@ -724,10 +743,16 @@ async function generateWithAnthropic(bundle) {
   ].join("\n");
 
   let lastError = null;
+  let retryInstruction = null;
 
-  const maxTokensByAttempt = [anthropicMaxTokens, anthropicRetryMaxTokens];
+  const maxTokensByAttempt = [
+    anthropicMaxTokens,
+    anthropicRetryMaxTokens,
+    anthropicFinalMaxTokens,
+  ];
 
   for (let attempt = 1; attempt <= maxTokensByAttempt.length; attempt += 1) {
+    const maxTokens = maxTokensByAttempt[attempt - 1];
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -738,12 +763,11 @@ async function generateWithAnthropic(bundle) {
       body: JSON.stringify(
         buildAnthropicRequestBody({
           model: anthropicModel,
-          maxTokens: maxTokensByAttempt[attempt - 1],
+          maxTokens,
           systemPrompt,
           tool,
           userPrompt,
-          lastError,
-          attempt,
+          retryInstruction,
         }),
       ),
     });
@@ -754,15 +778,30 @@ async function generateWithAnthropic(bundle) {
     }
 
     const json = await response.json();
+    const stopReason = String(json?.stop_reason || "unknown");
+    const outputTokens = json?.usage?.output_tokens ?? null;
+    const input = findToolUseInput(json, toolName);
+
+    if (!input) {
+      lastError = `Model did not return a ${toolName} tool call (stop_reason=${stopReason}, output_tokens=${outputTokens ?? "unknown"}, max_tokens=${maxTokens})`;
+      retryInstruction = stopReason === "max_tokens" ? null : lastError;
+      continue;
+    }
+
     try {
-      const input = findToolUseInput(json, toolName);
-      if (!input) {
-        throw new Error(`Model did not return a ${toolName} tool call`);
-      }
-      return input;
+      return validateRenderedEntry(input, bundle.batches, totalCommitCount);
     } catch (error) {
-      const stopReason = json?.stop_reason ? ` (stop_reason=${json.stop_reason})` : "";
-      lastError = `Could not validate model tool output${stopReason}: ${error}`;
+      const validationMessage = String(error);
+      const inputSummary = summarizeToolInput(input);
+      lastError = `Could not validate model tool output (stop_reason=${stopReason}, output_tokens=${outputTokens ?? "unknown"}, max_tokens=${maxTokens}, ${inputSummary}): ${validationMessage}`;
+
+      // Anthropic recommends retrying with a higher max_tokens budget when tool use
+      // is truncated by stop_reason=max_tokens. Re-send the same prompt in that case.
+      if (stopReason === "max_tokens") {
+        retryInstruction = null;
+      } else {
+        retryInstruction = lastError;
+      }
     }
   }
 
@@ -937,8 +976,7 @@ async function main() {
   }
 
   try {
-    const candidate = await generateWithAnthropic(bundle);
-    rendered = validateRenderedEntry(candidate, timeBatches, renderableCommits.length);
+    rendered = await generateWithAnthropic(bundle, renderableCommits.length);
   } catch (error) {
     generationError = String(error);
     console.error(JSON.stringify({
