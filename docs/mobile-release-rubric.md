@@ -26,9 +26,11 @@ These must work on-device or simulator before sign-off:
   - A user can switch between attached agents.
   - A user can create a remote agent.
   - A user can attach an existing remote agent when available.
+  - A user can open remote project files without being redirected into another tab.
 - On-the-go work loop:
   - A user can chat with the active agent.
   - A user can see task status, execution state, and specs without desktop-only assumptions.
+  - A user can preview remote workspace files on mobile when the backing agent exposes them.
 
 ## 3. Design Quality
 
@@ -65,6 +67,7 @@ These must work on-device or simulator before sign-off:
 - Native mobile shell builds and launches successfully.
 - Manual simulator validation is done after native sync for any UI flow changes.
 - Screenshot validation is captured for every reachable changed screen and key flow step.
+- Desktop focused E2E or responsive checks pass for any shared routes, shells, or forms touched by the change.
 
 ## 5. Sign-Off Gate
 
@@ -86,10 +89,10 @@ Before merge, all of the following must be true:
 
 For this branch, priority is:
 
-1. Remove first-run dead ends around org/team setup.
-2. Preserve global orientation and switching access while inside project work views.
-3. Make multi-agent project navigation workable on mobile.
-4. Improve the path from “open app” to “resume remote work” without chasing full desktop parity.
+1. Add a real remote-files surface for mobile project work.
+2. Expose attach-existing-agent from project context instead of leaving it route-only.
+3. Reuse the shared agent editor for mobile project creation while keeping mobile remote-only.
+4. Preserve desktop behavior for all shared shell, routing, and editor code touched by the branch.
 5. Keep mobile surfaces simple enough that users do not see the same context repeated in multiple places on one screen.
 
 ## 7. Screenshot Proof
@@ -102,6 +105,10 @@ Before calling the branch ready, capture screenshots for:
 - project chat
 - project drawer
 - tasks/work/specs entry points
+- remote files list
+- remote file preview
 - agent details / skills
+- add project agent action sheet
 - create remote agent
+- attach existing remote agent
 - desktop sanity views for any shared code touched

@@ -99,6 +99,21 @@ Validation and shipping are intentionally separated:
 - automatic validation on relevant changes
 - manual promotion to TestFlight / App Store
 
+### Mobile UI Sign-Off
+
+The mobile release workflows verify that the native shells still build and can
+move through the Fastlane lanes. They do not replace the mobile UI release gate
+for remote-workflow behavior.
+
+Before merging a branch that changes mobile routes, shells, forms, or shared
+editor flows, we still require:
+
+- focused mobile Playwright behavior checks
+- focused mobile screenshot capture
+- focused desktop regression checks for any shared code paths
+- native simulator launch plus screenshot confirmation
+- reviewer sign-off that the branch is mobile-coherent and desktop-safe
+
 ## Functional Verification
 
 The release system does not replace the functional eval system.
@@ -118,6 +133,7 @@ That system answers:
 The release system answers a different question:
 
 - can we build, package, launch, and ship the app artifacts safely?
+- can the store-delivery lanes promote the already-validated native shells?
 
 ## Current Recommended Flow
 
@@ -125,6 +141,7 @@ The release system answers a different question:
    - run functional evals where appropriate
    - run `Desktop Validate` for desktop changes
    - run mobile validation workflows for mobile shell changes
+   - run the mobile UI release-gate matrix for mobile UX, routing, shell, or shared-editor changes
 2. Push to `main`:
    - allow nightly desktop releases to build and publish
    - keep mobile validation automatic, but do not auto-ship to stores

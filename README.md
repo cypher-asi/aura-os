@@ -150,12 +150,10 @@ What it does:
 - prints the exact URL you should open for simulator or phone testing
 - fails fast if those ports are already in use, so the printed URLs stay accurate
 
-The same runner supports both data modes:
+Mobile is designed as a remote-backed experience. Keep the mobile runner pointed
+at remote services rather than treating the phone as a local-workspace host.
 
-- **Local-only mobile**: leave `AURA_NETWORK_URL`, `AURA_STORAGE_URL`, and `ORBIT_BASE_URL` unset in `.env`
-- **Remote-backed mobile**: set those URLs in `.env`, then run the same script
-
-Recommended remote-backed setup:
+Recommended mobile setup:
 
 ```bash
 AURA_NETWORK_URL=https://your-network-host.example.com
@@ -242,9 +240,10 @@ Notes:
 
 - Mobile web uses the local Aura host (`aura-os-server`) even when the underlying services are remote.
 - Some capabilities remain desktop-only by design, such as linked host folders, IDE open, and other native bridge actions.
-- Imported project files do work on mobile through the shared host file APIs; true linked-workspace browsing is still a desktop capability.
+- Mobile project files are remote-workspace files. On mobile they are currently previewable, not editable.
+- Linked local-workspace browsing remains a desktop capability.
 - If you need different ports, set `AURA_SERVER_PORT` and/or `AURA_FRONTEND_PORT` before running the script.
-- For simulator/local-only use, the defaults still bind to `127.0.0.1`, which is the simplest setup.
+- For simulator use on the same machine, the defaults still bind to `127.0.0.1`, which is the simplest setup.
 
 ### Build native mobile shells (Capacitor)
 
@@ -309,6 +308,10 @@ Backend env needed for a useful local mobile session:
   - `Z_BILLING_URL=https://your-billing-host.example.com`
   - `ORBIT_BASE_URL=https://your-orbit-host.example.com`
   - `SWARM_BASE_URL=https://your-swarm-gateway.example.com`
+
+Mobile should be treated as remote-only product behavior even when you are
+running the local host in front of those services. Local folder attachment and
+other host-workspace actions remain desktop-only by design.
 
 Native build env used by the local wrappers:
 

@@ -100,6 +100,7 @@ When touching shared mobile/desktop routes, shells, navigation, or forms, the mi
 2. Entry path is reachable through real navigation
 3. Main task flow is visually confirmed
 4. Screenshot capture for each step
+5. If the native shell cannot complete a backend-dependent branch in the current environment, the changed navigation, entry point, and container still need screenshot proof and the limitation must be stated explicitly.
 
 ### Desktop
 
@@ -119,6 +120,10 @@ Before claiming a mobile UI task is done:
 4. Focused mobile screenshot pass
 5. Focused desktop responsive or desktop E2E checks
 6. Native launch and screenshot confirmation if native is in scope
+7. Specialist sign-off from:
+   - a mobile UX reviewer
+   - a desktop-regression reviewer
+   - a release/verification reviewer when native or release-facing docs changed
 
 ## Claim Rules
 
@@ -146,9 +151,8 @@ unless all required lanes and metrics above have passed for the scope being clai
 
 As of this release pass, these failures remain active:
 
-1. Mobile create-agent is not discoverable from project context.
-2. The current mobile create-agent flow uses a desktop-style modal pattern that is not mobile-safe.
-3. Native iOS app-switcher routing is still unreliable, which blocks clean native verification of some global mobile flows.
+1. Native iOS app-switcher routing is still unreliable, which can limit clean native verification of some global mobile flows.
+2. Mobile remote files currently ship as a read-only preview surface. Editing still belongs on desktop until a true remote write path exists.
 
 ## Working Rule For Future Changes
 
@@ -160,3 +164,25 @@ Before I implement a mobile UI decision:
 4. Implement only the smallest mobile-only change that preserves desktop behavior.
 5. Run the mobile, native, and desktop verification matrix.
 6. Do not claim parity or completion unless the gate is fully green.
+
+## Current Branch Outcome
+
+For the remote-files and project-agent mobile parity pass on `codex/mobile-remote-parity`, the branch now addresses these previously-blocking product gaps:
+
+1. Project-context mobile agent actions are now discoverable through an `Add Project Agent` sheet.
+2. Mobile project agent creation now uses the shared editor while staying remote-only.
+3. Mobile project files now stay on-device as a remote workspace browser instead of redirecting away.
+4. Desktop-specific behavior stays on the desktop path even when the window is narrow.
+
+Combined native proof captured on this branch now covers:
+
+1. project agent root
+2. add-agent action sheet
+3. create-remote-agent route
+4. attach-existing-agent route
+5. remote files list
+
+The remaining limitations for this scope are intentional or environment-dependent:
+
+1. Mobile file access is preview-only. Remote file editing still requires desktop until the remote write path is productized and verified.
+2. Remote file preview needs at least one real remote file in the target workspace; empty workspaces can only prove the list state.
