@@ -11,14 +11,70 @@
 //! the same tool name appears twice. The harness forwards our
 //! `installed_tools` into that `tools[]` array, so any duplicate that
 //! slips through here lights up as an `invalid_request_error` on every
-//! turn of the session. The `info!` emitted here gives us the full list
-//! the server actually shipped, so when a 400 does occur we can tell
-//! from logs alone whether the duplicate originated here or was added
-//! by something downstream of us (e.g. a harness-native tool clashing
-//! with one we installed).
+//! turn of the session.
+//!
+//! There are two independent sources of duplicates we defend against:
+//!
+//! 1. Server-side name collisions between workspace tools and
+//!    cross-agent tools (both manifests happen to emit a name like
+//!    `list_specs`). Handled by [`dedupe_installed_tools_by_name`].
+//!
+//! 2. Collisions between a tool the server ships in `installed_tools`
+//!    and a native tool the external harness sidecar (`aura_node`)
+//!    registers itself before forwarding to Anthropic. This repo
+//!    doesn't host the sidecar, but the desktop launcher always spawns
+//!    it with `ENABLE_FS_TOOLS=true` / `ENABLE_CMD_TOOLS=true`, which
+//!    registers filesystem/env tools under the exact names
+//!    (`read_file`, `browse_files`, `get_environment_info`) that
+//!    `ceo_tool_manifest` also emits. Handled by
+//!    [`strip_harness_native_tool_names`].
+//!
+//! The `info!` emitted here gives us the full list the server actually
+//! shipped, so when a 400 does occur we can tell from logs alone
+//! whether the duplicate originated here or was added by something
+//! downstream of us.
 
 use aura_os_link::InstalledTool;
 use tracing::{info, warn};
+
+/// Tool names the external harness sidecar (`aura_node`) registers
+/// natively whenever it's launched with the default env flags the
+/// desktop launcher sets (`ENABLE_FS_TOOLS=true`). If we also ship
+/// an `InstalledTool` with any of these names in `installed_tools`,
+/// the sidecar merges both into the Anthropic `tools[]` payload,
+/// Anthropic sees a name appearing twice, and the whole request 400s
+/// with `"tools: Tool names must be unique."`.
+///
+/// Keep this list aligned with the server-side implementations in
+/// `crates/aura-os-agent-runtime/src/tools/system_tools.rs` — every
+/// entry here has a working server-side dispatcher fallback for
+/// contexts where the sidecar is NOT present (for example pure
+/// `SwarmHarness` mode), so dropping the installed tool only costs
+/// Anthropic's tool-schema advertising, not capability.
+const HARNESS_NATIVE_TOOL_NAMES: &[&str] = &[
+    "read_file",
+    "browse_files",
+    "get_environment_info",
+];
+
+/// Drop any `InstalledTool` whose name is claimed natively by the
+/// harness sidecar. Returns the dropped names (in drop order) so the
+/// caller can log. Called *before* [`dedupe_installed_tools_by_name`]
+/// so the dedupe log reflects what actually gets shipped.
+pub(crate) fn strip_harness_native_tool_names(tools: &mut Vec<InstalledTool>) -> Vec<String> {
+    let native: std::collections::HashSet<&str> =
+        HARNESS_NATIVE_TOOL_NAMES.iter().copied().collect();
+    let mut dropped: Vec<String> = Vec::new();
+    tools.retain(|tool| {
+        if native.contains(tool.name.as_str()) {
+            dropped.push(tool.name.clone());
+            false
+        } else {
+            true
+        }
+    });
+    dropped
+}
 
 /// Drop later entries with a tool `name` that was already seen earlier
 /// in `tools`. Returns the list of dropped names (in drop order) so the
@@ -53,6 +109,24 @@ pub(crate) fn dedupe_and_log_installed_tools(
     agent_id: &str,
     tools: &mut Vec<InstalledTool>,
 ) {
+    // Step 1: drop names the sidecar claims natively. These will ALWAYS
+    // collide when forwarded to Anthropic alongside our installed copy,
+    // so we surrender the name in the advertised tool schema and let
+    // the sidecar's native implementation handle it. The server-side
+    // `AgentTool` remains available as a fallback for non-sidecar
+    // harness modes.
+    let native = strip_harness_native_tool_names(tools);
+    if !native.is_empty() {
+        warn!(
+            context,
+            agent_id = %agent_id,
+            harness_native_tool_names = ?native,
+            "dropped harness-native tool names from installed_tools to avoid Anthropic \"tools: Tool names must be unique.\" 400",
+        );
+    }
+
+    // Step 2: dedupe by name (first occurrence wins) so workspace
+    // tools win over any identically-named cross-agent tool.
     let duplicates = dedupe_installed_tools_by_name(tools);
     if !duplicates.is_empty() {
         warn!(
@@ -63,12 +137,12 @@ pub(crate) fn dedupe_and_log_installed_tools(
         );
     }
 
-    // Always print the final shipped list. When the harness later 400s
-    // with Anthropic's "tools: Tool names must be unique." we can diff
-    // this against the harness request body to localize whether the
-    // collision was introduced here (and somehow survived dedupe) or
-    // downstream of us (the harness merging a native tool with the same
-    // name).
+    // Step 3: print the final shipped list. When the harness later
+    // 400s with Anthropic's "tools: Tool names must be unique." we
+    // can diff this against the harness request body to localize
+    // whether the collision was introduced here (and somehow survived
+    // strip + dedupe) or downstream of us (the harness merging a
+    // native tool with the same name we didn't know about).
     let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
     info!(
         context,
@@ -114,6 +188,59 @@ mod tests {
         );
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
         assert_eq!(names, vec!["list_agents", "send_to_agent", "create_spec"]);
+    }
+
+    #[test]
+    fn strip_harness_native_drops_fs_tool_names_the_sidecar_registers_itself() {
+        // Regression: the desktop sidecar launcher starts `aura_node`
+        // with `ENABLE_FS_TOOLS=true`, which registers `read_file`,
+        // `browse_files`, and `get_environment_info` natively. The
+        // ceo_tool_manifest also emits these names, so without this
+        // strip the sidecar forwards BOTH copies to Anthropic and the
+        // whole request 400s with `tools: Tool names must be unique.`.
+        let mut tools = vec![
+            tool_named("list_specs"),
+            tool_named("read_file"),
+            tool_named("browse_files"),
+            tool_named("send_to_agent"),
+            tool_named("get_environment_info"),
+        ];
+
+        let dropped = strip_harness_native_tool_names(&mut tools);
+
+        assert_eq!(
+            dropped,
+            vec![
+                "read_file".to_string(),
+                "browse_files".to_string(),
+                "get_environment_info".to_string(),
+            ],
+            "all three harness-native names must be dropped in input order"
+        );
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["list_specs", "send_to_agent"],
+            "only non-native tools should survive"
+        );
+    }
+
+    #[test]
+    fn strip_harness_native_is_a_noop_when_no_native_names_present() {
+        let mut tools = vec![
+            tool_named("list_specs"),
+            tool_named("send_to_agent"),
+            tool_named("create_spec"),
+        ];
+
+        let dropped = strip_harness_native_tool_names(&mut tools);
+
+        assert!(
+            dropped.is_empty(),
+            "strip must not touch anything when no harness-native names are present, dropped={dropped:?}"
+        );
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names, vec!["list_specs", "send_to_agent", "create_spec"]);
     }
 
     #[test]
