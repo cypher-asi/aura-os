@@ -36,6 +36,7 @@ const DEFAULT_FRONTEND_PORT: u16 = 5173;
 const HOST_STORAGE_KEY: &str = "aura-host-origin";
 const SESSION_STORAGE_KEY: &str = "aura-session";
 const JWT_STORAGE_KEY: &str = "aura-jwt";
+const INITIAL_BLANK_PAGE_URL: &str = "about:blank";
 const FRONTEND_DEV_SERVER_POLL_INTERVAL: Duration = Duration::from_secs(1);
 // Emergency-only rescue timer. The primary trigger to show the window is the
 // IPC `ready` signal from the frontend (scheduled in `main.tsx` after React's
@@ -1434,7 +1435,14 @@ fn create_main_webview(
 ) -> wry::WebView {
     let builder = WebViewBuilder::new_with_web_context(web_context)
         .with_background_color((0, 0, 0, 255))
-        .with_url(url)
+        // Start from a fresh blank document before navigating to the real app
+        // URL. This prevents WebView2 from briefly painting stale previous-run
+        // content (for example a cached `/login` page) while the new navigation
+        // is still spinning up. The real app URL is loaded immediately after
+        // the webview is built, and the desktop window remains hidden until the
+        // frontend posts `ready`, so users only ever see the current session's
+        // first committed frame.
+        .with_url(INITIAL_BLANK_PAGE_URL)
         .with_initialization_script(initialization_script)
         .with_ipc_handler(ipc_handler(proxy, main_window_id))
         .with_new_window_req_handler(|uri, _features| {
@@ -1453,6 +1461,10 @@ fn create_main_webview(
             .build_gtk(window.gtk_window())
             .expect("failed to build webview")
     };
+
+    webview
+        .load_url(url)
+        .expect("failed to load initial main webview url");
 
     webview
 }
