@@ -76,11 +76,44 @@ pub(crate) async fn dispatch_agent_tool(
 
     let tool = tool.clone();
     match tool.execute(args, &ctx).await {
-        Ok(result) => Ok(Json(serde_json::json!({
-            "tool": tool_name,
-            "is_error": result.is_error,
-            "content": result.content,
-        }))),
+        Ok(result) => {
+            // Log the serialized content byte size so a future
+            // context-bloat regression in any tool surfaces in logs
+            // without needing a user bug report. `list_agents` used to
+            // return multi-KB `NetworkAgent` records (personality /
+            // system_prompt) and a single call drove the CEO's context
+            // utilisation to 100% on the next turn — the harness's
+            // `Session.messages` vector is append-only, so every
+            // bloated tool_result rides along forever. The
+            // CONTENT_SIZE_WARN_BYTES threshold (8 KiB) is deliberately
+            // generous: typical slim tool outputs land well under 1
+            // KiB, so a warn here means something genuinely changed
+            // shape.
+            const CONTENT_SIZE_WARN_BYTES: usize = 8 * 1024;
+            let content_bytes = serde_json::to_string(&result.content)
+                .map(|s| s.len())
+                .unwrap_or(0);
+            if content_bytes > CONTENT_SIZE_WARN_BYTES {
+                warn!(
+                    tool = %tool_name,
+                    user = %user_id,
+                    org = %org_id,
+                    content_bytes,
+                    "agent tool result is large — possible context bloat"
+                );
+            } else {
+                info!(
+                    tool = %tool_name,
+                    content_bytes,
+                    "agent tool result ready"
+                );
+            }
+            Ok(Json(serde_json::json!({
+                "tool": tool_name,
+                "is_error": result.is_error,
+                "content": result.content,
+            })))
+        }
         Err(err) => {
             warn!(
                 tool = %tool_name,

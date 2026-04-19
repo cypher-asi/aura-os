@@ -1,8 +1,5 @@
 use async_trait::async_trait;
 use serde_json::json;
-use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
-use std::time::{Duration, Instant};
 
 use aura_os_core::{AgentId, ToolDomain};
 
@@ -12,88 +9,25 @@ use super::helpers::{
 use super::{AgentToolContext, AgentTool, ToolResult};
 use crate::AgentRuntimeError;
 
-/// How long a cached `list_agents` payload stays fresh.
+/// Render a `NetworkAgent` as the minimal summary the CEO needs to
+/// route a follow-up (`get_agent`, `send_to_agent`, ...).
 ///
-/// This sits on the *hot path* for CEO-preset chats — the user's first
-/// question in a new session ("who are my agents?" / "what's going on
-/// with agent X?") routes through `ListAgentsTool` before the LLM can
-/// frame its answer. Back-to-back turns inside the same conversation
-/// typically re-request the same data; caching for a few seconds makes
-/// the second and subsequent turns nearly free without noticeably
-/// delaying how soon fresh creates/deletes become visible.
-const AGENT_LIST_CACHE_TTL: Duration = Duration::from_secs(5);
-
-struct CachedPayload {
-    expires_at: Instant,
-    value: serde_json::Value,
-}
-
-type AgentToolCache = Mutex<HashMap<String, CachedPayload>>;
-
-static LIST_AGENTS_CACHE: LazyLock<AgentToolCache> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-static GET_AGENT_CACHE: LazyLock<AgentToolCache> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-fn cache_get(cache: &AgentToolCache, key: &str) -> Option<serde_json::Value> {
-    let now = Instant::now();
-    let mut guard = cache.lock().ok()?;
-    match guard.get(key) {
-        Some(entry) if entry.expires_at > now => Some(entry.value.clone()),
-        _ => {
-            guard.remove(key);
-            None
-        }
-    }
-}
-
-fn cache_put(cache: &AgentToolCache, key: String, value: serde_json::Value, ttl: Duration) {
-    let expires_at = Instant::now() + ttl;
-    if let Ok(mut guard) = cache.lock() {
-        guard.insert(key, CachedPayload { expires_at, value });
-    }
-}
-
-/// Render a `NetworkAgent` as a compact summary suitable for inclusion
-/// in the CEO's conversation history.
-///
-/// The raw `NetworkAgent` record includes `system_prompt` and
-/// `personality` strings that can each be multiple KB. Multiplied by a
-/// typical org fleet size (5-30 agents), a single `list_agents` call
-/// used to push tens of kilobytes of text into the LLM's context —
-/// which then rode along with every subsequent turn because the
-/// harness's `Session.messages` vector is append-only. That was the
-/// dominant cause of the "context filled up after two simple
-/// commands" bug.
-///
-/// The summary keeps only the fields the CEO needs to decide *which*
-/// agent to talk to (id/name/role/skills) and surface the catalog in
-/// chat UIs (icon/tags/listing status). When the CEO genuinely needs
-/// the full record it can call `get_agent` with `include_details: true`.
+/// `NetworkAgent` carries multi-KB `system_prompt` / `personality`
+/// strings plus marketplace fields (`revenue_usd`, `reputation`,
+/// `jobs`, `expertise`, ...). Emitting any of those from `list_agents`
+/// pushes tens of KB into the LLM's tool_result which then rides along
+/// with every subsequent turn (the harness `Session.messages` vector
+/// is append-only). Keep the shape to `{id, name, role}` — anything
+/// richer is a UI concern served by the Agent Library's `GET
+/// /api/agents` handler, not something that belongs in the LLM
+/// context. Callers that really want the full record can ask
+/// `get_agent` with `include_details=true`.
 fn to_agent_summary(agent: &aura_os_network::NetworkAgent) -> serde_json::Value {
     json!({
         "id": agent.id,
         "name": agent.name,
         "role": agent.role,
-        "icon": agent.icon,
-        "tags": agent.tags,
-        "listing_status": agent.listing_status,
-        "skills": agent.skills,
     })
-}
-
-/// Invalidate the cached `list_agents` / `get_agent` payloads.
-///
-/// Called from any tool that mutates the agent catalog so subsequent
-/// reads pull fresh data rather than serving a stale snapshot.
-pub(crate) fn invalidate_agent_caches() {
-    if let Ok(mut guard) = LIST_AGENTS_CACHE.lock() {
-        guard.clear();
-    }
-    if let Ok(mut guard) = GET_AGENT_CACHE.lock() {
-        guard.clear();
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -128,34 +62,20 @@ impl AgentTool for ListAgentsTool {
         ctx: &AgentToolContext,
     ) -> Result<ToolResult, AgentRuntimeError> {
         if let Some(network) = ctx.network_client.as_deref() {
-            let cache_key = format!("{}:{}", ctx.org_id, ctx.jwt);
-            if let Some(cached) = cache_get(&LIST_AGENTS_CACHE, &cache_key) {
-                return Ok(ToolResult {
-                    content: cached,
-                    is_error: false,
-                });
-            }
+            // Scope the catalog fetch to the caller's org. The
+            // unscoped `network.list_agents` hits the catalog-wide
+            // endpoint, which on marketplace-enabled backends returns
+            // every agent visible to the JWT — blowing both wire size
+            // and the resulting tool_result regardless of how small
+            // the org's real fleet is.
             let agents = network
-                .list_agents(&ctx.jwt)
+                .list_agents_by_org(&ctx.org_id, &ctx.jwt)
                 .await
                 .map_err(|e| tool_err("list_agents", e))?;
-            // Seed the local agent shadow with every discovered agent.
-            // Without this, `send_agent_event_stream`'s fallback path
-            // (`get_agent_local`) has nothing to return when the
-            // network lookup transiently flakes, turning a recoverable
-            // timeout into a spurious 404 for the CEO's `send_to_agent`.
-            ctx.agent_service.hydrate_shadow_from_network(&agents);
             let summaries: Vec<serde_json::Value> =
                 agents.iter().map(to_agent_summary).collect();
-            let value = serde_json::Value::Array(summaries);
-            cache_put(
-                &LIST_AGENTS_CACHE,
-                cache_key,
-                value.clone(),
-                AGENT_LIST_CACHE_TTL,
-            );
             return Ok(ToolResult {
-                content: value,
+                content: serde_json::Value::Array(summaries),
                 is_error: false,
             });
         }
@@ -171,9 +91,6 @@ impl AgentTool for ListAgentsTool {
                     "id": a.agent_id.to_string(),
                     "name": a.name,
                     "role": a.role,
-                    "icon": a.icon,
-                    "tags": a.tags,
-                    "skills": a.skills,
                 })
             })
             .collect();
@@ -231,38 +148,15 @@ impl AgentTool for GetAgentTool {
             .unwrap_or(false);
 
         if let Some(network) = ctx.network_client.as_deref() {
-            // Cache by (org, agent, jwt, include_details) so the slim
-            // and verbose variants can't shadow each other.
-            let cache_key = format!(
-                "{}:{}:{}:{}",
-                ctx.org_id, agent_id_str, ctx.jwt, include_details
-            );
-            if let Some(cached) = cache_get(&GET_AGENT_CACHE, &cache_key) {
-                return Ok(ToolResult {
-                    content: cached,
-                    is_error: false,
-                });
-            }
             let agent = network
                 .get_agent(agent_id_str, &ctx.jwt)
                 .await
                 .map_err(|e| tool_err("get_agent", e))?;
-            // Persist to the local shadow so downstream resolvers
-            // (e.g. `send_agent_event_stream`) have a fallback row if
-            // aura-network flakes on the next request.
-            ctx.agent_service
-                .hydrate_shadow_from_network(std::slice::from_ref(&agent));
             let value = if include_details {
                 serde_json::to_value(&agent).unwrap_or_default()
             } else {
                 to_agent_summary(&agent)
             };
-            cache_put(
-                &GET_AGENT_CACHE,
-                cache_key,
-                value.clone(),
-                AGENT_LIST_CACHE_TTL,
-            );
             return Ok(ToolResult {
                 content: value,
                 is_error: false,
@@ -283,9 +177,6 @@ impl AgentTool for GetAgentTool {
                 "id": agent.agent_id.to_string(),
                 "name": agent.name,
                 "role": agent.role,
-                "icon": agent.icon,
-                "tags": agent.tags,
-                "skills": agent.skills,
             })
         };
         Ok(ToolResult {
@@ -363,7 +254,6 @@ impl AgentTool for AssignAgentToProjectTool {
 
         let result: serde_json::Value = serde_json::from_str(&body_text)
             .unwrap_or_else(|_| json!({ "message": "Agent assigned successfully" }));
-        invalidate_agent_caches();
         Ok(ToolResult {
             content: result,
             is_error: false,
@@ -427,11 +317,7 @@ impl AgentTool for CreateAgentTool {
         if let Some(skills) = input["skills"].as_array() {
             body["skills"] = json!(skills);
         }
-        let result = network_post(network, "/api/agents", &ctx.jwt, &body).await;
-        if matches!(result, Ok(ref r) if !r.is_error) {
-            invalidate_agent_caches();
-        }
-        result
+        network_post(network, "/api/agents", &ctx.jwt, &body).await
     }
 }
 
@@ -489,11 +375,7 @@ impl AgentTool for UpdateAgentTool {
         if let Some(skills) = input["skills"].as_array() {
             body["skills"] = json!(skills);
         }
-        let result = network_put(network, &format!("/api/agents/{agent_id}"), &ctx.jwt, &body).await;
-        if matches!(result, Ok(ref r) if !r.is_error) {
-            invalidate_agent_caches();
-        }
-        result
+        network_put(network, &format!("/api/agents/{agent_id}"), &ctx.jwt, &body).await
     }
 }
 
@@ -537,11 +419,7 @@ impl AgentTool for DeleteAgentTool {
             });
         };
         let agent_id = require_str(&input, "agent_id")?;
-        let result = network_delete(network, &format!("/api/agents/{agent_id}"), &ctx.jwt).await;
-        if matches!(result, Ok(ref r) if !r.is_error) {
-            invalidate_agent_caches();
-        }
-        result
+        network_delete(network, &format!("/api/agents/{agent_id}"), &ctx.jwt).await
     }
 }
 
@@ -774,34 +652,36 @@ mod tests {
     }
 
     #[test]
-    fn to_agent_summary_drops_verbose_fields() {
+    fn to_agent_summary_is_id_name_role_only() {
+        // Guardrail: the `list_agents` tool_result rides along with
+        // every subsequent CEO turn via the harness's append-only
+        // `Session.messages`. Keep the shape strictly `{id, name,
+        // role}` — adding any richer field here (skills, tags,
+        // listing_status, icon, personality, system_prompt, ...) was
+        // how a single `list_agents` call used to push the context
+        // utilisation bar to 100% on two-turn chats. Anything richer
+        // is a UI concern served by `GET /api/agents`, not something
+        // that belongs in the LLM context.
         let agent = fixture_agent();
         let summary = to_agent_summary(&agent);
-        let rendered = serde_json::to_string(&summary).expect("serializes");
 
-        // Essentials present
-        assert!(rendered.contains("agent-1"));
-        assert!(rendered.contains("Barret"));
-        assert!(rendered.contains("engineer"));
-        assert!(rendered.contains("rust"));
-
-        // Verbose fields removed
-        assert!(
-            !rendered.contains(&"A".repeat(2000)),
-            "personality leaked into summary"
+        let obj = summary.as_object().expect("summary is a JSON object");
+        let keys: std::collections::BTreeSet<&str> =
+            obj.keys().map(String::as_str).collect();
+        assert_eq!(
+            keys,
+            ["id", "name", "role"].into_iter().collect(),
+            "to_agent_summary must emit exactly id/name/role; got {keys:?}"
         );
-        assert!(
-            !rendered.contains(&"S".repeat(5000)),
-            "system_prompt leaked into summary"
-        );
-        assert!(!rendered.contains("revenue_usd"));
-        assert!(!rendered.contains("reputation"));
-        assert!(!rendered.contains("\"jobs\""));
+        assert_eq!(obj["id"], "agent-1");
+        assert_eq!(obj["name"], "Barret");
+        assert_eq!(obj["role"], "engineer");
 
         // And the resulting payload is tiny compared to the raw record.
+        let rendered = serde_json::to_string(&summary).expect("serializes");
         let raw = serde_json::to_string(&agent).expect("serializes raw");
         assert!(
-            rendered.len() < raw.len() / 10,
+            rendered.len() < raw.len() / 20,
             "summary ({} bytes) not materially smaller than raw ({} bytes)",
             rendered.len(),
             raw.len()
