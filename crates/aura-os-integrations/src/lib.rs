@@ -468,14 +468,89 @@ fn legacy_org_integration_tool_manifest_entries() -> &'static [OrgIntegrationToo
 /// Falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>` for
 /// local-dev where the server and harness share a loopback interface.
 pub fn control_plane_api_base_url() -> String {
-    if let Some(url) = std::env::var("AURA_SERVER_BASE_URL")
-        .ok()
-        .map(|value| value.trim().trim_end_matches('/').to_string())
-        .filter(|value| !value.is_empty())
-    {
+    if let Some(url) = explicit_control_plane_base_url() {
         return url;
     }
 
+    let (_, fallback_url) = control_plane_api_base_url_fallback();
+    fallback_url
+}
+
+/// Error surfaced by [`control_plane_api_base_url_or_error`] when the
+/// derived fallback would stamp a loopback URL onto a manifest bound
+/// for a remote harness.
+///
+/// Carries the fallback URL the caller was about to ship so the
+/// operator-facing error message can name the offending value — the
+/// prod failure mode is the CEO agent POSTing `http://127.0.0.1:3100`
+/// from a swarm pod that has no loopback route to the control plane.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ControlPlaneBaseUrlError {
+    /// `AURA_SERVER_BASE_URL` is unset and the derived fallback points
+    /// at loopback, which a remote harness cannot reach. Carries the
+    /// fallback URL the caller was about to ship so the error message
+    /// can name the offending value.
+    MissingForRemoteHarness { fallback_url: String },
+}
+
+impl std::fmt::Display for ControlPlaneBaseUrlError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ControlPlaneBaseUrlError::MissingForRemoteHarness { fallback_url } => write!(
+                f,
+                "AURA_SERVER_BASE_URL must be set when the harness runs off-box; \
+                 refusing to ship `{fallback_url}` to the harness"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ControlPlaneBaseUrlError {}
+
+/// Fallible variant of [`control_plane_api_base_url`].
+///
+/// When `remote_harness` is `true` and `AURA_SERVER_BASE_URL` is unset
+/// AND the derived fallback host is loopback, returns
+/// [`ControlPlaneBaseUrlError::MissingForRemoteHarness`] so the caller
+/// can fail fast instead of silently shipping
+/// `http://127.0.0.1:<port>` to a harness running in a different pod
+/// / container / host (which manifests as
+/// `tcp connect error: ... os error 10061` on every cross-agent tool
+/// call the swarm harness tries to dispatch back to the control plane).
+///
+/// Callers that legitimately want the loopback default (the desktop
+/// `cargo run -p aura-os-desktop` path, in-process tests) keep
+/// calling the infallible [`control_plane_api_base_url`] helper, which
+/// is explicitly unchanged.
+pub fn control_plane_api_base_url_or_error(
+    remote_harness: bool,
+) -> Result<String, ControlPlaneBaseUrlError> {
+    if let Some(url) = explicit_control_plane_base_url() {
+        return Ok(url);
+    }
+
+    let (host, fallback_url) = control_plane_api_base_url_fallback();
+    if remote_harness && is_loopback_host(&host) {
+        return Err(ControlPlaneBaseUrlError::MissingForRemoteHarness { fallback_url });
+    }
+    Ok(fallback_url)
+}
+
+/// Trim + normalise the explicit `AURA_SERVER_BASE_URL` override, if
+/// present. Kept private so both entry points apply identical trimming
+/// rules (trailing slash + whitespace) to the explicit value.
+fn explicit_control_plane_base_url() -> Option<String> {
+    std::env::var("AURA_SERVER_BASE_URL")
+        .ok()
+        .map(|value| value.trim().trim_end_matches('/').to_string())
+        .filter(|value| !value.is_empty())
+}
+
+/// Build the `http://<host>:<port>` fallback used when
+/// `AURA_SERVER_BASE_URL` is unset. Returns the normalised host
+/// alongside the URL so the fallible variant can classify it without
+/// re-parsing the URL.
+fn control_plane_api_base_url_fallback() -> (String, String) {
     let port = std::env::var("AURA_SERVER_PORT")
         .ok()
         .filter(|value| !value.trim().is_empty())
@@ -491,7 +566,18 @@ pub fn control_plane_api_base_url() -> String {
         other => other.to_string(),
     };
 
-    format!("http://{normalized_host}:{port}")
+    let url = format!("http://{normalized_host}:{port}");
+    (normalized_host, url)
+}
+
+/// Classify a host string as loopback. Matches the canonical set the
+/// fallback helper can emit (`127.0.0.1`, `::1`, `[::1]`) plus the
+/// literal `localhost` since operators do set `AURA_SERVER_HOST=localhost`
+/// in some local-dev configs. Case-insensitive on the textual form.
+fn is_loopback_host(host: &str) -> bool {
+    let trimmed = host.trim();
+    let normalized = trimmed.trim_start_matches('[').trim_end_matches(']');
+    matches!(normalized, "127.0.0.1" | "::1") || normalized.eq_ignore_ascii_case("localhost")
 }
 
 fn available_workspace_integration_providers(integrations: &[OrgIntegration]) -> HashSet<&str> {
@@ -980,5 +1066,77 @@ mod tests {
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
         assert_eq!(control_plane_api_base_url(), "http://127.0.0.1:3100");
+    }
+
+    #[test]
+    fn control_plane_api_base_url_or_error_returns_ok_when_base_url_set() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(
+            control_plane_api_base_url_or_error(true).unwrap(),
+            "https://aura.example.com"
+        );
+    }
+
+    #[test]
+    fn control_plane_api_base_url_or_error_returns_ok_for_local_harness_fallback() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(
+            control_plane_api_base_url_or_error(false).unwrap(),
+            "http://127.0.0.1:3100"
+        );
+    }
+
+    #[test]
+    fn control_plane_api_base_url_or_error_errors_when_fallback_is_loopback_and_remote() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        let err = control_plane_api_base_url_or_error(true).unwrap_err();
+        assert_eq!(
+            err,
+            ControlPlaneBaseUrlError::MissingForRemoteHarness {
+                fallback_url: "http://127.0.0.1:3100".to_string(),
+            }
+        );
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("AURA_SERVER_BASE_URL"),
+            "error message must name the env var: {rendered}"
+        );
+        assert!(
+            rendered.contains("127.0.0.1:3100"),
+            "error message must name the offending fallback URL: {rendered}"
+        );
+    }
+
+    #[test]
+    fn control_plane_api_base_url_or_error_returns_ok_when_host_is_non_loopback() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::set("AURA_SERVER_HOST", "10.0.0.5");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(
+            control_plane_api_base_url_or_error(true).unwrap(),
+            "http://10.0.0.5:3100"
+        );
     }
 }

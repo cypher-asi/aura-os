@@ -68,6 +68,8 @@ async fn main() {
     let state =
         aura_os_server::build_app_state(&store_path).expect("failed to open local settings store");
 
+    validate_control_plane_base_url_config();
+
     let interface_dir = find_interface_dir();
     if let Some(ref dir) = interface_dir {
         info!(path = %dir.display(), "Serving interface");
@@ -90,4 +92,72 @@ async fn main() {
 
     let listener = TcpListener::bind(addr).await.expect("failed to bind");
     axum::serve(listener, app).await.expect("server error");
+}
+
+/// Boot-time sanity check: if the deployment looks like it'll route
+/// harness sessions off-box (a `SWARM_BASE_URL` is configured, or
+/// `LOCAL_HARNESS_URL` resolves to a non-loopback host) and
+/// `AURA_SERVER_BASE_URL` is unset, log a hard `warn!` naming the env
+/// var so the operator sees the real misconfig at deploy time rather
+/// than on the first cross-agent tool call hours later.
+///
+/// When `AURA_STRICT_CONFIG=1` is set the process also exits with
+/// status 1 — Render / CI can opt into fail-fast without breaking
+/// local-dev setups that rely on the loopback fallback.
+fn validate_control_plane_base_url_config() {
+    if !remote_harness_is_likely() {
+        return;
+    }
+    match aura_os_integrations::control_plane_api_base_url_or_error(true) {
+        Ok(_) => {}
+        Err(aura_os_integrations::ControlPlaneBaseUrlError::MissingForRemoteHarness {
+            fallback_url,
+        }) => {
+            warn!(
+                fallback_url = %fallback_url,
+                "AURA_SERVER_BASE_URL is unset but the harness target appears to be off-box; \
+                 cross-agent tool callbacks will attempt to reach `{fallback_url}` and fail. \
+                 Set AURA_SERVER_BASE_URL to the server's public URL."
+            );
+            if std::env::var("AURA_STRICT_CONFIG").as_deref() == Ok("1") {
+                warn!("AURA_STRICT_CONFIG=1 set; exiting due to control-plane base URL misconfig");
+                std::process::exit(1);
+            }
+        }
+    }
+}
+
+/// Heuristic mirror of
+/// [`aura_os_server::handlers::agents::harness_target::harness_target_is_remote`]
+/// without having access to a live agent's `machine_type`. Returns
+/// `true` when the process-level configuration suggests harness
+/// sessions will reach a non-loopback target. Intentionally kept crude
+/// — false positives cost a log line at boot, false negatives would
+/// mask the misconfig the guardrail is trying to surface.
+fn remote_harness_is_likely() -> bool {
+    let swarm_set = std::env::var("SWARM_BASE_URL")
+        .ok()
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false);
+    if swarm_set {
+        return true;
+    }
+    let Ok(raw) = std::env::var("LOCAL_HARNESS_URL") else {
+        return false;
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let Ok(parsed) = url::Url::parse(trimmed) else {
+        return false;
+    };
+    match parsed.host_str() {
+        Some(host) => {
+            let normalized = host.trim_start_matches('[').trim_end_matches(']');
+            !matches!(normalized, "127.0.0.1" | "::1")
+                && !normalized.eq_ignore_ascii_case("localhost")
+        }
+        None => false,
+    }
 }

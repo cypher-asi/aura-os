@@ -1,6 +1,7 @@
 mod chat;
 mod conversions;
 mod crud;
+pub(crate) mod harness_target;
 mod home_project;
 mod installed_tools;
 mod instances;

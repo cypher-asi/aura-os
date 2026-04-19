@@ -103,9 +103,7 @@ use aura_os_storage::StorageClient;
 use crate::dto::{ChatAttachmentDto, SendChatRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
-use crate::handlers::agents::workspace_tools::{
-    control_plane_api_base_url, installed_workspace_app_tools,
-};
+use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
 use crate::state::{AppState, AuthJwt, ChatSession};
@@ -136,6 +134,7 @@ use super::runtime::{
 /// integration tools (org-specific endpoints + auth) ahead of any
 /// identically-named cross-agent tool.
 #[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 async fn build_session_installed_tools(
     state: &AppState,
     org_id: Option<&OrgId>,
@@ -143,8 +142,9 @@ async fn build_session_installed_tools(
     jwt: &str,
     context: &'static str,
     agent_id: &str,
+    machine_type: &str,
     user_message: Option<&str>,
-) -> Option<Vec<InstalledTool>> {
+) -> ApiResult<Option<Vec<InstalledTool>>> {
     build_session_installed_tools_with_integrations(
         state,
         org_id,
@@ -152,6 +152,7 @@ async fn build_session_installed_tools(
         jwt,
         context,
         agent_id,
+        machine_type,
         user_message,
         None,
     )
@@ -166,9 +167,10 @@ async fn build_session_installed_tools_with_integrations(
     jwt: &str,
     context: &'static str,
     agent_id: &str,
+    machine_type: &str,
     user_message: Option<&str>,
     integrations: Option<&[aura_os_core::OrgIntegration]>,
-) -> Option<Vec<InstalledTool>> {
+) -> ApiResult<Option<Vec<InstalledTool>>> {
     let mut tools = if let Some(org_id) = org_id {
         match integrations {
             Some(ints) => {
@@ -211,12 +213,37 @@ async fn build_session_installed_tools_with_integrations(
         org_id_str.as_deref(),
         Some(agent_id),
     );
-    let base_url = control_plane_api_base_url();
+    // Resolve the URL stamped onto cross-agent endpoints. When the
+    // harness runs off-box (swarm pod / remote container) we refuse
+    // to ship a loopback fallback — the harness will POST into its
+    // own loopback and fail every cross-agent tool with
+    // `connection refused`. Surface a named error so the operator
+    // sees the real misconfig at session-init time instead of the
+    // downstream `os error 10061` from the harness.
+    let remote = crate::handlers::agents::harness_target::harness_target_is_remote(machine_type);
+    let base_url = match aura_os_integrations::control_plane_api_base_url_or_error(remote) {
+        Ok(url) => url,
+        Err(aura_os_integrations::ControlPlaneBaseUrlError::MissingForRemoteHarness {
+            fallback_url,
+        }) => {
+            error!(
+                agent_id = %agent_id,
+                context,
+                fallback_url = %fallback_url,
+                "refusing to ship loopback control-plane URL to remote harness; \
+                 set AURA_SERVER_BASE_URL to the server's public URL"
+            );
+            return Err(ApiError::internal(format!(
+                "AURA_SERVER_BASE_URL must be set when the harness runs off-box; \
+                 refusing to ship `{fallback_url}` to the harness"
+            )));
+        }
+    };
     aura_os_agent_tools::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
 
     dedupe_and_log_installed_tools(context, agent_id, &mut tools);
 
-    (!tools.is_empty()).then_some(tools)
+    Ok((!tools.is_empty()).then_some(tools))
 }
 
 // ---------------------------------------------------------------------------
@@ -2435,10 +2462,11 @@ pub(crate) async fn send_agent_event_stream(
         &jwt,
         "agent_chat",
         &agent_id.to_string(),
+        &agent.machine_type,
         Some(body.content.as_str()),
         org_integrations.as_deref(),
     )
-    .await;
+    .await?;
     let installed_integrations = match (agent.org_id.as_ref(), org_integrations.as_ref()) {
         (Some(_), Some(ints)) => {
             let installed =
@@ -2616,10 +2644,11 @@ pub(crate) async fn send_event_stream(
         &jwt,
         "instance_chat",
         &agent_instance_id.to_string(),
+        &instance.machine_type,
         Some(body.content.as_str()),
         org_integrations.as_deref(),
     )
-    .await;
+    .await?;
     let installed_integrations = match (instance.org_id.as_ref(), org_integrations.as_ref()) {
         (Some(_), Some(ints)) => {
             let installed =

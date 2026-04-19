@@ -22,10 +22,10 @@ use aura_os_link::InstalledTool;
 use aura_protocol::AgentPermissionsWire;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::handlers::agents::harness_target::harness_target_is_remote;
 use crate::handlers::agents::tool_dedupe::dedupe_installed_tools_by_name;
 use crate::handlers::agents::workspace_tools::{
-    control_plane_api_base_url, installed_workspace_app_tools,
-    installed_workspace_integrations_for_org_with_token,
+    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
 use crate::state::{AppState, AuthJwt};
 
@@ -107,8 +107,28 @@ pub(crate) async fn get_installed_tools_diagnostic(
     // stamps the control-plane base URL onto every cross-agent
     // endpoint before shipping the manifest to the harness. The
     // diagnostic must apply the exact same transform so the sidekick
-    // shows the endpoints the harness would actually invoke.
-    let base_url = control_plane_api_base_url();
+    // shows the endpoints the harness would actually invoke —
+    // including surfacing the same named error when the server would
+    // otherwise stamp a loopback URL onto a manifest bound for a
+    // remote harness.
+    let remote = harness_target_is_remote(&agent.machine_type);
+    let base_url = match aura_os_integrations::control_plane_api_base_url_or_error(remote) {
+        Ok(url) => url,
+        Err(aura_os_integrations::ControlPlaneBaseUrlError::MissingForRemoteHarness {
+            fallback_url,
+        }) => {
+            tracing::error!(
+                agent_id = %agent_id,
+                fallback_url = %fallback_url,
+                "refusing to ship loopback control-plane URL to remote harness; \
+                 set AURA_SERVER_BASE_URL to the server's public URL"
+            );
+            return Err(ApiError::internal(format!(
+                "AURA_SERVER_BASE_URL must be set when the harness runs off-box; \
+                 refusing to ship `{fallback_url}` to the harness"
+            )));
+        }
+    };
     absolutize_agent_tool_endpoints(&mut cross_agent_tools, &base_url);
     let integration_tools = if let Some(org_id) = agent.org_id.as_ref() {
         installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await
