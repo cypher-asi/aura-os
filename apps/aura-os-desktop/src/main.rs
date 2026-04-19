@@ -1863,6 +1863,21 @@ fn main() {
     let bootstrapped_auth = load_bootstrapped_auth_literals(&store_path);
     let (std_listener, server_port, url) = bind_listener();
 
+    // Sync the actually-bound loopback address back into the process
+    // env before `spawn_server` runs `build_app_state`. Without this,
+    // `aura_os_integrations::control_plane_api_base_url_fallback` reads
+    // an unset `AURA_SERVER_PORT` and stamps the hardcoded
+    // `http://127.0.0.1:3100` default onto
+    // `AgentRuntimeService.local_server_base_url` — but the embedded
+    // server binds to `PREFERRED_PORT` (19847) or an OS-chosen port,
+    // so every agent-runtime loopback callback
+    // (`send_to_agent`, `list_agents`, spec fetches, etc.) hits a
+    // closed port and surfaces as `external tool callback unreachable`.
+    // Explicit `AURA_SERVER_BASE_URL` overrides still win because
+    // `control_plane_api_base_url` checks that first.
+    std::env::set_var("AURA_SERVER_HOST", "127.0.0.1");
+    std::env::set_var("AURA_SERVER_PORT", server_port.to_string());
+
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
     let ide_proxy: Arc<EventLoopProxy<UserEvent>> = Arc::new(proxy.clone());
