@@ -13,6 +13,7 @@ use aura_os_projects::CreateProjectInput;
 use crate::dto::{CreateProjectRequest, ImportedProjectFile};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
+use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -249,7 +250,18 @@ pub(crate) async fn project_tool_session_config(
             .await;
     let installed_tools = match state.project_service.get_project(project_id).ok() {
         Some(project) => {
-            let tools = installed_workspace_app_tools(state, &project.org_id, jwt).await;
+            let mut tools = installed_workspace_app_tools(state, &project.org_id, jwt).await;
+            // Defensive: even though this path only concatenates workspace
+            // tools (no cross-agent tools), a malformed integration
+            // manifest or an MCP discovery that echoes a legacy name
+            // could still produce a duplicate. Funnelling through the
+            // shared helper keeps the "tool names must be unique"
+            // invariant observable in logs from every entry point.
+            dedupe_and_log_installed_tools(
+                "project_tool_session",
+                &project_id.to_string(),
+                &mut tools,
+            );
             if tools.is_empty() {
                 None
             } else {

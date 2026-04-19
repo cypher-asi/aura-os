@@ -17,9 +17,11 @@ use aura_os_agent_runtime::ceo::{
 };
 use aura_os_agent_runtime::tools::all_dispatchable_tool_names;
 use aura_os_core::{Agent, AgentId, AgentPermissions, Capability};
+use aura_os_link::InstalledTool;
 use aura_protocol::AgentPermissionsWire;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::handlers::agents::tool_dedupe::dedupe_installed_tools_by_name;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -63,6 +65,21 @@ pub(crate) struct AgentInstalledToolsDiagnostic {
     /// `Capability`-gated name that never got a concrete `AgentTool`
     /// implementation registered).
     pub missing_registrations: Vec<String>,
+    /// Tool names that collide between `workspace_tools` and
+    /// `cross_agent_tools`. Expected to be empty in normal operation —
+    /// any name listed here would have 400'd Anthropic with
+    /// `tools: Tool names must be unique.` prior to the server-side
+    /// dedupe. Kept in the diagnostic so the sidekick can surface
+    /// collisions that the harness resolves via first-occurrence
+    /// wins.
+    pub duplicate_names: Vec<String>,
+    /// Exact name list that `chat::build_session_installed_tools`
+    /// would ship to the harness for this agent today, after
+    /// first-occurrence-wins dedupe. Mirrors the `info!` line emitted
+    /// at `SessionInit`; surfacing it here lets the frontend verify
+    /// the list against the harness request body without re-running a
+    /// chat turn.
+    pub final_shipped_names: Vec<String>,
 }
 
 /// GET `/api/agents/:agent_id/installed-tools`
@@ -136,12 +153,24 @@ pub(crate) async fn get_installed_tools_diagnostic(
         .map(|row| row.name.clone())
         .collect();
 
+    // Mirror what `build_session_installed_tools` does at chat open
+    // time: concatenate workspace + cross-agent tools and run the
+    // shared dedupe. Integrations are not part of `tools[]` shipped to
+    // the LLM so they're excluded from this preview.
+    let mut shipped: Vec<InstalledTool> = workspace_tools.clone();
+    shipped.extend(cross_agent_tools.iter().cloned());
+    let duplicate_names = dedupe_installed_tools_by_name(&mut shipped);
+    let final_shipped_names: Vec<String> =
+        shipped.iter().map(|tool| tool.name.clone()).collect();
+
     Ok(Json(AgentInstalledToolsDiagnostic {
         agent_id: agent_id.to_string(),
         is_ceo_preset,
         agent_permissions: (&agent.permissions).into(),
         tools: rows,
         missing_registrations,
+        duplicate_names,
+        final_shipped_names,
     }))
 }
 

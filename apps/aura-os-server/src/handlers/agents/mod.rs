@@ -6,6 +6,7 @@ mod instances;
 mod marketplace_fields;
 mod runtime;
 mod sessions;
+pub(crate) mod tool_dedupe;
 pub(crate) mod workspace_tools;
 
 pub(crate) use chat::{

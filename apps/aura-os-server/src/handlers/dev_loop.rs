@@ -16,6 +16,7 @@ use aura_os_tasks::TaskService;
 use super::projects_helpers::resolve_agent_instance_workspace_path;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -1340,7 +1341,12 @@ pub(crate) async fn start_loop(
         .zip(project.as_ref().map(|project| &project.org_id))
     {
         Some((jwt, org_id)) => {
-            let tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            let mut tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            dedupe_and_log_installed_tools(
+                "dev_loop_start",
+                &project_id.to_string(),
+                &mut tools,
+            );
             (!tools.is_empty()).then_some(tools)
         }
         None => None,
@@ -1959,7 +1965,12 @@ pub(crate) async fn run_single_task(
         .zip(project.as_ref().map(|project| &project.org_id))
     {
         Some((jwt, org_id)) => {
-            let tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            let mut tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            dedupe_and_log_installed_tools(
+                "dev_loop_task",
+                &task_id.to_string(),
+                &mut tools,
+            );
             (!tools.is_empty()).then_some(tools)
         }
         None => None,

@@ -32,6 +32,7 @@ use aura_os_storage::StorageClient;
 
 use crate::dto::{ChatAttachmentDto, SendChatRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -52,21 +53,25 @@ use super::runtime::{
 /// Build the `installed_tools` payload for a harness chat session.
 ///
 /// Concatenates workspace + trusted-MCP tools (org-scoped, may be empty)
-/// with the cross-agent tools derived from `permissions`, then dedupes
-/// by tool name.
+/// with the cross-agent tools derived from `permissions`, then funnels
+/// the combined list through [`dedupe_and_log_installed_tools`] so the
+/// contract "no two tools share a name" is enforced in one place and
+/// the final shipped list is visible in logs for every session.
 ///
-/// The LLM API (Anthropic `/v1/messages`, OpenAI, etc.) rejects the
-/// whole request with a `400 Bad Request { "tools: Tool names must be
-/// unique." }` the moment the same tool name appears twice in the tools
-/// list, so we dedupe here and emit a `warn!` so any overlap shows up
-/// in logs instead of crashing the turn. First-occurrence wins — that
-/// keeps workspace / integration tools (org-specific endpoints + auth)
-/// ahead of any identically-named cross-agent tool.
+/// The Anthropic Messages API (and every other LLM provider we front)
+/// rejects the whole request with a `400 Bad Request { "tools: Tool
+/// names must be unique." }` the moment the same tool name appears
+/// twice in `tools[]`, so any collision here would 400 every turn of
+/// the session. First-occurrence wins — that keeps workspace /
+/// integration tools (org-specific endpoints + auth) ahead of any
+/// identically-named cross-agent tool.
 async fn build_session_installed_tools(
     state: &AppState,
     org_id: Option<&OrgId>,
     permissions: &AgentPermissions,
     jwt: &str,
+    context: &'static str,
+    agent_id: &str,
 ) -> Option<Vec<InstalledTool>> {
     let mut tools = if let Some(org_id) = org_id {
         installed_workspace_app_tools(state, org_id, jwt).await
@@ -77,35 +82,9 @@ async fn build_session_installed_tools(
         permissions,
     ));
 
-    let duplicates = dedupe_installed_tools_by_name(&mut tools);
-    if !duplicates.is_empty() {
-        warn!(
-            duplicate_tool_names = ?duplicates,
-            "dropped duplicate tool names from harness session installed_tools",
-        );
-    }
+    dedupe_and_log_installed_tools(context, agent_id, &mut tools);
 
     (!tools.is_empty()).then_some(tools)
-}
-
-/// Drop later entries with a tool `name` that was already seen earlier
-/// in `tools`. Returns the list of dropped names (in drop order) so the
-/// caller can log / alert.
-///
-/// Pure and deterministic so it's easy to unit-test and cheap to reason
-/// about from both chat entry points.
-fn dedupe_installed_tools_by_name(tools: &mut Vec<InstalledTool>) -> Vec<String> {
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut duplicates: Vec<String> = Vec::new();
-    tools.retain(|tool| {
-        if seen.insert(tool.name.clone()) {
-            true
-        } else {
-            duplicates.push(tool.name.clone());
-            false
-        }
-    });
-    duplicates
 }
 
 // ---------------------------------------------------------------------------
@@ -1847,6 +1826,8 @@ pub(crate) async fn send_agent_event_stream(
         agent.org_id.as_ref(),
         &agent.permissions,
         &jwt,
+        "agent_chat",
+        &agent_id.to_string(),
     )
     .await;
     let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
@@ -1982,6 +1963,8 @@ pub(crate) async fn send_event_stream(
         instance.org_id.as_ref(),
         &instance.permissions,
         &jwt,
+        "instance_chat",
+        &agent_instance_id.to_string(),
     )
     .await;
     let installed_integrations = if let Some(org_id) = instance.org_id.as_ref() {
@@ -2290,70 +2273,54 @@ mod tests {
         assert!(history.is_empty());
     }
 
-    fn tool_named(name: &str) -> InstalledTool {
-        InstalledTool {
-            name: name.to_string(),
-            description: String::new(),
-            input_schema: serde_json::json!({"type": "object"}),
-            endpoint: String::new(),
-            auth: aura_os_link::ToolAuth::default(),
-            timeout_ms: None,
-            namespace: None,
-            required_integration: None,
-            runtime_execution: None,
-            metadata: std::collections::HashMap::new(),
-        }
-    }
+    #[tokio::test]
+    async fn ceo_preset_installed_tools_are_unique_after_dedupe() {
+        // Regression: the CEO cross-agent manifest and the shared
+        // workspace tool manifest both emit `list_specs`, `create_spec`,
+        // `list_tasks`, `get_project`, `start_dev_loop`, etc. Without
+        // dedupe the combined list 400s Anthropic with
+        // `"tools: Tool names must be unique."` on every turn.
+        // This test exercises the full CEO wiring (real workspace
+        // manifest via `installed_workspace_app_tools` + real CEO
+        // cross-agent manifest) and pins the invariant that the final
+        // shipped list has unique names.
+        use crate::handlers::agents::tool_dedupe::dedupe_installed_tools_by_name;
+        use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
 
-    #[test]
-    fn dedupe_installed_tools_is_a_noop_when_all_names_are_unique() {
-        let mut tools = vec![
-            tool_named("list_agents"),
-            tool_named("send_to_agent"),
-            tool_named("create_spec"),
-        ];
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let state = crate::build_app_state(&store_path).expect("build app state");
+        let org_id = OrgId::new();
 
-        let dropped = dedupe_installed_tools_by_name(&mut tools);
+        let mut tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
+        tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
+            &AgentPermissions::ceo_preset(),
+        ));
 
+        let had_any_cross_agent_name = tools.iter().any(|t| t.name == "send_to_agent");
         assert!(
-            dropped.is_empty(),
-            "unique-name list must not drop anything, got: {dropped:?}"
+            had_any_cross_agent_name,
+            "sanity check: CEO cross-agent tools must be present before dedupe"
         );
+
+        let duplicates = dedupe_installed_tools_by_name(&mut tools);
+
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
-        assert_eq!(names, vec!["list_agents", "send_to_agent", "create_spec"]);
-    }
-
-    #[test]
-    fn dedupe_installed_tools_keeps_first_occurrence_and_drops_later_duplicates() {
-        // Scenario: a trusted MCP integration exposes `list_agents` with
-        // an org-scoped endpoint, and the CEO preset's cross-agent tool
-        // manifest also emits `list_agents`. Without dedup the harness
-        // ships both to the LLM API and the request 400s with
-        // `"tools: Tool names must be unique."`.
-        let mut workspace_list_agents = tool_named("list_agents");
-        workspace_list_agents.endpoint = "workspace-endpoint".to_string();
-        let mut cross_agent_list_agents = tool_named("list_agents");
-        cross_agent_list_agents.endpoint = "cross-agent-endpoint".to_string();
-
-        let mut tools = vec![
-            workspace_list_agents,
-            tool_named("send_to_agent"),
-            cross_agent_list_agents,
-            tool_named("send_to_agent"),
-        ];
-
-        let dropped = dedupe_installed_tools_by_name(&mut tools);
-
+        let unique_count = names
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
         assert_eq!(
-            dropped,
-            vec!["list_agents".to_string(), "send_to_agent".to_string()],
-            "second occurrences must be the ones dropped"
+            names.len(),
+            unique_count,
+            "CEO-preset tool list must be unique post-dedupe; dropped duplicates were: {duplicates:?}; final names: {names:?}"
         );
-        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
-        assert_eq!(names, vec!["list_agents", "send_to_agent"]);
-        assert_eq!(
-            tools[0].endpoint, "workspace-endpoint",
-            "first-occurrence wins so workspace (org-scoped) endpoint is preserved over the cross-agent copy"
-        );
+
+        // First-occurrence-wins is covered in
+        // `tool_dedupe::tests::dedupe_keeps_first_occurrence_and_drops_later_duplicates`.
+        // Here we only pin the most user-visible CEO invariant: the
+        // combined workspace + cross-agent list has no duplicate names
+        // so Anthropic won't 400 on session open.
     }
 }
