@@ -15,6 +15,14 @@ interface ProjectSettingsModalProps {
   onSaved: (project: Project) => void;
 }
 
+function resolveOrbitUrl(project: Project): string {
+  const owner = project.orbit_owner?.trim();
+  const repo = project.orbit_repo?.trim();
+  if (!owner || !repo) return "";
+  const base = (project.orbit_base_url?.trim() || "").replace(/\/+$/, "");
+  return base ? `${base}/${owner}/${repo}.git` : `${owner}/${repo}`;
+}
+
 export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettingsModalProps) {
   const [project, setProject] = useState<Project | null>(null);
   const [gitRepoUrl, setGitRepoUrl] = useState("");
@@ -30,6 +38,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
   const defaultWorkspacePath = project
     ? joinWorkspacePath(workspaceRoot, project.project_id)
     : "";
+  const orbitUrl = project ? resolveOrbitUrl(project) : "";
 
   useEffect(() => {
     if (!target) {
@@ -114,7 +123,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
       ) : (
         <div className={styles.formColumn}>
           <Text variant="muted" size="sm" className={styles.sectionLabel}>
-            Git / Orbit
+            Github
           </Text>
           <Input
             value={gitRepoUrl}
@@ -127,10 +136,18 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
             placeholder="Branch (e.g. main)"
           />
           <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
+            Orbit
+          </Text>
+          {orbitUrl ? (
+            <Input value={orbitUrl} readOnly disabled />
+          ) : (
+            <Text variant="muted" size="sm">No Orbit repo linked</Text>
+          )}
+          <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
             Local workspace
           </Text>
           <FolderPickerField
-            label="Local workspace folder (optional)"
+            label=""
             value={localWorkspacePath}
             onChange={setLocalWorkspacePath}
             disabled={saving}
