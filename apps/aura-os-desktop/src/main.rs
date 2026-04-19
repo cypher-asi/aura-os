@@ -38,6 +38,21 @@ const SESSION_STORAGE_KEY: &str = "aura-session";
 const JWT_STORAGE_KEY: &str = "aura-jwt";
 const INITIAL_BLANK_PAGE_URL: &str = "about:blank";
 const FRONTEND_DEV_SERVER_POLL_INTERVAL: Duration = Duration::from_secs(1);
+/// How long `main()` will block before creating the main webview waiting for
+/// the Vite dev server to become reachable. The goal is to avoid loading the
+/// axum-bundled frontend first and then hot-swapping to Vite via
+/// `main_webview.load_url` once it comes up — that swap is a full document
+/// teardown that the user perceives as "shell → black flash → shell again,
+/// then app loads". By polling up front we make sure the very first URL we
+/// navigate the webview to is already Vite, so the reveal is single-paint.
+///
+/// Only applies in debug builds (gated by `should_try_frontend_dev_server`).
+/// The fallback reveal timer (`WINDOW_SHOW_FALLBACK_DELAY`) still bounds the
+/// worst case if something upstream is much slower than expected, so a high
+/// timeout here is safe. Overridable via
+/// `AURA_DESKTOP_FRONTEND_DEV_READY_TIMEOUT_MS` (set to `0` to skip the wait).
+const FRONTEND_DEV_SERVER_READY_TIMEOUT: Duration = Duration::from_secs(8);
+const FRONTEND_DEV_SERVER_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 // Emergency-only rescue timer. The primary trigger to show the window is the
 // IPC `ready` signal from the frontend (scheduled in `main.tsx` after React's
 // first committed paint). The old 3 s value was short enough to routinely
@@ -818,36 +833,88 @@ fn resolve_frontend_target_with_probe(
     }
 }
 
-fn resolve_frontend_target(
-    server_url: &str,
-    frontend_dev_candidate: Option<&FrontendDevServerCandidate>,
-) -> FrontendTarget {
-    let frontend_dev_server_available =
-        frontend_dev_candidate.is_some_and(|candidate| probe_vite_dev_server(&candidate.probe_url));
-    let frontend_target = resolve_frontend_target_with_probe(
-        server_url,
-        frontend_dev_candidate,
-        frontend_dev_server_available,
-    );
-
-    if let Some(candidate) = frontend_dev_candidate {
-        if frontend_target.using_frontend_dev_server {
-            info!(
-                frontend = %candidate.probe_url,
-                backend = %server_url,
-                "using Vite frontend dev server"
-            );
-        }
-    }
-
-    frontend_target
-}
-
 fn should_poll_for_frontend_dev_server(
     using_frontend_dev_server: bool,
     frontend_dev_candidate: Option<&FrontendDevServerCandidate>,
 ) -> bool {
     frontend_dev_candidate.is_some() && !using_frontend_dev_server
+}
+
+fn configured_frontend_dev_server_ready_timeout() -> Duration {
+    match env_string("AURA_DESKTOP_FRONTEND_DEV_READY_TIMEOUT_MS")
+        .and_then(|value| value.parse::<u64>().ok())
+    {
+        Some(ms) => Duration::from_millis(ms),
+        None => FRONTEND_DEV_SERVER_READY_TIMEOUT,
+    }
+}
+
+/// Polls `probe` at `interval` until it returns `true` or `timeout` elapses.
+/// Returns whether the probe ever returned `true`. Factored out so tests can
+/// inject a deterministic probe without touching the network.
+///
+/// `timeout == 0` skips the wait entirely and returns the result of a single
+/// synchronous probe (the caller's existing one-shot behavior).
+fn wait_for_frontend_dev_server_with_probe<F: FnMut() -> bool>(
+    mut probe: F,
+    timeout: Duration,
+    interval: Duration,
+) -> bool {
+    if timeout.is_zero() {
+        return probe();
+    }
+    let deadline = std::time::Instant::now() + timeout;
+    loop {
+        if probe() {
+            return true;
+        }
+        let now = std::time::Instant::now();
+        if now >= deadline {
+            return false;
+        }
+        let remaining = deadline - now;
+        std::thread::sleep(interval.min(remaining));
+    }
+}
+
+/// Block the current thread (up to `timeout`) until the Vite dev server at
+/// `candidate.probe_url` responds. Called before `create_main_webview` so the
+/// webview's first navigation can go straight to Vite and avoid the visible
+/// "axum bundle first, then reload into Vite" flash.
+fn wait_for_frontend_dev_server(
+    candidate: &FrontendDevServerCandidate,
+    timeout: Duration,
+) -> bool {
+    if timeout.is_zero() {
+        return probe_vite_dev_server(&candidate.probe_url);
+    }
+    info!(
+        frontend = %candidate.probe_url,
+        timeout_ms = timeout.as_millis() as u64,
+        "waiting for Vite frontend dev server before creating webview"
+    );
+    let started_at = std::time::Instant::now();
+    let probe_url = candidate.probe_url.clone();
+    let ready = wait_for_frontend_dev_server_with_probe(
+        || probe_vite_dev_server(&probe_url),
+        timeout,
+        FRONTEND_DEV_SERVER_READY_POLL_INTERVAL,
+    );
+    let elapsed_ms = started_at.elapsed().as_millis() as u64;
+    if ready {
+        info!(
+            frontend = %candidate.probe_url,
+            elapsed_ms,
+            "Vite frontend dev server reachable before webview creation"
+        );
+    } else {
+        warn!(
+            frontend = %candidate.probe_url,
+            elapsed_ms,
+            "Vite frontend dev server not reachable before timeout; falling back to bundled frontend (a reload swap may flash when it does come up)"
+        );
+    }
+    ready
 }
 
 fn spawn_frontend_dev_server_poller(
@@ -1157,8 +1224,11 @@ mod tests {
         build_frontend_dev_server_candidate, build_frontend_dev_server_config,
         build_initialization_script, interface_dir_candidates, is_local_bind_host, parse_host_port,
         resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
+        wait_for_frontend_dev_server_with_probe,
     };
+    use std::cell::Cell;
     use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
 
     #[test]
     #[cfg(target_os = "windows")]
@@ -1288,6 +1358,80 @@ mod tests {
         assert_eq!(target.url, server_url);
         assert_eq!(target.host_origin, None);
         assert!(!target.using_frontend_dev_server);
+    }
+
+    #[test]
+    fn wait_for_frontend_dev_server_returns_early_when_probe_succeeds() {
+        let calls = Cell::new(0_u32);
+        let started_at = Instant::now();
+
+        let ready = wait_for_frontend_dev_server_with_probe(
+            || {
+                let count = calls.get() + 1;
+                calls.set(count);
+                count >= 3
+            },
+            Duration::from_secs(5),
+            Duration::from_millis(5),
+        );
+
+        assert!(ready, "probe eventually succeeded, wait must return true");
+        assert_eq!(
+            calls.get(),
+            3,
+            "wait must stop calling the probe as soon as it returns true"
+        );
+        assert!(
+            started_at.elapsed() < Duration::from_secs(1),
+            "early-success path must not consume the full timeout"
+        );
+    }
+
+    #[test]
+    fn wait_for_frontend_dev_server_returns_false_after_timeout() {
+        let calls = Cell::new(0_u32);
+        let timeout = Duration::from_millis(60);
+        let started_at = Instant::now();
+
+        let ready = wait_for_frontend_dev_server_with_probe(
+            || {
+                calls.set(calls.get() + 1);
+                false
+            },
+            timeout,
+            Duration::from_millis(10),
+        );
+
+        assert!(!ready, "probe never succeeded, wait must return false");
+        assert!(
+            calls.get() >= 1,
+            "wait must probe at least once before timing out"
+        );
+        assert!(
+            started_at.elapsed() >= timeout,
+            "wait must honor the full timeout before giving up"
+        );
+    }
+
+    #[test]
+    fn wait_for_frontend_dev_server_with_zero_timeout_probes_once() {
+        let calls = Cell::new(0_u32);
+
+        let ready = wait_for_frontend_dev_server_with_probe(
+            || {
+                calls.set(calls.get() + 1);
+                true
+            },
+            Duration::ZERO,
+            Duration::from_millis(10),
+        );
+
+        assert!(ready);
+        assert_eq!(
+            calls.get(),
+            1,
+            "zero-timeout wait must not loop — it's a single synchronous probe"
+        );
     }
 
     #[test]
@@ -1902,7 +2046,33 @@ fn main() {
         frontend_dev_server_config.as_ref(),
         frontend_dev_candidate.as_ref(),
     );
-    let frontend_target = resolve_frontend_target(&url, frontend_dev_candidate.as_ref());
+    // Block briefly for the Vite dev server before creating the webview so
+    // the first (and ideally only) navigation is the Vite URL. Without this,
+    // dev boots often navigate the webview to the axum-bundled frontend
+    // first, then hot-swap to Vite via `load_url` once it comes up — the
+    // swap tears the document down, exposing the black `<body>` background
+    // for the duration of Vite's boot. Users perceive that as "shell → black
+    // flash → shell again, then app loads".
+    let frontend_dev_server_available = match frontend_dev_candidate.as_ref() {
+        Some(candidate) => {
+            wait_for_frontend_dev_server(candidate, configured_frontend_dev_server_ready_timeout())
+        }
+        None => false,
+    };
+    let frontend_target = resolve_frontend_target_with_probe(
+        &url,
+        frontend_dev_candidate.as_ref(),
+        frontend_dev_server_available,
+    );
+    if let Some(candidate) = frontend_dev_candidate.as_ref() {
+        if frontend_target.using_frontend_dev_server {
+            info!(
+                frontend = %candidate.probe_url,
+                backend = %url,
+                "using Vite frontend dev server"
+            );
+        }
+    }
     let initial_frontend_base_url = frontend_target.url.clone();
     let initial_frontend_url = apply_restore_route(
         &initial_frontend_base_url,
