@@ -36,7 +36,15 @@ export interface ContextUsageResponse {
 }
 
 export const agentTemplatesApi = {
-  list: () => apiFetch<Agent[]>("/api/agents"),
+  // `orgId` scopes the listing to the full org fleet (every member's
+  // agents, not just the caller's). Without it aura-network filters by
+  // `WHERE user_id = $1`, which means teammates' agents never appear.
+  // The server forwards the query to aura-network which verifies org
+  // membership before dropping the user_id filter.
+  list: (orgId?: string) => {
+    const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}` : "";
+    return apiFetch<Agent[]>(`/api/agents${qs}`);
+  },
   create: (data: {
     org_id?: string;
     name: string;

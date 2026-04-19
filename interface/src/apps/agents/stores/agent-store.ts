@@ -7,6 +7,7 @@ import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
 import { BROWSER_DB_STORES, browserDbGet, browserDbSet } from "../../../lib/browser-db";
 import { useAuthStore } from "../../../stores/auth-store";
+import { useOrgStore } from "../../../stores/org-store";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
@@ -153,8 +154,17 @@ export const useAgentStore = create<AgentState>()(
           set({ agentsStatus: "loading", agentsError: null });
         }
 
+        // Scope the listing to the user's active org so the sidebar
+        // shows the full org fleet (every member's agents), matching
+        // what the CEO's `list_agents` tool sees. Without `org_id`
+        // aura-network filters by `WHERE user_id = $1` and the user
+        // only sees agents they created themselves — hiding
+        // teammates' agents. `activeOrg` may briefly be null on first
+        // mount before `refreshOrgs()` settles; in that window we
+        // fall back to the unscoped list (current behaviour).
+        const activeOrgId = useOrgStore.getState().activeOrg?.org_id;
         agentsFetchPromise = api.agents
-          .list()
+          .list(activeOrgId)
           .then(async (initialAgents) => {
             let agents = initialAgents;
             const superAgents = agents.filter((a) => isSuperAgent(a));
@@ -169,7 +179,7 @@ export const useAgentStore = create<AgentState>()(
               try {
                 const { deleted } = await api.superAgent.cleanup();
                 if (deleted.length > 0) {
-                  agents = await api.agents.list();
+                  agents = await api.agents.list(activeOrgId);
                 }
               } catch {
                 // cleanup is best-effort; stale duplicates will stick

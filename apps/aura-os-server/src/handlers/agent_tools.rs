@@ -31,6 +31,14 @@ use tracing::{info, warn};
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt, AuthSession};
 
+/// Sentinel used when we genuinely have no org context at all (no
+/// header stamped by the harness AND no network client available to
+/// resolve the caller's membership). Tools that do org-scoped I/O
+/// (`list_agents_by_org`, etc.) should treat this exactly the same as
+/// "no org supplied" so the server falls back to the user-scoped
+/// query instead of sending a bogus literal to aura-network.
+const DEFAULT_ORG_SENTINEL: &str = "default";
+
 /// `X-Aura-Org-Id` header the harness forwards from the session init
 /// payload so the dispatcher doesn't have to re-resolve the org on
 /// every tool call.
@@ -63,7 +71,7 @@ pub(crate) async fn dispatch_agent_tool(
     }
 
     let user_id = auth_session.user_id.as_str();
-    let org_id = resolve_org_id(&headers, &sas, &jwt, user_id).await;
+    let org_id = resolve_org_id(&headers, &state, &jwt, user_id).await;
 
     let ctx = sas.build_context(user_id, &org_id, &jwt);
 
@@ -125,10 +133,27 @@ pub(crate) async fn dispatch_agent_tool(
     }
 }
 
+/// Resolve the org id the tool should run under.
+///
+/// Resolution order:
+/// 1. `X-Aura-Org-Id` header (set by `stamp_agent_tool_auth` whenever
+///    the chatting agent carries an `org_id`).
+/// 2. Live lookup against aura-network — pick the first org the JWT
+///    has membership in via `client.list_orgs(jwt)`. This is the
+///    fallback path for cases where the session was opened without an
+///    agent `org_id` (bootstrap-seeded CEO on a fresh install, older
+///    harness that didn't forward the header, direct curl, ...).
+///
+/// If neither yields a real org id we fall back to
+/// [`DEFAULT_ORG_SENTINEL`]. Tools that care — `ListAgentsTool` in
+/// particular — must recognize the sentinel and degrade gracefully
+/// (e.g. by calling the unscoped `list_agents(jwt)` instead of sending
+/// `?org_id=default` to aura-network, which would 403 because nobody
+/// is a member of that string-literal org).
 async fn resolve_org_id(
     headers: &HeaderMap,
-    _sas: &std::sync::Arc<aura_os_agent_runtime::AgentRuntimeService>,
-    _jwt: &str,
+    state: &AppState,
+    jwt: &str,
     _user_id: &str,
 ) -> String {
     if let Some(org) = headers
@@ -138,7 +163,24 @@ async fn resolve_org_id(
     {
         return org.to_string();
     }
-    "default".to_string()
+
+    if let Some(ref client) = state.network_client {
+        match client.list_orgs(jwt).await {
+            Ok(orgs) => {
+                if let Some(first) = orgs.into_iter().next() {
+                    return first.id;
+                }
+            }
+            Err(err) => {
+                warn!(
+                    error = %err,
+                    "resolve_org_id: list_orgs failed; falling back to default sentinel"
+                );
+            }
+        }
+    }
+
+    DEFAULT_ORG_SENTINEL.to_string()
 }
 
 #[cfg(test)]

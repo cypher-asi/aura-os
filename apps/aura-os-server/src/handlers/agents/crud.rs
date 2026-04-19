@@ -1,8 +1,8 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use futures_util::future::join_all;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, HarnessMode};
@@ -745,12 +745,29 @@ enum SwarmAgentReadyError {
     Parse(String),
 }
 
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct ListAgentsQuery {
+    /// When set, return the fleet for this organization (every member's
+    /// agents, not just the caller's). Mirrors aura-network's
+    /// `/api/agents?org_id=...` contract — the aura-network handler
+    /// verifies membership before dropping the user_id filter, so
+    /// passing an arbitrary org id safely 403s instead of leaking.
+    pub org_id: Option<String>,
+}
+
 pub(crate) async fn list_agents(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    Query(query): Query<ListAgentsQuery>,
 ) -> ApiResult<Json<Vec<Agent>>> {
     if let Some(ref client) = state.network_client {
-        let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
+        let net_agents = match query.org_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+            Some(org_id) => client
+                .list_agents_by_org(org_id, &jwt)
+                .await
+                .map_err(map_network_error)?,
+            None => client.list_agents(&jwt).await.map_err(map_network_error)?,
+        };
         let agents: Vec<Agent> = net_agents
             .iter()
             .map(|na| {

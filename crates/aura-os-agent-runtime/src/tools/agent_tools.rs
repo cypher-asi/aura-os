@@ -62,16 +62,30 @@ impl AgentTool for ListAgentsTool {
         ctx: &AgentToolContext,
     ) -> Result<ToolResult, AgentRuntimeError> {
         if let Some(network) = ctx.network_client.as_deref() {
-            // Scope the catalog fetch to the caller's org. The
-            // unscoped `network.list_agents` hits the catalog-wide
-            // endpoint, which on marketplace-enabled backends returns
-            // every agent visible to the JWT — blowing both wire size
-            // and the resulting tool_result regardless of how small
-            // the org's real fleet is.
-            let agents = network
-                .list_agents_by_org(&ctx.org_id, &ctx.jwt)
-                .await
-                .map_err(|e| tool_err("list_agents", e))?;
+            // Scope the catalog fetch to the caller's org so the CEO
+            // sees every teammate's agent in the org, not just the
+            // ones owned by the JWT's user_id. aura-network's
+            // `list_agents?org_id=X` drops the user_id filter (and
+            // authorizes via org membership) once org_id is supplied.
+            //
+            // Guard against the `DEFAULT_ORG_SENTINEL` string used by
+            // the server dispatcher when it genuinely can't resolve an
+            // org: sending `?org_id=default` to aura-network will 403
+            // because nobody is a member of that literal. Fall back
+            // to the user-scoped call in that case so the CEO at
+            // least sees its own bootstrap-seeded agents.
+            let trimmed = ctx.org_id.trim();
+            let agents = if trimmed.is_empty() || trimmed == "default" {
+                network
+                    .list_agents(&ctx.jwt)
+                    .await
+                    .map_err(|e| tool_err("list_agents", e))?
+            } else {
+                network
+                    .list_agents_by_org(trimmed, &ctx.jwt)
+                    .await
+                    .map_err(|e| tool_err("list_agents", e))?
+            };
             let summaries: Vec<serde_json::Value> =
                 agents.iter().map(to_agent_summary).collect();
             return Ok(ToolResult {
