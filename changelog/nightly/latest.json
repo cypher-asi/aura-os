@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-19T19:16:52.684Z",
+  "generatedAt": "2026-04-19T21:21:50.907Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.306.1",
+  "version": "0.1.0-nightly.308.1",
   "date": "2026-04-19",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.306.1",
-  "lastIncludedSha": "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199",
-  "previousProcessedSha": "aa94703709882a88ade8265d8db21308009bb1c5",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.308.1",
+  "lastIncludedSha": "b716c728a8631a6ff3b5d131f0123c6a5690426a",
+  "previousProcessedSha": "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199",
   "commitShas": [
     "3d4c839b65169d5a1852816536cb22b46ee6da4b",
     "712e572667787d6ac72e767473314803b57adc38",
@@ -148,10 +148,12 @@
     "537b800758be42d97636b86f48d7ffc697ae56cf",
     "eac0e7a62c2edbe53dd37aadaea795c006b0b821",
     "aa94703709882a88ade8265d8db21308009bb1c5",
-    "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199"
+    "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199",
+    "219bd35408803a3ace9b4670501f57d0c313357f",
+    "b716c728a8631a6ff3b5d131f0123c6a5690426a"
   ],
-  "rawCommitCount": 141,
-  "filteredCommitCount": 137,
+  "rawCommitCount": 143,
+  "filteredCommitCount": 139,
   "rawCommits": [
     {
       "sha": "3d4c839b65169d5a1852816536cb22b46ee6da4b",
@@ -6893,6 +6895,78 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "219bd35408803a3ace9b4670501f57d0c313357f",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-19T17:00:06-04:00",
+      "subject": "Fix iOS API-key review submission precheck",
+      "body": "",
+      "parents": [
+        "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199"
+      ],
+      "files": [
+        "interface/ios/fastlane/Fastfile"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 4,
+        "deletions": 0
+      },
+      "committedAtMs": 1776632406000,
+      "cleanSubject": "Fix iOS API-key review submission precheck",
+      "keywords": [
+        "review",
+        "submission",
+        "precheck"
+      ],
+      "fileGroups": [
+        "interface/ios/fastlane"
+      ],
+      "primaryArea": "iOS",
+      "areas": [
+        "iOS"
+      ]
+    },
+    {
+      "sha": "b716c728a8631a6ff3b5d131f0123c6a5690426a",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-19T17:10:20-04:00",
+      "subject": "Fix iOS export compliance submission",
+      "body": "",
+      "parents": [
+        "219bd35408803a3ace9b4670501f57d0c313357f"
+      ],
+      "files": [
+        "interface/ios/App/App/Info.plist",
+        "interface/ios/fastlane/Fastfile"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 5,
+        "deletions": 0
+      },
+      "committedAtMs": 1776633020000,
+      "cleanSubject": "Fix iOS export compliance submission",
+      "keywords": [
+        "export",
+        "compliance",
+        "submission"
+      ],
+      "fileGroups": [
+        "interface/ios/App",
+        "interface/ios/fastlane"
+      ],
+      "primaryArea": "iOS",
+      "areas": [
+        "iOS"
+      ]
     }
   ],
   "batchCount": 6,
@@ -6904,36 +6978,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 5130351
+          "sizeBytes": 5130327
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.306.1",
+      "version": "0.1.0-nightly.308.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 28082328
+          "sizeBytes": 28086558
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 95390200
+          "sizeBytes": 95394296
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -6943,29 +7017,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.306.1",
+      "version": "0.1.0-nightly.308.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.306.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.308.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 24506949
+          "sizeBytes": 24506990
         },
         {
-          "name": "Aura_0.1.0-nightly.306.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.308.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 24318780
+          "sizeBytes": 24317448
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -6975,29 +7049,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.306.1",
+      "version": "0.1.0-nightly.308.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.306.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.308.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 26086056
+          "sizeBytes": 26085609
         },
         {
-          "name": "Aura_0.1.0-nightly.306.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.308.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 25944262
+          "sizeBytes": 25944496
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -7007,17 +7081,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.306.1",
+      "version": "0.1.0-nightly.308.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 16935164
+          "sizeBytes": 16932790
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.306.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.308.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -7026,29 +7100,34 @@
     }
   ],
   "rendered": {
-    "title": "Unified agents, embedded browser, and a flash-free desktop boot",
-    "intro": "A dense day across Aura: the super-agent concept collapsed into a single permissions-driven Agent model, a Chromium-backed browser tab and Talent Marketplace landed in the sidekick, the CEO's cross-agent tooling was hardened end-to-end, and the desktop app finally boots straight into the shell without a login flash. Release tooling also picked up immutable updater URLs, a standalone changelog workflow, and automated mobile release lanes.",
+    "title": "Unified agents, a new browser sidekick, and a flash-free desktop boot",
+    "intro": "A dense day across Aura: the super-agent plumbing collapsed into a single permissions-driven Agent model, a Chromium-backed browser tab landed in the Projects sidekick, a new Talent Marketplace and Integrations app arrived, and a long chain of chat, context, and boot-time fixes made the CEO experience and desktop startup dramatically tighter. Release infrastructure and mobile pipelines were also overhauled.",
     "entries": [
       {
         "time_label": "6:15 PM",
         "started_at": "2026-04-18T01:15:22.000Z",
         "ended_at": "2026-04-19T07:06:56.000Z",
-        "title": "Unified Agent model, embedded browser, and marketplace scaffolding",
-        "summary": "A long evening batch that rebuilt super-agents around AgentPermissions, shipped a Chromium-backed browser inside the projects sidekick, scaffolded the Talent Marketplace app, and landed a deep round of CEO chat reliability fixes.",
+        "title": "Unified Agent model, CEO chat plumbing, and a Chromium browser sidekick",
+        "summary": "A sweeping day-long push collapsed super-agents into a single permissions-driven Agent model, shipped a project-aware browser tab backed by Chromium CDP, added the Talent Marketplace and a dedicated Integrations app, and chased down an extensive chain of CEO chat routing, context, and tool-wiring bugs.",
         "items": [
           {
-            "text": "Collapsed the dedicated super-agent stack into a single Agent model: CEO status is now derived from AgentPermissions (universe scope + core capabilities), the in-process SuperAgentStream and host-mode env vars are gone, and every chat turn routes through the unified harness path. The interface drops the Local/Cloud toggle and exposes a read-only permissions summary instead.",
+            "text": "Collapsed the dedicated super-agent path into a single Agent model whose CEO status is derived from AgentPermissions, retired the legacy in-process SuperAgentStream, renamed the super-agent crates to aura-os-agent-{runtime,templates}, and reworked the interface to detect CEOs from permissions instead of tags or role.",
             "commit_shas": [
+              "2419f499ff2a40086b9cafddef502edcbdc80f64",
+              "d147923691438b6f3b8d5a2c9cce99943ca13ec9",
+              "17855d80962dccd0b8ec6b6d02e61a1e34575e98",
+              "505dfb921c00a47583727c40e70ad7f33e350f19",
+              "e100b416d600681461a6701857d6a146273c4224",
               "7fbb3a1d633899248c483cd0641ced5742b06b06",
               "926ac39a2785ebff5c55e438ac06c6c4139ce78e",
-              "e100b416d600681461a6701857d6a146273c4224",
               "78683e4c68c668c7cbe4960818d5875b5bddb85e",
-              "64f9f819db7920d01836c857f60f5f9a11afd91e"
+              "9ba6107af586eadd03e713f90ea61be304345f4c",
+              "79b0904e8f82a26d8586bf0e1e4c421ec1f3ffe6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a projects-sidekick Browser tab backed by a new aura-os-browser crate and a Chromium/CDP backend: real input, accurate navigation, backpressured screencast, per-user session ownership, project-scoped authz, auto-discovered Chrome/Edge executables, and isolated temp profiles. The UI ships tabs, an address bar that normalizes bare hostnames, and fixes non-inverted wheel deltas.",
+            "text": "Added a project-aware browser tab to the Projects sidekick with a new aura-os-browser crate, a Chromium CDP backend with interactive input, per-user session ownership, project-scoped authz, executable auto-discovery, address-bar URL normalization, and correct wheel-delta forwarding.",
             "commit_shas": [
               "a50892f6c1f026f87739aaaeb888a9b5d41b969c",
               "c93e583e649b3ad1cdae97b996da432a94e086cc",
@@ -7056,66 +7135,76 @@
               "3b75b9472a6c38c0a6ecae5ed30f590faf403614",
               "350f2c5fc5731173aed2551b3d3423f401a6282b",
               "ff91081e16f7c09d4c47c5d5f84fee260a4902bf",
-              "440e296b5586cc9f72582211d8a8d30f30052c95",
-              "7c763d2a35db2c9bf9200f4b0524fd885df7270b"
+              "7c763d2a35db2c9bf9200f4b0524fd885df7270b",
+              "440e296b5586cc9f72582211d8a8d30f30052c95"
             ],
             "confidence": "high"
           },
           {
-            "text": "Scaffolded the Agent Talent Marketplace as a first-class app with GET /api/marketplace/agents (sort/filter/search/pagination), canonical listing_status and expertise fields, a backfill script, and a new Marketplace left menu, talent cards, and Hire flow. Providers were split out of Integrations into their own group behind a feature flag.",
+            "text": "Shipped a scaffold of the Agent Talent Marketplace as a top-level app with list/sort/filter endpoints, canonical expertise slugs, a migration for listing_status/expertise fields, and a new Integrations app that breaks provider management out of Team Settings and groups AI providers under their own header.",
             "commit_shas": [
               "3e1896073f1e4ab0cd5c76fcf37e0be8f6369c31",
+              "f93027d5c5a93d94beda0ea7e897d41740578a08",
+              "ac48a2cd535b76a71d830a4c67f91ac489bbf90b",
               "889c5dbfb3c33d65d95ebde556ce1bd44b6fb2a9",
-              "1dca30c2929104b84aa02dbd8d0289f280892632",
-              "f93027d5c5a93d94beda0ea7e897d41740578a08"
+              "1dca30c2929104b84aa02dbd8d0289f280892632"
             ],
             "confidence": "high"
           },
           {
-            "text": "Made the CEO's cross-agent chat actually work end to end: dispatcher tools now ship real descriptions and schemas, endpoints are absolutized against AURA_SERVER_BASE_URL, JWT + org id are stamped on every call, duplicate and harness-native tool names are stripped before Anthropic sees them, and send_to_agent drains the target's SSE reply, surfaces persistence failures as hard errors, and targets the local server instead of aura-network.",
+            "text": "Added a Permissions sidekick tab with a full scope and capability editor, an installed-tools diagnostic that surfaces the exact manifest shipped to the harness, and a simplified Agent editor with a system prompt field and right-click Edit action.",
             "commit_shas": [
+              "2c0f977ccd8358752b7aa5ccaaa831f9b4912f9f",
+              "38166aba78839c7661d02939d8b1bb08c843a5d3",
+              "91af267ea24323d5b029804bf3617b190cb5bba4",
+              "8f31b228a899c0d2ef59625437296b3aab461be8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stabilized CEO chat end-to-end: auto-created a Home project binding so direct CEO chats persist, gated project tools on Read/WriteProject, shipped real tool descriptions and schemas to the harness, centralized installed_tools deduping, stripped the harness-native tool catalog to stop Anthropic 400s, absolutized and JWT-stamped cross-agent endpoints, and repaired empty CEO permissions on both the agent and instance read paths.",
+            "commit_shas": [
+              "89cce068cece84a22a6704435aefb0746298f2ad",
+              "2b804b583ae986c1c9cb5283cc872586bc0d8009",
               "9220e39ab6563a126ae8598d05a324de44197cfb",
-              "64852c268515eb260aa28e683a3f23cd3e3d08e7",
-              "921b6ebc2f43823904398dec191e470b16d69b64",
               "b9de762381416b6edf6766f3efbd779abda1f9a0",
+              "fdd2f5ef18ee89ead8c433ed46d6e9c5e8a1c3c3",
               "7282f72a95a86aff65547a371f0fbd12e190799c",
               "0798c254e302e0a1897edc8a54d494b7f10b2679",
+              "64852c268515eb260aa28e683a3f23cd3e3d08e7",
+              "921b6ebc2f43823904398dec191e470b16d69b64",
               "ce304a1773bf468e18b7aabe88849f4ffc0fa205",
-              "3e14ff18f2838b6b3d1b1e028c6503b64f28efd4",
-              "18da7c3b1af42896331bf49b24e2a871e4b8ba02",
-              "c23075f45dfd72bb8131749d3a5a6240a689d382",
-              "a5cb01dbfa3f3aaffffb13493dba6cfc4933aee2",
-              "dd955b72f72ab4cdf494e6a6b554daaec4370678"
+              "811b040fd080555cfcb52e233a8ef5cf898705a5",
+              "553deed8510ab23958075fe66b57b8f17fc3a484"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tamed CEO chat context bloat: list_agents is now scoped to the active org and returns only id/name/role, tool blobs in history are capped, and a static CEO_CORE_TOOLS allowlist replaces the per-turn intent classifier. A cached ToolRegistry, parallelised org/integration lookups, and a 5s agent-lookup cache cut per-turn setup latency. The bottom-bar context indicator now hydrates on chat entry and shows used/total tokens on hover.",
+            "text": "Drastically cut CEO context usage and latency: slimmed list_agents/get_agent results to id/name/role scoped by org, capped tool blobs in conversation history, switched the CEO to a static core-tools allowlist, cached the tool registry across turns, and parallelized org/project fan-outs.",
             "commit_shas": [
               "b6f6c995c2d1e3564d190069249f8f6a5768b1ea",
               "bc47efd8941b7908146150c257ae1e36b56cecb2",
               "2af30d78bef5a4ab297a53b3263c3d405ed4f869",
-              "5062b538609c11e05b7bc095bac7a7d52c6e9099",
-              "5bfd1489ec68cfdb79b2d0eb72da65258e1d31ce",
-              "da7a0fc66004aa97fdf8ffb370936a60a781e161",
               "df7667ff558b548ee8740794cb1cdde1976227fe"
             ],
             "confidence": "high"
           },
           {
-            "text": "New Apps organizer modal lets users drag-and-drop taskbar apps between Visible and Hidden, a new dedicated Integrations app groups providers by category, and a per-app Permissions sidekick tab with an Active harness tools diagnostic shows exactly which tools ship to the LLM.",
+            "text": "Hardened cross-agent messaging: send_to_agent now routes through the local server, drains the target's SSE reply under strict size/time budgets, hard-fails on persistence errors, live-refreshes the target's chat panel via broadcast events, and scopes the agent list to the active org with a user-scoped backstop.",
             "commit_shas": [
-              "23a5c50be4fb6c31977e89f42587c21445bc586e",
-              "c12a77d3e18dc419d4ae9dc495c376b9e1f42d7e",
-              "52a0f6f7a4e241052a96972826ec23b80a9d1c75",
-              "ac48a2cd535b76a71d830a4c67f91ac489bbf90b",
-              "2c0f977ccd8358752b7aa5ccaaa831f9b4912f9f",
-              "38166aba78839c7661d02939d8b1bb08c843a5d3"
+              "3e14ff18f2838b6b3d1b1e028c6503b64f28efd4",
+              "18da7c3b1af42896331bf49b24e2a871e4b8ba02",
+              "c23075f45dfd72bb8131749d3a5a6240a689d382",
+              "a5cb01dbfa3f3aaffffb13493dba6cfc4933aee2",
+              "a3c28916fd558767f09150c0f1fcbc2009b3962e",
+              "8a085cc0b0f3e19d39c73906708b26c4c3a56888",
+              "23ad8d56d2716b134893f4dba716edc562f2c4a6",
+              "dd955b72f72ab4cdf494e6a6b554daaec4370678"
             ],
             "confidence": "high"
           },
           {
-            "text": "Authored-skill lifecycle is complete: Create Skill now registers with the harness (surviving its own overwrite), a My Skills section is backed by a user-created marker, and skills can be deleted through an in-app modal with optimistic removal and silent refresh.",
+            "text": "Added user-authored skills: a My Skills section, create/delete endpoints that keep the user-created marker through harness overwrites, an in-app delete confirmation modal, optimistic silent refresh, and automatic registration with the harness catalog so newly created skills appear in the UI.",
             "commit_shas": [
               "e9760ea3a7766efe1e0a248971693a46cd535558",
               "f58b09f19db48e1f96ab125fa8b25f4bff3ce616",
@@ -7127,24 +7216,104 @@
             "confidence": "high"
           },
           {
-            "text": "Projects and agents gained per-machine workspace overrides with a FolderPickerField, a /api/system/workspace_defaults endpoint now surfaces the real default path, the agent editor is simplified with a System Prompt field, and project-local general agents self-heal blank names across every list path and the IndexedDB cache.",
+            "text": "Polished the shell: an Apps organizer modal with drag-and-drop for taskbar visibility and order, a stable centered taskbar with favorites/apps split, per-app sidekick widths that retarget reliably across lazy-loaded providers, and a fix for flicker on desktop-mode switches.",
             "commit_shas": [
-              "1fb31df41a7816abbd853bd138ac1129fb88aa54",
-              "fa25a90fb4c1eaba02bc746f387ec4ac343ec02c",
-              "91af267ea24323d5b029804bf3617b190cb5bba4",
-              "67aed235ef86232bdb5f04dbe8ddb4011b33cc38",
-              "fad98d5fe377fd27ea099d4e9be207ef4a3e2b2b",
-              "dbb62e5f37ef234431b090990123294aecfc2be4",
-              "8dc6a31f7c6e4350fe9d80d495009991c947ef04"
+              "23a5c50be4fb6c31977e89f42587c21445bc586e",
+              "c12a77d3e18dc419d4ae9dc495c376b9e1f42d7e",
+              "52a0f6f7a4e241052a96972826ec23b80a9d1c75",
+              "011598ea1141fb2c635f2793dc3730c0de2cca53",
+              "73e591c7414794bcc042cd58dd469b126575463b",
+              "7dfafe99f2145236058abde3bd44f7db7d5fa72b",
+              "2e60bea2b7c4784e44f6942ed6388491d6830a33",
+              "712e572667787d6ac72e767473314803b57adc38"
             ],
             "confidence": "high"
           },
           {
-            "text": "Desktop update banner is always legible on top of taskbar overlays, Windows auto-update now stops sidecar children before the installer runs, and sidekick widths are remembered per-app with lazy-provider remount handled cleanly.",
+            "text": "Context-usage indicator now hydrates on chat entry from the latest assistant_message_end, exposes a hover popover showing used vs total tokens, and survives new-session resets; also fixed a merge bug that swallowed fresh optimistic chat bubbles when prior turns had identical content.",
+            "commit_shas": [
+              "5062b538609c11e05b7bc095bac7a7d52c6e9099",
+              "5bfd1489ec68cfdb79b2d0eb72da65258e1d31ce",
+              "da7a0fc66004aa97fdf8ffb370936a60a781e161",
+              "cfaf243bcf5bf7705e4a73ab15061855daf06a2e",
+              "2f75c90c66bf4ec6a992fe2e3cc65f7b8cb4c6e2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Fixed the Windows auto-update sidecar lock and update banner stacking so installs can actually overwrite binaries, added a per-project local workspace folder override with a native folder picker, and exposed workspace_defaults so the \"leave blank\" hint shows the real resolved path.",
             "commit_shas": [
               "3d4c839b65169d5a1852816536cb22b46ee6da4b",
-              "7dfafe99f2145236058abde3bd44f7db7d5fa72b",
-              "2e60bea2b7c4784e44f6942ed6388491d6830a33"
+              "1fb31df41a7816abbd853bd138ac1129fb88aa54",
+              "fa25a90fb4c1eaba02bc746f387ec4ac343ec02c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Repaired several long-standing agent data hazards: blank agent names are now healed on every read path and during IndexedDB hydration, duplicate CEOs are deduped via a one-shot cleanup endpoint auto-invoked by the client, and a batched shadow-write avoids rewriting settings.json per row during list_agents.",
+            "commit_shas": [
+              "67aed235ef86232bdb5f04dbe8ddb4011b33cc38",
+              "da4abc7f4f21a8126a6a2260d5184b781d53e76d",
+              "a156f7d45540ed303d17dc0b31fd78727a331dbc",
+              "fad98d5fe377fd27ea099d4e9be207ef4a3e2b2b",
+              "dbb62e5f37ef234431b090990123294aecfc2be4",
+              "8dc6a31f7c6e4350fe9d80d495009991c947ef04",
+              "df7667ff558b548ee8740794cb1cdde1976227fe"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Extracted every concrete AgentTool impl into a new aura-os-agent-tools crate and added a capability re-check policy layer with an in-memory audit ring buffer, fixing 403s on local installs and giving cross-agent tool calls proper telemetry.",
+            "commit_shas": [
+              "82d1b30601e2ed7a6ce948470de6e024f892be83"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Startup and auth hardening: synchronous seeding of the cached session from localStorage, a dedicated hasResolvedInitialSession flag blocking login routes until hydration finishes, a RocksStore-to-SettingsStore rename with on-disk directory migration, and waiting for React-ready UI before revealing the desktop window.",
+            "commit_shas": [
+              "52f9dc53178a2399712797d22ce69110b9090de3",
+              "9da41eb477ca8b08a8943ddb616ef495e5fdb238",
+              "7460ab4d7c501244c45aa9150a58ac211e933d09",
+              "a3dd6a6a8d49e45bd2129795a72115dd5f575c82",
+              "e01c574592ac007f0859dc49ebaad1b2462b5871",
+              "ceb3e5324ce52113cbf8826cf071bd41d58a38db"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Introduced a HarnessClient with typed tx/stream/WS calls, a Local vs Cloud toggle wired through the harness tag, and a harness-health probe surfaced in the Agent editor.",
+            "commit_shas": [
+              "a769bc23371597485816bd9618e09cfcbe1114ad",
+              "aba454637031fe64d882b9b5ccba6c51bc91b8fd",
+              "e2173a0274a14ceb4f10e6895c2774e81d10e341",
+              "63ff4f97a429c7b1766423a1e496a3673f3702a9",
+              "6e63a651e42c8dd7a97d69976b01a5ab570dd2b2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Misc polish: a cross-platform get_current_time system tool, Apps modal description cleanup, process canvas dot-background fade-in, lighter global border tokens, removed a sidekick status spinner that looked like a loading indicator, and a Sidekick run panel that now persists completed task turns.",
+            "commit_shas": [
+              "aa01d1eb9b053bfa855cdff6fc8368e5c0f0938a",
+              "d4eab9b12e949fb83120adbd520caab07fe6fdc7",
+              "eec6c48a596be9d52cedb44c644c94c67444ea32",
+              "b1753ba488f4f96374446ed0955076d3e6ebc551",
+              "f91a5bcdc1851089bd7ccb841126ee2c660d67b6",
+              "a2e858890ede7ee2ff068838fd250e336ded9519",
+              "c2023a3d125b08f34deae1c09fd511e941d7be8c",
+              "0ee88a24fb41b37bd848c331e2fe45a524f45656",
+              "257ea71e0442a00c3aca61f15f3ed822185f8351",
+              "c5fbc57467aae5d6c785753657bc737629a2ecee",
+              "3b50c31b3427baf78e1caadbc0791541a0378091",
+              "a241c7b2a47b35ef8d73830a376d55244d90f675"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "Captured project-local agent instance permissions at creation time so cross-agent capabilities no longer silently drop on project-scoped chats.",
+            "commit_shas": [
+              "64f9f819db7920d01836c857f60f5f9a11afd91e"
             ],
             "confidence": "high"
           }
@@ -7154,21 +7323,21 @@
         "time_label": "12:36 AM",
         "started_at": "2026-04-19T07:36:45.000Z",
         "ended_at": "2026-04-19T08:08:22.000Z",
-        "title": "Release changelog pipeline split out and updater URLs made immutable",
-        "summary": "Release infrastructure got its own publish workflow and stopped pointing updater manifests at mutable URLs.",
+        "title": "Changelog publishing split out into its own workflow",
+        "summary": "Release changelog generation moved to a dedicated workflow with artifact-derived versions, immutable nightly release URLs, and an upgraded Claude Opus model.",
         "items": [
           {
-            "text": "Changelog generation now runs in a dedicated publish-release-changelog workflow instead of piggybacking on the nightly/stable release pipelines, and derives its version directly from the release artifacts.",
+            "text": "Split release changelog publishing into its own GitHub workflow, derived the version from release artifacts, and locked updater manifests to immutable nightly release URLs with matching validator updates.",
             "commit_shas": [
               "df6cbe0aa6f56ca86285feb1e72c9ecaa451ad15",
-              "f212d4d007e782c90086f7797b7b15afeb032910"
+              "f212d4d007e782c90086f7797b7b15afeb032910",
+              "340d9ae0cd7e2753600f6538c9430c214d53e2b4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Nightly updater manifests are now pinned to immutable release URLs, with validators updated so downloads and manifests stay in lockstep. Changelog generation moved to Claude Opus 4.7.",
+            "text": "Switched changelog generation to Claude Opus 4.7.",
             "commit_shas": [
-              "340d9ae0cd7e2753600f6538c9430c214d53e2b4",
               "efe0f24eed2d661e65b46d5be46eee2b2ab4b0ff"
             ],
             "confidence": "high"
@@ -7179,18 +7348,18 @@
         "time_label": "1:11 AM",
         "started_at": "2026-04-19T08:11:27.000Z",
         "ended_at": "2026-04-19T08:12:06.000Z",
-        "title": "CEO agent listing and remote control-plane URL fixes",
-        "summary": "Two targeted fixes so the CEO sees every agent the sidebar does and cross-agent tool callbacks work on remote deployments.",
+        "title": "Org-scoped CEO agent listing and remote control-plane URL alignment",
+        "summary": "Closed two follow-ups from the org-scoped listing change: the CEO's list_agents tool now matches the sidebar's merge strategy, and the integrations helper reads the same AURA_SERVER_BASE_URL as the rest of the server.",
         "items": [
           {
-            "text": "The CEO's list_agents LLM tool now runs org- and user-scoped lookups concurrently and merges by id, restoring visibility of legacy NULL-org rows that had been disappearing since listing went strictly org-scoped.",
+            "text": "Restored NULL-org agents in the CEO's list_agents tool by running org- and user-scoped lookups concurrently and merging by id, mirroring the sidebar's backfill behavior.",
             "commit_shas": [
               "430ff6041841860e190dee5ec6cc13d4564f6887"
             ],
             "confidence": "high"
           },
           {
-            "text": "control_plane_api_base_url now reads AURA_SERVER_BASE_URL (the same var the server already resolves), so remote harnesses stop stamping http://127.0.0.1 into cross-agent tool endpoints. Documented in .env.example and render-deployment.md.",
+            "text": "Aligned control_plane_api_base_url with AURA_SERVER_BASE_URL so remote harness deployments no longer stamp localhost into cross-agent tool endpoints, with docs and a troubleshooting note updated to match.",
             "commit_shas": [
               "f9cbc36f18ddd2adb681391cc4d62a84724c3982"
             ],
@@ -7202,11 +7371,11 @@
         "time_label": "1:15 AM",
         "started_at": "2026-04-19T08:15:15.000Z",
         "ended_at": "2026-04-19T08:15:15.000Z",
-        "title": "Changelog metadata handoff between release workflows",
-        "summary": "Tightened how release metadata flows from the build workflows into the changelog publisher.",
+        "title": "Hardened metadata handoff between release and changelog workflows",
+        "summary": "Tightened how release-nightly and release-stable pass version and channel metadata into the changelog publisher.",
         "items": [
           {
-            "text": "Hardened the metadata handoff between the nightly/stable release workflows and the new changelog publisher so downstream jobs get consistent version and channel inputs.",
+            "text": "Reworked the release-to-changelog metadata handoff across the nightly, stable, and publish-release-changelog workflows for more reliable version and channel propagation.",
             "commit_shas": [
               "ac4e3c5cc8ee2b9956fb5d3ac6b9eeb62eab541d"
             ],
@@ -7217,12 +7386,12 @@
       {
         "time_label": "1:28 AM",
         "started_at": "2026-04-19T08:28:51.000Z",
-        "ended_at": "2026-04-19T11:00:35.000Z",
-        "title": "Flash-free desktop boot, mobile parity flows, and auto-bound chat persistence",
-        "summary": "A morning block focused on making desktop cold start land directly in the shell, shipping a round of mobile remote-parity UI, and fixing the first-chat persistence gap for freshly created agents.",
+        "ended_at": "2026-04-19T19:05:21.000Z",
+        "title": "Flash-free desktop boot, mobile parity flows, and Android release lane",
+        "summary": "Eliminated the login-panel flash on desktop cold start by injecting boot-auth from the Rust on-disk store, added new mobile parity flows with regression coverage, and hardened the release pipeline around changelog generation and Android/iOS lanes.",
         "items": [
           {
-            "text": "Desktop cold start no longer flashes the login screen: boot auth is injected from the on-disk Aura store into window.__AURA_BOOT_AUTH__ before any JS runs, the initial app route is preloaded before the window is revealed, signalDesktopReady fires on the first committed React paint, and the Windows console and sidecar terminals are suppressed in release builds. WebView2 starts at about:blank to avoid stale cached content.",
+            "text": "Killed the desktop login-panel flash by injecting boot auth from the persisted SettingsStore through a frozen window global, tying window reveal to the first committed React paint, preloading the initial shell app's lazy module, and syncing the bound server port into env so loopback tool callbacks reach the real listener.",
             "commit_shas": [
               "5de2b45a932c4c9f5c2475beac083b204be0ea79",
               "d18b401dcde8c091dbb1511c031f0bb912fc7bd1",
@@ -7232,6 +7401,13 @@
               "e4f4165d41d20fc5a0b029f46e5e624e4e1d9751",
               "28df9cccaab31addd2960461fbef4886f0ef6dbe",
               "b79cae995252e426ca7cf538f2de15d4e1d90084",
+              "537b800758be42d97636b86f48d7ffc697ae56cf"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tightened the Windows desktop experience: GUI subsystem so no console pops up on release launch, bundled aura-node sidecar hidden with CREATE_NO_WINDOW and redirected to a log file, and main webview starts at about:blank to avoid painting stale cached content.",
+            "commit_shas": [
               "b767cfce5e0447c430480c96405ff26d69e8dc12",
               "dfe7cc5b2bb48e1a8e9e63b5ef59429c1129f93d",
               "e5b5c370d92182c5feebd086c59206d6888b7ec1"
@@ -7239,7 +7415,7 @@
             "confidence": "high"
           },
           {
-            "text": "Mobile gained a coordinated parity pass: refreshed topbar/drawer flows, a leaner AgentEditorModal, project files/tasks/work views reworked for mobile layout, a FeedMainPanel that hides the commit grid when empty, plus new runtime helpers (host-config, native-runtime, preload-recovery, service worker registration) and broad regression coverage including PWA visual tests.",
+            "text": "Shipped new mobile remote parity flows across Feed, Project Files, Tasks, Work, Agent Setup, and the mobile shell, backed by expanded runtime and e2e regression coverage plus a refreshed mobile release rubric.",
             "commit_shas": [
               "d3fa7e227806b2e489b526c21ee749e5b27494ca",
               "b769e193b8bd7de264f90b74a803e8a18053486d",
@@ -7250,63 +7426,59 @@
             "confidence": "high"
           },
           {
-            "text": "New agents are now auto-bound to a Home project on create, and existing orphan agents self-heal on their next chat attempt, so the very first message no longer hard-fails with \"Chat persistence unavailable\".",
+            "text": "Auto-bound newly created agents to a Home project so their first chat turn persists, generalizing the CEO bootstrap helper and self-healing legacy orphan agents on next chat.",
             "commit_shas": [
               "4d3026a80aaa9ca5c8cede90c2d36601d85f27f3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Deployment safety: the server refuses to ship a loopback control-plane URL to a remote harness, warns at boot (fatal under AURA_STRICT_CONFIG=1) when AURA_SERVER_BASE_URL is missing on a remote-looking install, and the desktop app syncs the bound server port back into the env so local tool callbacks reach the real listener.",
+            "text": "Refused to ship a loopback control-plane URL to remote harnesses, surfacing a named error at session init and logging a fatal-under-strict-config warning when AURA_SERVER_BASE_URL is missing on a deployment that looks remote.",
             "commit_shas": [
               "a6a966609b1072fe363f900295e1ae32a134e54d",
-              "537b800758be42d97636b86f48d7ffc697ae56cf",
               "8da37cea3259000c45cf102b45f5f0d85a133768"
             ],
             "confidence": "high"
           },
           {
-            "text": "Changelog tooling stabilised: dropped the deprecated Anthropic temperature param and hardened retry behaviour in the generator.",
+            "text": "Opened an Android GitHub APK release lane, automated mobile main release workflows across Android and iOS, and hardened the changelog Anthropic client with retries and tighter title/summary specificity rules.",
             "commit_shas": [
+              "aa94703709882a88ade8265d8db21308009bb1c5",
+              "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199",
               "3f9cd0a87a81b895d5dbf67cdb43287f964299bb",
-              "8de9cb453be091730cf3b6006bf5b01862222a0c"
+              "8de9cb453be091730cf3b6006bf5b01862222a0c",
+              "eac0e7a62c2edbe53dd37aadaea795c006b0b821"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
       {
-        "time_label": "10:53 AM",
-        "started_at": "2026-04-19T17:53:07.000Z",
-        "ended_at": "2026-04-19T19:05:21.000Z",
-        "title": "Mobile release automation and Android APK lane",
-        "summary": "Afternoon release-infra work that opened up mobile release automation and tightened changelog prompts.",
+        "time_label": "2:00 PM",
+        "started_at": "2026-04-19T21:00:06.000Z",
+        "ended_at": "2026-04-19T21:10:20.000Z",
+        "title": "iOS App Store submission fixes for export compliance and API-key review",
+        "summary": "Two fastlane tweaks unblocked iOS submissions tied to export compliance metadata and the API-key review precheck.",
         "items": [
           {
-            "text": "Exposed an Android GitHub APK release lane and automated the main mobile release workflows across iOS, Android, and the nightly pipeline.",
+            "text": "Fixed the iOS App Store Connect API-key review submission precheck and the export compliance submission path so nightly iOS builds can move through review.",
             "commit_shas": [
-              "aa94703709882a88ade8265d8db21308009bb1c5",
-              "a4c486f6f7aa876caf5ebc0b6f98d2fa0619d199"
+              "219bd35408803a3ace9b4670501f57d0c313357f",
+              "b716c728a8631a6ff3b5d131f0123c6a5690426a"
             ],
             "confidence": "high"
-          },
-          {
-            "text": "Tightened the daily changelog generator's title and summary specificity rules so published entries stay concrete.",
-            "commit_shas": [
-              "eac0e7a62c2edbe53dd37aadaea795c006b0b821"
-            ],
-            "confidence": "medium"
           }
         ]
       }
     ],
     "highlights": [
-      "Unified Agent model replaces the super-agent path with permissions-gated tools",
-      "New Chromium-backed browser tab and Talent Marketplace app",
-      "Desktop cold start no longer flashes the login screen",
-      "CEO cross-agent chat made reliable with dedupe, auth, and context fixes",
-      "Release pipeline hardened with immutable URLs and mobile automation"
+      "Single unified Agent model with permissions-driven CEO",
+      "Chromium browser sidekick for Projects",
+      "Talent Marketplace and dedicated Integrations app",
+      "CEO chat context, routing, and tool wiring overhauled",
+      "Flash-free desktop boot with injected auth state",
+      "Mobile parity flows and Android/iOS release lanes"
     ],
-    "raw_commit_count": 137
+    "raw_commit_count": 139
   }
 }
