@@ -1,6 +1,7 @@
 mod chat;
 mod conversions;
 mod crud;
+mod home_project;
 mod installed_tools;
 mod instances;
 mod marketplace_fields;
@@ -17,6 +18,7 @@ pub(crate) use crud::{
     create_agent, delete_agent, get_agent, list_agent_project_bindings, list_agents,
     recover_remote_agent_pipeline, remove_agent_project_binding, update_agent,
 };
+pub(crate) use home_project::ensure_agent_home_project_and_binding;
 pub(crate) use installed_tools::get_installed_tools_diagnostic;
 pub(crate) use instances::{
     create_agent_instance, delete_agent_instance, get_agent_instance, list_agent_instances,

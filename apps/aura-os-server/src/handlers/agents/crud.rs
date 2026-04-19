@@ -477,6 +477,17 @@ pub(crate) async fn create_agent(
     }
 
     let _ = state.agent_service.save_agent_shadow(&agent);
+
+    // Auto-bind the newly created agent to a per-org Home project so
+    // the very first chat turn has somewhere to persist. Without this,
+    // `setup_agent_chat_persistence` finds no `project_agent` row and
+    // the chat handler hard-fails with `chat_persist_unavailable`. The
+    // helper is best-effort — transient storage/network failures are
+    // logged and swallowed so they don't block the 2xx response, and
+    // the lazy repair path in `chat::setup_agent_chat_persistence`
+    // will retry on the user's first chat if needed.
+    super::home_project::ensure_agent_home_project_and_binding(&state, &jwt, &agent).await;
+
     Ok(Json(agent))
 }
 

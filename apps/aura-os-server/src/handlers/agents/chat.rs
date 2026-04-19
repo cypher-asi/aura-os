@@ -934,7 +934,44 @@ pub(crate) async fn setup_agent_chat_persistence(
             return None;
         }
     };
-    let matching = find_matching_project_agents(state, &storage, jwt, &agent_id.to_string()).await;
+    let mut matching =
+        find_matching_project_agents(state, &storage, jwt, &agent_id.to_string()).await;
+
+    // Lazy repair: if the agent has no project binding yet (e.g. it was
+    // created before the auto-binding path in `create_agent` existed, or
+    // the binding attempt at create time failed transiently), try once
+    // to auto-create a per-org Home project + binding here so the
+    // user's first chat turn self-heals instead of surfacing the
+    // `chat_persist_unavailable` error to the UI. Best-effort: if it
+    // still fails we fall through to the `None` return and the caller
+    // raises the existing error.
+    if matching.is_empty() {
+        match state
+            .agent_service
+            .get_agent_with_jwt(jwt, agent_id)
+            .await
+        {
+            Ok(agent) => {
+                info!(
+                    %agent_id,
+                    "agent chat persistence: no project binding; attempting lazy Home-project auto-bind"
+                );
+                super::home_project::ensure_agent_home_project_and_binding(state, jwt, &agent)
+                    .await;
+                matching =
+                    find_matching_project_agents(state, &storage, jwt, &agent_id.to_string())
+                        .await;
+            }
+            Err(e) => {
+                warn!(
+                    %agent_id,
+                    error = %e,
+                    "agent chat persistence: cannot resolve agent for lazy auto-bind; giving up"
+                );
+            }
+        }
+    }
+
     setup_agent_chat_persistence_with_matched(&storage, agent_id, jwt, force_new, &matching).await
 }
 
