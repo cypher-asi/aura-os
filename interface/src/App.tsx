@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useAuth, useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
@@ -70,7 +71,12 @@ function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
 }
 
 export default function App() {
-  const restoreSession = useAuthStore((s) => s.restoreSession);
+  const { hasResolvedInitialSession, restoreSession } = useAuthStore(
+    useShallow((s) => ({
+      hasResolvedInitialSession: s.hasResolvedInitialSession,
+      restoreSession: s.restoreSession,
+    })),
+  );
 
   useEffect(() => {
     let active = true;
@@ -92,6 +98,16 @@ export default function App() {
       active = false;
     };
   }, [restoreSession]);
+
+  // Hold the whole route tree until the boot-time session restore finishes.
+  // Returning `null` before the flag flips means no route — including `/login`
+  // — can ever paint during the startup window, so an authenticated user can
+  // never see the login form flash before the shell. The body already has
+  // `background:#000`, so the visible result is a short black screen followed
+  // by the real view (shell or login) once auth is resolved.
+  if (!hasResolvedInitialSession) {
+    return null;
+  }
 
   return (
     <BrowserRouter>

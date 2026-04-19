@@ -25,27 +25,26 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
-  const { isAuthenticated, isLoading, hasResolvedInitialSession } = useAuthStore(
+  const { isAuthenticated, isLoading } = useAuthStore(
     useShallow((s) => ({
       isAuthenticated: s.user !== null,
       isLoading: s.isLoading,
-      hasResolvedInitialSession: s.hasResolvedInitialSession,
     })),
   );
   const f = useLoginForm();
 
   useLayoutEffect(() => {
-    if (!isAuthenticated && !isLoading && hasResolvedInitialSession) {
+    if (!isAuthenticated && !isLoading) {
       signalDesktopReady();
     }
-  }, [isAuthenticated, isLoading, hasResolvedInitialSession]);
+  }, [isAuthenticated, isLoading]);
 
-  // Suppress the login chrome until the first boot-time session restore has
-  // finished, or whenever we already know the user is authenticated. Without
-  // the `hasResolvedInitialSession` gate, authenticated users who land on
-  // `/login` (e.g. a persisted URL, a browser reload) can see the form paint
-  // for one frame before `useLoginForm`'s redirect effect commits.
-  if (isAuthenticated || isLoading || !hasResolvedInitialSession) {
+  // `App` holds the whole route tree back until the boot-time restore has
+  // finished, so by the time `LoginView` mounts we already know whether the
+  // user is authenticated. The `isAuthenticated || isLoading` short-circuit
+  // is still useful post-login while the redirect effect in `useLoginForm`
+  // commits and while a manual `refreshSession()` is in flight.
+  if (isAuthenticated || isLoading) {
     return null;
   }
 
