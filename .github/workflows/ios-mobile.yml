@@ -6,11 +6,6 @@ on:
       - main
       - codex/mobile-ios-shell-clean
       - codex/mobile-store-integration
-    paths:
-      - .github/actions/**
-      - .github/workflows/ios-mobile.yml
-      - interface/**
-      - README.md
   pull_request:
     paths:
       - .github/actions/**
@@ -152,14 +147,44 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload build with fastlane
-        timeout-minutes: 30
+      - name: Run requested or automatic iOS lanes
+        timeout-minutes: 60
         working-directory: interface/ios
         env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
           APP_COMMIT: ${{ github.sha }}
-          APP_CHANNEL: ${{ steps.version.outputs.channel }}
-        run: bundle exec fastlane ios ${{ github.event_name == 'workflow_dispatch' && inputs.lane || 'beta' }}
+        shell: bash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            beta_build_number=$(( ${{ github.run_number }} * 10 + 1 ))
+            release_build_number=$(( ${{ github.run_number }} * 10 + 2 ))
+
+            APP_VERSION="beta.${SHORT_SHA}" \
+            APP_CHANNEL="beta" \
+            IOS_BUILD_NUMBER="$beta_build_number" \
+            bundle exec fastlane ios beta
+
+            APP_VERSION="stable.${SHORT_SHA}" \
+            APP_CHANNEL="stable" \
+            IOS_BUILD_NUMBER="$release_build_number" \
+            IOS_SUBMIT_FOR_REVIEW="1" \
+            bundle exec fastlane ios release
+
+            exit 0
+          fi
+
+          lane="${{ inputs.lane }}"
+          channel="beta"
+          case "$lane" in
+            release) channel="stable" ;;
+            beta) channel="beta" ;;
+            preflight|bootstrap_signing) channel="preflight" ;;
+          esac
+
+          APP_VERSION="${channel}.${SHORT_SHA}" \
+          APP_CHANNEL="$channel" \
+          bundle exec fastlane ios "$lane"
 
       - name: Summarize iOS release outputs
         run: |

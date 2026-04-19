@@ -6,11 +6,6 @@ on:
       - main
       - codex/mobile-android-shell-clean
       - codex/mobile-store-integration
-    paths:
-      - .github/actions/**
-      - .github/workflows/android-mobile.yml
-      - interface/**
-      - README.md
   pull_request:
     paths:
       - .github/actions/**
@@ -101,16 +96,14 @@ jobs:
             interface/android/app/build/outputs/apk/debug/*.apk
 
   ship-android:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     env:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
-      ANDROID_PLAY_RELEASE_STATUS: ${{ inputs.release_status }}
       ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
-      ANDROID_PLAY_TRACK: ${{ inputs.track }}
       ANDROID_VERSION_CODE: ${{ github.run_number }}
       VITE_ANDROID_DEFAULT_HOST: ${{ vars.VITE_ANDROID_DEFAULT_HOST }}
       VITE_NATIVE_DEFAULT_HOST: ${{ vars.VITE_NATIVE_DEFAULT_HOST }}
@@ -168,18 +161,38 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
           echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
 
+      - name: Resolve Android release plan
+        id: plan
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "lane=release" >> "$GITHUB_OUTPUT"
+            echo "track=production" >> "$GITHUB_OUTPUT"
+            echo "release_status=completed" >> "$GITHUB_OUTPUT"
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          lane="${{ inputs.lane }}"
+          channel="beta"
+          case "$lane" in
+            release) channel="stable" ;;
+            beta) channel="beta" ;;
+            preflight) channel="preflight" ;;
+            github_release) channel="github" ;;
+          esac
+
+          echo "lane=$lane" >> "$GITHUB_OUTPUT"
+          echo "track=${{ inputs.track }}" >> "$GITHUB_OUTPUT"
+          echo "release_status=${{ inputs.release_status }}" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+
       - name: Compute app version
         id: version
         shell: bash
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          CHANNEL="beta"
-          case "${{ inputs.lane }}" in
-            release) CHANNEL="stable" ;;
-            beta) CHANNEL="beta" ;;
-            preflight) CHANNEL="preflight" ;;
-            github_release) CHANNEL="github" ;;
-          esac
+          CHANNEL="${{ steps.plan.outputs.channel }}"
           VERSION="${GITHUB_REF_NAME#v}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
             VERSION="${CHANNEL}.${SHORT_SHA}"
@@ -193,7 +206,9 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.version }}
           APP_COMMIT: ${{ github.sha }}
           APP_CHANNEL: ${{ steps.version.outputs.channel }}
-        run: bundle exec fastlane android ${{ inputs.lane }}
+          ANDROID_PLAY_TRACK: ${{ steps.plan.outputs.track }}
+          ANDROID_PLAY_RELEASE_STATUS: ${{ steps.plan.outputs.release_status }}
+        run: bundle exec fastlane android ${{ steps.plan.outputs.lane }}
 
       - name: Summarize Android release outputs
         run: |
