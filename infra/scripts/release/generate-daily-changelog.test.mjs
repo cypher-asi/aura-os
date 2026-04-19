@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   assertStrictToolModelSupport,
   batchCommits,
+  buildAnthropicRequestBody,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
 
@@ -93,6 +94,41 @@ test("validateRenderedEntry rejects duplicate batch entries", () => {
 
 test("assertStrictToolModelSupport warns instead of failing for non-allowlisted models", () => {
   assert.equal(assertStrictToolModelSupport("claude-sonnet-4-20250514"), false);
+});
+
+test("buildAnthropicRequestBody omits deprecated temperature and preserves tool mode", () => {
+  const request = buildAnthropicRequestBody({
+    model: "claude-sonnet-4-6",
+    maxTokens: 4096,
+    systemPrompt: "system prompt",
+    tool: { name: "submit_daily_changelog", input_schema: { type: "object" } },
+    userPrompt: "user prompt",
+    lastError: null,
+    attempt: 1,
+  });
+
+  assert.equal(request.model, "claude-sonnet-4-6");
+  assert.equal(request.max_tokens, 4096);
+  assert.equal(request.tool_choice.type, "any");
+  assert.equal(request.messages.length, 1);
+  assert.equal(request.messages[0].content, "user prompt");
+  assert.equal("temperature" in request, false);
+});
+
+test("buildAnthropicRequestBody includes retry guidance on later attempts", () => {
+  const request = buildAnthropicRequestBody({
+    model: "claude-sonnet-4-6",
+    maxTokens: 6144,
+    systemPrompt: "system prompt",
+    tool: { name: "submit_daily_changelog", input_schema: { type: "object" } },
+    userPrompt: "user prompt",
+    lastError: "validation failed",
+    attempt: 2,
+  });
+
+  assert.match(request.messages[0].content, /validation failed/);
+  assert.match(request.messages[0].content, /Call the tool again with corrected input\./);
+  assert.equal("temperature" in request, false);
 });
 
 test("assertStrictToolModelSupport accepts Claude Opus 4.7", () => {
