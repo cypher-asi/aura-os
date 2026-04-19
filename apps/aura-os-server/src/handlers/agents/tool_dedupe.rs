@@ -105,14 +105,19 @@ const HARNESS_NATIVE_TOOL_NAMES: &[&str] = &[
     "list_projects",
     "check_budget",
     "record_usage",
-    // cross_agent_catalog_entries — capability-gated in the harness
-    // but the CEO preset holds the matching caps so the harness
-    // unhides them, which is exactly the case that 400s today.
-    "spawn_agent",
-    "send_to_agent",
-    "agent_lifecycle",
-    "get_agent_state",
-    "delegate_task",
+    // NOTE: cross_agent_catalog_entries (spawn_agent, send_to_agent,
+    // agent_lifecycle, get_agent_state, delegate_task) are deliberately
+    // NOT listed here. The harness registers them with non-empty
+    // `required_capabilities` via `cross_agent_catalog_entries()`
+    // (aura-harness/crates/aura-tools/src/catalog.rs:103-114). But its
+    // `populate_tool_definitions` (aura-harness/crates/aura-node/src/
+    // session/ws_handler.rs:395-398) calls `visible_tools(
+    // ToolProfile::Agent, _)`, which forwards `None` for permissions
+    // and so filters every capability-gated entry out before it reaches
+    // the session's `tool_definitions`. Listing them here would strip
+    // the only copy the LLM ever sees — that was the previous bug: the
+    // CEO reported "I don't have a messaging tool" even though
+    // `build_cross_agent_tools` emits `send_to_agent` for the ceo_preset.
 ];
 
 /// Drop any `InstalledTool` whose name is claimed natively by the
@@ -249,14 +254,16 @@ mod tests {
     }
 
     #[test]
-    fn strip_harness_native_drops_every_name_the_sidecar_catalog_registers() {
-        // Regression for the CEO-chat 400: after a previous partial
-        // fix only stripped 3 fs names, Anthropic still 400'd because
-        // `list_specs`, `get_spec`, `start_dev_loop`, `send_to_agent`,
-        // etc. ALSO show up in the harness's own
-        // `visible_tools(ToolProfile::Agent, _)` and get pushed again
-        // by `populate_tool_definitions` without dedupe. Strip every
-        // harness catalog name, keep server-only names untouched.
+    fn strip_harness_native_drops_unconditionally_visible_names_only() {
+        // The strip list covers names the harness advertises through
+        // `visible_tools(ToolProfile::Agent, _)` — i.e. entries with
+        // empty `required_capabilities`. Cross-agent tools
+        // (`send_to_agent`, `spawn_agent`, etc.) are registered with
+        // capability gates and `visible_tools` forwards `None` for
+        // permissions, so they never reach the harness's session
+        // `tool_definitions` and must SURVIVE the strip — otherwise
+        // the LLM never sees `send_to_agent` at all and the CEO tells
+        // the user it can't message agents.
         let mut tools = vec![
             tool_named("list_org_integrations"), // server-only, keep
             tool_named("read_file"),             // harness core, drop
@@ -268,7 +275,8 @@ mod tests {
             tool_named("start_dev_loop"),
             tool_named("pause_dev_loop"),
             tool_named("stop_dev_loop"),
-            tool_named("send_to_agent"), // harness cross-agent, drop
+            tool_named("send_to_agent"), // harness cross-agent, KEEP (capability-gated)
+            tool_named("spawn_agent"),   // harness cross-agent, KEEP (capability-gated)
             tool_named("list_agents"),   // server-only, keep
             tool_named("create_project"), // server-only, keep
             tool_named("list_projects"), // harness network, drop
@@ -286,18 +294,57 @@ mod tests {
             "start_dev_loop".to_string(),
             "pause_dev_loop".to_string(),
             "stop_dev_loop".to_string(),
-            "send_to_agent".to_string(),
             "list_projects".to_string(),
         ];
         assert_eq!(
             dropped, expected_dropped,
-            "every name the harness already has in ToolProfile::Agent must be dropped in input order"
+            "every name the harness already has in visible_tools(Agent, _) must be dropped in input order"
         );
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
         assert_eq!(
             names,
-            vec!["list_org_integrations", "list_agents", "create_project"],
-            "server-only names must survive the strip"
+            vec![
+                "list_org_integrations",
+                "send_to_agent",
+                "spawn_agent",
+                "list_agents",
+                "create_project",
+            ],
+            "server-only + capability-gated cross-agent names must survive the strip"
+        );
+    }
+
+    #[test]
+    fn send_to_agent_survives_strip_for_ceo_preset() {
+        // Regression for the Agents-app CEO bug: `build_cross_agent_tools`
+        // emits `send_to_agent` for the ceo_preset, and the harness's
+        // native copy is hidden from `populate_tool_definitions`
+        // (capability gate + `None` permissions), so stripping this
+        // name server-side would leave the LLM with no messaging tool.
+        let mut tools = vec![
+            tool_named("send_to_agent"),
+            tool_named("spawn_agent"),
+            tool_named("agent_lifecycle"),
+            tool_named("get_agent_state"),
+            tool_named("delegate_task"),
+        ];
+
+        let dropped = strip_harness_native_tool_names(&mut tools);
+
+        assert!(
+            dropped.is_empty(),
+            "capability-gated cross-agent tools must survive the strip, dropped={dropped:?}"
+        );
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec![
+                "send_to_agent",
+                "spawn_agent",
+                "agent_lifecycle",
+                "get_agent_state",
+                "delegate_task",
+            ]
         );
     }
 

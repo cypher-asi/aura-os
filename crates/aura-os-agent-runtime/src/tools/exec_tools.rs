@@ -241,7 +241,10 @@ impl AgentTool for SendToAgentTool {
         "send_to_agent"
     }
     fn description(&self) -> &str {
-        "Send a message/instruction to a running agent instance"
+        "Send a chat message to another agent by agent_id. The message is \
+         delivered to the target agent's conversation as a user turn and \
+         triggers its next response. Requires the ControlAgent capability. \
+         Use `list_agents` to discover the target's agent_id."
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Execution
@@ -251,11 +254,19 @@ impl AgentTool for SendToAgentTool {
         json!({
             "type": "object",
             "properties": {
-                "project_id": { "type": "string", "description": "Project ID" },
-                "agent_instance_id": { "type": "string", "description": "Agent instance ID" },
-                "message": { "type": "string", "description": "Message to send to the agent" }
+                "agent_id": {
+                    "type": "string",
+                    "description": "Target agent id (org-level agent). Use list_agents to discover."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Message content to deliver to the target agent."
+                },
+                "attachments": {
+                    "description": "Optional structured attachments forwarded with the message."
+                }
             },
-            "required": ["project_id", "agent_instance_id", "message"]
+            "required": ["agent_id", "content"]
         })
     }
 
@@ -264,15 +275,13 @@ impl AgentTool for SendToAgentTool {
         input: serde_json::Value,
         ctx: &AgentToolContext,
     ) -> Result<ToolResult, AgentRuntimeError> {
-        let project_id = input["project_id"]
+        let agent_id = input["agent_id"]
             .as_str()
-            .ok_or_else(|| AgentRuntimeError::ToolError("project_id is required".into()))?;
-        let agent_instance_id = input["agent_instance_id"]
+            .ok_or_else(|| AgentRuntimeError::ToolError("agent_id is required".into()))?;
+        let content = input["content"]
             .as_str()
-            .ok_or_else(|| AgentRuntimeError::ToolError("agent_instance_id is required".into()))?;
-        let message = input["message"]
-            .as_str()
-            .ok_or_else(|| AgentRuntimeError::ToolError("message is required".into()))?;
+            .ok_or_else(|| AgentRuntimeError::ToolError("content is required".into()))?;
+        let attachments = input.get("attachments").cloned();
 
         let network = ctx
             .network_client
@@ -280,15 +289,19 @@ impl AgentTool for SendToAgentTool {
             .ok_or_else(|| AgentRuntimeError::Internal("network client not available".into()))?;
 
         let url = format!(
-            "{}/api/projects/{}/agents/{}/events/stream",
+            "{}/api/agents/{}/events/stream",
             network.base_url(),
-            project_id,
-            agent_instance_id
+            agent_id
         );
-        let body = json!({
-            "content": message,
+        let mut body = json!({
+            "content": content,
             "action": "message"
         });
+        if let Some(att) = attachments {
+            if !att.is_null() {
+                body["attachments"] = att;
+            }
+        }
 
         let resp = network
             .http_client()
@@ -311,8 +324,7 @@ impl AgentTool for SendToAgentTool {
         Ok(ToolResult {
             content: json!({
                 "sent": true,
-                "project_id": project_id,
-                "agent_instance_id": agent_instance_id
+                "agent_id": agent_id
             }),
             is_error: false,
         })

@@ -14,7 +14,7 @@ use aura_protocol::{
 
 use crate::prompt::ceo_system_prompt;
 use aura_os_agent_templates::{
-    classify_intent_with, default_classifier_rules, AgentTemplate,
+    classify_intent, classify_intent_with, default_classifier_rules, is_tier1, AgentTemplate,
 };
 
 /// URL path prefix every cross-agent tool is proxied through.
@@ -149,35 +149,74 @@ pub fn ceo_classify_intent(message: &str) -> Vec<aura_os_core::ToolDomain> {
 /// dispatcher can authorize against the real user.
 #[must_use]
 pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledTool> {
+    build_cross_agent_tools_for_message(permissions, None)
+}
+
+/// Message-aware variant of [`build_cross_agent_tools`] that narrows a
+/// CEO-preset manifest down to tier-1 domains plus any tier-2 domains
+/// the intent classifier matched for `message`.
+///
+/// For CEO-preset agents the unfiltered manifest is ~55 tools — too
+/// much to feed into the LLM on every turn (both for token budget and
+/// decision latency). Callers in the chat path should pass
+/// `Some(user_message)`; callers that don't have the message yet
+/// (e.g. installed-tools diagnostics) can pass `None` to keep the
+/// pre-filter behaviour.
+///
+/// Non-CEO permissions are unaffected — they already ship a narrowly
+/// gated subset.
+#[must_use]
+pub fn build_cross_agent_tools_for_message(
+    permissions: &AgentPermissions,
+    message: Option<&str>,
+) -> Vec<InstalledTool> {
     // Build the name -> (description, schema) map *once* so each
     // InstalledTool gets the real metadata the LLM needs to call the
     // tool. Shipping `""` / `{}` here (the old behaviour) left the
     // model unable to decide when to invoke `send_to_agent` etc.
     let metadata = crate::tools::tool_metadata_map();
+    let metadata = &*metadata;
 
     // CEO preset: full manifest, one InstalledTool per registered tool.
     if permissions.is_ceo_preset() {
-        return AgentTemplate::ceo_default()
-            .tool_manifest
-            .into_iter()
-            .map(|entry| installed_tool_for(&entry.name, &metadata))
-            .collect();
+        let manifest = AgentTemplate::ceo_default().tool_manifest;
+        // When the caller supplied the user's message, narrow the
+        // manifest to tier-1 plus whichever tier-2 domains the
+        // classifier matched. This keeps trivial questions like
+        // "who are my agents" from dragging the full 55-tool
+        // payload through the LLM on every turn.
+        return match message {
+            Some(msg) => {
+                let domains = classify_intent(msg);
+                manifest
+                    .into_iter()
+                    .filter(|entry| {
+                        is_tier1(&entry.domain) || domains.contains(&entry.domain)
+                    })
+                    .map(|entry| installed_tool_for(&entry.name, metadata))
+                    .collect()
+            }
+            None => manifest
+                .into_iter()
+                .map(|entry| installed_tool_for(&entry.name, metadata))
+                .collect(),
+        };
     }
 
     // Non-CEO agents: narrowly gated cross-agent tools only.
     let mut tools: Vec<InstalledTool> = Vec::new();
     let caps = &permissions.capabilities;
     if caps.contains(&Capability::SpawnAgent) {
-        tools.push(installed_tool_for("spawn_agent", &metadata));
+        tools.push(installed_tool_for("spawn_agent", metadata));
     }
     if caps.contains(&Capability::ControlAgent) {
-        tools.push(installed_tool_for("send_to_agent", &metadata));
-        tools.push(installed_tool_for("remote_agent_action", &metadata));
+        tools.push(installed_tool_for("send_to_agent", metadata));
+        tools.push(installed_tool_for("remote_agent_action", metadata));
     }
     if caps.contains(&Capability::ReadAgent) {
-        tools.push(installed_tool_for("get_agent", &metadata));
-        tools.push(installed_tool_for("list_agents", &metadata));
-        tools.push(installed_tool_for("get_remote_agent_state", &metadata));
+        tools.push(installed_tool_for("get_agent", metadata));
+        tools.push(installed_tool_for("list_agents", metadata));
+        tools.push(installed_tool_for("get_remote_agent_state", metadata));
     }
     // Aura-native project control plane — gated so the menu the LLM
     // sees mirrors what the agent could actually invoke. `WriteProject`
@@ -187,12 +226,12 @@ pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledT
     let has_write = has_any_write_project(caps);
     if has_read || has_write {
         for name in AURA_NATIVE_PROJECT_READ_TOOLS {
-            tools.push(installed_tool_for(name, &metadata));
+            tools.push(installed_tool_for(name, metadata));
         }
     }
     if has_write {
         for name in AURA_NATIVE_PROJECT_WRITE_TOOLS {
-            tools.push(installed_tool_for(name, &metadata));
+            tools.push(installed_tool_for(name, metadata));
         }
     }
     tools
@@ -524,7 +563,8 @@ mod tests {
                 "`{name}` schema must require `{required_arg}`; got required = {required:?}"
             );
         };
-        check_required("send_to_agent", "message");
+        check_required("send_to_agent", "agent_id");
+        check_required("send_to_agent", "content");
         check_required("create_spec", "project_id");
         check_required("run_task", "task_id");
         // Exercises the fallback branch in `tool_metadata_map` that
