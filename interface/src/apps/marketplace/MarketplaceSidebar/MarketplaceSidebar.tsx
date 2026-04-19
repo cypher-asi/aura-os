@@ -1,7 +1,8 @@
-import { createElement, useMemo, useState } from "react";
+import { createElement, useMemo, useRef, useState } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { FolderSection } from "../../../components/FolderSection";
+import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
 import { useMarketplaceFilters } from "../stores";
 import { MARKETPLACE_EXPERTISE } from "../marketplace-expertise";
 import {
@@ -16,6 +17,7 @@ export function MarketplaceSidebar() {
   const { sort, expertiseFilter, setSort, setExpertiseFilter } = useMarketplaceFilters();
   const [trendingExpanded, setTrendingExpanded] = useState(true);
   const [expertiseExpanded, setExpertiseExpanded] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const trendingNodes = useMemo<ExplorerNode[]>(
     () =>
@@ -54,33 +56,36 @@ export function MarketplaceSidebar() {
   };
 
   return (
-    <div className={styles.sidebar}>
-      <FolderSection
-        label="Trending"
-        expanded={trendingExpanded}
-        onToggle={() => setTrendingExpanded((v) => !v)}
-      >
-        <Explorer
-          data={trendingNodes}
-          enableDragDrop={false}
-          enableMultiSelect={false}
-          defaultSelectedIds={selectedIds}
-          onSelect={handleSelect}
-        />
-      </FolderSection>
-      <FolderSection
-        label="Expertise"
-        expanded={expertiseExpanded}
-        onToggle={() => setExpertiseExpanded((v) => !v)}
-      >
-        <Explorer
-          data={expertiseNodes}
-          enableDragDrop={false}
-          enableMultiSelect={false}
-          defaultSelectedIds={selectedIds}
-          onSelect={handleSelect}
-        />
-      </FolderSection>
+    <div className={styles.root}>
+      <div ref={scrollRef} className={styles.list}>
+        <FolderSection
+          label="Trending"
+          expanded={trendingExpanded}
+          onToggle={() => setTrendingExpanded((v) => !v)}
+        >
+          <Explorer
+            data={trendingNodes}
+            enableDragDrop={false}
+            enableMultiSelect={false}
+            defaultSelectedIds={selectedIds}
+            onSelect={handleSelect}
+          />
+        </FolderSection>
+        <FolderSection
+          label="Expertise"
+          expanded={expertiseExpanded}
+          onToggle={() => setExpertiseExpanded((v) => !v)}
+        >
+          <Explorer
+            data={expertiseNodes}
+            enableDragDrop={false}
+            enableMultiSelect={false}
+            defaultSelectedIds={selectedIds}
+            onSelect={handleSelect}
+          />
+        </FolderSection>
+      </div>
+      <OverlayScrollbar scrollRef={scrollRef} />
     </div>
   );
 }

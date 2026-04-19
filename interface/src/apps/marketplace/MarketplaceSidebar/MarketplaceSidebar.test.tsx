@@ -20,6 +20,10 @@ vi.mock("./MarketplaceSidebar.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
+vi.mock("../../../components/OverlayScrollbar", () => ({
+  OverlayScrollbar: () => null,
+}));
+
 vi.mock("@cypher-asi/zui", () => ({
   Explorer: ({ data, onSelect }: StubExplorerProps) => (
     <ul data-testid="stub-explorer">
