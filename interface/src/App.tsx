@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
-import { useAuthStore } from "./stores/auth-store";
+import { useAuth, useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
@@ -20,6 +20,23 @@ function LastAppRedirect() {
   const previousPath = useAppUIStore((s) => s.previousPath);
   const lastAppId = getLastApp();
   return <Navigate to={getInitialShellPath(lastAppId, previousPath)} replace />;
+}
+
+/**
+ * Route-level guard for `/login`. `getInitialAuthState()` seeds `user`
+ * synchronously from the localStorage session mirror maintained by
+ * `auth-token`, so returning users hit this component with `isAuthenticated`
+ * already `true` on the very first render. Redirect them to `/` before
+ * `LoginView` ever mounts — this short-circuits any in-component guard
+ * races and guarantees the login chrome cannot paint at startup for
+ * authenticated users.
+ */
+function LoginRoute() {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return <LoginView />;
 }
 
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */
@@ -79,7 +96,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="login" element={<LoginView />} />
+        <Route path="login" element={<LoginRoute />} />
         <Route
           path="ide"
           element={
