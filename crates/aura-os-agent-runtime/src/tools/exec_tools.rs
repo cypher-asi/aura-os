@@ -416,9 +416,16 @@ impl AgentTool for SendToAgentTool {
                 result["warning"] = json!(
                     "Message was delivered to the target agent's harness, but it is not \
                      bound to any project in storage, so the turn will NOT appear in that \
-                     agent's chat history. Bind the agent to a project (or chat with it at \
-                     least once from the UI to create a session) before using send_to_agent."
+                     agent's chat history. The 'General' label in the UI is a placeholder \
+                     for 'no project selected', not an actual project binding. Call \
+                     `assign_agent_to_project` with a real project_id (use `list_projects` \
+                     to find one) to create a project binding, then retry `send_to_agent`."
                 );
+                result["remediation"] = json!({
+                    "tool": "assign_agent_to_project",
+                    "required_inputs": ["project_id", "agent_id"],
+                    "discovery_tool": "list_projects"
+                });
                 return Ok(ToolResult {
                     content: result,
                     is_error: true,
