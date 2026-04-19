@@ -11,7 +11,7 @@ use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 pub(crate) type SseStream =
     Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
@@ -35,7 +35,6 @@ use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     control_plane_api_base_url, installed_workspace_app_tools,
-    installed_workspace_integrations_for_org_with_token,
 };
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
@@ -66,6 +65,7 @@ use super::runtime::{
 /// the session. First-occurrence wins — that keeps workspace /
 /// integration tools (org-specific endpoints + auth) ahead of any
 /// identically-named cross-agent tool.
+#[allow(dead_code)]
 async fn build_session_installed_tools(
     state: &AppState,
     org_id: Option<&OrgId>,
@@ -73,15 +73,51 @@ async fn build_session_installed_tools(
     jwt: &str,
     context: &'static str,
     agent_id: &str,
+    user_message: Option<&str>,
+) -> Option<Vec<InstalledTool>> {
+    build_session_installed_tools_with_integrations(
+        state,
+        org_id,
+        permissions,
+        jwt,
+        context,
+        agent_id,
+        user_message,
+        None,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn build_session_installed_tools_with_integrations(
+    state: &AppState,
+    org_id: Option<&OrgId>,
+    permissions: &AgentPermissions,
+    jwt: &str,
+    context: &'static str,
+    agent_id: &str,
+    user_message: Option<&str>,
+    integrations: Option<&[aura_os_core::OrgIntegration]>,
 ) -> Option<Vec<InstalledTool>> {
     let mut tools = if let Some(org_id) = org_id {
-        installed_workspace_app_tools(state, org_id, jwt).await
+        match integrations {
+            Some(ints) => {
+                crate::handlers::agents::workspace_tools::installed_workspace_app_tools_with_integrations(
+                    state, org_id, jwt, ints,
+                )
+                .await
+            }
+            None => installed_workspace_app_tools(state, org_id, jwt).await,
+        }
     } else {
         Vec::new()
     };
-    tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
-        permissions,
-    ));
+    tools.extend(
+        aura_os_agent_runtime::ceo::build_cross_agent_tools_for_message(
+            permissions,
+            user_message,
+        ),
+    );
 
     // `build_cross_agent_tools` emits endpoints as the bare path
     // `/api/agent_tools/:name` with `ToolAuth::None`. The harness
@@ -134,25 +170,27 @@ async fn resolve_chat_session(
 ) -> Option<String> {
     if !force_new {
         match storage.list_sessions(project_agent_id, jwt).await {
-            Ok(mut sessions) => {
+            Ok(sessions) => {
                 // Sort by the same recency key the reader uses so a writer
                 // never lands in a different session than
                 // `load_project_session_history` will later read from.
                 // Storage may return sessions in any order (insertion,
                 // alphanumeric id, etc.); we want newest-by-timestamp first.
-                sessions
-                    .sort_by(|a, b| storage_session_sort_key(b).cmp(&storage_session_sort_key(a)));
-                for session in sessions.iter() {
-                    match storage.list_events(&session.id, jwt, Some(1), None).await {
-                        Ok(_) => return Some(session.id.clone()),
-                        Err(e) => {
-                            debug!(
-                                session_id = %session.id,
-                                error = %e,
-                                "Skipping stale session during resolution"
-                            );
-                        }
-                    }
+                //
+                // Previously we also walked the sorted list and issued a
+                // `list_events(limit=1)` probe on each candidate to skip
+                // "stale" sessions. That added one round-trip per session
+                // on the hot path — for users with long chat histories
+                // this was the single slowest setup step. Trust the sort
+                // key instead: if the newest session by timestamp is
+                // structurally unreadable the very next persist will
+                // surface the error, and the UI loader applies the same
+                // sort key so writer/reader can't diverge.
+                if let Some(newest) = sessions
+                    .iter()
+                    .max_by_key(|s| storage_session_sort_key(s))
+                {
+                    return Some(newest.id.clone());
                 }
             }
             Err(e) => {
@@ -729,9 +767,22 @@ pub(crate) async fn setup_agent_chat_persistence(
             return None;
         }
     };
-    let jwt = jwt.to_string();
-    let matching = find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
+    let matching = find_matching_project_agents(state, &storage, jwt, &agent_id.to_string()).await;
+    setup_agent_chat_persistence_with_matched(&storage, agent_id, jwt, force_new, &matching).await
+}
 
+/// Variant of [`setup_agent_chat_persistence`] that reuses a pre-fetched
+/// `find_matching_project_agents` result. The chat handler calls
+/// `find_matching_project_agents` once per turn and feeds the result
+/// into both this function and the history loader so we don't double
+/// the network/storage traffic for every CEO message.
+pub(crate) async fn setup_agent_chat_persistence_with_matched(
+    storage: &Arc<StorageClient>,
+    agent_id: &AgentId,
+    jwt: &str,
+    force_new: bool,
+    matching: &[aura_os_storage::StorageProjectAgent],
+) -> Option<ChatPersistCtx> {
     let (pai, pid) = if let Some(pa) = matching.first() {
         let pid = pa.project_id.clone().unwrap_or_default();
         if pid.is_empty() {
@@ -748,7 +799,7 @@ pub(crate) async fn setup_agent_chat_persistence(
         return None;
     };
 
-    let session_id = match resolve_chat_session(&storage, &jwt, &pai, &pid, force_new).await {
+    let session_id = match resolve_chat_session(storage, jwt, &pai, &pid, force_new).await {
         Some(sid) => sid,
         None => {
             warn!(%agent_id, %pai, %pid, "agent chat persistence: failed to resolve/create chat session");
@@ -756,8 +807,8 @@ pub(crate) async fn setup_agent_chat_persistence(
         }
     };
     Some(ChatPersistCtx {
-        storage,
-        jwt,
+        storage: storage.clone(),
+        jwt: jwt.to_string(),
         session_id,
         project_agent_id: pai,
         project_id: pid,
@@ -1426,6 +1477,22 @@ async fn load_current_session_events_for_agent_result(
     };
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
+    load_current_session_events_for_agent_with_matched_result(
+        storage, agent_id, jwt, &matching,
+    )
+    .await
+}
+
+/// Variant of [`load_current_session_events_for_agent_result`] that
+/// reuses a pre-fetched `find_matching_project_agents` result so the
+/// chat handler doesn't re-run the `list_orgs` / `list_projects` /
+/// `list_project_agents` fan-out twice per turn.
+async fn load_current_session_events_for_agent_with_matched_result(
+    storage: &StorageClient,
+    agent_id: &AgentId,
+    jwt: &str,
+    matching: &[aura_os_storage::StorageProjectAgent],
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     if matching.is_empty() {
         info!(
             %agent_id,
@@ -1433,7 +1500,7 @@ async fn load_current_session_events_for_agent_result(
         );
         return Ok(Vec::new());
     }
-    let sessions_outcome = fetch_all_sessions(storage, jwt, &matching).await;
+    let sessions_outcome = fetch_all_sessions(storage, jwt, matching).await;
     if sessions_outcome.all_failed() {
         if let Some(err) = sessions_outcome.first_error {
             return Err(err);
@@ -1467,6 +1534,25 @@ pub async fn load_current_session_events_for_agent(
     jwt: &str,
 ) -> Vec<SessionEvent> {
     match load_current_session_events_for_agent_result(state, agent_id, jwt).await {
+        Ok(messages) => messages,
+        Err(e) => {
+            warn!(error = %e, %agent_id, "failed to load current agent session from storage");
+            Vec::new()
+        }
+    }
+}
+
+pub async fn load_current_session_events_for_agent_with_matched(
+    storage: &StorageClient,
+    agent_id: &AgentId,
+    jwt: &str,
+    matching: &[aura_os_storage::StorageProjectAgent],
+) -> Vec<SessionEvent> {
+    match load_current_session_events_for_agent_with_matched_result(
+        storage, agent_id, jwt, matching,
+    )
+    .await
+    {
         Ok(messages) => messages,
         Err(e) => {
             warn!(error = %e, %agent_id, "failed to load current agent session from storage");
@@ -1814,53 +1900,105 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let force_new = body.new_session.unwrap_or(false);
-    let persist_ctx =
-        setup_agent_chat_persistence(&state, &agent_id, &agent.name, &jwt, force_new).await;
+
+    // `setup_agent_chat_persistence` and the history loader both need
+    // the set of project agents bound to this agent id. Previously
+    // each called `find_matching_project_agents` independently, which
+    // doubled the `list_orgs` / `list_projects_by_org` /
+    // `list_project_agents` fan-out on every turn. Fetch it once here
+    // and thread it into both consumers.
+    let session_key = format!("agent:{agent_id}");
+    if force_new {
+        remove_live_session(&state, &session_key).await;
+    }
+    let live_session = has_live_session(&state, &session_key).await;
+
+    let (persist_ctx, conversation_messages) =
+        if let Some(ref storage) = state.storage_client {
+            let matching =
+                find_matching_project_agents(&state, storage, &jwt, &agent_id.to_string()).await;
+
+            let persist_fut = setup_agent_chat_persistence_with_matched(
+                storage, &agent_id, &jwt, force_new, &matching,
+            );
+
+            // LLM context rebuild on cold start: load only the current
+            // storage session, not the full multi-session aggregate. See
+            // `load_current_session_events_for_agent` doc-comment for
+            // rationale.
+            let should_load_history = !force_new && !live_session;
+            let history_fut = async {
+                if !should_load_history {
+                    return None;
+                }
+                let stored = load_current_session_events_for_agent_with_matched(
+                    storage, &agent_id, &jwt, &matching,
+                )
+                .await;
+                if stored.is_empty() {
+                    None
+                } else {
+                    let bounded = slice_recent_agent_events(
+                        stored,
+                        Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT),
+                        0,
+                    );
+                    Some(session_events_to_conversation_history(&bounded))
+                }
+            };
+
+            let (persist_ctx, conversation_messages) = tokio::join!(persist_fut, history_fut);
+            (persist_ctx, conversation_messages)
+        } else {
+            (None, None)
+        };
+
     if persist_ctx.is_none() {
         error!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
     } else {
         info!(%agent_id, "agent chat: persistence context ready");
     }
 
-    let session_key = format!("agent:{agent_id}");
-    if force_new {
-        remove_live_session(&state, &session_key).await;
-    }
-    // LLM context rebuild on cold start: load only the current storage
-    // session, not the full multi-session aggregate. See
-    // `load_current_session_events_for_agent` doc-comment for rationale.
-    let conversation_messages = if force_new {
-        None
-    } else if !has_live_session(&state, &session_key).await {
-        let stored = load_current_session_events_for_agent(&state, &agent_id, &jwt).await;
-        if stored.is_empty() {
-            None
-        } else {
-            let bounded =
-                slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
-            Some(session_events_to_conversation_history(&bounded))
-        }
-    } else {
-        None
-    };
-
     let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
-    let installed_tools = build_session_installed_tools(
+
+    // Fetch org integrations exactly once per turn and feed both the
+    // tool catalog and the installed-integrations list from the same
+    // slice. Previously each of those helpers called
+    // `integrations_for_org_with_token` independently, doubling the
+    // upstream round-trip on every chat message.
+    let org_integrations = match agent.org_id.as_ref() {
+        Some(org_id) => Some(
+            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
+                &state,
+                org_id,
+                Some(&jwt),
+            )
+            .await,
+        ),
+        None => None,
+    };
+
+    let installed_tools = build_session_installed_tools_with_integrations(
         &state,
         agent.org_id.as_ref(),
         &agent.permissions,
         &jwt,
         "agent_chat",
         &agent_id.to_string(),
+        Some(body.content.as_str()),
+        org_integrations.as_deref(),
     )
     .await;
-    let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
-        let integrations =
-            installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
-        (!integrations.is_empty()).then_some(integrations)
-    } else {
-        None
+    let installed_integrations = match (agent.org_id.as_ref(), org_integrations.as_ref()) {
+        (Some(_), Some(ints)) => {
+            let installed =
+                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
+                    ints,
+                );
+            (!installed.is_empty()).then_some(installed)
+        }
+        _ => None,
     };
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
@@ -1983,21 +2121,38 @@ pub(crate) async fn send_event_stream(
                 .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         });
-    let installed_tools = build_session_installed_tools(
+    let org_integrations = match instance.org_id.as_ref() {
+        Some(org_id) => Some(
+            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
+                &state,
+                org_id,
+                Some(&jwt),
+            )
+            .await,
+        ),
+        None => None,
+    };
+
+    let installed_tools = build_session_installed_tools_with_integrations(
         &state,
         instance.org_id.as_ref(),
         &instance.permissions,
         &jwt,
         "instance_chat",
         &agent_instance_id.to_string(),
+        Some(body.content.as_str()),
+        org_integrations.as_deref(),
     )
     .await;
-    let installed_integrations = if let Some(org_id) = instance.org_id.as_ref() {
-        let integrations =
-            installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
-        (!integrations.is_empty()).then_some(integrations)
-    } else {
-        None
+    let installed_integrations = match (instance.org_id.as_ref(), org_integrations.as_ref()) {
+        (Some(_), Some(ints)) => {
+            let installed =
+                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
+                    ints,
+                );
+            (!installed.is_empty()).then_some(installed)
+        }
+        _ => None,
     };
     let config = SessionConfig {
         system_prompt: Some(system_prompt),

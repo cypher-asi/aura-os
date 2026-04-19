@@ -217,15 +217,45 @@ pub(crate) async fn installed_workspace_app_tools(
         .tools
 }
 
+/// Variant of [`installed_workspace_app_tools`] that reuses a pre-fetched
+/// org-integrations slice. The chat handler calls this alongside
+/// [`installed_workspace_integrations_with_integrations`] so a single
+/// `integrations_for_org_with_token` round-trip drives both.
+pub(crate) async fn installed_workspace_app_tools_with_integrations(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: &str,
+    integrations: &[OrgIntegration],
+) -> Vec<InstalledTool> {
+    installed_workspace_app_tool_catalog_with_integrations(
+        state,
+        org_id,
+        bearer_token,
+        integrations,
+    )
+    .await
+    .tools
+}
+
 pub(crate) async fn installed_workspace_app_tool_catalog(
     state: &AppState,
     org_id: &OrgId,
     bearer_token: &str,
 ) -> InstalledWorkspaceToolCatalog {
     let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
+    installed_workspace_app_tool_catalog_with_integrations(state, org_id, bearer_token, &integrations)
+        .await
+}
+
+pub(crate) async fn installed_workspace_app_tool_catalog_with_integrations(
+    state: &AppState,
+    org_id: &OrgId,
+    bearer_token: &str,
+    integrations: &[OrgIntegration],
+) -> InstalledWorkspaceToolCatalog {
     let runtime_integrations =
-        load_runtime_integrations(state, org_id, &integrations, Some(bearer_token)).await;
-    let mut tools = build_installed_workspace_app_tools(org_id, &integrations, bearer_token);
+        load_runtime_integrations(state, org_id, integrations, Some(bearer_token)).await;
+    let mut tools = build_installed_workspace_app_tools(org_id, integrations, bearer_token);
     for tool in &mut tools {
         annotate_tool_metadata(tool);
         let Some(contract) = app_provider_contract_by_tool(&tool.name) else {
@@ -238,7 +268,7 @@ pub(crate) async fn installed_workspace_app_tool_catalog(
             installed_tool_runtime_execution_for_provider(contract.kind, integrations.clone());
     }
     let trusted_mcp_catalog =
-        discovered_trusted_mcp_tool_catalog(state, org_id, bearer_token, &integrations).await;
+        discovered_trusted_mcp_tool_catalog(state, org_id, bearer_token, integrations).await;
     tools.extend(trusted_mcp_catalog.tools);
     InstalledWorkspaceToolCatalog {
         tools,
@@ -602,7 +632,17 @@ pub(crate) async fn installed_workspace_integrations_for_org_with_token(
     bearer_token: &str,
 ) -> Vec<InstalledIntegration> {
     let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
-    let mut installed = build_installed_workspace_integrations(&integrations);
+    installed_workspace_integrations_with_integrations(&integrations)
+}
+
+/// Variant of [`installed_workspace_integrations_for_org_with_token`]
+/// that reuses a pre-fetched org-integrations slice. See
+/// [`installed_workspace_app_tools_with_integrations`] for the
+/// motivation.
+pub(crate) fn installed_workspace_integrations_with_integrations(
+    integrations: &[OrgIntegration],
+) -> Vec<InstalledIntegration> {
+    let mut installed = build_installed_workspace_integrations(integrations);
     for integration in &mut installed {
         if integration.kind == "mcp_server" {
             integration.metadata.insert(

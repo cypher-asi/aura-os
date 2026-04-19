@@ -15,7 +15,7 @@ pub mod task_tools;
 mod tests;
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -263,6 +263,27 @@ impl ToolRegistry {
     }
 }
 
+/// Process-wide cached `ToolRegistry::with_all_tools()`.
+///
+/// `with_all_tools` allocates ~55 `Arc<dyn AgentTool>` entries plus a
+/// `HashMap` every call; it was being built once per chat session open
+/// ([`crate::ceo::build_cross_agent_tools`]) *and* once per tool
+/// invocation ([`dispatch_agent_tool`]). Since every tool in the
+/// registry is stateless (no captured `ProcessExecutor` — see
+/// [`ToolRegistry::register_process_tools`] for that branch), the
+/// built registry is safe to share across all requests.
+static SHARED_ALL_TOOLS: LazyLock<Arc<ToolRegistry>> =
+    LazyLock::new(|| Arc::new(ToolRegistry::with_all_tools()));
+
+/// Return the process-wide cached [`ToolRegistry::with_all_tools`]
+/// instance. Callers that previously wrote
+/// `ToolRegistry::with_all_tools()` on every request should use this
+/// instead to avoid rebuilding the full tool table.
+#[must_use]
+pub fn shared_all_tools_registry() -> Arc<ToolRegistry> {
+    SHARED_ALL_TOOLS.clone()
+}
+
 /// Names of every tool that the in-process `/api/agent_tools/:name`
 /// dispatcher knows how to execute. Built from
 /// [`ToolRegistry::with_all_tools`] plus the dynamically-registered
@@ -271,7 +292,7 @@ impl ToolRegistry {
 #[must_use]
 pub fn all_dispatchable_tool_names() -> std::collections::HashSet<String> {
     let mut names: std::collections::HashSet<String> =
-        ToolRegistry::with_all_tools().tool_names().into_iter().collect();
+        SHARED_ALL_TOOLS.tool_names().into_iter().collect();
     for name in [
         "create_process",
         "list_processes",
@@ -298,9 +319,19 @@ pub fn all_dispatchable_tool_names() -> std::collections::HashSet<String> {
 /// to the harness; without it the LLM sees just a tool name with an
 /// empty `{}` schema and defensively refuses to call the tool.
 #[must_use]
-pub fn tool_metadata_map() -> HashMap<String, (String, serde_json::Value)> {
+pub fn tool_metadata_map() -> Arc<HashMap<String, (String, serde_json::Value)>> {
+    SHARED_TOOL_METADATA_MAP.clone()
+}
+
+/// Process-wide cached metadata map. Built lazily on first access
+/// from the shared registry above so the full construction cost is
+/// paid exactly once per process.
+static SHARED_TOOL_METADATA_MAP: LazyLock<Arc<HashMap<String, (String, serde_json::Value)>>> =
+    LazyLock::new(|| Arc::new(build_tool_metadata_map()));
+
+fn build_tool_metadata_map() -> HashMap<String, (String, serde_json::Value)> {
     let mut map: HashMap<String, (String, serde_json::Value)> = HashMap::new();
-    let registry = ToolRegistry::with_all_tools();
+    let registry = &*SHARED_ALL_TOOLS;
     for name in registry.tool_names() {
         if let Some(tool) = registry.get(&name) {
             map.insert(

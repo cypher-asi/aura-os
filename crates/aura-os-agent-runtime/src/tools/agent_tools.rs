@@ -1,5 +1,8 @@
 use async_trait::async_trait;
 use serde_json::json;
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
 
 use aura_os_core::{AgentId, ToolDomain};
 
@@ -8,6 +11,62 @@ use super::helpers::{
 };
 use super::{AgentToolContext, AgentTool, ToolResult};
 use crate::AgentRuntimeError;
+
+/// How long a cached `list_agents` payload stays fresh.
+///
+/// This sits on the *hot path* for CEO-preset chats — the user's first
+/// question in a new session ("who are my agents?" / "what's going on
+/// with agent X?") routes through `ListAgentsTool` before the LLM can
+/// frame its answer. Back-to-back turns inside the same conversation
+/// typically re-request the same data; caching for a few seconds makes
+/// the second and subsequent turns nearly free without noticeably
+/// delaying how soon fresh creates/deletes become visible.
+const AGENT_LIST_CACHE_TTL: Duration = Duration::from_secs(5);
+
+struct CachedPayload {
+    expires_at: Instant,
+    value: serde_json::Value,
+}
+
+type AgentToolCache = Mutex<HashMap<String, CachedPayload>>;
+
+static LIST_AGENTS_CACHE: LazyLock<AgentToolCache> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+static GET_AGENT_CACHE: LazyLock<AgentToolCache> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn cache_get(cache: &AgentToolCache, key: &str) -> Option<serde_json::Value> {
+    let now = Instant::now();
+    let mut guard = cache.lock().ok()?;
+    match guard.get(key) {
+        Some(entry) if entry.expires_at > now => Some(entry.value.clone()),
+        _ => {
+            guard.remove(key);
+            None
+        }
+    }
+}
+
+fn cache_put(cache: &AgentToolCache, key: String, value: serde_json::Value, ttl: Duration) {
+    let expires_at = Instant::now() + ttl;
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(key, CachedPayload { expires_at, value });
+    }
+}
+
+/// Invalidate the cached `list_agents` / `get_agent` payloads.
+///
+/// Called from any tool that mutates the agent catalog so subsequent
+/// reads pull fresh data rather than serving a stale snapshot.
+pub(crate) fn invalidate_agent_caches() {
+    if let Ok(mut guard) = LIST_AGENTS_CACHE.lock() {
+        guard.clear();
+    }
+    if let Ok(mut guard) = GET_AGENT_CACHE.lock() {
+        guard.clear();
+    }
+}
 
 // ---------------------------------------------------------------------------
 // 1. ListAgentsTool
@@ -41,12 +100,26 @@ impl AgentTool for ListAgentsTool {
         ctx: &AgentToolContext,
     ) -> Result<ToolResult, AgentRuntimeError> {
         if let Some(network) = ctx.network_client.as_deref() {
+            let cache_key = format!("{}:{}", ctx.org_id, ctx.jwt);
+            if let Some(cached) = cache_get(&LIST_AGENTS_CACHE, &cache_key) {
+                return Ok(ToolResult {
+                    content: cached,
+                    is_error: false,
+                });
+            }
             let agents = network
                 .list_agents(&ctx.jwt)
                 .await
                 .map_err(|e| tool_err("list_agents", e))?;
+            let value = serde_json::to_value(&agents).unwrap_or_default();
+            cache_put(
+                &LIST_AGENTS_CACHE,
+                cache_key,
+                value.clone(),
+                AGENT_LIST_CACHE_TTL,
+            );
             return Ok(ToolResult {
-                content: serde_json::to_value(&agents).unwrap_or_default(),
+                content: value,
                 is_error: false,
             });
         }
@@ -100,12 +173,26 @@ impl AgentTool for GetAgentTool {
             .ok_or_else(|| AgentRuntimeError::ToolError("agent_id is required".into()))?;
 
         if let Some(network) = ctx.network_client.as_deref() {
+            let cache_key = format!("{}:{}:{}", ctx.org_id, agent_id_str, ctx.jwt);
+            if let Some(cached) = cache_get(&GET_AGENT_CACHE, &cache_key) {
+                return Ok(ToolResult {
+                    content: cached,
+                    is_error: false,
+                });
+            }
             let agent = network
                 .get_agent(agent_id_str, &ctx.jwt)
                 .await
                 .map_err(|e| tool_err("get_agent", e))?;
+            let value = serde_json::to_value(&agent).unwrap_or_default();
+            cache_put(
+                &GET_AGENT_CACHE,
+                cache_key,
+                value.clone(),
+                AGENT_LIST_CACHE_TTL,
+            );
             return Ok(ToolResult {
-                content: serde_json::to_value(&agent).unwrap_or_default(),
+                content: value,
                 is_error: false,
             });
         }
@@ -192,6 +279,7 @@ impl AgentTool for AssignAgentToProjectTool {
 
         let result: serde_json::Value = serde_json::from_str(&body_text)
             .unwrap_or_else(|_| json!({ "message": "Agent assigned successfully" }));
+        invalidate_agent_caches();
         Ok(ToolResult {
             content: result,
             is_error: false,
@@ -255,7 +343,11 @@ impl AgentTool for CreateAgentTool {
         if let Some(skills) = input["skills"].as_array() {
             body["skills"] = json!(skills);
         }
-        network_post(network, "/api/agents", &ctx.jwt, &body).await
+        let result = network_post(network, "/api/agents", &ctx.jwt, &body).await;
+        if matches!(result, Ok(ref r) if !r.is_error) {
+            invalidate_agent_caches();
+        }
+        result
     }
 }
 
@@ -313,7 +405,11 @@ impl AgentTool for UpdateAgentTool {
         if let Some(skills) = input["skills"].as_array() {
             body["skills"] = json!(skills);
         }
-        network_put(network, &format!("/api/agents/{agent_id}"), &ctx.jwt, &body).await
+        let result = network_put(network, &format!("/api/agents/{agent_id}"), &ctx.jwt, &body).await;
+        if matches!(result, Ok(ref r) if !r.is_error) {
+            invalidate_agent_caches();
+        }
+        result
     }
 }
 
@@ -357,7 +453,11 @@ impl AgentTool for DeleteAgentTool {
             });
         };
         let agent_id = require_str(&input, "agent_id")?;
-        network_delete(network, &format!("/api/agents/{agent_id}"), &ctx.jwt).await
+        let result = network_delete(network, &format!("/api/agents/{agent_id}"), &ctx.jwt).await;
+        if matches!(result, Ok(ref r) if !r.is_error) {
+            invalidate_agent_caches();
+        }
+        result
     }
 }
 

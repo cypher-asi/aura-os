@@ -48,7 +48,9 @@ pub(crate) async fn dispatch_agent_tool(
 ) -> ApiResult<Json<Value>> {
     let sas = state.agent_runtime.clone();
 
-    let registry = aura_os_agent_runtime::tools::ToolRegistry::with_all_tools();
+    // Use the process-wide cached registry so every cross-agent tool
+    // invocation skips the ~55-entry HashMap rebuild.
+    let registry = aura_os_agent_runtime::tools::shared_all_tools_registry();
     let tool = registry
         .get(&tool_name)
         .ok_or_else(|| ApiError::not_found(format!("unknown agent tool: {tool_name}")))?;

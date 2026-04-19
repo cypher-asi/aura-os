@@ -21,12 +21,20 @@ pub(crate) async fn list_all_projects_from_network(
 ) -> ApiResult<Vec<Project>> {
     let client = state.require_network_client()?;
     let orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
+
+    // Fan out one `list_projects_by_org` call per org in parallel.
+    // The sequential version used to dominate chat setup latency for
+    // users with more than a couple of orgs; every chat turn walks
+    // through `find_matching_project_agents` which depends on this
+    // enumeration finishing before the LLM can see the user message.
+    let futs = orgs
+        .iter()
+        .map(|org| client.list_projects_by_org(&org.id, jwt));
+    let results = futures_util::future::join_all(futs).await;
+
     let mut projects = Vec::new();
-    for org in &orgs {
-        let net_projects = client
-            .list_projects_by_org(&org.id, &jwt)
-            .await
-            .map_err(map_network_error)?;
+    for result in results {
+        let net_projects = result.map_err(map_network_error)?;
         for net in &net_projects {
             let local = net
                 .id
