@@ -84,13 +84,26 @@ async fn build_session_installed_tools(
     ));
 
     // `build_cross_agent_tools` emits endpoints as the bare path
-    // `/api/agent_tools/:name` so the manifest stays base-agnostic at
-    // construction time. The harness executes an `InstalledTool` by
-    // issuing a raw `reqwest` POST to `tool.endpoint` in a separate
-    // process, which fails immediately with `builder error: relative
-    // URL without a base` for any non-absolute path. This is the
-    // single choke point for live sessions, so stamp the control-plane
-    // base URL on every cross-agent entry before the list is shipped.
+    // `/api/agent_tools/:name` with `ToolAuth::None`. The harness
+    // executes an `InstalledTool` by issuing a raw `reqwest` POST to
+    // `tool.endpoint` and attaching headers derived from `tool.auth`
+    // in a separate process, which fails in two distinct ways without
+    // intervention:
+    //   1. Bare path → `builder error: relative URL without a base`
+    //      before the request ever leaves reqwest.
+    //   2. `ToolAuth::None` → the dispatcher's `AuthJwt` extractor
+    //      returns 401 `{"error":"missing authorization"}`.
+    // Both are fatal on the first tool call, so stamp the session
+    // credentials (JWT + org id) on every cross-agent entry and then
+    // absolutise the path before the list is shipped to the harness.
+    // Order matters: stamping expects relative endpoints, so it runs
+    // before `absolutize_agent_tool_endpoints`.
+    let org_id_str = org_id.map(|id| id.to_string());
+    aura_os_agent_runtime::ceo::stamp_agent_tool_auth(
+        &mut tools,
+        jwt,
+        org_id_str.as_deref(),
+    );
     let base_url = control_plane_api_base_url();
     aura_os_agent_runtime::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
 

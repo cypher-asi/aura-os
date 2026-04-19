@@ -217,6 +217,72 @@ pub fn aura_native_project_tool_origin(name: &str) -> Option<Capability> {
     None
 }
 
+/// Stamp the cross-agent dispatcher call-back credentials onto every
+/// cross-agent entry in `tools`.
+///
+/// The dispatcher at `POST /api/agent_tools/:name` extracts the user
+/// JWT via the standard `AuthJwt` extractor (`Authorization: Bearer
+/// <jwt>`) and reads an optional `X-Aura-Org-Id` header to pin the
+/// execution context to the caller's org without re-resolving it on
+/// every tool call. [`build_cross_agent_tools`] emits each entry with
+/// `ToolAuth::None` because construction has no access to the live
+/// session JWT — without stamping, the harness's
+/// [`ToolAuth::None`] branch ships the POST with no auth header and
+/// the dispatcher 401s with `missing authorization`, which is how this
+/// bug first surfaced for `get_fleet_status` and every other CEO tool.
+/// This is the single choke point for attaching session credentials,
+/// designed to be called on the combined manifest right after
+/// [`build_cross_agent_tools`] and before [`absolutize_agent_tool_endpoints`]
+/// so the relative path check stays simple.
+///
+/// Entries whose endpoint is not under [`AGENT_TOOL_PATH_PREFIX`] are
+/// left untouched: workspace / MCP integration tools carry their own
+/// bearer tokens stamped by dedicated builders (see
+/// `aura_os_integrations::installed_workspace_app_tools`) and those
+/// tokens must survive the combined-list pass through this helper.
+///
+/// If `jwt` is empty the helper is a no-op, matching the behaviour of
+/// [`absolutize_agent_tool_endpoints`] for misconfigured environments
+/// so the failure mode stays the same observable 401 rather than a
+/// harder-to-debug malformed `Authorization: Bearer` header.
+pub fn stamp_agent_tool_auth(
+    tools: &mut [InstalledTool],
+    jwt: &str,
+    org_id: Option<&str>,
+) {
+    if jwt.is_empty() {
+        return;
+    }
+    for tool in tools.iter_mut() {
+        // Only stamp entries that target the server-side cross-agent
+        // dispatcher. Expected call order is `build_cross_agent_tools`
+        // → `stamp_agent_tool_auth` → `absolutize_agent_tool_endpoints`,
+        // so the endpoint should still be relative here — but accept
+        // an already-absolute form as well so the helper stays robust
+        // if the call order ever gets reshuffled.
+        let endpoint = &tool.endpoint;
+        let is_cross_agent = endpoint.starts_with(AGENT_TOOL_PATH_PREFIX)
+            || endpoint.contains("/api/agent_tools/");
+        if !is_cross_agent {
+            continue;
+        }
+        let mut headers = std::collections::HashMap::new();
+        headers.insert("Authorization".to_string(), format!("Bearer {jwt}"));
+        if let Some(org) = org_id {
+            let trimmed = org.trim();
+            if !trimmed.is_empty() {
+                // HeaderName is case-insensitive on the wire and the
+                // dispatcher reads `"x-aura-org-id"` via `HeaderMap`,
+                // which normalises lookups. Either case works; keep the
+                // canonical lowercase form used by reqwest so the
+                // outbound header matches the dispatcher's constant.
+                headers.insert("x-aura-org-id".to_string(), trimmed.to_string());
+            }
+        }
+        tool.auth = ToolAuth::Headers { headers };
+    }
+}
+
 /// Rewrite relative `/api/agent_tools/:name` endpoints in `tools` to
 /// absolute URLs rooted at `base_url`.
 ///
@@ -625,6 +691,172 @@ mod tests {
             tools[2].endpoint, "http://127.0.0.1:3100/api/agent_tools/send_to_agent",
             "cross-agent endpoints must be absolutised"
         );
+    }
+
+    #[test]
+    fn stamp_attaches_bearer_and_org_headers_to_cross_agent_tools() {
+        // Pin the shape of the auth payload the harness will forward
+        // to `/api/agent_tools/:name`: both `Authorization: Bearer
+        // <jwt>` (required — without it the dispatcher's `AuthJwt`
+        // extractor returns 401 `missing authorization`) and
+        // `x-aura-org-id: <org>` (optional — the dispatcher falls
+        // back to `"default"` if absent, which silently scopes tool
+        // execution to the wrong org).
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        assert!(tools
+            .iter()
+            .all(|t| matches!(t.auth, ToolAuth::None)));
+
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"));
+
+        for tool in &tools {
+            match &tool.auth {
+                ToolAuth::Headers { headers } => {
+                    assert_eq!(
+                        headers.get("Authorization").map(String::as_str),
+                        Some("Bearer jwt-abc"),
+                        "`{}` must carry the session bearer token",
+                        tool.name
+                    );
+                    assert_eq!(
+                        headers.get("x-aura-org-id").map(String::as_str),
+                        Some("org-42"),
+                        "`{}` must carry the session org id",
+                        tool.name
+                    );
+                }
+                other => panic!(
+                    "`{}` should carry ToolAuth::Headers after stamping; got {:?}",
+                    tool.name, other
+                ),
+            }
+        }
+    }
+
+    #[test]
+    fn stamp_omits_org_header_when_missing() {
+        // Personal-account sessions (no org) must still send the
+        // bearer token — the dispatcher's 401 path only checks for
+        // the Authorization header, so skipping the org id keeps the
+        // tool callable and defers to the handler's "default" org
+        // fallback.
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", None);
+
+        let send_to_agent = tools
+            .iter()
+            .find(|t| t.name == "send_to_agent")
+            .expect("CEO manifest should contain send_to_agent");
+        match &send_to_agent.auth {
+            ToolAuth::Headers { headers } => {
+                assert!(headers.contains_key("Authorization"));
+                assert!(!headers.contains_key("x-aura-org-id"));
+                assert!(!headers.contains_key("X-Aura-Org-Id"));
+            }
+            other => panic!("expected Headers auth, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn stamp_ignores_whitespace_org_id() {
+        // Treat `Some("")` / `Some("   ")` the same as `None`. Env-
+        // plumbed values occasionally come back as whitespace when a
+        // session hasn't resolved an org yet; shipping
+        // `x-aura-org-id: ` with an empty value would cause the
+        // dispatcher to see a present-but-blank header and is strictly
+        // worse than the `None` fallback to `"default"`.
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("   "));
+        let any = tools.first().expect("manifest must be non-empty");
+        match &any.auth {
+            ToolAuth::Headers { headers } => {
+                assert!(!headers.contains_key("x-aura-org-id"));
+            }
+            other => panic!("expected Headers auth, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn stamp_leaves_non_cross_agent_tool_auth_untouched() {
+        // Workspace / MCP integration tools already carry their own
+        // bearer tokens from dedicated builders. The combined
+        // `installed_tools` slice in `build_session_installed_tools`
+        // is passed through this helper once, so we must not
+        // overwrite those — doing so would swap their provider-
+        // specific token for the raw control-plane JWT and break
+        // every workspace tool call.
+        let mut tools = vec![
+            InstalledTool {
+                name: "workspace_tool".to_string(),
+                description: String::new(),
+                input_schema: serde_json::json!({}),
+                endpoint: "https://example.com/api/orgs/acme/tool-actions/workspace_tool"
+                    .to_string(),
+                auth: ToolAuth::Bearer {
+                    token: "workspace-token".to_string(),
+                },
+                timeout_ms: None,
+                namespace: None,
+                required_integration: None,
+                runtime_execution: None,
+                metadata: std::collections::HashMap::new(),
+            },
+            InstalledTool {
+                name: "send_to_agent".to_string(),
+                description: String::new(),
+                input_schema: serde_json::json!({}),
+                endpoint: format!("{AGENT_TOOL_PATH_PREFIX}/send_to_agent"),
+                auth: ToolAuth::None,
+                timeout_ms: None,
+                namespace: None,
+                required_integration: None,
+                runtime_execution: None,
+                metadata: std::collections::HashMap::new(),
+            },
+        ];
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"));
+
+        // Workspace tool preserved.
+        match &tools[0].auth {
+            ToolAuth::Bearer { token } => assert_eq!(token, "workspace-token"),
+            other => panic!(
+                "workspace bearer must not be rewritten by stamp_agent_tool_auth; got {other:?}"
+            ),
+        }
+        // Cross-agent tool stamped.
+        match &tools[1].auth {
+            ToolAuth::Headers { headers } => {
+                assert_eq!(
+                    headers.get("Authorization").map(String::as_str),
+                    Some("Bearer jwt-abc")
+                );
+            }
+            other => panic!("cross-agent tool must be stamped; got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn stamp_is_noop_on_empty_jwt() {
+        // Guardrail: an empty JWT is almost certainly a bug in the
+        // caller, but shipping `Authorization: Bearer ` would still
+        // 401 at the dispatcher *and* hide the underlying misconfig
+        // behind a generic auth failure. Preserve the original
+        // `ToolAuth::None` so the failure mode stays visible.
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        stamp_agent_tool_auth(&mut tools, "", Some("org-42"));
+        assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::None)));
+    }
+
+    #[test]
+    fn stamp_matches_after_absolutize() {
+        // Defensive: if the call order ever gets reshuffled and
+        // `absolutize_agent_tool_endpoints` runs before
+        // `stamp_agent_tool_auth`, stamping must still recognise the
+        // absolute form of the cross-agent dispatcher URL.
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"));
+        assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::Headers { .. })));
     }
 
     #[test]
