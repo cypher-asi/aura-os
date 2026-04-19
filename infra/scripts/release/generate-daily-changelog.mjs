@@ -35,10 +35,11 @@ const timeZone = String(args.timezone || process.env.CHANGELOG_TIMEZONE || "Amer
 const repoName = String(args.repo || path.basename(repoDir));
 const promptVersion = 3;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim() || "";
-const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
+const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-opus-4-7";
 const anthropicMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_MAX_TOKENS || "", 10) || 4096;
 const anthropicRetryMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_RETRY_MAX_TOKENS || "", 10) || 6144;
 const STRICT_TOOL_SUPPORTED_MODELS = [
+  "claude-opus-4-7",
   "claude-opus-4-6",
   "claude-sonnet-4-6",
   "claude-opus-4-5",

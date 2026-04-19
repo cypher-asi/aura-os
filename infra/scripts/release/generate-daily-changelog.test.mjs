@@ -94,3 +94,7 @@ test("validateRenderedEntry rejects duplicate batch entries", () => {
 test("assertStrictToolModelSupport warns instead of failing for non-allowlisted models", () => {
   assert.equal(assertStrictToolModelSupport("claude-sonnet-4-20250514"), false);
 });
+
+test("assertStrictToolModelSupport accepts Claude Opus 4.7", () => {
+  assert.equal(assertStrictToolModelSupport("claude-opus-4-7"), true);
+});
