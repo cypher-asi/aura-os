@@ -49,7 +49,8 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
 
   await page.goto("/projects");
-  await expect(page.getByText("Welcome to AURA")).toBeVisible();
+  await expect(page.getByRole("tree", { name: "Projects" })).toBeVisible();
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open host settings" })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-projects-root.png`,
@@ -58,10 +59,18 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
 
   await page.goto("/projects/proj-1/execution");
   await expect(page.getByText("Demo Project")).toBeVisible();
-  await expect(page.getByRole("main").getByText("Task Feed")).toBeVisible();
   await expect(page.getByRole("button", { name: "Specs" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tasks" }).first()).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-project-execution.png`,
+    fullPage: true,
+  });
+
+  await page.goto("/projects/proj-1/files");
+  await expect(page.getByText("Files").first()).toBeVisible();
+  await expect(page.getByRole("main").getByRole("textbox", { name: "Search" })).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-desktop-project-files.png`,
     fullPage: true,
   });
 
@@ -74,9 +83,7 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
   });
 
   await page.goto("/process");
-  await expect(page.getByRole("button", { name: "Nightly QA" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Run/i }).first()).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-process.png`,
     fullPage: true,
@@ -84,7 +91,7 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
 
   await page.goto("/tasks/proj-1/agents/agent-inst-1");
   await expect(page.getByText("Ready")).toBeVisible();
-  await expect(page.getByText("Patch auth flow")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Builder Bot Patch auth flow/i })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-tasks.png`,
     fullPage: true,
@@ -110,14 +117,24 @@ test("capture desktop agents, feed, and profile views", async ({ page }, testInf
   await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
 
   await page.getByTitle("New Agent").click();
-  await expect(page.getByRole("heading", { name: "Create Agent" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Swarm/i })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Personality" })).toBeVisible();
+  const createDialog = page.getByRole("dialog");
+  await expect(createDialog.getByRole("heading", { name: "Create Agent" })).toBeVisible();
+  await expect(createDialog.getByRole("button", { name: "Remote" })).toBeVisible();
+  await expect(createDialog.getByRole("button", { name: "Local" })).toBeVisible();
+  await expect(createDialog.getByRole("textbox", { name: "Personality" })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-agent-create.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Cancel" }).click();
+
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Specs" })).toBeVisible();
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-desktop-project-agent-chat.png`,
+    fullPage: true,
+  });
 
   await page.goto("/feed");
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
