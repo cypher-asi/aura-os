@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Text, ButtonMore } from "@cypher-asi/zui";
+import { Text, Button, ButtonMore, Modal } from "@cypher-asi/zui";
 import { Zap, Loader2, Plus, Trash2, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
 import type { MySkillEntry } from "../../../api/harness-skills";
@@ -100,6 +100,60 @@ function SkillRow({
   );
 }
 
+interface DeleteSkillConfirmModalProps {
+  isOpen: boolean;
+  skillName: string;
+  deleting: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteSkillConfirmModal({
+  isOpen,
+  skillName,
+  deleting,
+  error,
+  onClose,
+  onConfirm,
+}: DeleteSkillConfirmModalProps) {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Delete skill"
+      size="sm"
+      footer={
+        <div className={styles.deleteConfirmFooter}>
+          <Button variant="ghost" onClick={onClose} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={deleting}>
+            {deleting ? (
+              <>
+                <Loader2 size={14} className={styles.spin} /> Deleting...
+              </>
+            ) : (
+              "Delete"
+            )}
+          </Button>
+        </div>
+      }
+    >
+      <Text size="sm">
+        Delete the skill <strong>{skillName}</strong>? This permanently removes{" "}
+        <code>~/.aura/skills/{skillName}/</code> and cannot be undone. Any agent
+        that has this skill installed will lose it.
+      </Text>
+      {error && (
+        <Text size="xs" className={styles.deleteConfirmError}>
+          {error}
+        </Text>
+      )}
+    </Modal>
+  );
+}
+
 export function SkillsTab({ agent }: SkillsTabProps) {
   const [catalog, setCatalog] = useState<HarnessSkill[]>([]);
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
@@ -111,6 +165,10 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   const [showCreator, setShowCreator] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  // Name of the skill the user has clicked "Delete skill" on; drives the
+  // confirmation modal. `null` = modal closed.
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const viewSkill = useAgentSidekickStore((s) => s.viewSkill);
   const installationByName = new Map(installations.map((i) => [i.skill_name, i]));
 
@@ -211,38 +269,50 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     [agentId, fetchData],
   );
 
-  const handleDeleteMySkill = useCallback(
-    async (name: string) => {
-      const ok = window.confirm(
-        `Delete the skill "${name}"?\n\nThis permanently removes ~/.aura/skills/${name}/ and cannot be undone. Any agent that has this skill installed will lose it.`,
-      );
-      if (!ok) return;
+  const requestDeleteMySkill = useCallback((name: string) => {
+    setDeleteError(null);
+    setPendingDeleteName(name);
+  }, []);
 
-      setActionLoading((prev) => ({ ...prev, [name]: true }));
-      try {
-        // Uninstall from the current agent first so its installation
-        // record doesn't outlive the underlying SKILL.md file and
-        // render as a ghost row on next fetch.
-        if (installedNameSet.has(name)) {
-          try {
-            await api.harnessSkills.uninstallAgentSkill(agentId, name);
-          } catch (err) {
-            console.error(`Failed to uninstall ${name} from agent before delete`, err);
-          }
+  const closeDeleteConfirm = useCallback(() => {
+    // Don't let the user dismiss the modal mid-delete — the in-flight
+    // request would still complete and leave the UI in a half-state.
+    if (pendingDeleteName && actionLoading[pendingDeleteName]) return;
+    setPendingDeleteName(null);
+    setDeleteError(null);
+  }, [pendingDeleteName, actionLoading]);
+
+  const confirmDeleteMySkill = useCallback(async () => {
+    const name = pendingDeleteName;
+    if (!name) return;
+
+    setDeleteError(null);
+    setActionLoading((prev) => ({ ...prev, [name]: true }));
+    try {
+      // Uninstall from the current agent first so its installation
+      // record doesn't outlive the underlying SKILL.md file and
+      // render as a ghost row on next fetch.
+      if (installedNameSet.has(name)) {
+        try {
+          await api.harnessSkills.uninstallAgentSkill(agentId, name);
+        } catch (err) {
+          console.error(`Failed to uninstall ${name} from agent before delete`, err);
         }
-        await api.harnessSkills.deleteMySkill(name);
-        await fetchData();
-      } catch (err) {
-        console.error(`Failed to delete skill ${name}`, err);
-        alert(
-          `Failed to delete skill "${name}". See console for details.`,
-        );
-      } finally {
-        setActionLoading((prev) => ({ ...prev, [name]: false }));
       }
-    },
-    [agentId, installedNameSet, fetchData],
-  );
+      await api.harnessSkills.deleteMySkill(name);
+      await fetchData();
+      setPendingDeleteName(null);
+    } catch (err) {
+      console.error(`Failed to delete skill ${name}`, err);
+      const msg =
+        (err as { body?: { error?: string }; message?: string })?.body?.error ??
+        (err as { message?: string })?.message ??
+        "Failed to delete skill. Please try again.";
+      setDeleteError(msg);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [name]: false }));
+    }
+  }, [pendingDeleteName, agentId, installedNameSet, fetchData]);
 
   return (
     <div className={styles.skillsListWrap}>
@@ -327,7 +397,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
                   installed ? handleUninstall(skill.name) : handleInstall(skill.name)
                 }
                 onView={(s) => viewSkill(s, installationByName.get(s.name))}
-                onDelete={() => handleDeleteMySkill(skill.name)}
+                onDelete={() => requestDeleteMySkill(skill.name)}
               />
             );
           })
@@ -380,6 +450,15 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         initialInstalledNames={installedNameSet}
         onClose={() => setShowStore(false)}
         onInstalled={fetchData}
+      />
+
+      <DeleteSkillConfirmModal
+        isOpen={pendingDeleteName !== null}
+        skillName={pendingDeleteName ?? ""}
+        deleting={pendingDeleteName ? !!actionLoading[pendingDeleteName] : false}
+        error={deleteError}
+        onClose={closeDeleteConfirm}
+        onConfirm={confirmDeleteMySkill}
       />
     </div>
   );
