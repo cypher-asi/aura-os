@@ -60,6 +60,26 @@ describe("harnessSkillsApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/harness/skills", expect.objectContaining({ headers: expect.any(Object) }));
   });
 
+  it("listMySkills fetches GET /api/harness/skills/mine", async () => {
+    const mine = [
+      {
+        name: "my-skill",
+        description: "mine",
+        path: "/root/.aura/skills/my-skill/SKILL.md",
+        user_invocable: true,
+        model_invocable: false,
+      },
+    ];
+    const fetchMock = mockFetch(200, mine);
+    globalThis.fetch = fetchMock;
+    const result = await harnessSkillsApi.listMySkills();
+    expect(result).toEqual(mine);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills/mine",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
   it("getSkill fetches skill by name", async () => {
     const fetchMock = mockFetch(200, { name: "code-review" });
     globalThis.fetch = fetchMock;

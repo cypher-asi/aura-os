@@ -50,6 +50,12 @@ fn create_skill_name_valid(name: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
+/// Marker written into the YAML frontmatter of every skill created via the
+/// `POST /api/harness/skills` endpoint. Used by `list_my_skills` to separate
+/// user-authored skills from shop-installed skills (both live under
+/// ~/.aura/skills/ on disk).
+pub(crate) const USER_CREATED_SOURCE_MARKER: &str = "user-created";
+
 fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
     let mut frontmatter = format!(
         "---\ndescription: \"{}\"\n",
@@ -72,6 +78,7 @@ fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
         "model_invocable: {}\n",
         payload.model_invocable.unwrap_or(false)
     ));
+    frontmatter.push_str(&format!("source: \"{USER_CREATED_SOURCE_MARKER}\"\n"));
     frontmatter.push_str("---\n");
     frontmatter
 }
@@ -351,4 +358,93 @@ fn strip_frontmatter(content: &str) -> String {
         Some(end) => trimmed[3 + end + 4..].trim_start().to_string(),
         None => content.to_string(),
     }
+}
+
+#[derive(serde::Serialize)]
+struct MySkillEntry {
+    name: String,
+    description: String,
+    path: String,
+    user_invocable: bool,
+    model_invocable: bool,
+}
+
+/// List skills the current user authored via `POST /api/harness/skills`.
+/// Scans `~/.aura/skills/*/SKILL.md` and returns only entries whose
+/// frontmatter carries `source: "user-created"` — this reliably excludes
+/// shop-installed skills, which share the same on-disk layout but do not
+/// carry that marker.
+pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusCode> {
+    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let skills_root = home.join(".aura").join("skills");
+
+    let entries = match std::fs::read_dir(&skills_root) {
+        Ok(entries) => entries,
+        // Directory may not exist yet (user hasn't created any skills).
+        // Treat as an empty list rather than an error so the UI renders cleanly.
+        Err(_) => {
+            return Ok((
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, "application/json")],
+                "[]",
+            )
+                .into_response());
+        }
+    };
+
+    let mut results: Vec<MySkillEntry> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string())
+        else {
+            continue;
+        };
+        // Skip metadata / hidden entries.
+        if name.starts_with('.') {
+            continue;
+        }
+
+        let skill_path = path.join("SKILL.md");
+        let Ok(content) = std::fs::read_to_string(&skill_path) else {
+            continue;
+        };
+
+        let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
+        if source != USER_CREATED_SOURCE_MARKER {
+            continue;
+        }
+
+        let description = extract_frontmatter_field(&content, "description").unwrap_or_default();
+        let user_invocable = extract_frontmatter_field(&content, "user_invocable")
+            .map(|v| v == "true")
+            .unwrap_or(true);
+        let model_invocable = extract_frontmatter_field(&content, "model_invocable")
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        results.push(MySkillEntry {
+            name,
+            description,
+            path: skill_path.to_string_lossy().into_owned(),
+            user_invocable,
+            model_invocable,
+        });
+    }
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+
+    let body =
+        serde_json::to_string(&results).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        body,
+    )
+        .into_response())
 }

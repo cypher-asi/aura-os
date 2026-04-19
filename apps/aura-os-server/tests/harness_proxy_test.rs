@@ -391,6 +391,13 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
     let content = std::fs::read_to_string(&skill_path).unwrap();
     assert!(content.contains("description: \"A skill for tests\""));
     assert!(content.contains("# Instructions"));
+    // The user-created marker must be present so list_my_skills can
+    // distinguish this from a shop-installed skill that happens to share
+    // the same on-disk layout.
+    assert!(
+        content.contains("source: \"user-created\""),
+        "expected user-created source marker in frontmatter, got:\n{content}"
+    );
 
     // Give the fire-and-forget POSTs a chance to hit the mock harness.
     for _ in 0..50 {
@@ -469,6 +476,70 @@ async fn create_skill_without_agent_id_still_registers_catalog() {
         "did not expect any install POST when agent_id is omitted, got {:?}",
         captured
     );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn list_my_skills_returns_only_user_created_entries() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    // Empty directory -> empty list, no panic.
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let req = json_request("GET", "/api/harness/skills/mine", None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body, json!([]));
+
+    // Author one via the real create_skill path.
+    let create_payload = json!({
+        "name": "authored-skill",
+        "description": "Authored by user",
+        "body": "# Body",
+    });
+    let req = json_request("POST", "/api/harness/skills", Some(create_payload));
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // Simulate a shop-installed skill by writing a SKILL.md that lacks the
+    // user-created marker. list_my_skills must NOT include it.
+    let shop_dir = home_dir.path().join(".aura").join("skills").join("shop-skill");
+    std::fs::create_dir_all(&shop_dir).unwrap();
+    std::fs::write(
+        shop_dir.join("SKILL.md"),
+        "---\ndescription: \"From shop\"\nuser_invocable: true\n---\n# Shop body\n",
+    )
+    .unwrap();
+
+    // Also drop a malformed SKILL.md to confirm the scanner skips it gracefully.
+    let bad_dir = home_dir.path().join(".aura").join("skills").join("broken-skill");
+    std::fs::create_dir_all(&bad_dir).unwrap();
+    std::fs::write(bad_dir.join("SKILL.md"), "no frontmatter here\n").unwrap();
+
+    let req = json_request("GET", "/api/harness/skills/mine", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+
+    let arr = body.as_array().expect("response should be a JSON array");
+    assert_eq!(
+        arr.len(),
+        1,
+        "expected only the user-authored skill, got {arr:?}"
+    );
+    assert_eq!(arr[0]["name"], "authored-skill");
+    assert_eq!(arr[0]["description"], "Authored by user");
+    assert_eq!(arr[0]["user_invocable"], true);
+    assert_eq!(arr[0]["model_invocable"], false);
 }
 
 #[tokio::test]

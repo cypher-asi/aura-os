@@ -1,9 +1,19 @@
 import type { HarnessSkill, HarnessSkillActivation, HarnessSkillInstallation } from "../types";
 import { apiFetch } from "./core";
 
+export interface MySkillEntry {
+  name: string;
+  description: string;
+  path: string;
+  user_invocable: boolean;
+  model_invocable: boolean;
+}
+
 export const harnessSkillsApi = {
   listSkills: () =>
     apiFetch<HarnessSkill[]>(`/api/harness/skills`),
+  listMySkills: () =>
+    apiFetch<MySkillEntry[]>(`/api/harness/skills/mine`),
   getSkill: (name: string) =>
     apiFetch<HarnessSkill>(`/api/harness/skills/${name}`),
   createSkill: (data: {

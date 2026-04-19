@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Text, ButtonMore } from "@cypher-asi/zui";
 import { Zap, Loader2, Plus, Trash2, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
+import type { MySkillEntry } from "../../../api/harness-skills";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
@@ -74,9 +75,11 @@ function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps
 export function SkillsTab({ agent }: SkillsTabProps) {
   const [catalog, setCatalog] = useState<HarnessSkill[]>([]);
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
+  const [mySkills, setMySkills] = useState<MySkillEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [showAvailable, setShowAvailable] = useState(false);
+  const [showMine, setShowMine] = useState(true);
   const [showCreator, setShowCreator] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -87,9 +90,10 @@ export function SkillsTab({ agent }: SkillsTabProps) {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [skillsResult, installResult] = await Promise.allSettled([
+    const [skillsResult, installResult, mineResult] = await Promise.allSettled([
       api.harnessSkills.listSkills(),
       api.harnessSkills.listAgentSkills(agentId),
+      api.harnessSkills.listMySkills(),
     ]);
     if (skillsResult.status === "rejected") {
       console.error("Failed to list skills", skillsResult.reason);
@@ -97,14 +101,20 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     if (installResult.status === "rejected") {
       console.error("Failed to list agent skills", installResult.reason);
     }
+    if (mineResult.status === "rejected") {
+      console.error("Failed to list user-created skills", mineResult.reason);
+    }
     const skillsData = skillsResult.status === "fulfilled" ? skillsResult.value : [];
     const installData = installResult.status === "fulfilled" ? installResult.value : [];
+    const mineData = mineResult.status === "fulfilled" ? mineResult.value : [];
     const skills = Array.isArray(skillsData) ? skillsData : (skillsData as any)?.skills ?? [];
     const installs = Array.isArray(installData)
       ? installData
       : (installData as any)?.skills ?? (installData as any)?.installations ?? [];
+    const mine = Array.isArray(mineData) ? mineData : [];
     setCatalog(skills);
     setInstallations(installs);
+    setMySkills(mine);
     setFetchError(
       skillsResult.status === "rejected" && installResult.status === "rejected"
         ? "Failed to load skills. The harness may be unavailable."
@@ -119,6 +129,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
 
   const installedNameSet = new Set(installations.map((i) => i.skill_name));
   const catalogByName = new Map(catalog.map((s) => [s.name, s]));
+  const mySkillNameSet = new Set(mySkills.map((s) => s.name));
 
   // Build installed list from installations, synthesising entries for skills
   // the harness catalog hasn't indexed yet (race after store install).
@@ -133,6 +144,18 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     },
   );
   const availableSkills = catalog.filter((s) => !installedNameSet.has(s.name));
+
+  // "My Skills" lists everything the user authored via the Create Skill flow,
+  // independent of install state on this agent. Rows still carry the correct
+  // install/uninstall affordance based on the current agent's installations.
+  const mySkillsRows: HarnessSkill[] = mySkills.map((m) => ({
+    name: m.name,
+    description: m.description,
+    source: "user-created",
+    model_invocable: m.model_invocable,
+    user_invocable: m.user_invocable,
+    frontmatter: {},
+  }));
 
   const handleInstall = useCallback(
     async (name: string) => {
@@ -213,7 +236,43 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         ))
       ))}
 
-      {/* Available section (collapsible) */}
+      {/* My Skills section (collapsible) — skills the current user authored */}
+      <button
+        type="button"
+        className={styles.skillsSectionToggle}
+        onClick={() => setShowMine((v) => !v)}
+      >
+        {showMine ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <Text size="xs" variant="muted" weight="medium">
+          My Skills{!loading && ` (${mySkillsRows.length})`}
+        </Text>
+      </button>
+
+      {!loading && !fetchError && showMine &&
+        (mySkillsRows.length === 0 ? (
+          <div className={styles.skillsEmpty}>
+            No skills yet — click the + above to create one
+          </div>
+        ) : (
+          mySkillsRows.map((skill) => {
+            const installed = installedNameSet.has(skill.name);
+            return (
+              <SkillRow
+                key={`mine-${skill.name}`}
+                skill={skill}
+                installed={installed}
+                loading={!!actionLoading[skill.name]}
+                onAction={() =>
+                  installed ? handleUninstall(skill.name) : handleInstall(skill.name)
+                }
+                onView={(s) => viewSkill(s, installationByName.get(s.name))}
+              />
+            );
+          })
+        ))}
+
+      {/* Available section (collapsible). Excludes skills shown under
+          "My Skills" so a single user-authored skill doesn't appear twice. */}
       <button
         type="button"
         className={styles.skillsSectionToggle}
@@ -221,25 +280,30 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       >
         {showAvailable ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Text size="xs" variant="muted" weight="medium">
-          Available{!loading && ` (${availableSkills.length})`}
+          Available
+          {!loading &&
+            ` (${availableSkills.filter((s) => !mySkillNameSet.has(s.name)).length})`}
         </Text>
       </button>
 
       {!loading && showAvailable &&
-        (availableSkills.length === 0 ? (
-          <div className={styles.skillsEmpty}>No additional skills available</div>
-        ) : (
-          availableSkills.map((skill) => (
-            <SkillRow
-              key={skill.name}
-              skill={skill}
-              installed={false}
-              loading={!!actionLoading[skill.name]}
-              onAction={() => handleInstall(skill.name)}
-              onView={viewSkill}
-            />
-          ))
-        ))}
+        (() => {
+          const rows = availableSkills.filter((s) => !mySkillNameSet.has(s.name));
+          return rows.length === 0 ? (
+            <div className={styles.skillsEmpty}>No additional skills available</div>
+          ) : (
+            rows.map((skill) => (
+              <SkillRow
+                key={skill.name}
+                skill={skill}
+                installed={false}
+                loading={!!actionLoading[skill.name]}
+                onAction={() => handleInstall(skill.name)}
+                onView={viewSkill}
+              />
+            ))
+          );
+        })()}
 
       <CreateSkillModal
         isOpen={showCreator}
