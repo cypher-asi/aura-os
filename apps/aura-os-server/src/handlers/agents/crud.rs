@@ -1287,6 +1287,7 @@ fn agent_delete_conflict(bindings: &[AgentProjectBinding]) -> (StatusCode, Json<
             error: "Cannot delete agent while it is added to projects. Remove it from all projects first.".to_string(),
             code: "conflict".to_string(),
             details: format_agent_binding_details(bindings),
+            data: None,
         }),
     )
 }

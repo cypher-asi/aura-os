@@ -43,7 +43,7 @@ function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps
           </div>
         ) : (
           <ButtonMore
-            items={[{ id: "delete", label: "Delete", icon: <Trash2 size={14} /> }]}
+            items={[{ id: "uninstall", label: "Uninstall", icon: <Trash2 size={14} /> }]}
             onSelect={() => onAction()}
             icon="horizontal"
             size="sm"

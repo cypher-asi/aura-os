@@ -224,11 +224,11 @@ async fn build_session_installed_tools_with_integrations(
 
 #[derive(Clone)]
 pub(crate) struct ChatPersistCtx {
-    storage: Arc<StorageClient>,
-    jwt: String,
-    session_id: String,
-    project_agent_id: String,
-    project_id: String,
+    pub(crate) storage: Arc<StorageClient>,
+    pub(crate) jwt: String,
+    pub(crate) session_id: String,
+    pub(crate) project_agent_id: String,
+    pub(crate) project_id: String,
 }
 
 async fn resolve_chat_session(
@@ -331,14 +331,19 @@ async fn close_active_sessions_for_agent(
     }
 }
 
-pub(crate) fn persist_user_message(
+/// Persist the inbound user message to storage and return the created
+/// event on success.
+///
+/// Previously this fire-and-forget spawned a background task that only
+/// logged failures, which let the CEO's `send_to_agent` tool report
+/// `persisted: true` for writes that silently vanished from the target
+/// agent's chat history. Callers are now required to `.await` this
+/// function and hard-fail the request on `Err` — no silent success.
+pub(crate) async fn persist_user_message(
     ctx: &ChatPersistCtx,
     content: &str,
     attachments: &Option<Vec<ChatAttachmentDto>>,
-) {
-    let ctx = ctx.clone();
-    let content = content.to_string();
-
+) -> Result<aura_os_storage::StorageSessionEvent, aura_os_storage::StorageError> {
     let content_blocks: Option<serde_json::Value> = attachments.as_ref().and_then(|atts| {
         let image_blocks: Vec<serde_json::Value> = atts
             .iter()
@@ -363,39 +368,93 @@ pub(crate) fn persist_user_message(
         }
     });
 
-    tokio::spawn(async move {
-        let mut payload = serde_json::json!({ "text": content });
-        if let Some(blocks) = content_blocks {
-            payload["content_blocks"] = blocks;
-        }
-        let req = aura_os_storage::CreateSessionEventRequest {
-            session_id: Some(ctx.session_id.clone()),
-            user_id: None,
-            agent_id: Some(ctx.project_agent_id.clone()),
-            sender: Some("user".to_string()),
-            project_id: Some(ctx.project_id.clone()),
-            org_id: None,
-            event_type: "user_message".to_string(),
-            content: Some(payload),
-        };
-        if let Err(e) = ctx
-            .storage
-            .create_event(&ctx.session_id, &ctx.jwt, &req)
-            .await
-        {
+    let mut payload = serde_json::json!({ "text": content });
+    if let Some(blocks) = content_blocks {
+        payload["content_blocks"] = blocks;
+    }
+    let req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(ctx.session_id.clone()),
+        user_id: None,
+        agent_id: Some(ctx.project_agent_id.clone()),
+        sender: Some("user".to_string()),
+        project_id: Some(ctx.project_id.clone()),
+        org_id: None,
+        event_type: "user_message".to_string(),
+        content: Some(payload),
+    };
+    match ctx
+        .storage
+        .create_event(&ctx.session_id, &ctx.jwt, &req)
+        .await
+    {
+        Ok(evt) => Ok(evt),
+        Err(e) => {
+            let (upstream_status, body_preview) = match &e {
+                aura_os_storage::StorageError::Server { status, body } => (
+                    Some(*status),
+                    body.chars().take(400).collect::<String>(),
+                ),
+                _ => (None, String::new()),
+            };
             error!(
                 error = %e,
+                upstream_status = ?upstream_status,
+                body_preview = %body_preview,
                 session_id = %ctx.session_id,
                 project_agent_id = %ctx.project_agent_id,
+                project_id = %ctx.project_id,
                 "Failed to persist user message event"
             );
+            Err(e)
         }
-    });
+    }
+}
+
+/// Publish a `user_message` event on the app-wide WebSocket event bus.
+/// The UI's `useChatHistorySync` hook subscribes to this and force-refetches
+/// the target agent's chat history so cross-agent writes (from the CEO's
+/// `send_to_agent` tool, say) surface live in the target's panel without
+/// needing a manual reload.
+pub(crate) fn publish_user_message_event(
+    bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    ctx: &ChatPersistCtx,
+    event_id: &str,
+) {
+    let _ = bus.send(serde_json::json!({
+        "type": "user_message",
+        "event_id": event_id,
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+        // `agent_instance_id` is the field the UI wire parser
+        // (`parseAuraEvent` in interface/src/types/aura-events.ts) reads
+        // to populate `AuraEventBase.agent_id`, which the hook filters on.
+        "agent_instance_id": ctx.project_agent_id,
+    }));
+}
+
+/// Publish an `assistant_message_end` event on the app-wide WebSocket
+/// event bus after a successful persist. Same consumer story as
+/// `publish_user_message_event`.
+fn publish_assistant_message_end_event(
+    bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    ctx: &ChatPersistCtx,
+    message_id: &str,
+) {
+    let _ = bus.send(serde_json::json!({
+        "type": "assistant_message_end",
+        "message_id": message_id,
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+        "agent_instance_id": ctx.project_agent_id,
+    }));
 }
 
 pub(crate) fn spawn_chat_persist_task(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
     ctx: ChatPersistCtx,
+    event_bus: tokio::sync::broadcast::Sender<serde_json::Value>,
 ) {
     tokio::spawn(async move {
         let mut rx = rx;
@@ -607,6 +666,11 @@ pub(crate) fn spawn_chat_persist_task(
                             })).await {
                                 persisted_events += 1;
                                 end_persisted = true;
+                                publish_assistant_message_end_event(
+                                    &event_bus,
+                                    &ctx,
+                                    &end.message_id,
+                                );
                             }
                             info!(
                                 session_id = %ctx.session_id,
@@ -676,6 +740,12 @@ pub(crate) fn spawn_chat_persist_task(
                                 if persist("assistant_message_end", end_payload).await {
                                     persisted_events += 1;
                                     end_persisted = true;
+                                    let mid = if message_id.is_empty() {
+                                        ""
+                                    } else {
+                                        message_id.as_str()
+                                    };
+                                    publish_assistant_message_end_event(&event_bus, &ctx, mid);
                                     warn!(
                                         session_id = %ctx.session_id,
                                         error_code = %err.code,
@@ -750,6 +820,12 @@ pub(crate) fn spawn_chat_persist_task(
             });
             if persist("assistant_message_end", end_payload).await {
                 persisted_events += 1;
+                let mid = if message_id.is_empty() {
+                    ""
+                } else {
+                    message_id.as_str()
+                };
+                publish_assistant_message_end_event(&event_bus, &ctx, mid);
             }
             warn!(
                 session_id = %ctx.session_id,
@@ -2011,14 +2087,47 @@ async fn open_harness_chat_stream(
     _commands: Option<Vec<String>>,
     attachments: Option<Vec<ChatAttachmentDto>>,
 ) -> ApiResult<SseResponse> {
-    let persist_unavailable = persist_ctx.is_none();
-    // Snapshot the persistence identifiers before we move `persist_ctx`
-    // into the background task; the SSE response headers advertise them
-    // so callers (e.g. the CEO's `send_to_agent`) can tell whether the
-    // message landed in a saveable session without draining the stream.
-    let persist_snapshot: Option<(String, String)> = persist_ctx
-        .as_ref()
-        .map(|c| (c.session_id.clone(), c.project_id.clone()));
+    // Guiding invariant: no silent success. If the inbound user message
+    // cannot be persisted for ANY reason, we must return a non-2xx to the
+    // caller, we must NOT forward the turn to the harness, and we must
+    // NOT open an SSE body. The CEO's `send_to_agent` tool relied on the
+    // previous soft-success behavior to report `persisted: true` for
+    // writes that silently vanished — see the structured
+    // `chat_persist_failed` / `chat_persist_unavailable` shapes in
+    // `error.rs` for what callers now see on failure.
+    let ctx = match persist_ctx {
+        Some(ctx) => ctx,
+        None => {
+            error!(
+                session_key,
+                "chat stream rejected: persistence context unavailable (no project binding / storage down)"
+            );
+            return Err(ApiError::chat_persist_unavailable(
+                "Chat persistence unavailable: target agent is not bound to any project in storage, or storage is not configured. Call assign_agent_to_project before retrying.",
+                crate::error::ChatPersistErrorCtx::default(),
+            ));
+        }
+    };
+
+    let err_ctx = crate::error::ChatPersistErrorCtx {
+        session_id: Some(ctx.session_id.clone()),
+        project_id: Some(ctx.project_id.clone()),
+        project_agent_id: Some(ctx.project_agent_id.clone()),
+    };
+
+    // Persist the user turn BEFORE starting the harness session. If
+    // storage rejects the write we must not charge the caller credits
+    // for a turn that would never make it into the target agent's chat
+    // history, and we must not leave an orphaned harness turn mid-flight.
+    let persisted_user_evt = persist_user_message(&ctx, &user_content, &attachments)
+        .await
+        .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?;
+
+    // Snapshot the persistence identifiers so we can advertise them in
+    // SSE response headers for callers (e.g. the CEO's `send_to_agent`)
+    // that want to locate the saved turn without draining the stream.
+    let persist_snapshot: Option<(String, String)> =
+        Some((ctx.session_id.clone(), ctx.project_id.clone()));
 
     let (is_new, rx, commands_tx) = get_or_create_chat_session(
         state,
@@ -2029,15 +2138,7 @@ async fn open_harness_chat_stream(
     )
     .await?;
 
-    let persist_rx = if persist_ctx.is_some() {
-        Some(rx.resubscribe())
-    } else {
-        None
-    };
-
-    if let Some(ref ctx) = persist_ctx {
-        persist_user_message(ctx, &user_content, &attachments);
-    }
+    let persist_rx = rx.resubscribe();
 
     commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
@@ -2047,9 +2148,17 @@ async fn open_harness_chat_stream(
         }))
         .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
 
-    if let (Some(ctx), Some(prx)) = (persist_ctx, persist_rx) {
-        spawn_chat_persist_task(prx, ctx);
-    }
+    // Fan out the now-persisted user turn onto the local WebSocket event
+    // bus so the UI can live-refresh the target agent's chat panel when
+    // another agent (e.g. the CEO) writes into its history. See
+    // `useChatHistorySync` for the consumer.
+    publish_user_message_event(
+        &state.event_broadcast,
+        &ctx,
+        persisted_user_evt.id.as_str(),
+    );
+
+    spawn_chat_persist_task(persist_rx, ctx, state.event_broadcast.clone());
 
     let mut prefix: Vec<Result<Event, Infallible>> = Vec::new();
     if is_new {
@@ -2058,17 +2167,6 @@ async fn open_harness_chat_stream(
             .json_data(&serde_json::json!({"type":"progress","stage":"connecting"}))
             .unwrap();
         prefix.push(Ok(progress_event));
-    }
-    if persist_unavailable {
-        let warning_event = Event::default()
-            .event("error")
-            .json_data(&serde_json::json!({
-                "type": "error",
-                "message": "Chat history could not be saved — storage is unavailable",
-                "recoverable": true,
-            }))
-            .unwrap();
-        prefix.push(Ok(warning_event));
     }
 
     let broadcast_stream = harness_broadcast_to_sse(rx);

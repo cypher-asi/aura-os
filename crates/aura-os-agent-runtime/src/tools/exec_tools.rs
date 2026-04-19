@@ -302,22 +302,15 @@ impl AgentTool for SendToAgentTool {
         // AURA_SERVER_BASE_URL / host+port in app_builder); only fall
         // back to the network client as a legacy safety net.
         //
-        // The channel send inside `send_agent_event_stream` schedules
-        // the turn synchronously before the SSE stream is returned,
-        // so dropping the response body after checking the status
-        // still delivers the message.
+        // The server awaits the storage `create_event` call for the user
+        // turn before opening SSE, so a 2xx here means the message is
+        // already saved in the target agent's chat history (see
+        // `open_harness_chat_stream` and the `chat_persist_failed` /
+        // `chat_persist_unavailable` error contract in `error.rs`).
         let path = format!("/api/agents/{agent_id}/events/stream");
-        // Pull persistence signals back from `send_agent_event_stream`
-        // headers so the caller (and the CEO, via the tool result) can
-        // tell whether the message will actually show up in the target
-        // agent's chat history — not just whether the harness accepted
-        // it. Without this the tool returns 200 even when the target
-        // agent has no project binding, and the message silently
-        // vanishes from the UI.
         struct SendResponse {
             status: reqwest::StatusCode,
-            body: Option<String>,
-            persisted: Option<bool>,
+            body: String,
             session_id: Option<String>,
             project_id: Option<String>,
         }
@@ -326,10 +319,10 @@ impl AgentTool for SendToAgentTool {
         ) -> Result<SendResponse, AgentRuntimeError> {
             let status = resp.status();
             let headers = resp.headers().clone();
-            let persisted = headers
-                .get("x-aura-chat-persisted")
-                .and_then(|v| v.to_str().ok())
-                .map(|v| v.eq_ignore_ascii_case("true"));
+            // Keep reading the persistence headers even on success:
+            // `open_harness_chat_stream` advertises them on the 2xx SSE
+            // response and the CEO uses them to locate the saved turn
+            // without draining the stream.
             let session_id = headers
                 .get("x-aura-chat-session-id")
                 .and_then(|v| v.to_str().ok())
@@ -338,15 +331,18 @@ impl AgentTool for SendToAgentTool {
                 .get("x-aura-chat-project-id")
                 .and_then(|v| v.to_str().ok())
                 .map(str::to_owned);
+            // On failure the server returns JSON (the `ApiError` shape
+            // defined in apps/aura-os-server/src/error.rs). On success
+            // we don't care about the SSE body — the status itself is
+            // our "persisted" signal now.
             let body = if status.is_success() {
-                None
+                String::new()
             } else {
-                Some(resp.text().await.unwrap_or_default())
+                resp.text().await.unwrap_or_default()
             };
             Ok(SendResponse {
                 status,
                 body,
-                persisted,
                 session_id,
                 project_id,
             })
@@ -382,63 +378,378 @@ impl AgentTool for SendToAgentTool {
         };
 
         if !parsed.status.is_success() {
+            // Parse the structured ApiError JSON body produced by the
+            // server. We care specifically about the `chat_persist_*`
+            // codes (see `ApiError::chat_persist_failed` /
+            // `chat_persist_unavailable`), but any non-2xx maps to a
+            // hard tool failure — no more "sent but vanished" soft path.
+            let status_u16 = parsed.status.as_u16();
+            let fallback_content = json!({
+                "sent": false,
+                "agent_id": agent_id,
+                "code": "chat_persist_failed",
+                "reason": parsed.body.clone(),
+                "upstream_status": status_u16,
+                "session_id": parsed.session_id,
+                "project_id": parsed.project_id,
+            });
+
+            let content = match serde_json::from_str::<serde_json::Value>(&parsed.body) {
+                Ok(err_json) => {
+                    // Prefer the structured `data` payload the server
+                    // attaches to `chat_persist_*` errors. Fall back to
+                    // the top-level `code` / `error` / `details` fields
+                    // for legacy non-structured errors.
+                    let data = err_json.get("data");
+                    let code = data
+                        .and_then(|d| d.get("code"))
+                        .and_then(|v| v.as_str())
+                        .or_else(|| err_json.get("code").and_then(|v| v.as_str()))
+                        .unwrap_or("chat_persist_failed")
+                        .to_string();
+                    let reason = data
+                        .and_then(|d| d.get("reason"))
+                        .and_then(|v| v.as_str())
+                        .or_else(|| err_json.get("details").and_then(|v| v.as_str()))
+                        .or_else(|| err_json.get("error").and_then(|v| v.as_str()))
+                        .unwrap_or_else(|| parsed.body.as_str())
+                        .to_string();
+                    let upstream_status = data
+                        .and_then(|d| d.get("upstream_status"))
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as u16);
+                    let session_id = data
+                        .and_then(|d| d.get("session_id"))
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned)
+                        .or(parsed.session_id.clone());
+                    let project_id = data
+                        .and_then(|d| d.get("project_id"))
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned)
+                        .or(parsed.project_id.clone());
+                    let project_agent_id = data
+                        .and_then(|d| d.get("project_agent_id"))
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned);
+                    json!({
+                        "sent": false,
+                        "agent_id": agent_id,
+                        "code": code,
+                        "reason": reason,
+                        "upstream_status": upstream_status.map(|s| s as u64).unwrap_or(status_u16 as u64),
+                        "session_id": session_id,
+                        "project_id": project_id,
+                        "project_agent_id": project_agent_id,
+                    })
+                }
+                Err(_) => fallback_content,
+            };
+
             return Ok(ToolResult {
-                content: json!({
-                    "error": parsed.body.unwrap_or_default(),
-                    "status": parsed.status.as_u16()
-                }),
+                content,
                 is_error: true,
             });
         }
 
-        let mut result = json!({
-            "sent": true,
-            "agent_id": agent_id,
-        });
-        // `persisted=false` means `send_agent_event_stream` could not
-        // bind the target agent to any project in storage. The harness
-        // processed the turn but nothing was written to the session
-        // event log, so the user will NOT see the message in that
-        // agent's chat tab. Surface this explicitly so the CEO stops
-        // reporting false success.
-        match parsed.persisted {
-            Some(true) => {
-                result["persisted"] = json!(true);
-                if let Some(sid) = parsed.session_id {
-                    result["session_id"] = json!(sid);
-                }
-                if let Some(pid) = parsed.project_id {
-                    result["project_id"] = json!(pid);
-                }
-            }
-            Some(false) => {
-                result["persisted"] = json!(false);
-                result["warning"] = json!(
-                    "Message was delivered to the target agent's harness, but it is not \
-                     bound to any project in storage, so the turn will NOT appear in that \
-                     agent's chat history. The 'General' label in the UI is a placeholder \
-                     for 'no project selected', not an actual project binding. Call \
-                     `assign_agent_to_project` with a real project_id (use `list_projects` \
-                     to find one) to create a project binding, then retry `send_to_agent`."
-                );
-                result["remediation"] = json!({
-                    "tool": "assign_agent_to_project",
-                    "required_inputs": ["project_id", "agent_id"],
-                    "discovery_tool": "list_projects"
-                });
-                return Ok(ToolResult {
-                    content: result,
-                    is_error: true,
-                });
-            }
-            None => {
-                result["persisted"] = json!("unknown");
-            }
-        }
-
         Ok(ToolResult {
-            content: result,
+            content: json!({
+                "sent": true,
+                "persisted": true,
+                "agent_id": agent_id,
+                "session_id": parsed.session_id,
+                "project_id": parsed.project_id,
+            }),
             is_error: false,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tests for SendToAgentTool
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod send_to_agent_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+    use tokio::sync::broadcast;
+
+    use aura_os_agents::{AgentInstanceService, AgentService, RuntimeAgentStateMap};
+    use aura_os_billing::BillingClient;
+    use aura_os_link::AutomatonClient;
+    use aura_os_orgs::OrgService;
+    use aura_os_projects::ProjectService;
+    use aura_os_sessions::SessionService;
+    use aura_os_store::SettingsStore;
+    use aura_os_tasks::TaskService;
+
+    /// A single-shot HTTP mock: binds to 127.0.0.1:0, accepts one connection,
+    /// parses the request headers enough to consume the body (via
+    /// Content-Length), then writes the provided response bytes.
+    ///
+    /// Returns (base_url, join_handle). Awaiting the join handle yields the
+    /// raw request bytes received — useful for request-shape assertions.
+    async fn spawn_mock_server(
+        response_status: u16,
+        response_body: &'static str,
+        response_headers: Vec<(&'static str, &'static str)>,
+    ) -> (String, tokio::task::JoinHandle<Vec<u8>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let base_url = format!("http://{}", addr);
+
+        let handle = tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = Vec::with_capacity(4096);
+            let mut tmp = [0u8; 1024];
+
+            // Read until we have full headers, then drain Content-Length bytes.
+            let (header_end, content_length) = loop {
+                let n = sock.read(&mut tmp).await.unwrap();
+                if n == 0 {
+                    break (buf.len(), 0usize);
+                }
+                buf.extend_from_slice(&tmp[..n]);
+                if let Some(pos) = find_header_end(&buf) {
+                    let cl = parse_content_length(&buf[..pos]);
+                    break (pos + 4, cl);
+                }
+            };
+
+            let need = header_end + content_length;
+            while buf.len() < need {
+                let n = sock.read(&mut tmp).await.unwrap();
+                if n == 0 {
+                    break;
+                }
+                buf.extend_from_slice(&tmp[..n]);
+            }
+
+            let status_line = match response_status {
+                200 => "HTTP/1.1 200 OK",
+                424 => "HTTP/1.1 424 Failed Dependency",
+                502 => "HTTP/1.1 502 Bad Gateway",
+                503 => "HTTP/1.1 503 Service Unavailable",
+                500 => "HTTP/1.1 500 Internal Server Error",
+                _ => "HTTP/1.1 500 Internal Server Error",
+            };
+
+            let mut resp = format!("{status_line}\r\n");
+            resp.push_str("Content-Type: application/json\r\n");
+            resp.push_str(&format!("Content-Length: {}\r\n", response_body.len()));
+            for (k, v) in &response_headers {
+                resp.push_str(&format!("{k}: {v}\r\n"));
+            }
+            resp.push_str("Connection: close\r\n\r\n");
+
+            sock.write_all(resp.as_bytes()).await.unwrap();
+            sock.write_all(response_body.as_bytes()).await.unwrap();
+            sock.shutdown().await.ok();
+
+            buf
+        });
+
+        (base_url, handle)
+    }
+
+    fn find_header_end(buf: &[u8]) -> Option<usize> {
+        buf.windows(4).position(|w| w == b"\r\n\r\n")
+    }
+
+    fn parse_content_length(headers: &[u8]) -> usize {
+        let text = match std::str::from_utf8(headers) {
+            Ok(t) => t,
+            Err(_) => return 0,
+        };
+        for line in text.split("\r\n") {
+            if let Some((k, v)) = line.split_once(':') {
+                if k.trim().eq_ignore_ascii_case("content-length") {
+                    return v.trim().parse().unwrap_or(0);
+                }
+            }
+        }
+        0
+    }
+
+    fn temp_store() -> (tempfile::TempDir, Arc<SettingsStore>) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(SettingsStore::open(dir.path()).unwrap());
+        (dir, store)
+    }
+
+    fn build_ctx_with_base(base_url: String, store: Arc<SettingsStore>) -> AgentToolContext {
+        let runtime_state: RuntimeAgentStateMap =
+            Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()));
+        let (tx, _) = broadcast::channel(16);
+        AgentToolContext {
+            user_id: "test-user".into(),
+            org_id: "test-org".into(),
+            jwt: "test-jwt".into(),
+            project_service: Arc::new(ProjectService::new(store.clone())),
+            agent_service: Arc::new(AgentService::new(store.clone(), None)),
+            agent_instance_service: Arc::new(AgentInstanceService::new(
+                store.clone(),
+                None,
+                runtime_state,
+                None,
+            )),
+            task_service: Arc::new(TaskService::new(store.clone(), None)),
+            session_service: Arc::new(SessionService::new(store.clone(), 0.8, 200_000)),
+            org_service: Arc::new(OrgService::new(store.clone())),
+            billing_client: Arc::new(BillingClient::new()),
+            automaton_client: Arc::new(AutomatonClient::new("http://localhost:0".into())),
+            orbit_client: None,
+            network_client: None,
+            storage_client: None,
+            store: store.clone(),
+            event_broadcast: tx,
+            local_server_base_url: Some(base_url),
+            local_http_client: reqwest::Client::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn send_to_agent_success_returns_persisted_with_headers() {
+        let (base_url, _handle) = spawn_mock_server(
+            200,
+            "",
+            vec![
+                ("x-aura-chat-session-id", "sess-123"),
+                ("x-aura-chat-project-id", "proj-456"),
+            ],
+        )
+        .await;
+
+        let (_dir, store) = temp_store();
+        let ctx = build_ctx_with_base(base_url, store);
+
+        let tool = SendToAgentTool;
+        let result = tool
+            .execute(
+                json!({ "agent_id": "agent-xyz", "content": "hello target" }),
+                &ctx,
+            )
+            .await
+            .expect("tool should complete");
+
+        assert!(!result.is_error, "2xx should not set is_error");
+        assert_eq!(result.content["sent"], json!(true));
+        assert_eq!(result.content["persisted"], json!(true));
+        assert_eq!(result.content["agent_id"], json!("agent-xyz"));
+        assert_eq!(result.content["session_id"], json!("sess-123"));
+        assert_eq!(result.content["project_id"], json!("proj-456"));
+    }
+
+    #[tokio::test]
+    async fn send_to_agent_persist_failed_500_with_structured_body() {
+        let body = r#"{
+            "code": "chat_persist_failed",
+            "error": "Failed to persist chat message",
+            "data": {
+                "code": "chat_persist_failed",
+                "reason": "storage upstream 503 — connection refused",
+                "upstream_status": 503,
+                "session_id": "sess-abc",
+                "project_id": "proj-def",
+                "project_agent_id": "pa-ghi"
+            }
+        }"#;
+        let (base_url, _handle) = spawn_mock_server(502, body, vec![]).await;
+
+        let (_dir, store) = temp_store();
+        let ctx = build_ctx_with_base(base_url, store);
+
+        let tool = SendToAgentTool;
+        let result = tool
+            .execute(
+                json!({ "agent_id": "agent-xyz", "content": "hi" }),
+                &ctx,
+            )
+            .await
+            .expect("tool should return Ok even on server 5xx");
+
+        assert!(result.is_error, "non-2xx must set is_error=true");
+        assert_eq!(result.content["sent"], json!(false));
+        assert_eq!(result.content["code"], json!("chat_persist_failed"));
+        assert_eq!(
+            result.content["reason"],
+            json!("storage upstream 503 — connection refused")
+        );
+        assert_eq!(result.content["upstream_status"], json!(503));
+        assert_eq!(result.content["session_id"], json!("sess-abc"));
+        assert_eq!(result.content["project_id"], json!("proj-def"));
+        assert_eq!(result.content["project_agent_id"], json!("pa-ghi"));
+        assert_eq!(result.content["agent_id"], json!("agent-xyz"));
+        // Nothing in the contract says `persisted: true` should leak through
+        // on failure -- we explicitly dropped that soft-failure branch.
+        assert!(result.content.get("persisted").is_none());
+    }
+
+    #[tokio::test]
+    async fn send_to_agent_persist_unavailable_424_is_hard_failure() {
+        let body = r#"{
+            "code": "chat_persist_unavailable",
+            "error": "Chat persistence is not configured for this agent",
+            "data": {
+                "code": "chat_persist_unavailable",
+                "reason": "no project agent binding for agent",
+                "upstream_status": null,
+                "session_id": null,
+                "project_id": null,
+                "project_agent_id": null
+            }
+        }"#;
+        let (base_url, _handle) = spawn_mock_server(424, body, vec![]).await;
+
+        let (_dir, store) = temp_store();
+        let ctx = build_ctx_with_base(base_url, store);
+
+        let tool = SendToAgentTool;
+        let result = tool
+            .execute(
+                json!({ "agent_id": "agent-xyz", "content": "hi" }),
+                &ctx,
+            )
+            .await
+            .expect("tool should return Ok");
+
+        assert!(result.is_error, "424 must be a hard tool failure");
+        assert_eq!(result.content["sent"], json!(false));
+        assert_eq!(result.content["code"], json!("chat_persist_unavailable"));
+        assert_eq!(
+            result.content["reason"],
+            json!("no project agent binding for agent")
+        );
+    }
+
+    #[tokio::test]
+    async fn send_to_agent_non_json_error_body_falls_back_to_generic() {
+        let (base_url, _handle) =
+            spawn_mock_server(500, "internal server error (plain text)", vec![]).await;
+
+        let (_dir, store) = temp_store();
+        let ctx = build_ctx_with_base(base_url, store);
+
+        let tool = SendToAgentTool;
+        let result = tool
+            .execute(
+                json!({ "agent_id": "agent-xyz", "content": "hi" }),
+                &ctx,
+            )
+            .await
+            .expect("tool should return Ok");
+
+        assert!(result.is_error, "500 must be a hard tool failure");
+        assert_eq!(result.content["sent"], json!(false));
+        // Falls back to chat_persist_failed with the raw body as reason.
+        assert_eq!(result.content["code"], json!("chat_persist_failed"));
+        assert_eq!(result.content["upstream_status"], json!(500));
+        assert_eq!(
+            result.content["reason"],
+            json!("internal server error (plain text)")
+        );
     }
 }

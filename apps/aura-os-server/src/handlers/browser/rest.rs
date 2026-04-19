@@ -187,6 +187,7 @@ fn map_browser_error(err: BrowserError) -> (StatusCode, Json<ApiError>) {
                 error: err.to_string(),
                 code: "capacity_exceeded".to_string(),
                 details: None,
+                data: None,
             }),
         ),
         BrowserError::Timeout { .. } => (
@@ -195,6 +196,7 @@ fn map_browser_error(err: BrowserError) -> (StatusCode, Json<ApiError>) {
                 error: err.to_string(),
                 code: "timeout".to_string(),
                 details: None,
+                data: None,
             }),
         ),
         BrowserError::NotSupported(_) => (
@@ -203,6 +205,7 @@ fn map_browser_error(err: BrowserError) -> (StatusCode, Json<ApiError>) {
                 error: err.to_string(),
                 code: "not_supported".to_string(),
                 details: None,
+                data: None,
             }),
         ),
         _ => {

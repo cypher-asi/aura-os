@@ -21,6 +21,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 error: "billing account not provisioned".to_string(),
                 code: "billing_account_missing".to_string(),
                 details: Some(body),
+                data: None,
             }),
         ),
         aura_os_billing::BillingError::AccountProvisioningFailed { status, body } => (
@@ -29,6 +30,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 error: "unable to provision billing account".to_string(),
                 code: "billing_account_provisioning_failed".to_string(),
                 details: Some(format!("status={status} body={body}")),
+                data: None,
             }),
         ),
         aura_os_billing::BillingError::ServerError { status, body } => {
@@ -38,13 +40,14 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 404 => (StatusCode::BAD_GATEWAY, "billing_account_missing", "billing account not provisioned"),
                 _ => (StatusCode::BAD_GATEWAY, "billing_error", "billing server error"),
             };
-            (sc, Json(ApiError { error: msg.to_string(), code: code.to_string(), details: Some(body) }))
+            (sc, Json(ApiError { error: msg.to_string(), code: code.to_string(), details: Some(body), data: None }))
         }
         aura_os_billing::BillingError::Request(_) => {
             (StatusCode::BAD_GATEWAY, Json(ApiError {
                 error: "unable to reach billing server".to_string(),
                 code: "billing_unreachable".to_string(),
                 details: Some(e.to_string()),
+                data: None,
             }))
         }
         _ => ApiError::internal(format!("billing operation failed: {e}")),

@@ -378,6 +378,8 @@ function ProjectAgentChatPanel({
     invalidateBeforeFetch: isSessionView,
     onSwitch: onProjectSwitch,
     onClear,
+    watchAgentInstanceId: agentInstanceId,
+    watchSessionId: sessionId ?? undefined,
   });
 
   const hasHistory = historyMessages.length > 0;
