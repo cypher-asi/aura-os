@@ -10,7 +10,7 @@ use aura_os_core::parse_dt;
 use aura_os_core::*;
 use aura_os_network::NetworkAgent;
 use aura_os_storage::StorageClient;
-use aura_os_store::SettingsStore;
+use aura_os_store::{BatchOp, SettingsStore};
 
 pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentState>>>;
 
@@ -120,6 +120,52 @@ impl AgentService {
             .map_err(AgentError::Store)
     }
 
+    /// Batch-persist agent shadows, writing only those whose serialized
+    /// bytes differ from what's already in the store.
+    ///
+    /// This is the fast path for hot routes like `GET /api/agents` that
+    /// used to call [`save_agent_shadow`] in a per-agent loop — each call
+    /// triggered a full `settings.json` rewrite in
+    /// [`SettingsStore::persist_cf`], so listing N agents caused N full
+    /// rewrites plus N held write-locks on the store. Here we:
+    ///   * serialize each agent once,
+    ///   * compare against the currently stored bytes (in-memory read),
+    ///   * submit only the changed/new entries as a single
+    ///     [`SettingsStore::write_batch`] — which triggers exactly one
+    ///     `persist_cf` for the whole set.
+    ///
+    /// Returns the number of rows actually written (0 means everything
+    /// was already up to date, which means no disk I/O was performed).
+    pub fn save_agent_shadows_if_changed(&self, agents: &[&Agent]) -> Result<usize, AgentError> {
+        if agents.is_empty() {
+            return Ok(0);
+        }
+        let mut ops = Vec::new();
+        for agent in agents {
+            let payload =
+                serde_json::to_vec(*agent).map_err(|e| AgentError::Parse(e.to_string()))?;
+            let key = Self::agent_key(&agent.agent_id);
+            let unchanged = matches!(
+                self.store.get_setting(&key),
+                Ok(existing) if existing == payload
+            );
+            if unchanged {
+                continue;
+            }
+            ops.push(BatchOp::Put {
+                cf: aura_os_store::ColumnFamilyName::Settings.as_str().to_string(),
+                key,
+                value: payload,
+            });
+        }
+        if ops.is_empty() {
+            return Ok(0);
+        }
+        let count = ops.len();
+        self.store.write_batch(ops).map_err(AgentError::Store)?;
+        Ok(count)
+    }
+
     pub fn save_agent_runtime_config(
         &self,
         agent_id: &AgentId,
@@ -204,11 +250,17 @@ impl AgentService {
     /// swallowed intentionally — this is a cache, not the source of
     /// truth, and we don't want a flaky store to break the tool call.
     pub fn hydrate_shadow_from_network(&self, agents: &[NetworkAgent]) {
+        if agents.is_empty() {
+            return;
+        }
+        let mut owned: Vec<Agent> = Vec::with_capacity(agents.len());
         for net in agents {
             let mut agent = network_agent_to_core(net);
             let _ = self.apply_runtime_config(&mut agent);
-            let _ = self.save_agent_shadow(&agent);
+            owned.push(agent);
         }
+        let refs: Vec<&Agent> = owned.iter().collect();
+        let _ = self.save_agent_shadows_if_changed(&refs);
     }
     fn list_local_agents(&self) -> Result<Vec<Agent>, AgentError> {
         let entries = self
@@ -830,5 +882,128 @@ mod tests {
         let agent = network_agent_to_core(&net);
         assert!(!agent.permissions.is_ceo_preset());
         assert!(agent.permissions.capabilities.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // save_agent_shadows_if_changed — batched, diff-only flush. This is
+    // the hot-path fix behind the slow `GET /api/agents` response; the
+    // tests below pin the contract that previously caused N full
+    // `settings.json` rewrites per list:
+    //   1. unchanged inputs produce zero writes,
+    //   2. changed inputs produce exactly one `persist_cf` call
+    //      regardless of how many rows changed.
+    // -----------------------------------------------------------------
+
+    fn sample_agent(name: &str) -> Agent {
+        let now = chrono::Utc::now();
+        Agent {
+            agent_id: AgentId::new(),
+            user_id: "u1".into(),
+            org_id: None,
+            name: name.into(),
+            role: "dev".into(),
+            personality: String::new(),
+            system_prompt: String::new(),
+            skills: vec![],
+            icon: None,
+            machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "aura_managed".into(),
+            integration_id: None,
+            default_model: None,
+            vm_id: None,
+            network_agent_id: None,
+            profile_id: None,
+            tags: vec![],
+            is_pinned: false,
+            listing_status: Default::default(),
+            expertise: vec![],
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
+            permissions: AgentPermissions::empty(),
+            intent_classifier: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn open_service() -> (AgentService, tempfile::TempDir) {
+        let dir = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(SettingsStore::open(dir.path()).unwrap());
+        (AgentService::new(store, None), dir)
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_writes_new_and_changed_rows_once() {
+        let (service, dir) = open_service();
+        let a = sample_agent("Atlas");
+        let b = sample_agent("Beta");
+
+        // First call: both rows are new, so both get batched into one
+        // write.
+        let written = service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("initial batched save");
+        assert_eq!(written, 2, "both new shadows should be queued");
+
+        // Sanity-check that both rows actually round-trip.
+        let a_round = service.get_agent_local(&a.agent_id).unwrap();
+        let b_round = service.get_agent_local(&b.agent_id).unwrap();
+        assert_eq!(a_round.name, "Atlas");
+        assert_eq!(b_round.name, "Beta");
+
+        // Second call with identical inputs must not touch the disk.
+        // We assert that by snapshotting the `settings.json` mtime and
+        // confirming it is unchanged afterwards — if
+        // `save_agent_shadows_if_changed` had fallen back to
+        // `save_agent_shadow`-per-row or unconditionally called
+        // `write_batch`, `persist_cf` would rewrite the file and bump
+        // the mtime.
+        let settings_path = dir.path().join("settings.json");
+        let mtime_before = std::fs::metadata(&settings_path).unwrap().modified().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        let written = service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("second batched save");
+        assert_eq!(written, 0, "unchanged inputs must not trigger writes");
+
+        let mtime_after = std::fs::metadata(&settings_path).unwrap().modified().unwrap();
+        assert_eq!(
+            mtime_before, mtime_after,
+            "settings.json must not be rewritten when nothing changed"
+        );
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_only_writes_diffs() {
+        let (service, _dir) = open_service();
+        let a = sample_agent("Atlas");
+        let mut b = sample_agent("Beta");
+
+        service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("seed both shadows");
+
+        // Mutate only `b`.
+        b.name = "Beta Prime".into();
+        b.updated_at = chrono::Utc::now();
+        let written = service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("flush only the diff");
+        assert_eq!(written, 1, "only the mutated row should be written");
+
+        let b_round = service.get_agent_local(&b.agent_id).unwrap();
+        assert_eq!(b_round.name, "Beta Prime");
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_noop_on_empty_input() {
+        let (service, _dir) = open_service();
+        let written = service.save_agent_shadows_if_changed(&[]).unwrap();
+        assert_eq!(written, 0);
     }
 }

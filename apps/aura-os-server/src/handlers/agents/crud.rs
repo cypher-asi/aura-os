@@ -14,7 +14,7 @@ use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
-use super::instances::repair_agent_name_in_place;
+use super::instances::{repair_agent_name_in_place, repair_agent_name_only};
 use super::marketplace_fields::{merge_marketplace_tags, normalize_marketplace_fields};
 use tracing::{info, warn};
 
@@ -761,14 +761,36 @@ pub(crate) async fn list_agents(
                         agent.icon = shadow.icon;
                     }
                 }
-                // Repair blank names before persisting the shadow so the
-                // "New Agent" placeholder (and the UI renames that key off
-                // it) cascade to both library and project listings.
-                repair_agent_name_in_place(&state.agent_service, &mut agent);
-                let _ = state.agent_service.save_agent_shadow(&agent);
+                // Repair blank names in-memory so the "New Agent" placeholder
+                // (and the UI renames that key off it) cascade to both
+                // library and project listings. Persistence happens in the
+                // batched background flush below.
+                repair_agent_name_only(&mut agent);
                 agent
             })
             .collect();
+
+        // Flush shadow changes as a SINGLE batched write on a blocking
+        // thread so the response isn't gated on N full `settings.json`
+        // rewrites (see `AgentService::save_agent_shadows_if_changed`).
+        // The shadow is a cache — failures are logged but don't fail the
+        // request, matching the prior `let _ = save_agent_shadow(..)`
+        // semantics.
+        let service = state.agent_service.clone();
+        let snapshot = agents.clone();
+        tokio::task::spawn_blocking(move || {
+            let refs: Vec<&Agent> = snapshot.iter().collect();
+            match service.save_agent_shadows_if_changed(&refs) {
+                Ok(n) if n > 0 => tracing::debug!(
+                    changed = n,
+                    total = refs.len(),
+                    "list_agents: persisted shadow diffs"
+                ),
+                Ok(_) => {}
+                Err(e) => tracing::warn!(error = %e, "list_agents: shadow flush failed"),
+            }
+        });
+
         return Ok(Json(agents));
     }
 

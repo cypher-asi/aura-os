@@ -79,11 +79,9 @@ pub(super) fn repair_agent_name_in_place(
     agent_service: &AgentService,
     agent: &mut Agent,
 ) -> bool {
-    if !agent.name.trim().is_empty() {
+    if !repair_agent_name_only(agent) {
         return false;
     }
-    agent.name = GENERAL_AGENT_NAME.to_string();
-    agent.updated_at = Utc::now();
     if let Err(e) = agent_service.save_agent_shadow(agent) {
         tracing::warn!(
             error = %e,
@@ -91,6 +89,20 @@ pub(super) fn repair_agent_name_in_place(
             "failed to repair missing agent name",
         );
     }
+    true
+}
+
+/// Mutation-only variant of [`repair_agent_name_in_place`] for callers that
+/// batch their shadow writes (see e.g. `list_agents`, which collects repaired
+/// rows and flushes them with a single `save_agent_shadows_if_changed` in a
+/// background task). Returns `true` when the agent's name was changed so the
+/// caller can decide whether to include it in its batch.
+pub(super) fn repair_agent_name_only(agent: &mut Agent) -> bool {
+    if !agent.name.trim().is_empty() {
+        return false;
+    }
+    agent.name = GENERAL_AGENT_NAME.to_string();
+    agent.updated_at = Utc::now();
     true
 }
 
