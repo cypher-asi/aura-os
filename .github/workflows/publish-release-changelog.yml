@@ -1,0 +1,124 @@
+name: Publish Release Changelog
+
+on:
+  workflow_run:
+    workflows:
+      - Release Nightly
+      - Release Stable
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-release-changelog-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  publish-changelog:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check whether the triggering workflow published a release
+        id: release-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          response="$(gh api repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs --paginate)"
+          if jq -e '.jobs[] | select(.name == "release" and .conclusion == "success")' >/dev/null <<<"$response"; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip changelog publish when the triggering run did not create a release
+        if: steps.release-check.outputs.released != 'true'
+        run: echo "Triggering workflow did not publish a release. Skipping changelog publish."
+
+      - uses: actions/checkout@v4
+        if: steps.release-check.outputs.released == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          path: repo
+
+      - uses: actions/checkout@v4
+        if: steps.release-check.outputs.released == 'true'
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Install Node.js
+        if: steps.release-check.outputs.released == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+
+      - name: Download release artifacts from the triggering run
+        if: steps.release-check.outputs.released == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: all-artifacts
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Determine changelog metadata
+        if: steps.release-check.outputs.released == 'true'
+        id: metadata
+        shell: bash
+        run: |
+          base_version="$(grep '^version' repo/apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')"
+
+          case "${{ github.event.workflow_run.name }}" in
+            "Release Nightly")
+              echo "channel=nightly" >> "$GITHUB_OUTPUT"
+              echo "version=${base_version}-nightly.${{ github.event.workflow_run.run_number }}.${{ github.event.workflow_run.run_attempt }}" >> "$GITHUB_OUTPUT"
+              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/nightly" >> "$GITHUB_OUTPUT"
+              ;;
+            "Release Stable")
+              echo "channel=stable" >> "$GITHUB_OUTPUT"
+              echo "version=${base_version}" >> "$GITHUB_OUTPUT"
+              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/v${base_version}" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported triggering workflow: ${{ github.event.workflow_run.name }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Generate release changelog
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CHANGELOG_TIMEZONE: America/Los_Angeles
+        run: |
+          node repo/infra/scripts/release/generate-daily-changelog.mjs \
+            --repo-dir repo \
+            --pages-dir pages \
+            --artifacts-dir all-artifacts \
+            --repo aura-os \
+            --channel "${{ steps.metadata.outputs.channel }}" \
+            --version "${{ steps.metadata.outputs.version }}" \
+            --release-url "${{ steps.metadata.outputs.release_url }}"
+
+      - name: Attach changelog summary
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push changelog
+        if: steps.release-check.outputs.released == 'true'
+        run: |
+          cd pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "changelog/${{ steps.metadata.outputs.channel }}"
+          git diff --cached --quiet || git commit -m "Update ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}"
+          git push

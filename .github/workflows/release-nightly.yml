@@ -818,20 +818,6 @@ jobs:
           generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
           generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
 
-      - name: Generate preview changelog
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/Los_Angeles
-        run: |
-          node infra/scripts/release/generate-daily-changelog.mjs \
-            --repo-dir . \
-            --pages-dir . \
-            --artifacts-dir all-artifacts \
-            --repo aura-os \
-            --channel nightly \
-            --version "${{ steps.version.outputs.version }}" \
-            --release-url "https://github.com/${{ github.repository }}/releases/tag/nightly"
-
       - name: Validate preview manifests
         run: |
           node infra/scripts/release/desktop-manifest-validate.mjs \
@@ -848,8 +834,6 @@ jobs:
             echo "- Publish skipped because this run was started in validation mode."
             echo ""
             cat manifest-validation/desktop-manifests-nightly.md
-            echo ""
-            cat changelog/nightly/latest.md
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload preview manifests
@@ -858,7 +842,6 @@ jobs:
           name: nightly-preview-manifests
           path: |
             nightly/**
-            changelog/**
             manifest-validation/**
 
   publish-manifests:
@@ -959,20 +942,6 @@ jobs:
           }
           MANIFEST
 
-      - name: Generate nightly changelog
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/Los_Angeles
-        run: |
-          node repo/infra/scripts/release/generate-daily-changelog.mjs \
-            --repo-dir repo \
-            --pages-dir pages \
-            --artifacts-dir all-artifacts \
-            --repo aura-os \
-            --channel nightly \
-            --version "${{ steps.version.outputs.version }}" \
-            --release-url "https://github.com/${{ github.repository }}/releases/tag/nightly"
-
       - name: Validate nightly update manifests
         run: |
           cd repo
@@ -995,13 +964,12 @@ jobs:
         run: |
           cat manifest-validation/desktop-manifests-nightly.md >> "$GITHUB_STEP_SUMMARY"
           cat manifest-validation/desktop-downloads-nightly.md >> "$GITHUB_STEP_SUMMARY"
-          cat pages/changelog/nightly/latest.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push manifests
         run: |
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add nightly/ downloads/nightly.json changelog/nightly
+          git add nightly/ downloads/nightly.json
           git diff --cached --quiet || git commit -m "Update nightly manifests for ${{ steps.version.outputs.version }}"
           git push
