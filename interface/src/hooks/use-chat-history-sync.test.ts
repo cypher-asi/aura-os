@@ -285,6 +285,44 @@ describe("useChatHistorySync", () => {
     });
   });
 
+  it("force-refetches when watchAgentId matches content.agent_id", async () => {
+    // Covers the standalone-chat path: the hook keys history by the
+    // org-level agent_id, so it must react to `user_message` events
+    // published by the server's `publish_user_message_event`, which
+    // carries `agent_id` (and `project_agent_id` that differs from
+    // the key). Without the `watchAgentId` branch a cross-agent
+    // `send_to_agent` delivery leaves the target chat panel stale.
+    const resetEvents = vi.fn();
+    const fetchFn = vi.fn(async () => []);
+
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn,
+        resetEvents,
+        watchAgentId: "agent-1",
+      }),
+    );
+    mocks.state.fetchHistory.mockClear();
+
+    emit("assistant_message_end", {
+      content: {
+        project_agent_id: "pa-42",
+        agent_id: "agent-1",
+        session_id: "s-1",
+      },
+    });
+
+    await waitFor(() => {
+      expect(mocks.state.fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-1",
+        fetchFn,
+        { force: true },
+      );
+    });
+  });
+
   it("does not subscribe when neither watch param is set", async () => {
     const resetEvents = vi.fn();
 

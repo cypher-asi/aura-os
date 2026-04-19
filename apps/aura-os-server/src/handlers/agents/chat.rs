@@ -229,6 +229,15 @@ pub(crate) struct ChatPersistCtx {
     pub(crate) session_id: String,
     pub(crate) project_agent_id: String,
     pub(crate) project_id: String,
+    /// Org-level agent id (the `agents.agent_id` from aura-network)
+    /// this persistence context belongs to. Distinct from
+    /// `project_agent_id` (the project binding). We broadcast it in
+    /// `user_message` / `assistant_message_end` so the UI can key
+    /// standalone-chat history entries by the same id the sidebar
+    /// uses (`agentHistoryKey(agent_id)`); without it cross-agent
+    /// `send_to_agent` deliveries only refresh the sender's view and
+    /// the recipient's chat window stays stale until the user hits F5.
+    pub(crate) agent_id: Option<String>,
 }
 
 async fn resolve_chat_session(
@@ -430,6 +439,12 @@ pub(crate) fn publish_user_message_event(
         // (`parseAuraEvent` in interface/src/types/aura-events.ts) reads
         // to populate `AuraEventBase.agent_id`, which the hook filters on.
         "agent_instance_id": ctx.project_agent_id,
+        // Org-level agent id (`agents.agent_id`), used by the UI
+        // standalone-chat invalidator to force-refresh
+        // `agentHistoryKey(agent_id)` when someone else writes into
+        // this agent's session (e.g. the CEO via `send_to_agent`).
+        // `Null` for project-scoped chat sessions.
+        "agent_id": ctx.agent_id,
     }));
 }
 
@@ -448,6 +463,7 @@ fn publish_assistant_message_end_event(
         "project_id": ctx.project_id,
         "project_agent_id": ctx.project_agent_id,
         "agent_instance_id": ctx.project_agent_id,
+        "agent_id": ctx.agent_id,
     }));
 }
 
@@ -896,6 +912,10 @@ async fn setup_project_chat_persistence(
         session_id,
         project_agent_id: pai,
         project_id: pid,
+        // Project chats don't have an org-level agent handle to
+        // broadcast — the sidebar's standalone-chat view wouldn't key
+        // on a project session anyway.
+        agent_id: None,
     })
 }
 
@@ -958,6 +978,7 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
         session_id,
         project_agent_id: pai,
         project_id: pid,
+        agent_id: Some(agent_id.to_string()),
     })
 }
 

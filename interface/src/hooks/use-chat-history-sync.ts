@@ -30,6 +30,14 @@ interface ChatHistorySyncOptions {
    */
   watchAgentInstanceId?: string;
   /**
+   * When set, match events by their org-level `agent_id` field (from
+   * `agents.agent_id` in aura-network). Standalone agent chats key
+   * their history by `agentHistoryKey(agent_id)` — not by
+   * `project_agent_id` — so they must filter on this field instead
+   * of `watchAgentInstanceId` to see cross-agent writes live.
+   */
+  watchAgentId?: string;
+  /**
    * When set, scopes the live refetch to events for this specific
    * `session_id`. Useful for historical session views where we only care
    * about updates to the pinned session.
@@ -60,6 +68,7 @@ export function useChatHistorySync({
   onClear,
   hydrateToStream = true,
   watchAgentInstanceId,
+  watchAgentId,
   watchSessionId,
 }: ChatHistorySyncOptions): ChatHistorySyncResult {
   const {
@@ -98,20 +107,34 @@ export function useChatHistorySync({
   const subscribe = useEventStore((s) => s.subscribe);
   useEffect(() => {
     if (!historyKey || !fetchFn) return;
-    if (!watchAgentInstanceId && !watchSessionId) return;
+    if (!watchAgentInstanceId && !watchAgentId && !watchSessionId) return;
 
     const matches = (content: Record<string, unknown> | undefined): boolean => {
       if (!content) return false;
       const eventAgentInstanceId =
         (content.project_agent_id as string | undefined) ??
         (content.agent_instance_id as string | undefined);
+      const eventAgentId = content.agent_id as string | undefined;
       const eventSessionId = content.session_id as string | undefined;
 
+      // `watchSessionId` is the narrowest scope and is *exclusive*:
+      // when set, only events for that exact session fire a refetch,
+      // regardless of any other watch field. This matches the
+      // original behaviour tested in `use-chat-history-sync.test.ts`.
       if (watchSessionId) {
         return eventSessionId === watchSessionId;
       }
-      if (watchAgentInstanceId) {
-        return eventAgentInstanceId === watchAgentInstanceId;
+      // Otherwise fall through to ID-level matching. `watchAgentId`
+      // (org-level) and `watchAgentInstanceId` (project binding)
+      // are both acceptable — a single chat window only passes one.
+      if (watchAgentId && eventAgentId === watchAgentId) {
+        return true;
+      }
+      if (
+        watchAgentInstanceId &&
+        eventAgentInstanceId === watchAgentInstanceId
+      ) {
+        return true;
       }
       return false;
     };
@@ -137,6 +160,7 @@ export function useChatHistorySync({
     fetchFn,
     subscribe,
     watchAgentInstanceId,
+    watchAgentId,
     watchSessionId,
   ]);
 
