@@ -1135,7 +1135,7 @@ pub fn session_events_to_agent_history(
     messages
 }
 
-async fn find_matching_project_agents(
+pub(super) async fn find_matching_project_agents(
     state: &AppState,
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
@@ -1309,7 +1309,7 @@ async fn fetch_all_sessions(
 /// `updated_at` (last row mutation). Missing / unparseable timestamps sort
 /// to the Unix epoch, so any session with a real timestamp always wins over
 /// a session with no recency signal at all.
-fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> DateTime<Utc> {
+pub(super) fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> DateTime<Utc> {
     let candidate = session
         .started_at
         .as_deref()

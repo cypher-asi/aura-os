@@ -22,6 +22,7 @@ import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
 import { useContextUtilization, useContextUsageStore } from "../../stores/context-usage-store";
+import { useHydrateContextUtilization } from "../../hooks/use-hydrate-context-utilization";
 import type { AgentInstance, Project } from "../../types";
 import {
   isCreateAgentChatHandoff,
@@ -242,11 +243,17 @@ function StandaloneAgentChatPanel({
   const handleNewSession = useCallback(() => {
     api.agents.resetSession(agentId).catch(() => {});
     markNextSendAsNewSession();
-    useContextUsageStore.getState().clearContextUtilization(streamKey);
-    // Intentionally keep historyKey cache + stream events so prior messages
-    // remain visible. The next send posts new_session=true and lands in a
-    // fresh storage session; the model's context no longer includes these.
+    const store = useContextUsageStore.getState();
+    store.clearContextUtilization(streamKey);
+    store.markResetPending(streamKey);
   }, [agentId, markNextSendAsNewSession, streamKey]);
+
+  const contextUsageFetcher = useMemo(
+    () =>
+      (signal: AbortSignal) => api.agents.getContextUsage(agentId, { signal }),
+    [agentId],
+  );
+  useHydrateContextUtilization(streamKey, contextUsageFetcher, agentId);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -347,11 +354,21 @@ function ProjectAgentChatPanel({
   const handleNewSession = useCallback(() => {
     api.resetInstanceSession(projectId, agentInstanceId).catch(() => {});
     markNextSendAsNewSession();
-    useContextUsageStore.getState().clearContextUtilization(streamKey);
-    // Intentionally keep historyKey cache + stream events so prior messages
-    // remain visible. The next send posts new_session=true and lands in a
-    // fresh storage session; the model's context no longer includes these.
+    const store = useContextUsageStore.getState();
+    store.clearContextUtilization(streamKey);
+    store.markResetPending(streamKey);
   }, [projectId, agentInstanceId, markNextSendAsNewSession, streamKey]);
+
+  const contextUsageFetcher = useMemo(() => {
+    if (isSessionView) return undefined;
+    return (signal: AbortSignal) =>
+      api.getContextUsage(projectId, agentInstanceId, { signal });
+  }, [isSessionView, projectId, agentInstanceId]);
+  useHydrateContextUtilization(
+    streamKey,
+    contextUsageFetcher,
+    isSessionView ? undefined : agentInstanceId,
+  );
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
     historyKey,

@@ -31,6 +31,10 @@ export interface PaginatedEventsResponse {
   next_cursor: string | null;
 }
 
+export interface ContextUsageResponse {
+  context_utilization: number;
+}
+
 export const agentTemplatesApi = {
   list: () => apiFetch<Agent[]>("/api/agents"),
   create: (data: {
@@ -132,6 +136,11 @@ export const agentTemplatesApi = {
   sendEventStream: sendAgentEventStream,
   resetSession: (agentId: AgentId) =>
     apiFetch<void>(`/api/agents/${agentId}/reset-session`, { method: "POST" }),
+  getContextUsage: (agentId: AgentId, options?: ApiRequestOptions) =>
+    apiFetch<ContextUsageResponse>(
+      `/api/agents/${agentId}/context-usage`,
+      { signal: options?.signal },
+    ),
   getInstalledTools: (
     agentId: AgentId,
     options?: ApiRequestOptions,
@@ -229,6 +238,15 @@ export const agentInstancesApi = {
     apiFetch<void>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/reset-session`,
       { method: "POST" },
+    ),
+  getContextUsage: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    options?: ApiRequestOptions,
+  ) =>
+    apiFetch<ContextUsageResponse>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/context-usage`,
+      { signal: options?.signal },
     ),
 };
 

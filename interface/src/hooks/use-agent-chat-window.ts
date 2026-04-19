@@ -9,6 +9,7 @@ import { agentHistoryKey } from "../stores/chat-history-store";
 import { useAgentStore } from "../apps/agents/stores";
 import { useProjectsListStore } from "../stores/projects-list-store";
 import { useContextUtilization, useContextUsageStore } from "../stores/context-usage-store";
+import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
 import type { ChatPanelProps } from "../components/ChatPanel";
 import type { AgentInstance, Project } from "../types";
 
@@ -101,11 +102,20 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     if (!agentId) return;
     api.agents.resetSession(agentId).catch(() => {});
     markNextSendAsNewSession();
-    useContextUsageStore.getState().clearContextUtilization(streamKey);
-    // Intentionally keep historyKey cache + stream events so prior messages
-    // remain visible. The next send posts new_session=true and lands in a
-    // fresh storage session; the model's context no longer includes these.
+    const store = useContextUsageStore.getState();
+    store.clearContextUtilization(streamKey);
+    // Mark a reset sentinel so the hydration hook doesn't resurrect the old
+    // session's value if the view remounts before the next send (e.g. nav
+    // away and back) or if the reset API call is slow to propagate.
+    store.markResetPending(streamKey);
   }, [agentId, markNextSendAsNewSession, streamKey]);
+
+  const contextUsageFetcher = useMemo(() => {
+    if (!agentId) return undefined;
+    return (signal: AbortSignal) => api.agents.getContextUsage(agentId, { signal });
+  }, [agentId]);
+
+  useHydrateContextUtilization(streamKey, contextUsageFetcher, agentId);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
