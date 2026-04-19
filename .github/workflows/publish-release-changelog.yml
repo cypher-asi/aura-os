@@ -101,7 +101,7 @@ jobs:
             "Release Nightly")
               echo "channel=nightly" >> "$GITHUB_OUTPUT"
               echo "version=${version}" >> "$GITHUB_OUTPUT"
-              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/nightly" >> "$GITHUB_OUTPUT"
+              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/v${version}" >> "$GITHUB_OUTPUT"
               ;;
             "Release Stable")
               echo "channel=stable" >> "$GITHUB_OUTPUT"

@@ -709,7 +709,9 @@ jobs:
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           RUN_SEQ="${{ github.run_number }}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
-          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -718,7 +720,21 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
-      - name: Prune existing nightly release assets
+      - name: Create immutable nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Aura ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: true
+          make_latest: false
+          files: all-artifacts/**/*
+          body: |
+            Automated nightly build from `main` at ${{ github.sha }}.
+
+            **Version**: `${{ steps.version.outputs.version }}`
+
+      - name: Prune existing nightly release alias assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -748,6 +764,7 @@ jobs:
             Automated nightly build from `main` at ${{ github.sha }}.
 
             **Version**: `${{ steps.version.outputs.version }}`
+            **Immutable release**: `https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}`
 
       - name: Attach release summary to job
         shell: bash
@@ -778,7 +795,9 @@ jobs:
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           RUN_SEQ="${{ github.run_number }}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
-          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -791,7 +810,7 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAG="nightly"
+          TAG="${{ steps.version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
@@ -875,7 +894,9 @@ jobs:
           BASE=$(grep '^version' repo/apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           RUN_SEQ="${{ github.run_number }}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
-          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -889,7 +910,7 @@ jobs:
         run: |
           cd repo
           VERSION="${{ steps.version.outputs.version }}"
-          TAG="nightly"
+          TAG="${{ steps.version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
@@ -921,22 +942,22 @@ jobs:
           {
             "channel": "nightly",
             "version": "${VERSION}",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/nightly",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
             "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "desktop": {
               "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/nightly/aura-os-desktop_${VERSION}_x64-setup.exe"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
               },
               "mac": {
                 "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/nightly/Aura_${VERSION}_aarch64.dmg"
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_aarch64.dmg"
                 },
                 "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/nightly/Aura_${VERSION}_x64.dmg"
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_x64.dmg"
                 }
               },
               "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/nightly/aura-os-desktop_${VERSION}_x86_64.AppImage"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
               }
             }
           }
