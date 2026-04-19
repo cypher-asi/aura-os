@@ -481,10 +481,8 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
         .env("AURA_LISTEN_ADDR", &listen_addr)
         .env("AURA_DATA_DIR", &harness_data_dir)
         .env("ENABLE_FS_TOOLS", "true")
-        .env("ENABLE_CMD_TOOLS", "true")
-        .stdin(Stdio::null())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+        .env("ENABLE_CMD_TOOLS", "true");
+    configure_background_child(&mut command, &harness_data_dir.join("sidecar.log"));
 
     if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
         command.env("ORBIT_URL", orbit_url);
@@ -508,6 +506,44 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
             warn!(%error, binary = %harness_binary.display(), "failed to start bundled local harness sidecar");
             None
         }
+    }
+}
+
+/// Configure a `Command` so it runs fully in the background: no console
+/// window on Windows (the desktop app is a GUI-subsystem process and would
+/// otherwise get a fresh console allocated for the console-subsystem child,
+/// which is what used to pop up as a visible terminal next to the app) and
+/// stdout/stderr redirected to a log file under the data directory rather
+/// than inherited from a non-existent parent console.
+fn configure_background_child(command: &mut Command, log_path: &Path) {
+    command.stdin(Stdio::null());
+
+    let log_file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path);
+
+    match log_file.and_then(|file| file.try_clone().map(|clone| (file, clone))) {
+        Ok((stdout_file, stderr_file)) => {
+            command
+                .stdout(Stdio::from(stdout_file))
+                .stderr(Stdio::from(stderr_file));
+        }
+        Err(error) => {
+            warn!(
+                %error,
+                path = %log_path.display(),
+                "failed to open sidecar log file; discarding stdout/stderr"
+            );
+            command.stdout(Stdio::null()).stderr(Stdio::null());
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
     }
 }
 
