@@ -123,6 +123,15 @@ impl ToolRegistry {
         // Billing tools
         registry.register(Arc::new(billing_tools::GetCreditBalanceTool));
 
+        // System tools (Tier 1)
+        // `get_current_time` is Tier 1 because asking "what time is it"
+        // / "what's today's date" is a basic question the CEO needs to
+        // answer without loading a domain. It's also the stable
+        // replacement for the harness's `run_command date` flow, which
+        // is broken on Windows (cmd's built-in `date` is interactive
+        // and exits 1).
+        registry.register(Arc::new(system_tools::GetCurrentTimeTool));
+
         // Meta-tool: load_domain_tools (always available)
         registry.register(Arc::new(crate::tier::LoadDomainToolsTool));
 

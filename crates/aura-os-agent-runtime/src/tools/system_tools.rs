@@ -124,7 +124,57 @@ impl AgentTool for GetEnvironmentInfoTool {
 }
 
 // ---------------------------------------------------------------------------
-// 4. GetRemoteAgentStateTool
+// 4. GetCurrentTimeTool
+// ---------------------------------------------------------------------------
+
+pub struct GetCurrentTimeTool;
+
+#[async_trait]
+impl AgentTool for GetCurrentTimeTool {
+    fn name(&self) -> &str {
+        "get_current_time"
+    }
+    fn description(&self) -> &str {
+        "Return the current local date and time. Prefer this over \
+         running `date` through a shell — the platform shells vary \
+         (Windows cmd.exe's `date` is interactive and exits non-zero \
+         without stdin, PowerShell's `date` is an alias for Get-Date, \
+         POSIX `date` accepts different format flags). This tool gives \
+         a stable, cross-platform answer without spawning a process."
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::System
+    }
+
+    fn parameters_schema(&self) -> serde_json::Value {
+        json!({
+            "type": "object",
+            "properties": {},
+            "required": []
+        })
+    }
+
+    async fn execute(
+        &self,
+        _input: serde_json::Value,
+        _ctx: &AgentToolContext,
+    ) -> Result<ToolResult, AgentRuntimeError> {
+        let local = chrono::Local::now();
+        let utc = chrono::Utc::now();
+        Ok(ToolResult {
+            content: json!({
+                "iso_local": local.to_rfc3339(),
+                "iso_utc": utc.to_rfc3339(),
+                "human": local.format("%A, %B %-d, %Y %H:%M:%S %:z").to_string(),
+                "unix_ms": utc.timestamp_millis(),
+            }),
+            is_error: false,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 5. GetRemoteAgentStateTool
 // ---------------------------------------------------------------------------
 
 pub struct GetRemoteAgentStateTool;

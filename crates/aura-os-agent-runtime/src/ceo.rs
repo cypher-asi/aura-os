@@ -103,6 +103,11 @@ const CEO_CORE_TOOLS: &[&str] = &[
     "get_project_cost",
     // Billing (tier 1 head)
     "get_credit_balance",
+    // System (tier 1) — stable, cross-platform current time. Without
+    // this, the CEO falls back to `run_command date`, which on Windows
+    // hits cmd.exe's interactive `date` built-in (no `/t`) and exits
+    // with code 1 plus garbage output.
+    "get_current_time",
     // Meta-tool (always on; lets the LLM ask for additional domains)
     "load_domain_tools",
 ];
