@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
+use futures_util::StreamExt;
 use serde_json::json;
 
 use aura_os_core::ToolDomain;
@@ -233,6 +236,199 @@ impl AgentTool for GetLoopStatusTool {
 // 5. SendToAgentTool
 // ---------------------------------------------------------------------------
 
+/// Parsed metadata from the target agent's SSE response. Populated from
+/// both the initial HTTP response headers (`x-aura-chat-*`) and by
+/// draining the `text_delta` / `assistant_message_end` events on the
+/// body stream.
+struct SendResponse {
+    status: reqwest::StatusCode,
+    body: String,
+    session_id: Option<String>,
+    project_id: Option<String>,
+    /// Accumulated `text_delta` payloads from the target agent's
+    /// turn. Empty when the stream timed out before the first delta
+    /// or when the server returned a non-2xx.
+    reply_text: String,
+    /// True iff we observed an `assistant_message_end` SSE event —
+    /// i.e. the target fully finished its turn within our budget.
+    reply_complete: bool,
+    /// True iff the drain hit `DRAIN_MAX_WAIT`. The CEO will still
+    /// get whatever partial text we collected, just flagged so the
+    /// LLM can explain that the reply may be clipped.
+    reply_timed_out: bool,
+    /// True iff the drain hit `DRAIN_MAX_BYTES` or `DRAIN_MAX_REPLY_CHARS`
+    /// and we stopped reading early.
+    reply_truncated: bool,
+}
+
+/// Total wall-clock budget for draining the target's SSE response.
+///
+/// Most inter-agent exchanges are short (a couple of sentences), so
+/// 60s is generous; large multi-tool-call turns will hit this and
+/// we'll surface a `reply_timed_out: true` flag instead of stalling
+/// the calling agent forever. The harness's own turn timeout is in
+/// the same ballpark, so we can't do much better without plumbing.
+const DRAIN_MAX_WAIT: Duration = Duration::from_secs(60);
+/// Hard cap on raw bytes pulled off the SSE socket. Exists to defend
+/// against a runaway target filling the CEO's tool_result with
+/// arbitrary data (every tool_result rides in the harness conversation
+/// history for the rest of the session — that's exactly the mechanism
+/// that caused the 100% context utilisation bug with `list_agents`).
+const DRAIN_MAX_BYTES: usize = 256 * 1024;
+/// Hard cap on the `reply_text` string we return to the LLM. Keeps
+/// even the worst-case tool_result comfortably under the 8 KiB
+/// warn-threshold in `dispatch_agent_tool`.
+const DRAIN_MAX_REPLY_CHARS: usize = 32 * 1024;
+
+async fn parse_response(resp: reqwest::Response) -> Result<SendResponse, AgentRuntimeError> {
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    let session_id = headers
+        .get("x-aura-chat-session-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+    let project_id = headers
+        .get("x-aura-chat-project-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
+    if !status.is_success() {
+        // Error path: body is a structured `ApiError` JSON — read it
+        // whole, no streaming needed.
+        let body = resp.text().await.unwrap_or_default();
+        return Ok(SendResponse {
+            status,
+            body,
+            session_id,
+            project_id,
+            reply_text: String::new(),
+            reply_complete: false,
+            reply_timed_out: false,
+            reply_truncated: false,
+        });
+    }
+
+    let (reply_text, reply_complete, reply_timed_out, reply_truncated) =
+        drain_sse_reply(resp).await;
+
+    Ok(SendResponse {
+        status,
+        body: String::new(),
+        session_id,
+        project_id,
+        reply_text,
+        reply_complete,
+        reply_timed_out,
+        reply_truncated,
+    })
+}
+
+/// Drain the SSE body until we see `assistant_message_end`, the stream
+/// closes, or one of the budgets is exhausted.
+///
+/// Returns `(reply_text, complete, timed_out, truncated)`. `text_delta`
+/// events are concatenated into `reply_text`; every other event type
+/// (`tool_use_start`, `tool_call_snapshot`, `tool_result`, ...) is
+/// ignored on purpose — those belong in the target agent's own
+/// session history, not in the calling agent's tool_result.
+async fn drain_sse_reply(resp: reqwest::Response) -> (String, bool, bool, bool) {
+    let mut text = String::new();
+    let mut total_bytes: usize = 0;
+    let mut reply_complete = false;
+    let mut reply_timed_out = false;
+    let mut reply_truncated = false;
+
+    let deadline = tokio::time::Instant::now() + DRAIN_MAX_WAIT;
+    let mut stream = resp.bytes_stream();
+    let mut buf: Vec<u8> = Vec::new();
+    let mut current_event: Option<String> = None;
+
+    'outer: loop {
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            reply_timed_out = true;
+            break;
+        }
+
+        let next = match tokio::time::timeout(remaining, stream.next()).await {
+            Ok(Some(Ok(chunk))) => chunk,
+            Ok(Some(Err(_))) => break,
+            Ok(None) => break,
+            Err(_) => {
+                reply_timed_out = true;
+                break;
+            }
+        };
+
+        total_bytes = total_bytes.saturating_add(next.len());
+        if total_bytes > DRAIN_MAX_BYTES {
+            reply_truncated = true;
+            break;
+        }
+        buf.extend_from_slice(&next);
+
+        while let Some(pos) = buf.iter().position(|&b| b == b'\n') {
+            let raw: Vec<u8> = buf.drain(..=pos).collect();
+            let mut line = std::str::from_utf8(&raw)
+                .unwrap_or("")
+                .trim_end_matches('\n')
+                .trim_end_matches('\r')
+                .to_string();
+            // Empty line terminates an SSE event.
+            if line.is_empty() {
+                current_event = None;
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("event:") {
+                current_event = Some(rest.trim().to_string());
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("data:") {
+                line = rest.trim().to_string();
+                let event_type = current_event.as_deref().unwrap_or("");
+                match event_type {
+                    "text_delta" => {
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
+                            if let Some(t) = v.get("text").and_then(|x| x.as_str()) {
+                                let budget = DRAIN_MAX_REPLY_CHARS.saturating_sub(text.len());
+                                if budget == 0 {
+                                    reply_truncated = true;
+                                    break 'outer;
+                                }
+                                if t.len() <= budget {
+                                    text.push_str(t);
+                                } else {
+                                    // Find the largest char boundary <= budget so we
+                                    // don't split a multi-byte codepoint in half.
+                                    let mut cut = budget;
+                                    while cut > 0 && !t.is_char_boundary(cut) {
+                                        cut -= 1;
+                                    }
+                                    text.push_str(&t[..cut]);
+                                    reply_truncated = true;
+                                    break 'outer;
+                                }
+                            }
+                        }
+                    }
+                    "assistant_message_end" => {
+                        reply_complete = true;
+                        break 'outer;
+                    }
+                    _ => {
+                        // Ignore tool_use_*, progress, error, etc. —
+                        // those are the target agent's private
+                        // machinery and shouldn't leak into the
+                        // caller's tool_result.
+                    }
+                }
+            }
+        }
+    }
+
+    (text, reply_complete, reply_timed_out, reply_truncated)
+}
+
 pub struct SendToAgentTool;
 
 #[async_trait]
@@ -241,10 +437,14 @@ impl AgentTool for SendToAgentTool {
         "send_to_agent"
     }
     fn description(&self) -> &str {
-        "Send a chat message to another agent by agent_id. The message is \
-         delivered to the target agent's conversation as a user turn and \
-         triggers its next response. Requires the ControlAgent capability. \
-         Use `list_agents` to discover the target's agent_id."
+        "Send a chat message to another agent by agent_id and wait for \
+         their reply (up to ~60s). The message is delivered to the target \
+         agent's conversation as a user turn and the target's response text \
+         is returned as `reply`. Fields `reply_complete`, `reply_timed_out`, \
+         and `reply_truncated` indicate whether the drain hit a budget — \
+         when any are true, `reply` may be partial. Requires the \
+         ControlAgent capability. Use `list_agents` to discover the target's \
+         agent_id."
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Execution
@@ -307,46 +507,12 @@ impl AgentTool for SendToAgentTool {
         // already saved in the target agent's chat history (see
         // `open_harness_chat_stream` and the `chat_persist_failed` /
         // `chat_persist_unavailable` error contract in `error.rs`).
+        //
+        // After the 2xx we drain the SSE body to harvest the target's
+        // reply — without that the calling LLM (the CEO) only sees
+        // "sent" and has nothing to reason about, which is why asking
+        // Barret a question used to return silence.
         let path = format!("/api/agents/{agent_id}/events/stream");
-        struct SendResponse {
-            status: reqwest::StatusCode,
-            body: String,
-            session_id: Option<String>,
-            project_id: Option<String>,
-        }
-        async fn parse_response(
-            resp: reqwest::Response,
-        ) -> Result<SendResponse, AgentRuntimeError> {
-            let status = resp.status();
-            let headers = resp.headers().clone();
-            // Keep reading the persistence headers even on success:
-            // `open_harness_chat_stream` advertises them on the 2xx SSE
-            // response and the CEO uses them to locate the saved turn
-            // without draining the stream.
-            let session_id = headers
-                .get("x-aura-chat-session-id")
-                .and_then(|v| v.to_str().ok())
-                .map(str::to_owned);
-            let project_id = headers
-                .get("x-aura-chat-project-id")
-                .and_then(|v| v.to_str().ok())
-                .map(str::to_owned);
-            // On failure the server returns JSON (the `ApiError` shape
-            // defined in apps/aura-os-server/src/error.rs). On success
-            // we don't care about the SSE body — the status itself is
-            // our "persisted" signal now.
-            let body = if status.is_success() {
-                String::new()
-            } else {
-                resp.text().await.unwrap_or_default()
-            };
-            Ok(SendResponse {
-                status,
-                body,
-                session_id,
-                project_id,
-            })
-        }
 
         let parsed = if let Some(base) = ctx.local_server_base_url.as_deref() {
             let url = format!("{base}{path}");
@@ -452,6 +618,13 @@ impl AgentTool for SendToAgentTool {
             });
         }
 
+        // Success path: include the target's reply text so the
+        // calling LLM can actually reason about it ("Barret said
+        // X, therefore ..."). The `reply_*` flags let the LLM
+        // narrate gracefully when the drain hit a budget — e.g.
+        // "Barret didn't finish within 60s; here's the partial
+        // response so far".
+        let reply = parsed.reply_text;
         Ok(ToolResult {
             content: json!({
                 "sent": true,
@@ -459,6 +632,10 @@ impl AgentTool for SendToAgentTool {
                 "agent_id": agent_id,
                 "session_id": parsed.session_id,
                 "project_id": parsed.project_id,
+                "reply": reply,
+                "reply_complete": parsed.reply_complete,
+                "reply_timed_out": parsed.reply_timed_out,
+                "reply_truncated": parsed.reply_truncated,
             }),
             is_error: false,
         })
@@ -641,6 +818,13 @@ mod send_to_agent_tests {
         assert_eq!(result.content["agent_id"], json!("agent-xyz"));
         assert_eq!(result.content["session_id"], json!("sess-123"));
         assert_eq!(result.content["project_id"], json!("proj-456"));
+        // Empty-body mock closes immediately; drain returns an empty
+        // reply with no completion marker. The tool still succeeds —
+        // the calling LLM sees `reply: ""` and can narrate accordingly.
+        assert_eq!(result.content["reply"], json!(""));
+        assert_eq!(result.content["reply_complete"], json!(false));
+        assert_eq!(result.content["reply_timed_out"], json!(false));
+        assert_eq!(result.content["reply_truncated"], json!(false));
     }
 
     #[tokio::test]
@@ -723,6 +907,127 @@ mod send_to_agent_tests {
             result.content["reason"],
             json!("no project agent binding for agent")
         );
+    }
+
+    /// Spawn a mock that writes an SSE-style body (`event:`/`data:`
+    /// frames) under a plain 200. Chunked transfer isn't needed — we
+    /// rely on `Content-Length` closing the stream cleanly, which
+    /// exercises the drain's stream-closed branch as a proxy for the
+    /// real `assistant_message_end` hit.
+    async fn spawn_sse_mock(body: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let base_url = format!("http://{}", addr);
+
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = Vec::with_capacity(4096);
+            let mut tmp = [0u8; 1024];
+            let (header_end, content_length) = loop {
+                let n = sock.read(&mut tmp).await.unwrap();
+                if n == 0 {
+                    break (buf.len(), 0usize);
+                }
+                buf.extend_from_slice(&tmp[..n]);
+                if let Some(pos) = find_header_end(&buf) {
+                    let cl = parse_content_length(&buf[..pos]);
+                    break (pos + 4, cl);
+                }
+            };
+            let need = header_end + content_length;
+            while buf.len() < need {
+                let n = sock.read(&mut tmp).await.unwrap();
+                if n == 0 {
+                    break;
+                }
+                buf.extend_from_slice(&tmp[..n]);
+            }
+            let mut resp = String::from("HTTP/1.1 200 OK\r\n");
+            resp.push_str("Content-Type: text/event-stream\r\n");
+            resp.push_str(&format!("Content-Length: {}\r\n", body.len()));
+            resp.push_str("x-aura-chat-session-id: sess-drain\r\n");
+            resp.push_str("x-aura-chat-project-id: proj-drain\r\n");
+            resp.push_str("Connection: close\r\n\r\n");
+            sock.write_all(resp.as_bytes()).await.unwrap();
+            sock.write_all(body.as_bytes()).await.unwrap();
+            sock.shutdown().await.ok();
+        });
+
+        base_url
+    }
+
+    #[tokio::test]
+    async fn send_to_agent_drains_reply_text_from_sse() {
+        // Two text_delta frames plus an assistant_message_end terminator.
+        // The drain should concatenate the deltas, flag `reply_complete`
+        // true, and leave the truncation/timeout flags false.
+        let body = "event: text_delta\r\n\
+                    data: {\"text\":\"Hello \"}\r\n\
+                    \r\n\
+                    event: text_delta\r\n\
+                    data: {\"text\":\"world\"}\r\n\
+                    \r\n\
+                    event: assistant_message_end\r\n\
+                    data: {\"message_id\":\"m-1\",\"stop_reason\":\"end_turn\"}\r\n\
+                    \r\n";
+        let base_url = spawn_sse_mock(body).await;
+
+        let (_dir, store) = temp_store();
+        let ctx = build_ctx_with_base(base_url, store);
+
+        let tool = SendToAgentTool;
+        let result = tool
+            .execute(
+                json!({ "agent_id": "agent-xyz", "content": "say hi" }),
+                &ctx,
+            )
+            .await
+            .expect("tool should complete");
+
+        assert!(!result.is_error);
+        assert_eq!(result.content["sent"], json!(true));
+        assert_eq!(result.content["reply"], json!("Hello world"));
+        assert_eq!(result.content["reply_complete"], json!(true));
+        assert_eq!(result.content["reply_timed_out"], json!(false));
+        assert_eq!(result.content["reply_truncated"], json!(false));
+        assert_eq!(result.content["session_id"], json!("sess-drain"));
+        assert_eq!(result.content["project_id"], json!("proj-drain"));
+    }
+
+    #[tokio::test]
+    async fn send_to_agent_ignores_non_text_events() {
+        // The drain must only collect `text_delta`. Tool-use events
+        // belong in the target agent's own session history, not in
+        // the caller's tool_result — letting them through would
+        // re-introduce the multi-KB context-bloat class of bugs.
+        let body = "event: tool_use_start\r\n\
+                    data: {\"id\":\"tu-1\",\"name\":\"list_specs\"}\r\n\
+                    \r\n\
+                    event: text_delta\r\n\
+                    data: {\"text\":\"ok\"}\r\n\
+                    \r\n\
+                    event: tool_result\r\n\
+                    data: {\"name\":\"list_specs\",\"result\":\"[...]\",\"is_error\":false}\r\n\
+                    \r\n\
+                    event: assistant_message_end\r\n\
+                    data: {\"message_id\":\"m-2\",\"stop_reason\":\"end_turn\"}\r\n\
+                    \r\n";
+        let base_url = spawn_sse_mock(body).await;
+
+        let (_dir, store) = temp_store();
+        let ctx = build_ctx_with_base(base_url, store);
+
+        let tool = SendToAgentTool;
+        let result = tool
+            .execute(
+                json!({ "agent_id": "agent-xyz", "content": "hi" }),
+                &ctx,
+            )
+            .await
+            .expect("tool should complete");
+
+        assert_eq!(result.content["reply"], json!("ok"));
+        assert_eq!(result.content["reply_complete"], json!(true));
     }
 
     #[tokio::test]
