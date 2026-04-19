@@ -29,7 +29,24 @@ describe("useHydrateContextUtilization", () => {
 
     await waitFor(() => {
       expect(fetcher).toHaveBeenCalledTimes(1);
-      expect(useContextUsageStore.getState().usageByStreamKey["stream-1"]).toBeCloseTo(0.42);
+      expect(
+        useContextUsageStore.getState().usageByStreamKey["stream-1"]?.utilization,
+      ).toBeCloseTo(0.42);
+    });
+  });
+
+  it("seeds estimated tokens when the server returns them", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      context_utilization: 0.42,
+      estimated_context_tokens: 84_000,
+    });
+
+    renderHook(() => useHydrateContextUtilization("stream-1", fetcher, "agent-1"));
+
+    await waitFor(() => {
+      const entry = useContextUsageStore.getState().usageByStreamKey["stream-1"];
+      expect(entry?.utilization).toBeCloseTo(0.42);
+      expect(entry?.estimatedTokens).toBe(84_000);
     });
   });
 
@@ -52,7 +69,9 @@ describe("useHydrateContextUtilization", () => {
 
     await new Promise((r) => setTimeout(r, 10));
     expect(fetcher).not.toHaveBeenCalled();
-    expect(useContextUsageStore.getState().usageByStreamKey["stream-1"]).toBeCloseTo(0.33);
+    expect(
+      useContextUsageStore.getState().usageByStreamKey["stream-1"]?.utilization,
+    ).toBeCloseTo(0.33);
   });
 
   it("skips hydration when a stream is active", async () => {
@@ -77,12 +96,16 @@ describe("useHydrateContextUtilization", () => {
   });
 
   it("does not seed if reset was marked after fetch started but before it resolved", async () => {
-    let resolveFetch: ((v: { context_utilization: number }) => void) | null = null;
+    let resolveFetch:
+      | ((v: { context_utilization: number; estimated_context_tokens?: number }) => void)
+      | null = null;
     const fetcher = vi.fn(
       () =>
-        new Promise<{ context_utilization: number }>((resolve) => {
-          resolveFetch = resolve;
-        }),
+        new Promise<{ context_utilization: number; estimated_context_tokens?: number }>(
+          (resolve) => {
+            resolveFetch = resolve;
+          },
+        ),
     );
 
     renderHook(() => useHydrateContextUtilization("stream-1", fetcher, "agent-1"));

@@ -1,7 +1,12 @@
 import { create } from "zustand";
 
+export interface ContextUsageEntry {
+  utilization: number;
+  estimatedTokens?: number;
+}
+
 interface ContextUsageState {
-  usageByStreamKey: Record<string, number>;
+  usageByStreamKey: Record<string, ContextUsageEntry>;
   /**
    * Per-streamKey "reset pending" sentinel. Set by {@link markResetPending}
    * when the user clicks "New session". While `true`, hydration hooks MUST
@@ -14,7 +19,11 @@ interface ContextUsageState {
    * `AssistantMessageEnd` of the new session arrives from the harness.
    */
   resetPendingByStreamKey: Record<string, true>;
-  setContextUtilization: (key: string, value: number) => void;
+  setContextUtilization: (
+    key: string,
+    utilization: number,
+    estimatedTokens?: number,
+  ) => void;
   clearContextUtilization: (key: string) => void;
   markResetPending: (key: string) => void;
   isResetPending: (key: string) => boolean;
@@ -23,11 +32,19 @@ interface ContextUsageState {
 export const useContextUsageStore = create<ContextUsageState>((set, get) => ({
   usageByStreamKey: {},
   resetPendingByStreamKey: {},
-  setContextUtilization: (key, value) =>
+  setContextUtilization: (key, utilization, estimatedTokens) =>
     set((state) => {
       const { [key]: _, ...resetRest } = state.resetPendingByStreamKey;
+      const entry: ContextUsageEntry = { utilization };
+      if (
+        typeof estimatedTokens === "number" &&
+        Number.isFinite(estimatedTokens) &&
+        estimatedTokens >= 0
+      ) {
+        entry.estimatedTokens = estimatedTokens;
+      }
       return {
-        usageByStreamKey: { ...state.usageByStreamKey, [key]: value },
+        usageByStreamKey: { ...state.usageByStreamKey, [key]: entry },
         resetPendingByStreamKey: resetRest,
       };
     }),
@@ -45,6 +62,12 @@ export const useContextUsageStore = create<ContextUsageState>((set, get) => ({
 
 export function useContextUtilization(streamKey: string): number | undefined {
   return useContextUsageStore(
-    (state) => state.usageByStreamKey[streamKey],
+    (state) => state.usageByStreamKey[streamKey]?.utilization,
   );
+}
+
+export function useContextUsage(
+  streamKey: string,
+): ContextUsageEntry | undefined {
+  return useContextUsageStore((state) => state.usageByStreamKey[streamKey]);
 }

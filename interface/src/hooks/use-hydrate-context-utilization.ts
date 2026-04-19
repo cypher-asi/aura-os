@@ -3,7 +3,10 @@ import { useContextUsageStore } from "../stores/context-usage-store";
 import { useIsStreaming } from "./stream/hooks";
 
 export interface HydrateContextUtilizationFetcher {
-  (signal: AbortSignal): Promise<{ context_utilization: number }>;
+  (signal: AbortSignal): Promise<{
+    context_utilization: number;
+    estimated_context_tokens?: number;
+  }>;
 }
 
 /**
@@ -64,7 +67,11 @@ export function useHydrateContextUtilization(
         ) {
           return;
         }
-        latest.setContextUtilization(streamKey, response.context_utilization);
+        latest.setContextUtilization(
+          streamKey,
+          response.context_utilization,
+          response.estimated_context_tokens,
+        );
       })
       .catch((err) => {
         if (cancelled || (err instanceof DOMException && err.name === "AbortError")) {

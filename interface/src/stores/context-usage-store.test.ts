@@ -11,7 +11,25 @@ describe("useContextUsageStore", () => {
 
   it("stores and retrieves a per-streamKey value", () => {
     useContextUsageStore.getState().setContextUtilization("k1", 0.42);
-    expect(useContextUsageStore.getState().usageByStreamKey.k1).toBeCloseTo(0.42);
+    const entry = useContextUsageStore.getState().usageByStreamKey.k1;
+    expect(entry?.utilization).toBeCloseTo(0.42);
+    expect(entry?.estimatedTokens).toBeUndefined();
+  });
+
+  it("stores an optional estimatedTokens alongside utilization", () => {
+    useContextUsageStore.getState().setContextUtilization("k1", 0.42, 12_345);
+    const entry = useContextUsageStore.getState().usageByStreamKey.k1;
+    expect(entry?.utilization).toBeCloseTo(0.42);
+    expect(entry?.estimatedTokens).toBe(12_345);
+  });
+
+  it("ignores non-finite or negative estimatedTokens", () => {
+    const s = useContextUsageStore.getState();
+    s.setContextUtilization("k1", 0.1, Number.NaN);
+    s.setContextUtilization("k2", 0.2, -5);
+    const latest = useContextUsageStore.getState();
+    expect(latest.usageByStreamKey.k1?.estimatedTokens).toBeUndefined();
+    expect(latest.usageByStreamKey.k2?.estimatedTokens).toBeUndefined();
   });
 
   it("clears a value without affecting reset-pending sentinel", () => {

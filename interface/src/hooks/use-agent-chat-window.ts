@@ -8,7 +8,7 @@ import { useStandaloneAgentMeta } from "./use-agent-chat-meta";
 import { agentHistoryKey } from "../stores/chat-history-store";
 import { useAgentStore } from "../apps/agents/stores";
 import { useProjectsListStore } from "../stores/projects-list-store";
-import { useContextUtilization, useContextUsageStore } from "../stores/context-usage-store";
+import { useContextUsage, useContextUsageStore } from "../stores/context-usage-store";
 import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
 import type { ChatPanelProps } from "../components/ChatPanel";
 import type { AgentInstance, Project } from "../types";
@@ -70,7 +70,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
   );
 
   const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } = useAgentChatStream({ agentId });
-  const contextUtilization = useContextUtilization(streamKey);
+  const contextUsage = useContextUsage(streamKey);
 
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } =
     useStandaloneAgentMeta(agentId);
@@ -160,7 +160,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     projects: agentProjects,
     selectedProjectId: effectiveProjectId,
     onProjectChange: handleProjectChange,
-    contextUtilization,
+    contextUsage,
     onNewSession: handleNewSession,
   };
 }

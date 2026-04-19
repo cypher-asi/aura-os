@@ -311,9 +311,19 @@ pub(crate) async fn summarize_session(
 #[derive(Serialize)]
 pub(crate) struct ContextUsageResponse {
     pub context_utilization: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub estimated_context_tokens: Option<u64>,
 }
 
-/// Pull the most recent `context_utilization` out of a storage session.
+/// Usage snapshot derived from the most recent persisted
+/// `assistant_message_end` event for a session.
+#[derive(Clone, Copy, Default)]
+struct SessionContextUsage {
+    utilization: f32,
+    estimated_context_tokens: Option<u64>,
+}
+
+/// Pull the most recent context usage out of a storage session.
 ///
 /// Chat sessions do NOT update `Session.context_usage_estimate` today —
 /// only the dev-loop writes that column. So for chat the authoritative
@@ -324,19 +334,24 @@ pub(crate) struct ContextUsageResponse {
 /// Walks the session's events newest-first (by looking at the persisted
 /// `seq`/timestamp order returned by storage) and returns the first
 /// `assistant_message_end` whose payload has a usable
-/// `usage.context_utilization`. Falls back to
-/// `session.context_usage_estimate` (dev-loop's source) when no such
-/// event exists.
-async fn latest_context_utilization_for_session(
+/// `usage.context_utilization`; when present, also pulls
+/// `usage.estimated_context_tokens` from the same payload so the UI can
+/// display absolute used/total numbers alongside the percentage. Falls
+/// back to `session.context_usage_estimate` (dev-loop's source) when no
+/// such event exists.
+async fn latest_context_usage_for_session(
     storage: &StorageClient,
     jwt: &str,
     session: &aura_os_storage::StorageSession,
-) -> Option<f32> {
+) -> Option<SessionContextUsage> {
     let events = match storage.list_events(&session.id, jwt, None, None).await {
         Ok(e) => e,
         Err(e) => {
             warn!(session_id = %session.id, error = %e, "context-usage: list_events failed");
-            return session.context_usage_estimate.map(|v| v as f32);
+            return session.context_usage_estimate.map(|v| SessionContextUsage {
+                utilization: v as f32,
+                estimated_context_tokens: None,
+            });
         }
     };
 
@@ -346,17 +361,28 @@ async fn latest_context_utilization_for_session(
         .filter(|evt| evt.event_type.as_deref() == Some("assistant_message_end"))
         .find_map(|evt| {
             let content = evt.content.as_ref()?;
-            let raw = content
-                .get("usage")
-                .and_then(|u| u.get("context_utilization"))
+            let usage = content.get("usage")?;
+            let raw = usage
+                .get("context_utilization")
                 .and_then(|v| v.as_f64())?;
             if !raw.is_finite() {
                 return None;
             }
-            Some(raw as f32)
+            let estimated_context_tokens = usage
+                .get("estimated_context_tokens")
+                .and_then(|v| v.as_u64());
+            Some(SessionContextUsage {
+                utilization: raw as f32,
+                estimated_context_tokens,
+            })
         });
 
-    found.or_else(|| session.context_usage_estimate.map(|v| v as f32))
+    found.or_else(|| {
+        session.context_usage_estimate.map(|v| SessionContextUsage {
+            utilization: v as f32,
+            estimated_context_tokens: None,
+        })
+    })
 }
 
 /// GET `/api/agents/:agent_id/context-usage` — returns the latest
@@ -379,6 +405,7 @@ pub(crate) async fn get_agent_context_usage(
     if matching.is_empty() {
         return Ok(Json(ContextUsageResponse {
             context_utilization: 0.0,
+            estimated_context_tokens: None,
         }));
     }
 
@@ -406,14 +433,15 @@ pub(crate) async fn get_agent_context_usage(
         }
     }
 
-    let context_utilization = match latest {
-        Some(session) => latest_context_utilization_for_session(storage, &jwt, &session)
+    let usage = match latest {
+        Some(session) => latest_context_usage_for_session(storage, &jwt, &session)
             .await
-            .unwrap_or(0.0),
-        None => 0.0,
+            .unwrap_or_default(),
+        None => SessionContextUsage::default(),
     };
     Ok(Json(ContextUsageResponse {
-        context_utilization,
+        context_utilization: usage.utilization,
+        estimated_context_tokens: usage.estimated_context_tokens,
     }))
 }
 
@@ -435,14 +463,15 @@ pub(crate) async fn get_instance_context_usage(
         .into_iter()
         .max_by_key(|s| storage_session_sort_key(s));
 
-    let context_utilization = match latest {
-        Some(session) => latest_context_utilization_for_session(storage, &jwt, &session)
+    let usage = match latest {
+        Some(session) => latest_context_usage_for_session(storage, &jwt, &session)
             .await
-            .unwrap_or(0.0),
-        None => 0.0,
+            .unwrap_or_default(),
+        None => SessionContextUsage::default(),
     };
 
     Ok(Json(ContextUsageResponse {
-        context_utilization,
+        context_utilization: usage.utilization,
+        estimated_context_tokens: usage.estimated_context_tokens,
     }))
 }

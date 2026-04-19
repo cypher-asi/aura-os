@@ -33,6 +33,11 @@ export interface PaginatedEventsResponse {
 
 export interface ContextUsageResponse {
   context_utilization: number;
+  /** Most recent absolute token count for the session's input context,
+   * as reported by the harness in `assistant_message_end.usage`. Absent
+   * when only the legacy `context_utilization` ratio is known (e.g.
+   * dev-loop fallback). */
+  estimated_context_tokens?: number;
 }
 
 export const agentTemplatesApi = {

@@ -170,9 +170,18 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       case EventType.AssistantMessageEnd: {
         handleAssistantTurnBoundary(refs, setters);
-        const amc = event.content as { stop_reason?: string; usage?: { context_utilization?: number } };
+        const amc = event.content as {
+          stop_reason?: string;
+          usage?: { context_utilization?: number; estimated_context_tokens?: number };
+        };
         if (amc.usage?.context_utilization != null) {
-          useContextUsageStore.getState().setContextUtilization(coreKey, amc.usage.context_utilization);
+          useContextUsageStore
+            .getState()
+            .setContextUtilization(
+              coreKey,
+              amc.usage.context_utilization,
+              amc.usage.estimated_context_tokens,
+            );
         }
         if (amc.stop_reason !== "tool_use") {
           resetStreamBuffers(refs, setters);

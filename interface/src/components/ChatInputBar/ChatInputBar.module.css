@@ -251,6 +251,15 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 1px 3px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.contextIndicator:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .contextWarning {
@@ -259,6 +268,64 @@
 
 .contextDanger {
   color: var(--color-error, #e54017);
+}
+
+.contextUsageWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.contextUsageCard {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  background: var(--color-bg-secondary, #1a1a1a);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contextUsageCard::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 6px;
+}
+
+.contextUsageRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.contextUsageLabel {
+  color: var(--color-text-tertiary, #6b7280);
+  flex-shrink: 0;
+  min-width: 56px;
+}
+
+.contextUsageValue {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.contextUsageHint {
+  font-size: 10px;
+  color: var(--color-text-tertiary, #6b7280);
+  font-style: italic;
+  line-height: 1.4;
 }
 
 .newSessionButton {

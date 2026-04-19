@@ -21,7 +21,7 @@ import { queryClient } from "../../lib/query-client";
 import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
-import { useContextUtilization, useContextUsageStore } from "../../stores/context-usage-store";
+import { useContextUsage, useContextUsageStore } from "../../stores/context-usage-store";
 import { useHydrateContextUtilization } from "../../hooks/use-hydrate-context-utilization";
 import type { AgentInstance, Project } from "../../types";
 import {
@@ -205,7 +205,7 @@ function StandaloneAgentChatPanel({
     { agentId },
   );
   const { setSelectedAgent } = useSelectedAgent();
-  const contextUtilization = useContextUtilization(streamKey);
+  const contextUsage = useContextUsage(streamKey);
 
   const effectiveProjectId = useMemo(() => {
     if (selectedProjectId && agentProjects.some((project) => project.project_id === selectedProjectId)) {
@@ -291,7 +291,7 @@ function StandaloneAgentChatPanel({
       projects={agentProjects}
       selectedProjectId={effectiveProjectId}
       onProjectChange={handleProjectChange}
-      contextUtilization={contextUtilization}
+      contextUsage={contextUsage}
       onNewSession={handleNewSession}
     />
   );
@@ -326,7 +326,7 @@ function ProjectAgentChatPanel({
     "project",
     { projectId, agentInstanceId },
   );
-  const contextUtilization = useContextUtilization(streamKey);
+  const contextUsage = useContextUsage(streamKey);
 
   const historyKey = useMemo(() => {
     if (sessionId) {
@@ -509,7 +509,7 @@ function ProjectAgentChatPanel({
         historyMessages={historyMessages}
         projects={currentProject}
         selectedProjectId={projectId}
-        contextUtilization={isSessionView ? undefined : contextUtilization}
+        contextUsage={isSessionView ? undefined : contextUsage}
         onNewSession={isSessionView ? undefined : handleNewSession}
         mobileHeaderAction={(
           <div style={mobileHeaderActionsStyle} data-mobile-header-actions>
