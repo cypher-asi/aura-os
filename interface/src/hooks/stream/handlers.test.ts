@@ -369,26 +369,26 @@ describe("stream/handlers", () => {
       });
     });
 
-    it("seeds empty path/content for write_file so the preview can render", () => {
+    it("does not seed empty path/content for write_file so the Block renders its header only", () => {
+      // Seeding empty strings previously caused FileBlock to show "..." as the
+      // filename and render an empty code surface (just a "1" line number)
+      // until the first snapshot arrived. The live path/content arrive via
+      // ToolCallSnapshot, which then populates the block correctly.
       const refs = makeRefs();
       const setters = makeSetters();
 
       handleToolCallStarted(refs, setters, { id: "tc1", name: "write_file" });
 
-      expect(refs.toolCalls.current[0].input).toEqual({ path: "", content: "" });
+      expect(refs.toolCalls.current[0].input).toEqual({});
     });
 
-    it("seeds empty path/old_text/new_text for edit_file", () => {
+    it("does not seed empty fields for edit_file", () => {
       const refs = makeRefs();
       const setters = makeSetters();
 
       handleToolCallStarted(refs, setters, { id: "tc1", name: "edit_file" });
 
-      expect(refs.toolCalls.current[0].input).toEqual({
-        path: "",
-        old_text: "",
-        new_text: "",
-      });
+      expect(refs.toolCalls.current[0].input).toEqual({});
     });
   });
 
@@ -682,9 +682,16 @@ describe("stream/handlers", () => {
 
       finalizeStream(refs, setters, abortRef, false, { reason: "completed" });
 
-      expect(refs.toolCalls.current[0].pending).toBe(false);
-      expect(refs.toolCalls.current[0].isError).toBe(false);
-      expect(refs.toolCalls.current[0].result).toContain("Completed before an explicit tool result");
+      // The resolved tool call is persisted into events and the ref is cleared
+      // as part of the save. Inspect the persisted copy.
+      const lastSetEvents = setters.calls.setEvents[
+        setters.calls.setEvents.length - 1
+      ] as (prev: unknown[]) => Array<{ toolCalls?: ToolCallEntry[] }>;
+      const saved = lastSetEvents([])[0]?.toolCalls?.[0];
+      expect(saved).toBeDefined();
+      expect(saved?.pending).toBe(false);
+      expect(saved?.isError).toBe(false);
+      expect(saved?.result).toContain("Completed before an explicit tool result");
     });
 
     it("marks pending tools as failed with the provided message", () => {
@@ -698,9 +705,14 @@ describe("stream/handlers", () => {
         message: "Harness timed out",
       });
 
-      expect(refs.toolCalls.current[0].pending).toBe(false);
-      expect(refs.toolCalls.current[0].isError).toBe(true);
-      expect(refs.toolCalls.current[0].result).toBe("Harness timed out");
+      const lastSetEvents = setters.calls.setEvents[
+        setters.calls.setEvents.length - 1
+      ] as (prev: unknown[]) => Array<{ toolCalls?: ToolCallEntry[] }>;
+      const saved = lastSetEvents([])[0]?.toolCalls?.[0];
+      expect(saved).toBeDefined();
+      expect(saved?.pending).toBe(false);
+      expect(saved?.isError).toBe(true);
+      expect(saved?.result).toBe("Harness timed out");
     });
 
     it("saves the full buffered content even when only part of it was revealed", () => {
@@ -719,6 +731,79 @@ describe("stream/handlers", () => {
       const result = updater([]);
 
       expect(result[0].content).toBe("hello world again");
+    });
+
+    it("persists buffered turn on terminal reason even when closureIsStreaming=true", () => {
+      // Task streams call finalizeStream with closureIsStreaming=true on
+      // TaskCompleted. The buffered turn must still be saved, otherwise the
+      // Sidekick run panel shows a bare header with no content.
+      const refs = makeRefs();
+      refs.streamBuffer.current = "partial summary";
+      refs.toolCalls.current = [
+        { id: "tc-1", name: "write_file", input: { path: "foo.md" }, pending: true, started: true },
+      ];
+      refs.timeline.current = [{ kind: "tool", toolCallId: "tc-1", id: 1 }];
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      finalizeStream(refs, setters, abortRef, true, { reason: "completed" });
+
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
+      const updater = lastCall as (prev: unknown[]) => Array<{
+        content: string;
+        toolCalls?: ToolCallEntry[];
+        timeline?: unknown[];
+      }>;
+      const result = updater([]);
+      expect(result).toHaveLength(1);
+      expect(result[0].content).toBe("partial summary");
+      expect(result[0].toolCalls).toHaveLength(1);
+      expect(result[0].toolCalls?.[0].id).toBe("tc-1");
+      expect(result[0].timeline).toHaveLength(1);
+      expect(refs.streamBuffer.current).toBe("");
+      expect(refs.toolCalls.current).toEqual([]);
+    });
+
+    it("does not duplicate tool calls already snapshotted by a prior turn boundary", () => {
+      // AssistantMessageEnd consolidates a turn via handleAssistantTurnBoundary
+      // and marks the tool calls as snapshotted. A subsequent finalizeStream
+      // on TaskCompleted must not re-save the same tool call.
+      const refs = makeRefs();
+      const snapshottedTool: ToolCallEntry = {
+        id: "tc-already-saved",
+        name: "read_file",
+        input: { path: "a.md" },
+        pending: false,
+        started: true,
+      };
+      refs.toolCalls.current = [snapshottedTool];
+      refs.snapshottedToolCallIds.current = new Set(["tc-already-saved"]);
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      finalizeStream(refs, setters, abortRef, true, { reason: "completed" });
+
+      const eventCalls =
+        (setters.calls.setEvents as Array<(prev: unknown[]) => unknown[]> | undefined) ?? [];
+      const mostRecent = eventCalls[eventCalls.length - 1]?.([]) ?? [];
+      expect(mostRecent).toEqual([]);
+    });
+
+    it("does not persist a mid-stream closure without a terminal reason", () => {
+      // Chat streams can call finalize mid-turn; those keep their buffers so
+      // the follow-up AssistantMessageEnd/onDone save the turn once.
+      const refs = makeRefs();
+      refs.streamBuffer.current = "mid-turn text";
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      finalizeStream(refs, setters, abortRef, true);
+
+      const eventCalls =
+        (setters.calls.setEvents as Array<(prev: unknown[]) => unknown[]> | undefined) ?? [];
+      const mostRecent = eventCalls[eventCalls.length - 1]?.([]) ?? [];
+      expect(mostRecent).toEqual([]);
+      expect(refs.streamBuffer.current).toBe("mid-turn text");
     });
   });
 });
