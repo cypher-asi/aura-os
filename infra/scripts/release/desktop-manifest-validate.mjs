@@ -54,7 +54,7 @@ function walkJsonFiles(rootDir, files) {
   }
 }
 
-function validateManifest(manifestPath, manifest) {
+function validateManifest(channel, manifestPath, manifest) {
   const errors = [];
   if (typeof manifest.version !== "string" || !manifest.version.trim()) {
     errors.push("missing version");
@@ -63,6 +63,11 @@ function validateManifest(manifestPath, manifest) {
     errors.push("missing url");
   } else if (!/^https:\/\//.test(manifest.url)) {
     errors.push("url must be https");
+  } else if (
+    channel === "nightly" &&
+    manifest.url.includes("/releases/download/nightly/")
+  ) {
+    errors.push("nightly manifests must use immutable release asset URLs");
   }
   if (typeof manifest.signature !== "string" || !manifest.signature.trim()) {
     errors.push("missing signature");
@@ -123,7 +128,7 @@ const results = manifestFiles.map((manifestPath) => {
   const manifest = JSON.parse(raw);
   return {
     relativePath: path.relative(path.resolve(options.rootDir), manifestPath),
-    ...validateManifest(manifestPath, manifest),
+    ...validateManifest(options.channel, manifestPath, manifest),
   };
 });
 

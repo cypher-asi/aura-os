@@ -76,20 +76,20 @@ async function mockProjectWorkApp(page: import("@playwright/test").Page) {
 }
 
 async function openAccountSheet(page: import("@playwright/test").Page) {
-  const workspaceHeading = page.getByRole("heading", { name: "Remote work" });
-  const appSettingsButton = page.getByRole("button", { name: "App settings" });
+  const workspaceHeading = page.getByRole("heading", { name: "Continue work" });
   const accountDrawer = page.getByText("Account", { exact: true });
+  const teamSettingsButton = page.getByRole("button", { name: "Team settings" });
 
   if (/\/projects\/organization$/.test(page.url())) {
     await expect(workspaceHeading).toBeVisible();
     return;
   }
 
-  if ((await appSettingsButton.count()) > 0 && await appSettingsButton.first().isVisible()) {
+  if ((await teamSettingsButton.count()) > 0 && await teamSettingsButton.first().isVisible()) {
     return;
   }
 
-  const trigger = page.getByRole("button", { name: "Open account" });
+  const trigger = page.getByRole("button", { name: "Open workspace" });
   await expect(trigger).toBeVisible();
   await expect(trigger).toBeEnabled();
 
@@ -98,9 +98,9 @@ async function openAccountSheet(page: import("@playwright/test").Page) {
   await expect.poll(async () => {
     const onWorkspaceRoute = /\/projects\/organization$/.test(page.url());
     const workspaceVisible = await workspaceHeading.isVisible().catch(() => false);
-    const appSettingsVisible = await appSettingsButton.isVisible().catch(() => false);
+    const teamSettingsVisible = await teamSettingsButton.isVisible().catch(() => false);
     const drawerVisible = await accountDrawer.isVisible().catch(() => false);
-    return onWorkspaceRoute || workspaceVisible || appSettingsVisible || drawerVisible;
+    return onWorkspaceRoute || workspaceVisible || teamSettingsVisible || drawerVisible;
   }).toBe(true);
 
   if (/\/projects\/organization$/.test(page.url())) {
@@ -109,7 +109,7 @@ async function openAccountSheet(page: import("@playwright/test").Page) {
   }
 
   await expect(accountDrawer).toBeVisible();
-  await expect(appSettingsButton).toBeVisible();
+  await expect(teamSettingsButton).toBeVisible();
 }
 
 async function expectProjectMobileChrome(
@@ -127,7 +127,7 @@ async function expectProjectMobileChrome(
   await expect(navigation.getByRole("button", { name: "Agent", exact: true })).toBeVisible();
   await expect(navigation.getByRole("button", { name: "Execution", exact: true })).toBeVisible();
   await expect(navigation.getByRole("button", { name: "Stats", exact: true })).toBeVisible();
-  await expect(navigation.getByRole("button", { name: "Files", exact: true })).toHaveCount(0);
+  await expect(navigation.getByRole("button", { name: "Files", exact: true })).toBeVisible();
   await expect(navigation.getByRole("button", { name: "Feed", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Projects", exact: true })).toHaveCount(0);
 }
@@ -184,8 +184,9 @@ test("projects entry keeps desktop welcome, while mobile/tablet resolve directly
   await page.goto("/projects");
 
   if (factor === "desktop") {
-    await expect(page.getByText("Welcome to AURA")).toBeVisible();
+    await expect(page.getByRole("tree", { name: "Projects" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
+    await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
   } else {
     await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
     await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
@@ -208,7 +209,8 @@ test("projects entry uses remembered agent state on smaller form factors", async
 
   if (factor === "desktop") {
     await expect(page).toHaveURL(/\/projects$/);
-    await expect(page.getByText("Welcome to AURA")).toBeVisible();
+    await expect(page.getByRole("tree", { name: "Projects" })).toBeVisible();
+    await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
   } else {
     await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
     await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
@@ -268,9 +270,9 @@ test("project work route uses the combined mobile work view while desktop keeps 
     await expect(page.getByText("Mobile parity spec")).toBeVisible();
   } else {
     await expect(page.getByRole("main").getByText("Execution", { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Recent activity")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("Specs")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: "Open spec Mobile parity spec" })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("heading", { name: /Task Feed/i })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("treeitem", { name: "Demo Project" })).toHaveCount(0);
     await page
       .getByRole("navigation", { name: "Primary mobile navigation" })
@@ -308,7 +310,7 @@ test("account sheet holds team and app settings access on smaller form factors",
   } else {
     await expect(page.getByRole("button", { name: "Host settings" }).first()).toBeVisible();
   }
-  await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "App settings" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Profile" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Leaderboard" })).toHaveCount(0);
 });
@@ -324,7 +326,7 @@ test("modal flows lock the background document across form factors", async ({ pa
     await expect(page.getByRole("heading", { name: "Host Connection" })).toBeVisible();
   } else {
     await openAccountSheet(page);
-    await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
   }
 
   await expect.poll(async () => {

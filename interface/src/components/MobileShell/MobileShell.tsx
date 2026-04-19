@@ -7,7 +7,7 @@ import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
+import { projectFilesRoute, projectProcessRoute, projectStatsRoute, projectTasksRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useOrgStore } from "../../stores/org-store";
 import { useProjectsListStore } from "../../stores/projects-list-store";
@@ -73,6 +73,7 @@ export function MobileShell() {
   const mobileNavActiveId: MobileNavId | null = state.mobileDestination === "agent"
     || state.mobileDestination === "execution"
     || state.mobileDestination === "tasks"
+    || state.mobileDestination === "files"
     || state.mobileDestination === "process"
     || state.mobileDestination === "stats"
     ? state.mobileDestination
@@ -85,6 +86,7 @@ export function MobileShell() {
     if (id === "agent") { navigate(resolveProjectAgentPath(state.mobileTargetProjectId)); return; }
     if (id === "tasks") { navigate(projectTasksRoute(state.mobileTargetProjectId)); return; }
     if (id === "execution") { navigate(projectWorkRoute(state.mobileTargetProjectId)); return; }
+    if (id === "files") { navigate(projectFilesRoute(state.mobileTargetProjectId)); return; }
     if (id === "process") { navigate(projectProcessRoute(state.mobileTargetProjectId)); return; }
     navigate(projectStatsRoute(state.mobileTargetProjectId));
   }, [state.mobileTargetProjectId, navigate]);
@@ -151,7 +153,7 @@ export function MobileShell() {
         </div>
         {overlayDrawerOpen && <button type="button" className={styles.mobileDrawerBackdrop} aria-label="Close drawer" onClick={closeDrawers} />}
 
-        <Drawer side="left" isOpen={navOpen} onClose={() => { blurActiveElement(); setNavOpen(false); }} title="Aura" className={styles.mobileNavDrawer} showMinimizedBar={false} defaultSize={356} maxSize={404}>
+        <Drawer side="left" isOpen={navOpen} onClose={() => { blurActiveElement(); setNavOpen(false); }} title="" className={styles.mobileNavDrawer} showMinimizedBar={false} defaultSize={356} maxSize={404}>
           {navOpen && <ProjectNavigationDrawerContent />}
         </Drawer>
 
@@ -159,8 +161,14 @@ export function MobileShell() {
           <AppSwitcherContent state={state} />
         </Drawer>
 
-        {PreviewPanel && (
-          <Drawer side={state.isPhoneLayout ? "bottom" : "right"} isOpen={previewOpen} onClose={() => { blurActiveElement(); setPreviewOpen(false); }} title="Preview" className={state.isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet} showMinimizedBar={false} defaultSize={state.isPhoneLayout ? 420 : 360} maxSize={state.isPhoneLayout ? 640 : 480}>
+        {PreviewPanel && state.isPhoneLayout && previewOpen ? (
+          <div className={styles.mobilePreviewSheet} role="dialog" aria-modal="true" aria-label="Preview">
+            <PreviewSheetContent PreviewPanel={PreviewPanel} PreviewHeader={PreviewHeaderComp} />
+          </div>
+        ) : null}
+
+        {PreviewPanel && !state.isPhoneLayout && (
+          <Drawer side="right" isOpen={previewOpen} onClose={() => { blurActiveElement(); setPreviewOpen(false); }} title="Preview" className={styles.mobileSideSheet} showMinimizedBar={false} defaultSize={360} maxSize={480}>
             <PreviewSheetContent PreviewPanel={PreviewPanel} PreviewHeader={PreviewHeaderComp} />
           </Drawer>
         )}

@@ -14,7 +14,7 @@ import {
 
 export function useMobileShellState() {
   const activeApp = useActiveApp();
-  const { isPhoneLayout } = useAuraCapabilities();
+  const { isMobileClient, isPhoneLayout } = useAuraCapabilities();
   const projectContext = useProjectActions();
   const projects = useProjectsListStore((s) => s.projects);
   const location = useLocation();
@@ -46,11 +46,13 @@ export function useMobileShellState() {
   const mobileShellMode = getMobileShellMode(location.pathname, currentProjectId, hasResolvedCurrentProject);
   const isProjectAgentManagementRoute =
     /^\/projects\/[^/]+\/agents\/[^/]+\/details$/.test(location.pathname)
-    || /^\/projects\/[^/]+\/agents\/create$/.test(location.pathname);
+    || /^\/projects\/[^/]+\/agents\/create$/.test(location.pathname)
+    || /^\/projects\/[^/]+\/agents\/attach$/.test(location.pathname);
   const isPrimaryProjectDestination =
     mobileDestination === "agent"
     || mobileDestination === "execution"
     || mobileDestination === "tasks"
+    || mobileDestination === "files"
     || mobileDestination === "process"
     || mobileDestination === "stats";
   const showProjectTitle = mobileShellMode === "project" && hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute;
@@ -64,16 +66,16 @@ export function useMobileShellState() {
   const isStandaloneAgentDetailRoute = activeApp.id === "agents" && /^\/agents\/[^/]+$/.test(location.pathname);
   const isMobileOrganizationRoute = location.pathname === "/projects/organization";
   const showProjectResponsiveControls = activeApp.id === "agents" && location.pathname.startsWith("/projects/");
-  const isProjectAgentChatRoute = /^\/projects\/[^/]+\/agents\/(?!create$)[^/]+$/.test(location.pathname);
+  const isProjectAgentChatRoute = /^\/projects\/[^/]+\/agents\/(?!create$|attach$)[^/]+$/.test(location.pathname);
   const showGlobalTitle = mobileShellMode === "global";
   const globalTitle = isMobileOrganizationRoute
-    ? "Organization"
+    ? "Workspace"
     : location.pathname === "/projects"
       ? "Projects"
       : activeApp.label;
 
   return {
-    activeApp, isPhoneLayout, location,
+    activeApp, isMobileClient, isPhoneLayout, location,
     currentProjectId, currentProject, mobileDestination,
     mobileTargetProjectId, mobileTargetProject,
     showProjectTitle, showProjectBack, showProjectResponsiveControls,

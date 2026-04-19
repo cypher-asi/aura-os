@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
+import { ArrowLeft } from "lucide-react";
 import { PanelSearch } from "../PanelSearch";
 import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
@@ -9,6 +10,7 @@ import { useSidekickStore } from "../../stores/sidekick-store";
 import {
   getMobileProjectDestination,
   getProjectIdFromPathname,
+  projectFilesRoute,
   projectProcessRoute,
   projectTasksRoute,
   projectWorkRoute,
@@ -58,6 +60,10 @@ export function ProjectNavigationDrawerContent() {
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
   const recentProjects = useMemo(() => getRecentProjects(projects), [projects]);
+  const currentProject = projects.find((project) => project.project_id === currentProjectId)
+    ?? recentProjects[0]
+    ?? projects[0]
+    ?? null;
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -93,6 +99,11 @@ export function ProjectNavigationDrawerContent() {
       return;
     }
 
+    if (mobileDestination === "files") {
+      runDrawerNavigation(projectFilesRoute(projectId));
+      return;
+    }
+
     if (mobileDestination === "process") {
       runDrawerNavigation(projectProcessRoute(projectId));
       return;
@@ -120,19 +131,22 @@ export function ProjectNavigationDrawerContent() {
     });
   return (
     <div className={styles.mobileDrawerContent}>
+      <div className={styles.mobileProjectDrawerTopbar}>
+        <button
+          type="button"
+          className={styles.mobileProjectDrawerBackButton}
+          aria-label="Back to project"
+          onClick={() => setNavOpen(false)}
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div className={styles.mobileProjectDrawerTopbarTitle}>
+          {currentProject?.name ?? "Project"}
+        </div>
+      </div>
       <div className={styles.mobileDrawerSearch}>
         <div className={styles.mobileDrawerHeaderBar}>
           <div className={styles.mobileDrawerHeaderTitle}>Switch project</div>
-          <div className={styles.mobileDrawerHeaderActions}>
-            <button
-              type="button"
-              className={styles.mobileDrawerDoneButton}
-              aria-label="Close project navigation"
-              onClick={() => setNavOpen(false)}
-            >
-              Done
-            </button>
-          </div>
         </div>
         <PanelSearch
           placeholder="Search Projects..."

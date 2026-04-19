@@ -265,6 +265,76 @@
   background: var(--color-bg);
 }
 
+.mobilePreviewSheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: max(12px, calc(env(safe-area-inset-top) + 12px));
+  bottom: 0;
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.mobileActionSheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.mobileActionSheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
+}
+
+.mobileActionSheetTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.mobileActionSheetClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileActionSheetClose:hover,
+.mobileActionSheetClose:focus-visible {
+  background: color-mix(in srgb, var(--color-text-secondary) 18%, transparent);
+}
+
 .mobileSideSheet {
   position: fixed !important;
   top: 0;
@@ -308,6 +378,46 @@
   pointer-events: auto;
 }
 
+.mobileProjectDrawerTopbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 14px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
+}
+
+.mobileProjectDrawerBackButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+  color: var(--color-text);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileProjectDrawerBackButton:hover,
+.mobileProjectDrawerBackButton:focus-visible {
+  background: color-mix(in srgb, var(--color-text-secondary) 18%, transparent);
+}
+
+.mobileProjectDrawerTopbarTitle {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .mobileDrawerSearch {
   padding: var(--space-3);
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
@@ -317,7 +427,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   margin-bottom: 10px;
 }
 
@@ -371,6 +480,11 @@
   position: relative;
   z-index: 1;
   pointer-events: auto;
+}
+
+.mobilePreviewDrawerBody {
+  display: flex;
+  flex-direction: column;
 }
 
 .mobileProjectDrawerList {

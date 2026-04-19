@@ -57,8 +57,8 @@ describe("getMobileProjectDestination", () => {
     expect(getMobileProjectDestination("/projects/p1/execution")).toBe("execution");
   });
 
-  it("returns null for /projects/:id/files so mobile can redirect to agent flow", () => {
-    expect(getMobileProjectDestination("/projects/p1/files")).toBeNull();
+  it("returns files for /projects/:id/files", () => {
+    expect(getMobileProjectDestination("/projects/p1/files")).toBe("files");
   });
 
   it("returns stats for /projects/:id/stats", () => {

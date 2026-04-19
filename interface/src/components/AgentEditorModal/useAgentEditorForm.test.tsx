@@ -5,6 +5,7 @@ import { emptyAgentPermissions } from "../../types/permissions-wire";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 
 const mockUseAuraCapabilities = vi.fn();
+const mockRefreshIntegrations = vi.fn();
 const mockOrgState = {
   activeOrg: null,
   integrations: [] as Array<{
@@ -36,8 +37,11 @@ vi.mock("../../api/client", () => ({
 }));
 
 vi.mock("../../stores/org-store", () => ({
-  useOrgStore: (selector: (state: typeof mockOrgState) => unknown) =>
-    selector(mockOrgState),
+  useOrgStore: (selector: (state: typeof mockOrgState & { refreshIntegrations: typeof mockRefreshIntegrations }) => unknown) =>
+    selector({
+      ...mockOrgState,
+      refreshIntegrations: mockRefreshIntegrations,
+    }),
 }));
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
@@ -69,7 +73,8 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
 describe("useAgentEditorForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: false, isMobileClient: false });
+    mockOrgState.activeOrg = null;
     mockOrgState.integrations = [];
     vi.mocked(api.agents.create).mockResolvedValue(makeAgent());
     vi.mocked(api.agents.update).mockResolvedValue(makeAgent());
@@ -87,7 +92,7 @@ describe("useAgentEditorForm", () => {
   });
 
   it("defaults new mobile agents to swarm microvm", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
 
     const { result } = renderHook(() =>
       useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
@@ -99,7 +104,7 @@ describe("useAgentEditorForm", () => {
   });
 
   it("preserves an existing agent environment while editing on mobile", () => {
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
 
     const { result } = renderHook(() =>
       useAgentEditorForm(true, makeAgent({ machine_type: "local", environment: "local_host" }), vi.fn(), vi.fn()),
@@ -116,6 +121,37 @@ describe("useAgentEditorForm", () => {
     expect(result.current.adapterType).toBe("claude_code");
     expect(result.current.authSource).toBe("local_cli_auth");
     expect(result.current.showAdvancedRuntime).toBe(true);
+  });
+
+  it("keeps narrow desktop layouts on local_host when the client is not mobile", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: false });
+
+    const { result } = renderHook(() =>
+      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+    );
+
+    expect(result.current.environment).toBe("local_host");
+    expect(result.current.restrictCreateToAuraRuntimes).toBe(false);
+    expect(result.current.simplifyForMobileCreate).toBe(false);
+  });
+
+  it("keeps retrying mobile project creation on remote-only guardrails even when an agent already exists", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+
+    const { result } = renderHook(() =>
+      useAgentEditorForm(
+        true,
+        makeAgent({ machine_type: "remote", environment: "swarm_microvm" }),
+        vi.fn(),
+        vi.fn(),
+        false,
+        true,
+      ),
+    );
+
+    expect(result.current.restrictCreateToAuraRuntimes).toBe(true);
+    expect(result.current.simplifyForMobileCreate).toBe(true);
+    expect(result.current.environment).toBe("swarm_microvm");
   });
 
   it("keeps editing a default Aura agent collapsed by default", () => {
@@ -169,6 +205,8 @@ describe("useAgentEditorForm", () => {
   });
 
   it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+
     const { result } = renderHook(() =>
       useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
     );
@@ -257,5 +295,25 @@ describe("useAgentEditorForm", () => {
 
     expect(onSaved).toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("only refreshes org integrations once per open state when none are configured yet", async () => {
+    mockOrgState.activeOrg = { org_id: "org-1" } as typeof mockOrgState.activeOrg;
+    mockRefreshIntegrations.mockResolvedValue(undefined);
+
+    const { rerender } = renderHook(
+      ({ isOpen }) => useAgentEditorForm(isOpen, undefined, vi.fn(), vi.fn()),
+      { initialProps: { isOpen: true } },
+    );
+
+    await waitFor(() => {
+      expect(mockRefreshIntegrations).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ isOpen: true });
+
+    await waitFor(() => {
+      expect(mockRefreshIntegrations).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -21,6 +21,7 @@ export interface AuraFeatureAvailability {
 
 export interface AuraCapabilities {
   hasDesktopBridge: boolean;
+  isMobileClient: boolean;
   isMobileLayout: boolean;
   isPhoneLayout: boolean;
   isTabletLayout: boolean;
@@ -48,6 +49,7 @@ function readCapabilities(): AuraCapabilities {
     const features = buildFeatureAvailability(false, false);
     return {
       hasDesktopBridge: false,
+      isMobileClient: false,
       isMobileLayout: false,
       isPhoneLayout: false,
       isTabletLayout: false,
@@ -71,10 +73,18 @@ function readCapabilities(): AuraCapabilities {
     window.matchMedia(STANDALONE_MEDIA_QUERY).matches ||
     (typeof navigator !== "undefined" && "standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
   const isNativeApp = isNativeRuntime();
+  const isMobileUserAgent =
+    typeof navigator !== "undefined" &&
+    (
+      ("userAgentData" in navigator && Boolean((navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData?.mobile)) ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    );
+  const isMobileClient = isNativeApp || isMobileUserAgent;
   const features = buildFeatureAvailability(hasDesktopBridge, isMobileLayout);
 
   return {
     hasDesktopBridge,
+    isMobileClient,
     isMobileLayout,
     isPhoneLayout,
     isTabletLayout,
@@ -113,6 +123,21 @@ export function useAuraCapabilities(): AuraCapabilities {
       window.removeEventListener("resize", update);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    root.dataset.mobileClient = capabilities.isMobileClient ? "true" : "false";
+    root.dataset.mobileLayout = capabilities.isMobileLayout ? "true" : "false";
+
+    return () => {
+      delete root.dataset.mobileClient;
+      delete root.dataset.mobileLayout;
+    };
+  }, [capabilities.isMobileClient, capabilities.isMobileLayout]);
 
   return capabilities;
 }

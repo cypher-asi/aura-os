@@ -72,6 +72,7 @@ describe("AgentEditorForm", () => {
 
     expect(screen.getByText("Environment")).toBeInTheDocument();
     expect(screen.getByText("Remote")).toBeInTheDocument();
+    expect(screen.queryByText("Local")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change runtime or credentials" })).not.toBeInTheDocument();
     expect(screen.queryByText("Claude Code")).not.toBeInTheDocument();
   });

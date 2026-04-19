@@ -1,5 +1,6 @@
 import { render, screen } from "../../test/render";
 import { Route, Routes } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
@@ -93,6 +94,22 @@ describe("ProjectTasksView", () => {
     expect(screen.getByText("What needs attention")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Ready/i })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("button", { name: /Open task Patch auth flow/i })).toBeInTheDocument();
+  });
+
+  it("lets people select an empty segment and see the empty state", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/tasks" element={<ProjectTasksView />} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/tasks"] } },
+    );
+
+    await user.click(screen.getByRole("tab", { name: /Blocked/i }));
+
+    expect(screen.getByRole("tab", { name: /Blocked/i })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Nothing here right now")).toBeInTheDocument();
   });
 
   it("redirects to the desktop tasks route outside mobile layouts", () => {

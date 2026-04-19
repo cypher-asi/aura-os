@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../../components/Lane";
 import { CommitGrid } from "../../../components/CommitGrid";
@@ -18,6 +18,10 @@ export function FeedMainPanel() {
   const { filter, setFilter, filteredEvents, commitActivity, selectedEventId, selectEvent, selectProfile, getCommentsForEvent } = useFeed();
 
   const isLeaderboard = filter === "leaderboard";
+  const hasCommitActivity = useMemo(
+    () => Object.values(commitActivity).some((count) => count > 0),
+    [commitActivity],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -50,9 +54,11 @@ export function FeedMainPanel() {
             </div>
           ) : (
             <>
-              <div className={styles.commitGridWrapper}>
-                <CommitGrid data={commitActivity} />
-              </div>
+              {hasCommitActivity ? (
+                <div className={styles.commitGridWrapper}>
+                  <CommitGrid data={commitActivity} />
+                </div>
+              ) : null}
               <div className={styles.feedList}>
                 {filteredEvents.map((evt, i) => (
                   <ActivityCard

@@ -85,8 +85,8 @@ function defaultAuthSource(adapterType: string, integrationId?: string | null): 
   return "local_cli_auth";
 }
 
-function defaultEnvironmentForLayout(isMobileLayout: boolean): string {
-  return isMobileLayout ? "swarm_microvm" : "local_host";
+function defaultEnvironmentForContext(restrictCreateToAuraRuntimes: boolean): string {
+  return restrictCreateToAuraRuntimes ? "swarm_microvm" : "local_host";
 }
 
 function isDefaultCreateRuntime(
@@ -95,11 +95,11 @@ function isDefaultCreateRuntime(
   authSource: string,
   integrationId: string,
   defaultModel: string,
-  isMobileLayout: boolean,
+  restrictCreateToAuraRuntimes: boolean,
 ): boolean {
   return (
     adapterType === "aura_harness" &&
-    environment === defaultEnvironmentForLayout(isMobileLayout) &&
+    environment === defaultEnvironmentForContext(restrictCreateToAuraRuntimes) &&
     authSource === "aura_managed" &&
     !integrationId.trim() &&
     !defaultModel.trim()
@@ -110,19 +110,20 @@ export function useAgentEditorForm(
   isOpen: boolean,
   agent: Agent | undefined,
   onClose: () => void,
-  onSaved: (agent: Agent) => void,
+  onSaved: (agent: Agent) => void | Promise<void>,
   closeOnSave = true,
+  forceRemoteOnlyCreate = false,
 ): AgentEditorFormResult {
-  const { isMobileLayout } = useAuraCapabilities();
-  const simplifyForMobileCreate = isMobileLayout && !agent;
-  const restrictCreateToAuraRuntimes = !agent;
+  const { isMobileLayout, isMobileClient } = useAuraCapabilities();
+  const restrictCreateToAuraRuntimes = forceRemoteOnlyCreate || (isMobileClient && !agent);
+  const simplifyForMobileCreate = restrictCreateToAuraRuntimes && isMobileLayout;
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [personality, setPersonality] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [icon, setIcon] = useState("");
   const [adapterType, setAdapterType] = useState("aura_harness");
-  const [environment, setEnvironment] = useState(defaultEnvironmentForLayout(isMobileLayout));
+  const [environment, setEnvironment] = useState(defaultEnvironmentForContext(restrictCreateToAuraRuntimes));
   const [authSource, setAuthSource] = useState("aura_managed");
   const [showAdvancedRuntime, setShowAdvancedRuntime] = useState(false);
   const [integrationId, setIntegrationId] = useState("");
@@ -136,6 +137,7 @@ export function useAgentEditorForm(
   const [cropOpen, setCropOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState("");
   const rememberedIntegrationIdsRef = useRef<Record<string, string>>({});
+  const requestedIntegrationsOrgIdRef = useRef<string | null>(null);
   const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { activeOrg, integrations } = useOrgStore(
@@ -170,13 +172,13 @@ export function useAgentEditorForm(
           agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id),
           agent.integration_id ?? "",
           agent.default_model ?? "",
-          isMobileLayout,
+          restrictCreateToAuraRuntimes,
         ),
       );
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
       setAdapterType("aura_harness");
-      setEnvironment(isMobileLayout ? "swarm_microvm" : "local_host");
+      setEnvironment(defaultEnvironmentForContext(restrictCreateToAuraRuntimes));
       setAuthSource("aura_managed");
       setShowAdvancedRuntime(false);
       setIntegrationId("");
@@ -186,7 +188,7 @@ export function useAgentEditorForm(
       setListingStatus(DEFAULT_LISTING_STATUS);
     }
     setError(""); setNameError("");
-  }, [isOpen, agent, isMobileLayout]);
+  }, [isOpen, agent, restrictCreateToAuraRuntimes]);
 
   useEffect(() => {
     if (!restrictCreateToAuraRuntimes) {
@@ -210,7 +212,7 @@ export function useAgentEditorForm(
     }
 
     if (environment !== "local_host" && environment !== "swarm_microvm") {
-      setEnvironment(defaultEnvironmentForLayout(isMobileLayout));
+      setEnvironment(defaultEnvironmentForContext(restrictCreateToAuraRuntimes));
     }
   }, [
     adapterType,
@@ -218,7 +220,6 @@ export function useAgentEditorForm(
     defaultModel,
     environment,
     integrationId,
-    isMobileLayout,
     restrictCreateToAuraRuntimes,
   ]);
 
@@ -231,7 +232,7 @@ export function useAgentEditorForm(
         authSource,
         integrationId,
         defaultModel,
-        isMobileLayout,
+        restrictCreateToAuraRuntimes,
       )
     ) {
       setShowAdvancedRuntime(true);
@@ -242,14 +243,31 @@ export function useAgentEditorForm(
     defaultModel,
     environment,
     integrationId,
-    isMobileLayout,
+    restrictCreateToAuraRuntimes,
     showAdvancedRuntime,
   ]);
 
   useEffect(() => {
-    if (!isOpen || !activeOrg?.org_id || integrations.length > 0) {
+    if (!isOpen) {
+      requestedIntegrationsOrgIdRef.current = null;
       return;
     }
+
+    if (!activeOrg?.org_id) {
+      requestedIntegrationsOrgIdRef.current = null;
+      return;
+    }
+
+    if (integrations.length > 0) {
+      requestedIntegrationsOrgIdRef.current = activeOrg.org_id;
+      return;
+    }
+
+    if (requestedIntegrationsOrgIdRef.current === activeOrg.org_id) {
+      return;
+    }
+
+    requestedIntegrationsOrgIdRef.current = activeOrg.org_id;
     void refreshIntegrations();
   }, [activeOrg?.org_id, integrations.length, isOpen, refreshIntegrations]);
 
@@ -433,7 +451,7 @@ export function useAgentEditorForm(
         personality: personality.trim(),
         system_prompt: systemPrompt.trim(),
         icon: icon || (agent?.icon ? null : undefined),
-        machine_type: !agent && isMobileLayout && adapterType === "aura_harness" ? "remote" : machineType,
+        machine_type: !agent && restrictCreateToAuraRuntimes && adapterType === "aura_harness" ? "remote" : machineType,
         adapter_type: adapterType,
         environment,
         auth_source: authSource,
@@ -460,14 +478,14 @@ export function useAgentEditorForm(
         };
         saved = await api.agents.create(createPayload);
       }
-      onSaved(saved);
+      await onSaved(saved);
       if (closeOnSave) {
         onClose();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, localWorkspacePath, initialLocalWorkspacePath, listingStatus, agent, activeOrg?.org_id, isMobileLayout, isSuperAgent, onSaved, closeOnSave, onClose]);
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, localWorkspacePath, initialLocalWorkspacePath, listingStatus, agent, activeOrg?.org_id, isSuperAgent, restrictCreateToAuraRuntimes, onSaved, closeOnSave, onClose]);
 
   return {
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,

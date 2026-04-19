@@ -13,3 +13,13 @@ export function resolveProjectAgentPath(projectId: string) {
   }
   return projectAgentRoute(projectId);
 }
+
+export function resolveWorkspaceReturnPath(projectId: string, state: unknown) {
+  if (state && typeof state === "object" && "returnTo" in state) {
+    const returnTo = (state as { returnTo?: unknown }).returnTo;
+    if (typeof returnTo === "string" && returnTo.startsWith(`/projects/${projectId}/`)) {
+      return returnTo;
+    }
+  }
+  return resolveProjectAgentPath(projectId);
+}

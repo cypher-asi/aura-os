@@ -712,6 +712,30 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
+      - name: Write release metadata
+        shell: bash
+        run: |
+          mkdir -p release-metadata
+          jq -n \
+            --arg channel stable \
+            --arg workflow "Release Stable" \
+            --arg version "${{ steps.version.outputs.version }}" \
+            --arg tag "${{ steps.version.outputs.tag }}" \
+            --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" \
+            '{
+              channel: $channel,
+              workflow: $workflow,
+              version: $version,
+              tag: $tag,
+              release_url: $release_url
+            }' > release-metadata/release-metadata.json
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata/release-metadata.json
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -829,20 +853,6 @@ jobs:
           }
           MANIFEST
 
-      - name: Generate stable changelog
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/Los_Angeles
-        run: |
-          node repo/infra/scripts/release/generate-daily-changelog.mjs \
-            --repo-dir repo \
-            --pages-dir pages \
-            --artifacts-dir all-artifacts \
-            --repo aura-os \
-            --channel stable \
-            --version "${{ steps.version.outputs.version }}" \
-            --release-url "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
-
       - name: Validate stable update manifests
         run: |
           cd repo
@@ -865,13 +875,12 @@ jobs:
         run: |
           cat manifest-validation/desktop-manifests-stable.md >> "$GITHUB_STEP_SUMMARY"
           cat manifest-validation/desktop-downloads-stable.md >> "$GITHUB_STEP_SUMMARY"
-          cat pages/changelog/stable/latest.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push manifests
         run: |
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add stable/ downloads/stable.json changelog/stable
+          git add stable/ downloads/stable.json
           git diff --cached --quiet || git commit -m "Update stable manifests for ${{ steps.version.outputs.version }}"
           git push

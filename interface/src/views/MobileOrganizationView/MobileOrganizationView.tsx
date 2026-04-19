@@ -58,30 +58,51 @@ export function MobileOrganizationView() {
   const [teamName, setTeamName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const activeOrgProjects = useMemo(
-    () => (activeOrg ? projects.filter((project) => project.org_id === activeOrg.org_id) : []),
-    [activeOrg, projects],
-  );
-  const canCreateProject = activeOrg !== null || projects.length > 0;
-  const recentProjects = useMemo(
-    () => getRecentProjects(activeOrgProjects).slice(0, 3),
-    [activeOrgProjects],
-  );
   const lastProjectId = getLastProject();
   const lastAgentEntry = getLastAgentEntry();
+  const fallbackOrgId = useMemo(() => {
+    if (activeOrg?.org_id) {
+      return activeOrg.org_id;
+    }
+
+    if (lastProjectId) {
+      const project = projects.find((candidate) => candidate.project_id === lastProjectId);
+      if (project) {
+        return project.org_id;
+      }
+    }
+
+    if (lastAgentEntry) {
+      const project = projects.find((candidate) => candidate.project_id === lastAgentEntry.projectId);
+      if (project) {
+        return project.org_id;
+      }
+    }
+
+    return projects[0]?.org_id ?? null;
+  }, [activeOrg?.org_id, lastAgentEntry, lastProjectId, projects]);
+  const workspaceOrgId = activeOrg?.org_id ?? fallbackOrgId;
+  const workspaceProjects = useMemo(
+    () => (workspaceOrgId ? projects.filter((project) => project.org_id === workspaceOrgId) : []),
+    [projects, workspaceOrgId],
+  );
+  const recentProjects = useMemo(
+    () => getRecentProjects(workspaceProjects).slice(0, 3),
+    [workspaceProjects],
+  );
   const resumeProject = useMemo(() => {
     const byLastProject = lastProjectId
-      ? activeOrgProjects.find((project) => project.project_id === lastProjectId) ?? null
+      ? workspaceProjects.find((project) => project.project_id === lastProjectId) ?? null
       : null;
     if (byLastProject) {
       return byLastProject;
     }
 
     const byLastAgent = lastAgentEntry
-      ? activeOrgProjects.find((project) => project.project_id === lastAgentEntry.projectId) ?? null
+      ? workspaceProjects.find((project) => project.project_id === lastAgentEntry.projectId) ?? null
       : null;
     return byLastAgent ?? recentProjects[0] ?? null;
-  }, [activeOrgProjects, lastAgentEntry, lastProjectId, recentProjects]);
+  }, [lastAgentEntry, lastProjectId, recentProjects, workspaceProjects]);
   const resumeProjectAgents = resumeProject ? agentsByProject[resumeProject.project_id] ?? [] : [];
   const resumeAgent = useMemo(() => {
     if (!resumeProject) {
@@ -93,6 +114,7 @@ export function MobileOrganizationView() {
       ?? resumeProjectAgents[0]
       ?? null;
   }, [resumeProject, resumeProjectAgents]);
+  const resumeAgentDisplayName = resumeAgent?.name?.trim() || null;
   const handleSwitch = (org: Org) => {
     setSwitchingOrgId(org.org_id);
     switchOrg(org);
@@ -102,11 +124,11 @@ export function MobileOrganizationView() {
   };
 
   useEffect(() => {
-    if (!activeOrg || loadingProjects || activeOrgProjects.length > 0) {
+    if (!activeOrg || loadingProjects || workspaceProjects.length > 0) {
       return;
     }
     void refreshProjects();
-  }, [activeOrg, activeOrgProjects.length, loadingProjects, refreshProjects]);
+  }, [activeOrg, loadingProjects, refreshProjects, workspaceProjects.length]);
 
   useEffect(() => {
     for (const project of recentProjects) {
@@ -153,62 +175,66 @@ export function MobileOrganizationView() {
     <>
       <div className={styles.page}>
         <div className={styles.stack}>
-          <section className={styles.hero}>
-            <div className={styles.heroEyebrow}>Mobile workspace</div>
-            <h1 className={styles.title}>Remote work</h1>
-            <p className={styles.description}>
-              Resume the right project fast, or switch teams without losing context.
-            </p>
-          </section>
-
-          {activeOrg ? (
+          {workspaceOrgId ? (
             <section className={`${styles.section} ${styles.resumeSection}`} aria-labelledby="mobile-resume-heading">
-              {resumeProject ? (
-                <div className={styles.resumeCard}>
-                  <div id="mobile-resume-heading" className={styles.resumeEyebrow}>Resume</div>
-                  <div className={styles.resumeTitle}>{resumeProject.name}</div>
-                  <div className={styles.resumeCopy}>
-                    {resumeAgent
-                      ? `Resume ${resumeAgent.name}${resumeAgent.role?.trim() ? `, ${resumeAgent.role}` : ""}.`
-                      : "Open the project to review progress or add a remote agent."}
-                  </div>
-                  <div className={styles.resumeMetaRow}>
-                    <span className={styles.resumeMetaPill}>
-                      <FolderKanban size={14} />
-                      {formatStatus(resumeProject.current_status)}
-                    </span>
-                    <span className={styles.resumeMetaPill}>
-                      <Sparkles size={14} />
-                      {resumeProjectAgents.length > 0 ? `${resumeProjectAgents.length} agents ready` : "No agents yet"}
-                    </span>
-                  </div>
-                  <div className={styles.resumeActions}>
-                    <Button
-                      variant="primary"
-                      onClick={() => openProjectWorkspace(resumeProject.project_id)}
-                    >
-                      {resumeAgent ? `Chat with ${resumeAgent.name}` : "Open Project"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => navigate(
-                        resumeProjectAgents.length > 0
-                          ? projectTasksRoute(resumeProject.project_id)
-                          : projectAgentCreateRoute(resumeProject.project_id),
-                      )}
-                    >
-                      {resumeProjectAgents.length > 0 ? "Tasks" : "Add Agent"}
-                    </Button>
-                  </div>
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionTitle}>
+                  <h2 id="mobile-resume-heading" className={styles.sectionHeading}>Continue work</h2>
+                  <span className={styles.sectionCopy}>
+                    Pick up your latest project fast, or start a new workspace for this team.
+                  </span>
                 </div>
+              </div>
+              {resumeProject ? (
+                <>
+                  <div className={styles.resumeCard}>
+                    <div className={styles.resumeEyebrow}>Last project</div>
+                    <div className={styles.resumeTitle}>{resumeProject.name}</div>
+                    <div className={styles.resumeCopy}>
+                      {resumeAgent
+                        ? `Continue with ${resumeAgentDisplayName ?? "your latest agent"}${resumeAgent.role?.trim() ? `, ${resumeAgent.role}` : ""}.`
+                        : "Open the project to review progress or add a remote agent."}
+                    </div>
+                    <div className={styles.resumeMetaRow}>
+                      <span className={styles.resumeMetaPill}>
+                        <FolderKanban size={14} />
+                        {formatStatus(resumeProject.current_status)}
+                      </span>
+                      <span className={styles.resumeMetaPill}>
+                        <Sparkles size={14} />
+                        {resumeProjectAgents.length > 0 ? `${resumeProjectAgents.length} agents ready` : "No agents yet"}
+                      </span>
+                    </div>
+                    <div className={styles.resumeActions}>
+                      <Button
+                        variant="primary"
+                        className={styles.resumeActionButton}
+                        onClick={() => openProjectWorkspace(resumeProject.project_id)}
+                      >
+                        {resumeAgent ? "Open chat" : "Open project"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={styles.resumeActionButton}
+                        onClick={() => navigate(
+                          resumeProjectAgents.length > 0
+                            ? projectTasksRoute(resumeProject.project_id)
+                            : projectAgentCreateRoute(resumeProject.project_id),
+                        )}
+                      >
+                        {resumeProjectAgents.length > 0 ? "View tasks" : "Add agent"}
+                      </Button>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className={styles.emptyWorkspaceCard}>
-                  <div id="mobile-resume-heading" className={styles.resumeEyebrow}>Resume</div>
+                  <div className={styles.resumeEyebrow}>Projects</div>
                   <div className={styles.emptyWorkspaceTitle}>No project ready yet</div>
                   <div className={styles.emptyWorkspaceCopy}>
                     Start a new project for this organization so mobile users can jump straight into remote-agent work.
                   </div>
-                  <Button variant="primary" onClick={openCreateProject}>
+                  <Button variant="primary" className={styles.resumeActionButton} onClick={openCreateProject}>
                     Create Project
                   </Button>
                 </div>
@@ -216,10 +242,35 @@ export function MobileOrganizationView() {
             </section>
           ) : null}
 
+          {workspaceOrgId ? (
+            <section className={styles.section} aria-labelledby="mobile-project-create-heading">
+              <div className={styles.sectionHeader}>
+                <div className={styles.sectionTitle}>
+                  <h2 id="mobile-project-create-heading" className={styles.sectionHeading}>Start new work</h2>
+                  <span className={styles.sectionCopy}>
+                    Create a new project when you want a fresh remote workspace for this team.
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                variant="primary"
+                icon={<FolderKanban size={16} />}
+                className={styles.primaryActionButton}
+                onClick={openCreateProject}
+              >
+                New Project
+              </Button>
+            </section>
+          ) : null}
+
           <section className={styles.section} aria-labelledby="mobile-org-switcher-heading">
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitle}>
-                <span id="mobile-org-switcher-heading" className={styles.sectionHeading}>Switch Team</span>
+                <h2 id="mobile-org-switcher-heading" className={styles.sectionHeading}>Teams</h2>
+                <span className={styles.sectionCopy}>
+                  Switch the organization you want to work in on mobile.
+                </span>
               </div>
               <span className={styles.sectionMeta}>{orgs.length}</span>
             </div>
@@ -259,17 +310,6 @@ export function MobileOrganizationView() {
               </Text>
             )}
             <div className={styles.actions}>
-              {canCreateProject ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<FolderKanban size={16} />}
-                  className={styles.actionButton}
-                  onClick={openCreateProject}
-                >
-                  New Project
-                </Button>
-              ) : null}
               <Button
                 variant={orgs.length === 0 ? "primary" : "ghost"}
                 size="sm"

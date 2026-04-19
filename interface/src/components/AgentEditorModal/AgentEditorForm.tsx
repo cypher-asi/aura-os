@@ -6,9 +6,11 @@ import styles from "./AgentEditorModal.module.css";
 function CompactEnvironmentPicker({
   environment,
   setEnvironment,
+  allowLocal = true,
 }: {
   environment: string;
   setEnvironment: (v: string) => void;
+  allowLocal?: boolean;
 }) {
   return (
     <div className={styles.fieldGroup}>
@@ -22,14 +24,16 @@ function CompactEnvironmentPicker({
           <Cloud size={14} />
           Remote
         </button>
-        <button
-          type="button"
-          className={`${styles.envOption} ${environment === "local_host" ? styles.envOptionActive : ""}`}
-          onClick={() => setEnvironment("local_host")}
-        >
-          <Monitor size={14} />
-          Local
-        </button>
+        {allowLocal ? (
+          <button
+            type="button"
+            className={`${styles.envOption} ${environment === "local_host" ? styles.envOptionActive : ""}`}
+            onClick={() => setEnvironment("local_host")}
+          >
+            <Monitor size={14} />
+            Local
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -162,6 +166,7 @@ export function AgentEditorForm({
         <CompactEnvironmentPicker
           environment="swarm_microvm"
           setEnvironment={setEnvironment}
+          allowLocal={false}
         />
       ) : restrictCreateToAuraRuntimes ? (
         <CompactEnvironmentPicker

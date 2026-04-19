@@ -18,7 +18,7 @@ export function ProjectStatsView() {
   return (
     <div className={styles.root}>
       <section className={styles.section}>
-        <div className={styles.sectionLabel}>Stats</div>
+        <div className={styles.sectionLabel}>STATS</div>
         <StatsDashboard variant="mobile" />
       </section>
     </div>

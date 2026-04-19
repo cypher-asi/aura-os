@@ -41,11 +41,19 @@ describe("native-runtime", () => {
     setLocation("/login");
   });
 
-  it("treats Android localhost webviews as native even before the bridge is ready", () => {
+  it("treats localhost webviews as native and infers Android from the user agent", () => {
     setLocation("http://localhost/login");
+    setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 3a)");
 
     expect(isNativeRuntime()).toBe(true);
     expect(inferNativePlatform()).toBe("android");
+  });
+
+  it("leaves localhost webviews without platform hints unresolved", () => {
+    setLocation("http://localhost/login");
+
+    expect(isNativeRuntime()).toBe(true);
+    expect(inferNativePlatform()).toBeNull();
   });
 
   it("treats the iOS capacitor protocol as native", () => {

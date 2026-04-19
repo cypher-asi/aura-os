@@ -84,7 +84,7 @@ function getAssetName(url) {
   }
 }
 
-function validateTarget(label, target, artifactNames) {
+function validateTarget(channel, label, target, artifactNames) {
   const errors = [];
 
   if (!target || typeof target.url !== "string" || !target.url.trim()) {
@@ -92,6 +92,9 @@ function validateTarget(label, target, artifactNames) {
   } else {
     if (!target.url.startsWith("https://")) {
       errors.push("url must be https");
+    }
+    if (channel === "nightly" && target.url.includes("/releases/download/nightly/")) {
+      errors.push("nightly download URLs must use immutable release asset URLs");
     }
     const assetName = getAssetName(target.url);
     if (!assetName) {
@@ -148,6 +151,13 @@ if (typeof manifest.version !== "string" || !manifest.version.trim()) {
 }
 if (typeof manifest.release_url !== "string" || !manifest.release_url.trim()) {
   topLevelErrors.push("missing release_url");
+} else {
+  if (!manifest.release_url.startsWith("https://")) {
+    topLevelErrors.push("release_url must be https");
+  }
+  if (options.channel === "nightly" && manifest.release_url.endsWith("/releases/tag/nightly")) {
+    topLevelErrors.push("nightly release_url must reference an immutable release tag");
+  }
 }
 if (!manifest.desktop || typeof manifest.desktop !== "object") {
   topLevelErrors.push("missing desktop targets");
@@ -162,12 +172,17 @@ if (topLevelErrors.length > 0) {
 }
 
 if (manifest.desktop && typeof manifest.desktop === "object") {
-  results.push(validateTarget("desktop.windows", manifest.desktop.windows, artifactNames));
-  results.push(validateTarget("desktop.linux", manifest.desktop.linux, artifactNames));
+  results.push(validateTarget(options.channel, "desktop.windows", manifest.desktop.windows, artifactNames));
+  results.push(validateTarget(options.channel, "desktop.linux", manifest.desktop.linux, artifactNames));
   results.push(
-    validateTarget("desktop.mac.apple-silicon", manifest.desktop.mac?.["apple-silicon"], artifactNames)
+    validateTarget(
+      options.channel,
+      "desktop.mac.apple-silicon",
+      manifest.desktop.mac?.["apple-silicon"],
+      artifactNames
+    )
   );
-  results.push(validateTarget("desktop.mac.intel", manifest.desktop.mac?.intel, artifactNames));
+  results.push(validateTarget(options.channel, "desktop.mac.intel", manifest.desktop.mac?.intel, artifactNames));
 }
 
 const failures = results.filter((result) => !result.ok);

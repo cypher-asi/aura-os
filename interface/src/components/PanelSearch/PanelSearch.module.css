@@ -9,10 +9,18 @@
   line-height: 1;
 }
 
+:global(html[data-mobile-client="true"]) .root input {
+  font-size: 16px;
+}
+
 .root input::placeholder {
   color: var(--color-text-muted) !important;
   font-size: 12px !important;
   line-height: 1 !important;
+}
+
+:global(html[data-mobile-client="true"]) .root input::placeholder {
+  font-size: 16px !important;
 }
 
 .icon {

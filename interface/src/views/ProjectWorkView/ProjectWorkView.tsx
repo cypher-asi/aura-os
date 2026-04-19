@@ -52,20 +52,13 @@ function ExecutionAction({
   onPress: () => void;
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       className={className}
       onClick={onPress}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onPress();
-        }
-      }}
     >
       {label}
-    </div>
+    </button>
   );
 }
 
@@ -87,11 +80,7 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div
-        className={`${styles.sectionCard} ${styles.executionCard} ${
-          hasSecondaryAction ? styles.executionCardDualActions : styles.executionCardSingleAction
-        }`}
-      >
+      <div className={`${styles.sectionCard} ${styles.executionCard}`}>
         <div className={styles.executionSummary}>
           {!connected && (
             <Text variant="muted" size="sm" className={styles.executionNotice}>
@@ -115,43 +104,50 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
             </div>
           </div>
 
-          <div className={styles.executionActions}>
-            <div className={styles.executionControlRow}>
-              {!loopRunning && !loopPaused && (
-                <ExecutionAction
-                  label="Start remote work"
-                  className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
-                  onPress={() => { void handleStart(); }}
-                />
-              )}
-              {loopPaused && (
-                <ExecutionAction
-                  label="Resume remote work"
-                  className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
-                  onPress={() => { void handleStart(); }}
-                />
-              )}
-              {loopRunning && !loopPaused && (
-                <ExecutionAction
-                  label="Pause loop"
-                  className={`${styles.executionButton} ${styles.executionButtonSecondary}`}
-                  onPress={() => { void handlePause(); }}
-                />
-              )}
-              {(loopRunning || loopPaused) && (
-                <ExecutionAction
-                  label="Stop loop"
-                  className={`${styles.executionButton} ${styles.executionButtonDanger}`}
-                  onPress={() => setConfirmStopOpen(true)}
-                />
-              )}
-            </div>
-            {error && (
-              <Text variant="muted" size="sm" className={styles.executionError}>
-                {error}
-              </Text>
+        </div>
+      </div>
+
+      <div
+        className={`${styles.sectionCard} ${styles.executionActionCard} ${
+          hasSecondaryAction ? styles.executionActionCardDual : styles.executionActionCardSingle
+        }`}
+      >
+        <div className={styles.executionActions}>
+          <div className={styles.executionControlRow}>
+            {!loopRunning && !loopPaused && (
+              <ExecutionAction
+                label="Start remote work"
+                className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
+                onPress={() => { void handleStart(); }}
+              />
+            )}
+            {loopPaused && (
+              <ExecutionAction
+                label="Resume remote work"
+                className={`${styles.executionButton} ${styles.executionButtonPrimary}`}
+                onPress={() => { void handleStart(); }}
+              />
+            )}
+            {loopRunning && !loopPaused && (
+              <ExecutionAction
+                label="Pause loop"
+                className={`${styles.executionButton} ${styles.executionButtonSecondary}`}
+                onPress={() => { void handlePause(); }}
+              />
+            )}
+            {(loopRunning || loopPaused) && (
+              <ExecutionAction
+                label="Stop loop"
+                className={`${styles.executionButton} ${styles.executionButtonDanger}`}
+                onPress={() => setConfirmStopOpen(true)}
+              />
             )}
           </div>
+          {error && (
+            <Text variant="muted" size="sm" className={styles.executionError}>
+              {error}
+            </Text>
+          )}
         </div>
       </div>
 
@@ -175,6 +171,7 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
 function MobileSpecsList({ projectId }: { projectId: string }) {
   const viewSpec = useSidekickStore((s) => s.viewSpec);
   const { specs } = useMobileSpecs(projectId);
+  const visibleSpecs = specs.slice(0, 2);
 
   if (specs.length === 0) {
     return <Text variant="muted" size="sm">No specs yet</Text>;
@@ -182,7 +179,7 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.itemList}>
-      {specs.map((spec) => (
+      {visibleSpecs.map((spec) => (
         <button
           key={spec.spec_id}
           type="button"
@@ -193,6 +190,11 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
           <span className={styles.itemTitle}>{spec.title || "Spec"}</span>
         </button>
       ))}
+      {specs.length > visibleSpecs.length ? (
+        <Text size="sm" variant="muted" className={styles.sectionHint}>
+          Showing the latest {visibleSpecs.length} specs.
+        </Text>
+      ) : null}
     </div>
   );
 }
@@ -221,7 +223,7 @@ function MobileRecentActivity({ projectId }: { projectId: string }) {
         if (rankDiff !== 0) return rankDiff;
         return Number(new Date(right.updated_at)) - Number(new Date(left.updated_at));
       })
-      .slice(0, 4);
+      .slice(0, 2);
   }, [liveTaskIds, loopActive, tasks]);
 
   if (visibleTasks.length === 0) {
@@ -277,24 +279,28 @@ export function ProjectWorkView() {
 
   return (
     <div className={styles.root}>
-      <section className={`${styles.section} ${styles.executionSection}`}>
+      <section className={styles.section} aria-label="Execution">
         <div className={styles.sectionLabel}>Execution</div>
         <ExecutionSummary projectId={projectId} />
       </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionLabel}>Recent activity</div>
+      <section className={styles.section} aria-label="Recent activity">
         <div className={`${styles.sectionCard} ${styles.sectionBody} ${styles.executionBody}`}>
+          <div className={styles.sectionCardHeader}>
+            <div className={styles.sectionLabel}>Recent activity</div>
+          </div>
           <MobileRecentActivity projectId={projectId} />
         </div>
       </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionLabel}>Specs</div>
+      <section className={styles.section} aria-label="Specs">
         <div className={`${styles.sectionCard} ${styles.sectionBody}`}>
-          <Text size="sm" variant="muted" className={styles.sectionHint}>
-            Review the latest planning outputs and jump into details when you need them.
-          </Text>
+          <div className={styles.sectionCardHeader}>
+            <div className={styles.sectionLabel}>Specs</div>
+            <Text size="sm" variant="muted" className={styles.sectionHint}>
+              Review the latest planning outputs and jump into details when you need them.
+            </Text>
+          </div>
           <MobileSpecsList projectId={projectId} />
         </div>
       </section>

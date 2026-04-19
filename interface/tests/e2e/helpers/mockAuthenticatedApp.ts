@@ -563,6 +563,47 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       );
     }
 
+    const matchingRemoteFilesAgent = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/remote_agent/files`);
+    if (matchingRemoteFilesAgent) {
+      const workspaceRoot = agentInstances.find((instance) => instance.agent_id === matchingRemoteFilesAgent.agent_id)?.workspace_path
+        ?? "/tmp/demo-project";
+      return json({
+        ok: true,
+        entries: [
+          {
+            path: `${workspaceRoot}/src`,
+            name: "src",
+            is_dir: true,
+            children: [
+              {
+                path: `${workspaceRoot}/src/auth.ts`,
+                name: "auth.ts",
+                is_dir: false,
+              },
+            ],
+          },
+          {
+            path: `${workspaceRoot}/README.md`,
+            name: "README.md",
+            is_dir: false,
+          },
+        ],
+      });
+    }
+
+    const matchingRemoteReadAgent = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/remote_agent/read-file`);
+    if (matchingRemoteReadAgent) {
+      const body = JSON.parse(route.request().postData() || "{}");
+      const pathArg = typeof body.path === "string" ? body.path : "";
+      if (pathArg.endsWith("README.md")) {
+        return json({ ok: true, content: "# Demo Project\n\nPreview the remote workspace here on mobile.", path: pathArg });
+      }
+      if (pathArg.endsWith("auth.ts")) {
+        return json({ ok: true, content: "export function signIn() {\n  return true;\n}\n", path: pathArg });
+      }
+      return json({ ok: false, error: "Preview unavailable" });
+    }
+
     const matchingAgentSkills = agents.find((agent) => pathname === `/api/harness/agents/${agent.agent_id}/skills`);
     if (matchingAgentSkills) {
       if (method === "POST") {
