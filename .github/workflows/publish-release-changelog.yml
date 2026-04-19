@@ -68,51 +68,131 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
+      - name: Download release metadata from the triggering run
+        if: steps.release-check.outputs.released == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
       - name: Determine changelog metadata
         if: steps.release-check.outputs.released == 'true'
         id: metadata
         shell: bash
         run: |
-          version="$(
-            python3 <<'PY'
-            import re
-            from pathlib import Path
-
-            patterns = [
-              re.compile(r"^aura-os-desktop_(.+?)_x64-setup\.exe$"),
-              re.compile(r"^aura-os-desktop_(.+?)_x86_64\.AppImage$"),
-              re.compile(r"^aura-os-desktop_(.+?)_amd64\.deb$"),
-              re.compile(r"^Aura_(.+?)_aarch64\.dmg$"),
-              re.compile(r"^Aura_(.+?)_x64\.dmg$"),
-            ]
-
-            for path in sorted(Path("all-artifacts").iterdir()):
-              for pattern in patterns:
-                match = pattern.match(path.name)
-                if match:
-                  print(match.group(1))
-                  raise SystemExit(0)
-
-            raise SystemExit("Could not determine release version from downloaded artifacts")
-            PY
-          )"
-
           case "${{ github.event.workflow_run.name }}" in
             "Release Nightly")
-              echo "channel=nightly" >> "$GITHUB_OUTPUT"
-              echo "version=${version}" >> "$GITHUB_OUTPUT"
-              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/v${version}" >> "$GITHUB_OUTPUT"
+              expected_channel="nightly"
               ;;
             "Release Stable")
-              echo "channel=stable" >> "$GITHUB_OUTPUT"
-              echo "version=${version}" >> "$GITHUB_OUTPUT"
-              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/v${version}" >> "$GITHUB_OUTPUT"
+              expected_channel="stable"
               ;;
             *)
               echo "Unsupported triggering workflow: ${{ github.event.workflow_run.name }}" >&2
               exit 1
               ;;
           esac
+
+          extract_version() {
+            local filename="$1"
+            local artifact_version
+
+            case "$filename" in
+              aura-os-desktop_*_x64-setup.exe)
+                artifact_version="${filename#aura-os-desktop_}"
+                printf '%s\n' "${artifact_version%_x64-setup.exe}"
+                ;;
+              aura-os-desktop_*_x86_64.AppImage)
+                artifact_version="${filename#aura-os-desktop_}"
+                printf '%s\n' "${artifact_version%_x86_64.AppImage}"
+                ;;
+              aura-os-desktop_*_amd64.deb)
+                artifact_version="${filename#aura-os-desktop_}"
+                printf '%s\n' "${artifact_version%_amd64.deb}"
+                ;;
+              Aura_*_aarch64.dmg)
+                artifact_version="${filename#Aura_}"
+                printf '%s\n' "${artifact_version%_aarch64.dmg}"
+                ;;
+              Aura_*_x64.dmg)
+                artifact_version="${filename#Aura_}"
+                printf '%s\n' "${artifact_version%_x64.dmg}"
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          shopt -s nullglob
+          artifact_version=""
+
+          for path in all-artifacts/*; do
+            filename="${path##*/}"
+            current_version="$(extract_version "$filename")" || continue
+
+            if [[ -z "$artifact_version" ]]; then
+              artifact_version="$current_version"
+              continue
+            fi
+
+            if [[ "$artifact_version" != "$current_version" ]]; then
+              echo "Mismatched release versions across installer artifacts: ${artifact_version} vs ${current_version}" >&2
+              exit 1
+            fi
+          done
+
+          if [[ -z "$artifact_version" ]]; then
+            echo "Could not determine release version from downloaded artifacts" >&2
+            exit 1
+          fi
+
+          metadata_file="release-metadata/release-metadata.json"
+          if [[ -f "$metadata_file" ]]; then
+            channel="$(jq -er '.channel' "$metadata_file")"
+            version="$(jq -er '.version' "$metadata_file")"
+            tag="$(jq -er '.tag' "$metadata_file")"
+            release_url="$(jq -er '.release_url' "$metadata_file")"
+            workflow_name="$(jq -er '.workflow' "$metadata_file")"
+
+            if [[ "$channel" != "$expected_channel" ]]; then
+              echo "Release metadata channel ${channel} did not match expected ${expected_channel}" >&2
+              exit 1
+            fi
+
+            if [[ "$workflow_name" != "${{ github.event.workflow_run.name }}" ]]; then
+              echo "Release metadata workflow ${workflow_name} did not match triggering workflow ${{ github.event.workflow_run.name }}" >&2
+              exit 1
+            fi
+
+            if [[ "$version" != "$artifact_version" ]]; then
+              echo "Release metadata version ${version} did not match installer artifact version ${artifact_version}" >&2
+              exit 1
+            fi
+
+            if [[ "$tag" != "v${version}" ]]; then
+              echo "Release metadata tag ${tag} did not match version ${version}" >&2
+              exit 1
+            fi
+
+            expected_release_url="https://github.com/${{ github.repository }}/releases/tag/${tag}"
+            if [[ "$release_url" != "$expected_release_url" ]]; then
+              echo "Release metadata release_url ${release_url} did not match expected ${expected_release_url}" >&2
+              exit 1
+            fi
+          else
+            channel="$expected_channel"
+            version="$artifact_version"
+            tag="v${version}"
+            release_url="https://github.com/${{ github.repository }}/releases/tag/${tag}"
+          fi
+
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"
 
       - name: Generate release changelog
         if: steps.release-check.outputs.released == 'true'

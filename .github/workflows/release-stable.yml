@@ -712,6 +712,30 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
+      - name: Write release metadata
+        shell: bash
+        run: |
+          mkdir -p release-metadata
+          jq -n \
+            --arg channel stable \
+            --arg workflow "Release Stable" \
+            --arg version "${{ steps.version.outputs.version }}" \
+            --arg tag "${{ steps.version.outputs.tag }}" \
+            --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" \
+            '{
+              channel: $channel,
+              workflow: $workflow,
+              version: $version,
+              tag: $tag,
+              release_url: $release_url
+            }' > release-metadata/release-metadata.json
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata/release-metadata.json
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
