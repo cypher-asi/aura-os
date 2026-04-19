@@ -200,6 +200,17 @@ describe("harnessSkillsApi", () => {
     );
   });
 
+  it("deleteMySkill sends DELETE /api/harness/skills/mine/:name", async () => {
+    const fetchMock = mockFetch(200, { name: "my-skill", deleted: true });
+    globalThis.fetch = fetchMock;
+    const result = await harnessSkillsApi.deleteMySkill("my-skill");
+    expect(result).toEqual({ name: "my-skill", deleted: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills/mine/my-skill",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
   it("installFromShop sends POST with name and category", async () => {
     const fetchMock = mockFetch(200, { name: "web-search", path: "/skills/web-search", installed: true });
     globalThis.fetch = fetchMock;

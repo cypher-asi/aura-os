@@ -5,7 +5,8 @@ mod memory;
 mod skills;
 
 pub(crate) use local::{
-    create_skill, discover_skill_paths, get_skill_content, install_from_shop, list_my_skills,
+    create_skill, delete_my_skill, discover_skill_paths, get_skill_content, install_from_shop,
+    list_my_skills,
 };
 pub(crate) use memory::{
     create_event, create_fact, create_procedure, delete_event, delete_fact, delete_procedure,

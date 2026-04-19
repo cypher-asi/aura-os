@@ -1,5 +1,5 @@
 use axum::extract::{Path, State};
-use axum::http::{header, StatusCode};
+use axum::http::{header, Method, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use serde::Deserialize;
@@ -445,6 +445,67 @@ pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusC
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/json")],
         body,
+    )
+        .into_response())
+}
+
+/// Permanently delete a user-authored skill. Removes
+/// `~/.aura/skills/<name>/` from disk and fires a best-effort
+/// `DELETE api/skills/<name>` at the harness catalog.
+///
+/// Safety: the on-disk SKILL.md must carry the `source: "user-created"`
+/// marker. This prevents this endpoint from being used to delete
+/// shop-installed skills that happen to share the same on-disk layout.
+/// Callers who want to remove a shop-installed skill should uninstall
+/// it from every agent and let the harness rescan.
+pub(crate) async fn delete_my_skill(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Result<axum::response::Response, StatusCode> {
+    if !create_skill_name_valid(&name) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let skill_dir = home.join(".aura").join("skills").join(&name);
+    let skill_path = skill_dir.join("SKILL.md");
+
+    // Existence + ownership check before removing anything.
+    let content =
+        std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
+    let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
+    if source != USER_CREATED_SOURCE_MARKER {
+        // Refuse to nuke a non-user-created skill file through this
+        // endpoint even if the filename matches.
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Remove the whole skill directory so supporting files (if any)
+    // also go away. Only the SKILL.md has been verified, so this is a
+    // targeted directory name under ~/.aura/skills/.
+    if skill_dir.exists() {
+        std::fs::remove_dir_all(&skill_dir)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
+    // Best-effort harness catalog deregister. The local harness may or
+    // may not support DELETE on api/skills/{name}; either way we don't
+    // want the on-disk delete to fail just because the in-memory
+    // catalog doesn't update, and the harness will reconcile on its
+    // next rescan regardless.
+    let _ = state
+        .harness_http
+        .proxy_json(Method::DELETE, &format!("api/skills/{name}"), None, None)
+        .await;
+
+    let resp_json = serde_json::json!({
+        "name": name,
+        "deleted": true,
+    });
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        resp_json.to_string(),
     )
         .into_response())
 }

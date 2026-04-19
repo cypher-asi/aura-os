@@ -671,6 +671,10 @@ fn harness_proxy_routes() -> Router<AppState> {
         // wins over the dynamic param route. (Axum prefers static segments, but
         // keeping them ordered makes the intent obvious.)
         .route("/api/harness/skills/mine", get(harness_proxy::list_my_skills))
+        .route(
+            "/api/harness/skills/mine/:name",
+            delete(harness_proxy::delete_my_skill),
+        )
         .route("/api/harness/skills/:name", get(harness_proxy::get_skill))
         .route(
             "/api/harness/skills/:name/activate",

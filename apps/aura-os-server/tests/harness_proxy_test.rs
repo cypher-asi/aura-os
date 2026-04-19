@@ -542,6 +542,102 @@ async fn list_my_skills_returns_only_user_created_entries() {
     assert_eq!(arr[0]["model_invocable"], false);
 }
 
+#[cfg(unix)]
+#[tokio::test]
+async fn delete_my_skill_removes_user_created_and_refuses_shop_skill() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let (mock_url, _calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    // Author a user skill via the real create path so it carries the
+    // `source: "user-created"` marker.
+    let req = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "doomed-skill",
+            "description": "Will be deleted",
+            "body": "# Body",
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let skill_dir = home_dir.path().join(".aura").join("skills").join("doomed-skill");
+    assert!(skill_dir.join("SKILL.md").exists());
+
+    // Drop a shop-style SKILL.md (no user-created marker). DELETE must
+    // refuse to remove it — that would be a foot-gun.
+    let shop_dir = home_dir.path().join(".aura").join("skills").join("shop-skill");
+    std::fs::create_dir_all(&shop_dir).unwrap();
+    std::fs::write(
+        shop_dir.join("SKILL.md"),
+        "---\ndescription: \"From shop\"\nuser_invocable: true\n---\n# Shop body\n",
+    )
+    .unwrap();
+
+    let req = json_request("DELETE", "/api/harness/skills/mine/shop-skill", None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    assert!(
+        shop_dir.join("SKILL.md").exists(),
+        "shop skill file must NOT be deleted by the mine/ endpoint",
+    );
+
+    // Missing skill -> 404.
+    let req = json_request("DELETE", "/api/harness/skills/mine/no-such-skill", None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    // Happy path: deletes the user-authored skill directory and reports success.
+    let req = json_request("DELETE", "/api/harness/skills/mine/doomed-skill", None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    assert_eq!(body["name"], "doomed-skill");
+    assert_eq!(body["deleted"], true);
+    assert!(!skill_dir.exists(), "skill dir must be removed from disk");
+
+    // And list_my_skills no longer reports it.
+    let req = json_request("GET", "/api/harness/skills/mine", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    let arr = body.as_array().expect("response should be a JSON array");
+    assert!(
+        arr.iter().all(|e| e["name"] != "doomed-skill"),
+        "deleted skill should not appear in list_my_skills: {arr:?}",
+    );
+}
+
+#[tokio::test]
+async fn delete_my_skill_rejects_invalid_name() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    // The invalid-name guard runs before any filesystem or harness access,
+    // so a bogus LOCAL_HARNESS_URL is sufficient here and avoids pulling
+    // in the unix-gated mock harness helper.
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", "http://127.0.0.1:1");
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    // Valid skill names are [a-z0-9-]+. Uppercase is invalid and makes a
+    // clean URI segment that still reaches the handler, so the guard is
+    // what produces the 400 (not the HTTP layer).
+    let req = json_request("DELETE", "/api/harness/skills/mine/BadName", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
 #[tokio::test]
 async fn proxy_returns_502_on_connection_failure() {
     let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();

@@ -19,9 +19,44 @@ interface SkillRowProps {
   loading: boolean;
   onAction: () => void;
   onView: (skill: HarnessSkill) => void;
+  /** When provided, the row shows a "Delete skill" action in its menu.
+   *  Only passed for user-authored ("My Skills") rows — deleting
+   *  removes the SKILL.md file and is a different operation from
+   *  uninstalling the skill from the current agent. */
+  onDelete?: () => void;
 }
 
-function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps) {
+function SkillRow({
+  skill,
+  installed,
+  loading,
+  onAction,
+  onView,
+  onDelete,
+}: SkillRowProps) {
+  const menuItems: Array<
+    { id: string; label: string; icon?: React.ReactNode } | { type: "separator" }
+  > = [];
+  if (installed) {
+    menuItems.push({ id: "uninstall", label: "Uninstall", icon: <Trash2 size={14} /> });
+  } else if (onDelete) {
+    menuItems.push({ id: "install", label: "Install", icon: <Plus size={14} /> });
+  }
+  if (onDelete) {
+    if (menuItems.length > 0) {
+      menuItems.push({ type: "separator" });
+    }
+    menuItems.push({ id: "delete", label: "Delete skill", icon: <Trash2 size={14} /> });
+  }
+
+  const handleSelect = (id: string) => {
+    if (id === "delete") {
+      onDelete?.();
+    } else {
+      onAction();
+    }
+  };
+
   return (
     <div className={styles.skillRow}>
       <button
@@ -37,35 +72,28 @@ function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps
           )}
         </div>
       </button>
-      {installed ? (
-        loading ? (
-          <div className={styles.skillActionRemove}>
-            <Loader2 size={14} className={styles.spin} />
-          </div>
-        ) : (
-          <ButtonMore
-            items={[{ id: "uninstall", label: "Uninstall", icon: <Trash2 size={14} /> }]}
-            onSelect={() => onAction()}
-            icon="horizontal"
-            size="sm"
-            variant="ghost"
-            className={styles.skillMoreBtn}
-            title={`Actions for ${skill.name}`}
-          />
-        )
+      {loading ? (
+        <div className={styles.skillActionRemove}>
+          <Loader2 size={14} className={styles.spin} />
+        </div>
+      ) : installed || onDelete ? (
+        <ButtonMore
+          items={menuItems}
+          onSelect={handleSelect}
+          icon="horizontal"
+          size="sm"
+          variant="ghost"
+          className={styles.skillMoreBtn}
+          title={`Actions for ${skill.name}`}
+        />
       ) : (
         <button
           type="button"
           className={styles.skillActionAdd}
           onClick={onAction}
-          disabled={loading}
           title={`Install ${skill.name}`}
         >
-          {loading ? (
-            <Loader2 size={14} className={styles.spin} />
-          ) : (
-            <Plus size={14} />
-          )}
+          <Plus size={14} />
         </button>
       )}
     </div>
@@ -183,6 +211,39 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     [agentId, fetchData],
   );
 
+  const handleDeleteMySkill = useCallback(
+    async (name: string) => {
+      const ok = window.confirm(
+        `Delete the skill "${name}"?\n\nThis permanently removes ~/.aura/skills/${name}/ and cannot be undone. Any agent that has this skill installed will lose it.`,
+      );
+      if (!ok) return;
+
+      setActionLoading((prev) => ({ ...prev, [name]: true }));
+      try {
+        // Uninstall from the current agent first so its installation
+        // record doesn't outlive the underlying SKILL.md file and
+        // render as a ghost row on next fetch.
+        if (installedNameSet.has(name)) {
+          try {
+            await api.harnessSkills.uninstallAgentSkill(agentId, name);
+          } catch (err) {
+            console.error(`Failed to uninstall ${name} from agent before delete`, err);
+          }
+        }
+        await api.harnessSkills.deleteMySkill(name);
+        await fetchData();
+      } catch (err) {
+        console.error(`Failed to delete skill ${name}`, err);
+        alert(
+          `Failed to delete skill "${name}". See console for details.`,
+        );
+      } finally {
+        setActionLoading((prev) => ({ ...prev, [name]: false }));
+      }
+    },
+    [agentId, installedNameSet, fetchData],
+  );
+
   return (
     <div className={styles.skillsListWrap}>
       {/* Installed section */}
@@ -266,6 +327,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
                   installed ? handleUninstall(skill.name) : handleInstall(skill.name)
                 }
                 onView={(s) => viewSkill(s, installationByName.get(s.name))}
+                onDelete={() => handleDeleteMySkill(skill.name)}
               />
             );
           })

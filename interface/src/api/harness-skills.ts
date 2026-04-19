@@ -14,6 +14,10 @@ export const harnessSkillsApi = {
     apiFetch<HarnessSkill[]>(`/api/harness/skills`),
   listMySkills: () =>
     apiFetch<MySkillEntry[]>(`/api/harness/skills/mine`),
+  deleteMySkill: (name: string) =>
+    apiFetch<{ name: string; deleted: boolean }>(`/api/harness/skills/mine/${name}`, {
+      method: "DELETE",
+    }),
   getSkill: (name: string) =>
     apiFetch<HarnessSkill>(`/api/harness/skills/${name}`),
   createSkill: (data: {
