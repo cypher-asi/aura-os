@@ -36,11 +36,17 @@ pub const LOADABLE_DOMAINS: &[&str] = &[
     "process",
 ];
 
-/// Tool names whose JSON arguments should stream eagerly to the client
-/// (`input_json_delta`). Must stay in sync with `is_streaming_tool_name`
-/// in `aura-os-agent-runtime::tools`.
-pub const STREAMING_TOOL_NAMES: &[&str] =
-    &["create_spec", "update_spec", "write_file", "edit_file"];
+/// Harness-side tool names (not part of the runtime's `ToolRegistry`)
+/// whose JSON arguments should stream eagerly to the client via
+/// `input_json_delta`. These are the file-editing tools exposed by the
+/// harness process itself; registry-backed tools (e.g. `create_spec`,
+/// `update_spec`) opt in via `AgentTool::is_streaming()` in
+/// `aura-os-agent-runtime::tools`.
+///
+/// The union of this list and the registry's streaming tools is
+/// assembled by `aura_os_agent_runtime::tools::streaming_tool_names()`
+/// and shipped in `AgentTemplate::streaming_tool_names`.
+pub const HARNESS_SIDE_STREAMING_TOOL_NAMES: &[&str] = &["write_file", "edit_file"];
 
 /// A keyword → [`ToolDomain`] mapping.
 ///

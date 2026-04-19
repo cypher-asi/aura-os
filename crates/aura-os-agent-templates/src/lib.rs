@@ -13,8 +13,8 @@
 //!    harness can render the same system prompt, classify intents with
 //!    the same rules, and filter tools by the same domain manifest.
 //!
-//! The CEO preset remains the canonical starter template; "super-agent
-//! tier" now refers exclusively to a *permission-rich* agent and carries
+//! The CEO preset remains the canonical starter template; the former
+//! "super-agent tier" is now just a *permission-rich* agent and carries
 //! no type-level meaning (see `AgentPermissions` in `aura-os-core`).
 //!
 //! See `crates/aura-os-agent-templates/src/template.rs` for the
@@ -24,11 +24,9 @@ pub mod prompt;
 pub mod template;
 pub mod tier;
 
-pub use template::{
-    ceo_tool_manifest, AgentTemplate, ToolManifestEntry, CEO_PRESET_NAME,
-};
+pub use template::{AgentTemplate, ToolManifestEntry, CEO_PRESET_NAME};
 pub use prompt::{build_dynamic_context, ceo_system_prompt};
 pub use tier::{
     classify_intent, classify_intent_with, default_classifier_rules, is_tier1, ClassifierRule,
-    LOADABLE_DOMAINS, STREAMING_TOOL_NAMES, TIER1_DOMAINS,
+    HARNESS_SIDE_STREAMING_TOOL_NAMES, LOADABLE_DOMAINS, TIER1_DOMAINS,
 };

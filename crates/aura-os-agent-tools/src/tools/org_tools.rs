@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListOrgsTool
@@ -25,6 +25,12 @@ impl AgentTool for ListOrgsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `list_orgs` is scoped by the caller's JWT
+        // (only returns orgs the user is a member of); no capability
+        // defined yet for org-membership reads.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -58,6 +64,11 @@ impl AgentTool for CreateOrgTool {
     }
     fn description(&self) -> &str {
         "Create a new organization"
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): no `CreateOrg` capability exists; creation is
+        // authenticated via the user's JWT and rate-limited upstream.
+        &[]
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
@@ -105,6 +116,11 @@ impl AgentTool for GetOrgTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): no `ReadOrg` capability defined; JWT
+        // enforces membership downstream.
+        &[]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -143,6 +159,9 @@ impl AgentTool for UpdateOrgTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -192,6 +211,9 @@ impl AgentTool for ListMembersTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -230,6 +252,9 @@ impl AgentTool for UpdateMemberRoleTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -281,6 +306,9 @@ impl AgentTool for RemoveMemberTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -326,6 +354,9 @@ impl AgentTool for ManageInvitesTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

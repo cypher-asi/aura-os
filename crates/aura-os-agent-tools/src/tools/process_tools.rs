@@ -3,11 +3,11 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::{ProcessId, ProcessRunTrigger, ToolDomain};
+use aura_os_core::{Capability, ProcessId, ProcessRunTrigger, ToolDomain};
 use aura_os_process::ProcessExecutor;
 
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
     AgentRuntimeError::ToolError(format!("{action}: {e}"))
@@ -45,6 +45,9 @@ impl AgentTool for CreateProcessTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -141,6 +144,9 @@ impl AgentTool for ListProcessesTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({ "type": "object", "properties": {}, "required": [] })
@@ -189,6 +195,9 @@ impl AgentTool for TriggerProcessTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         trigger_process_metadata().1
@@ -234,6 +243,12 @@ impl AgentTool for DeleteProcessTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): deletion needs the owning project's write cap but
+        // the arg is `process_id`, not `project_id`; gate on
+        // InvokeProcess as a conservative minimum.
+        &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -278,6 +293,9 @@ impl AgentTool for ListProcessRunsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

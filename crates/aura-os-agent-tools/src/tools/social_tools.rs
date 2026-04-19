@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_delete, network_get, network_post, require_network, require_str};
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListFeedTool
@@ -23,6 +23,12 @@ impl AgentTool for ListFeedTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `list_feed` is a read-only social surface; no
+        // capability enforced. Downstream `/api/feed` still scopes by
+        // the caller's JWT.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -66,6 +72,9 @@ impl AgentTool for CreatePostTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::PostToFeed)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -111,6 +120,10 @@ impl AgentTool for GetPostTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_post` is read-only; no capability yet.
+        &[]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -149,6 +162,9 @@ impl AgentTool for AddCommentTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::PostToFeed)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -198,6 +214,9 @@ impl AgentTool for DeleteCommentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::PostToFeed)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -236,6 +255,11 @@ impl AgentTool for FollowProfileTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): following a profile is a personal social
+        // action; no capability defined.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -276,6 +300,10 @@ impl AgentTool for UnfollowProfileTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): see `follow_profile`.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -320,6 +348,11 @@ impl AgentTool for ListFollowsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `list_follows` is a read-only own-profile peek
+        // scoped by the caller's JWT; no capability required.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

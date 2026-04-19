@@ -6,8 +6,8 @@ use aura_os_core::ToolDomain;
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListTasksTool
@@ -25,6 +25,9 @@ impl AgentTool for ListTasksTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -69,6 +72,9 @@ impl AgentTool for ListTasksBySpecTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -116,6 +122,9 @@ impl AgentTool for GetTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -161,6 +170,9 @@ impl AgentTool for CreateTaskTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -223,6 +235,9 @@ impl AgentTool for UpdateTaskTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -287,6 +302,9 @@ impl AgentTool for DeleteTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -333,6 +351,9 @@ impl AgentTool for ExtractTasksTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -377,6 +398,9 @@ impl AgentTool for TransitionTaskTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -428,6 +452,9 @@ impl AgentTool for RetryTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -475,6 +502,9 @@ impl AgentTool for RunTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -521,6 +551,9 @@ impl AgentTool for GetTaskOutputTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

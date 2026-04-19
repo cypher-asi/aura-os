@@ -1,8 +1,8 @@
-pub mod ceo;
+pub mod audit;
 pub mod events;
+pub mod policy;
 pub mod prompt;
 pub mod state;
-pub mod tier;
 pub mod tools;
 
 use std::sync::Arc;
@@ -22,6 +22,7 @@ use aura_os_storage::StorageClient;
 use aura_os_store::SettingsStore;
 use aura_os_tasks::TaskService;
 
+use audit::AgentToolAuditLog;
 use events::AgentEventListener;
 use tools::{AgentToolContext, ToolRegistry};
 
@@ -38,7 +39,7 @@ pub enum AgentRuntimeError {
 }
 
 pub struct AgentRuntimeService {
-    pub tool_registry: ToolRegistry,
+    pub tool_registry: Arc<ToolRegistry>,
     pub router_url: String,
     pub http_client: reqwest::Client,
     pub event_listener: AgentEventListener,
@@ -60,11 +61,29 @@ pub struct AgentRuntimeService {
     /// server-side side-effects (e.g. mirroring specs to disk) should route
     /// through this URL instead of the remote `router_url` / storage.
     local_server_base_url: Option<String>,
+    /// In-memory audit log for cross-agent tool invocations. Exposed via
+    /// [`Self::audit_log`] so the dispatcher can record every call and a
+    /// future diagnostics endpoint can page through snapshots.
+    audit_log: AgentToolAuditLog,
 }
 
 impl AgentRuntimeService {
+    /// Construct an `AgentRuntimeService` with a pre-built tool
+    /// registry and process executor.
+    ///
+    /// Tier D split the god-crate: the registry builders and process
+    /// executor construction moved to `aura-os-agent-tools` (tools)
+    /// and the server's `app_builder` respectively. Callers pass:
+    ///
+    /// * `tool_registry` — typically `aura_os_agent_tools::shared_all_tools_registry()`
+    ///   plus whatever dynamic tools (process tools) the caller has
+    ///   registered on a fresh registry.
+    /// * `process_executor` — a live `ProcessExecutor` the caller
+    ///   constructed from its data directory + storage client.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        tool_registry: Arc<ToolRegistry>,
+        process_executor: Arc<aura_os_process::ProcessExecutor>,
         router_url: String,
         project_service: Arc<ProjectService>,
         agent_service: Arc<AgentService>,
@@ -80,24 +99,7 @@ impl AgentRuntimeService {
         store: Arc<SettingsStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
         _harness: Arc<dyn HarnessLink>,
-        data_dir: std::path::PathBuf,
     ) -> Self {
-        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
-            event_broadcast.clone(),
-            data_dir,
-            store.clone(),
-            agent_service.clone(),
-            org_service.clone(),
-            automaton_client.clone(),
-            storage_client.clone(),
-            task_service.clone(),
-            router_url.clone(),
-            reqwest::Client::new(),
-        ));
-
-        let mut tool_registry = ToolRegistry::with_tier1_tools();
-        tool_registry.register_process_tools(process_executor.clone());
-
         let event_listener = AgentEventListener::new(100);
         event_listener.spawn(event_broadcast.subscribe());
         info!(router_url = %router_url, "AgentRuntimeService initialized");
@@ -121,7 +123,22 @@ impl AgentRuntimeService {
             store,
             event_broadcast,
             local_server_base_url: None,
+            audit_log: AgentToolAuditLog::default(),
         }
+    }
+
+    /// Access the in-memory audit log. Cheap to clone (`Arc` inside)
+    /// so callers can hand a copy to async tasks without retaining a
+    /// borrow on the service.
+    #[must_use]
+    pub fn audit_log(&self) -> AgentToolAuditLog {
+        self.audit_log.clone()
+    }
+
+    /// Snapshot of the most recent cross-agent tool invocations.
+    /// Diagnostic-only; order is oldest-first.
+    pub async fn recent_tool_invocations(&self) -> Vec<audit::AgentToolInvocation> {
+        self.audit_log.snapshot().await
     }
 
     /// Wire in the base URL of the local aura-os-server so tool calls that

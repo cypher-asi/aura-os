@@ -12,11 +12,11 @@ use axum::extract::{Path, State};
 use axum::Json;
 use serde::Serialize;
 
-use aura_os_agent_runtime::ceo::{
+use aura_os_agent_tools::all_dispatchable_tool_names;
+use aura_os_agent_tools::ceo::{
     absolutize_agent_tool_endpoints, aura_native_project_tool_origin, build_cross_agent_tools,
     AGENT_TOOL_PATH_PREFIX,
 };
-use aura_os_agent_runtime::tools::all_dispatchable_tool_names;
 use aura_os_core::{Agent, AgentId, AgentPermissions, Capability};
 use aura_os_link::InstalledTool;
 use aura_protocol::AgentPermissionsWire;
@@ -62,7 +62,7 @@ pub(crate) struct AgentInstalledToolsDiagnostic {
     pub tools: Vec<InstalledToolDiagnosticRow>,
     /// Tool names whose endpoint points at `/api/agent_tools/:name` but
     /// which are not present in
-    /// [`aura_os_agent_runtime::tools::all_dispatchable_tool_names`].
+    /// [`aura_os_agent_tools::all_dispatchable_tool_names`].
     /// Typically indicates a wiring bug (for example a
     /// `Capability`-gated name that never got a concrete `AgentTool`
     /// implementation registered).

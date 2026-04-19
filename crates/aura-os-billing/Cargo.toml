@@ -1,7 +1,10 @@
 [package]
 name = "aura-os-billing"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [features]
 test-utils = ["dep:axum", "dep:tempfile"]
@@ -9,17 +12,20 @@ test-utils = ["dep:axum", "dep:tempfile"]
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-os-store = { path = "../aura-os-store" }
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "1"
-chrono = { version = "0.4", features = ["serde"] }
-tracing = "0.1"
-tokio = { version = "1", features = ["full"] }
-axum = { version = "0.7", optional = true }
-tempfile = { version = "3", optional = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
 
 [dev-dependencies]
-tempfile = "3"
-axum = "0.7"
-tokio = { version = "1", features = ["full"] }
+tempfile = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

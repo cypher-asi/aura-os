@@ -12,8 +12,9 @@ use aura_protocol::{
     InstalledTool, IntentClassifierRule, IntentClassifierSpec, ToolAuth,
 };
 
-use crate::prompt::ceo_system_prompt;
-use aura_os_agent_templates::{classify_intent_with, default_classifier_rules, AgentTemplate};
+use aura_os_agent_runtime::prompt::ceo_system_prompt;
+use aura_os_agent_runtime::tools::CapabilityRequirement;
+use aura_os_agent_templates::{classify_intent_with, default_classifier_rules};
 
 /// URL path prefix every cross-agent tool is proxied through.
 ///
@@ -21,110 +22,13 @@ use aura_os_agent_templates::{classify_intent_with, default_classifier_rules, Ag
 /// process on behalf of a harness-hosted agent session.
 pub const AGENT_TOOL_PATH_PREFIX: &str = "/api/agent_tools";
 
-/// Aura-native project control-plane tools that are safe to expose the
-/// moment an agent holds *any* [`Capability::ReadProject`] grant.
-///
-/// These all take a `project_id` argument and are enforced at dispatch
-/// time by the underlying service clients against the caller's JWT, so
-/// shipping them in the harness's tool menu cannot escalate access
-/// beyond what the agent could already do via direct REST calls — it
-/// just lets the LLM discover and invoke them from a chat session.
-const AURA_NATIVE_PROJECT_READ_TOOLS: &[&str] = &[
-    "list_specs",
-    "get_spec",
-    "list_tasks",
-    "list_tasks_by_spec",
-    "get_task",
-    "get_task_output",
-    "get_loop_status",
-    "get_project",
-    "get_project_stats",
-];
-
-/// Aura-native project control-plane tools that mutate project state.
-/// Exposed only when the agent holds any [`Capability::WriteProject`]
-/// grant. Universe scope is represented by [`AgentPermissions::ceo_preset`]
-/// (which skips this path entirely) and per-project `WriteProject`
-/// grants, so a non-CEO agent with only `ReadProject` capabilities will
-/// never see these names.
-const AURA_NATIVE_PROJECT_WRITE_TOOLS: &[&str] = &[
-    "create_spec",
-    "update_spec",
-    "delete_spec",
-    "generate_specs",
-    "generate_specs_summary",
-    "create_task",
-    "update_task",
-    "delete_task",
-    "extract_tasks",
-    "transition_task",
-    "retry_task",
-    "run_task",
-    "update_project",
-    "start_dev_loop",
-    "pause_dev_loop",
-    "stop_dev_loop",
-];
-
-/// Static tool allowlist for [`AgentPermissions::ceo_preset`] agents.
-///
-/// Mirrors the tier-1 slice of
-/// [`aura_os_agent_templates::ceo_tool_manifest`] plus the
-/// `load_domain_tools` meta-tool, which lets the CEO fetch additional
-/// domains on demand without the harness having to run an intent
-/// classifier. Pulling the tier-1 slice directly (rather than letting a
-/// per-turn classifier rebuild it) matches how non-CEO agents construct
-/// their cross-agent tool list — see the capability-gated branch below —
-/// and is what keeps a trivial "who are my agents" turn from shipping
-/// ~30 tool definitions to the LLM.
-const CEO_CORE_TOOLS: &[&str] = &[
-    // Project (tier 1)
-    "create_project",
-    "import_project",
-    "list_projects",
-    "get_project",
-    "update_project",
-    "delete_project",
-    "archive_project",
-    "get_project_stats",
-    // Agent (tier 1)
-    "list_agents",
-    "get_agent",
-    "assign_agent_to_project",
-    // Execution (tier 1)
-    "start_dev_loop",
-    "pause_dev_loop",
-    "stop_dev_loop",
-    "get_loop_status",
-    "send_to_agent",
-    // Monitoring (tier 1)
-    "get_fleet_status",
-    "get_progress_report",
-    "get_project_cost",
-    // Billing (tier 1 head)
-    "get_credit_balance",
-    // System (tier 1) — stable, cross-platform current time. Without
-    // this, the CEO falls back to `run_command date`, which on Windows
-    // hits cmd.exe's interactive `date` built-in (no `/t`) and exits
-    // with code 1 plus garbage output.
-    "get_current_time",
-    // Meta-tool (always on; lets the LLM ask for additional domains)
-    "load_domain_tools",
-];
-
-/// Returns true if any capability in `caps` is a [`Capability::ReadProject`]
-/// grant (regardless of target project id).
-fn has_any_read_project(caps: &[Capability]) -> bool {
-    caps.iter()
-        .any(|c| matches!(c, Capability::ReadProject { .. }))
-}
-
-/// Returns true if any capability in `caps` is a [`Capability::WriteProject`]
-/// grant (regardless of target project id).
-fn has_any_write_project(caps: &[Capability]) -> bool {
-    caps.iter()
-        .any(|c| matches!(c, Capability::WriteProject { .. }))
-}
+/// Synthetic cross-agent tool names that are *not* backed by an
+/// `AgentTool` in the shared registry. The dispatcher-side handler
+/// recognises them and routes to bespoke executors (`spawn_agent` to
+/// the agent-creation pipeline); the installed-tools diagnostic also
+/// inspects this list to label rows. Keep small and conservative —
+/// registry-backed tools should be preferred over synthetic names.
+const SYNTHETIC_SPAWN_AGENT: &str = "spawn_agent";
 
 /// Portable seed values used to build a `CreateAgentRequest` for the CEO
 /// bootstrap.
@@ -149,10 +53,11 @@ pub fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoAgentTemplate {
                 .to_string(),
         system_prompt: ceo_system_prompt(org_name, org_id),
         permissions: AgentPermissions::ceo_preset(),
-        // CEO agents run with a static tool allowlist (see CEO_CORE_TOOLS);
-        // shipping an IntentClassifierSpec causes the harness to re-filter
-        // the list per turn and has silently dropped tier-1 tools like
-        // `send_to_agent` in practice.
+        // CEO agents run with a narrow tier-1 allowlist (see
+        // `build_cross_agent_tools` for the rationale); shipping an
+        // IntentClassifierSpec would cause the harness to re-filter
+        // the list per turn and has silently dropped tier-1 tools
+        // like `send_to_agent` in practice.
         intent_classifier: None,
     }
 }
@@ -160,8 +65,14 @@ pub fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoAgentTemplate {
 /// The per-turn intent classifier spec used by the CEO preset. Mirrors
 /// the tier-1/tier-2 keyword rules the in-process path used to apply,
 /// so harness-hosted CEOs narrow their tool surface the same way.
+///
+/// The underlying [`aura_os_agent_templates::AgentTemplate`] is built
+/// by [`crate::ceo_agent_template`], which derives its manifest
+/// + streaming list from the live registry — eliminating the former
+/// three-way sync between `ceo.rs`, `agent-templates`, and the
+/// `ToolRegistry` wiring.
 pub fn ceo_intent_classifier_spec() -> IntentClassifierSpec {
-    let template = AgentTemplate::ceo_default();
+    let template = crate::ceo_agent_template();
     let tier1_domains = template.tier1_domains_snake_case();
     let classifier_rules = template
         .classifier_rules_snake_case()
@@ -186,11 +97,27 @@ pub fn ceo_classify_intent(message: &str) -> Vec<aura_os_core::ToolDomain> {
 /// for an agent with the given permissions.
 ///
 /// The unified chat path installs these alongside workspace + integration
-/// tools when opening a harness session. For the CEO preset we emit the
-/// static [`CEO_CORE_TOOLS`] allowlist (~21 tier-1 names plus the
-/// `load_domain_tools` meta-tool). For agents carrying only a subset of
-/// the cross-agent capabilities we emit a narrower list gated by
-/// [`Capability`].
+/// tools when opening a harness session. The list is derived from the
+/// canonical [`ToolRegistry`](aura_os_agent_runtime::tools::ToolRegistry)
+/// so it cannot drift from the set of tools the dispatcher actually
+/// knows how to execute:
+///
+/// * **CEO preset** receives the tier-1 slice of the registry
+///   ([`crate::build_tier1_registry`]) — ~22 tools including
+///   `load_domain_tools` and `get_current_time`. Kept narrow on
+///   purpose: a full 55-tool manifest drove CEO turns to 100% context
+///   utilisation on simple prompts.
+/// * **Non-CEO agents** receive a capability-gated subset computed by
+///   [`crate::build_time_cross_agent_tool_names`], which iterates the
+///   full registry and applies a build-time approximation of
+///   [`aura_os_agent_runtime::policy::check_capabilities`]. Tools
+///   whose `required_capabilities()` is empty are always included
+///   (ambient tools such as `browse_files`, `get_current_time`,
+///   `load_domain_tools`).
+///
+/// Synthetic cross-agent names that are handled by bespoke dispatcher
+/// branches rather than a registry `AgentTool` (currently just
+/// `spawn_agent`) are appended when the matching capability is held.
 ///
 /// Every returned entry points at [`AGENT_TOOL_PATH_PREFIX`]`/:name` on
 /// the local server; the harness forwards the caller's JWT so the
@@ -206,11 +133,8 @@ pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledT
 /// [`build_cross_agent_tools`] that ran an intent classifier over the
 /// user's message and narrowed a ~55-tool CEO manifest down to tier-1
 /// plus any tier-2 domains the classifier matched. That per-turn
-/// narrowing has been removed in favour of a static
-/// [`CEO_CORE_TOOLS`] allowlist — the classifier was silently dropping
-/// tier-1 tools like `send_to_agent` in practice, and a static list
-/// matches how non-CEO agents already construct their cross-agent tool
-/// list (see the capability-gated branch below). The `message`
+/// narrowing has been removed in favour of the registry-derived
+/// allowlist described on [`build_cross_agent_tools`]. The `message`
 /// parameter is retained so the chat path can keep calling through
 /// this entry point without a signature change; it is currently
 /// ignored.
@@ -219,71 +143,72 @@ pub fn build_cross_agent_tools_for_message(
     permissions: &AgentPermissions,
     _message: Option<&str>,
 ) -> Vec<InstalledTool> {
-    // Build the name -> (description, schema) map *once* so each
-    // InstalledTool gets the real metadata the LLM needs to call the
-    // tool. Shipping `""` / `{}` here (the old behaviour) left the
-    // model unable to decide when to invoke `send_to_agent` etc.
-    let metadata = crate::tools::tool_metadata_map();
+    let metadata = crate::tool_metadata_map();
     let metadata = &*metadata;
 
-    // CEO preset: static tier-1 allowlist, no classifier. See
-    // `CEO_CORE_TOOLS` for the rationale. The harness receives this
-    // list verbatim and does not re-filter it, which prevents the
-    // "classifier silently strips send_to_agent" failure mode the
-    // previous per-turn narrowing caused.
-    if permissions.is_ceo_preset() {
-        return CEO_CORE_TOOLS
-            .iter()
-            .map(|name| installed_tool_for(name, metadata))
-            .collect();
+    let mut names: Vec<String> = if permissions.is_ceo_preset() {
+        // CEO preset: narrow tier-1 allowlist, derived from the
+        // canonical `build_tier1_registry()` wiring. Sorted so the
+        // list is stable across process restarts (the registry is
+        // backed by a HashMap).
+        let mut names = crate::build_tier1_registry().tool_names();
+        names.sort();
+        names
+    } else {
+        // Non-CEO agents: build-time capability-filtered subset of
+        // the full registry.
+        crate::build_time_cross_agent_tool_names(permissions)
+    };
+
+    // Synthetic cross-agent names (handled by bespoke dispatcher
+    // branches, not a registry `AgentTool`). Only `spawn_agent`
+    // today — surfaced when the agent holds the matching capability
+    // so the LLM menu mirrors what the agent could actually invoke.
+    // The CEO preset already carries `SpawnAgent` and would see the
+    // synthetic entry, but its narrow tier-1 allowlist deliberately
+    // omits it; keep that behaviour by only appending for non-CEO
+    // bundles.
+    if !permissions.is_ceo_preset()
+        && permissions.capabilities.contains(&Capability::SpawnAgent)
+        && !names.iter().any(|n| n == SYNTHETIC_SPAWN_AGENT)
+    {
+        names.push(SYNTHETIC_SPAWN_AGENT.to_string());
     }
 
-    // Non-CEO agents: narrowly gated cross-agent tools only.
-    let mut tools: Vec<InstalledTool> = Vec::new();
-    let caps = &permissions.capabilities;
-    if caps.contains(&Capability::SpawnAgent) {
-        tools.push(installed_tool_for("spawn_agent", metadata));
-    }
-    if caps.contains(&Capability::ControlAgent) {
-        tools.push(installed_tool_for("send_to_agent", metadata));
-        tools.push(installed_tool_for("remote_agent_action", metadata));
-    }
-    if caps.contains(&Capability::ReadAgent) {
-        tools.push(installed_tool_for("get_agent", metadata));
-        tools.push(installed_tool_for("list_agents", metadata));
-        tools.push(installed_tool_for("get_remote_agent_state", metadata));
-    }
-    // Aura-native project control plane — gated so the menu the LLM
-    // sees mirrors what the agent could actually invoke. `WriteProject`
-    // is treated as a strict superset of `ReadProject` because every
-    // spec/task/project write flow reads the same record first.
-    let has_read = has_any_read_project(caps);
-    let has_write = has_any_write_project(caps);
-    if has_read || has_write {
-        for name in AURA_NATIVE_PROJECT_READ_TOOLS {
-            tools.push(installed_tool_for(name, metadata));
-        }
-    }
-    if has_write {
-        for name in AURA_NATIVE_PROJECT_WRITE_TOOLS {
-            tools.push(installed_tool_for(name, metadata));
-        }
-    }
-    tools
+    names
+        .iter()
+        .map(|name| installed_tool_for(name, metadata))
+        .collect()
 }
 
 /// Returns true if `name` is one of the aura-native project tools
 /// emitted by [`build_cross_agent_tools`] when `ReadProject` /
 /// `WriteProject` capabilities are present. Used by the installed-tools
 /// diagnostic to label the origin capability in the sidekick.
+///
+/// Derived from the canonical [`ToolRegistry`](aura_os_agent_runtime::tools::ToolRegistry) by
+/// inspecting each tool's [`CapabilityRequirement`] set; tools that
+/// declare a `WriteProjectFromArg` requirement are classified as
+/// write-project origins (write is a strict superset of read, so we
+/// never mis-label a write tool as read), and tools with only
+/// `ReadProjectFromArg` are classified as read-project origins.
 #[must_use]
 pub fn aura_native_project_tool_origin(name: &str) -> Option<Capability> {
-    if AURA_NATIVE_PROJECT_WRITE_TOOLS.iter().any(|t| *t == name) {
+    let registry = crate::shared_all_tools_registry();
+    let tool = registry.get(name)?;
+    let reqs = tool.required_capabilities();
+    let has_write = reqs
+        .iter()
+        .any(|r| matches!(r, CapabilityRequirement::WriteProjectFromArg(_)));
+    if has_write {
         return Some(Capability::WriteProject {
             id: String::new(),
         });
     }
-    if AURA_NATIVE_PROJECT_READ_TOOLS.iter().any(|t| *t == name) {
+    let has_read = reqs
+        .iter()
+        .any(|r| matches!(r, CapabilityRequirement::ReadProjectFromArg(_)));
+    if has_read {
         return Some(Capability::ReadProject {
             id: String::new(),
         });
@@ -323,6 +248,7 @@ pub fn stamp_agent_tool_auth(
     tools: &mut [InstalledTool],
     jwt: &str,
     org_id: Option<&str>,
+    agent_id: Option<&str>,
 ) {
     if jwt.is_empty() {
         return;
@@ -351,6 +277,18 @@ pub fn stamp_agent_tool_auth(
                 // canonical lowercase form used by reqwest so the
                 // outbound header matches the dispatcher's constant.
                 headers.insert("x-aura-org-id".to_string(), trimmed.to_string());
+            }
+        }
+        // Stamp the calling agent's id so the dispatcher can resolve
+        // the agent's permissions and re-check the policy before
+        // executing a cross-agent tool. The harness is expected to
+        // pre-filter tools at session init, but a compromised or buggy
+        // harness must not be able to escalate beyond the chatting
+        // agent's declared capabilities.
+        if let Some(aid) = agent_id {
+            let trimmed = aid.trim();
+            if !trimmed.is_empty() {
+                headers.insert("x-aura-agent-id".to_string(), trimmed.to_string());
             }
         }
         tool.auth = ToolAuth::Headers { headers };
@@ -398,9 +336,8 @@ fn installed_tool_for(
 ) -> InstalledTool {
     // Pull the real description + parameters schema from the canonical
     // `ToolRegistry` (via `tool_metadata_map`). The fallback — empty
-    // description, generic object schema — only kicks in for names the
-    // registry doesn't know about, which would indicate a wiring bug
-    // surfaced by the installed-tools diagnostic's `missing_registrations`.
+    // description, generic object schema — only kicks in for synthetic
+    // names (currently `spawn_agent`) that have no registry entry.
     let (description, input_schema) = metadata.get(name).cloned().unwrap_or_else(|| {
         (String::new(), serde_json::json!({"type": "object"}))
     });
@@ -423,6 +360,20 @@ mod tests {
     use super::*;
     use aura_os_core::AgentScope;
 
+    /// Snapshot of the tier-1 registry's tool names. Kept as a helper
+    /// (not a constant) so the single source of truth remains the
+    /// `with_tier1_tools()` wiring — this exists only so individual
+    /// tests can make readable assertions about expected subsets.
+    fn tier1_tool_names_sorted() -> Vec<String> {
+        let mut names = crate::build_tier1_registry().tool_names();
+        names.sort();
+        names
+    }
+
+    fn tool_names(tools: &[InstalledTool]) -> Vec<&str> {
+        tools.iter().map(|t| t.name.as_str()).collect()
+    }
+
     #[test]
     fn ceo_template_is_ceo_preset() {
         let t = ceo_agent_template("Acme", "org-123");
@@ -432,7 +383,8 @@ mod tests {
         assert!(t.system_prompt.contains("org-123"));
         assert!(
             t.intent_classifier.is_none(),
-            "CEO template must not ship an IntentClassifierSpec — see CEO_CORE_TOOLS"
+            "CEO template must not ship an IntentClassifierSpec — the narrow tier-1 \
+             allowlist is the guard against classifier-driven tool dropouts"
         );
     }
 
@@ -443,10 +395,6 @@ mod tests {
         assert!(spec.tier1_domains.contains(&"agent".to_string()));
         assert!(!spec.classifier_rules.is_empty());
         assert!(!spec.tool_domains.is_empty());
-    }
-
-    fn tool_names(tools: &[InstalledTool]) -> Vec<&str> {
-        tools.iter().map(|t| t.name.as_str()).collect()
     }
 
     #[test]
@@ -463,17 +411,33 @@ mod tests {
         };
         let tools = build_cross_agent_tools(&perms);
         let names = tool_names(&tools);
-        for name in AURA_NATIVE_PROJECT_READ_TOOLS {
-            assert!(
-                names.contains(name),
-                "expected read tool `{name}` for ReadProject grant; got {names:?}"
-            );
-        }
-        for name in AURA_NATIVE_PROJECT_WRITE_TOOLS {
-            assert!(
-                !names.contains(name),
-                "write tool `{name}` must not appear without WriteProject"
-            );
+
+        // Every registry tool that declares `ReadProjectFromArg` must
+        // appear. We inspect the registry directly so the test stays
+        // correct as tools are added / renamed.
+        let registry = crate::shared_all_tools_registry();
+        for tool in registry.list_tools() {
+            let reqs = tool.required_capabilities();
+            let is_read = reqs
+                .iter()
+                .any(|r| matches!(r, CapabilityRequirement::ReadProjectFromArg(_)));
+            let is_write = reqs
+                .iter()
+                .any(|r| matches!(r, CapabilityRequirement::WriteProjectFromArg(_)));
+            if is_read && !is_write {
+                assert!(
+                    names.contains(&tool.name()),
+                    "expected read tool `{}` for ReadProject grant; got {names:?}",
+                    tool.name()
+                );
+            }
+            if is_write {
+                assert!(
+                    !names.contains(&tool.name()),
+                    "write tool `{}` must not appear without WriteProject",
+                    tool.name()
+                );
+            }
         }
     }
 
@@ -490,58 +454,81 @@ mod tests {
         };
         let tools = build_cross_agent_tools(&perms);
         let names = tool_names(&tools);
-        for name in AURA_NATIVE_PROJECT_READ_TOOLS
-            .iter()
-            .chain(AURA_NATIVE_PROJECT_WRITE_TOOLS.iter())
-        {
-            assert!(
-                names.contains(name),
-                "expected project tool `{name}` for WriteProject grant; got {names:?}"
-            );
+        let registry = crate::shared_all_tools_registry();
+        for tool in registry.list_tools() {
+            let reqs = tool.required_capabilities();
+            let is_project_scoped = reqs.iter().any(|r| {
+                matches!(
+                    r,
+                    CapabilityRequirement::ReadProjectFromArg(_)
+                        | CapabilityRequirement::WriteProjectFromArg(_)
+                )
+            });
+            if is_project_scoped {
+                assert!(
+                    names.contains(&tool.name()),
+                    "expected project tool `{}` for WriteProject grant; got {names:?}",
+                    tool.name()
+                );
+            }
         }
     }
 
     #[test]
     fn no_project_capabilities_means_no_project_tools() {
-        // Agents with only cross-agent capabilities (the original
-        // gating) keep the original behaviour — no stray aura-native
-        // project tools leak in.
+        // Agents with only cross-agent capabilities (SpawnAgent /
+        // ReadAgent) must not see any project-scoped tool — the LLM
+        // menu must mirror what the agent could actually invoke.
         let perms = AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::SpawnAgent, Capability::ReadAgent],
         };
         let tools = build_cross_agent_tools(&perms);
         let names = tool_names(&tools);
-        for name in AURA_NATIVE_PROJECT_READ_TOOLS
-            .iter()
-            .chain(AURA_NATIVE_PROJECT_WRITE_TOOLS.iter())
-        {
-            assert!(
-                !names.contains(name),
-                "unexpected project tool `{name}` emitted without project capability"
-            );
+        let registry = crate::shared_all_tools_registry();
+        for tool in registry.list_tools() {
+            let reqs = tool.required_capabilities();
+            let is_project_scoped = reqs.iter().any(|r| {
+                matches!(
+                    r,
+                    CapabilityRequirement::ReadProjectFromArg(_)
+                        | CapabilityRequirement::WriteProjectFromArg(_)
+                )
+            });
+            if is_project_scoped {
+                assert!(
+                    !names.contains(&tool.name()),
+                    "unexpected project tool `{}` emitted without project capability",
+                    tool.name()
+                );
+            }
         }
+        // Synthetic `spawn_agent` + the registry-backed `get_agent`
+        // must still appear for this permission bundle.
         assert!(names.contains(&"spawn_agent"));
         assert!(names.contains(&"get_agent"));
     }
 
     #[test]
-    fn ceo_preset_ships_static_core_allowlist() {
-        // Guardrail: the CEO fast-path must emit exactly the
-        // `CEO_CORE_TOOLS` set, regardless of the user message. This
+    fn ceo_preset_ships_tier1_allowlist() {
+        // Guardrail: the CEO fast-path must emit exactly the tier-1
+        // registry's tool set, regardless of the user message. This
         // replaces the old "ships full manifest" guarantee — the full
-        // manifest was the source of the 100% context utilisation bug.
+        // manifest was the source of the 100% context utilisation bug —
+        // and pins the canonical source as `with_tier1_tools()` rather
+        // than a hand-maintained `CEO_CORE_TOOLS` constant.
         let tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        let expected = tier1_tool_names_sorted();
         assert_eq!(
             names.len(),
-            CEO_CORE_TOOLS.len(),
-            "CEO manifest should be exactly CEO_CORE_TOOLS; got {names:?}"
+            expected.len(),
+            "CEO manifest should be exactly the tier-1 registry's tools; got {names:?}"
         );
-        for expected in CEO_CORE_TOOLS {
+        for tool_name in &expected {
             assert!(
-                names.contains(expected),
-                "CEO_CORE_TOOLS entry `{expected}` missing from emitted manifest; got {names:?}"
+                names.contains(&tool_name.as_str()),
+                "tier-1 tool `{tool_name}` missing from emitted CEO manifest; got {names:?}"
             );
         }
     }
@@ -593,11 +580,6 @@ mod tests {
                 .unwrap_or_else(|| panic!("`{name}` missing from CEO manifest"))
         };
 
-        // Every tool must ship a non-empty description; the empty
-        // string was the pre-fix behaviour that made the LLM believe
-        // the tools didn't exist. Only names that are part of
-        // `CEO_CORE_TOOLS` can be asserted here — tier-2/process tools
-        // are no longer shipped up-front on the CEO path.
         for name in [
             "send_to_agent",
             "list_agents",
@@ -609,8 +591,6 @@ mod tests {
             );
         }
 
-        // Tools that take arguments must now ship the real required
-        // list — this is what lets the LLM pick the right call shape.
         let check_required = |name: &str, required_arg: &str| {
             let schema = &find(name).input_schema;
             let required = schema
@@ -805,7 +785,7 @@ mod tests {
             .iter()
             .all(|t| matches!(t.auth, ToolAuth::None)));
 
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"));
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
 
         for tool in &tools {
             match &tool.auth {
@@ -839,7 +819,7 @@ mod tests {
         // tool callable and defers to the handler's "default" org
         // fallback.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", None);
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", None, None);
 
         let send_to_agent = tools
             .iter()
@@ -864,7 +844,7 @@ mod tests {
         // dispatcher to see a present-but-blank header and is strictly
         // worse than the `None` fallback to `"default"`.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("   "));
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("   "), None);
         let any = tools.first().expect("manifest must be non-empty");
         match &any.auth {
             ToolAuth::Headers { headers } => {
@@ -912,7 +892,7 @@ mod tests {
                 metadata: std::collections::HashMap::new(),
             },
         ];
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"));
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
 
         // Workspace tool preserved.
         match &tools[0].auth {
@@ -941,7 +921,7 @@ mod tests {
         // behind a generic auth failure. Preserve the original
         // `ToolAuth::None` so the failure mode stays visible.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        stamp_agent_tool_auth(&mut tools, "", Some("org-42"));
+        stamp_agent_tool_auth(&mut tools, "", Some("org-42"), None);
         assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::None)));
     }
 
@@ -953,7 +933,7 @@ mod tests {
         // absolute form of the cross-agent dispatcher URL.
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
         absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
-        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"));
+        stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
         assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::Headers { .. })));
     }
 

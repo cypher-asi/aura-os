@@ -15,7 +15,7 @@ mod tests {
     use aura_os_store::SettingsStore;
     use aura_os_tasks::TaskService;
 
-    use crate::tools::{AgentToolContext, AgentTool, ToolRegistry};
+    use crate::tools::{AgentTool, AgentToolContext};
 
     #[derive(serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_all_tool_schemas_are_valid_objects() {
-        let registry = ToolRegistry::with_all_tools();
+        let registry = crate::build_all_tools_registry();
         for tool in registry.list_tools() {
             let schema = tool.parameters_schema();
             assert_eq!(
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_tool_names_are_unique() {
-        let registry = ToolRegistry::with_all_tools();
+        let registry = crate::build_all_tools_registry();
         let tools = registry.list_tools();
         let mut names: Vec<&str> = tools.iter().map(|t| t.name()).collect();
         let count_before = names.len();
@@ -110,7 +110,7 @@ mod tests {
         ))
         .expect("shared project control-plane manifest should parse");
 
-        let registry = ToolRegistry::with_all_tools();
+        let registry = crate::build_all_tools_registry();
         let registry_names: HashSet<String> = registry
             .list_tools()
             .into_iter()
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_tool_definitions_format() {
-        let registry = ToolRegistry::with_all_tools();
+        let registry = crate::build_all_tools_registry();
         let tools = registry.list_tools();
         let defs = registry.tool_definitions(&tools);
         for def in &defs {
@@ -146,14 +146,14 @@ mod tests {
 
     #[test]
     fn streaming_tools_opt_into_eager_input_streaming() {
-        let registry = ToolRegistry::with_all_tools();
+        let registry = crate::build_all_tools_registry();
         let tools = registry.list_tools();
         let defs = registry.tool_definitions(&tools);
 
-        // The spec tools are the ones registered in the super-agent registry
-        // whose arguments we stream via `input_json_delta`; file tools live
-        // in adapter-provided registries outside this crate but share the
-        // `is_streaming_tool_name` list.
+        // The spec tools are the ones registered in the default agent tool
+        // registry whose arguments we stream via `input_json_delta`; file
+        // tools live in adapter-provided registries outside this crate but
+        // share the `is_streaming_tool_name` list.
         for name in ["create_spec", "update_spec"] {
             let def = defs
                 .iter()
@@ -178,12 +178,12 @@ mod tests {
 
     #[test]
     fn is_streaming_tool_name_covers_spec_and_file_tools() {
-        assert!(super::super::is_streaming_tool_name("create_spec"));
-        assert!(super::super::is_streaming_tool_name("update_spec"));
-        assert!(super::super::is_streaming_tool_name("write_file"));
-        assert!(super::super::is_streaming_tool_name("edit_file"));
-        assert!(!super::super::is_streaming_tool_name("create_task"));
-        assert!(!super::super::is_streaming_tool_name("read_file"));
+        assert!(crate::is_streaming_tool_name("create_spec"));
+        assert!(crate::is_streaming_tool_name("update_spec"));
+        assert!(crate::is_streaming_tool_name("write_file"));
+        assert!(crate::is_streaming_tool_name("edit_file"));
+        assert!(!crate::is_streaming_tool_name("create_task"));
+        assert!(!crate::is_streaming_tool_name("read_file"));
     }
 
     // -----------------------------------------------------------------------
@@ -248,7 +248,7 @@ mod tests {
             "get_remote_agent_state",
         ];
 
-        let registry = ToolRegistry::with_all_tools();
+        let registry = crate::build_all_tools_registry();
         for name in network_tools {
             let tool = registry.get(name);
             assert!(tool.is_some(), "Tool '{}' not found in registry", name);
@@ -522,7 +522,7 @@ mod tests {
     #[test]
     fn test_exec_tools_use_automaton_id() {
         for tool_name in &["pause_dev_loop", "stop_dev_loop", "get_loop_status"] {
-            let registry = ToolRegistry::with_all_tools();
+            let registry = crate::build_all_tools_registry();
             let tool = registry.get(tool_name).unwrap();
             let schema = tool.parameters_schema();
             assert!(

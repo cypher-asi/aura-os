@@ -1,27 +1,30 @@
 [package]
 name = "aura-os-browser"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Headless-browser session + project-aware initial URL resolution for aura-os."
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
-tokio = { version = "1", features = ["fs", "net", "rt", "sync", "time", "macros", "io-util"] }
-tokio-util = { version = "0.7", features = ["rt"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-chrono = { version = "0.4", features = ["serde"] }
-url = { version = "2", features = ["serde"] }
-dashmap = "6"
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+dashmap = { workspace = true }
 once_cell = "1"
 regex = "1"
-thiserror = "1"
-tracing = "0.1"
-uuid = { version = "1", features = ["v4", "serde"] }
-bytes = "1"
-async-trait = "0.1"
-futures-util = { version = "0.3", optional = true }
-base64 = { version = "0.22", optional = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+bytes = { workspace = true }
+async-trait = { workspace = true }
+futures-util = { workspace = true, optional = true }
+base64 = { workspace = true, optional = true }
 chromiumoxide = { version = "0.9", optional = true }
 
 [features]
@@ -32,5 +35,8 @@ default = []
 cdp = ["dep:chromiumoxide", "dep:futures-util", "dep:base64"]
 
 [dev-dependencies]
-tempfile = "3"
-tokio = { version = "1", features = ["full", "test-util"] }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+
+[lints]
+workspace = true

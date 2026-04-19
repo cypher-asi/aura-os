@@ -397,32 +397,56 @@ mod tests {
         let local_harness: Arc<dyn aura_os_link::HarnessLink> = Arc::new(
             aura_os_link::LocalHarness::new("http://localhost:8080".to_string()),
         );
+        let router_url = "http://localhost:9998".to_string();
+        let agent_service_arc = Arc::new(aura_os_agents::AgentService::new(store.clone(), None));
+        let task_service_arc = Arc::new(aura_os_tasks::TaskService::new(store.clone(), None));
+        let org_service_arc = Arc::new(aura_os_orgs::OrgService::new(store.clone()));
+        let automaton_client_arc =
+            Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999"));
+        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+            event_broadcast.clone(),
+            std::env::temp_dir(),
+            store.clone(),
+            agent_service_arc.clone(),
+            org_service_arc.clone(),
+            automaton_client_arc.clone(),
+            None,
+            task_service_arc.clone(),
+            router_url.clone(),
+            reqwest::Client::new(),
+        ));
+        let tool_registry = {
+            let mut registry = aura_os_agent_tools::build_all_tools_registry();
+            aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
+            Arc::new(registry)
+        };
         let agent_runtime = Arc::new(aura_os_agent_runtime::AgentRuntimeService::new(
-            "http://localhost:9998".to_string(),
+            tool_registry,
+            process_executor,
+            router_url,
             Arc::new(aura_os_projects::ProjectService::new(store.clone())),
-            Arc::new(aura_os_agents::AgentService::new(store.clone(), None)),
+            agent_service_arc,
             Arc::new(aura_os_agents::AgentInstanceService::new(
                 store.clone(),
                 None,
                 Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
                 None,
             )),
-            Arc::new(aura_os_tasks::TaskService::new(store.clone(), None)),
+            task_service_arc,
             Arc::new(aura_os_sessions::SessionService::new(
                 store.clone(),
                 0.8,
                 200_000,
             )),
-            Arc::new(aura_os_orgs::OrgService::new(store.clone())),
+            org_service_arc,
             Arc::new(aura_os_billing::BillingClient::new()),
-            Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999")),
+            automaton_client_arc,
             None,
             None,
             None,
             store.clone(),
             event_broadcast.clone(),
             local_harness,
-            std::env::temp_dir(),
         ));
 
         AppState {
@@ -466,6 +490,7 @@ mod tests {
             orbit_client: None,
             validation_cache: cache,
             agent_runtime,
+            permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
         }
     }
 

@@ -11,8 +11,17 @@
 //!
 //! - serialized to JSON and POSTed to a remote harness,
 //! - stored next to the agent record,
-//! - or inlined as a Rust constant via
-//!   [`AgentTemplate::ceo_default`].
+//! - or assembled in-process by `aura-os-agent-runtime` via
+//!   `tools::ceo_agent_template()`, which derives the tool manifest +
+//!   streaming list from the live [`crate`]-agnostic `ToolRegistry`.
+//!
+//! # Crate dependency envelope
+//!
+//! This crate intentionally depends only on `aura-os-core` + `serde`.
+//! The tool manifest used to live here as a hand-written static list,
+//! which drifted from the runtime's `ToolRegistry` every time a tool
+//! was added; the canonical list now lives in `aura-os-agent-runtime`
+//! and is injected into [`AgentTemplate::ceo`] at construction time.
 
 use aura_os_core::ToolDomain;
 use serde::{Deserialize, Serialize};
@@ -32,119 +41,6 @@ pub const CEO_PRESET_NAME: &str = "ceo";
 pub struct ToolManifestEntry {
     pub name: String,
     pub domain: ToolDomain,
-}
-
-/// Complete tool manifest for the CEO preset, listed in registration
-/// order (tier-1 first, then tier-2 by domain). Mirrors
-/// `ToolRegistry::with_tier1_tools` + `ToolRegistry::with_all_tools`
-/// + `ToolRegistry::register_process_tools` exactly.
-pub fn ceo_tool_manifest() -> Vec<ToolManifestEntry> {
-    use ToolDomain::*;
-    let rows: &[(&str, ToolDomain)] = &[
-        // Project tools (tier 1)
-        ("create_project", Project),
-        ("import_project", Project),
-        ("list_projects", Project),
-        ("get_project", Project),
-        ("update_project", Project),
-        ("delete_project", Project),
-        ("archive_project", Project),
-        ("get_project_stats", Project),
-        // Agent tools (tier 1)
-        ("list_agents", Agent),
-        ("get_agent", Agent),
-        ("assign_agent_to_project", Agent),
-        // Execution tools (tier 1)
-        ("start_dev_loop", Execution),
-        ("pause_dev_loop", Execution),
-        ("stop_dev_loop", Execution),
-        ("get_loop_status", Execution),
-        ("send_to_agent", Execution),
-        // Monitoring tools (tier 1)
-        ("get_fleet_status", Monitoring),
-        ("get_progress_report", Monitoring),
-        ("get_project_cost", Monitoring),
-        // Billing tools (tier 1 head)
-        ("get_credit_balance", Billing),
-        // Meta-tool (always on)
-        ("load_domain_tools", System),
-        // Spec tools (tier 2)
-        ("list_specs", Spec),
-        ("get_spec", Spec),
-        ("create_spec", Spec),
-        ("update_spec", Spec),
-        ("delete_spec", Spec),
-        ("generate_specs", Spec),
-        ("generate_specs_summary", Spec),
-        // Task tools (tier 2)
-        ("list_tasks", Task),
-        ("list_tasks_by_spec", Task),
-        ("get_task", Task),
-        ("create_task", Task),
-        ("update_task", Task),
-        ("delete_task", Task),
-        ("extract_tasks", Task),
-        ("transition_task", Task),
-        ("retry_task", Task),
-        ("run_task", Task),
-        ("get_task_output", Task),
-        // Additional agent tools (tier 2)
-        ("create_agent", Agent),
-        ("update_agent", Agent),
-        ("delete_agent", Agent),
-        ("list_agent_instances", Agent),
-        ("update_agent_instance", Agent),
-        ("delete_agent_instance", Agent),
-        ("remote_agent_action", Agent),
-        // Org tools (tier 2)
-        ("list_orgs", Org),
-        ("create_org", Org),
-        ("get_org", Org),
-        ("update_org", Org),
-        ("list_members", Org),
-        ("update_member_role", Org),
-        ("remove_member", Org),
-        ("manage_invites", Org),
-        // Additional billing tools (tier 2)
-        ("get_transactions", Billing),
-        ("get_billing_account", Billing),
-        ("purchase_credits", Billing),
-        // Social tools (tier 2)
-        ("list_feed", Social),
-        ("create_post", Social),
-        ("get_post", Social),
-        ("add_comment", Social),
-        ("delete_comment", Social),
-        ("follow_profile", Social),
-        ("unfollow_profile", Social),
-        ("list_follows", Social),
-        // Additional monitoring tools (tier 2)
-        ("get_leaderboard", Monitoring),
-        ("get_usage_stats", Monitoring),
-        ("list_sessions", Monitoring),
-        ("list_log_entries", Monitoring),
-        // System tools (tier 2)
-        ("browse_files", System),
-        ("read_file", System),
-        ("get_environment_info", System),
-        ("get_remote_agent_state", System),
-        // Generation tools (tier 2)
-        ("generate_image", Generation),
-        ("generate_3d_model", Generation),
-        ("get_3d_status", Generation),
-        // Process tools (registered dynamically at boot)
-        ("create_process", Process),
-        ("list_processes", Process),
-        ("delete_process", Process),
-        ("trigger_process", Process),
-        ("list_process_runs", Process),
-    ];
-    rows.iter()
-        .map(|(name, domain)| ToolManifestEntry {
-            name: (*name).to_string(),
-            domain: *domain,
-        })
-        .collect()
 }
 
 /// A portable agent template. Everything the harness needs to know to
@@ -170,20 +66,27 @@ pub struct AgentTemplate {
 }
 
 impl AgentTemplate {
-    /// The CEO preset — bit-compatible with today's hard-coded
-    /// super-agent configuration.
-    pub fn ceo_default() -> Self {
+    /// Build the CEO preset from caller-supplied `tool_manifest` and
+    /// `streaming_tool_names` lists.
+    ///
+    /// `aura-os-agent-templates` no longer ships a hand-written tool
+    /// manifest — the canonical list lives in
+    /// `aura-os-agent-runtime::tools::ceo_tool_manifest()` and is
+    /// derived from the live `ToolRegistry`. Callers in the runtime
+    /// crate use `ceo_agent_template()` (which fills both lists in)
+    /// rather than calling this constructor directly.
+    pub fn ceo(
+        tool_manifest: Vec<ToolManifestEntry>,
+        streaming_tool_names: Vec<String>,
+    ) -> Self {
         Self {
             preset: CEO_PRESET_NAME.to_string(),
             system_prompt_template: ceo_system_prompt_template(),
             tier1_domains: TIER1_DOMAINS.to_vec(),
             loadable_domains: LOADABLE_DOMAINS.iter().map(|s| (*s).to_string()).collect(),
             classifier_rules: default_classifier_rules(),
-            tool_manifest: ceo_tool_manifest(),
-            streaming_tool_names: crate::tier::STREAMING_TOOL_NAMES
-                .iter()
-                .map(|s| (*s).to_string())
-                .collect(),
+            tool_manifest,
+            streaming_tool_names,
         }
     }
 
@@ -254,7 +157,7 @@ fn domain_to_snake_case(domain: &ToolDomain) -> String {
         .unwrap_or_default()
 }
 
-/// Raw template string used by [`AgentTemplate::ceo_default`].
+/// Raw template string used by [`AgentTemplate::ceo`].
 ///
 /// Kept identical (modulo the `{org_*}` placeholders) to the body of
 /// [`crate::prompt::ceo_system_prompt`] so that in-process and
@@ -295,10 +198,23 @@ You are a high-level orchestrator that manages projects, agents, and all system 
 mod tests {
     use super::*;
 
+    fn sample_manifest() -> Vec<ToolManifestEntry> {
+        vec![
+            ToolManifestEntry {
+                name: "create_spec".to_string(),
+                domain: ToolDomain::Spec,
+            },
+            ToolManifestEntry {
+                name: "list_projects".to_string(),
+                domain: ToolDomain::Project,
+            },
+        ]
+    }
+
     #[test]
-    fn ceo_default_renders_bit_compatible_prompt() {
-        let rendered =
-            AgentTemplate::ceo_default().render_system_prompt("Acme", "org-123");
+    fn ceo_renders_bit_compatible_prompt() {
+        let rendered = AgentTemplate::ceo(sample_manifest(), vec![])
+            .render_system_prompt("Acme", "org-123");
         let expected = crate::prompt::ceo_system_prompt("Acme", "org-123");
         assert_eq!(
             rendered, expected,
@@ -308,7 +224,10 @@ mod tests {
 
     #[test]
     fn json_roundtrip_preserves_every_field() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(
+            sample_manifest(),
+            vec!["create_spec".to_string()],
+        );
         let json = serde_json::to_string(&profile).unwrap();
         let back: AgentTemplate = serde_json::from_str(&json).unwrap();
         assert_eq!(back.preset, profile.preset);
@@ -320,64 +239,30 @@ mod tests {
     }
 
     #[test]
-    fn tool_manifest_has_no_duplicate_names() {
-        let mut names: Vec<_> = ceo_tool_manifest()
-            .into_iter()
-            .map(|e| e.name)
-            .collect();
-        let before = names.len();
-        names.sort();
-        names.dedup();
-        assert_eq!(
-            before,
-            names.len(),
-            "duplicate tool names in ceo_tool_manifest"
-        );
-    }
-
-    #[test]
     fn tools_for_domains_filters_manifest() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(sample_manifest(), vec![]);
         let spec_tools = profile.tools_for_domains(&[ToolDomain::Spec]);
         assert!(!spec_tools.is_empty());
         for t in &spec_tools {
             assert_eq!(t.domain, ToolDomain::Spec);
         }
-        // create_spec must be in the Spec subset.
         assert!(spec_tools.iter().any(|t| t.name == "create_spec"));
     }
 
     #[test]
-    fn streaming_names_match_legacy_static_list() {
-        let profile = AgentTemplate::ceo_default();
-        assert_eq!(
-            profile.streaming_tool_names,
-            vec![
-                "create_spec".to_string(),
-                "update_spec".to_string(),
-                "write_file".to_string(),
-                "edit_file".to_string(),
-            ]
-        );
-    }
-
-    #[test]
     fn tier1_domains_match_tier_module_constant() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(vec![], vec![]);
         assert_eq!(profile.tier1_domains, TIER1_DOMAINS);
     }
 
     #[test]
     fn tier1_domains_snake_case_matches_wire_strings() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(vec![], vec![]);
         let strs = profile.tier1_domains_snake_case();
-        // Exact set the harness `IntentClassifier` matches against.
         assert!(strs.contains(&"project".to_string()));
         assert!(strs.contains(&"agent".to_string()));
         assert!(strs.contains(&"execution".to_string()));
         assert!(strs.contains(&"monitoring".to_string()));
-        // And every entry must round-trip through serde to a string
-        // (i.e. no Debug-formatted CamelCase leaked in).
         for s in &strs {
             assert!(s.chars().all(|c| c.is_lowercase() || c == '_'));
         }
@@ -385,7 +270,7 @@ mod tests {
 
     #[test]
     fn classifier_rules_snake_case_preserves_keywords() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(vec![], vec![]);
         let rules = profile.classifier_rules_snake_case();
         assert_eq!(rules.len(), profile.classifier_rules.len());
         for (i, (dom, kws)) in rules.iter().enumerate() {
@@ -398,25 +283,24 @@ mod tests {
 
     #[test]
     fn tool_domains_snake_case_covers_every_manifest_entry() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(sample_manifest(), vec![]);
         let map = profile.tool_domains_snake_case();
         assert_eq!(map.len(), profile.tool_manifest.len());
         for entry in &profile.tool_manifest {
-            let expected =
-                serde_json::to_value(entry.domain).unwrap().as_str().unwrap().to_string();
+            let expected = serde_json::to_value(entry.domain)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string();
             assert_eq!(map.get(&entry.name), Some(&expected));
         }
     }
 
     /// Contract test: the JSON wire shape must match what
-    /// `aura-tools::IntentClassifier::from_profile_json` expects
-    /// (`tier1_domains: [String]` + `classifier_rules: [{domain,
-    /// keywords}]`). Phase 3 will ship this exact JSON to a
-    /// harness-hosted agent; if this test fails, the harness
-    /// classifier will silently fall back to tier-1-only behavior.
+    /// `aura-tools::IntentClassifier::from_profile_json` expects.
     #[test]
     fn wire_shape_matches_harness_intent_classifier_contract() {
-        let profile = AgentTemplate::ceo_default();
+        let profile = AgentTemplate::ceo(sample_manifest(), vec![]);
         let v = serde_json::to_value(&profile).unwrap();
         let obj = v.as_object().expect("top-level must be object");
 
@@ -439,8 +323,10 @@ mod tests {
             .expect("classifier_rules must be an array");
         for rule in rules {
             let r = rule.as_object().expect("rule must be object");
-            assert!(r.get("domain").and_then(|d| d.as_str()).is_some(),
-                "each rule must expose `domain: string`, got {rule:?}");
+            assert!(
+                r.get("domain").and_then(|d| d.as_str()).is_some(),
+                "each rule must expose `domain: string`, got {rule:?}"
+            );
             let kws = r
                 .get("keywords")
                 .and_then(|k| k.as_array())
@@ -450,8 +336,6 @@ mod tests {
             }
         }
 
-        // Sanity: tier1 contents should serialize as the documented
-        // snake_case names the harness classifier matches on.
         let tier1_strs: Vec<&str> =
             tier1.iter().filter_map(serde_json::Value::as_str).collect();
         for expected in ["project", "agent", "execution", "monitoring"] {

@@ -228,7 +228,7 @@ pub(crate) async fn setup_ceo_agent(
         }));
     }
 
-    let template = aura_os_agent_runtime::ceo::ceo_agent_template(&org_name, &org_id);
+    let template = aura_os_agent_tools::ceo::ceo_agent_template(&org_name, &org_id);
 
     let net_req = aura_os_network::CreateAgentRequest {
         name: template.name,
@@ -283,7 +283,7 @@ pub(crate) async fn setup_ceo_agent(
 ///
 /// The storage schema requires every chat session to live under a
 /// `project_agent` row (`/api/project-agents/{id}/sessions`), but the
-/// CEO super-agent is universe-scoped and has no natural project home.
+/// CEO-preset agent is universe-scoped and has no natural project home.
 /// Without a binding [`super::agents::chat::setup_agent_chat_persistence`]
 /// returns `None` and the SSE stream prepends a "Chat history could not
 /// be saved — storage is unavailable" error event.
@@ -298,7 +298,7 @@ pub(crate) async fn setup_ceo_agent(
 ///
 /// Best-effort: every network/storage failure is logged and swallowed
 /// so a transient error doesn't block the setup response. A retry is
-/// one `/api/super-agent/setup` call away.
+/// one `/api/agents/harness/setup` call away.
 async fn ensure_ceo_home_project_and_binding(state: &AppState, jwt: &str, canonical_ceo: &Agent) {
     let Some(storage) = state.storage_client.as_ref().cloned() else {
         warn!(
@@ -375,7 +375,7 @@ async fn ensure_ceo_home_project_and_binding(state: &AppState, jwt: &str, canoni
                 org_id: ceo_org_id.clone(),
                 description: Some(format!(
                     "{CEO_HOME_PROJECT_MARKER} Auto-created workspace for the \
-                     CEO super-agent so its direct chats have somewhere to \
+                     CEO-preset agent so its direct chats have somewhere to \
                      persist. You can rename this project, but don't delete \
                      it or CEO chat history will stop saving."
                 )),
@@ -483,11 +483,11 @@ pub(crate) async fn harness_health(
     Json(client.probe(Some(&jwt)).await)
 }
 
-/// POST `/api/super-agent/cleanup` — one-shot dedupe of CEO bootstrap
+/// POST `/api/agents/harness/cleanup` — one-shot dedupe of CEO bootstrap
 /// agents. Keeps the oldest CEO record and deletes every other agent
 /// matching [`looks_like_ceo`]. Never creates a new CEO, so calling this
 /// on an account with zero CEO agents is a no-op (the caller can still
-/// hit `/api/super-agent/setup` afterwards to bootstrap one).
+/// hit `/api/agents/harness/setup` afterwards to bootstrap one).
 pub(crate) async fn cleanup_ceo_agents(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,

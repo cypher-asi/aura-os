@@ -1,18 +1,24 @@
 [package]
 name = "aura-os-sessions"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-os-storage = { path = "../aura-os-storage" }
-chrono = { version = "0.4", features = ["serde"] }
-tracing = "0.1"
-thiserror = "1"
-serde_json = "1"
+chrono = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 aura-os-store = { path = "../aura-os-store" }
-axum = "0.7"
-tokio = { version = "1", features = ["full"] }
-tempfile = "3"
+axum = { workspace = true }
+tokio = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

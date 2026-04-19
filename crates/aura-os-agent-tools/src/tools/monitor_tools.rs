@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, require_network, require_str, tool_err};
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. GetFleetStatusTool
@@ -23,6 +23,9 @@ impl AgentTool for GetFleetStatusTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -86,6 +89,13 @@ impl AgentTool for GetProgressReportTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_progress_report` aggregates across every
+        // project in the caller's org; no per-project scope check is
+        // practical here. Require `ReadAgent` as the coarsest monitor
+        // capability until a dedicated `ReadOrgMonitoring` is defined.
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -148,6 +158,9 @@ impl AgentTool for GetProjectCostTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -195,6 +208,11 @@ impl AgentTool for GetLeaderboardTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_leaderboard` is public-ish marketplace
+        // data; no capability defined. Leave unrestricted.
+        &[]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -237,6 +255,12 @@ impl AgentTool for GetUsageStatsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_usage_stats` is user/org scoped; the
+        // downstream aura-network endpoint enforces ownership. No
+        // cross-agent capability exists for user metrics yet.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -290,6 +314,9 @@ impl AgentTool for ListSessionsTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -335,6 +362,12 @@ impl AgentTool for ListLogEntriesTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `list_log_entries` is admin-style global read.
+        // Require `ReadAgent` as a coarse gate until a dedicated
+        // monitoring capability exists.
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

@@ -33,8 +33,8 @@ pub use ids::{
 pub use permissions::{AgentPermissions, AgentScope, Capability};
 pub use settings::{SettingsEntry, SettingsValue};
 
-/// Re-export of the wire-shipped intent classifier spec used by the
-/// super-agent-style tool narrowing. Stored on `Agent` as an optional
+/// Re-export of the wire-shipped intent classifier spec used by
+/// per-turn tool narrowing. Stored on `Agent` as an optional
 /// field so the regular chat path can hand the same value straight to
 /// the harness `SessionInit`.
 pub use aura_protocol::IntentClassifierSpec;

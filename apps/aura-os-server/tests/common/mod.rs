@@ -288,8 +288,28 @@ pub fn build_test_app_from_store(
         },
     );
 
+    let router_url = "http://localhost:19080".to_string();
+    let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+        event_broadcast.clone(),
+        data_dir.clone(),
+        store.clone(),
+        agent_service.clone(),
+        org_service.clone(),
+        automaton_client.clone(),
+        storage_client.clone(),
+        task_service.clone(),
+        router_url.clone(),
+        reqwest::Client::new(),
+    ));
+    let tool_registry = {
+        let mut registry = aura_os_agent_tools::build_all_tools_registry();
+        aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
+        Arc::new(registry)
+    };
     let agent_runtime = Arc::new(AgentRuntimeService::new(
-        "http://localhost:19080".to_string(),
+        tool_registry,
+        process_executor,
+        router_url,
         project_service.clone(),
         agent_service.clone(),
         agent_instance_service.clone(),
@@ -304,7 +324,6 @@ pub fn build_test_app_from_store(
         store.clone(),
         event_broadcast.clone(),
         local_harness.clone(),
-        data_dir.clone(),
     ));
 
     let state = AppState {
@@ -339,6 +358,7 @@ pub fn build_test_app_from_store(
         orbit_client: None,
         validation_cache,
         agent_runtime,
+        permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);

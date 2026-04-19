@@ -14,6 +14,7 @@ members = [
     "crates/aura-os-storage",
     "crates/aura-os-store",
     "crates/aura-os-agent-runtime",
+    "crates/aura-os-agent-tools",
     "crates/aura-os-agent-templates",
     "crates/aura-os-tasks",
     "crates/aura-os-terminal",
@@ -24,6 +25,62 @@ members = [
     "apps/aura-os-ide",
 ]
 resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80.0"
+license = "MIT"
+repository = "https://github.com/aura/aura-os"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = "warn"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# HTTP
+reqwest = { version = "0.12", features = ["json"] }
+axum = { version = "0.7", features = ["ws"] }
+tower-http = { version = "0.5", features = ["trace", "cors"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async helpers
+async-trait = "0.1"
+futures-util = "0.3"
+
+# Time / IDs
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Encoding
+bytes = "1"
+base64 = "0.22"
+hex = "0.4"
+blake3 = "1.5"
+
+# Misc utilities
+url = { version = "2", features = ["serde"] }
+dashmap = "6"
+dirs = "5"
+tempfile = "3"
 
 [profile.dev]
 debug = 0

@@ -1,15 +1,21 @@
 [package]
 name = "aura-os-terminal"
 version = "0.2.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 portable-pty = "0.8"
-tokio = { version = "1", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-uuid = { version = "1", features = ["v4", "serde"] }
-tracing = "0.1"
-base64 = "0.22"
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+base64 = { workspace = true }
 which = "7"
-dirs = "5"
+dirs = { workspace = true }
+
+[lints]
+workspace = true

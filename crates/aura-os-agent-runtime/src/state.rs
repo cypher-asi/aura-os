@@ -4,8 +4,11 @@ use aura_os_core::AgentOrchestration;
 use aura_os_store::SettingsStore;
 use uuid::Uuid;
 
-// Column-family name kept in the super_agent_* form for on-disk
-// compatibility with previously-persisted records.
+// Column-family name kept in the `super_agent_*` form for on-disk
+// compatibility with previously-persisted records. See the note on
+// `CF_NAMES` in `aura-os-store/src/store.rs`: "super agents" were
+// unified into `Agent` + `AgentPermissions`, but renaming the CF
+// would require a data migration, so the legacy name is retained.
 const CF_NAME: &str = "super_agent_orchestrations";
 
 pub struct OrchestrationStore {

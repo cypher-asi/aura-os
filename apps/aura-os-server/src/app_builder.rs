@@ -374,8 +374,32 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         let port = std::env::var("AURA_SERVER_PORT").unwrap_or_else(|_| "3100".to_string());
         Some(format!("http://{host}:{port}"))
     });
+    // Build the tool registry + process executor outside the runtime so
+    // Tier D's slim `aura-os-agent-runtime` doesn't need to pull in
+    // tool-implementation deps. Tools live in `aura-os-agent-tools`; the
+    // `ProcessExecutor` is owned by the server because it depends on the
+    // data directory + storage client.
+    let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+        event_broadcast.clone(),
+        data_dir.clone(),
+        store.clone(),
+        domain.agent_service.clone(),
+        core.org_service.clone(),
+        automaton_client.clone(),
+        storage_client.clone(),
+        domain.task_service.clone(),
+        router_url.clone(),
+        reqwest::Client::new(),
+    ));
+    let tool_registry = {
+        let mut registry = aura_os_agent_tools::build_all_tools_registry();
+        aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
+        Arc::new(registry)
+    };
     let agent_runtime = Arc::new(
         AgentRuntimeService::new(
+            tool_registry,
+            process_executor,
             router_url,
             domain.project_service.clone(),
             domain.agent_service.clone(),
@@ -391,7 +415,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
             store.clone(),
             event_broadcast.clone(),
             domain.local_harness.clone(),
-            data_dir.clone(),
         )
         .with_local_server_base_url(local_server_base_url.unwrap_or_default()),
     );
@@ -415,6 +438,11 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         validation_cache.clone(),
         event_broadcast.clone(),
     );
+
+    // Emit the active cross-agent tool policy mode once at startup
+    // so operators can confirm the env flag landed before any traffic
+    // hits the dispatcher.
+    crate::handlers::agent_tools::log_active_policy_mode();
 
     Ok(AppState {
         data_dir,
@@ -450,5 +478,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         orbit_client,
         validation_cache,
         agent_runtime,
+        permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     })
 }

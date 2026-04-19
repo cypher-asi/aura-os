@@ -2,7 +2,7 @@ use aura_os_network::NetworkClient;
 use serde_json::json;
 
 use super::ToolResult;
-use crate::AgentRuntimeError;
+use aura_os_agent_runtime::AgentRuntimeError;
 
 pub fn require_network(ctx: &super::AgentToolContext) -> Result<&NetworkClient, AgentRuntimeError> {
     ctx.network_client

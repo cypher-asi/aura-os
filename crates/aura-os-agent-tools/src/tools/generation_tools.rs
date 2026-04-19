@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::require_str;
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 fn router_url() -> String {
     std::env::var("AURA_ROUTER_URL").unwrap_or_else(|_| "http://localhost:3100".to_string())
@@ -27,6 +27,9 @@ impl AgentTool for GenerateImageTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Generation
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::GenerateMedia)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -97,6 +100,9 @@ impl AgentTool for Generate3dModelTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Generation
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::GenerateMedia)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -161,6 +167,9 @@ impl AgentTool for Get3dStatusTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Generation
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::GenerateMedia)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

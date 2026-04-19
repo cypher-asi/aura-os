@@ -3,7 +3,7 @@
 //!
 //! Today aura-os bills whichever user owns the JWT that drove the
 //! current chat turn. That's fine for standalone agents but wrong for
-//! agents spawned by a super-agent: the spawned child runs under a
+//! agents spawned by another agent: the spawned child runs under a
 //! different user's record, and credits should continue to come out
 //! of the originating user's budget.
 //!
@@ -36,8 +36,8 @@
 //!   event and stash it on the active [`crate::state::ChatSession`]
 //!   so the pre-flight credit check on the *next* turn attributes to
 //!   the rolled-up user.
-//! - **In-process super-agent session**: no change needed; there is
-//!   no parent chain because the super-agent runs under the caller's
+//! - **In-process agent session**: no change needed; there is
+//!   no parent chain because the in-process agent runs under the caller's
 //!   own JWT. Wrapper returns the immediate owner unchanged. This
 //!   path is going away in Phase 6 regardless.
 

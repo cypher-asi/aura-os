@@ -619,7 +619,7 @@ fn make_assistant_event_with_blocks(content_blocks: Vec<ChatContentBlock>) -> Se
 }
 
 #[tokio::test]
-async fn super_agent_history_strips_dangling_tool_use_block() {
+async fn test_agent_harness_history_strips_dangling_tool_use_block() {
     // Mirrors the real-world corruption: an assistant turn emitted a
     // tool_use block and the harness crashed before the matching
     // tool_result landed in storage. Feeding this back into context trips
@@ -668,7 +668,7 @@ async fn super_agent_history_strips_dangling_tool_use_block() {
     let serialized = serde_json::to_string(&history).unwrap();
     assert!(
         !serialized.contains(dangling_id),
-        "dangling tool_use id must not survive into super-agent history, got: {serialized}"
+        "dangling tool_use id must not survive into agent history, got: {serialized}"
     );
     assert!(
         serialized.contains(matched_id),

@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::{AgentId, ToolDomain};
+use aura_os_core::{AgentId, Capability, ToolDomain};
 
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str, tool_err,
 };
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 /// Render a `NetworkAgent` as the minimal summary the CEO needs to
 /// route a follow-up (`get_agent`, `send_to_agent`, ...).
@@ -46,6 +46,9 @@ impl AgentTool for ListAgentsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -132,6 +135,9 @@ impl AgentTool for GetAgentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -217,6 +223,9 @@ impl AgentTool for AssignAgentToProjectTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -292,6 +301,9 @@ impl AgentTool for CreateAgentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::SpawnAgent)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -352,6 +364,9 @@ impl AgentTool for UpdateAgentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ControlAgent)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -410,6 +425,9 @@ impl AgentTool for DeleteAgentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ControlAgent)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -454,6 +472,9 @@ impl AgentTool for ListAgentInstancesTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -497,6 +518,9 @@ impl AgentTool for UpdateAgentInstanceTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -552,6 +576,9 @@ impl AgentTool for DeleteAgentInstanceTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -597,6 +624,9 @@ impl AgentTool for RemoteAgentActionTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ControlAgent)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

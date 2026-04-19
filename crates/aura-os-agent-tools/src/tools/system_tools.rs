@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, network_post, require_network, require_str};
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. BrowseFilesTool
@@ -23,6 +23,11 @@ impl AgentTool for BrowseFilesTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `browse_files` operates on the caller's host
+        // FS via aura-network; no per-path capability model yet.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -64,6 +69,11 @@ impl AgentTool for ReadFileTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `read_file` is same as `browse_files` — no
+        // per-path capability model yet.
+        &[]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -104,6 +114,11 @@ impl AgentTool for GetEnvironmentInfoTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_environment_info` is public diagnostic
+        // data; unrestricted.
+        &[]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -133,6 +148,10 @@ pub struct GetCurrentTimeTool;
 impl AgentTool for GetCurrentTimeTool {
     fn name(&self) -> &str {
         "get_current_time"
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // Always-on ambient tool; zero capability requirement.
+        &[]
     }
     fn description(&self) -> &str {
         "Return the current local date and time. Prefer this over \
@@ -189,6 +208,9 @@ impl AgentTool for GetRemoteAgentStateTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

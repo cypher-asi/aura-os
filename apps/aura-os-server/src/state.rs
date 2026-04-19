@@ -343,6 +343,13 @@ pub struct AppState {
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
     pub agent_runtime: Arc<AgentRuntimeService>,
+    /// Session-open permissions cache consulted by the cross-agent tool
+    /// dispatcher. Populated in `chat.rs` when a harness session is
+    /// opened for an agent / agent-instance so the dispatcher can answer
+    /// capability checks without a round-trip to aura-network. See
+    /// [`aura_os_agent_runtime::policy::PermissionsCache`] for the TTL
+    /// and lookup semantics.
+    pub permissions_cache: aura_os_agent_runtime::policy::PermissionsCache,
 }
 
 impl AppState {

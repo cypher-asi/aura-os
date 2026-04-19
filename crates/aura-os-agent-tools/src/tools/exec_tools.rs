@@ -4,11 +4,11 @@ use async_trait::async_trait;
 use futures_util::StreamExt;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 use aura_os_link::AutomatonStartParams;
 
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
     AgentRuntimeError::ToolError(format!("{action}: {e}"))
@@ -27,6 +27,9 @@ impl AgentTool for StartDevLoopTool {
     }
     fn description(&self) -> &str {
         "Start a development loop for an agent instance on a project"
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Execution
@@ -95,6 +98,13 @@ impl AgentTool for PauseDevLoopTool {
     fn name(&self) -> &str {
         "pause_dev_loop"
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `pause_dev_loop` takes `automaton_id`, not
+        // `project_id`, so we can't scope-check a `WriteProject{id}`
+        // at dispatch time. Fall back to `ControlAgent` as a proxy;
+        // the underlying AutomatonClient still enforces ownership.
+        &[CapabilityRequirement::Exact(Capability::ControlAgent)]
+    }
     fn description(&self) -> &str {
         "Pause a running development loop"
     }
@@ -144,6 +154,11 @@ impl AgentTool for StopDevLoopTool {
     fn name(&self) -> &str {
         "stop_dev_loop"
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `stop_dev_loop` takes `automaton_id`, not
+        // `project_id`; see `pause_dev_loop` above.
+        &[CapabilityRequirement::Exact(Capability::ControlAgent)]
+    }
     fn description(&self) -> &str {
         "Stop a running development loop"
     }
@@ -192,6 +207,12 @@ pub struct GetLoopStatusTool;
 impl AgentTool for GetLoopStatusTool {
     fn name(&self) -> &str {
         "get_loop_status"
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_loop_status` takes `automaton_id`; no
+        // project-scoped `ReadProject` check is possible. Falls back
+        // to `ReadAgent`.
+        &[CapabilityRequirement::Exact(Capability::ReadAgent)]
     }
     fn description(&self) -> &str {
         "Get the current status of a development loop"
@@ -435,6 +456,9 @@ pub struct SendToAgentTool;
 impl AgentTool for SendToAgentTool {
     fn name(&self) -> &str {
         "send_to_agent"
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ControlAgent)]
     }
     fn description(&self) -> &str {
         "Send a chat message to another agent by agent_id and wait for \

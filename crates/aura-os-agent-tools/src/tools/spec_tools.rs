@@ -7,8 +7,8 @@ use super::helpers::{
     local_delete, local_post, local_put, network_delete, network_get, network_post, network_put,
     require_network, require_str,
 };
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. ListSpecsTool
@@ -26,6 +26,9 @@ impl AgentTool for ListSpecsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -70,6 +73,9 @@ impl AgentTool for GetSpecTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -116,6 +122,13 @@ impl AgentTool for CreateSpecTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
+
+    fn is_streaming(&self) -> bool {
+        true
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -173,6 +186,13 @@ impl AgentTool for UpdateSpecTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
+
+    fn is_streaming(&self) -> bool {
+        true
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -228,6 +248,9 @@ impl AgentTool for DeleteSpecTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -275,6 +298,9 @@ impl AgentTool for GenerateSpecsTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -319,6 +345,9 @@ impl AgentTool for GenerateSpecsSummaryTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Spec
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

@@ -10,7 +10,9 @@ mod ws_bridge;
 pub use automaton_client::{
     AutomatonClient, AutomatonStartError, AutomatonStartParams, AutomatonStartResult,
 };
-pub use harness::{HarnessLink, HarnessSession, SessionConfig};
+pub use harness::{
+    build_remote_handshake, build_session_init, HarnessLink, HarnessSession, SessionConfig,
+};
 pub use harness_url::local_harness_base_url;
 pub use local_harness::LocalHarness;
 pub use runner::automaton_event_kinds;

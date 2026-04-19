@@ -1,17 +1,17 @@
-//! Phase 1 of the super-agent / harness unification plan.
+//! Phase 1 of the agent / harness unification plan.
 //!
 //! [`HarnessClient`] is a lightweight wrapper around the aura-harness node's
 //! transaction-based HTTP surface (`POST /tx`, `GET /agents/:id/head`,
 //! `GET /agents/:id/record`) and its `/stream` WebSocket.
 //!
 //! This module is intentionally **not wired into any live code path yet**. It
-//! exists so that later phases (harness-hosted super agents, cross-agent
+//! exists so that later phases (harness-hosted agents, cross-agent
 //! tools) can delegate execution to a harness node at any URL — local or
 //! cloud — using a single shared client.
 //!
 //! The caller's JWT is forwarded as a `Bearer` token on every request so that
 //! a harness-hosted agent can authenticate upstream calls the same way the
-//! in-process super-agent does today.
+//! in-process agent dispatch does today.
 //!
 //! See `docs/` and the plan file for the full rollout context.
 
@@ -254,7 +254,7 @@ impl HarnessClient {
     /// available" pill next to the Local/Cloud host-mode picker.
     ///
     /// This is **not** in the chat hot path. It's issued on demand when the
-    /// operator opens the super-agent editor and wants visual confirmation
+    /// operator opens the agent editor and wants visual confirmation
     /// that the configured `LOCAL_HARNESS_URL` (or future per-agent
     /// `harness_url`) answers. Any well-formed HTTP response — including a
     /// 404 on the placeholder endpoint — counts as "reachable"; only

@@ -13,8 +13,10 @@ use aura_os_core::ToolDomain;
 
 pub use aura_os_agent_templates::{classify_intent, is_tier1, LOADABLE_DOMAINS};
 
-use crate::tools::{AgentTool, AgentToolContext, ToolResult};
-use crate::AgentRuntimeError;
+use aura_os_agent_runtime::tools::{
+    AgentTool, AgentToolContext, CapabilityRequirement, ToolResult,
+};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // LoadDomainToolsTool – meta-tool that signals the orchestration loop to
@@ -35,6 +37,12 @@ impl AgentTool for LoadDomainToolsTool {
 
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
+    }
+
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // `load_domain_tools` is a meta-tool; it only signals the
+        // orchestration loop and never reaches the dispatcher.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -94,7 +102,7 @@ mod tests {
     use aura_os_core::ToolDomain;
 
     use super::{classify_intent, LoadDomainToolsTool};
-    use crate::tools::AgentTool;
+    use aura_os_agent_runtime::tools::AgentTool;
 
     #[test]
     fn schedule_language_loads_process_domain() {

@@ -162,9 +162,27 @@ impl From<Capability> for CapabilityWire {
     }
 }
 
-impl From<CapabilityWire> for Capability {
-    fn from(c: CapabilityWire) -> Self {
-        match c {
+/// Error produced when a [`CapabilityWire::Unknown`] forward-compat
+/// placeholder is converted to the native [`Capability`] enum, which
+/// cannot represent unknown variants. Callers that receive wire
+/// bundles should treat this as "drop this capability" rather than
+/// propagate the error (see the `From<AgentPermissionsWire>` impl).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnknownCapability;
+
+impl std::fmt::Display for UnknownCapability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("unknown capability variant")
+    }
+}
+
+impl std::error::Error for UnknownCapability {}
+
+impl TryFrom<CapabilityWire> for Capability {
+    type Error = UnknownCapability;
+
+    fn try_from(c: CapabilityWire) -> Result<Self, Self::Error> {
+        Ok(match c {
             CapabilityWire::SpawnAgent => Capability::SpawnAgent,
             CapabilityWire::ControlAgent => Capability::ControlAgent,
             CapabilityWire::ReadAgent => Capability::ReadAgent,
@@ -175,7 +193,8 @@ impl From<CapabilityWire> for Capability {
             CapabilityWire::GenerateMedia => Capability::GenerateMedia,
             CapabilityWire::ReadProject { id } => Capability::ReadProject { id },
             CapabilityWire::WriteProject { id } => Capability::WriteProject { id },
-        }
+            CapabilityWire::Unknown => return Err(UnknownCapability),
+        })
     }
 }
 
@@ -229,9 +248,19 @@ impl From<&AgentPermissions> for AgentPermissionsWire {
 
 impl From<AgentPermissionsWire> for AgentPermissions {
     fn from(p: AgentPermissionsWire) -> Self {
+        // Drop `CapabilityWire::Unknown` placeholders: they indicate the
+        // wire bundle carried a variant introduced after this build's
+        // protocol version. The native `Capability` enum cannot
+        // represent them, and policy checks over an unknown token are
+        // never satisfiable. Preserving the enclosing session with a
+        // narrower capability set is strictly safer than rejecting it.
         AgentPermissions {
             scope: p.scope.into(),
-            capabilities: p.capabilities.into_iter().map(Into::into).collect(),
+            capabilities: p
+                .capabilities
+                .into_iter()
+                .filter_map(|c| Capability::try_from(c).ok())
+                .collect(),
         }
     }
 }
@@ -318,5 +347,31 @@ mod tests {
         let v = serde_json::to_value(&c).unwrap();
         assert_eq!(v["type"], "readProject");
         assert_eq!(v["id"], "p");
+    }
+
+    #[test]
+    fn unknown_wire_capability_is_dropped_on_conversion() {
+        // Older server receiving a newer wire bundle must still accept
+        // the session; unknown variants are silently dropped so policy
+        // enforcement falls back to the narrower, known capability set.
+        let wire = AgentPermissionsWire {
+            scope: AgentScopeWire::default(),
+            capabilities: vec![
+                CapabilityWire::SpawnAgent,
+                CapabilityWire::Unknown,
+                CapabilityWire::ReadAgent,
+            ],
+        };
+        let perms: AgentPermissions = wire.into();
+        assert_eq!(
+            perms.capabilities,
+            vec![Capability::SpawnAgent, Capability::ReadAgent]
+        );
+    }
+
+    #[test]
+    fn try_from_unknown_capability_wire_returns_error() {
+        let result = Capability::try_from(CapabilityWire::Unknown);
+        assert_eq!(result, Err(UnknownCapability));
     }
 }

@@ -4,8 +4,8 @@ use serde_json::json;
 use aura_os_core::{OrgId, ProjectId, ToolDomain};
 use aura_os_network::{CreateProjectRequest, UpdateProjectRequest};
 
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 fn require_network(
     ctx: &AgentToolContext,
@@ -50,6 +50,14 @@ impl AgentTool for CreateProjectTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `create_project` has no project-scoped capability
+        // yet (the `Capability` enum lacks `CreateProject`); the CEO
+        // preset holds universe scope so it is always allowed, and the
+        // downstream aura-network / Orbit calls enforce membership via
+        // the JWT. Revisit once an org-level write capability exists.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -136,6 +144,11 @@ impl AgentTool for ImportProjectTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `import_project` is a stub and has no capability
+        // mapping yet. Treat as org-scoped write once available.
+        &[]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -177,6 +190,14 @@ impl AgentTool for ListProjectsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `list_projects` is org-scoped; there is no
+        // `ReadOrg` capability yet and the result set is filtered by
+        // the caller's JWT downstream, so leaving this unrestricted
+        // matches existing behaviour for non-CEO agents with scoped
+        // `ReadProject` grants.
+        &[]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -231,6 +252,9 @@ impl AgentTool for GetProjectTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -294,6 +318,9 @@ impl AgentTool for UpdateProjectTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -356,6 +383,9 @@ impl AgentTool for DeleteProjectTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -403,6 +433,9 @@ impl AgentTool for ArchiveProjectTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -453,6 +486,9 @@ impl AgentTool for GetProjectStatsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Project
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

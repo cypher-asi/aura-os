@@ -277,8 +277,28 @@ mod tests {
         let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(64);
         let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
         let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
+        let router_url = "http://localhost:19080".to_string();
+        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+            event_broadcast.clone(),
+            store_dir.path().to_path_buf(),
+            store.clone(),
+            agent_service.clone(),
+            org_service.clone(),
+            automaton_client.clone(),
+            None,
+            task_service.clone(),
+            router_url.clone(),
+            reqwest::Client::new(),
+        ));
+        let tool_registry = {
+            let mut registry = aura_os_agent_tools::build_all_tools_registry();
+            aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
+            Arc::new(registry)
+        };
         let agent_runtime = Arc::new(AgentRuntimeService::new(
-            "http://localhost:19080".to_string(),
+            tool_registry,
+            process_executor,
+            router_url,
             project_service.clone(),
             agent_service.clone(),
             agent_instance_service.clone(),
@@ -293,7 +313,6 @@ mod tests {
             store.clone(),
             event_broadcast.clone(),
             local_harness.clone(),
-            store_dir.path().to_path_buf(),
         ));
 
         (
@@ -329,6 +348,7 @@ mod tests {
                 orbit_client: None,
                 validation_cache: Arc::new(dashmap::DashMap::new()),
                 agent_runtime,
+                permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
             },
             store_dir,
         )

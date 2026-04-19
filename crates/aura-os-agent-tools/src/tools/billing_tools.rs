@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use serde_json::json;
 
-use aura_os_core::ToolDomain;
+use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, network_post, require_network};
-use super::{AgentToolContext, AgentTool, ToolResult};
-use crate::AgentRuntimeError;
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
 // 1. GetCreditBalanceTool
@@ -23,6 +23,13 @@ impl AgentTool for GetCreditBalanceTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        // TODO(tier-a): `get_credit_balance` is a read-only billing
+        // peek; the canonical `ManageBilling` capability gates
+        // mutations. Require it here as the conservative default —
+        // downstream JWT auth still enforces org membership.
+        &[CapabilityRequirement::Exact(Capability::ManageBilling)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -74,6 +81,9 @@ impl AgentTool for GetTransactionsTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageBilling)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -118,6 +128,9 @@ impl AgentTool for GetBillingAccountTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
     }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageBilling)]
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -156,6 +169,9 @@ impl AgentTool for PurchaseCreditsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
+    }
+    fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
+        &[CapabilityRequirement::Exact(Capability::ManageBilling)]
     }
 
     fn parameters_schema(&self) -> serde_json::Value {

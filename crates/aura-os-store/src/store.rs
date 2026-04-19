@@ -13,6 +13,13 @@ use crate::error::{StoreError, StoreResult};
 ///
 /// This is a historical holdover from the RocksDB-backed predecessor; the
 /// current implementation is a plain JSON-file store per family.
+///
+/// NOTE: `super_agent_orchestrations` is a historical name from when
+/// "super agents" were a distinct type. That distinction has been
+/// unified into `Agent` + `AgentPermissions`; renaming the column
+/// family here would require a data migration (existing on-disk
+/// JSON files are keyed by this CF name), so the legacy name is
+/// retained intentionally. Comments only — storage key is stable.
 pub(crate) const CF_NAMES: &[&str] = &["settings", "super_agent_orchestrations"];
 
 type CfMap = BTreeMap<String, Vec<u8>>;

@@ -82,6 +82,7 @@ Edit `.env` and set:
 | `ANTHROPIC_API_KEY` | **Yes** | Your Anthropic API key for spec generation and agent execution |
 | `BILLING_SERVER_URL` | No | Credits/billing server (default: `https://billing.zero.tech`) |
 | `AURA_NETWORK_URL` | No | aura-network backend for orgs/sync (e.g. `https://your-network-host.example.com`). Omit for local-only. |
+| `AURA_NETWORK_FEEDBACK_URL` | No | Optional Feedback-only aura-network override. Leave unset normally so Feedback shares `AURA_NETWORK_URL`; set it only when intentionally testing a different aura-network deployment for `/api/feedback/*`. |
 | `AURA_NETWORK_AUTH_TOKEN` | No | Auth token for aura-network (when using `AURA_NETWORK_URL`) |
 | `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://your-storage-host.example.com`). Omit to disable. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
@@ -158,9 +159,9 @@ The same runner supports both data modes:
 Recommended remote-backed setup:
 
 ```bash
-AURA_NETWORK_URL=https://your-network-host.example.com
-AURA_STORAGE_URL=https://your-storage-host.example.com
-ORBIT_BASE_URL=https://your-orbit-host.example.com
+AURA_NETWORK_URL=https://aura-network.onrender.com
+AURA_STORAGE_URL=https://aura-storage.onrender.com
+ORBIT_BASE_URL=https://orbit-sfvu.onrender.com
 ```
 
 #### Use iOS Simulator / Android Emulator

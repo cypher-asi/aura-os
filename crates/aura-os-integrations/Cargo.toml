@@ -1,18 +1,24 @@
 [package]
 name = "aura-os-integrations"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-os-link = { path = "../aura-os-link" }
-base64 = "0.22"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "1"
-tracing = "0.1"
-tokio = { version = "1", features = ["full"] }
+base64 = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
+
+[lints]
+workspace = true

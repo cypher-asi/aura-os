@@ -68,7 +68,7 @@ const HISTORY_TTL_MS = 30_000;
 const AGENTS_TTL_MS = 30_000;
 const PLACEHOLDER_AGENT_NAME = "New Agent";
 
-/// Per-app-session guard for the idempotent `POST /api/super-agent/setup`
+/// Per-app-session guard for the idempotent `POST /api/agents/harness/setup`
 /// call issued from `fetchAgents`. Lifted to module scope so the auth
 /// subscription below can reset it on logout (otherwise a
 /// sign-out/sign-in cycle to a different account would skip the

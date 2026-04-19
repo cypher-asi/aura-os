@@ -183,7 +183,7 @@ async fn build_session_installed_tools_with_integrations(
         Vec::new()
     };
     tools.extend(
-        aura_os_agent_runtime::ceo::build_cross_agent_tools_for_message(
+        aura_os_agent_tools::ceo::build_cross_agent_tools_for_message(
             permissions,
             user_message,
         ),
@@ -205,13 +205,14 @@ async fn build_session_installed_tools_with_integrations(
     // Order matters: stamping expects relative endpoints, so it runs
     // before `absolutize_agent_tool_endpoints`.
     let org_id_str = org_id.map(|id| id.to_string());
-    aura_os_agent_runtime::ceo::stamp_agent_tool_auth(
+    aura_os_agent_tools::ceo::stamp_agent_tool_auth(
         &mut tools,
         jwt,
         org_id_str.as_deref(),
+        Some(agent_id),
     );
     let base_url = control_plane_api_base_url();
-    aura_os_agent_runtime::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
+    aura_os_agent_tools::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
 
     dedupe_and_log_installed_tools(context, agent_id, &mut tools);
 
@@ -1307,7 +1308,7 @@ async fn load_project_state_snapshot(
 /// Reconstruct conversation history in Claude API format from stored
 /// `SessionEvent`s. Unlike `session_events_to_conversation_history` (which
 /// only keeps text), this preserves tool_use / tool_result content blocks so
-/// the super agent can resume multi-turn tool conversations after a cold start.
+/// the agent can resume multi-turn tool conversations after a cold start.
 ///
 /// Dangling `tool_use` blocks (ones whose id has no matching `tool_result`
 /// in the event stream — typically left behind by a crashed harness) are
@@ -1382,7 +1383,7 @@ pub fn session_events_to_agent_history(
                                     warn!(
                                         tool_use_id = %id,
                                         %name,
-                                        "skipping dangling tool_use (no matching tool_result) from super-agent history"
+                                        "skipping dangling tool_use (no matching tool_result) from agent history"
                                     );
                                     continue;
                                 }
@@ -2374,10 +2375,26 @@ pub(crate) async fn send_agent_event_stream(
         None => None,
     };
 
+    // Populate the dispatcher's permissions cache with the bundle the
+    // session was opened under. Keyed by the same string the harness
+    // will stamp as `X-Aura-Agent-Id`, so the dispatcher can answer
+    // capability checks without resolving the agent over the network
+    // (which 503s on local-only installs and was the original 403
+    // source for `list_agents` / `get_fleet_status`). Normalising
+    // here means session-open and dispatch agree on the bundle
+    // post-CEO-promotion.
+    let normalized_perms = agent
+        .permissions
+        .clone()
+        .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
+    state
+        .permissions_cache
+        .insert(agent_id.to_string(), normalized_perms.clone());
+
     let installed_tools = build_session_installed_tools_with_integrations(
         &state,
         agent.org_id.as_ref(),
-        &agent.permissions,
+        &normalized_perms,
         &jwt,
         "agent_chat",
         &agent_id.to_string(),
@@ -2540,10 +2557,25 @@ pub(crate) async fn send_event_stream(
         None => None,
     };
 
+    // Populate the dispatcher's permissions cache for the instance
+    // session. Keyed by `agent_instance_id` (NOT `instance.agent_id`)
+    // because `stamp_agent_tool_auth` below passes the instance id
+    // through as the value of `X-Aura-Agent-Id` — the dispatcher
+    // reads the raw header value and must find an entry under that
+    // string. Stamping the template `agent_id` here would silently
+    // miss every project-agent-instance tool call.
+    let normalized_instance_perms = instance
+        .permissions
+        .clone()
+        .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
+    state
+        .permissions_cache
+        .insert(agent_instance_id.to_string(), normalized_instance_perms.clone());
+
     let installed_tools = build_session_installed_tools_with_integrations(
         &state,
         instance.org_id.as_ref(),
-        &instance.permissions,
+        &normalized_instance_perms,
         &jwt,
         "instance_chat",
         &agent_instance_id.to_string(),
@@ -3020,7 +3052,7 @@ mod tests {
         let org_id = OrgId::new();
 
         let mut tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
-        tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
+        tools.extend(aura_os_agent_tools::ceo::build_cross_agent_tools(
             &AgentPermissions::ceo_preset(),
         ));
 

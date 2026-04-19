@@ -1,7 +1,10 @@
 [package]
 name = "aura-os-storage"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [features]
 test-utils = ["dep:axum", "dep:uuid", "dep:tokio"]
@@ -9,19 +12,22 @@ test-utils = ["dep:axum", "dep:uuid", "dep:tokio"]
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-protocol = { path = "../aura-protocol" }
-chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "1"
-tracing = "0.1"
-axum = { version = "0.7", optional = true }
-uuid = { version = "1", features = ["v4"], optional = true }
-tokio = { version = "1", features = ["net"], optional = true }
+chrono = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+axum = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
-axum = "0.7"
-uuid = { version = "1", features = ["v4"] }
-tokio = { version = "1", features = ["full"] }
-chrono = { version = "0.4", features = ["serde"] }
-serde_json = "1"
+axum = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
