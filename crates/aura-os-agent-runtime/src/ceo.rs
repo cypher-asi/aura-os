@@ -217,6 +217,41 @@ pub fn aura_native_project_tool_origin(name: &str) -> Option<Capability> {
     None
 }
 
+/// Rewrite relative `/api/agent_tools/:name` endpoints in `tools` to
+/// absolute URLs rooted at `base_url`.
+///
+/// `build_cross_agent_tools` emits every cross-agent tool with the
+/// canonical [`AGENT_TOOL_PATH_PREFIX`]`/:name` path so the manifest
+/// stays base-agnostic at construction time (it has no access to
+/// runtime config). The harness, however, executes an `InstalledTool`
+/// by issuing a raw `reqwest::Client::post(&tool.endpoint)` in a
+/// separate process — often on a separate host — so a bare path fails
+/// immediately with `builder error: relative URL without a base`
+/// before the request even leaves the harness. This is the single
+/// choke point where the control-plane base URL gets stamped on, so
+/// anything shipped to the harness (live session `installed_tools`
+/// list, installed-tools diagnostic, etc.) must funnel through it.
+///
+/// Endpoints that are already absolute (contain `://`) or that don't
+/// start with [`AGENT_TOOL_PATH_PREFIX`] are left untouched so callers
+/// can freely mix cross-agent entries with workspace / integration
+/// tools (which already carry absolute URLs stamped by their own
+/// builders) without risking a double prefix.
+pub fn absolutize_agent_tool_endpoints(tools: &mut [InstalledTool], base_url: &str) {
+    let base = base_url.trim_end_matches('/');
+    if base.is_empty() {
+        return;
+    }
+    for tool in tools.iter_mut() {
+        if tool.endpoint.contains("://") {
+            continue;
+        }
+        if tool.endpoint.starts_with(AGENT_TOOL_PATH_PREFIX) {
+            tool.endpoint = format!("{base}{}", tool.endpoint);
+        }
+    }
+}
+
 fn installed_tool_for(
     name: &str,
     metadata: &std::collections::HashMap<String, (String, serde_json::Value)>,
@@ -466,5 +501,145 @@ mod tests {
         assert!(matches!(write, Some(Capability::WriteProject { .. })));
         assert!(aura_native_project_tool_origin("spawn_agent").is_none());
         assert!(aura_native_project_tool_origin("nonexistent").is_none());
+    }
+
+    #[test]
+    fn absolutize_rewrites_relative_cross_agent_endpoints() {
+        // Every CEO tool leaves `build_cross_agent_tools` with a bare
+        // `/api/agent_tools/:name` path. The harness POSTs to that
+        // path directly, which fails with `builder error: relative
+        // URL without a base` unless we stamp the control-plane base
+        // URL on first. Pin that behaviour so a regression in the
+        // session-assembly path can't silently reintroduce the
+        // original `get_fleet_status` failure.
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        assert!(tools
+            .iter()
+            .all(|t| t.endpoint.starts_with(AGENT_TOOL_PATH_PREFIX)));
+
+        absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
+
+        for tool in &tools {
+            assert!(
+                tool.endpoint.starts_with("http://127.0.0.1:3100/api/agent_tools/"),
+                "cross-agent endpoint should be absolute after rewrite; got {}",
+                tool.endpoint
+            );
+            assert!(
+                tool.endpoint.ends_with(&format!("/{}", tool.name)),
+                "rewritten endpoint should still end with `/{name}`; got {endpoint}",
+                name = tool.name,
+                endpoint = tool.endpoint
+            );
+        }
+    }
+
+    #[test]
+    fn absolutize_trims_trailing_slash_from_base_url() {
+        // `control_plane_api_base_url()` trims trailing slashes, but
+        // be defensive: callers occasionally pass values straight from
+        // configuration or environment variables where a trailing `/`
+        // is common. Joining naively would produce
+        // `http://host//api/agent_tools/:name`, which some routers
+        // 404. Verify the helper normalises the base.
+        let mut tools = vec![InstalledTool {
+            name: "send_to_agent".to_string(),
+            description: String::new(),
+            input_schema: serde_json::json!({}),
+            endpoint: format!("{AGENT_TOOL_PATH_PREFIX}/send_to_agent"),
+            auth: ToolAuth::default(),
+            timeout_ms: None,
+            namespace: None,
+            required_integration: None,
+            runtime_execution: None,
+            metadata: std::collections::HashMap::new(),
+        }];
+        absolutize_agent_tool_endpoints(&mut tools, "http://example.com/");
+        assert_eq!(
+            tools[0].endpoint,
+            "http://example.com/api/agent_tools/send_to_agent"
+        );
+    }
+
+    #[test]
+    fn absolutize_leaves_absolute_and_non_matching_endpoints_alone() {
+        // The session assembly path concatenates workspace /
+        // integration tools (already absolute, e.g.
+        // `https://host/api/orgs/.../tool-actions/...`) with the
+        // cross-agent manifest and then calls this helper once over
+        // the combined slice. It must be a no-op for entries that
+        // either (a) already carry a scheme or (b) don't live under
+        // the cross-agent dispatcher path, otherwise double-prefixing
+        // would break every workspace tool call.
+        let mut tools = vec![
+            InstalledTool {
+                name: "workspace_tool".to_string(),
+                description: String::new(),
+                input_schema: serde_json::json!({}),
+                endpoint: "https://example.com/api/orgs/acme/tool-actions/workspace_tool"
+                    .to_string(),
+                auth: ToolAuth::default(),
+                timeout_ms: None,
+                namespace: None,
+                required_integration: None,
+                runtime_execution: None,
+                metadata: std::collections::HashMap::new(),
+            },
+            InstalledTool {
+                name: "other_relative".to_string(),
+                description: String::new(),
+                input_schema: serde_json::json!({}),
+                endpoint: "/unrelated/path".to_string(),
+                auth: ToolAuth::default(),
+                timeout_ms: None,
+                namespace: None,
+                required_integration: None,
+                runtime_execution: None,
+                metadata: std::collections::HashMap::new(),
+            },
+            InstalledTool {
+                name: "send_to_agent".to_string(),
+                description: String::new(),
+                input_schema: serde_json::json!({}),
+                endpoint: format!("{AGENT_TOOL_PATH_PREFIX}/send_to_agent"),
+                auth: ToolAuth::default(),
+                timeout_ms: None,
+                namespace: None,
+                required_integration: None,
+                runtime_execution: None,
+                metadata: std::collections::HashMap::new(),
+            },
+        ];
+        absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
+
+        assert_eq!(
+            tools[0].endpoint,
+            "https://example.com/api/orgs/acme/tool-actions/workspace_tool",
+            "absolute workspace endpoints must not be rewritten"
+        );
+        assert_eq!(
+            tools[1].endpoint, "/unrelated/path",
+            "relative paths outside the cross-agent dispatcher prefix must not be rewritten"
+        );
+        assert_eq!(
+            tools[2].endpoint, "http://127.0.0.1:3100/api/agent_tools/send_to_agent",
+            "cross-agent endpoints must be absolutised"
+        );
+    }
+
+    #[test]
+    fn absolutize_is_noop_on_empty_base_url() {
+        // Be forgiving when the base URL is missing / misconfigured:
+        // shipping a relative path to the harness still errors, but
+        // clobbering the list with `/api/agent_tools/...` prefixed by
+        // an empty string would turn the manifest into `//api/...`
+        // which is strictly worse. Preserve the original endpoints so
+        // the failure mode stays the same observable "relative URL
+        // without a base" rather than a harder-to-debug malformed URL.
+        let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        let before: Vec<String> = tools.iter().map(|t| t.endpoint.clone()).collect();
+        absolutize_agent_tool_endpoints(&mut tools, "");
+        let after: Vec<String> = tools.iter().map(|t| t.endpoint.clone()).collect();
+        assert_eq!(before, after);
     }
 }

@@ -13,7 +13,8 @@ use axum::Json;
 use serde::Serialize;
 
 use aura_os_agent_runtime::ceo::{
-    aura_native_project_tool_origin, build_cross_agent_tools, AGENT_TOOL_PATH_PREFIX,
+    absolutize_agent_tool_endpoints, aura_native_project_tool_origin, build_cross_agent_tools,
+    AGENT_TOOL_PATH_PREFIX,
 };
 use aura_os_agent_runtime::tools::all_dispatchable_tool_names;
 use aura_os_core::{Agent, AgentId, AgentPermissions, Capability};
@@ -23,7 +24,8 @@ use aura_protocol::AgentPermissionsWire;
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::agents::tool_dedupe::dedupe_installed_tools_by_name;
 use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
+    control_plane_api_base_url, installed_workspace_app_tools,
+    installed_workspace_integrations_for_org_with_token,
 };
 use crate::state::{AppState, AuthJwt};
 
@@ -100,7 +102,14 @@ pub(crate) async fn get_installed_tools_diagnostic(
     } else {
         Vec::new()
     };
-    let cross_agent_tools = build_cross_agent_tools(&agent.permissions);
+    let mut cross_agent_tools = build_cross_agent_tools(&agent.permissions);
+    // Mirror `build_session_installed_tools`: the live chat path
+    // stamps the control-plane base URL onto every cross-agent
+    // endpoint before shipping the manifest to the harness. The
+    // diagnostic must apply the exact same transform so the sidekick
+    // shows the endpoints the harness would actually invoke.
+    let base_url = control_plane_api_base_url();
+    absolutize_agent_tool_endpoints(&mut cross_agent_tools, &base_url);
     let integration_tools = if let Some(org_id) = agent.org_id.as_ref() {
         installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await
     } else {

@@ -34,7 +34,8 @@ use crate::dto::{ChatAttachmentDto, SendChatRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
+    control_plane_api_base_url, installed_workspace_app_tools,
+    installed_workspace_integrations_for_org_with_token,
 };
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
@@ -81,6 +82,17 @@ async fn build_session_installed_tools(
     tools.extend(aura_os_agent_runtime::ceo::build_cross_agent_tools(
         permissions,
     ));
+
+    // `build_cross_agent_tools` emits endpoints as the bare path
+    // `/api/agent_tools/:name` so the manifest stays base-agnostic at
+    // construction time. The harness executes an `InstalledTool` by
+    // issuing a raw `reqwest` POST to `tool.endpoint` in a separate
+    // process, which fails immediately with `builder error: relative
+    // URL without a base` for any non-absolute path. This is the
+    // single choke point for live sessions, so stamp the control-plane
+    // base URL on every cross-agent entry before the list is shipped.
+    let base_url = control_plane_api_base_url();
+    aura_os_agent_runtime::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
 
     dedupe_and_log_installed_tools(context, agent_id, &mut tools);
 
