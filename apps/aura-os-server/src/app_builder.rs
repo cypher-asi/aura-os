@@ -24,6 +24,10 @@ use aura_os_terminal::TerminalManager;
 
 use crate::state::AppState;
 
+fn resolve_local_server_base_url() -> String {
+    aura_os_integrations::control_plane_api_base_url()
+}
+
 fn spawn_health_checks(
     storage_client: &Option<Arc<StorageClient>>,
     network_client: &Option<Arc<NetworkClient>>,
@@ -369,11 +373,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
 
     let router_url = std::env::var("AURA_ROUTER_URL")
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
-    let local_server_base_url = std::env::var("AURA_SERVER_BASE_URL").ok().or_else(|| {
-        let host = std::env::var("AURA_SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-        let port = std::env::var("AURA_SERVER_PORT").unwrap_or_else(|_| "3100".to_string());
-        Some(format!("http://{host}:{port}"))
-    });
+    let local_server_base_url = resolve_local_server_base_url();
     // Build the tool registry + process executor outside the runtime so
     // Tier D's slim `aura-os-agent-runtime` doesn't need to pull in
     // tool-implementation deps. Tools live in `aura-os-agent-tools`; the
@@ -416,7 +416,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
             event_broadcast.clone(),
             domain.local_harness.clone(),
         )
-        .with_local_server_base_url(local_server_base_url.unwrap_or_default()),
+        .with_local_server_base_url(local_server_base_url),
     );
 
     // Spawn scheduled process execution.
@@ -480,4 +480,63 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         agent_runtime,
         permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_local_server_base_url;
+    use std::sync::Mutex;
+
+    struct EnvGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, prev }
+        }
+
+        fn unset(key: &'static str) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::remove_var(key);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.prev {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: Mutex<()> = Mutex::new(());
+        &LOCK
+    }
+
+    #[test]
+    fn resolve_local_server_base_url_uses_canonical_explicit_base_url() {
+        let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::set("AURA_SERVER_BASE_URL", " https://aura.example.com/ ");
+        let _host = EnvGuard::set("AURA_SERVER_HOST", "10.0.0.5");
+        let _port = EnvGuard::set("AURA_SERVER_PORT", "9000");
+
+        assert_eq!(resolve_local_server_base_url(), "https://aura.example.com");
+    }
+
+    #[test]
+    fn resolve_local_server_base_url_normalizes_host_port_fallback() {
+        let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _host = EnvGuard::set("AURA_SERVER_HOST", "0.0.0.0");
+        let _port = EnvGuard::set("AURA_SERVER_PORT", "3100");
+
+        assert_eq!(resolve_local_server_base_url(), "http://127.0.0.1:3100");
+    }
 }
