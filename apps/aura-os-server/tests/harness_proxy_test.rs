@@ -304,6 +304,62 @@ async fn proxy_forwards_procedures_by_skill() {
     assert!(uri.contains("skill=deploy"));
 }
 
+/// Mock harness that, on `POST /api/skills`, writes a competing
+/// SKILL.md to `~/.aura/skills/<name>/` in the style of the real
+/// harness (no `source:` marker, `user-invocable` hyphenated,
+/// includes a `name:` field). This is the shape that was landing
+/// on disk in production and causing user-created skills to fall
+/// out of "My Skills" into "Available".
+///
+/// The server's `create_skill` must run its own write *after* the
+/// harness call so its marker-bearing frontmatter wins the race.
+#[cfg(unix)]
+async fn start_clobbering_mock_harness(home: std::path::PathBuf) -> String {
+    #[derive(serde::Deserialize)]
+    struct Body {
+        name: String,
+        description: Option<String>,
+    }
+
+    let home = std::sync::Arc::new(home);
+    let home_post = home.clone();
+    let skills_post = move |axum::Json(body): axum::Json<Body>| {
+        let home = home_post.clone();
+        async move {
+            let dir = home.join(".aura").join("skills").join(&body.name);
+            let _ = std::fs::create_dir_all(&dir);
+            let desc = body.description.unwrap_or_default();
+            // Frontmatter shape modelled on what the real harness
+            // emits: `name:` field, `user-invocable:` hyphenated,
+            // no `source:` marker.
+            let contents = format!(
+                "---\nname: \"{}\"\ndescription: \"{}\"\nuser-invocable: true\n---\nharness-body\n",
+                body.name, desc
+            );
+            let _ = std::fs::write(dir.join("SKILL.md"), contents);
+            axum::Json(json!({ "ok": true })).into_response()
+        }
+    };
+
+    let agent_skills_post = |_req: Request<Body>| async move {
+        axum::Json(json!({ "ok": true })).into_response()
+    };
+
+    let mock_app = Router::new()
+        .route("/api/skills", post(skills_post))
+        .route("/api/agents/:agent_id/skills", post(agent_skills_post));
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let url = format!("http://{addr}");
+
+    tokio::spawn(async move {
+        axum::serve(listener, mock_app).await.ok();
+    });
+
+    url
+}
+
 /// Mock harness that records every POST it receives so tests can assert on them.
 #[cfg(unix)]
 async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(String, String)>>>) {
@@ -475,6 +531,61 @@ async fn create_skill_without_agent_id_still_registers_catalog() {
             .any(|(uri, _)| uri.starts_with("/api/agents/")),
         "did not expect any install POST when agent_id is omitted, got {:?}",
         captured
+    );
+}
+
+/// Regression: reported in production — a skill created via the UI
+/// ended up under "Available" (shop catalog) instead of "My Skills"
+/// because the harness's own POST /api/skills handler writes its
+/// OWN SKILL.md to `~/.aura/skills/<name>/`, clobbering the file we
+/// wrote and stripping the `source: "user-created"` marker.
+///
+/// The fix is ordering: do the harness call first, then write our
+/// marker-bearing file last. This test locks that ordering in.
+#[cfg(unix)]
+#[tokio::test]
+async fn create_skill_marker_survives_harness_overwrite() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let mock_url = start_clobbering_mock_harness(home_dir.path().to_path_buf()).await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let payload = json!({
+        "name": "racey-skill",
+        "description": "Under contention",
+        "body": "# Body we want to keep",
+    });
+    let req = json_request("POST", "/api/harness/skills", Some(payload));
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let skill_path = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("racey-skill")
+        .join("SKILL.md");
+    let content = std::fs::read_to_string(&skill_path).unwrap();
+
+    assert!(
+        content.contains("source: \"user-created\""),
+        "user-created marker must survive the harness overwrite; got:\n{content}"
+    );
+    assert!(
+        !content.contains("harness-body"),
+        "harness body from clobbering write must have been overwritten; got:\n{content}"
+    );
+    assert!(
+        content.contains("# Body we want to keep"),
+        "our body content must be preserved; got:\n{content}"
     );
 }
 

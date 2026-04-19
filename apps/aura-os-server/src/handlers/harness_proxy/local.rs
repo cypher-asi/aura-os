@@ -98,13 +98,19 @@ pub(crate) async fn create_skill(
     let frontmatter = build_skill_frontmatter(&payload);
     let body_text = payload.body.clone().unwrap_or_default();
     let content = format!("{frontmatter}\n{body_text}");
-
     let skill_path = skill_dir.join("SKILL.md");
-    std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Register the skill with the harness catalog so it shows up in listings.
     // Without this the UI's catalog (backed by the harness' `GET api/skills`)
     // stays empty and the newly created skill is invisible.
+    //
+    // NB: the harness writes its OWN `~/.aura/skills/<name>/SKILL.md` on
+    // this POST (with a different frontmatter shape — `name:` included,
+    // `user-invocable:` spelled with a hyphen, and crucially NO `source:`
+    // marker). We therefore have to do the harness call *before* our own
+    // write so our marker-bearing file wins the race; otherwise the
+    // harness overwrites it and `list_my_skills` can't find the skill,
+    // landing it under "Available" instead of "My Skills".
     state
         .harness_http
         .post_json_ignore_result(
@@ -119,6 +125,11 @@ pub(crate) async fn create_skill(
             .to_string(),
         )
         .await;
+
+    // Last writer wins: stamp the source marker after the harness has had
+    // its turn. (The directory was created above; the harness call may or
+    // may not have written SKILL.md, either way we overwrite.)
+    std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // If the client supplied an agent context, auto-install the skill for that
     // agent so it appears under "Installed" in the UI (mirrors the Skill Shop flow).
