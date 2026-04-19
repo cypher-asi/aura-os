@@ -174,8 +174,18 @@ export function SkillsTab({ agent }: SkillsTabProps) {
 
   const agentId = agent.agent_id;
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  /**
+   * Re-fetch catalog + installations + user-authored skills.
+   *
+   * `silent` keeps the existing rows on screen while the refetch runs
+   * — use it after a mutation (install / uninstall / delete / create)
+   * so the sidekick's three collapsible sections don't flash empty
+   * ("Loading...") on every click. The initial load omits `silent`
+   * so the first render still shows a loading state.
+   */
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = !!opts?.silent;
+    if (!silent) setLoading(true);
     const [skillsResult, installResult, mineResult] = await Promise.allSettled([
       api.harnessSkills.listSkills(),
       api.harnessSkills.listAgentSkills(agentId),
@@ -206,7 +216,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         ? "Failed to load skills. The harness may be unavailable."
         : null,
     );
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [agentId]);
 
   useEffect(() => {
@@ -248,7 +258,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       setActionLoading((prev) => ({ ...prev, [name]: true }));
       try {
         await api.harnessSkills.installAgentSkill(agentId, name);
-        await fetchData();
+        await fetchData({ silent: true });
       } finally {
         setActionLoading((prev) => ({ ...prev, [name]: false }));
       }
@@ -261,7 +271,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       setActionLoading((prev) => ({ ...prev, [name]: true }));
       try {
         await api.harnessSkills.uninstallAgentSkill(agentId, name);
-        await fetchData();
+        await fetchData({ silent: true });
       } finally {
         setActionLoading((prev) => ({ ...prev, [name]: false }));
       }
@@ -300,8 +310,19 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         }
       }
       await api.harnessSkills.deleteMySkill(name);
-      await fetchData();
+
+      // Optimistically drop the skill from all three local lists so
+      // the row vanishes in place instead of waiting for the refetch
+      // round-trip. Then reconcile silently with the server — if the
+      // harness catalog still lists it (in-memory staleness before
+      // the next rescan) we'll just quietly pick it back up in the
+      // Available section without flashing the whole sidekick.
+      setMySkills((prev) => prev.filter((s) => s.name !== name));
+      setInstallations((prev) => prev.filter((i) => i.skill_name !== name));
+      setCatalog((prev) => prev.filter((s) => s.name !== name));
+
       setPendingDeleteName(null);
+      void fetchData({ silent: true });
     } catch (err) {
       console.error(`Failed to delete skill ${name}`, err);
       const msg =
@@ -440,7 +461,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       <CreateSkillModal
         isOpen={showCreator}
         onClose={() => setShowCreator(false)}
-        onCreated={fetchData}
+        onCreated={() => fetchData({ silent: true })}
         agentId={agentId}
       />
 
@@ -449,7 +470,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         agentId={agentId}
         initialInstalledNames={installedNameSet}
         onClose={() => setShowStore(false)}
-        onInstalled={fetchData}
+        onInstalled={() => fetchData({ silent: true })}
       />
 
       <DeleteSkillConfirmModal
