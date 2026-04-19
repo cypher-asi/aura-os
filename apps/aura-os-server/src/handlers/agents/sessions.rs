@@ -313,13 +313,61 @@ pub(crate) struct ContextUsageResponse {
     pub context_utilization: f32,
 }
 
-/// GET `/api/agents/:agent_id/context-usage` — returns the latest session's
-/// `context_usage_estimate` aggregated across all project_agents that share
-/// this template agent id. Used by the UI to seed the bottom-left context
-/// indicator on chat mount without waiting for the first assistant turn.
+/// Pull the most recent `context_utilization` out of a storage session.
+///
+/// Chat sessions do NOT update `Session.context_usage_estimate` today —
+/// only the dev-loop writes that column. So for chat the authoritative
+/// source is the `usage.context_utilization` field embedded in the most
+/// recent `assistant_message_end` event for the session (see
+/// `chat.rs` ~line 528 where the end payload is persisted).
+///
+/// Walks the session's events newest-first (by looking at the persisted
+/// `seq`/timestamp order returned by storage) and returns the first
+/// `assistant_message_end` whose payload has a usable
+/// `usage.context_utilization`. Falls back to
+/// `session.context_usage_estimate` (dev-loop's source) when no such
+/// event exists.
+async fn latest_context_utilization_for_session(
+    storage: &StorageClient,
+    jwt: &str,
+    session: &aura_os_storage::StorageSession,
+) -> Option<f32> {
+    let events = match storage.list_events(&session.id, jwt, None, None).await {
+        Ok(e) => e,
+        Err(e) => {
+            warn!(session_id = %session.id, error = %e, "context-usage: list_events failed");
+            return session.context_usage_estimate.map(|v| v as f32);
+        }
+    };
+
+    let found = events
+        .iter()
+        .rev()
+        .filter(|evt| evt.event_type.as_deref() == Some("assistant_message_end"))
+        .find_map(|evt| {
+            let content = evt.content.as_ref()?;
+            let raw = content
+                .get("usage")
+                .and_then(|u| u.get("context_utilization"))
+                .and_then(|v| v.as_f64())?;
+            if !raw.is_finite() {
+                return None;
+            }
+            Some(raw as f32)
+        });
+
+    found.or_else(|| session.context_usage_estimate.map(|v| v as f32))
+}
+
+/// GET `/api/agents/:agent_id/context-usage` — returns the latest
+/// observed `context_utilization` across every session owned by every
+/// project_agent that shares this template agent id. Used by the UI to
+/// seed the bottom-left context indicator on chat mount without waiting
+/// for the first assistant turn.
 ///
 /// Returns 0.0 when storage is unavailable, when there are no matching
-/// project_agents, or when none of them have any sessions yet.
+/// project_agents, or when none of them have any sessions with recorded
+/// usage yet.
 pub(crate) async fn get_agent_context_usage(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -358,18 +406,20 @@ pub(crate) async fn get_agent_context_usage(
         }
     }
 
-    let context_utilization = latest
-        .and_then(|s| s.context_usage_estimate)
-        .map(|v| v as f32)
-        .unwrap_or(0.0);
+    let context_utilization = match latest {
+        Some(session) => latest_context_utilization_for_session(storage, &jwt, &session)
+            .await
+            .unwrap_or(0.0),
+        None => 0.0,
+    };
     Ok(Json(ContextUsageResponse {
         context_utilization,
     }))
 }
 
 /// GET `/api/projects/:project_id/agents/:agent_instance_id/context-usage` —
-/// project-scoped analogue: returns the latest session's
-/// `context_usage_estimate` for a single agent instance.
+/// project-scoped analogue: returns the latest observed
+/// `context_utilization` for a single agent instance.
 pub(crate) async fn get_instance_context_usage(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -381,12 +431,16 @@ pub(crate) async fn get_instance_context_usage(
         .await
         .map_err(map_storage_error)?;
 
-    let context_utilization = sessions
-        .iter()
-        .max_by_key(|s| storage_session_sort_key(s))
-        .and_then(|s| s.context_usage_estimate)
-        .map(|v| v as f32)
-        .unwrap_or(0.0);
+    let latest = sessions
+        .into_iter()
+        .max_by_key(|s| storage_session_sort_key(s));
+
+    let context_utilization = match latest {
+        Some(session) => latest_context_utilization_for_session(storage, &jwt, &session)
+            .await
+            .unwrap_or(0.0),
+        None => 0.0,
+    };
 
     Ok(Json(ContextUsageResponse {
         context_utilization,
