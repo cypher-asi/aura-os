@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderValue, StatusCode};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use chrono::{DateTime, Utc};
@@ -15,7 +15,35 @@ use tracing::{error, info, warn};
 
 pub(crate) type SseStream =
     Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
-pub(crate) type SseResponse = ([(&'static str, HeaderValue); 1], Sse<SseStream>);
+pub(crate) type SseResponse = (HeaderMap, Sse<SseStream>);
+
+/// Header names used to surface persistence info alongside the SSE
+/// response so fire-and-forget callers (e.g. the CEO's `send_to_agent`
+/// tool, which only reads the response head) can tell whether the
+/// message will actually be saved and viewable in the target agent's
+/// chat history — without having to drain the stream.
+pub(crate) const HEADER_CHAT_PERSISTED: &str = "x-aura-chat-persisted";
+pub(crate) const HEADER_CHAT_SESSION_ID: &str = "x-aura-chat-session-id";
+pub(crate) const HEADER_CHAT_PROJECT_ID: &str = "x-aura-chat-project-id";
+
+fn sse_response_headers(persist_snapshot: Option<&(String, String)>) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert("X-Accel-Buffering", HeaderValue::from_static("no"));
+    let persisted = persist_snapshot.is_some();
+    headers.insert(
+        HeaderName::from_static(HEADER_CHAT_PERSISTED),
+        HeaderValue::from_static(if persisted { "true" } else { "false" }),
+    );
+    if let Some((session_id, project_id)) = persist_snapshot {
+        if let Ok(v) = HeaderValue::from_str(session_id) {
+            headers.insert(HeaderName::from_static(HEADER_CHAT_SESSION_ID), v);
+        }
+        if let Ok(v) = HeaderValue::from_str(project_id) {
+            headers.insert(HeaderName::from_static(HEADER_CHAT_PROJECT_ID), v);
+        }
+    }
+    headers
+}
 
 const DEFAULT_AGENT_HISTORY_WINDOW_LIMIT: usize = 80;
 const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
@@ -814,9 +842,6 @@ pub(crate) async fn setup_agent_chat_persistence_with_matched(
         project_id: pid,
     })
 }
-
-pub(crate) const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
-    [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
 pub(crate) fn harness_broadcast_to_sse(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
@@ -1812,6 +1837,13 @@ async fn open_harness_chat_stream(
     attachments: Option<Vec<ChatAttachmentDto>>,
 ) -> ApiResult<SseResponse> {
     let persist_unavailable = persist_ctx.is_none();
+    // Snapshot the persistence identifiers before we move `persist_ctx`
+    // into the background task; the SSE response headers advertise them
+    // so callers (e.g. the CEO's `send_to_agent`) can tell whether the
+    // message landed in a saveable session without draining the stream.
+    let persist_snapshot: Option<(String, String)> = persist_ctx
+        .as_ref()
+        .map(|c| (c.session_id.clone(), c.project_id.clone()));
 
     let (is_new, rx, commands_tx) = get_or_create_chat_session(
         state,
@@ -1822,8 +1854,6 @@ async fn open_harness_chat_stream(
     )
     .await?;
 
-    // Subscribe the persistence receiver *before* sending the user message so
-    // we don't miss early harness events in a fast-response scenario.
     let persist_rx = if persist_ctx.is_some() {
         Some(rx.resubscribe())
     } else {
@@ -1872,7 +1902,7 @@ async fn open_harness_chat_stream(
     let boxed: SseStream = Box::pin(stream);
 
     Ok((
-        SSE_NO_BUFFERING_HEADERS,
+        sse_response_headers(persist_snapshot.as_ref()),
         Sse::new(boxed).keep_alive(KeepAlive::default()),
     ))
 }

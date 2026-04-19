@@ -174,7 +174,10 @@ pub(crate) async fn send_external_agent_event_stream(
     );
     let boxed: SseStream = Box::pin(stream);
     Ok((
-        [("x-accel-buffering", HeaderValue::from_static("no"))],
+        axum::http::HeaderMap::from_iter([(
+            axum::http::HeaderName::from_static("x-accel-buffering"),
+            HeaderValue::from_static("no"),
+        )]),
         Sse::new(boxed).keep_alive(KeepAlive::default()),
     ))
 }
@@ -280,7 +283,10 @@ async fn send_external_project_agent_event_stream(
     });
 
     Ok((
-        [("x-accel-buffering", HeaderValue::from_static("no"))],
+        axum::http::HeaderMap::from_iter([(
+            axum::http::HeaderName::from_static("x-accel-buffering"),
+            HeaderValue::from_static("no"),
+        )]),
         Sse::new(sse_stream).keep_alive(KeepAlive::default()),
     ))
 }

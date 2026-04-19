@@ -307,63 +307,130 @@ impl AgentTool for SendToAgentTool {
         // so dropping the response body after checking the status
         // still delivers the message.
         let path = format!("/api/agents/{agent_id}/events/stream");
-        let (response_status, response_body): (reqwest::StatusCode, Option<String>) =
-            if let Some(base) = ctx.local_server_base_url.as_deref() {
-                let url = format!("{base}{path}");
-                let resp = ctx
-                    .local_http_client
-                    .post(&url)
-                    .bearer_auth(&ctx.jwt)
-                    .json(&body)
-                    .send()
-                    .await
-                    .map_err(|e| tool_err("send_to_agent", e))?;
-                let status = resp.status();
-                let err_body = if status.is_success() {
-                    None
-                } else {
-                    Some(resp.text().await.unwrap_or_default())
-                };
-                (status, err_body)
+        // Pull persistence signals back from `send_agent_event_stream`
+        // headers so the caller (and the CEO, via the tool result) can
+        // tell whether the message will actually show up in the target
+        // agent's chat history — not just whether the harness accepted
+        // it. Without this the tool returns 200 even when the target
+        // agent has no project binding, and the message silently
+        // vanishes from the UI.
+        struct SendResponse {
+            status: reqwest::StatusCode,
+            body: Option<String>,
+            persisted: Option<bool>,
+            session_id: Option<String>,
+            project_id: Option<String>,
+        }
+        async fn parse_response(
+            resp: reqwest::Response,
+        ) -> Result<SendResponse, AgentRuntimeError> {
+            let status = resp.status();
+            let headers = resp.headers().clone();
+            let persisted = headers
+                .get("x-aura-chat-persisted")
+                .and_then(|v| v.to_str().ok())
+                .map(|v| v.eq_ignore_ascii_case("true"));
+            let session_id = headers
+                .get("x-aura-chat-session-id")
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned);
+            let project_id = headers
+                .get("x-aura-chat-project-id")
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned);
+            let body = if status.is_success() {
+                None
             } else {
-                let network = ctx.network_client.as_ref().ok_or_else(|| {
-                    AgentRuntimeError::Internal(
-                        "send_to_agent: neither local_server_base_url nor network_client is configured".into(),
-                    )
-                })?;
-                let url = format!("{}{path}", network.base_url());
-                let resp = network
-                    .http_client()
-                    .post(&url)
-                    .bearer_auth(&ctx.jwt)
-                    .json(&body)
-                    .send()
-                    .await
-                    .map_err(|e| tool_err("send_to_agent", e))?;
-                let status = resp.status();
-                let err_body = if status.is_success() {
-                    None
-                } else {
-                    Some(resp.text().await.unwrap_or_default())
-                };
-                (status, err_body)
+                Some(resp.text().await.unwrap_or_default())
             };
+            Ok(SendResponse {
+                status,
+                body,
+                persisted,
+                session_id,
+                project_id,
+            })
+        }
 
-        if !response_status.is_success() {
+        let parsed = if let Some(base) = ctx.local_server_base_url.as_deref() {
+            let url = format!("{base}{path}");
+            let resp = ctx
+                .local_http_client
+                .post(&url)
+                .bearer_auth(&ctx.jwt)
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| tool_err("send_to_agent", e))?;
+            parse_response(resp).await?
+        } else {
+            let network = ctx.network_client.as_ref().ok_or_else(|| {
+                AgentRuntimeError::Internal(
+                    "send_to_agent: neither local_server_base_url nor network_client is configured".into(),
+                )
+            })?;
+            let url = format!("{}{path}", network.base_url());
+            let resp = network
+                .http_client()
+                .post(&url)
+                .bearer_auth(&ctx.jwt)
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| tool_err("send_to_agent", e))?;
+            parse_response(resp).await?
+        };
+
+        if !parsed.status.is_success() {
             return Ok(ToolResult {
                 content: json!({
-                    "error": response_body.unwrap_or_default(),
-                    "status": response_status.as_u16()
+                    "error": parsed.body.unwrap_or_default(),
+                    "status": parsed.status.as_u16()
                 }),
                 is_error: true,
             });
         }
 
+        let mut result = json!({
+            "sent": true,
+            "agent_id": agent_id,
+        });
+        // `persisted=false` means `send_agent_event_stream` could not
+        // bind the target agent to any project in storage. The harness
+        // processed the turn but nothing was written to the session
+        // event log, so the user will NOT see the message in that
+        // agent's chat tab. Surface this explicitly so the CEO stops
+        // reporting false success.
+        match parsed.persisted {
+            Some(true) => {
+                result["persisted"] = json!(true);
+                if let Some(sid) = parsed.session_id {
+                    result["session_id"] = json!(sid);
+                }
+                if let Some(pid) = parsed.project_id {
+                    result["project_id"] = json!(pid);
+                }
+            }
+            Some(false) => {
+                result["persisted"] = json!(false);
+                result["warning"] = json!(
+                    "Message was delivered to the target agent's harness, but it is not \
+                     bound to any project in storage, so the turn will NOT appear in that \
+                     agent's chat history. Bind the agent to a project (or chat with it at \
+                     least once from the UI to create a session) before using send_to_agent."
+                );
+                return Ok(ToolResult {
+                    content: result,
+                    is_error: true,
+                });
+            }
+            None => {
+                result["persisted"] = json!("unknown");
+            }
+        }
+
         Ok(ToolResult {
-            content: json!({
-                "sent": true,
-                "agent_id": agent_id
-            }),
+            content: result,
             is_error: false,
         })
     }
