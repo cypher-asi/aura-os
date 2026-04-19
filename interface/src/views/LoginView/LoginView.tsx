@@ -8,13 +8,11 @@ import {
   Badge,
 } from "@cypher-asi/zui";
 import { lazy, Suspense } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
-import { useAuthStore } from "../../stores/auth-store";
 import styles from "./LoginView.module.css";
 
 const HostSettingsModal = lazy(() =>
@@ -24,21 +22,11 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
-  const { isAuthenticated, isLoading } = useAuthStore(
-    useShallow((s) => ({
-      isAuthenticated: s.user !== null,
-      isLoading: s.isLoading,
-    })),
-  );
+  // Route-level guarding in `App.tsx` guarantees this component only mounts
+  // when the explicit `initiallyLoggedIn` check is false and `useAuthStore`
+  // reports no user, so no in-component auth short-circuit is needed here.
+  // Post-login navigation is handled by the redirect effect in `useLoginForm`.
   const f = useLoginForm();
-
-  // Keep the short-circuit: it covers post-login while the redirect effect in
-  // `useLoginForm` commits and while a manual `refreshSession()` is in flight.
-  // The boot-time flash fix lives in `main.tsx` (paint-tied desktop-ready) and
-  // `App.tsx` (synchronous session seed → first-render correctness), not here.
-  if (isAuthenticated || isLoading) {
-    return null;
-  }
 
   return (
     <div className={`${styles.page} ${f.isMobileLayout ? styles.pageMobile : ""}`}>

@@ -1,11 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { authState, loginFormStub } = vi.hoisted(() => ({
-  authState: {
-    user: null as { user_id: string } | null,
-    isLoading: true as boolean,
-  },
+const { loginFormStub } = vi.hoisted(() => ({
   loginFormStub: {
     activeTab: "signin" as const,
     email: "",
@@ -43,10 +39,6 @@ const { authState, loginFormStub } = vi.hoisted(() => ({
     openHostSettings: vi.fn(),
     closeHostSettings: vi.fn(),
   },
-}));
-
-vi.mock("../../stores/auth-store", () => ({
-  useAuthStore: <T,>(selector: (s: typeof authState) => T) => selector(authState),
 }));
 
 vi.mock("./use-login-form", () => ({
@@ -93,35 +85,13 @@ vi.mock("../../components/HostSettingsModal", () => ({
 import { LoginView } from "./LoginView";
 
 beforeEach(() => {
-  authState.user = null;
-  authState.isLoading = true;
+  // Intentionally empty — LoginView no longer reads any auth state directly.
+  // Route-level guarding in `App.tsx` is the single source of truth for when
+  // this component is allowed to mount.
 });
 
 describe("LoginView", () => {
-  it("renders nothing while auth is still loading (e.g. a manual refreshSession in flight)", () => {
-    authState.user = null;
-    authState.isLoading = true;
-
-    const { container } = render(<LoginView />);
-
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("login-form")).toBeNull();
-  });
-
-  it("renders nothing for already-authenticated users landing on /login", () => {
-    authState.user = { user_id: "u1" };
-    authState.isLoading = false;
-
-    const { container } = render(<LoginView />);
-
-    expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("login-form")).toBeNull();
-  });
-
-  it("renders the login form once auth restore completes with no session", () => {
-    authState.user = null;
-    authState.isLoading = false;
-
+  it("always renders the login form when mounted (routing guarantees unauthenticated)", () => {
     render(<LoginView />);
 
     expect(screen.getByTestId("login-form")).toBeInTheDocument();

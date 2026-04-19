@@ -82,6 +82,18 @@ export function getStoredSession(): AuthSession | null {
   return cachedSession;
 }
 
+/**
+ * Explicit, synchronous "is the user logged in?" primitive used at app boot
+ * to decide between the authenticated shell and `LoginView` before any async
+ * work runs. Derives purely from the localStorage/IndexedDB-mirrored session
+ * seeded into `cachedSession` at module import. Callers (routing in App.tsx
+ * and the Zustand auth store seed) MUST share this primitive so the boot
+ * decision is consistent across the tree.
+ */
+export function isLoggedInSync(): boolean {
+  return Boolean(cachedSession?.access_token);
+}
+
 export async function hydrateStoredAuth(): Promise<AuthSession | null> {
   if (hydratePromise) {
     return hydratePromise;

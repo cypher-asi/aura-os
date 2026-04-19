@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
-import { useAuth, useAuthStore } from "./stores/auth-store";
+import { useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
@@ -9,34 +9,35 @@ import { apps } from "./apps/registry";
 import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
-import { hydrateStoredAuth } from "./lib/auth-token";
+import { hydrateStoredAuth, isLoggedInSync } from "./lib/auth-token";
 
 const InviteAcceptView = lazy(() =>
   import("./views/InviteAcceptView").then((m) => ({ default: m.InviteAcceptView })),
 );
 const IdeView = lazy(() => import("./views/IdeView").then((m) => ({ default: m.IdeView })));
 
+/**
+ * Canonical, explicit boot-time auth decision.
+ *
+ * Computed once at module load from the synchronous localStorage session
+ * mirror. This is THE single source of truth for "should the app open on the
+ * shell or on login?" — the Zustand store's initial seed (in `auth-store.ts`)
+ * is wired to the same `isLoggedInSync()` primitive so the two can never
+ * disagree on the very first render.
+ *
+ * If this boolean is `true`, we mount the authenticated shell routes
+ * immediately and never construct `LoginView` at boot. If it's `false`,
+ * `LoginView` is the only thing rendered and `AppShell` is never constructed
+ * until the user signs in. Once sign-in (or a background 401) happens,
+ * React re-renders against the live `useAuthStore` selector below and the
+ * tree transitions naturally.
+ */
+const initiallyLoggedIn = isLoggedInSync();
+
 function LastAppRedirect() {
   const previousPath = useAppUIStore((s) => s.previousPath);
   const lastAppId = getLastApp();
   return <Navigate to={getInitialShellPath(lastAppId, previousPath)} replace />;
-}
-
-/**
- * Route-level guard for `/login`. `getInitialAuthState()` seeds `user`
- * synchronously from the localStorage session mirror maintained by
- * `auth-token`, so returning users hit this component with `isAuthenticated`
- * already `true` on the very first render. Redirect them to `/` before
- * `LoginView` ever mounts — this short-circuits any in-component guard
- * races and guarantees the login chrome cannot paint at startup for
- * authenticated users.
- */
-function LoginRoute() {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  return <LoginView />;
 }
 
 /** Keeps AppShell chrome visible while lazy shell routes load (avoids full-app Suspense fallback). */
@@ -70,19 +71,17 @@ function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
 }
 
 export default function App() {
-  // `getInitialAuthState()` seeds `user` synchronously from the localStorage
-  // session mirror, so the very first render is already on the correct branch
-  // (shell for authenticated users, LoginView for everyone else). That is why
-  // this component does NOT gate rendering on any async flag — adding such a
-  // gate reintroduced a boot-time window where the Rust 3s fallback could
-  // make the webview visible before React committed the correct frame, which
-  // is the root cause of the login-screen flash we chased for many commits.
-  //
-  // The effect below keeps the session fresh in the background: hydrate from
-  // IndexedDB, optionally import a native test token, then validate with the
-  // server. If the backend returns 401, the auth store clears `user` and
-  // `RequireAuth` handles the transition to `/login` — but only after the
-  // first paint has already committed the correct-for-now frame.
+  // Live-subscribed auth flag — diverges from `initiallyLoggedIn` only AFTER
+  // first paint (on login, logout, or a background 401). The shell branch is
+  // entered if either is true so that:
+  //   - returning users land on the shell instantly (initiallyLoggedIn)
+  //   - a fresh sign-in from the login branch flips the tree to the shell
+  //     without requiring a reload (isAuthenticated)
+  // There is no boot-time window where an authenticated user renders LoginView
+  // because `initiallyLoggedIn` is decided before `App()` first runs.
+  const isAuthenticated = useAuthStore((s) => s.user !== null);
+  const showShell = initiallyLoggedIn || isAuthenticated;
+
   const restoreSession = useAuthStore((s) => s.restoreSession);
 
   useEffect(() => {
@@ -109,7 +108,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="login" element={<LoginRoute />} />
+        <Route
+          path="login"
+          element={showShell ? <Navigate to="/" replace /> : <LoginView />}
+        />
         <Route
           path="ide"
           element={
@@ -118,22 +120,26 @@ export default function App() {
             </Suspense>
           }
         />
-        <Route element={<RequireAuth />}>
-          <Route
-            path="invite/:token"
-            element={
-              <Suspense fallback={null}>
-                <InviteAcceptView />
-              </Suspense>
-            }
-          />
-          <Route element={<AppShell />}>
-            <Route element={<ShellOutletSuspense />}>
-              <Route index element={<LastAppRedirect />} />
-              {renderRoutes(shellAppRoutes)}
+        {showShell ? (
+          <Route element={<RequireAuth />}>
+            <Route
+              path="invite/:token"
+              element={
+                <Suspense fallback={null}>
+                  <InviteAcceptView />
+                </Suspense>
+              }
+            />
+            <Route element={<AppShell />}>
+              <Route element={<ShellOutletSuspense />}>
+                <Route index element={<LastAppRedirect />} />
+                {renderRoutes(shellAppRoutes)}
+              </Route>
             </Route>
           </Route>
-        </Route>
+        ) : (
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        )}
       </Routes>
     </BrowserRouter>
   );

@@ -36,6 +36,7 @@ import {
   getStoredJwt,
   getStoredSession,
   hydrateStoredAuth,
+  isLoggedInSync,
   setStoredAuth,
 } from "./auth-token";
 
@@ -122,5 +123,35 @@ describe("auth-token", () => {
     window.localStorage.setItem("aura-session", "not-json");
     await hydrateStoredAuth();
     expect(getStoredSession()).toBeNull();
+  });
+
+  describe("isLoggedInSync", () => {
+    it("returns false when nothing is stored", () => {
+      expect(isLoggedInSync()).toBe(false);
+    });
+
+    it("returns true after setStoredAuth writes a session with a token", async () => {
+      await setStoredAuth(mockSession);
+      expect(isLoggedInSync()).toBe(true);
+    });
+
+    it("returns false after clearStoredAuth", async () => {
+      await setStoredAuth(mockSession);
+      await clearStoredAuth();
+      expect(isLoggedInSync()).toBe(false);
+    });
+
+    it("returns false when stored session has no access_token", async () => {
+      await setStoredAuth(mockSession);
+      await setStoredAuth({ ...mockSession, access_token: undefined });
+      expect(isLoggedInSync()).toBe(false);
+    });
+
+    it("returns true after hydrating from the legacy localStorage mirror", async () => {
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+      window.localStorage.setItem("aura-jwt", mockSession.access_token);
+      await hydrateStoredAuth();
+      expect(isLoggedInSync()).toBe(true);
+    });
   });
 });

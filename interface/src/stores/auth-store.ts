@@ -5,6 +5,7 @@ import {
   clearStoredAuth,
   getStoredSession,
   hydrateStoredAuth,
+  isLoggedInSync,
   setStoredAuth,
 } from "../lib/auth-token";
 import { authApi } from "../api/auth";
@@ -64,23 +65,30 @@ interface AuthState {
 }
 
 /**
- * Compute the initial store state synchronously from the localStorage mirror
- * maintained by `auth-token`. This means authenticated users start with a real
- * `user` on the very first React render, so the login route never flashes
- * before the async `restoreSession()` catches up.
+ * Seed the auth store synchronously from the localStorage/IndexedDB mirror
+ * maintained by `auth-token`, using the shared `isLoggedInSync()` primitive
+ * so the store and the router can never disagree on the boot decision.
+ *
+ * The canonical boot-time "show shell vs show login" decision is made in
+ * `App.tsx` via `initiallyLoggedIn = isLoggedInSync()` at module scope. This
+ * seed exists purely so consumers of `useAuth().user` (e.g. API headers,
+ * user-name display) have a populated user object on the very first render
+ * for returning users, matching that routing decision.
  */
-function getInitialAuthState(): Pick<
+function seedAuthStateFromStorage(): Pick<
   AuthState,
   "user" | "isLoading" | "hasResolvedInitialSession" | "zeroProRefreshError"
 > {
-  const cached = getStoredSession();
-  if (cached) {
-    return {
-      user: sessionToUser(cached),
-      isLoading: false,
-      hasResolvedInitialSession: false,
-      zeroProRefreshError: getZeroProRefreshError(cached),
-    };
+  if (isLoggedInSync()) {
+    const cached = getStoredSession();
+    if (cached) {
+      return {
+        user: sessionToUser(cached),
+        isLoading: false,
+        hasResolvedInitialSession: false,
+        zeroProRefreshError: getZeroProRefreshError(cached),
+      };
+    }
   }
   return {
     user: null,
@@ -91,7 +99,7 @@ function getInitialAuthState(): Pick<
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
-  ...getInitialAuthState(),
+  ...seedAuthStateFromStorage(),
 
   restoreSession: async () => {
     await hydrateStoredAuth();
