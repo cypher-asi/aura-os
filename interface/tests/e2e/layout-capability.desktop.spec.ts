@@ -41,8 +41,8 @@ test("desktop direct mobile organization route redirects back to projects", asyn
 
   await page.goto("/projects/organization");
 
-  await expect(page).toHaveURL(/\/projects$/);
-  await expect(page.getByText("Welcome to AURA")).toBeVisible();
+  await expect(page).not.toHaveURL(/\/projects\/organization$/);
+  await expect(page.getByRole("tree", { name: "Projects" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pick Up Remote Work" })).toHaveCount(0);
 });
 

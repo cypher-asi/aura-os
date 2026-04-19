@@ -91,6 +91,20 @@ describe("host-config", () => {
     expect(hostConfig.getTargetHostOrigin()).toBe("http://10.0.2.2:3100");
   });
 
+  it("uses the iOS build default when a native localhost webview cannot identify its platform", async () => {
+    vi.stubEnv("VITE_IOS_DEFAULT_HOST", "http://127.0.0.1:3100");
+    (window as Window & { Capacitor?: { isNativePlatform: () => boolean; getPlatform: () => string } }).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => "web",
+    };
+
+    const hostConfig = await import("./host-config");
+
+    expect(hostConfig.getNativeDefaultHostOrigin()).toBe("http://127.0.0.1:3100");
+    expect(hostConfig.getTargetHostOrigin()).toBe("http://127.0.0.1:3100");
+    expect(hostConfig.getHostDisplayLabel()).toBe("http://127.0.0.1:3100 (build default)");
+  });
+
   it("persists a bootstrap ?host= query param into localStorage", async () => {
     storageState.set("aura-host-origin", "http://127.0.0.1:19847");
     setLocation("/projects/demo?host=http://127.0.0.1:3100");

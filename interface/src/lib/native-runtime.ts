@@ -36,10 +36,10 @@ export function inferNativePlatform(): "android" | "ios" | null {
   }
 
   if (window.location.protocol === "capacitor:") return "ios";
-  if (LOCALHOST_WEBVIEW_ORIGINS.has(window.location.origin)) return "android";
 
   const userAgent = window.navigator.userAgent.toLowerCase();
   if (userAgent.includes("android")) return "android";
   if (userAgent.includes("iphone") || userAgent.includes("ipad") || userAgent.includes("ipod")) return "ios";
+  if (LOCALHOST_WEBVIEW_ORIGINS.has(window.location.origin)) return null;
   return null;
 }

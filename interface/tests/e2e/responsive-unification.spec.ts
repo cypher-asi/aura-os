@@ -76,7 +76,7 @@ async function mockProjectWorkApp(page: import("@playwright/test").Page) {
 }
 
 async function openAccountSheet(page: import("@playwright/test").Page) {
-  const workspaceHeading = page.getByRole("heading", { name: "Remote work" });
+  const workspaceHeading = page.getByRole("heading", { name: "Continue work" });
   const appSettingsButton = page.getByRole("button", { name: "App settings" });
   const accountDrawer = page.getByText("Account", { exact: true });
 
@@ -89,7 +89,7 @@ async function openAccountSheet(page: import("@playwright/test").Page) {
     return;
   }
 
-  const trigger = page.getByRole("button", { name: "Open account" });
+  const trigger = page.getByRole("button", { name: "Open workspace" });
   await expect(trigger).toBeVisible();
   await expect(trigger).toBeEnabled();
 

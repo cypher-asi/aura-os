@@ -6,8 +6,8 @@ import { CREATE_AGENT_CHAT_HANDOFF } from "../../utils/chat-handoff";
 
 const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectActions = vi.fn();
+const mockUseOrgStore = vi.fn();
 const mockSetAgentsByProject = vi.fn();
-const mockCreateAgent = vi.fn();
 const mockCreateAgentInstance = vi.fn();
 const mockListAgents = vi.fn();
 const mockGetRemoteAgentState = vi.fn();
@@ -23,16 +23,32 @@ const mockProjectsState = {
   ],
   agentsByProject: {
     "proj-1": [],
-  },
+  } as Record<string, Array<Record<string, unknown>>>,
 };
 
-const mockOrgState = {
-  activeOrg: {
-    org_id: "org-1",
-    name: "My Team",
-  },
-  integrations: [],
-};
+const mockAgentEditorModal = vi.fn((props: {
+  onSaved: (agent: { agent_id: string }) => void | Promise<void>;
+  onClose: () => void;
+  titleOverride?: string;
+  agent?: { agent_id: string };
+  mobilePresentation?: "sheet" | "inline";
+  submitLabelOverride?: string;
+  showCloseAction?: boolean;
+}) => (
+  <div data-testid="agent-editor-modal">
+    <div>{props.titleOverride ?? "Create Agent"}</div>
+    {props.mobilePresentation ? <div>Presentation {props.mobilePresentation}</div> : null}
+    {props.submitLabelOverride ? <div>{props.submitLabelOverride}</div> : null}
+    <div>{props.showCloseAction === false ? "Close hidden" : "Close visible"}</div>
+    {props.agent ? <div>Retrying {props.agent.agent_id}</div> : null}
+    <button type="button" onClick={() => { void props.onSaved({ agent_id: "agent-9" }).catch(() => {}); }}>
+      Trigger shared save
+    </button>
+    <button type="button" onClick={props.onClose}>
+      Close shared editor
+    </button>
+  </div>
+));
 
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, onClick, disabled, className, variant }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }) => (
@@ -40,12 +56,6 @@ vi.mock("@cypher-asi/zui", () => ({
       {children}
     </button>
   ),
-  Input: React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>((props, ref) => (
-    <input
-      ref={ref}
-      {...props}
-    />
-  )),
   Spinner: () => <div>Loading…</div>,
   Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
 }));
@@ -69,14 +79,17 @@ vi.mock("../../stores/projects-list-store", () => ({
 }));
 
 vi.mock("../../stores/org-store", () => ({
-  useOrgStore: (selector: (state: typeof mockOrgState) => unknown) => selector(mockOrgState),
+  useOrgStore: (selector: (state: {
+    activeOrg: { org_id: string; name: string } | null;
+    isLoading: boolean;
+    orgsError: string | null;
+  }) => unknown) => selector(mockUseOrgStore()),
 }));
 
 vi.mock("../../api/client", () => ({
   api: {
     agents: {
       list: (...args: unknown[]) => mockListAgents(...args),
-      create: (...args: unknown[]) => mockCreateAgent(...args),
     },
     createAgentInstance: (...args: unknown[]) => mockCreateAgentInstance(...args),
     swarm: {
@@ -93,6 +106,10 @@ vi.mock("../../api/client", () => ({
       this.body = body;
     }
   },
+}));
+
+vi.mock("../../components/AgentEditorModal", () => ({
+  AgentEditorModal: (props: Parameters<typeof mockAgentEditorModal>[0]) => mockAgentEditorModal(props),
 }));
 
 vi.mock("../../components/Avatar", () => ({
@@ -119,11 +136,18 @@ function LocationStateProbe() {
 describe("ProjectAgentSetupView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true });
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
     mockUseProjectActions.mockReturnValue(null);
-    mockOrgState.integrations = [];
+    mockUseOrgStore.mockReturnValue({
+      activeOrg: {
+        org_id: "org-1",
+        name: "My Team",
+      },
+      isLoading: false,
+      orgsError: null,
+    });
+    mockProjectsState.agentsByProject["proj-1"] = [];
     mockListAgents.mockResolvedValue([]);
-    mockCreateAgent.mockResolvedValue({ agent_id: "agent-9" });
     mockGetRemoteAgentState.mockResolvedValue({ state: "running" });
     mockCreateAgentInstance.mockResolvedValue({
       agent_instance_id: "agent-inst-9",
@@ -134,52 +158,29 @@ describe("ProjectAgentSetupView", () => {
     });
   });
 
-  it("keeps the mobile create screen focused on Aura swarm", async () => {
+  it("uses the shared editor on the mobile create route", () => {
     render(
       <Routes>
         <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Attached after retry</div>} />
       </Routes>,
       { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
     );
 
-    expect(screen.getByText("Name your remote agent")).toBeInTheDocument();
-    expect(screen.getByText("Managed by Aura")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: /Use organization connection/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Create Remote Agent").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Attach Existing Agent" })).toBeInTheDocument();
+    expect(screen.getByText("Create a fresh agent for this project, or attach one your team already shares.")).toBeInTheDocument();
+    expect(screen.getByTestId("agent-editor-modal")).toBeInTheDocument();
+    expect(mockAgentEditorModal.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      closeOnSave: false,
+      forceRemoteOnlyCreate: true,
+      mobilePresentation: "inline",
+      showCloseAction: false,
+    }));
     expect(mockListAgents).not.toHaveBeenCalled();
   });
 
-  it("submits an Aura-managed swarm create payload", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Agent chat</div>} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    await user.type(screen.getByLabelText("Name"), "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create Agent" }));
-
-    await waitFor(() => {
-      expect(mockCreateAgent).toHaveBeenCalledWith(expect.objectContaining({
-        org_id: "org-1",
-        name: "Atlas",
-        role: "Engineer",
-        machine_type: "remote",
-        adapter_type: "aura_harness",
-        environment: "swarm_microvm",
-        auth_source: "aura_managed",
-        integration_id: null,
-      }));
-    });
-  });
-
-  it("navigates to the new chat with a create handoff flag", async () => {
+  it("attaches a newly saved shared-editor agent and navigates to chat with handoff state", async () => {
     const user = userEvent.setup();
 
     render(
@@ -190,192 +191,81 @@ describe("ProjectAgentSetupView", () => {
       { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
     );
 
-    await user.type(screen.getByLabelText("Name"), "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create Agent" }));
-
-    await waitFor(() => {
-      expect(screen.getByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
-    });
-  });
-
-  it("persists the created agent as the current project agent before handing off to chat", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Agent chat</div>} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    await user.type(screen.getByLabelText("Name"), "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create Agent" }));
-
-    await waitFor(() => {
-      expect(mockSetLastProject).toHaveBeenCalledWith("proj-1");
-      expect(mockSetLastAgent).toHaveBeenCalledWith("proj-1", "agent-inst-9");
-    });
-  });
-
-  it("waits for the remote agent to be ready before navigating to chat", async () => {
-    const user = userEvent.setup();
-    let resolveRemoteState: ((value: { state: string }) => void) | null = null;
-    mockGetRemoteAgentState.mockReturnValue(new Promise((resolve) => {
-      resolveRemoteState = resolve;
-    }));
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<LocationStateProbe />} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    await user.type(screen.getByLabelText("Name"), "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.click(screen.getByRole("button", { name: "Create Agent" }));
+    await user.click(screen.getByRole("button", { name: "Trigger shared save" }));
 
     await waitFor(() => {
       expect(mockGetRemoteAgentState).toHaveBeenCalledWith("agent-9");
-    });
-    expect(screen.queryByText(CREATE_AGENT_CHAT_HANDOFF)).not.toBeInTheDocument();
-    expect(mockCreateAgentInstance).not.toHaveBeenCalled();
-
-    resolveRemoteState?.({ state: "running" });
-
-    await waitFor(() => {
       expect(mockCreateAgentInstance).toHaveBeenCalledWith("proj-1", "agent-9");
       expect(screen.getByText(CREATE_AGENT_CHAT_HANDOFF)).toBeInTheDocument();
     });
+    expect(mockSetLastProject).toHaveBeenCalledWith("proj-1");
+    expect(mockSetLastAgent).toHaveBeenCalledWith("proj-1", "agent-inst-9");
   });
 
-  it("submits from the role field when mobile users press Enter", async () => {
+  it("retries attach against the already-created agent after a post-save failure", async () => {
     const user = userEvent.setup();
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Agent chat</div>} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    await user.type(screen.getByLabelText("Name"), "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.type(screen.getByLabelText("Role"), "Engineer");
-    await user.keyboard("{Enter}");
-
-    await waitFor(() => {
-      expect(mockCreateAgent).toHaveBeenCalledWith(expect.objectContaining({
+    mockCreateAgentInstance
+      .mockRejectedValueOnce(new Error("Attach failed"))
+      .mockResolvedValueOnce({
+        agent_instance_id: "agent-inst-9",
+        project_id: "proj-1",
+        agent_id: "agent-9",
         name: "Atlas",
         role: "Engineer",
-      }));
-    });
-  });
-
-  it("reveals and focuses the role field when mobile users continue from name", async () => {
-    const user = userEvent.setup();
+      });
 
     render(
       <Routes>
         <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Attached after retry</div>} />
       </Routes>,
       { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
     );
 
-    const nameInput = screen.getByLabelText("Name");
-    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
-
-    await user.click(nameInput);
-    await user.type(nameInput, "Atlas{Enter}");
+    await user.click(screen.getByRole("button", { name: "Trigger shared save" }));
 
     await waitFor(() => {
-      const roleInput = screen.getByLabelText("Role");
-      expect(roleInput).toBeInTheDocument();
-      expect(roleInput).toHaveFocus();
+      expect(screen.getByText("Retrying agent-9")).toBeInTheDocument();
     });
-  });
 
-  it("lets mobile users edit the name after moving to the role step", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    const nameInput = screen.getByLabelText("Name");
-
-    await user.type(nameInput, "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-
-    expect(screen.getByText("Atlas")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Edit" }));
-
-    expect(screen.getByLabelText("Name")).toHaveFocus();
-    expect(screen.queryByLabelText("Role")).not.toBeInTheDocument();
-  });
-
-  it("keeps the role step focused on the summary card and role field", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    await user.type(screen.getByLabelText("Name"), "Atlas");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-
-    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Role")).toBeInTheDocument();
-    expect(screen.getByText("Agent name")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
-  });
-
-  it("blocks mobile create when the name contains spaces", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
-
-    await user.type(screen.getByLabelText("Name"), "Atlas Scout");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-
-    expect(screen.getByText("Use only letters, numbers, hyphens, or underscores")).toBeInTheDocument();
-    expect(mockCreateAgent).not.toHaveBeenCalled();
-  });
-
-  it("does not surface attach-existing loading errors on the create flow", async () => {
-    mockListAgents.mockRejectedValue(new Error("Load failed"));
-
-    render(
-      <Routes>
-        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
-      </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
-    );
+    await user.click(screen.getByRole("button", { name: "Trigger shared save" }));
 
     await waitFor(() => {
-      expect(screen.queryByText("Load failed")).not.toBeInTheDocument();
+      expect(mockCreateAgentInstance).toHaveBeenCalledTimes(2);
+      expect(screen.getByText("Attached after retry")).toBeInTheDocument();
     });
-    expect(mockListAgents).not.toHaveBeenCalled();
+  });
+
+  it("lets users jump from create to attach without a hidden route", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agents/attach" element={<div>Attach route</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Attach Existing Agent" }));
+
+    expect(await screen.findByText("Attach route")).toBeInTheDocument();
+  });
+
+  it("returns to the project agent route when the shared editor closes", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId/agent" element={<div>Project agent landing</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close shared editor" }));
+
+    expect(await screen.findByText("Project agent landing")).toBeInTheDocument();
   });
 
   it("limits attach-existing candidates to remote agents in the active org", async () => {
@@ -405,14 +295,65 @@ describe("ProjectAgentSetupView", () => {
 
     render(
       <Routes>
-        <Route path="/projects/:projectId/agents/existing" element={<ProjectAgentSetupView mode="existing" />} />
+        <Route path="/projects/:projectId/agents/attach" element={<ProjectAgentSetupView mode="existing" />} />
         <Route path="/projects/:projectId/agents/create" element={<div>Create fallback</div>} />
       </Routes>,
-      { routerProps: { initialEntries: ["/projects/proj-1/agents/existing"] } },
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/attach"] } },
     );
 
     expect(await screen.findByRole("button", { name: /Org remote/i })).toBeInTheDocument();
     expect(screen.queryByText("Foreign remote")).not.toBeInTheDocument();
     expect(screen.queryByText("Local teammate")).not.toBeInTheDocument();
+  });
+
+  it("stays on attach and shows an error when existing agents fail to load", async () => {
+    mockListAgents.mockRejectedValue(new Error("Agent list failed"));
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/attach" element={<ProjectAgentSetupView mode="existing" />} />
+        <Route path="/projects/:projectId/agents/create" element={<div>Create fallback</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/attach"] } },
+    );
+
+    expect(await screen.findByText("Add Existing Agent")).toBeInTheDocument();
+    expect(await screen.findByText("Agent list failed")).toBeInTheDocument();
+    expect(screen.queryByText("Create fallback")).not.toBeInTheDocument();
+  });
+
+  it("stays on attach while the active org is still resolving", async () => {
+    mockUseOrgStore.mockReturnValue({
+      activeOrg: null,
+      isLoading: true,
+      orgsError: null,
+    });
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/attach" element={<ProjectAgentSetupView mode="existing" />} />
+        <Route path="/projects/:projectId/agents/create" element={<div>Create fallback</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/attach"] } },
+    );
+
+    expect(await screen.findByText("Add Existing Agent")).toBeInTheDocument();
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(screen.queryByText("Create fallback")).not.toBeInTheDocument();
+    expect(mockListAgents).not.toHaveBeenCalled();
+  });
+
+  it("redirects desktop users back to the project root", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: false });
+
+    render(
+      <Routes>
+        <Route path="/projects/:projectId/agents/create" element={<ProjectAgentSetupView mode="create" />} />
+        <Route path="/projects/:projectId" element={<div>Desktop project root</div>} />
+      </Routes>,
+      { routerProps: { initialEntries: ["/projects/proj-1/agents/create"] } },
+    );
+
+    expect(screen.getByText("Desktop project root")).toBeInTheDocument();
   });
 });

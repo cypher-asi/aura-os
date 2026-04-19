@@ -9,16 +9,19 @@ function hasWindow() {
 
 function readNativeDefaultHostCandidate(): string | null {
   const platform = inferNativePlatform();
+  const genericDefaultHost = import.meta.env.VITE_NATIVE_DEFAULT_HOST || null;
+  const androidDefaultHost = import.meta.env.VITE_ANDROID_DEFAULT_HOST || null;
+  const iosDefaultHost = import.meta.env.VITE_IOS_DEFAULT_HOST || null;
 
   if (platform === "android") {
-    return import.meta.env.VITE_ANDROID_DEFAULT_HOST || import.meta.env.VITE_NATIVE_DEFAULT_HOST || null;
+    return androidDefaultHost || genericDefaultHost || iosDefaultHost;
   }
 
   if (platform === "ios") {
-    return import.meta.env.VITE_IOS_DEFAULT_HOST || import.meta.env.VITE_NATIVE_DEFAULT_HOST || null;
+    return iosDefaultHost || genericDefaultHost || androidDefaultHost;
   }
 
-  return import.meta.env.VITE_NATIVE_DEFAULT_HOST || null;
+  return iosDefaultHost || androidDefaultHost || genericDefaultHost;
 }
 
 export function normalizeHostOrigin(value: string | null | undefined): string | null {

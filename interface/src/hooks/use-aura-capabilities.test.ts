@@ -58,6 +58,8 @@ describe("useAuraCapabilities", () => {
   afterEach(() => {
     window.matchMedia = origMatchMedia;
     setLocation("/login");
+    delete document.documentElement.dataset.mobileClient;
+    delete document.documentElement.dataset.mobileLayout;
   });
 
   it("returns default desktop capabilities", () => {
@@ -72,6 +74,8 @@ describe("useAuraCapabilities", () => {
     expect(result.current.hasDesktopBridge).toBe(false);
     expect(result.current.isNativeApp).toBe(false);
     expect(result.current.features.hostRetargeting).toBe(true);
+    expect(document.documentElement.dataset.mobileClient).toBe("false");
+    expect(document.documentElement.dataset.mobileLayout).toBe("false");
   });
 
   it("detects phone layout", () => {
@@ -105,6 +109,7 @@ describe("useAuraCapabilities", () => {
     const { result } = renderHook(() => useAuraCapabilities());
 
     expect(result.current.isNativeApp).toBe(true);
+    expect(document.documentElement.dataset.mobileClient).toBe("true");
 
     delete (window as Window & { Capacitor?: { isNativePlatform: () => boolean } }).Capacitor;
   });

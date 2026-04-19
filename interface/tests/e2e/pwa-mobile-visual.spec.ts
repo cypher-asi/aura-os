@@ -193,6 +193,7 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
       {
         agent_id: "agent-1",
         user_id: "user-1",
+        org_id: "org-1",
         name: "Builder Bot",
         role: "Engineer",
         personality: "Helpful",
@@ -209,6 +210,7 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
       {
         agent_id: "agent-2",
         user_id: "user-1",
+        org_id: "org-1",
         name: "Research Bot",
         role: "Analyst",
         personality: "Curious",
@@ -217,6 +219,23 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
         icon: null,
         machine_type: "remote",
         environment: "cloud",
+        auth_source: "aura_managed",
+        adapter_type: "aura_harness",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+      {
+        agent_id: "agent-3",
+        user_id: "user-1",
+        org_id: "org-1",
+        name: "Mobile QA Agent",
+        role: "Validator",
+        personality: "Meticulous",
+        system_prompt: "Check mobile flows carefully.",
+        skills: [],
+        icon: null,
+        machine_type: "remote",
+        environment: "swarm_microvm",
         auth_source: "aura_managed",
         adapter_type: "aura_harness",
         created_at: "2026-03-17T01:00:00.000Z",
@@ -273,11 +292,11 @@ async function mockMobileVisualApp(page: import("@playwright/test").Page) {
 
 async function openAccountSheet(page: import("@playwright/test").Page) {
   if (/\/projects\/organization$/.test(page.url())) {
-    await expect(page.getByRole("heading", { name: "Remote work" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Continue work" })).toBeVisible();
     return;
   }
 
-  const trigger = page.getByRole("button", { name: "Open account" });
+  const trigger = page.getByRole("button", { name: "Open workspace" });
   await trigger.tap();
 
   try {
@@ -287,7 +306,7 @@ async function openAccountSheet(page: import("@playwright/test").Page) {
     await expect(page).toHaveURL(/\/projects\/organization$/);
   }
 
-  await expect(page.getByRole("heading", { name: "Remote work" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Continue work" })).toBeVisible();
 }
 
 test("capture mobile login screen", async ({ page, browserName }, testInfo) => {
@@ -398,6 +417,23 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
     fullPage: true,
   });
 
+  await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Files" }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
+  await expect(page.getByText("Remote workspace")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-files-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByText("README.md").click();
+  await expect(page.getByRole("button", { name: "Back to files" })).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-files-preview-mobile-ia.png`,
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Back to files" }).click();
+
   const processTab = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Process" });
   await expect(processTab).toBeVisible({ timeout: 10000 });
   await processTab.click();
@@ -444,18 +480,29 @@ test("capture mobile work, process, and agent settings", async ({ page, browserN
 
   await page.goto("/projects");
   await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible({ timeout: 10000 });
-  await page.getByRole("button", { name: "Add or create project agent" }).click();
-  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/create$/);
-  await expect(page.getByText("Name your remote agent")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByLabel("Role")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add project agent" }).click();
+  await expect(page.getByText("Add Project Agent")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-actions-mobile-ia.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: /Attach Existing Agent/i }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/attach$/);
+  await expect(page.getByText("Add Existing Agent")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-attach-mobile-ia.png`,
+    fullPage: true,
+  });
+  await page.goto("/projects/proj-1/agents/create");
+  await expect(page.getByLabel("Name")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByLabel("Role")).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-create-mobile-ia.png`,
     fullPage: true,
   });
 
   await page.getByLabel("Name").fill("Atlas");
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(page.getByLabel("Role")).toBeVisible({ timeout: 10000 });
+  await page.getByLabel("Role").fill("Engineer");
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-agent-create-form-mobile-ia.png`,
     fullPage: true,
@@ -484,13 +531,12 @@ test("capture mobile organization workspace", async ({ page, browserName }, test
   await mockMobileVisualApp(page);
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
 
-  await page.goto("/projects/proj-1/agents/agent-inst-1");
-  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
-  await openAccountSheet(page);
-  await expect(page.getByText("Switch Team", { exact: true })).toBeVisible();
+  await page.goto("/projects/organization");
+  await expect(page).toHaveURL(/\/projects\/organization$/);
+  await expect(page.getByRole("heading", { name: "Continue work" })).toBeVisible();
+  await expect(page.getByText("Teams", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "New Project" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-organization-workspace-mobile-ia.png`,
     fullPage: true,

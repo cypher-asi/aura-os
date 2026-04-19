@@ -36,6 +36,13 @@ const orgs = [
   },
 ];
 
+const mockOrgState = {
+  orgs,
+  activeOrg: orgs[0] as typeof orgs[number] | null,
+  switchOrg,
+  createOrg,
+};
+
 const projects = [
   {
     project_id: "project-1",
@@ -128,14 +135,14 @@ vi.mock("../../stores/projects-list-store", () => ({
 vi.mock("../../stores/org-store", () => ({
   useOrgStore: (selector: (state: {
     orgs: typeof orgs;
-    activeOrg: typeof orgs[number];
+    activeOrg: typeof orgs[number] | null;
     switchOrg: typeof switchOrg;
     createOrg: typeof createOrg;
   }) => unknown) => selector({
-    orgs,
-    activeOrg: orgs[0],
-    switchOrg,
-    createOrg,
+    orgs: mockOrgState.orgs,
+    activeOrg: mockOrgState.activeOrg,
+    switchOrg: mockOrgState.switchOrg,
+    createOrg: mockOrgState.createOrg,
   }),
 }));
 
@@ -189,6 +196,8 @@ function renderView() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockOrgState.orgs = orgs;
+  mockOrgState.activeOrg = orgs[0];
 });
 
 describe("MobileOrganizationView", () => {
@@ -196,9 +205,9 @@ describe("MobileOrganizationView", () => {
     const user = userEvent.setup();
     renderView();
 
-    expect(screen.getByRole("button", { name: "Chat with Navigator" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open chat" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Chat with Navigator" }));
+    await user.click(screen.getByRole("button", { name: "Open chat" }));
 
     expect(await screen.findByText("project-agent-chat-route")).toBeInTheDocument();
   });
@@ -207,9 +216,19 @@ describe("MobileOrganizationView", () => {
     const user = userEvent.setup();
     renderView();
 
-    await user.click(screen.getByRole("button", { name: "Tasks" }));
+    await user.click(screen.getByRole("button", { name: "View tasks" }));
 
     expect(await screen.findByText("project-tasks-route")).toBeInTheDocument();
+  });
+
+  it("keeps project creation separate from team switching", async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    await user.click(screen.getByRole("button", { name: "New Project" }));
+
+    expect(openNewProjectModal).toHaveBeenCalledOnce();
+    expect(await screen.findByText("projects-route")).toBeInTheDocument();
   });
 
   it("switches orgs and returns to projects", async () => {
@@ -241,6 +260,20 @@ describe("MobileOrganizationView", () => {
 
     expect(createOrg).toHaveBeenCalledWith("Fresh Team");
     expect(switchOrg).toHaveBeenCalledWith("org-3");
+    expect(await screen.findByText("projects-route")).toBeInTheDocument();
+  });
+
+  it("keeps continue work and new project available when org metadata is unavailable but projects are cached", async () => {
+    const user = userEvent.setup();
+    mockOrgState.activeOrg = null;
+    renderView();
+
+    expect(screen.getByRole("heading", { name: "Continue work" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open chat" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "New Project" }));
+
+    expect(openNewProjectModal).toHaveBeenCalledOnce();
     expect(await screen.findByText("projects-route")).toBeInTheDocument();
   });
 });

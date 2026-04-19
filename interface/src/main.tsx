@@ -14,11 +14,13 @@ import {
   markReactRootRenderScheduled,
 } from "./lib/perf/startup-perf";
 import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
+import { installPreloadRecovery } from "./lib/preload-recovery";
 import { syncQueryHostOriginToStorage } from "./lib/host-config";
 
 // Must run before any module that reads the host origin (e.g. host-store,
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
 syncQueryHostOriginToStorage();
+installPreloadRecovery();
 
 markAppEntry();
 initWebVitalsLite();
