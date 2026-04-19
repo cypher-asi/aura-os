@@ -6,11 +6,12 @@ interface CreateSkillModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  agentId?: string;
 }
 
 const NAME_RE = /^[a-z0-9-]{1,64}$/;
 
-export function CreateSkillModal({ isOpen, onClose, onCreated }: CreateSkillModalProps) {
+export function CreateSkillModal({ isOpen, onClose, onCreated, agentId }: CreateSkillModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [body, setBody] = useState("");
@@ -59,6 +60,7 @@ export function CreateSkillModal({ isOpen, onClose, onCreated }: CreateSkillModa
         name: slug,
         description: description.trim(),
         body: body.trim() || undefined,
+        agent_id: agentId,
       });
       onCreated();
       handleClose();
@@ -67,7 +69,7 @@ export function CreateSkillModal({ isOpen, onClose, onCreated }: CreateSkillModa
     } finally {
       setSaving(false);
     }
-  }, [name, description, body, onCreated, handleClose]);
+  }, [name, description, body, agentId, onCreated, handleClose]);
 
   return (
     <Modal

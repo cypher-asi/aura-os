@@ -79,6 +79,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   const [showAvailable, setShowAvailable] = useState(false);
   const [showCreator, setShowCreator] = useState(false);
   const [showStore, setShowStore] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const viewSkill = useAgentSidekickStore((s) => s.viewSkill);
   const installationByName = new Map(installations.map((i) => [i.skill_name, i]));
 
@@ -90,6 +91,12 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       api.harnessSkills.listSkills(),
       api.harnessSkills.listAgentSkills(agentId),
     ]);
+    if (skillsResult.status === "rejected") {
+      console.error("Failed to list skills", skillsResult.reason);
+    }
+    if (installResult.status === "rejected") {
+      console.error("Failed to list agent skills", installResult.reason);
+    }
     const skillsData = skillsResult.status === "fulfilled" ? skillsResult.value : [];
     const installData = installResult.status === "fulfilled" ? installResult.value : [];
     const skills = Array.isArray(skillsData) ? skillsData : (skillsData as any)?.skills ?? [];
@@ -98,6 +105,11 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       : (installData as any)?.skills ?? (installData as any)?.installations ?? [];
     setCatalog(skills);
     setInstallations(installs);
+    setFetchError(
+      skillsResult.status === "rejected" && installResult.status === "rejected"
+        ? "Failed to load skills. The harness may be unavailable."
+        : null,
+    );
     setLoading(false);
   }, [agentId]);
 
@@ -180,7 +192,13 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         </div>
       </div>
 
-      {!loading && (installedSkills.length === 0 ? (
+      {!loading && fetchError && (
+        <div className={styles.skillsEmpty} role="alert">
+          {fetchError}
+        </div>
+      )}
+
+      {!loading && !fetchError && (installedSkills.length === 0 ? (
         <div className={styles.skillsEmpty}>No skills installed</div>
       ) : (
         installedSkills.map((skill) => (
@@ -227,6 +245,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         isOpen={showCreator}
         onClose={() => setShowCreator(false)}
         onCreated={fetchData}
+        agentId={agentId}
       />
 
       <SkillShopModal

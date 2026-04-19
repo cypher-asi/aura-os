@@ -1,6 +1,8 @@
 mod common;
 
 use std::sync::{LazyLock, Mutex};
+#[cfg(unix)]
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -300,6 +302,173 @@ async fn proxy_forwards_procedures_by_skill() {
     assert!(uri.contains("/api/agents/"));
     assert!(uri.contains("/memory/procedures"));
     assert!(uri.contains("skill=deploy"));
+}
+
+/// Mock harness that records every POST it receives so tests can assert on them.
+#[cfg(unix)]
+async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(String, String)>>>) {
+    let calls: Arc<Mutex<Vec<(String, String)>>> = Arc::new(Mutex::new(Vec::new()));
+    let calls_clone = calls.clone();
+
+    let record = move |req: Request<Body>| {
+        let calls = calls_clone.clone();
+        async move {
+            let uri = req.uri().to_string();
+            let body_bytes = axum::body::to_bytes(req.into_body(), usize::MAX)
+                .await
+                .unwrap_or_default();
+            let body_str = String::from_utf8_lossy(&body_bytes).to_string();
+            calls.lock().unwrap().push((uri, body_str));
+            axum::Json(json!({ "ok": true })).into_response()
+        }
+    };
+
+    let mock_app = Router::new()
+        .route("/api/skills", post(record.clone()))
+        .route(
+            "/api/agents/:agent_id/skills",
+            post(record.clone()),
+        );
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let url = format!("http://{addr}");
+
+    tokio::spawn(async move {
+        axum::serve(listener, mock_app).await.ok();
+    });
+
+    (url, calls)
+}
+
+// `dirs::home_dir()` on Windows ignores env vars and reads the real user
+// profile from the OS, so these tests redirect `HOME` and only run on Unix to
+// avoid polluting a developer's real ~/.aura/skills/.
+#[cfg(unix)]
+#[tokio::test]
+async fn create_skill_registers_with_harness_and_installs_for_agent() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let (mock_url, calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let agent = "00000000-0000-0000-0000-000000000001";
+    let payload = json!({
+        "name": "my-skill",
+        "description": "A skill for tests",
+        "body": "# Instructions",
+        "agent_id": agent,
+    });
+    let req = json_request("POST", "/api/harness/skills", Some(payload));
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let body = response_json(resp).await;
+    assert_eq!(body["created"], true);
+    assert_eq!(body["registered"], true);
+    assert_eq!(body["installed_on_agent"], true);
+    assert_eq!(body["name"], "my-skill");
+
+    // The SKILL.md file should be written under the temp HOME.
+    let skill_path = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("my-skill")
+        .join("SKILL.md");
+    assert!(
+        skill_path.exists(),
+        "expected SKILL.md at {}",
+        skill_path.display()
+    );
+    let content = std::fs::read_to_string(&skill_path).unwrap();
+    assert!(content.contains("description: \"A skill for tests\""));
+    assert!(content.contains("# Instructions"));
+
+    // Give the fire-and-forget POSTs a chance to hit the mock harness.
+    for _ in 0..50 {
+        if calls.lock().unwrap().len() >= 2 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+
+    let captured = calls.lock().unwrap().clone();
+    let register_call = captured
+        .iter()
+        .find(|(uri, _)| uri == "/api/skills")
+        .expect("expected registration POST to /api/skills");
+    let register_body: serde_json::Value =
+        serde_json::from_str(&register_call.1).expect("register body is valid JSON");
+    assert_eq!(register_body["name"], "my-skill");
+    assert_eq!(register_body["description"], "A skill for tests");
+    assert_eq!(register_body["user_invocable"], true);
+
+    let install_call = captured
+        .iter()
+        .find(|(uri, _)| uri == format!("/api/agents/{agent}/skills"))
+        .expect("expected install POST to /api/agents/<id>/skills");
+    let install_body: serde_json::Value =
+        serde_json::from_str(&install_call.1).expect("install body is valid JSON");
+    assert_eq!(install_body["name"], "my-skill");
+    assert!(install_body["approved_paths"].is_array());
+    assert!(install_body["approved_commands"].is_array());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn create_skill_without_agent_id_still_registers_catalog() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let (mock_url, calls) = start_recording_mock_harness().await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+    let payload = json!({
+        "name": "solo-skill",
+        "description": "No agent attached",
+    });
+    let req = json_request("POST", "/api/harness/skills", Some(payload));
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let body = response_json(resp).await;
+    assert_eq!(body["registered"], true);
+    assert_eq!(body["installed_on_agent"], false);
+
+    for _ in 0..50 {
+        if !calls.lock().unwrap().is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+
+    let captured = calls.lock().unwrap().clone();
+    assert!(
+        captured.iter().any(|(uri, _)| uri == "/api/skills"),
+        "expected at least one POST to /api/skills, got {:?}",
+        captured
+    );
+    assert!(
+        !captured
+            .iter()
+            .any(|(uri, _)| uri.starts_with("/api/agents/")),
+        "did not expect any install POST when agent_id is omitted, got {:?}",
+        captured
+    );
 }
 
 #[tokio::test]

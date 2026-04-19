@@ -69,7 +69,30 @@ describe("harnessSkillsApi", () => {
 
   it("createSkill sends POST with skill data", async () => {
     const data = { name: "new-skill", description: "A skill" };
-    const fetchMock = mockFetch(200, { name: "new-skill", path: "/skills/new-skill", created: true });
+    const fetchMock = mockFetch(200, {
+      name: "new-skill",
+      path: "/skills/new-skill",
+      created: true,
+      registered: true,
+      installed_on_agent: false,
+    });
+    globalThis.fetch = fetchMock;
+    await harnessSkillsApi.createSkill(data);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(data) }),
+    );
+  });
+
+  it("createSkill forwards agent_id so the skill auto-installs on that agent", async () => {
+    const data = { name: "scoped-skill", description: "Agent-scoped", agent_id: "a1" };
+    const fetchMock = mockFetch(200, {
+      name: "scoped-skill",
+      path: "/skills/scoped-skill",
+      created: true,
+      registered: true,
+      installed_on_agent: true,
+    });
     globalThis.fetch = fetchMock;
     await harnessSkillsApi.createSkill(data);
     expect(fetchMock).toHaveBeenCalledWith(

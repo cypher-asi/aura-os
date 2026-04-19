@@ -15,8 +15,15 @@ export const harnessSkillsApi = {
     context?: string;
     user_invocable?: boolean;
     model_invocable?: boolean;
+    agent_id?: string;
   }) =>
-    apiFetch<{ name: string; path: string; created: boolean }>(`/api/harness/skills`, {
+    apiFetch<{
+      name: string;
+      path: string;
+      created: boolean;
+      registered: boolean;
+      installed_on_agent: boolean;
+    }>(`/api/harness/skills`, {
       method: "POST",
       body: JSON.stringify(data),
     }),

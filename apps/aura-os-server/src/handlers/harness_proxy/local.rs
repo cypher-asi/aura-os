@@ -26,6 +26,11 @@ pub(crate) struct CreateSkillBody {
     pub context: Option<String>,
     pub user_invocable: Option<bool>,
     pub model_invocable: Option<bool>,
+    /// Optional agent to auto-install this newly created skill on.
+    /// When set, the server mirrors the Skill Shop flow: register the
+    /// skill with the harness catalog AND install it for the agent so it
+    /// shows up under "Installed" immediately.
+    pub agent_id: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -33,6 +38,8 @@ struct CreateSkillResponse {
     name: String,
     path: String,
     created: bool,
+    registered: bool,
+    installed_on_agent: bool,
 }
 
 fn create_skill_name_valid(name: &str) -> bool {
@@ -70,7 +77,7 @@ fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
 }
 
 pub(crate) async fn create_skill(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<CreateSkillBody>,
 ) -> Result<axum::response::Response, StatusCode> {
     if !create_skill_name_valid(&payload.name) {
@@ -82,16 +89,59 @@ pub(crate) async fn create_skill(
     std::fs::create_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let frontmatter = build_skill_frontmatter(&payload);
-    let body_text = payload.body.unwrap_or_default();
+    let body_text = payload.body.clone().unwrap_or_default();
     let content = format!("{frontmatter}\n{body_text}");
 
     let skill_path = skill_dir.join("SKILL.md");
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Register the skill with the harness catalog so it shows up in listings.
+    // Without this the UI's catalog (backed by the harness' `GET api/skills`)
+    // stays empty and the newly created skill is invisible.
+    state
+        .harness_http
+        .post_json_ignore_result(
+            "api/skills",
+            serde_json::json!({
+                "name": payload.name,
+                "description": payload.description,
+                "body": body_text,
+                "user_invocable": payload.user_invocable.unwrap_or(true),
+                "model_invocable": payload.model_invocable.unwrap_or(false),
+            })
+            .to_string(),
+        )
+        .await;
+
+    // If the client supplied an agent context, auto-install the skill for that
+    // agent so it appears under "Installed" in the UI (mirrors the Skill Shop flow).
+    let installed_on_agent = match payload.agent_id.as_deref() {
+        Some(agent_id) if !agent_id.is_empty() => {
+            let empty: Vec<String> = Vec::new();
+            let install_body = serde_json::json!({
+                "name": payload.name,
+                "approved_paths": empty,
+                "approved_commands": empty,
+            })
+            .to_string();
+            state
+                .harness_http
+                .post_json_ignore_result(
+                    &format!("api/agents/{agent_id}/skills"),
+                    install_body,
+                )
+                .await;
+            true
+        }
+        _ => false,
+    };
+
     let resp = CreateSkillResponse {
         name: payload.name,
         path: skill_path.to_string_lossy().into_owned(),
         created: true,
+        registered: true,
+        installed_on_agent,
     };
     let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((
