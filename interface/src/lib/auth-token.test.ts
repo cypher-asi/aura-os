@@ -1,4 +1,35 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+  const localStorageStub = {
+    getItem: vi.fn((key: string) => storage.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      storage.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      storage.delete(key);
+    }),
+    clear: vi.fn(() => {
+      storage.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(storage.keys())[index] ?? null),
+    get length() {
+      return storage.size;
+    },
+  };
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: localStorageStub,
+  });
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: localStorageStub,
+    });
+  }
+});
 import {
   authHeaders,
   clearStoredAuth,
@@ -11,6 +42,7 @@ import {
 beforeEach(async () => {
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
+  window.localStorage.removeItem("aura-idb:auth:session");
   await clearStoredAuth();
 });
 
@@ -72,6 +104,14 @@ describe("auth-token", () => {
 
   it("hydrates legacy localStorage auth into the runtime cache", async () => {
     window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+    window.localStorage.setItem("aura-jwt", mockSession.access_token);
+    await hydrateStoredAuth();
+    expect(getStoredJwt()).toBe("my-jwt-token");
+    expect(getStoredSession()).toEqual(mockSession);
+  });
+
+  it("hydrates the browser-db localStorage fallback when aura-session is missing", async () => {
+    window.localStorage.setItem("aura-idb:auth:session", JSON.stringify(mockSession));
     window.localStorage.setItem("aura-jwt", mockSession.access_token);
     await hydrateStoredAuth();
     expect(getStoredJwt()).toBe("my-jwt-token");

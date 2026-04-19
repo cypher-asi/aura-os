@@ -4,8 +4,9 @@ mod handlers;
 mod route_state;
 mod updater;
 
-use axum::routing::{get as axum_get, post as axum_post};
+use aura_os_store::SettingsStore;
 use axum::Router;
+use axum::routing::{get as axum_get, post as axum_post};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener as StdTcpListener, ToSocketAddrs};
@@ -21,7 +22,7 @@ use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
 use wry::{WebContext, WebViewBuilder};
 
-use route_state::{normalize_restore_route, RouteState};
+use route_state::{RouteState, normalize_restore_route};
 use updater::UpdateState;
 
 const PREFERRED_PORT: u16 = 19847;
@@ -29,6 +30,8 @@ const PREFERRED_LOCAL_HARNESS_PORT: u16 = 19080;
 const DEFAULT_FRONTEND_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_FRONTEND_PORT: u16 = 5173;
 const HOST_STORAGE_KEY: &str = "aura-host-origin";
+const SESSION_STORAGE_KEY: &str = "aura-session";
+const JWT_STORAGE_KEY: &str = "aura-jwt";
 const FRONTEND_DEV_SERVER_POLL_INTERVAL: Duration = Duration::from_secs(1);
 // Emergency-only rescue timer. The primary trigger to show the window is the
 // IPC `ready` signal from the frontend (scheduled in `main.tsx` after React's
@@ -91,6 +94,12 @@ struct FrontendDevServerConfig {
     bind_host: String,
     port: u16,
     can_spawn_local: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BootstrappedAuthLiterals {
+    session_literal: String,
+    jwt_literal: String,
 }
 
 impl FrontendTarget {
@@ -535,6 +544,39 @@ fn env_string(name: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
+fn load_bootstrapped_auth_literals(store_path: &Path) -> Option<BootstrappedAuthLiterals> {
+    let store = match SettingsStore::open(store_path) {
+        Ok(store) => store,
+        Err(error) => {
+            warn!(
+                %error,
+                path = %store_path.display(),
+                "failed to open settings store for desktop auth bootstrap"
+            );
+            return None;
+        }
+    };
+    let session = store.get_cached_zero_auth_session()?;
+    let session_literal = match serde_json::to_string(&session) {
+        Ok(value) => value,
+        Err(error) => {
+            warn!(%error, "failed to serialize cached desktop auth session");
+            return None;
+        }
+    };
+    let jwt_literal = match serde_json::to_string(&session.access_token) {
+        Ok(value) => value,
+        Err(error) => {
+            warn!(%error, "failed to serialize cached desktop auth token");
+            return None;
+        }
+    };
+    Some(BootstrappedAuthLiterals {
+        session_literal,
+        jwt_literal,
+    })
+}
+
 fn build_frontend_dev_server_config(
     frontend_dev_url_override: Option<&str>,
     bind_host_override: Option<&str>,
@@ -776,19 +818,21 @@ fn spawn_frontend_dev_server_poller(
         "waiting for Vite frontend dev server"
     );
 
-    std::thread::spawn(move || loop {
-        if probe_vite_dev_server(&frontend_dev_candidate.probe_url) {
-            info!(
-                frontend = %frontend_dev_candidate.probe_url,
-                "Vite frontend dev server became available"
-            );
-            let _ = proxy.send_event(UserEvent::AttachFrontendDevServer {
-                frontend_url: frontend_dev_candidate.frontend_url.clone(),
-            });
-            break;
-        }
+    std::thread::spawn(move || {
+        loop {
+            if probe_vite_dev_server(&frontend_dev_candidate.probe_url) {
+                info!(
+                    frontend = %frontend_dev_candidate.probe_url,
+                    "Vite frontend dev server became available"
+                );
+                let _ = proxy.send_event(UserEvent::AttachFrontendDevServer {
+                    frontend_url: frontend_dev_candidate.frontend_url.clone(),
+                });
+                break;
+            }
 
-        std::thread::sleep(FRONTEND_DEV_SERVER_POLL_INTERVAL);
+            std::thread::sleep(FRONTEND_DEV_SERVER_POLL_INTERVAL);
+        }
     });
 }
 
@@ -1031,7 +1075,7 @@ fn set_square_corners(_window: &tao::window::Window) {
         use tao::platform::windows::WindowExtWindows;
         use windows::Win32::Foundation::HWND;
         use windows::Win32::Graphics::Dwm::{
-            DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWM_WINDOW_CORNER_PREFERENCE,
+            DWM_WINDOW_CORNER_PREFERENCE, DWMWA_WINDOW_CORNER_PREFERENCE, DwmSetWindowAttribute,
         };
 
         let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
@@ -1068,10 +1112,10 @@ fn set_square_corners(_window: &tao::window::Window) {
 #[cfg(test)]
 mod tests {
     use super::{
-        append_query_param, apply_restore_route, build_frontend_dev_server_candidate,
-        build_frontend_dev_server_config, build_initialization_script, interface_dir_candidates,
-        is_local_bind_host, parse_host_port, resolve_frontend_target_with_probe,
-        should_poll_for_frontend_dev_server,
+        BootstrappedAuthLiterals, append_query_param, apply_restore_route,
+        build_frontend_dev_server_candidate, build_frontend_dev_server_config,
+        build_initialization_script, interface_dir_candidates, is_local_bind_host, parse_host_port,
+        resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
     };
     use std::path::{Path, PathBuf};
 
@@ -1265,10 +1309,24 @@ mod tests {
 
     #[test]
     fn build_initialization_script_persists_host_origin() {
-        let script = build_initialization_script(Some("http://127.0.0.1:19847"));
+        let script = build_initialization_script(Some("http://127.0.0.1:19847"), None);
         assert!(script.contains("aura-host-origin"));
         assert!(script.contains("http://127.0.0.1:19847"));
         assert!(!script.contains("window.ipc.postMessage('ready')"));
+    }
+
+    #[test]
+    fn build_initialization_script_bootstraps_cached_auth() {
+        let auth = BootstrappedAuthLiterals {
+            session_literal:
+                "{\"user_id\":\"u1\",\"display_name\":\"Test\",\"access_token\":\"jwt\"}"
+                    .to_string(),
+            jwt_literal: "\"jwt\"".to_string(),
+        };
+        let script = build_initialization_script(Some("http://127.0.0.1:19847"), Some(&auth));
+        assert!(script.contains("aura-session"));
+        assert!(script.contains("aura-jwt"));
+        assert!(script.contains("\"jwt\""));
     }
 
     #[test]
@@ -1298,8 +1356,8 @@ fn set_black_background(_window: &tao::window::Window) {
     {
         use tao::platform::windows::WindowExtWindows;
         use windows::Win32::Foundation::HWND;
-        use windows::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH};
-        use windows::Win32::UI::WindowsAndMessaging::{SetClassLongPtrW, GCL_HBRBACKGROUND};
+        use windows::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
+        use windows::Win32::UI::WindowsAndMessaging::{GCL_HBRBACKGROUND, SetClassLongPtrW};
 
         let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
         unsafe {
@@ -1330,16 +1388,35 @@ fn create_main_window(
     (window, id)
 }
 
-fn build_initialization_script(host_origin: Option<&str>) -> String {
-    match host_origin {
-        Some(origin) => {
-            let host_literal = serde_json::to_string(origin)
-                .expect("failed to serialize host origin for initialization script");
-            format!(
-                "try {{ window.localStorage.setItem('{HOST_STORAGE_KEY}', {host_literal}); }} catch {{}};"
-            )
-        }
-        None => String::new(),
+fn build_initialization_script(
+    host_origin: Option<&str>,
+    bootstrapped_auth: Option<&BootstrappedAuthLiterals>,
+) -> String {
+    let mut statements = Vec::new();
+
+    if let Some(origin) = host_origin {
+        let host_literal = serde_json::to_string(origin)
+            .expect("failed to serialize host origin for initialization script");
+        statements.push(format!(
+            "window.localStorage.setItem('{HOST_STORAGE_KEY}', {host_literal});"
+        ));
+    }
+
+    if let Some(auth) = bootstrapped_auth {
+        statements.push(format!(
+            "window.localStorage.setItem('{SESSION_STORAGE_KEY}', {});",
+            auth.session_literal
+        ));
+        statements.push(format!(
+            "window.localStorage.setItem('{JWT_STORAGE_KEY}', {});",
+            auth.jwt_literal
+        ));
+    }
+
+    if statements.is_empty() {
+        String::new()
+    } else {
+        format!("try {{ {} }} catch {{}};", statements.join(" "))
     }
 }
 
@@ -1684,6 +1761,7 @@ fn main() {
     install_panic_hook(data_dir);
     install_native_crash_handler(data_dir);
     let managed_local_harness = maybe_spawn_local_harness_sidecar(data_dir);
+    let bootstrapped_auth = load_bootstrapped_auth_literals(&store_path);
     let (std_listener, server_port, url) = bind_listener();
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
@@ -1720,7 +1798,10 @@ fn main() {
     let icon_data = load_icon_data();
     let (window, main_window_id) = create_main_window(&event_loop, &icon_data);
     let mut web_context = WebContext::new(Some(webview_data_dir));
-    let initialization_script = build_initialization_script(frontend_target.host_origin.as_deref());
+    let initialization_script = build_initialization_script(
+        frontend_target.host_origin.as_deref(),
+        bootstrapped_auth.as_ref(),
+    );
     let main_webview = create_main_webview(
         &window,
         &mut web_context,

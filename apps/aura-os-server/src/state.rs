@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use axum::Json;
 use axum::async_trait;
 use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
 use axum::http::StatusCode;
-use axum::Json;
+use axum::http::request::Parts;
 use dashmap::DashMap;
-use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::sync::{Mutex, broadcast, mpsc};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
@@ -19,6 +19,7 @@ use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 
 use crate::harness_gateway::HarnessHttpGateway;
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_browser::BrowserManager;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
@@ -27,7 +28,6 @@ use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_store::SettingsStore;
-use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
@@ -108,11 +108,22 @@ pub struct CachedSession {
 pub type ValidationCache = Arc<DashMap<String, CachedSession>>;
 
 pub(crate) fn persist_zero_auth_session(store: &SettingsStore, session: &ZeroAuthSession) {
-    store.cache_zero_auth_session(session);
+    let payload = match serde_json::to_vec(session) {
+        Ok(payload) => payload,
+        Err(error) => {
+            tracing::warn!(%error, "failed to encode zero_auth_session for persistence");
+            return;
+        }
+    };
+    if let Err(error) = store.put_setting("zero_auth_session", &payload) {
+        tracing::warn!(%error, "failed to persist zero_auth_session");
+    }
 }
 
 pub(crate) fn clear_zero_auth_session(store: &SettingsStore) {
-    store.clear_zero_auth_session_cache();
+    if let Err(error) = store.delete_setting("zero_auth_session") {
+        tracing::warn!(%error, "failed to clear zero_auth_session");
+    }
 }
 
 /// Maximum age before a cached entry is considered expired and eligible for eviction.

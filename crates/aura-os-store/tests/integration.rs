@@ -1,4 +1,5 @@
 use aura_os_store::*;
+use chrono::Utc;
 use tempfile::TempDir;
 
 fn open_temp_store() -> (SettingsStore, TempDir) {
@@ -84,4 +85,52 @@ fn list_settings_with_prefix_returns_org_integration_keys() {
 
     let keys: Vec<String> = values.into_iter().map(|(key, _)| key).collect();
     assert_eq!(keys, vec![key_a.to_string(), key_b.to_string()]);
+}
+
+#[test]
+fn zero_auth_session_persists_across_store_reopen() {
+    let dir = TempDir::new().expect("failed to create temp dir");
+    let session = aura_os_core::ZeroAuthSession {
+        user_id: "u1".into(),
+        network_user_id: None,
+        profile_id: None,
+        display_name: "Test User".into(),
+        profile_image: String::new(),
+        primary_zid: "0://test".into(),
+        zero_wallet: "0x0".into(),
+        wallets: vec!["0x0".into()],
+        access_token: "persisted-jwt".into(),
+        is_zero_pro: true,
+        is_access_granted: true,
+        created_at: Utc::now(),
+        validated_at: Utc::now(),
+    };
+
+    let store = SettingsStore::open(dir.path()).expect("failed to open store");
+    store
+        .put_setting(
+            "zero_auth_session",
+            &serde_json::to_vec(&session).expect("failed to encode session"),
+        )
+        .expect("failed to persist session");
+    drop(store);
+
+    let reopened = SettingsStore::open(dir.path()).expect("failed to reopen store");
+    let restored = reopened
+        .get_cached_zero_auth_session()
+        .expect("session should survive reopen");
+    assert_eq!(restored.access_token, session.access_token);
+    assert_eq!(restored.user_id, session.user_id);
+
+    reopened
+        .delete_setting("zero_auth_session")
+        .expect("failed to delete session");
+    drop(reopened);
+
+    let empty = SettingsStore::open(dir.path()).expect("failed to reopen empty store");
+    assert!(empty.get_cached_zero_auth_session().is_none());
+    assert!(matches!(
+        empty.get_setting("zero_auth_session"),
+        Err(StoreError::NotFound(_))
+    ));
 }

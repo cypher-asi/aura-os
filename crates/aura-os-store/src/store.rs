@@ -21,6 +21,7 @@ use crate::error::{StoreError, StoreResult};
 /// JSON files are keyed by this CF name), so the legacy name is
 /// retained intentionally. Comments only — storage key is stable.
 pub(crate) const CF_NAMES: &[&str] = &["settings", "super_agent_orchestrations"];
+pub(crate) const ZERO_AUTH_SESSION_KEY: &str = "zero_auth_session";
 
 type CfMap = BTreeMap<String, Vec<u8>>;
 
@@ -40,12 +41,24 @@ impl SettingsStore {
             let loaded = Self::load_cf(path, cf)?;
             data.insert(cf.to_string(), loaded);
         }
+        let session_cache = Self::load_session_cache(&data);
 
         Ok(Self {
             data: RwLock::new(data),
-            session_cache: RwLock::new(None),
+            session_cache: RwLock::new(session_cache),
             dir: path.to_path_buf(),
         })
+    }
+
+    fn load_session_cache(data: &BTreeMap<String, CfMap>) -> Option<ZeroAuthSession> {
+        let raw = data.get("settings")?.get(ZERO_AUTH_SESSION_KEY)?;
+        match serde_json::from_slice::<ZeroAuthSession>(raw) {
+            Ok(session) => Some(session),
+            Err(error) => {
+                tracing::warn!(%error, "failed to load cached zero_auth_session from settings");
+                None
+            }
+        }
     }
 
     fn cf_path(dir: &Path, cf_name: &str) -> PathBuf {

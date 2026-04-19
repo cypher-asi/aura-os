@@ -4,9 +4,32 @@ import { BROWSER_DB_STORES, browserDbDelete, browserDbGet, browserDbSet } from "
 const JWT_STORAGE_KEY = "aura-jwt";
 const SESSION_STORAGE_KEY = "aura-session";
 const AUTH_RECORD_KEY = "session";
+const AUTH_BROWSER_DB_FALLBACK_KEY = "aura-idb:auth:session";
 
 function normalizeSession(session: AuthSession | null): AuthSession | null {
   return session?.access_token ? session : null;
+}
+
+function getLocalStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  const storage = window.localStorage;
+  return storage &&
+    typeof storage.getItem === "function" &&
+    typeof storage.setItem === "function" &&
+    typeof storage.removeItem === "function"
+    ? storage
+    : null;
+}
+
+function parseStoredSession(raw: string | null, jwt: string | null): AuthSession | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as AuthSession;
+    if (parsed?.access_token) return parsed;
+    return normalizeSession(jwt ? { ...parsed, access_token: jwt } : parsed);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -17,31 +40,31 @@ function normalizeSession(session: AuthSession | null): AuthSession | null {
  * page from flashing for authenticated users on app open.
  */
 function readSyncStoredSession(): AuthSession | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as AuthSession;
-    if (parsed?.access_token) return parsed;
-    const jwt = window.localStorage.getItem(JWT_STORAGE_KEY);
-    return normalizeSession(jwt ? { ...parsed, access_token: jwt } : parsed);
-  } catch {
-    return null;
-  }
+  const storage = getLocalStorage();
+  if (!storage) return null;
+  const jwt = storage.getItem(JWT_STORAGE_KEY);
+  const direct = parseStoredSession(storage.getItem(SESSION_STORAGE_KEY), jwt);
+  if (direct) return direct;
+
+  // `browser-db.ts` mirrors IndexedDB writes into a localStorage fallback key.
+  // Read it synchronously here too so startup can recover even if the direct
+  // `aura-session` mirror is missing but the IndexedDB fallback mirror exists.
+  return parseStoredSession(storage.getItem(AUTH_BROWSER_DB_FALLBACK_KEY), jwt);
 }
 
 function writeSyncStoredSession(session: AuthSession | null): void {
-  if (typeof window === "undefined") return;
+  const storage = getLocalStorage();
+  if (!storage) return;
   if (session) {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
     if (session.access_token) {
-      window.localStorage.setItem(JWT_STORAGE_KEY, session.access_token);
+      storage.setItem(JWT_STORAGE_KEY, session.access_token);
     } else {
-      window.localStorage.removeItem(JWT_STORAGE_KEY);
+      storage.removeItem(JWT_STORAGE_KEY);
     }
   } else {
-    window.localStorage.removeItem(JWT_STORAGE_KEY);
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    storage.removeItem(JWT_STORAGE_KEY);
+    storage.removeItem(SESSION_STORAGE_KEY);
   }
 }
 

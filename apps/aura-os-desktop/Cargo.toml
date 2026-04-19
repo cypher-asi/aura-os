@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 aura-os-server = { path = "../aura-os-server", features = ["browser-cdp"] }
 aura-os-ide = { path = "../aura-os-ide" }
+aura-os-store = { path = "../../crates/aura-os-store" }
 axum = { workspace = true }
 base64 = { workspace = true }
 wry = "0.54"
