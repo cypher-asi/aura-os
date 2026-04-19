@@ -34,7 +34,11 @@ function writeSyncStoredSession(session: AuthSession | null): void {
   if (typeof window === "undefined") return;
   if (session) {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-    window.localStorage.setItem(JWT_STORAGE_KEY, session.access_token);
+    if (session.access_token) {
+      window.localStorage.setItem(JWT_STORAGE_KEY, session.access_token);
+    } else {
+      window.localStorage.removeItem(JWT_STORAGE_KEY);
+    }
   } else {
     window.localStorage.removeItem(JWT_STORAGE_KEY);
     window.localStorage.removeItem(SESSION_STORAGE_KEY);

@@ -60,7 +60,7 @@ export function AgentTalentCard({
         <CoverImage src={agent.icon} name={agent.name} />
 
         <div className={styles.info}>
-          <Text size="md" weight="semibold" className={styles.name}>
+          <Text size="base" weight="semibold" className={styles.name}>
             {agent.name}
           </Text>
           {expertise ? (
