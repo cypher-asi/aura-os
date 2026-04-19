@@ -16,6 +16,7 @@ use aura_os_tasks::TaskService;
 use super::projects_helpers::resolve_agent_instance_workspace_path;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -1360,7 +1361,12 @@ pub(crate) async fn start_loop(
         .zip(project.as_ref().map(|project| &project.org_id))
     {
         Some((jwt, org_id)) => {
-            let tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            let mut tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            dedupe_and_log_installed_tools(
+                "dev_loop_start",
+                &project_id.to_string(),
+                &mut tools,
+            );
             (!tools.is_empty()).then_some(tools)
         }
         None => None,
@@ -1618,8 +1624,8 @@ pub(crate) async fn start_loop(
         session_service: state.session_service.clone(),
         agent_instance_service: state.agent_instance_service.clone(),
         usage_reporting,
-        router_url: state.super_agent_service.router_url.clone(),
-        http_client: state.super_agent_service.http_client.clone(),
+        router_url: state.agent_runtime.router_url.clone(),
+        http_client: state.agent_runtime.http_client.clone(),
     });
 
     emit_domain_event(
@@ -1977,7 +1983,12 @@ pub(crate) async fn run_single_task(
         .zip(project.as_ref().map(|project| &project.org_id))
     {
         Some((jwt, org_id)) => {
-            let tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            let mut tools = installed_workspace_app_tools(&state, org_id, jwt).await;
+            dedupe_and_log_installed_tools(
+                "dev_loop_task",
+                &task_id.to_string(),
+                &mut tools,
+            );
             (!tools.is_empty()).then_some(tools)
         }
         None => None,
@@ -2086,8 +2097,8 @@ pub(crate) async fn run_single_task(
             session_service: state.session_service.clone(),
             agent_instance_service: state.agent_instance_service.clone(),
             usage_reporting,
-            router_url: state.super_agent_service.router_url.clone(),
-            http_client: state.super_agent_service.http_client.clone(),
+            router_url: state.agent_runtime.router_url.clone(),
+            http_client: state.agent_runtime.http_client.clone(),
         });
     } else {
         warn!(
@@ -2137,7 +2148,7 @@ mod tests {
         extract_run_command, extract_turn_usage, is_work_event_type, map_passthrough_event_type,
         preferred_automaton_model, requested_automaton_model, VerificationStepKind,
     };
-    use aura_os_core::{AgentInstance, AgentStatus};
+    use aura_os_core::{AgentInstance, AgentPermissions, AgentStatus};
     use chrono::Utc;
 
     fn make_agent_instance(name: &str) -> AgentInstance {
@@ -2166,6 +2177,8 @@ mod tests {
             total_input_tokens: 0,
             total_output_tokens: 0,
             model: None,
+            permissions: AgentPermissions::empty(),
+            intent_classifier: None,
             created_at: now,
             updated_at: now,
         }

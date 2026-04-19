@@ -1,10 +1,12 @@
 mod app_builder;
 mod auth_guard;
 mod billing_bridge;
+pub(crate) mod billing_rollup;
 pub(crate) mod channel_ext;
 pub(crate) mod dto;
 pub(crate) mod error;
 pub mod handlers;
+pub mod harness_client;
 pub(crate) mod harness_gateway;
 mod network_bridge;
 
@@ -13,9 +15,13 @@ pub(crate) mod router;
 pub(crate) mod state;
 
 pub use app_builder::build_app_state;
+pub use harness_client::{
+    bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,
+    HarnessTxKind, SubmitTxResponse,
+};
 pub use harness_gateway::HarnessHttpGateway;
 pub use router::{build_local_api_cors_layer, create_router_with_interface};
-pub use state::{ActiveAutomaton, AppState, CachedSession, SuperAgentRun};
+pub use state::{ActiveAutomaton, AppState, CachedSession};
 
 /// Discover common user-level binary directories (pip `--user` scripts, `~/.local/bin`,
 /// etc.) and append any that exist but are missing from `PATH`.  Call once at startup
@@ -124,10 +130,10 @@ pub mod handlers_test_support {
         crate::handlers::agents::chat_pub::session_events_to_conversation_history(events)
     }
 
-    pub fn session_events_to_super_agent_history_pub(
+    pub fn session_events_to_agent_history_pub(
         events: &[SessionEvent],
     ) -> Vec<serde_json::Value> {
-        crate::handlers::agents::chat_pub::session_events_to_super_agent_history(events)
+        crate::handlers::agents::chat_pub::session_events_to_agent_history(events)
     }
 
     pub async fn load_current_session_events_for_agent_pub(

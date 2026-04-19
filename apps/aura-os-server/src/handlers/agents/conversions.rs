@@ -3,18 +3,72 @@ use std::collections::{HashMap, HashSet};
 use chrono::{DateTime, Utc};
 use tracing::warn;
 
+use aura_os_core::expertise;
+use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::parse_dt;
 use aura_os_core::{
-    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, ProfileId, ProjectId,
-    SessionEvent, SessionEventId, ZeroAuthSession,
+    Agent, AgentId, AgentInstanceId, AgentPermissions, ChatContentBlock, ChatRole, ProfileId,
+    ProjectId, SessionEvent, SessionEventId, ZeroAuthSession,
 };
 use aura_os_network::NetworkAgent;
 use aura_os_storage::StorageSessionEvent;
+use aura_protocol::IntentClassifierSpec;
 
 use crate::state::AppState;
 
 pub(crate) fn get_user_id(session: &ZeroAuthSession) -> String {
     session.user_id.clone()
+}
+
+/// Safety-net repair for CEO agents whose stored permissions bundle is
+/// empty (or otherwise doesn't match the canonical CEO preset).
+///
+/// Older aura-network deployments didn't persist the `permissions` column
+/// for agents, so `NetworkAgent.permissions` deserializes to the default
+/// (empty) [`AgentPermissions`] via `#[serde(default)]`. When the rest of
+/// the server reads that record, callers like [`build_cross_agent_tools`]
+/// (aura-os-agent-runtime) and the Permissions sidekick toggles key off
+/// [`AgentPermissions::is_ceo_preset`] — so a CEO with an empty bundle
+/// ends up with zero cross-agent tools installed and every capability
+/// toggle rendered as "off", even though the agent is clearly the CEO.
+///
+/// The canonical "this is a CEO" signal is
+/// [`AgentPermissions::is_ceo_preset`] on the stored bundle. When that
+/// returns `false` but the agent's name and role both spell `CEO`, we
+/// treat the stored bundle as corrupted-on-read and return the preset +
+/// canonical intent classifier instead.
+///
+/// Permission normalisation is delegated to
+/// [`AgentPermissions::normalized_for_identity`] so this handler and the
+/// other read-time converter in `aura-os-agents::network_agent_to_core`
+/// can't drift apart — both now route through the same `aura-os-core`
+/// helper. The classifier fix-up stays here because it pulls the
+/// canonical spec from `aura-os-agent-runtime`, which sits above
+/// `aura-os-agents` in the crate graph.
+///
+/// [`build_cross_agent_tools`]: aura_os_agent_runtime::ceo::build_cross_agent_tools
+fn effective_permissions_and_classifier(
+    net: &NetworkAgent,
+) -> (AgentPermissions, Option<IntentClassifierSpec>) {
+    let permissions = net
+        .permissions
+        .clone()
+        .normalized_for_identity(&net.name, net.role.as_deref());
+    let permissions_were_repaired = permissions != net.permissions;
+    if permissions_were_repaired {
+        warn!(
+            agent_id = %net.id,
+            "CEO agent has non-preset permissions in network record; applying read-time preset"
+        );
+        // CEO agents no longer ship an IntentClassifierSpec — the CEO
+        // cross-agent tool list is a static allowlist (see
+        // `aura_os_agent_runtime::ceo::CEO_CORE_TOOLS`). Preserve whatever
+        // the network record carries (typically `None`) so legacy
+        // deployments that still have a stored classifier don't have it
+        // retroactively clobbered by the read-time repair path.
+        return (permissions, net.intent_classifier.clone());
+    }
+    (permissions, net.intent_classifier.clone())
 }
 
 pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
@@ -35,8 +89,6 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or(created_at);
 
-    let is_super = net.role.as_deref() == Some("super_agent");
-
     let machine_type = net
         .machine_type
         .clone()
@@ -46,6 +98,32 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
     } else {
         "local_host".to_string()
     };
+
+    let tags: Vec<String> = net.tags.clone().unwrap_or_default();
+
+    // Marketplace listing_status: prefer the typed field; fall back to the
+    // legacy `listing_status:<value>` tag so agents written before Phase 3
+    // still render correctly. Unknown values default to Closed.
+    let listing_status = net
+        .listing_status
+        .as_deref()
+        .and_then(|raw| AgentListingStatus::from_str(raw).ok())
+        .or_else(|| listing_status_from_tags(&tags))
+        .unwrap_or_default();
+
+    // Marketplace expertise: prefer the typed field; fall back to the
+    // `expertise:<slug>` tag encoding. Unknown slugs are filtered out so
+    // stale client data cannot introduce invalid slugs on read.
+    let expertise: Vec<String> = match net.expertise.as_ref() {
+        Some(slugs) => slugs
+            .iter()
+            .filter(|slug| expertise::is_valid_slug(slug))
+            .cloned()
+            .collect(),
+        None => expertise_from_tags(&tags),
+    };
+
+    let (permissions, intent_classifier) = effective_permissions_and_classifier(net);
 
     Agent {
         agent_id,
@@ -66,21 +144,54 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,
-        tags: if is_super {
-            vec!["super_agent".to_string()]
-        } else {
-            Vec::new()
-        },
-        is_pinned: is_super,
+        tags,
+        is_pinned: false,
+        listing_status,
+        expertise,
+        jobs: net.jobs.unwrap_or(0),
+        revenue_usd: net.revenue_usd.unwrap_or(0.0),
+        reputation: net.reputation.unwrap_or(0.0),
+        // Network-derived agents never carry a local override; populated later
+        // from the local shadow if present.
+        local_workspace_path: None,
+        permissions,
+        intent_classifier,
         created_at,
         updated_at,
     }
 }
 
+/// Parse `listing_status:<value>` from a tag list. Retained only as a
+/// backward-compatibility fallback for agents that predate Phase 3.
+fn listing_status_from_tags(tags: &[String]) -> Option<AgentListingStatus> {
+    for tag in tags {
+        if let Some(raw) =
+            tag.strip_prefix(aura_os_core::listing_status::LISTING_STATUS_TAG_PREFIX)
+        {
+            if let Ok(parsed) = AgentListingStatus::from_str(raw) {
+                return Some(parsed);
+            }
+        }
+    }
+    None
+}
+
+/// Parse `expertise:<slug>` entries from a tag list, filtering out any
+/// unknown slugs so the server never forwards invalid data to clients.
+fn expertise_from_tags(tags: &[String]) -> Vec<String> {
+    tags.iter()
+        .filter_map(|tag| tag.strip_prefix(expertise::EXPERTISE_TAG_PREFIX))
+        .filter(|slug| expertise::is_valid_slug(slug))
+        .map(|slug| slug.to_string())
+        .collect()
+}
+
 /// Compute a workspace path hint for an agent instance.
 ///
-/// For **local** agents the server is the authority: prefer the stored absolute
-/// `project_folder`; fall back to `{data_dir}/workspaces/{slug}`.
+/// For **local** agents the server is the authority. Resolution order:
+///   1. `agent_local_path` — per-agent override from the agent template shadow.
+///   2. `project_local_path` — per-project override from the project shadow.
+///   3. `{data_dir}/workspaces/{project_id}` — canonical default.
 ///
 /// For **remote / swarm** agents the harness is the authoritative source (via
 /// `AutomatonClient::resolve_workspace`). This function returns a best-guess
@@ -92,8 +203,20 @@ pub(crate) fn resolve_workspace_path(
     project_id: &ProjectId,
     data_dir: &std::path::Path,
     project_name: &str,
+    project_local_path: Option<&str>,
+    agent_local_path: Option<&str>,
 ) -> String {
+    fn non_empty(value: Option<&str>) -> Option<&str> {
+        value.map(str::trim).filter(|s| !s.is_empty())
+    }
+
     if machine_type == "local" {
+        if let Some(path) = non_empty(agent_local_path) {
+            return path.to_string();
+        }
+        if let Some(path) = non_empty(project_local_path) {
+            return path.to_string();
+        }
         super::super::projects_helpers::canonical_workspace_path(data_dir, project_id)
             .to_string_lossy()
             .to_string()
@@ -372,9 +495,114 @@ fn is_incomplete_write_tool_use(name: &str, input: &serde_json::Value) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::events_to_session_history;
-    use aura_os_core::ChatContentBlock;
+    use super::{agent_from_network, events_to_session_history};
+    use aura_os_core::{AgentPermissions, ChatContentBlock};
+    use aura_os_network::NetworkAgent;
     use aura_os_storage::StorageSessionEvent;
+
+    fn blank_network_agent(name: &str, role: Option<&str>) -> NetworkAgent {
+        NetworkAgent {
+            id: "00000000-0000-0000-0000-000000000001".to_string(),
+            name: name.to_string(),
+            role: role.map(|s| s.to_string()),
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            machine_type: None,
+            vm_id: None,
+            user_id: "user-1".to_string(),
+            org_id: None,
+            profile_id: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            jobs: None,
+            revenue_usd: None,
+            reputation: None,
+            permissions: AgentPermissions::default(),
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn agent_from_network_fills_ceo_preset_when_permissions_missing() {
+        // Regression: older aura-network deployments didn't persist the
+        // `permissions` column, so a CEO record round-tripped with an
+        // empty bundle. The read-time safety net must restore the CEO
+        // preset so `is_ceo_preset()`-gated callers behave correctly.
+        let net = blank_network_agent("CEO", Some("CEO"));
+        assert!(
+            !net.permissions.is_ceo_preset(),
+            "precondition: network record is not yet the preset"
+        );
+
+        let agent = agent_from_network(&net);
+
+        assert!(
+            agent.permissions.is_ceo_preset(),
+            "empty CEO bundles are repaired to the canonical preset"
+        );
+        // CEO agents no longer ship an IntentClassifierSpec — the
+        // read-time repair path preserves whatever the network record
+        // carries (typically `None`) rather than synthesising the old
+        // canonical classifier. See CEO_CORE_TOOLS for the rationale.
+        assert!(
+            agent.intent_classifier.is_none(),
+            "read-time repair no longer fills a canonical classifier"
+        );
+    }
+
+    #[test]
+    fn agent_from_network_ceo_preset_matches_case_insensitively() {
+        // Historical CEO records may have lowercase / mixed-case name or
+        // role fields. The safety net mirrors the case-insensitive
+        // matching in `looks_like_ceo`.
+        let net = blank_network_agent("ceo", Some("ceo"));
+        let agent = agent_from_network(&net);
+        assert!(agent.permissions.is_ceo_preset());
+    }
+
+    #[test]
+    fn agent_from_network_does_not_promote_non_ceo_agents() {
+        // Users may legitimately create regular agents whose name or role
+        // resembles "CEO" in isolation — only the (name="CEO" AND
+        // role="CEO") pair triggers the safety net.
+        let mut cases = Vec::new();
+        cases.push(blank_network_agent("CEO", Some("Coach")));
+        cases.push(blank_network_agent("Eve", Some("CEO")));
+        cases.push(blank_network_agent("Regular", None));
+        for net in cases {
+            let agent = agent_from_network(&net);
+            assert!(
+                !agent.permissions.is_ceo_preset(),
+                "non-CEO agents keep their empty permissions bundle"
+            );
+            assert!(
+                agent.intent_classifier.is_none(),
+                "non-CEO agents don't receive the canonical classifier"
+            );
+        }
+    }
+
+    #[test]
+    fn agent_from_network_preserves_existing_ceo_preset() {
+        // When aura-network *does* persist the preset, the safety net is
+        // a no-op and must not churn the intent classifier either.
+        let mut net = blank_network_agent("CEO", Some("CEO"));
+        net.permissions = AgentPermissions::ceo_preset();
+
+        let agent = agent_from_network(&net);
+
+        assert!(agent.permissions.is_ceo_preset());
+        assert!(
+            agent.intent_classifier.is_none(),
+            "preserved-preset path doesn't synthesize a classifier on its own"
+        );
+    }
 
     #[test]
     fn events_to_session_history_preserves_tool_only_assistant_turns() {

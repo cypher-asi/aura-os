@@ -12,7 +12,7 @@ use tokio::net::TcpListener;
 use tower::ServiceExt;
 
 use aura_os_network::NetworkClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 
 use common::*;
 
@@ -218,7 +218,7 @@ async fn start_mock_swarm_raw(status_code: StatusCode, raw_body: String) -> Stri
 }
 
 fn build_app_with_swarm(
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     data_dir: std::path::PathBuf,
     network_url: &str,
     swarm_url: Option<String>,
@@ -240,15 +240,15 @@ fn build_app_with_swarm(
 
 #[tokio::test]
 async fn create_local_agent_skips_swarm() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let network_url = start_mock_network_create_only(network_agent_json("local", None)).await;
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         None, // no swarm configured
     );
@@ -268,8 +268,8 @@ async fn create_local_agent_skips_swarm() {
 
 #[tokio::test]
 async fn create_remote_agent_provisions_swarm_and_sets_vm_id() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
@@ -294,7 +294,7 @@ async fn create_remote_agent_provisions_swarm_and_sets_vm_id() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -318,8 +318,8 @@ async fn create_remote_agent_provisions_swarm_and_sets_vm_id() {
 
 #[tokio::test]
 async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
@@ -343,7 +343,7 @@ async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -361,8 +361,8 @@ async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
 
 #[tokio::test]
 async fn recover_remote_agent_deletes_and_reprovisions() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
@@ -387,7 +387,7 @@ async fn recover_remote_agent_deletes_and_reprovisions() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -417,8 +417,8 @@ async fn recover_remote_agent_deletes_and_reprovisions() {
 
 #[tokio::test]
 async fn recover_remote_agent_fails_when_delete_returns_error() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
@@ -444,7 +444,7 @@ async fn recover_remote_agent_fails_when_delete_returns_error() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -467,8 +467,8 @@ async fn recover_remote_agent_fails_when_delete_returns_error() {
 
 #[tokio::test]
 async fn recover_remote_agent_succeeds_when_delete_returns_404() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
@@ -494,7 +494,7 @@ async fn recover_remote_agent_succeeds_when_delete_returns_404() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -522,15 +522,15 @@ async fn recover_remote_agent_succeeds_when_delete_returns_404() {
 
 #[tokio::test]
 async fn create_remote_agent_fails_when_swarm_not_configured() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         None, // swarm NOT configured
     );
@@ -545,8 +545,8 @@ async fn create_remote_agent_fails_when_swarm_not_configured() {
 
 #[tokio::test]
 async fn create_remote_agent_fails_when_swarm_returns_error() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
@@ -559,7 +559,7 @@ async fn create_remote_agent_fails_when_swarm_returns_error() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -574,13 +574,13 @@ async fn create_remote_agent_fails_when_swarm_returns_error() {
 
 #[tokio::test]
 async fn recover_remote_agent_rejects_local_agents() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let network_url = start_mock_network_get_only(network_agent_json("local", None)).await;
 
-    let app = build_app_with_swarm(store, db_dir.path().to_path_buf(), &network_url, None);
+    let app = build_app_with_swarm(store, store_dir.path().to_path_buf(), &network_url, None);
 
     let req = json_request(
         "POST",
@@ -596,8 +596,8 @@ async fn recover_remote_agent_rejects_local_agents() {
 
 #[tokio::test]
 async fn recover_remote_agent_surfaces_provision_errors_after_delete() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let update_capture: Arc<tokio::sync::Mutex<Option<Value>>> =
@@ -619,7 +619,7 @@ async fn recover_remote_agent_surfaces_provision_errors_after_delete() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -642,8 +642,8 @@ async fn recover_remote_agent_surfaces_provision_errors_after_delete() {
 
 #[tokio::test]
 async fn create_remote_agent_fails_when_swarm_returns_401() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
@@ -656,7 +656,7 @@ async fn create_remote_agent_fails_when_swarm_returns_401() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -671,8 +671,8 @@ async fn create_remote_agent_fails_when_swarm_returns_401() {
 
 #[tokio::test]
 async fn create_remote_agent_fails_when_swarm_returns_malformed_json() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
@@ -682,7 +682,7 @@ async fn create_remote_agent_fails_when_swarm_returns_malformed_json() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -697,8 +697,8 @@ async fn create_remote_agent_fails_when_swarm_returns_malformed_json() {
 
 #[tokio::test]
 async fn create_remote_agent_fails_when_network_update_fails() {
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     // Network: POST /api/agents succeeds, PUT /api/agents/:id returns 500
@@ -738,7 +738,7 @@ async fn create_remote_agent_fails_when_network_update_fails() {
 
     let app = build_app_with_swarm(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         &network_url,
         Some(swarm_url),
     );
@@ -789,6 +789,11 @@ fn update_agent_request_serializes_vm_id() {
         harness: None,
         machine_type: None,
         vm_id: Some("pod-123".to_string()),
+        tags: None,
+        listing_status: None,
+        expertise: None,
+        permissions: None,
+        intent_classifier: None,
     };
     let val = serde_json::to_value(&req).unwrap();
     assert_eq!(val["vmId"], "pod-123");
@@ -814,6 +819,11 @@ fn update_agent_request_skips_none_vm_id() {
         harness: None,
         machine_type: None,
         vm_id: None,
+        tags: None,
+        listing_status: None,
+        expertise: None,
+        permissions: None,
+        intent_classifier: None,
     };
     let val = serde_json::to_value(&req).unwrap();
     let obj = val.as_object().unwrap();

@@ -22,6 +22,7 @@ import {
   formatRunsOnLabel,
 } from "./agent-info-utils";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import styles from "./AgentInfoPanel.module.css";
 
 export interface ProfileTabProps {
@@ -206,7 +207,7 @@ function ProfileHeader({
         )}
       </div>
 
-      {agent.tags?.includes("super_agent") && (
+      {isSuperAgent(agent) && (
         <div className={styles.section}>
           <Badge variant="running">CEO SuperAgent</Badge>
         </div>

@@ -8,6 +8,7 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../MobileShell";
+import { signalDesktopReady } from "../../lib/desktop-ready";
 import { markShellVisible } from "../../lib/perf/startup-perf";
 
 const BuyCreditsModal = lazy(() =>
@@ -18,6 +19,9 @@ const OrgSettingsPanel = lazy(() =>
 );
 const NewProjectModal = lazy(() =>
   import("../NewProjectModal").then((module) => ({ default: module.NewProjectModal })),
+);
+const AppsModal = lazy(() =>
+  import("../AppsModal").then((module) => ({ default: module.AppsModal })),
 );
 
 function ProjectCreationModalHost() {
@@ -63,6 +67,7 @@ function AppContent() {
   const {
     orgSettingsOpen, orgInitialSection, closeOrgSettings,
     buyCreditsOpen, closeBuyCredits, openOrgBilling,
+    appsModalOpen, closeAppsModal,
   } = useUIModalStore(
     useShallow((s) => ({
       orgSettingsOpen: s.orgSettingsOpen,
@@ -71,6 +76,8 @@ function AppContent() {
       buyCreditsOpen: s.buyCreditsOpen,
       closeBuyCredits: s.closeBuyCredits,
       openOrgBilling: s.openOrgBilling,
+      appsModalOpen: s.appsModalOpen,
+      closeAppsModal: s.closeAppsModal,
     })),
   );
 
@@ -96,6 +103,11 @@ function AppContent() {
           />
         </LazyModalBoundary>
       ) : null}
+      {appsModalOpen ? (
+        <LazyModalBoundary>
+          <AppsModal isOpen={appsModalOpen} onClose={closeAppsModal} />
+        </LazyModalBoundary>
+      ) : null}
       <ProjectCreationModalHost />
     </>
   );
@@ -104,6 +116,7 @@ function AppContent() {
 export function AppShell() {
   useLayoutEffect(() => {
     markShellVisible();
+    signalDesktopReady();
   }, []);
 
   return (

@@ -1,0 +1,85 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: var(--color-bg-subtle, #141414);
+  border-bottom: 1px solid var(--color-border, #2a2a2a);
+  overflow-x: auto;
+}
+
+.tabWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 184px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted, #9a9a9a);
+  cursor: pointer;
+  font-size: 12px;
+  min-width: 0;
+  max-width: 160px;
+}
+
+.tab:hover {
+  color: var(--color-text, #ededed);
+  background: var(--color-bg-hover, #1e1e1e);
+}
+
+.tab[aria-current="page"] {
+  color: var(--color-text, #ededed);
+  background: var(--color-bg-elevated, #1a1a1a);
+  border-color: var(--color-border, #2a2a2a);
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm, 4px);
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.close:hover {
+  opacity: 1;
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm, 4px);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #9a9a9a);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  color: var(--color-text, #ededed);
+  background: var(--color-bg-hover, #1e1e1e);
+}

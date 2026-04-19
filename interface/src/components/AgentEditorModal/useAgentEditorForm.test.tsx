@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { api } from "../../api/client";
 import type { Agent } from "../../types";
+import { emptyAgentPermissions } from "../../types/permissions-wire";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 
 const mockUseAuraCapabilities = vi.fn();
@@ -60,6 +61,9 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
     auth_source: "aura_managed",
     integration_id: null,
     default_model: null,
+    tags: [],
+    is_pinned: false,
+    permissions: emptyAgentPermissions(),
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -169,54 +173,7 @@ describe("useAgentEditorForm", () => {
     expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
-  it("preserves existing org integration auth while editing a harness agent", () => {
-    mockOrgState.integrations = [
-      {
-        integration_id: "int-1",
-        provider: "anthropic",
-        default_model: "claude-sonnet-4-6",
-        name: "Anthropic Team",
-      },
-    ];
-
-    const { result } = renderHook(() =>
-      useAgentEditorForm(
-        true,
-        makeAgent({
-          adapter_type: "aura_harness",
-          auth_source: "org_integration",
-          integration_id: "int-1",
-        }),
-        vi.fn(),
-        vi.fn(),
-      ),
-    );
-
-    expect(result.current.authSource).toBe("org_integration");
-    expect(result.current.integrationId).toBe("int-1");
-  });
-
-  it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
-    const { result } = renderHook(() =>
-      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
-    );
-
-    act(() => {
-      result.current.setAdapterType("claude_code");
-      result.current.setAuthSource("org_integration");
-      result.current.setIntegrationId("int-anthropic");
-      result.current.setDefaultModel("claude-opus-4-6");
-    });
-
-    await waitFor(() => {
-      expect(result.current.adapterType).toBe("aura_harness");
-      expect(result.current.authSource).toBe("aura_managed");
-      expect(result.current.integrationId).toBe("");
-      expect(result.current.defaultModel).toBe("");
-    });
-  });
-
-  it("normalizes a legacy org-backed aura agent back to aura-managed auth", async () => {
+  it("preserves a legacy org-backed agent while editing", async () => {
     mockOrgState.integrations = [
       {
         integration_id: "int-anthropic",
@@ -241,9 +198,29 @@ describe("useAgentEditorForm", () => {
     );
 
     await waitFor(() => {
+      expect(result.current.authSource).toBe("org_integration");
+      expect(result.current.integrationId).toBe("int-anthropic");
+      expect(result.current.restrictCreateToAuraRuntimes).toBe(false);
+    });
+  });
+
+  it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
+    const { result } = renderHook(() =>
+      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+    );
+
+    act(() => {
+      result.current.setAdapterType("claude_code");
+      result.current.setAuthSource("org_integration");
+      result.current.setIntegrationId("int-anthropic");
+      result.current.setDefaultModel("claude-opus-4-6");
+    });
+
+    await waitFor(() => {
+      expect(result.current.adapterType).toBe("aura_harness");
       expect(result.current.authSource).toBe("aura_managed");
       expect(result.current.integrationId).toBe("");
-      expect(result.current.restrictCreateToAuraRuntimes).toBe(false);
+      expect(result.current.defaultModel).toBe("");
     });
   });
 

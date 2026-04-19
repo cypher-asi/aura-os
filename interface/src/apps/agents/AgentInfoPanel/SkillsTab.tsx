@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Text, ButtonMore } from "@cypher-asi/zui";
+import { Text, Button, ButtonMore, Modal } from "@cypher-asi/zui";
 import { Zap, Loader2, Plus, Trash2, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
+import type { MySkillEntry } from "../../../api/harness-skills";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
@@ -18,9 +19,44 @@ interface SkillRowProps {
   loading: boolean;
   onAction: () => void;
   onView: (skill: HarnessSkill) => void;
+  /** When provided, the row shows a "Delete skill" action in its menu.
+   *  Only passed for user-authored ("My Skills") rows — deleting
+   *  removes the SKILL.md file and is a different operation from
+   *  uninstalling the skill from the current agent. */
+  onDelete?: () => void;
 }
 
-function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps) {
+function SkillRow({
+  skill,
+  installed,
+  loading,
+  onAction,
+  onView,
+  onDelete,
+}: SkillRowProps) {
+  const menuItems: Array<
+    { id: string; label: string; icon?: React.ReactNode } | { type: "separator" }
+  > = [];
+  if (installed) {
+    menuItems.push({ id: "uninstall", label: "Uninstall", icon: <Trash2 size={14} /> });
+  } else if (onDelete) {
+    menuItems.push({ id: "install", label: "Install", icon: <Plus size={14} /> });
+  }
+  if (onDelete) {
+    if (menuItems.length > 0) {
+      menuItems.push({ type: "separator" });
+    }
+    menuItems.push({ id: "delete", label: "Delete skill", icon: <Trash2 size={14} /> });
+  }
+
+  const handleSelect = (id: string) => {
+    if (id === "delete") {
+      onDelete?.();
+    } else {
+      onAction();
+    }
+  };
+
   return (
     <div className={styles.skillRow}>
       <button
@@ -36,69 +72,151 @@ function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps
           )}
         </div>
       </button>
-      {installed ? (
-        loading ? (
-          <div className={styles.skillActionRemove}>
-            <Loader2 size={14} className={styles.spin} />
-          </div>
-        ) : (
-          <ButtonMore
-            items={[{ id: "delete", label: "Delete", icon: <Trash2 size={14} /> }]}
-            onSelect={() => onAction()}
-            icon="horizontal"
-            size="sm"
-            variant="ghost"
-            className={styles.skillMoreBtn}
-            title={`Actions for ${skill.name}`}
-          />
-        )
+      {loading ? (
+        <div className={styles.skillActionRemove}>
+          <Loader2 size={14} className={styles.spin} />
+        </div>
+      ) : installed || onDelete ? (
+        <ButtonMore
+          items={menuItems}
+          onSelect={handleSelect}
+          icon="horizontal"
+          size="sm"
+          variant="ghost"
+          className={styles.skillMoreBtn}
+          title={`Actions for ${skill.name}`}
+        />
       ) : (
         <button
           type="button"
           className={styles.skillActionAdd}
           onClick={onAction}
-          disabled={loading}
           title={`Install ${skill.name}`}
         >
-          {loading ? (
-            <Loader2 size={14} className={styles.spin} />
-          ) : (
-            <Plus size={14} />
-          )}
+          <Plus size={14} />
         </button>
       )}
     </div>
   );
 }
 
+interface DeleteSkillConfirmModalProps {
+  isOpen: boolean;
+  skillName: string;
+  deleting: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteSkillConfirmModal({
+  isOpen,
+  skillName,
+  deleting,
+  error,
+  onClose,
+  onConfirm,
+}: DeleteSkillConfirmModalProps) {
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Delete skill"
+      size="sm"
+      footer={
+        <div className={styles.deleteConfirmFooter}>
+          <Button variant="ghost" onClick={onClose} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={onConfirm} disabled={deleting}>
+            {deleting ? (
+              <>
+                <Loader2 size={14} className={styles.spin} /> Deleting...
+              </>
+            ) : (
+              "Delete"
+            )}
+          </Button>
+        </div>
+      }
+    >
+      <Text size="sm">
+        Delete the skill <strong>{skillName}</strong>? This permanently removes{" "}
+        <code>~/.aura/skills/{skillName}/</code> and cannot be undone. Any agent
+        that has this skill installed will lose it.
+      </Text>
+      {error && (
+        <Text size="xs" className={styles.deleteConfirmError}>
+          {error}
+        </Text>
+      )}
+    </Modal>
+  );
+}
+
 export function SkillsTab({ agent }: SkillsTabProps) {
   const [catalog, setCatalog] = useState<HarnessSkill[]>([]);
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
+  const [mySkills, setMySkills] = useState<MySkillEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [showAvailable, setShowAvailable] = useState(false);
+  const [showMine, setShowMine] = useState(true);
   const [showCreator, setShowCreator] = useState(false);
   const [showStore, setShowStore] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  // Name of the skill the user has clicked "Delete skill" on; drives the
+  // confirmation modal. `null` = modal closed.
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const viewSkill = useAgentSidekickStore((s) => s.viewSkill);
   const installationByName = new Map(installations.map((i) => [i.skill_name, i]));
 
   const agentId = agent.agent_id;
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [skillsResult, installResult] = await Promise.allSettled([
+  /**
+   * Re-fetch catalog + installations + user-authored skills.
+   *
+   * `silent` keeps the existing rows on screen while the refetch runs
+   * — use it after a mutation (install / uninstall / delete / create)
+   * so the sidekick's three collapsible sections don't flash empty
+   * ("Loading...") on every click. The initial load omits `silent`
+   * so the first render still shows a loading state.
+   */
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = !!opts?.silent;
+    if (!silent) setLoading(true);
+    const [skillsResult, installResult, mineResult] = await Promise.allSettled([
       api.harnessSkills.listSkills(),
       api.harnessSkills.listAgentSkills(agentId),
+      api.harnessSkills.listMySkills(),
     ]);
+    if (skillsResult.status === "rejected") {
+      console.error("Failed to list skills", skillsResult.reason);
+    }
+    if (installResult.status === "rejected") {
+      console.error("Failed to list agent skills", installResult.reason);
+    }
+    if (mineResult.status === "rejected") {
+      console.error("Failed to list user-created skills", mineResult.reason);
+    }
     const skillsData = skillsResult.status === "fulfilled" ? skillsResult.value : [];
     const installData = installResult.status === "fulfilled" ? installResult.value : [];
+    const mineData = mineResult.status === "fulfilled" ? mineResult.value : [];
     const skills = Array.isArray(skillsData) ? skillsData : (skillsData as any)?.skills ?? [];
     const installs = Array.isArray(installData)
       ? installData
       : (installData as any)?.skills ?? (installData as any)?.installations ?? [];
+    const mine = Array.isArray(mineData) ? mineData : [];
     setCatalog(skills);
     setInstallations(installs);
-    setLoading(false);
+    setMySkills(mine);
+    setFetchError(
+      skillsResult.status === "rejected" && installResult.status === "rejected"
+        ? "Failed to load skills. The harness may be unavailable."
+        : null,
+    );
+    if (!silent) setLoading(false);
   }, [agentId]);
 
   useEffect(() => {
@@ -107,6 +225,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
 
   const installedNameSet = new Set(installations.map((i) => i.skill_name));
   const catalogByName = new Map(catalog.map((s) => [s.name, s]));
+  const mySkillNameSet = new Set(mySkills.map((s) => s.name));
 
   // Build installed list from installations, synthesising entries for skills
   // the harness catalog hasn't indexed yet (race after store install).
@@ -122,12 +241,24 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   );
   const availableSkills = catalog.filter((s) => !installedNameSet.has(s.name));
 
+  // "My Skills" lists everything the user authored via the Create Skill flow,
+  // independent of install state on this agent. Rows still carry the correct
+  // install/uninstall affordance based on the current agent's installations.
+  const mySkillsRows: HarnessSkill[] = mySkills.map((m) => ({
+    name: m.name,
+    description: m.description,
+    source: "user-created",
+    model_invocable: m.model_invocable,
+    user_invocable: m.user_invocable,
+    frontmatter: {},
+  }));
+
   const handleInstall = useCallback(
     async (name: string) => {
       setActionLoading((prev) => ({ ...prev, [name]: true }));
       try {
         await api.harnessSkills.installAgentSkill(agentId, name);
-        await fetchData();
+        await fetchData({ silent: true });
       } finally {
         setActionLoading((prev) => ({ ...prev, [name]: false }));
       }
@@ -140,13 +271,69 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       setActionLoading((prev) => ({ ...prev, [name]: true }));
       try {
         await api.harnessSkills.uninstallAgentSkill(agentId, name);
-        await fetchData();
+        await fetchData({ silent: true });
       } finally {
         setActionLoading((prev) => ({ ...prev, [name]: false }));
       }
     },
     [agentId, fetchData],
   );
+
+  const requestDeleteMySkill = useCallback((name: string) => {
+    setDeleteError(null);
+    setPendingDeleteName(name);
+  }, []);
+
+  const closeDeleteConfirm = useCallback(() => {
+    // Don't let the user dismiss the modal mid-delete — the in-flight
+    // request would still complete and leave the UI in a half-state.
+    if (pendingDeleteName && actionLoading[pendingDeleteName]) return;
+    setPendingDeleteName(null);
+    setDeleteError(null);
+  }, [pendingDeleteName, actionLoading]);
+
+  const confirmDeleteMySkill = useCallback(async () => {
+    const name = pendingDeleteName;
+    if (!name) return;
+
+    setDeleteError(null);
+    setActionLoading((prev) => ({ ...prev, [name]: true }));
+    try {
+      // Uninstall from the current agent first so its installation
+      // record doesn't outlive the underlying SKILL.md file and
+      // render as a ghost row on next fetch.
+      if (installedNameSet.has(name)) {
+        try {
+          await api.harnessSkills.uninstallAgentSkill(agentId, name);
+        } catch (err) {
+          console.error(`Failed to uninstall ${name} from agent before delete`, err);
+        }
+      }
+      await api.harnessSkills.deleteMySkill(name);
+
+      // Optimistically drop the skill from all three local lists so
+      // the row vanishes in place instead of waiting for the refetch
+      // round-trip. Then reconcile silently with the server — if the
+      // harness catalog still lists it (in-memory staleness before
+      // the next rescan) we'll just quietly pick it back up in the
+      // Available section without flashing the whole sidekick.
+      setMySkills((prev) => prev.filter((s) => s.name !== name));
+      setInstallations((prev) => prev.filter((i) => i.skill_name !== name));
+      setCatalog((prev) => prev.filter((s) => s.name !== name));
+
+      setPendingDeleteName(null);
+      void fetchData({ silent: true });
+    } catch (err) {
+      console.error(`Failed to delete skill ${name}`, err);
+      const msg =
+        (err as { body?: { error?: string }; message?: string })?.body?.error ??
+        (err as { message?: string })?.message ??
+        "Failed to delete skill. Please try again.";
+      setDeleteError(msg);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [name]: false }));
+    }
+  }, [pendingDeleteName, agentId, installedNameSet, fetchData]);
 
   return (
     <div className={styles.skillsListWrap}>
@@ -180,7 +367,13 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         </div>
       </div>
 
-      {!loading && (installedSkills.length === 0 ? (
+      {!loading && fetchError && (
+        <div className={styles.skillsEmpty} role="alert">
+          {fetchError}
+        </div>
+      )}
+
+      {!loading && !fetchError && (installedSkills.length === 0 ? (
         <div className={styles.skillsEmpty}>No skills installed</div>
       ) : (
         installedSkills.map((skill) => (
@@ -195,7 +388,44 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         ))
       ))}
 
-      {/* Available section (collapsible) */}
+      {/* My Skills section (collapsible) — skills the current user authored */}
+      <button
+        type="button"
+        className={styles.skillsSectionToggle}
+        onClick={() => setShowMine((v) => !v)}
+      >
+        {showMine ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <Text size="xs" variant="muted" weight="medium">
+          My Skills{!loading && ` (${mySkillsRows.length})`}
+        </Text>
+      </button>
+
+      {!loading && !fetchError && showMine &&
+        (mySkillsRows.length === 0 ? (
+          <div className={styles.skillsEmpty}>
+            No skills yet — click the + above to create one
+          </div>
+        ) : (
+          mySkillsRows.map((skill) => {
+            const installed = installedNameSet.has(skill.name);
+            return (
+              <SkillRow
+                key={`mine-${skill.name}`}
+                skill={skill}
+                installed={installed}
+                loading={!!actionLoading[skill.name]}
+                onAction={() =>
+                  installed ? handleUninstall(skill.name) : handleInstall(skill.name)
+                }
+                onView={(s) => viewSkill(s, installationByName.get(s.name))}
+                onDelete={() => requestDeleteMySkill(skill.name)}
+              />
+            );
+          })
+        ))}
+
+      {/* Available section (collapsible). Excludes skills shown under
+          "My Skills" so a single user-authored skill doesn't appear twice. */}
       <button
         type="button"
         className={styles.skillsSectionToggle}
@@ -203,30 +433,36 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       >
         {showAvailable ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Text size="xs" variant="muted" weight="medium">
-          Available{!loading && ` (${availableSkills.length})`}
+          Available
+          {!loading &&
+            ` (${availableSkills.filter((s) => !mySkillNameSet.has(s.name)).length})`}
         </Text>
       </button>
 
       {!loading && showAvailable &&
-        (availableSkills.length === 0 ? (
-          <div className={styles.skillsEmpty}>No additional skills available</div>
-        ) : (
-          availableSkills.map((skill) => (
-            <SkillRow
-              key={skill.name}
-              skill={skill}
-              installed={false}
-              loading={!!actionLoading[skill.name]}
-              onAction={() => handleInstall(skill.name)}
-              onView={viewSkill}
-            />
-          ))
-        ))}
+        (() => {
+          const rows = availableSkills.filter((s) => !mySkillNameSet.has(s.name));
+          return rows.length === 0 ? (
+            <div className={styles.skillsEmpty}>No additional skills available</div>
+          ) : (
+            rows.map((skill) => (
+              <SkillRow
+                key={skill.name}
+                skill={skill}
+                installed={false}
+                loading={!!actionLoading[skill.name]}
+                onAction={() => handleInstall(skill.name)}
+                onView={viewSkill}
+              />
+            ))
+          );
+        })()}
 
       <CreateSkillModal
         isOpen={showCreator}
         onClose={() => setShowCreator(false)}
-        onCreated={fetchData}
+        onCreated={() => fetchData({ silent: true })}
+        agentId={agentId}
       />
 
       <SkillShopModal
@@ -234,7 +470,16 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         agentId={agentId}
         initialInstalledNames={installedNameSet}
         onClose={() => setShowStore(false)}
-        onInstalled={fetchData}
+        onInstalled={() => fetchData({ silent: true })}
+      />
+
+      <DeleteSkillConfirmModal
+        isOpen={pendingDeleteName !== null}
+        skillName={pendingDeleteName ?? ""}
+        deleting={pendingDeleteName ? !!actionLoading[pendingDeleteName] : false}
+        error={deleteError}
+        onClose={closeDeleteConfirm}
+        onConfirm={confirmDeleteMySkill}
       />
     </div>
   );

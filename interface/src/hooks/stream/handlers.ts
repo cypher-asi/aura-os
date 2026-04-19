@@ -415,22 +415,18 @@ export function handleToolCallStarted(
   info: ToolCallStartedInfo,
 ): void {
   const isSpecTool = info.name === "create_spec" || info.name === "update_spec";
-  const isWriteFile = info.name === "write_file";
-  const isEditFile = info.name === "edit_file";
   if (isSpecTool && refs.streamBuffer.current) {
     flushStreamingText(refs, setters);
   }
 
+  // For write_file/edit_file we intentionally leave `initialInput` empty so
+  // the FileBlock renders its compact "Writing code..." header instead of an
+  // empty code surface. Partial snapshots will populate `path`/`content`/
+  // `old_text`/`new_text` live as they arrive from the stream.
   let initialInput: Record<string, unknown> = {};
   if (isSpecTool) {
     const draftPreview = refs.streamBuffer.current.trim();
     if (draftPreview) initialInput = { draft_preview: draftPreview };
-  } else if (isWriteFile) {
-    // Seed the fields the FilePreviewCard reads so it can render an empty
-    // code area immediately; partial snapshots will then fill it in live.
-    initialInput = { path: "", content: "" };
-  } else if (isEditFile) {
-    initialInput = { path: "", old_text: "", new_text: "" };
   }
 
   const entry: ToolCallEntry = {
@@ -789,22 +785,39 @@ export function finalizeStream(
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const hasBuffer = !!refs.streamBuffer.current;
+  const unsnapshottedToolCalls = refs.toolCalls.current.filter(
+    (tc) => !refs.snapshottedToolCallIds.current.has(tc.id),
+  );
+  const hasUnsnapshottedTools = unsnapshottedToolCalls.length > 0;
+  // Terminal outcomes (task/run completed or failed) never receive a follow-up
+  // save, so we must consolidate the current turn now. For mid-stream closures
+  // without a terminal reason, keep the existing behavior and let the caller
+  // save the turn on its AssistantMessageEnd path.
+  const isTerminalReason =
+    options?.reason === "completed" || options?.reason === "failed";
+  const shouldPersistTurn =
+    (hasBuffer || hasUnsnapshottedTools) && (!closureIsStreaming || isTerminalReason);
 
-  if (hasBuffer && !closureIsStreaming) {
+  if (shouldPersistTurn) {
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
     const bufferedContent = refs.streamBuffer.current;
-    const bufferedToolCalls = snapshotToolCalls(refs);
-    const bufferedTimeline = snapshotTimeline(refs);
+    const newToolCallIds = new Set(unsnapshottedToolCalls.map((tc) => tc.id));
+    const bufferedTimeline = refs.timeline.current.filter(
+      (item) => item.kind !== "tool" || newToolCallIds.has(item.toolCallId),
+    );
+    for (const tc of unsnapshottedToolCalls) {
+      refs.snapshottedToolCallIds.current.add(tc.id);
+    }
     setters.setEvents((prev) => [
       ...prev,
       {
         id: `stream-${Date.now()}`,
         role: "assistant",
         content: bufferedContent,
-        toolCalls: bufferedToolCalls,
+        toolCalls: hasUnsnapshottedTools ? [...unsnapshottedToolCalls] : undefined,
         thinkingText: savedThinking,
         thinkingDurationMs: savedThinkingDuration,
-        timeline: bufferedTimeline,
+        timeline: bufferedTimeline.length > 0 ? [...bufferedTimeline] : undefined,
       },
     ]);
     setters.setStreamingText("");
@@ -825,9 +838,9 @@ export function finalizeStream(
     refs.thinkingStart.current = null;
     setters.setThinkingDurationMs(null);
   }
-  // When hasBuffer is true but closureIsStreaming prevents saving,
-  // preserve thinking so it is included when the message is saved
-  // on the subsequent call (e.g. onDone after AssistantMessageEnd).
+  // When hasBuffer is true but closureIsStreaming prevents saving (non-terminal),
+  // preserve thinking so it is included when the message is saved on the
+  // subsequent call (e.g. onDone after AssistantMessageEnd).
 
   setters.setProgressText("");
   setters.setIsStreaming(false);

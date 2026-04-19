@@ -35,10 +35,11 @@ const timeZone = String(args.timezone || process.env.CHANGELOG_TIMEZONE || "Amer
 const repoName = String(args.repo || path.basename(repoDir));
 const promptVersion = 3;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim() || "";
-const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
+const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-opus-4-7";
 const anthropicMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_MAX_TOKENS || "", 10) || 4096;
 const anthropicRetryMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_RETRY_MAX_TOKENS || "", 10) || 6144;
 const STRICT_TOOL_SUPPORTED_MODELS = [
+  "claude-opus-4-7",
   "claude-opus-4-6",
   "claude-sonnet-4-6",
   "claude-opus-4-5",
@@ -540,6 +541,24 @@ function findToolUseInput(responseJson, toolName) {
   return block?.input;
 }
 
+function buildAnthropicRequestBody({ model, maxTokens, systemPrompt, tool, userPrompt, lastError, attempt }) {
+  return {
+    model,
+    max_tokens: maxTokens,
+    system: systemPrompt,
+    tools: [tool],
+    tool_choice: { type: "any" },
+    messages: [
+      {
+        role: "user",
+        content: attempt === 1
+          ? userPrompt
+          : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nCall the tool again with corrected input.`,
+      },
+    ],
+  };
+}
+
 function assertStrictToolModelSupport(model) {
   if (STRICT_TOOL_SUPPORTED_MODELS.includes(model)) {
     return true;
@@ -716,22 +735,17 @@ async function generateWithAnthropic(bundle) {
         "x-api-key": anthropicApiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify({
-        model: anthropicModel,
-        max_tokens: maxTokensByAttempt[attempt - 1],
-        temperature: 0.2,
-        system: systemPrompt,
-        tools: [tool],
-        tool_choice: { type: "any" },
-        messages: [
-          {
-            role: "user",
-            content: attempt === 1
-              ? userPrompt
-              : `${userPrompt}\n\nThe previous response failed validation with this error:\n${lastError}\n\nCall the tool again with corrected input.`,
-          },
-        ],
-      }),
+      body: JSON.stringify(
+        buildAnthropicRequestBody({
+          model: anthropicModel,
+          maxTokens: maxTokensByAttempt[attempt - 1],
+          systemPrompt,
+          tool,
+          userPrompt,
+          lastError,
+          attempt,
+        }),
+      ),
     });
 
     if (!response.ok) {
@@ -1015,6 +1029,7 @@ async function main() {
 export {
   assertStrictToolModelSupport,
   batchCommits,
+  buildAnthropicRequestBody,
   validateRenderedEntry,
 };
 

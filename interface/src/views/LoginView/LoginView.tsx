@@ -7,12 +7,15 @@ import {
   Topbar,
   Badge,
 } from "@cypher-asi/zui";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useLayoutEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
+import { signalDesktopReady } from "../../lib/desktop-ready";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
+import { useAuthStore } from "../../stores/auth-store";
 import styles from "./LoginView.module.css";
 
 const HostSettingsModal = lazy(() =>
@@ -22,7 +25,26 @@ const HostSettingsModal = lazy(() =>
 );
 
 export function LoginView() {
+  const { isAuthenticated, isLoading } = useAuthStore(
+    useShallow((s) => ({
+      isAuthenticated: s.user !== null,
+      isLoading: s.isLoading,
+    })),
+  );
   const f = useLoginForm();
+
+  useLayoutEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      signalDesktopReady();
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Authenticated users land here briefly on app open when the persisted URL
+  // was /login. Render nothing so the login chrome never flashes — the redirect
+  // useEffect inside useLoginForm will navigate away on mount.
+  if (isAuthenticated || isLoading) {
+    return null;
+  }
 
   return (
     <div className={`${styles.page} ${f.isMobileLayout ? styles.pageMobile : ""}`}>

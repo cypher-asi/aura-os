@@ -21,7 +21,8 @@ import { queryClient } from "../../lib/query-client";
 import { deriveProjectAgentTitle } from "../../lib/derive-project-agent-title";
 import { mergeAgentIntoProjectAgents, projectQueryKeys } from "../../queries/project-queries";
 import { useChatHandoffStore } from "../../stores/chat-handoff-store";
-import { useContextUtilization, useContextUsageStore } from "../../stores/context-usage-store";
+import { useContextUsage, useContextUsageStore } from "../../stores/context-usage-store";
+import { useHydrateContextUtilization } from "../../hooks/use-hydrate-context-utilization";
 import type { AgentInstance, Project } from "../../types";
 import {
   isCreateAgentChatHandoff,
@@ -204,7 +205,7 @@ function StandaloneAgentChatPanel({
     { agentId },
   );
   const { setSelectedAgent } = useSelectedAgent();
-  const contextUtilization = useContextUtilization(streamKey);
+  const contextUsage = useContextUsage(streamKey);
 
   const effectiveProjectId = useMemo(() => {
     if (selectedProjectId && agentProjects.some((project) => project.project_id === selectedProjectId)) {
@@ -242,11 +243,17 @@ function StandaloneAgentChatPanel({
   const handleNewSession = useCallback(() => {
     api.agents.resetSession(agentId).catch(() => {});
     markNextSendAsNewSession();
-    useContextUsageStore.getState().clearContextUtilization(streamKey);
-    // Intentionally keep historyKey cache + stream events so prior messages
-    // remain visible. The next send posts new_session=true and lands in a
-    // fresh storage session; the model's context no longer includes these.
+    const store = useContextUsageStore.getState();
+    store.clearContextUtilization(streamKey);
+    store.markResetPending(streamKey);
   }, [agentId, markNextSendAsNewSession, streamKey]);
+
+  const contextUsageFetcher = useMemo(
+    () =>
+      (signal: AbortSignal) => api.agents.getContextUsage(agentId, { signal }),
+    [agentId],
+  );
+  useHydrateContextUtilization(streamKey, contextUsageFetcher, agentId);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -284,7 +291,7 @@ function StandaloneAgentChatPanel({
       projects={agentProjects}
       selectedProjectId={effectiveProjectId}
       onProjectChange={handleProjectChange}
-      contextUtilization={contextUtilization}
+      contextUsage={contextUsage}
       onNewSession={handleNewSession}
     />
   );
@@ -319,7 +326,7 @@ function ProjectAgentChatPanel({
     "project",
     { projectId, agentInstanceId },
   );
-  const contextUtilization = useContextUtilization(streamKey);
+  const contextUsage = useContextUsage(streamKey);
 
   const historyKey = useMemo(() => {
     if (sessionId) {
@@ -347,11 +354,21 @@ function ProjectAgentChatPanel({
   const handleNewSession = useCallback(() => {
     api.resetInstanceSession(projectId, agentInstanceId).catch(() => {});
     markNextSendAsNewSession();
-    useContextUsageStore.getState().clearContextUtilization(streamKey);
-    // Intentionally keep historyKey cache + stream events so prior messages
-    // remain visible. The next send posts new_session=true and lands in a
-    // fresh storage session; the model's context no longer includes these.
+    const store = useContextUsageStore.getState();
+    store.clearContextUtilization(streamKey);
+    store.markResetPending(streamKey);
   }, [projectId, agentInstanceId, markNextSendAsNewSession, streamKey]);
+
+  const contextUsageFetcher = useMemo(() => {
+    if (isSessionView) return undefined;
+    return (signal: AbortSignal) =>
+      api.getContextUsage(projectId, agentInstanceId, { signal });
+  }, [isSessionView, projectId, agentInstanceId]);
+  useHydrateContextUtilization(
+    streamKey,
+    contextUsageFetcher,
+    isSessionView ? undefined : agentInstanceId,
+  );
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } = useChatHistorySync({
     historyKey,
@@ -361,6 +378,8 @@ function ProjectAgentChatPanel({
     invalidateBeforeFetch: isSessionView,
     onSwitch: onProjectSwitch,
     onClear,
+    watchAgentInstanceId: agentInstanceId,
+    watchSessionId: sessionId ?? undefined,
   });
 
   const hasHistory = historyMessages.length > 0;
@@ -490,7 +509,7 @@ function ProjectAgentChatPanel({
         historyMessages={historyMessages}
         projects={currentProject}
         selectedProjectId={projectId}
-        contextUtilization={isSessionView ? undefined : contextUtilization}
+        contextUsage={isSessionView ? undefined : contextUsage}
         onNewSession={isSessionView ? undefined : handleNewSession}
         mobileHeaderAction={(
           <div style={mobileHeaderActionsStyle} data-mobile-header-actions>

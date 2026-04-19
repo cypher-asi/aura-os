@@ -1,0 +1,19 @@
+[package]
+name = "aura-os-agent-templates"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Portable agent template (system prompt, intent classifier rules, tool manifest) used to seed new Agent records."
+
+[dependencies]
+aura-os-core = { path = "../aura-os-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

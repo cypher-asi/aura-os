@@ -1,15 +1,21 @@
 [package]
 name = "aura-os-orgs"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
 aura-os-store = { path = "../aura-os-store" }
-chrono = { version = "0.4", features = ["serde"] }
-serde_json = "1"
-uuid = { version = "1", features = ["v4"] }
-thiserror = "1"
+chrono = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3"
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

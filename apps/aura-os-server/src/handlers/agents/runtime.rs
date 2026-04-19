@@ -15,7 +15,6 @@ use tokio::process::Command;
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::timeout;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tracing::warn;
 use uuid::Uuid;
 
 use aura_os_core::{Agent, AgentId, OrgIntegration, ProjectId};
@@ -121,11 +120,32 @@ pub(crate) async fn send_external_agent_event_stream(
 
     let integration = resolve_integration(state, agent, jwt).await?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
+    // Same hard-fail contract as the harness path in `open_harness_chat_stream`:
+    // if the inbound user message can't be persisted, we must not run the
+    // external adapter (which would consume credits for a turn that is
+    // invisible to the UI) and must not return a 2xx to the caller.
     let persist_ctx =
-        setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt, false).await;
-    if let Some(ref ctx) = persist_ctx {
-        super::chat::persist_user_message(ctx, &body.content, &None);
-    }
+        setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt, false)
+            .await
+            .ok_or_else(|| {
+                ApiError::chat_persist_unavailable(
+                    "Chat persistence unavailable for external-adapter agent (no project binding or storage down)",
+                    crate::error::ChatPersistErrorCtx::default(),
+                )
+            })?;
+    let persist_err_ctx = crate::error::ChatPersistErrorCtx {
+        session_id: Some(persist_ctx.session_id.clone()),
+        project_id: Some(persist_ctx.project_id.clone()),
+        project_agent_id: Some(persist_ctx.project_agent_id.clone()),
+    };
+    let persisted_user_evt = super::chat::persist_user_message(&persist_ctx, &body.content, &None)
+        .await
+        .map_err(|e| crate::error::map_chat_persist_storage_error(e, persist_err_ctx))?;
+    super::chat::publish_user_message_event(
+        &state.event_broadcast,
+        &persist_ctx,
+        persisted_user_evt.id.as_str(),
+    );
     let prompt =
         build_external_prompt(state, agent, &body.content, body.project_id.as_deref()).await;
 
@@ -139,11 +159,7 @@ pub(crate) async fn send_external_agent_event_stream(
     )
     .await?;
 
-    if let Some(ref ctx) = persist_ctx {
-        super::chat::persist_external_agent_turn(ctx, &outcome.text, &outcome.usage);
-    } else {
-        warn!(agent_id = %agent.agent_id, "external agent chat: persistence context unavailable");
-    }
+    super::chat::persist_external_agent_turn(&persist_ctx, &outcome.text, &outcome.usage);
 
     let events = vec![
         HarnessOutbound::SessionReady(SessionReady {
@@ -162,6 +178,7 @@ pub(crate) async fn send_external_agent_event_stream(
             stop_reason: "end_turn".to_string(),
             usage: outcome.usage,
             files_changed: FilesChanged::default(),
+            originating_user_id: None,
         }),
     ];
 
@@ -173,7 +190,10 @@ pub(crate) async fn send_external_agent_event_stream(
     );
     let boxed: SseStream = Box::pin(stream);
     Ok((
-        [("x-accel-buffering", HeaderValue::from_static("no"))],
+        axum::http::HeaderMap::from_iter([(
+            axum::http::HeaderName::from_static("x-accel-buffering"),
+            HeaderValue::from_static("no"),
+        )]),
         Sse::new(boxed).keep_alive(KeepAlive::default()),
     ))
 }
@@ -190,11 +210,30 @@ async fn send_external_project_agent_event_stream(
         .ok_or_else(|| ApiError::bad_request("External project chat requires a project id"))?;
     let integration = resolve_integration(state, agent, jwt).await?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
+    // Same hard-fail contract as the harness path. See the comment in
+    // `send_external_agent_event_stream` above for rationale.
     let persist_ctx =
-        setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt, false).await;
-    if let Some(ref ctx) = persist_ctx {
-        super::chat::persist_user_message(ctx, &body.content, &None);
-    }
+        setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt, false)
+            .await
+            .ok_or_else(|| {
+                ApiError::chat_persist_unavailable(
+                    "Chat persistence unavailable for external-adapter project agent (no project binding or storage down)",
+                    crate::error::ChatPersistErrorCtx::default(),
+                )
+            })?;
+    let persist_err_ctx = crate::error::ChatPersistErrorCtx {
+        session_id: Some(persist_ctx.session_id.clone()),
+        project_id: Some(persist_ctx.project_id.clone()),
+        project_agent_id: Some(persist_ctx.project_agent_id.clone()),
+    };
+    let persisted_user_evt = super::chat::persist_user_message(&persist_ctx, &body.content, &None)
+        .await
+        .map_err(|e| crate::error::map_chat_persist_storage_error(e, persist_err_ctx))?;
+    super::chat::publish_user_message_event(
+        &state.event_broadcast,
+        &persist_ctx,
+        persisted_user_evt.id.as_str(),
+    );
 
     let prompt =
         build_external_prompt(state, agent, &body.content, Some(project_id.as_str())).await;
@@ -204,9 +243,11 @@ async fn send_external_project_agent_event_stream(
     let (sse_tx, sse_rx) = mpsc::unbounded_channel::<Result<Event, Infallible>>();
     let message_id = Uuid::new_v4().to_string();
 
-    if let Some(ctx) = persist_ctx {
-        spawn_chat_persist_task(events_tx.subscribe(), ctx);
-    }
+    spawn_chat_persist_task(
+        events_tx.subscribe(),
+        persist_ctx,
+        state.event_broadcast.clone(),
+    );
 
     let sse_stream: SseStream = Box::pin(UnboundedReceiverStream::new(sse_rx));
     let state = state.clone();
@@ -279,7 +320,10 @@ async fn send_external_project_agent_event_stream(
     });
 
     Ok((
-        [("x-accel-buffering", HeaderValue::from_static("no"))],
+        axum::http::HeaderMap::from_iter([(
+            axum::http::HeaderName::from_static("x-accel-buffering"),
+            HeaderValue::from_static("no"),
+        )]),
         Sse::new(sse_stream).keep_alive(KeepAlive::default()),
     ))
 }
@@ -996,6 +1040,7 @@ async fn stream_codex_project_turn(
             stop_reason: "end_turn".to_string(),
             usage,
             files_changed: FilesChanged::default(),
+            originating_user_id: None,
         }),
     );
 
@@ -1205,6 +1250,7 @@ async fn stream_claude_project_turn(
             stop_reason: "end_turn".to_string(),
             usage,
             files_changed: FilesChanged::default(),
+            originating_user_id: None,
         }),
     );
 
@@ -1427,6 +1473,8 @@ async fn resolve_or_create_project_agent_instance_id(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
         harness: None,
+        permissions: Some(agent.permissions.clone()),
+        intent_classifier: agent.intent_classifier.clone(),
     };
 
     let created = storage

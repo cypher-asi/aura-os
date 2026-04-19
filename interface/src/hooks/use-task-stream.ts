@@ -60,18 +60,24 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
       subscribe(EventType.ToolUseStart, (e) => {
         const c = e.content as unknown as Record<string, unknown>;
         if (c.task_id !== taskId) return;
+        const rawId = typeof c.id === "string" ? c.id.trim() : "";
         handleToolCallStarted(refs, setters, {
-          id: (c.id as string) ?? crypto.randomUUID(),
-          name: (c.name as string) ?? "unknown",
+          id: rawId || crypto.randomUUID(),
+          name: (typeof c.name === "string" && c.name) || "unknown",
         });
       }),
 
       subscribe(EventType.ToolCallSnapshot, (e) => {
         const c = e.content as unknown as Record<string, unknown>;
         if (c.task_id !== taskId) return;
+        // Drop snapshots with no id: they would otherwise create an orphan
+        // pending tool call that never resolves and leaves the streaming
+        // banner stuck on "Working..." after the run finishes.
+        const rawId = typeof c.id === "string" ? c.id.trim() : "";
+        if (!rawId) return;
         handleToolCallSnapshot(refs, setters, {
-          id: (c.id as string) ?? "",
-          name: (c.name as string) ?? "unknown",
+          id: rawId,
+          name: (typeof c.name === "string" && c.name) || "unknown",
           input: (c.input as Record<string, unknown>) ?? {},
         });
       }),

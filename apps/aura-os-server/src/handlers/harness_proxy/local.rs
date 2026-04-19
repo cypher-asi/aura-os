@@ -1,5 +1,5 @@
 use axum::extract::{Path, State};
-use axum::http::{header, StatusCode};
+use axum::http::{header, Method, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use serde::Deserialize;
@@ -26,6 +26,11 @@ pub(crate) struct CreateSkillBody {
     pub context: Option<String>,
     pub user_invocable: Option<bool>,
     pub model_invocable: Option<bool>,
+    /// Optional agent to auto-install this newly created skill on.
+    /// When set, the server mirrors the Skill Shop flow: register the
+    /// skill with the harness catalog AND install it for the agent so it
+    /// shows up under "Installed" immediately.
+    pub agent_id: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -33,6 +38,8 @@ struct CreateSkillResponse {
     name: String,
     path: String,
     created: bool,
+    registered: bool,
+    installed_on_agent: bool,
 }
 
 fn create_skill_name_valid(name: &str) -> bool {
@@ -42,6 +49,12 @@ fn create_skill_name_valid(name: &str) -> bool {
             .chars()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
+
+/// Marker written into the YAML frontmatter of every skill created via the
+/// `POST /api/harness/skills` endpoint. Used by `list_my_skills` to separate
+/// user-authored skills from shop-installed skills (both live under
+/// ~/.aura/skills/ on disk).
+pub(crate) const USER_CREATED_SOURCE_MARKER: &str = "user-created";
 
 fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
     let mut frontmatter = format!(
@@ -65,12 +78,13 @@ fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
         "model_invocable: {}\n",
         payload.model_invocable.unwrap_or(false)
     ));
+    frontmatter.push_str(&format!("source: \"{USER_CREATED_SOURCE_MARKER}\"\n"));
     frontmatter.push_str("---\n");
     frontmatter
 }
 
 pub(crate) async fn create_skill(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<CreateSkillBody>,
 ) -> Result<axum::response::Response, StatusCode> {
     if !create_skill_name_valid(&payload.name) {
@@ -82,16 +96,70 @@ pub(crate) async fn create_skill(
     std::fs::create_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let frontmatter = build_skill_frontmatter(&payload);
-    let body_text = payload.body.unwrap_or_default();
+    let body_text = payload.body.clone().unwrap_or_default();
     let content = format!("{frontmatter}\n{body_text}");
-
     let skill_path = skill_dir.join("SKILL.md");
+
+    // Register the skill with the harness catalog so it shows up in listings.
+    // Without this the UI's catalog (backed by the harness' `GET api/skills`)
+    // stays empty and the newly created skill is invisible.
+    //
+    // NB: the harness writes its OWN `~/.aura/skills/<name>/SKILL.md` on
+    // this POST (with a different frontmatter shape — `name:` included,
+    // `user-invocable:` spelled with a hyphen, and crucially NO `source:`
+    // marker). We therefore have to do the harness call *before* our own
+    // write so our marker-bearing file wins the race; otherwise the
+    // harness overwrites it and `list_my_skills` can't find the skill,
+    // landing it under "Available" instead of "My Skills".
+    state
+        .harness_http
+        .post_json_ignore_result(
+            "api/skills",
+            serde_json::json!({
+                "name": payload.name,
+                "description": payload.description,
+                "body": body_text,
+                "user_invocable": payload.user_invocable.unwrap_or(true),
+                "model_invocable": payload.model_invocable.unwrap_or(false),
+            })
+            .to_string(),
+        )
+        .await;
+
+    // Last writer wins: stamp the source marker after the harness has had
+    // its turn. (The directory was created above; the harness call may or
+    // may not have written SKILL.md, either way we overwrite.)
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // If the client supplied an agent context, auto-install the skill for that
+    // agent so it appears under "Installed" in the UI (mirrors the Skill Shop flow).
+    let installed_on_agent = match payload.agent_id.as_deref() {
+        Some(agent_id) if !agent_id.is_empty() => {
+            let empty: Vec<String> = Vec::new();
+            let install_body = serde_json::json!({
+                "name": payload.name,
+                "approved_paths": empty,
+                "approved_commands": empty,
+            })
+            .to_string();
+            state
+                .harness_http
+                .post_json_ignore_result(
+                    &format!("api/agents/{agent_id}/skills"),
+                    install_body,
+                )
+                .await;
+            true
+        }
+        _ => false,
+    };
 
     let resp = CreateSkillResponse {
         name: payload.name,
         path: skill_path.to_string_lossy().into_owned(),
         created: true,
+        registered: true,
+        installed_on_agent,
     };
     let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((
@@ -301,4 +369,154 @@ fn strip_frontmatter(content: &str) -> String {
         Some(end) => trimmed[3 + end + 4..].trim_start().to_string(),
         None => content.to_string(),
     }
+}
+
+#[derive(serde::Serialize)]
+struct MySkillEntry {
+    name: String,
+    description: String,
+    path: String,
+    user_invocable: bool,
+    model_invocable: bool,
+}
+
+/// List skills the current user authored via `POST /api/harness/skills`.
+/// Scans `~/.aura/skills/*/SKILL.md` and returns only entries whose
+/// frontmatter carries `source: "user-created"` — this reliably excludes
+/// shop-installed skills, which share the same on-disk layout but do not
+/// carry that marker.
+pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusCode> {
+    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let skills_root = home.join(".aura").join("skills");
+
+    let entries = match std::fs::read_dir(&skills_root) {
+        Ok(entries) => entries,
+        // Directory may not exist yet (user hasn't created any skills).
+        // Treat as an empty list rather than an error so the UI renders cleanly.
+        Err(_) => {
+            return Ok((
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, "application/json")],
+                "[]",
+            )
+                .into_response());
+        }
+    };
+
+    let mut results: Vec<MySkillEntry> = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string())
+        else {
+            continue;
+        };
+        // Skip metadata / hidden entries.
+        if name.starts_with('.') {
+            continue;
+        }
+
+        let skill_path = path.join("SKILL.md");
+        let Ok(content) = std::fs::read_to_string(&skill_path) else {
+            continue;
+        };
+
+        let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
+        if source != USER_CREATED_SOURCE_MARKER {
+            continue;
+        }
+
+        let description = extract_frontmatter_field(&content, "description").unwrap_or_default();
+        let user_invocable = extract_frontmatter_field(&content, "user_invocable")
+            .map(|v| v == "true")
+            .unwrap_or(true);
+        let model_invocable = extract_frontmatter_field(&content, "model_invocable")
+            .map(|v| v == "true")
+            .unwrap_or(false);
+
+        results.push(MySkillEntry {
+            name,
+            description,
+            path: skill_path.to_string_lossy().into_owned(),
+            user_invocable,
+            model_invocable,
+        });
+    }
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+
+    let body =
+        serde_json::to_string(&results).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        body,
+    )
+        .into_response())
+}
+
+/// Permanently delete a user-authored skill. Removes
+/// `~/.aura/skills/<name>/` from disk and fires a best-effort
+/// `DELETE api/skills/<name>` at the harness catalog.
+///
+/// Safety: the on-disk SKILL.md must carry the `source: "user-created"`
+/// marker. This prevents this endpoint from being used to delete
+/// shop-installed skills that happen to share the same on-disk layout.
+/// Callers who want to remove a shop-installed skill should uninstall
+/// it from every agent and let the harness rescan.
+pub(crate) async fn delete_my_skill(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Result<axum::response::Response, StatusCode> {
+    if !create_skill_name_valid(&name) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let skill_dir = home.join(".aura").join("skills").join(&name);
+    let skill_path = skill_dir.join("SKILL.md");
+
+    // Existence + ownership check before removing anything.
+    let content =
+        std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
+    let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
+    if source != USER_CREATED_SOURCE_MARKER {
+        // Refuse to nuke a non-user-created skill file through this
+        // endpoint even if the filename matches.
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Remove the whole skill directory so supporting files (if any)
+    // also go away. Only the SKILL.md has been verified, so this is a
+    // targeted directory name under ~/.aura/skills/.
+    if skill_dir.exists() {
+        std::fs::remove_dir_all(&skill_dir)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
+    // Best-effort harness catalog deregister. The local harness may or
+    // may not support DELETE on api/skills/{name}; either way we don't
+    // want the on-disk delete to fail just because the in-memory
+    // catalog doesn't update, and the harness will reconcile on its
+    // next rescan regardless.
+    let _ = state
+        .harness_http
+        .proxy_json(Method::DELETE, &format!("api/skills/{name}"), None, None)
+        .await;
+
+    let resp_json = serde_json::json!({
+        "name": name,
+        "deleted": true,
+    });
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        resp_json.to_string(),
+    )
+        .into_response())
 }

@@ -3,6 +3,8 @@ import { useShallow } from "zustand/react/shallow";
 import { useChatHistoryStore, useChatHistory } from "../stores/chat-history-store";
 import { useIsStreaming } from "./stream/hooks";
 import { getStreamEntry } from "./stream/store";
+import { useEventStore } from "../stores/event-store/index";
+import { EventType } from "../types/aura-events";
 import type { SessionEvent } from "../types";
 import type { DisplaySessionEvent } from "../types/stream";
 
@@ -19,6 +21,28 @@ interface ChatHistorySyncOptions {
   onClear?: () => void;
   /** When false, callers render directly from cached history instead of copying it into the stream store. */
   hydrateToStream?: boolean;
+  /**
+   * When set, subscribes to live `UserMessage` and `AssistantMessageEnd`
+   * WebSocket events for this project-agent / agent-instance id and
+   * force-refetches history when a matching event arrives. Used to surface
+   * cross-agent writes (e.g. the CEO's `send_to_agent` tool) live in the
+   * target agent's chat panel without a manual reload.
+   */
+  watchAgentInstanceId?: string;
+  /**
+   * When set, match events by their org-level `agent_id` field (from
+   * `agents.agent_id` in aura-network). Standalone agent chats key
+   * their history by `agentHistoryKey(agent_id)` — not by
+   * `project_agent_id` — so they must filter on this field instead
+   * of `watchAgentInstanceId` to see cross-agent writes live.
+   */
+  watchAgentId?: string;
+  /**
+   * When set, scopes the live refetch to events for this specific
+   * `session_id`. Useful for historical session views where we only care
+   * about updates to the pinned session.
+   */
+  watchSessionId?: string;
 }
 
 interface ChatHistorySyncResult {
@@ -43,6 +67,9 @@ export function useChatHistorySync({
   onSwitch,
   onClear,
   hydrateToStream = true,
+  watchAgentInstanceId,
+  watchAgentId,
+  watchSessionId,
 }: ChatHistorySyncOptions): ChatHistorySyncResult {
   const {
     events: historyMessages,
@@ -72,6 +99,70 @@ export function useChatHistorySync({
     }
     prevIsStreamingRef.current = isStreaming;
   }, [isStreaming, historyKey, fetchFn]);
+
+  // Subscribe to live WebSocket chat events for this agent and force-refetch
+  // history on a match. This keeps the target agent's chat panel in sync when
+  // another agent writes into its session (e.g. the CEO's `send_to_agent`
+  // tool) without relying on stream-stop or manual reload.
+  const subscribe = useEventStore((s) => s.subscribe);
+  useEffect(() => {
+    if (!historyKey || !fetchFn) return;
+    if (!watchAgentInstanceId && !watchAgentId && !watchSessionId) return;
+
+    const matches = (content: Record<string, unknown> | undefined): boolean => {
+      if (!content) return false;
+      const eventAgentInstanceId =
+        (content.project_agent_id as string | undefined) ??
+        (content.agent_instance_id as string | undefined);
+      const eventAgentId = content.agent_id as string | undefined;
+      const eventSessionId = content.session_id as string | undefined;
+
+      // `watchSessionId` is the narrowest scope and is *exclusive*:
+      // when set, only events for that exact session fire a refetch,
+      // regardless of any other watch field. This matches the
+      // original behaviour tested in `use-chat-history-sync.test.ts`.
+      if (watchSessionId) {
+        return eventSessionId === watchSessionId;
+      }
+      // Otherwise fall through to ID-level matching. `watchAgentId`
+      // (org-level) and `watchAgentInstanceId` (project binding)
+      // are both acceptable — a single chat window only passes one.
+      if (watchAgentId && eventAgentId === watchAgentId) {
+        return true;
+      }
+      if (
+        watchAgentInstanceId &&
+        eventAgentInstanceId === watchAgentInstanceId
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const onChatEvent = (event: { content?: Record<string, unknown> }) => {
+      if (!matches(event.content)) return;
+      useChatHistoryStore
+        .getState()
+        .fetchHistory(historyKey, fetchFn, { force: true });
+    };
+
+    const unsubUser = subscribe(EventType.UserMessage, onChatEvent as never);
+    const unsubEnd = subscribe(
+      EventType.AssistantMessageEnd,
+      onChatEvent as never,
+    );
+    return () => {
+      unsubUser();
+      unsubEnd();
+    };
+  }, [
+    historyKey,
+    fetchFn,
+    subscribe,
+    watchAgentInstanceId,
+    watchAgentId,
+    watchSessionId,
+  ]);
 
   // Fetch history when the entity changes.
   useEffect(() => {

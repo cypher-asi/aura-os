@@ -1,24 +1,30 @@
 [package]
 name = "aura-os-link"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 aura-protocol = { path = "../aura-protocol" }
-async-trait = "0.1"
-anyhow = "1"
-bytes = "1"
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+bytes = { workspace = true }
 futures-core = "0.3"
-futures-util = "0.3"
-reqwest = { version = "0.12", features = ["json", "stream"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "1"
-tokio = { version = "1", features = ["sync", "rt", "time"] }
+futures-util = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
 tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
-tokio-util = { version = "0.7", features = ["io"] }
-tracing = "0.1"
-url = "2"
+tokio-util = { workspace = true, features = ["io"] }
+tracing = { workspace = true }
+url = { workspace = true }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt"] }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

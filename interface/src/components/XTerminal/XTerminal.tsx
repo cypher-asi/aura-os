@@ -29,9 +29,9 @@ function getTheme() {
   return {
     background,
     foreground: "#d4d4d4",
-    cursor: appBlue,
+    cursor: appGreen,
     cursorAccent: background,
-    selectionBackground: "rgba(69, 170, 242, 0.32)",
+    selectionBackground: "rgba(74, 234, 168, 0.32)",
     selectionInactiveBackground: "rgba(74, 234, 168, 0.22)",
     black: "#1e1e1e",
     red: "#f44747",

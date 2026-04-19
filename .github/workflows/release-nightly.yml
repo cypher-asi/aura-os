@@ -709,7 +709,9 @@ jobs:
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           RUN_SEQ="${{ github.run_number }}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
-          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -718,7 +720,45 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
-      - name: Prune existing nightly release assets
+      - name: Write release metadata
+        shell: bash
+        run: |
+          mkdir -p release-metadata
+          jq -n \
+            --arg channel nightly \
+            --arg workflow "Release Nightly" \
+            --arg version "${{ steps.version.outputs.version }}" \
+            --arg tag "${{ steps.version.outputs.tag }}" \
+            --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" \
+            '{
+              channel: $channel,
+              workflow: $workflow,
+              version: $version,
+              tag: $tag,
+              release_url: $release_url
+            }' > release-metadata/release-metadata.json
+
+      - name: Upload release metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata/release-metadata.json
+
+      - name: Create immutable nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Aura ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: true
+          make_latest: false
+          files: all-artifacts/**/*
+          body: |
+            Automated nightly build from `main` at ${{ github.sha }}.
+
+            **Version**: `${{ steps.version.outputs.version }}`
+
+      - name: Prune existing nightly release alias assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -748,6 +788,7 @@ jobs:
             Automated nightly build from `main` at ${{ github.sha }}.
 
             **Version**: `${{ steps.version.outputs.version }}`
+            **Immutable release**: `https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}`
 
       - name: Attach release summary to job
         shell: bash
@@ -778,7 +819,9 @@ jobs:
           BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           RUN_SEQ="${{ github.run_number }}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
-          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -791,7 +834,7 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAG="nightly"
+          TAG="${{ steps.version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
@@ -818,20 +861,6 @@ jobs:
           generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
           generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
 
-      - name: Generate preview changelog
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/Los_Angeles
-        run: |
-          node infra/scripts/release/generate-daily-changelog.mjs \
-            --repo-dir . \
-            --pages-dir . \
-            --artifacts-dir all-artifacts \
-            --repo aura-os \
-            --channel nightly \
-            --version "${{ steps.version.outputs.version }}" \
-            --release-url "https://github.com/${{ github.repository }}/releases/tag/nightly"
-
       - name: Validate preview manifests
         run: |
           node infra/scripts/release/desktop-manifest-validate.mjs \
@@ -848,8 +877,6 @@ jobs:
             echo "- Publish skipped because this run was started in validation mode."
             echo ""
             cat manifest-validation/desktop-manifests-nightly.md
-            echo ""
-            cat changelog/nightly/latest.md
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload preview manifests
@@ -858,7 +885,6 @@ jobs:
           name: nightly-preview-manifests
           path: |
             nightly/**
-            changelog/**
             manifest-validation/**
 
   publish-manifests:
@@ -892,7 +918,9 @@ jobs:
           BASE=$(grep '^version' repo/apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           RUN_SEQ="${{ github.run_number }}"
           RUN_ATTEMPT="${{ github.run_attempt }}"
-          echo "version=${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -906,7 +934,7 @@ jobs:
         run: |
           cd repo
           VERSION="${{ steps.version.outputs.version }}"
-          TAG="nightly"
+          TAG="${{ steps.version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
@@ -938,40 +966,26 @@ jobs:
           {
             "channel": "nightly",
             "version": "${VERSION}",
-            "release_url": "https://github.com/${{ github.repository }}/releases/tag/nightly",
+            "release_url": "https://github.com/${{ github.repository }}/releases/tag/${TAG}",
             "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "desktop": {
               "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/nightly/aura-os-desktop_${VERSION}_x64-setup.exe"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x64-setup.exe"
               },
               "mac": {
                 "apple-silicon": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/nightly/Aura_${VERSION}_aarch64.dmg"
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_aarch64.dmg"
                 },
                 "intel": {
-                  "url": "https://github.com/${{ github.repository }}/releases/download/nightly/Aura_${VERSION}_x64.dmg"
+                  "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/Aura_${VERSION}_x64.dmg"
                 }
               },
               "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/nightly/aura-os-desktop_${VERSION}_x86_64.AppImage"
+                "url": "https://github.com/${{ github.repository }}/releases/download/${TAG}/aura-os-desktop_${VERSION}_x86_64.AppImage"
               }
             }
           }
           MANIFEST
-
-      - name: Generate nightly changelog
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CHANGELOG_TIMEZONE: America/Los_Angeles
-        run: |
-          node repo/infra/scripts/release/generate-daily-changelog.mjs \
-            --repo-dir repo \
-            --pages-dir pages \
-            --artifacts-dir all-artifacts \
-            --repo aura-os \
-            --channel nightly \
-            --version "${{ steps.version.outputs.version }}" \
-            --release-url "https://github.com/${{ github.repository }}/releases/tag/nightly"
 
       - name: Validate nightly update manifests
         run: |
@@ -995,13 +1009,12 @@ jobs:
         run: |
           cat manifest-validation/desktop-manifests-nightly.md >> "$GITHUB_STEP_SUMMARY"
           cat manifest-validation/desktop-downloads-nightly.md >> "$GITHUB_STEP_SUMMARY"
-          cat pages/changelog/nightly/latest.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push manifests
         run: |
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add nightly/ downloads/nightly.json changelog/nightly
+          git add nightly/ downloads/nightly.json
           git diff --cached --quiet || git commit -m "Update nightly manifests for ${{ steps.version.outputs.version }}"
           git push

@@ -125,8 +125,10 @@ vi.mock("../OrgSettingsInvites", () => ({
 vi.mock("../OrgSettingsBilling", () => ({
   OrgSettingsBilling: () => <div data-testid="section-billing">Billing</div>,
 }));
-vi.mock("../OrgSettingsIntegrations", () => ({
-  OrgSettingsIntegrations: () => <div data-testid="section-integrations">Integrations</div>,
+
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => mockNavigate,
 }));
 
 vi.mock("./OrgSettingsPanel.module.css", () => ({
@@ -205,6 +207,16 @@ describe("OrgSettingsPanel", () => {
     expect(screen.getByText("Invites")).toBeInTheDocument();
     expect(screen.getByText("Billing")).toBeInTheDocument();
     expect(screen.getByText("Integrations")).toBeInTheDocument();
+  });
+
+  it("closes the modal and navigates to /integrations when Integrations is clicked", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByText("Integrations"));
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(mockNavigate).toHaveBeenCalledWith("/integrations");
   });
 
   it("fetches data on open", async () => {

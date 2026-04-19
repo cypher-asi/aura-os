@@ -11,6 +11,9 @@ use crate::ids::{
     ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId, ProjectId, SessionEventId,
     SessionId, SpecId, TaskId, UserId,
 };
+use crate::listing_status::AgentListingStatus;
+use crate::permissions::AgentPermissions;
+use aura_protocol::IntentClassifierSpec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Project {
@@ -42,6 +45,11 @@ pub struct Project {
     pub orbit_owner: Option<String>,
     #[serde(default)]
     pub orbit_repo: Option<String>,
+    /// Local-only, per-machine override for the project's working directory.
+    /// Not synced to aura-network. When set, local agents run in this folder
+    /// and the project terminal auto-loads here. Absolute OS path.
+    #[serde(default)]
+    pub local_workspace_path: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -225,6 +233,7 @@ pub struct Agent {
     pub user_id: String,
     #[serde(default)]
     pub org_id: Option<OrgId>,
+    #[serde(default)]
     pub name: String,
     pub role: String,
     pub personality: String,
@@ -255,6 +264,37 @@ pub struct Agent {
     pub tags: Vec<String>,
     #[serde(default)]
     pub is_pinned: bool,
+    /// Marketplace listing status. Defaults to [`AgentListingStatus::Closed`]
+    /// so agents stay unlisted until their owner opts in.
+    #[serde(default)]
+    pub listing_status: AgentListingStatus,
+    /// Marketplace expertise slugs (see [`crate::expertise::ALLOWED_SLUGS`]).
+    /// Unknown slugs are filtered out by the server on ingest.
+    #[serde(default)]
+    pub expertise: Vec<String>,
+    /// Aggregated marketplace stats. Computed server-side and surfaced in
+    /// API responses; clients should not write these directly.
+    #[serde(default)]
+    pub jobs: u64,
+    #[serde(default)]
+    pub revenue_usd: f64,
+    #[serde(default)]
+    pub reputation: f32,
+    /// Local-only override for the agent's working directory, applied only when
+    /// running on a local machine. Takes precedence over the project's
+    /// `local_workspace_path`. Not synced to aura-network.
+    #[serde(default)]
+    pub local_workspace_path: Option<String>,
+    /// Required capability + scope bundle. The harness enforces these
+    /// unconditionally on every session — there is no role-based
+    /// fallback. Regular agents carry [`AgentPermissions::empty`]; CEO
+    /// bootstraps carry [`AgentPermissions::ceo_preset`].
+    pub permissions: AgentPermissions,
+    /// Optional per-turn intent classifier. When present the harness
+    /// narrows the per-turn tool surface based on each user message.
+    /// Populated for CEO-style agents; `None` for regular agents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -303,6 +343,16 @@ pub struct AgentInstance {
     pub total_output_tokens: u64,
     #[serde(default)]
     pub model: Option<String>,
+    /// Snapshot of the parent Agent's permissions at instance-creation
+    /// time. The harness enforces these unconditionally for any session
+    /// opened against this instance. Persisted via the storage DTO so a
+    /// cold reload doesn't silently fall back to an empty bundle when
+    /// the parent Agent lookup fails (e.g. offline / network error).
+    #[serde(default)]
+    pub permissions: AgentPermissions,
+    /// Snapshot of the parent Agent's intent classifier, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -507,19 +557,19 @@ pub struct ZeroAuthSession {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SuperAgentOrchestration {
+pub struct AgentOrchestration {
     pub orchestration_id: uuid::Uuid,
     pub agent_id: AgentId,
     pub org_id: OrgId,
     pub intent: String,
-    pub plan: Vec<SuperAgentStep>,
+    pub plan: Vec<AgentOrchestrationStep>,
     pub status: crate::enums::OrchestrationStatus,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SuperAgentStep {
+pub struct AgentOrchestrationStep {
     pub step_index: u32,
     pub tool_name: String,
     pub tool_input: serde_json::Value,

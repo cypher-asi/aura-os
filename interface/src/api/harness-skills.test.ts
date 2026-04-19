@@ -60,6 +60,26 @@ describe("harnessSkillsApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/harness/skills", expect.objectContaining({ headers: expect.any(Object) }));
   });
 
+  it("listMySkills fetches GET /api/harness/skills/mine", async () => {
+    const mine = [
+      {
+        name: "my-skill",
+        description: "mine",
+        path: "/root/.aura/skills/my-skill/SKILL.md",
+        user_invocable: true,
+        model_invocable: false,
+      },
+    ];
+    const fetchMock = mockFetch(200, mine);
+    globalThis.fetch = fetchMock;
+    const result = await harnessSkillsApi.listMySkills();
+    expect(result).toEqual(mine);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills/mine",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
   it("getSkill fetches skill by name", async () => {
     const fetchMock = mockFetch(200, { name: "code-review" });
     globalThis.fetch = fetchMock;
@@ -69,7 +89,30 @@ describe("harnessSkillsApi", () => {
 
   it("createSkill sends POST with skill data", async () => {
     const data = { name: "new-skill", description: "A skill" };
-    const fetchMock = mockFetch(200, { name: "new-skill", path: "/skills/new-skill", created: true });
+    const fetchMock = mockFetch(200, {
+      name: "new-skill",
+      path: "/skills/new-skill",
+      created: true,
+      registered: true,
+      installed_on_agent: false,
+    });
+    globalThis.fetch = fetchMock;
+    await harnessSkillsApi.createSkill(data);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(data) }),
+    );
+  });
+
+  it("createSkill forwards agent_id so the skill auto-installs on that agent", async () => {
+    const data = { name: "scoped-skill", description: "Agent-scoped", agent_id: "a1" };
+    const fetchMock = mockFetch(200, {
+      name: "scoped-skill",
+      path: "/skills/scoped-skill",
+      created: true,
+      registered: true,
+      installed_on_agent: true,
+    });
     globalThis.fetch = fetchMock;
     await harnessSkillsApi.createSkill(data);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -153,6 +196,17 @@ describe("harnessSkillsApi", () => {
     await harnessSkillsApi.uninstallAgentSkill("a1", "code-review");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/harness/agents/a1/skills/code-review",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("deleteMySkill sends DELETE /api/harness/skills/mine/:name", async () => {
+    const fetchMock = mockFetch(200, { name: "my-skill", deleted: true });
+    globalThis.fetch = fetchMock;
+    const result = await harnessSkillsApi.deleteMySkill("my-skill");
+    expect(result).toEqual({ name: "my-skill", deleted: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/harness/skills/mine/my-skill",
       expect.objectContaining({ method: "DELETE" }),
     );
   });

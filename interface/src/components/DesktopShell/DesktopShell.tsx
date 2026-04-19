@@ -33,8 +33,7 @@ import { LeftMenu } from "../../features/left-menu";
 import {
   SIDEKICK_MAX_WIDTH,
   SIDEKICK_MIN_WIDTH,
-  getSidekickLayoutProfile,
-  getSidekickTransitionTargetWidth,
+  getSidekickTargetWidth,
   persistSidekickWidth,
   readStoredSidekickWidth,
 } from "./desktop-shell-sidekick";
@@ -184,11 +183,23 @@ export function DesktopShell() {
   );
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const mainPanelRef = useRef<HTMLDivElement>(null);
+  // Callback-ref-backed state: the main panel div is unmounted and remounted
+  // whenever `ActiveProvider` changes identity (e.g. Projects has no Provider
+  // so `ActiveProvider` is `Fragment`, while Tasks has a lazy-wrapped
+  // `TasksProvider`). When the ref changes, the retarget effect re-runs so it
+  // can apply the stored width once the new panel is in the DOM.
+  const [mainPanelEl, setMainPanelEl] = useState<HTMLDivElement | null>(null);
+  const handleMainPanelRef = useCallback((node: HTMLDivElement | null) => {
+    setMainPanelEl(node);
+  }, []);
   const sidekickResizeControlsRef = useRef<LaneResizeControls | null>(null);
-  const previousSidekickProfileRef = useRef<"shared" | "projects" | null>(null);
+  // Tracks the app whose width is currently applied to the Lane. We only mark
+  // an app as "applied" after successfully calling setSize, so if the Lane or
+  // main panel isn't ready yet, a later effect run (when they come online)
+  // still retries instead of skipping.
+  const appliedSidekickAppIdRef = useRef<string | null>(null);
   const [sidekickInitialWidth] = useState(() =>
-    readStoredSidekickWidth(getSidekickLayoutProfile(activeApp.id)),
+    readStoredSidekickWidth(activeApp.id),
   );
   const [sidekickHeaderTarget, setSidekickHeaderTarget] =
     useState<HTMLDivElement | null>(null);
@@ -200,7 +211,6 @@ export function DesktopShell() {
   const ActiveProvider = activeApp.Provider ?? Fragment;
   const isDesktop = activeApp.id === "desktop";
   const desktopModeActive = isDesktop && backgroundHydrated;
-  const sidekickProfile = getSidekickLayoutProfile(activeApp.id);
   const hasActiveSidekick = Boolean(activeApp.SidekickPanel) && !isDesktop;
   const sidekickHostCollapsed = sidekickCollapsed || !hasActiveSidekick;
   const showSidekickHeader = hasActiveSidekick && Boolean(activeApp.SidekickTaskbar);
@@ -225,71 +235,118 @@ export function DesktopShell() {
 
   const handleSidekickResizeEnd = useCallback(
     (size: number) => {
-      persistSidekickWidth(sidekickProfile, size);
+      persistSidekickWidth(activeApp.id, size);
     },
-    [sidekickProfile],
+    [activeApp.id],
   );
 
+
+  // Keep `--left-panel-width` in sync with the actual sidebar width.
+  //
+  // We measure synchronously in a layout effect (before paint) whenever the
+  // active app or desktop-mode collapse state changes, because the CSS var
+  // drives horizontal centering in app panels (e.g. Notes' centerColumn). If
+  // the var lagged the sidebar's width by a frame, the first paint after an
+  // app switch would position content against the previous sidebar width —
+  // producing a visible flicker as text jumps to its final column.
+  //
+  // The ResizeObserver then handles ongoing resize drags; it also writes the
+  // var synchronously (no rAF batching) so paints during a drag stay aligned.
+  useLayoutEffect(() => {
+    const el = leftPanelRef.current;
+    if (!el) return;
+    const width = Math.round(el.getBoundingClientRect().width);
+    document.documentElement.style.setProperty("--left-panel-width", `${width}px`);
+  }, [isDesktop, activeApp.id]);
 
   useEffect(() => {
     const el = leftPanelRef.current;
     if (!el) return;
-    let rafId: number | null = null;
     let lastWidth = -1;
     const ro = new ResizeObserver(([entry]) => {
       const rawWidth = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
       const nextWidth = Math.round(rawWidth);
       if (nextWidth === lastWidth) return;
       lastWidth = nextWidth;
-      if (rafId != null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        document.documentElement.style.setProperty("--left-panel-width", `${nextWidth}px`);
-      });
+      document.documentElement.style.setProperty("--left-panel-width", `${nextWidth}px`);
     });
     ro.observe(el);
     return () => {
       ro.disconnect();
-      if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, []);
 
+  // Retarget the sidekick Lane whenever the active app changes so each app
+  // restores the width the user chose for it.
+  //
+  // Timing is tricky: when an app switch involves a different `ActiveProvider`
+  // (e.g. Projects has no Provider, Tasks has a lazy-loaded `TasksProvider`),
+  // the provider swap unmounts and remounts the main panel div. Meanwhile, a
+  // suspense boundary can briefly replace the panel with `null` while the
+  // lazy chunk loads, so `mainPanelEl` is null for one or more renders after
+  // the navigation. To handle this robustly:
+  //
+  // - `mainPanelEl` is callback-ref-backed state, so this effect re-runs
+  //   whenever the main panel div appears/disappears.
+  // - `appliedSidekickAppIdRef` tracks which app's width is currently on the
+  //   Lane. We only mark an app as applied after a successful `setSize`, so
+  //   if prerequisites (main panel, sidekick controls, non-zero width) are
+  //   missing, a later effect run (triggered by the new main panel mounting)
+  //   retries the apply.
+  // - The first render short-circuits because `sidekickInitialWidth` (passed
+  //   as Lane's `defaultWidth`) already applied the initial app's width.
+  //
+  // A ResizeObserver also watches the main panel for the case where it mounts
+  // with width 0 (e.g. during suspense fallback) and later lays out.
   useLayoutEffect(() => {
-    const previousSidekickProfile = previousSidekickProfileRef.current;
-    previousSidekickProfileRef.current = sidekickProfile;
+    if (appliedSidekickAppIdRef.current === null) {
+      appliedSidekickAppIdRef.current = activeApp.id;
+      return;
+    }
+    if (appliedSidekickAppIdRef.current === activeApp.id) return;
+    if (!mainPanelEl) return;
+    const sidekickResizeControls = sidekickResizeControlsRef.current;
+    if (!sidekickResizeControls) return;
 
-    const isCrossingProjectsBoundary =
-      sidekickProfile === "projects" || previousSidekickProfile === "projects";
-    if (!isCrossingProjectsBoundary) return;
-    if (previousSidekickProfile === sidekickProfile) return;
+    const mainWidth = Math.round(mainPanelEl.getBoundingClientRect().width);
+    if (mainWidth <= 0) {
+      if (typeof ResizeObserver === "undefined") return;
+      const observer = new ResizeObserver(() => {
+        if (appliedSidekickAppIdRef.current === activeApp.id) {
+          observer.disconnect();
+          return;
+        }
+        const controls = sidekickResizeControlsRef.current;
+        if (!controls) return;
+        const observedWidth = Math.round(
+          mainPanelEl.getBoundingClientRect().width,
+        );
+        if (observedWidth <= 0) return;
+        const currentSidekickWidth = sidekickCollapsed ? 0 : controls.getSize();
+        controls.setSize(
+          getSidekickTargetWidth(activeApp.id, {
+            mainWidth: observedWidth,
+            currentSidekickWidth,
+          }),
+        );
+        appliedSidekickAppIdRef.current = activeApp.id;
+        observer.disconnect();
+      });
+      observer.observe(mainPanelEl);
+      return () => observer.disconnect();
+    }
 
-    const syncProjectsSidekickWidth = () => {
-      const mainPanelHost = mainPanelRef.current;
-      const sidekickResizeControls = sidekickResizeControlsRef.current;
-      if (!mainPanelHost || !sidekickResizeControls) return false;
-
-      const mainWidth = Math.round(mainPanelHost.getBoundingClientRect().width);
-      if (mainWidth <= 0) return false;
-
-      const currentSidekickWidth = sidekickCollapsed
-        ? 0
-        : sidekickResizeControls.getSize();
-      sidekickResizeControls.setSize(
-        getSidekickTransitionTargetWidth(
-          sidekickProfile,
-          mainWidth,
-          currentSidekickWidth,
-        ),
-      );
-      return true;
-    };
-
-    if (syncProjectsSidekickWidth()) return;
-
-    const rafId = requestAnimationFrame(() => {
-      syncProjectsSidekickWidth();
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [sidekickCollapsed, sidekickProfile]);
+    const currentSidekickWidth = sidekickCollapsed
+      ? 0
+      : sidekickResizeControls.getSize();
+    sidekickResizeControls.setSize(
+      getSidekickTargetWidth(activeApp.id, {
+        mainWidth,
+        currentSidekickWidth,
+      }),
+    );
+    appliedSidekickAppIdRef.current = activeApp.id;
+  }, [activeApp.id, sidekickCollapsed, mainPanelEl]);
 
   return (
     <>
@@ -358,7 +415,7 @@ export function DesktopShell() {
           </div>
 
           <ActiveProvider>
-            <div ref={mainPanelRef} className={styles.mainPanelHost}>
+            <div ref={handleMainPanelRef} className={styles.mainPanelHost}>
               <ErrorBoundary name="main">
                 <MainPanel>{routeContent}</MainPanel>
               </ErrorBoundary>

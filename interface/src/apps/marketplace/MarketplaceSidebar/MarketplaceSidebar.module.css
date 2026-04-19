@@ -1,0 +1,31 @@
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+.list [class*="itemContent"] {
+  min-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.list button[aria-selected="true"],
+.list button[aria-selected="true"]:hover {
+  background: var(--color-overlay-subtle) !important;
+}

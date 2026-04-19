@@ -11,9 +11,10 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, dev_loop, feed, feedback, files, follows, generation, harness_proxy,
-    leaderboard, log, notes, org_tools, orgs, process, project_stats, projects, remote_files,
-    remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
+    agents, auth, billing, browser, dev_loop, feed, feedback, files, follows, generation,
+    harness_proxy, leaderboard, log, marketplace, notes, org_tools, orgs, process, project_stats,
+    agent_bootstrap, agent_tools, projects, remote_files, remote_terminal, specs, swarm, system,
+    tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -83,11 +84,12 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(social_routes())
         .merge(feedback_routes())
         .merge(system_routes())
-        .merge(super_agent_routes())
+        .merge(agent_bootstrap_routes())
         .merge(process_routes())
         .merge(generation_routes())
         .merge(harness_proxy_routes())
         .merge(notes_routes())
+        .merge(marketplace_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -376,6 +378,14 @@ fn agent_routes() -> Router<AppState> {
             post(agents::reset_agent_session),
         )
         .route(
+            "/api/agents/:agent_id/context-usage",
+            get(agents::get_agent_context_usage),
+        )
+        .route(
+            "/api/agents/:agent_id/installed-tools",
+            get(agents::get_installed_tools_diagnostic),
+        )
+        .route(
             "/api/projects/:project_id/agents",
             post(agents::create_agent_instance).get(agents::list_agent_instances),
         )
@@ -396,6 +406,10 @@ fn agent_routes() -> Router<AppState> {
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/reset-session",
             post(agents::reset_instance_session),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/context-usage",
+            get(agents::get_instance_context_usage),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions",
@@ -477,23 +491,74 @@ fn feedback_routes() -> Router<AppState> {
         )
 }
 
-fn super_agent_routes() -> Router<AppState> {
+fn marketplace_routes() -> Router<AppState> {
     Router::new()
         .route(
+            "/api/marketplace/agents",
+            get(marketplace::list_marketplace_agents),
+        )
+        .route(
+            "/api/marketplace/agents/:agent_id",
+            get(marketplace::get_marketplace_agent),
+        )
+}
+
+fn agent_bootstrap_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/agents/harness/setup",
+            post(agent_bootstrap::setup_ceo_agent),
+        )
+        // DEPRECATED: renamed to /api/agents/harness/setup; keep alias for rollout compat
+        .route(
             "/api/super-agent/setup",
-            post(super_agent::setup_super_agent),
+            post(agent_bootstrap::setup_ceo_agent),
         )
         .route(
-            "/api/super-agent/orchestrations",
-            get(super_agent::list_orchestrations),
+            "/api/agents/harness/cleanup",
+            post(agent_bootstrap::cleanup_ceo_agents),
+        )
+        // DEPRECATED: renamed to /api/agents/harness/cleanup; keep alias for rollout compat
+        .route(
+            "/api/super-agent/cleanup",
+            post(agent_bootstrap::cleanup_ceo_agents),
         )
         .route(
-            "/api/super-agent/orchestrations/:orchestration_id",
-            get(super_agent::get_orchestration),
+            "/api/agent-orchestrations",
+            get(agent_bootstrap::list_orchestrations),
         )
+        .route(
+            "/api/agent-orchestrations/:orchestration_id",
+            get(agent_bootstrap::get_orchestration),
+        )
+        .route(
+            "/api/agents/harness/events",
+            get(agent_bootstrap::list_pending_events),
+        )
+        // DEPRECATED: renamed to /api/agents/harness/events; keep alias for rollout compat
         .route(
             "/api/super-agent/events",
-            get(super_agent::list_pending_events),
+            get(agent_bootstrap::list_pending_events),
+        )
+        // Dispatcher that lets a harness-hosted agent execute
+        // cross-agent tools (spawn_agent, control_agent, etc.) in
+        // process. Gated per-agent by `AgentPermissions::capabilities`
+        // at `send_agent_event_stream` build time — this route merely
+        // resolves the tool by name.
+        .route(
+            "/api/agent_tools/:name",
+            post(agent_tools::dispatch_agent_tool),
+        )
+        // Non-blocking harness reachability probe for the agent
+        // editor's Local/Cloud toggle.
+        .route(
+            "/api/agents/harness/health",
+            get(agent_bootstrap::harness_health),
+        )
+        // DEPRECATED: renamed to /api/agents/harness/health; keep alias for rollout compat
+        .route(
+            "/api/super_agent/harness/health",
+            get(agent_bootstrap::harness_health),
         )
 }
 
@@ -622,6 +687,14 @@ fn harness_proxy_routes() -> Router<AppState> {
             "/api/harness/skills",
             get(harness_proxy::list_skills).post(harness_proxy::create_skill),
         )
+        // `/skills/mine` is registered before `/skills/:name` so the static path
+        // wins over the dynamic param route. (Axum prefers static segments, but
+        // keeping them ordered makes the intent obvious.)
+        .route("/api/harness/skills/mine", get(harness_proxy::list_my_skills))
+        .route(
+            "/api/harness/skills/mine/:name",
+            delete(harness_proxy::delete_my_skill),
+        )
         .route("/api/harness/skills/:name", get(harness_proxy::get_skill))
         .route(
             "/api/harness/skills/:name/activate",
@@ -716,9 +789,27 @@ fn system_routes() -> Router<AppState> {
         .route("/api/terminal/:id", delete(terminal::kill_terminal))
         .route("/ws/terminal/:id", get(terminal::ws_terminal))
         .route(
+            "/api/browser",
+            post(browser::spawn_browser).get(browser::list_browsers),
+        )
+        .route("/api/browser/:id", delete(browser::kill_browser))
+        .route(
+            "/api/browser/projects/:project_id/settings",
+            get(browser::get_project_settings).put(browser::update_project_settings),
+        )
+        .route(
+            "/api/browser/projects/:project_id/detect",
+            post(browser::run_detect),
+        )
+        .route("/ws/browser/:id", get(browser::ws_browser))
+        .route(
             "/ws/agents/:agent_id/remote_agent/terminal",
             get(remote_terminal::ws_remote_terminal),
         )
         .route("/ws/events", get(ws::ws_events))
         .route("/api/system/info", get(system::get_environment_info))
+        .route(
+            "/api/system/workspace_defaults",
+            get(system::get_workspace_defaults),
+        )
 }

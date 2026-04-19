@@ -1,8 +1,8 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use futures_util::future::join_all;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, HarnessMode};
@@ -14,6 +14,8 @@ use crate::handlers::projects;
 use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
+use super::instances::{repair_agent_name_in_place, repair_agent_name_only};
+use super::marketplace_fields::{merge_marketplace_tags, normalize_marketplace_fields};
 use tracing::{info, warn};
 
 const SWARM_AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -316,6 +318,11 @@ async fn persist_vm_id(
         harness: None,
         machine_type: None,
         vm_id: Some(vm_id.to_string()),
+        tags: None,
+        listing_status: None,
+        expertise: None,
+        permissions: None,
+        intent_classifier: None,
     };
 
     let updated_net_agent = client
@@ -408,6 +415,13 @@ pub(crate) async fn create_agent(
         "local".to_string()
     });
 
+    let marketplace = normalize_marketplace_fields(
+        body.listing_status.as_deref(),
+        body.expertise.as_deref(),
+    )?;
+
+    let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
+
     let net_req = aura_os_network::CreateAgentRequest {
         org_id: body.org_id.map(|id| id.to_string()),
         name: body.name.trim().to_string(),
@@ -418,6 +432,11 @@ pub(crate) async fn create_agent(
         icon: body.icon,
         machine_type: machine_type.clone(),
         harness: None,
+        tags: dual_write_tags,
+        listing_status: marketplace.listing_status,
+        expertise: marketplace.expertise,
+        permissions: body.permissions,
+        intent_classifier: body.intent_classifier,
     };
 
     let net_agent = client
@@ -434,6 +453,15 @@ pub(crate) async fn create_agent(
         .agent_service
         .apply_runtime_config(&mut agent)
         .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    let submitted_local_workspace_path = body.local_workspace_path.as_ref().and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    });
+    agent.local_workspace_path = submitted_local_workspace_path.clone();
     let _ = state.agent_service.save_agent_shadow(&agent);
 
     let is_remote = HarnessMode::from_machine_type(machine_type.as_deref().unwrap_or("remote"))
@@ -442,6 +470,10 @@ pub(crate) async fn create_agent(
     if is_remote {
         let reprovisioned = provision_remote_agent(&state, client, &jwt, &net_agent).await?;
         agent = reprovisioned.agent;
+        // Preserve the user-supplied local override even though it doesn't
+        // apply to remote agents today — keeps the value stable if the user
+        // later converts the agent back to local.
+        agent.local_workspace_path = submitted_local_workspace_path;
     }
 
     let _ = state.agent_service.save_agent_shadow(&agent);
@@ -713,12 +745,71 @@ enum SwarmAgentReadyError {
     Parse(String),
 }
 
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct ListAgentsQuery {
+    /// When set, return the fleet for this organization (every member's
+    /// agents, not just the caller's). Mirrors aura-network's
+    /// `/api/agents?org_id=...` contract — the aura-network handler
+    /// verifies membership before dropping the user_id filter, so
+    /// passing an arbitrary org id safely 403s instead of leaking.
+    pub org_id: Option<String>,
+}
+
 pub(crate) async fn list_agents(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    Query(query): Query<ListAgentsQuery>,
 ) -> ApiResult<Json<Vec<Agent>>> {
     if let Some(ref client) = state.network_client {
-        let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
+        // When the caller passes `org_id`, we want BOTH:
+        //   - every agent in that org's fleet (teammates' agents,
+        //     enabled by commit 8a085cc0 "scope agent listing to
+        //     the active org fleet"), AND
+        //   - the caller's own agents regardless of org stamp —
+        //     otherwise legacy rows with `org_id IS NULL` (created
+        //     before the UI started stamping activeOrg on create)
+        //     silently disappear from the sidebar.
+        //
+        // Issue the two list calls concurrently and merge by
+        // `agent_id`, with the org-scoped entry winning on conflict
+        // so fleet-membership metadata (e.g. the other member's
+        // user_id) isn't clobbered by the caller-scoped view of the
+        // same record.
+        let net_agents = match query.org_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+            Some(org_id) => {
+                let org_scoped = client.list_agents_by_org(org_id, &jwt);
+                let user_scoped = client.list_agents(&jwt);
+                let (org_agents, user_agents) = tokio::join!(org_scoped, user_scoped);
+                let org_agents = org_agents.map_err(map_network_error)?;
+                // The user-scoped call is a best-effort backstop for
+                // legacy NULL-org agents; if it fails (e.g. transient
+                // aura-network blip), fall back to the org view alone
+                // rather than failing the whole sidebar refresh.
+                let user_agents = match user_agents {
+                    Ok(list) => list,
+                    Err(err) => {
+                        warn!(
+                            error = %err,
+                            "list_agents: user-scoped backstop failed; returning org-scoped result only"
+                        );
+                        Vec::new()
+                    }
+                };
+
+                let mut merged: Vec<NetworkAgent> =
+                    Vec::with_capacity(org_agents.len() + user_agents.len());
+                let mut seen = std::collections::HashSet::with_capacity(
+                    org_agents.len() + user_agents.len(),
+                );
+                for na in org_agents.into_iter().chain(user_agents.into_iter()) {
+                    if seen.insert(na.id.clone()) {
+                        merged.push(na);
+                    }
+                }
+                merged
+            }
+            None => client.list_agents(&jwt).await.map_err(map_network_error)?,
+        };
         let agents: Vec<Agent> = net_agents
             .iter()
             .map(|na| {
@@ -729,17 +820,46 @@ pub(crate) async fn list_agents(
                         agent.icon = shadow.icon;
                     }
                 }
-                let _ = state.agent_service.save_agent_shadow(&agent);
+                // Repair blank names in-memory so the "New Agent" placeholder
+                // (and the UI renames that key off it) cascade to both
+                // library and project listings. Persistence happens in the
+                // batched background flush below.
+                repair_agent_name_only(&mut agent);
                 agent
             })
             .collect();
+
+        // Flush shadow changes as a SINGLE batched write on a blocking
+        // thread so the response isn't gated on N full `settings.json`
+        // rewrites (see `AgentService::save_agent_shadows_if_changed`).
+        // The shadow is a cache — failures are logged but don't fail the
+        // request, matching the prior `let _ = save_agent_shadow(..)`
+        // semantics.
+        let service = state.agent_service.clone();
+        let snapshot = agents.clone();
+        tokio::task::spawn_blocking(move || {
+            let refs: Vec<&Agent> = snapshot.iter().collect();
+            match service.save_agent_shadows_if_changed(&refs) {
+                Ok(n) if n > 0 => tracing::debug!(
+                    changed = n,
+                    total = refs.len(),
+                    "list_agents: persisted shadow diffs"
+                ),
+                Ok(_) => {}
+                Err(e) => tracing::warn!(error = %e, "list_agents: shadow flush failed"),
+            }
+        });
+
         return Ok(Json(agents));
     }
 
-    let agents = state
+    let mut agents = state
         .agent_service
         .list_agents()
         .map_err(|e| ApiError::internal(format!("listing agents: {e}")))?;
+    for agent in agents.iter_mut() {
+        repair_agent_name_in_place(&state.agent_service, agent);
+    }
     Ok(Json(agents))
 }
 
@@ -760,17 +880,19 @@ pub(crate) async fn get_agent(
                 agent.icon = shadow.icon;
             }
         }
+        repair_agent_name_in_place(&state.agent_service, &mut agent);
         let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(agent));
     }
 
-    let agent = state
+    let mut agent = state
         .agent_service
         .get_agent_local(&agent_id)
         .map_err(|e| match e {
             aura_os_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
             _ => ApiError::internal(format!("fetching agent: {e}")),
         })?;
+    repair_agent_name_in_place(&state.agent_service, &mut agent);
     Ok(Json(agent))
 }
 
@@ -821,6 +943,18 @@ pub(crate) async fn update_agent(
         Some(Some(url)) => Some(url.clone()),
         _ => None,
     };
+    // `body.tags == Some(vec)` replaces the tag set wholesale; `None` leaves
+    // the aura-network-stored tags untouched so host-mode / role tags survive
+    // partial PUTs. Marketplace fields (`listing_status`, `expertise`) are
+    // sent as typed columns on the network request — see Phase 3 migration
+    // for the schema change.
+    let marketplace = normalize_marketplace_fields(
+        body.listing_status.as_deref(),
+        body.expertise.as_deref(),
+    )?;
+
+    let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
+
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name.map(|value| value.trim().to_string()),
         role: body.role,
@@ -839,6 +973,11 @@ pub(crate) async fn update_agent(
         }),
         harness: None,
         vm_id: None,
+        tags: dual_write_tags,
+        listing_status: marketplace.listing_status,
+        expertise: marketplace.expertise,
+        permissions: body.permissions,
+        intent_classifier: body.intent_classifier,
     };
     let net_agent = client
         .update_agent(&agent_id.to_string(), &jwt, &net_req)
@@ -862,6 +1001,22 @@ pub(crate) async fn update_agent(
                 .and_then(|s| s.icon)
         });
     }
+    // Patch-style semantics for the local override:
+    //   None            -> preserve existing value
+    //   Some(None)      -> clear it
+    //   Some(Some(p))   -> set it (trim; treat empty as clear)
+    agent.local_workspace_path = match body.local_workspace_path {
+        None => existing.local_workspace_path.clone(),
+        Some(None) => None,
+        Some(Some(value)) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }
+    };
     let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }
@@ -1191,6 +1346,7 @@ fn agent_delete_conflict(bindings: &[AgentProjectBinding]) -> (StatusCode, Json<
             error: "Cannot delete agent while it is added to projects. Remove it from all projects first.".to_string(),
             code: "conflict".to_string(),
             details: format_agent_binding_details(bindings),
+            data: None,
         }),
     )
 }

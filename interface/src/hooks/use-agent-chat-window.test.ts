@@ -41,6 +41,7 @@ vi.mock("../api/client", () => ({
   api: {
     agents: {
       listEvents: vi.fn().mockResolvedValue([]),
+      getContextUsage: vi.fn().mockResolvedValue({ context_utilization: 0 }),
     },
   },
 }));

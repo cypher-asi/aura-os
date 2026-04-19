@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderValue, StatusCode};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use chrono::{DateTime, Utc};
@@ -11,33 +11,104 @@ use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 pub(crate) type SseStream =
     Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
-pub(crate) type SseResponse = ([(&'static str, HeaderValue); 1], Sse<SseStream>);
+pub(crate) type SseResponse = (HeaderMap, Sse<SseStream>);
+
+/// Header names used to surface persistence info alongside the SSE
+/// response so fire-and-forget callers (e.g. the CEO's `send_to_agent`
+/// tool, which only reads the response head) can tell whether the
+/// message will actually be saved and viewable in the target agent's
+/// chat history — without having to drain the stream.
+pub(crate) const HEADER_CHAT_PERSISTED: &str = "x-aura-chat-persisted";
+pub(crate) const HEADER_CHAT_SESSION_ID: &str = "x-aura-chat-session-id";
+pub(crate) const HEADER_CHAT_PROJECT_ID: &str = "x-aura-chat-project-id";
+
+fn sse_response_headers(persist_snapshot: Option<&(String, String)>) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    headers.insert("X-Accel-Buffering", HeaderValue::from_static("no"));
+    let persisted = persist_snapshot.is_some();
+    headers.insert(
+        HeaderName::from_static(HEADER_CHAT_PERSISTED),
+        HeaderValue::from_static(if persisted { "true" } else { "false" }),
+    );
+    if let Some((session_id, project_id)) = persist_snapshot {
+        if let Ok(v) = HeaderValue::from_str(session_id) {
+            headers.insert(HeaderName::from_static(HEADER_CHAT_SESSION_ID), v);
+        }
+        if let Ok(v) = HeaderValue::from_str(project_id) {
+            headers.insert(HeaderName::from_static(HEADER_CHAT_PROJECT_ID), v);
+        }
+    }
+    headers
+}
 
 const DEFAULT_AGENT_HISTORY_WINDOW_LIMIT: usize = 80;
 const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 
+/// Maximum bytes of a single `tool_use` input / `tool_result` content
+/// blob we embed into the flat-text conversation history replayed to
+/// the harness on a cold start. Anything beyond this is replaced with
+/// a "... [truncated N bytes]" marker.
+///
+/// Tool payloads like the old `list_agents` response used to land here
+/// in the tens-of-kilobytes range because the full `NetworkAgent`
+/// record carries multi-KB `system_prompt` / `personality` fields per
+/// agent. Even after slimming those tools, a buggy or verbose tool
+/// could still blow the context — this cap is the defense in depth.
+const TOOL_BLOB_MAX_BYTES: usize = 2048;
+
+/// Tighter cap used for tool blobs in turns *outside* the recent
+/// window; older tool traffic only needs to leave a breadcrumb of
+/// "this happened".
+const TOOL_BLOB_OLD_MAX_BYTES: usize = 256;
+
+/// How many of the most recent turns keep the full
+/// `TOOL_BLOB_MAX_BYTES` budget when replaying history. Turns beyond
+/// this fall back to `TOOL_BLOB_OLD_MAX_BYTES`.
+const HISTORY_RECENT_TURNS: usize = 2;
+
+/// Log-level threshold on the total size of the flat-text
+/// `conversation_messages` array shipped to the harness in
+/// `SessionConfig`. Anything above this triggers a `warn!` so future
+/// context bloat regressions surface without needing user bug reports.
+const CONVERSATION_HISTORY_WARN_BYTES: usize = 64 * 1024;
+
+/// Truncate a string to at most `max_bytes` bytes on a UTF-8 char
+/// boundary and append a marker noting the original length. A no-op
+/// when `s.len() <= max_bytes`.
+fn truncate_for_history(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}... [truncated {} bytes]", &s[..end], s.len())
+}
+
 use aura_os_core::{
-    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId,
-    SessionEvent, Spec, Task,
+    AgentId, AgentInstanceId, AgentPermissions, ChatContentBlock, ChatRole, HarnessMode, OrgId,
+    ProjectId, SessionEvent, Spec, Task,
 };
 use aura_os_link::{
-    ConversationMessage, HarnessInbound, HarnessOutbound, MessageAttachment, SessionConfig,
-    SessionUsage, UserMessage,
+    ConversationMessage, HarnessInbound, HarnessOutbound, InstalledTool, MessageAttachment,
+    SessionConfig, SessionUsage, UserMessage,
 };
 use aura_os_storage::StorageClient;
 
 use crate::dto::{ChatAttachmentDto, SendChatRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
-    installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
+    control_plane_api_base_url, installed_workspace_app_tools,
 };
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
-use crate::state::{AppState, AuthJwt, ChatSession, SuperAgentRun};
+use crate::state::{AppState, AuthJwt, ChatSession};
 
 use super::conversions::events_to_session_history;
 use super::runtime::{
@@ -46,16 +117,128 @@ use super::runtime::{
 };
 
 // ---------------------------------------------------------------------------
+// Session installed_tools assembly
+// ---------------------------------------------------------------------------
+
+/// Build the `installed_tools` payload for a harness chat session.
+///
+/// Concatenates workspace + trusted-MCP tools (org-scoped, may be empty)
+/// with the cross-agent tools derived from `permissions`, then funnels
+/// the combined list through [`dedupe_and_log_installed_tools`] so the
+/// contract "no two tools share a name" is enforced in one place and
+/// the final shipped list is visible in logs for every session.
+///
+/// The Anthropic Messages API (and every other LLM provider we front)
+/// rejects the whole request with a `400 Bad Request { "tools: Tool
+/// names must be unique." }` the moment the same tool name appears
+/// twice in `tools[]`, so any collision here would 400 every turn of
+/// the session. First-occurrence wins — that keeps workspace /
+/// integration tools (org-specific endpoints + auth) ahead of any
+/// identically-named cross-agent tool.
+#[allow(dead_code)]
+async fn build_session_installed_tools(
+    state: &AppState,
+    org_id: Option<&OrgId>,
+    permissions: &AgentPermissions,
+    jwt: &str,
+    context: &'static str,
+    agent_id: &str,
+    user_message: Option<&str>,
+) -> Option<Vec<InstalledTool>> {
+    build_session_installed_tools_with_integrations(
+        state,
+        org_id,
+        permissions,
+        jwt,
+        context,
+        agent_id,
+        user_message,
+        None,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn build_session_installed_tools_with_integrations(
+    state: &AppState,
+    org_id: Option<&OrgId>,
+    permissions: &AgentPermissions,
+    jwt: &str,
+    context: &'static str,
+    agent_id: &str,
+    user_message: Option<&str>,
+    integrations: Option<&[aura_os_core::OrgIntegration]>,
+) -> Option<Vec<InstalledTool>> {
+    let mut tools = if let Some(org_id) = org_id {
+        match integrations {
+            Some(ints) => {
+                crate::handlers::agents::workspace_tools::installed_workspace_app_tools_with_integrations(
+                    state, org_id, jwt, ints,
+                )
+                .await
+            }
+            None => installed_workspace_app_tools(state, org_id, jwt).await,
+        }
+    } else {
+        Vec::new()
+    };
+    tools.extend(
+        aura_os_agent_tools::ceo::build_cross_agent_tools_for_message(
+            permissions,
+            user_message,
+        ),
+    );
+
+    // `build_cross_agent_tools` emits endpoints as the bare path
+    // `/api/agent_tools/:name` with `ToolAuth::None`. The harness
+    // executes an `InstalledTool` by issuing a raw `reqwest` POST to
+    // `tool.endpoint` and attaching headers derived from `tool.auth`
+    // in a separate process, which fails in two distinct ways without
+    // intervention:
+    //   1. Bare path → `builder error: relative URL without a base`
+    //      before the request ever leaves reqwest.
+    //   2. `ToolAuth::None` → the dispatcher's `AuthJwt` extractor
+    //      returns 401 `{"error":"missing authorization"}`.
+    // Both are fatal on the first tool call, so stamp the session
+    // credentials (JWT + org id) on every cross-agent entry and then
+    // absolutise the path before the list is shipped to the harness.
+    // Order matters: stamping expects relative endpoints, so it runs
+    // before `absolutize_agent_tool_endpoints`.
+    let org_id_str = org_id.map(|id| id.to_string());
+    aura_os_agent_tools::ceo::stamp_agent_tool_auth(
+        &mut tools,
+        jwt,
+        org_id_str.as_deref(),
+        Some(agent_id),
+    );
+    let base_url = control_plane_api_base_url();
+    aura_os_agent_tools::ceo::absolutize_agent_tool_endpoints(&mut tools, &base_url);
+
+    dedupe_and_log_installed_tools(context, agent_id, &mut tools);
+
+    (!tools.is_empty()).then_some(tools)
+}
+
+// ---------------------------------------------------------------------------
 // Chat persistence helpers
 // ---------------------------------------------------------------------------
 
 #[derive(Clone)]
 pub(crate) struct ChatPersistCtx {
-    storage: Arc<StorageClient>,
-    jwt: String,
-    session_id: String,
-    project_agent_id: String,
-    project_id: String,
+    pub(crate) storage: Arc<StorageClient>,
+    pub(crate) jwt: String,
+    pub(crate) session_id: String,
+    pub(crate) project_agent_id: String,
+    pub(crate) project_id: String,
+    /// Org-level agent id (the `agents.agent_id` from aura-network)
+    /// this persistence context belongs to. Distinct from
+    /// `project_agent_id` (the project binding). We broadcast it in
+    /// `user_message` / `assistant_message_end` so the UI can key
+    /// standalone-chat history entries by the same id the sidebar
+    /// uses (`agentHistoryKey(agent_id)`); without it cross-agent
+    /// `send_to_agent` deliveries only refresh the sender's view and
+    /// the recipient's chat window stays stale until the user hits F5.
+    pub(crate) agent_id: Option<String>,
 }
 
 async fn resolve_chat_session(
@@ -67,25 +250,27 @@ async fn resolve_chat_session(
 ) -> Option<String> {
     if !force_new {
         match storage.list_sessions(project_agent_id, jwt).await {
-            Ok(mut sessions) => {
+            Ok(sessions) => {
                 // Sort by the same recency key the reader uses so a writer
                 // never lands in a different session than
                 // `load_project_session_history` will later read from.
                 // Storage may return sessions in any order (insertion,
                 // alphanumeric id, etc.); we want newest-by-timestamp first.
-                sessions
-                    .sort_by(|a, b| storage_session_sort_key(b).cmp(&storage_session_sort_key(a)));
-                for session in sessions.iter() {
-                    match storage.list_events(&session.id, jwt, Some(1), None).await {
-                        Ok(_) => return Some(session.id.clone()),
-                        Err(e) => {
-                            debug!(
-                                session_id = %session.id,
-                                error = %e,
-                                "Skipping stale session during resolution"
-                            );
-                        }
-                    }
+                //
+                // Previously we also walked the sorted list and issued a
+                // `list_events(limit=1)` probe on each candidate to skip
+                // "stale" sessions. That added one round-trip per session
+                // on the hot path — for users with long chat histories
+                // this was the single slowest setup step. Trust the sort
+                // key instead: if the newest session by timestamp is
+                // structurally unreadable the very next persist will
+                // surface the error, and the UI loader applies the same
+                // sort key so writer/reader can't diverge.
+                if let Some(newest) = sessions
+                    .iter()
+                    .max_by_key(|s| storage_session_sort_key(s))
+                {
+                    return Some(newest.id.clone());
                 }
             }
             Err(e) => {
@@ -156,14 +341,19 @@ async fn close_active_sessions_for_agent(
     }
 }
 
-pub(crate) fn persist_user_message(
+/// Persist the inbound user message to storage and return the created
+/// event on success.
+///
+/// Previously this fire-and-forget spawned a background task that only
+/// logged failures, which let the CEO's `send_to_agent` tool report
+/// `persisted: true` for writes that silently vanished from the target
+/// agent's chat history. Callers are now required to `.await` this
+/// function and hard-fail the request on `Err` — no silent success.
+pub(crate) async fn persist_user_message(
     ctx: &ChatPersistCtx,
     content: &str,
     attachments: &Option<Vec<ChatAttachmentDto>>,
-) {
-    let ctx = ctx.clone();
-    let content = content.to_string();
-
+) -> Result<aura_os_storage::StorageSessionEvent, aura_os_storage::StorageError> {
     let content_blocks: Option<serde_json::Value> = attachments.as_ref().and_then(|atts| {
         let image_blocks: Vec<serde_json::Value> = atts
             .iter()
@@ -188,39 +378,100 @@ pub(crate) fn persist_user_message(
         }
     });
 
-    tokio::spawn(async move {
-        let mut payload = serde_json::json!({ "text": content });
-        if let Some(blocks) = content_blocks {
-            payload["content_blocks"] = blocks;
-        }
-        let req = aura_os_storage::CreateSessionEventRequest {
-            session_id: Some(ctx.session_id.clone()),
-            user_id: None,
-            agent_id: Some(ctx.project_agent_id.clone()),
-            sender: Some("user".to_string()),
-            project_id: Some(ctx.project_id.clone()),
-            org_id: None,
-            event_type: "user_message".to_string(),
-            content: Some(payload),
-        };
-        if let Err(e) = ctx
-            .storage
-            .create_event(&ctx.session_id, &ctx.jwt, &req)
-            .await
-        {
+    let mut payload = serde_json::json!({ "text": content });
+    if let Some(blocks) = content_blocks {
+        payload["content_blocks"] = blocks;
+    }
+    let req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(ctx.session_id.clone()),
+        user_id: None,
+        agent_id: Some(ctx.project_agent_id.clone()),
+        sender: Some("user".to_string()),
+        project_id: Some(ctx.project_id.clone()),
+        org_id: None,
+        event_type: "user_message".to_string(),
+        content: Some(payload),
+    };
+    match ctx
+        .storage
+        .create_event(&ctx.session_id, &ctx.jwt, &req)
+        .await
+    {
+        Ok(evt) => Ok(evt),
+        Err(e) => {
+            let (upstream_status, body_preview) = match &e {
+                aura_os_storage::StorageError::Server { status, body } => (
+                    Some(*status),
+                    body.chars().take(400).collect::<String>(),
+                ),
+                _ => (None, String::new()),
+            };
             error!(
                 error = %e,
+                upstream_status = ?upstream_status,
+                body_preview = %body_preview,
                 session_id = %ctx.session_id,
                 project_agent_id = %ctx.project_agent_id,
+                project_id = %ctx.project_id,
                 "Failed to persist user message event"
             );
+            Err(e)
         }
-    });
+    }
+}
+
+/// Publish a `user_message` event on the app-wide WebSocket event bus.
+/// The UI's `useChatHistorySync` hook subscribes to this and force-refetches
+/// the target agent's chat history so cross-agent writes (from the CEO's
+/// `send_to_agent` tool, say) surface live in the target's panel without
+/// needing a manual reload.
+pub(crate) fn publish_user_message_event(
+    bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    ctx: &ChatPersistCtx,
+    event_id: &str,
+) {
+    let _ = bus.send(serde_json::json!({
+        "type": "user_message",
+        "event_id": event_id,
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+        // `agent_instance_id` is the field the UI wire parser
+        // (`parseAuraEvent` in interface/src/types/aura-events.ts) reads
+        // to populate `AuraEventBase.agent_id`, which the hook filters on.
+        "agent_instance_id": ctx.project_agent_id,
+        // Org-level agent id (`agents.agent_id`), used by the UI
+        // standalone-chat invalidator to force-refresh
+        // `agentHistoryKey(agent_id)` when someone else writes into
+        // this agent's session (e.g. the CEO via `send_to_agent`).
+        // `Null` for project-scoped chat sessions.
+        "agent_id": ctx.agent_id,
+    }));
+}
+
+/// Publish an `assistant_message_end` event on the app-wide WebSocket
+/// event bus after a successful persist. Same consumer story as
+/// `publish_user_message_event`.
+fn publish_assistant_message_end_event(
+    bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    ctx: &ChatPersistCtx,
+    message_id: &str,
+) {
+    let _ = bus.send(serde_json::json!({
+        "type": "assistant_message_end",
+        "message_id": message_id,
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+        "agent_instance_id": ctx.project_agent_id,
+        "agent_id": ctx.agent_id,
+    }));
 }
 
 pub(crate) fn spawn_chat_persist_task(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
     ctx: ChatPersistCtx,
+    event_bus: tokio::sync::broadcast::Sender<serde_json::Value>,
 ) {
     tokio::spawn(async move {
         let mut rx = rx;
@@ -432,6 +683,11 @@ pub(crate) fn spawn_chat_persist_task(
                             })).await {
                                 persisted_events += 1;
                                 end_persisted = true;
+                                publish_assistant_message_end_event(
+                                    &event_bus,
+                                    &ctx,
+                                    &end.message_id,
+                                );
                             }
                             info!(
                                 session_id = %ctx.session_id,
@@ -501,6 +757,12 @@ pub(crate) fn spawn_chat_persist_task(
                                 if persist("assistant_message_end", end_payload).await {
                                     persisted_events += 1;
                                     end_persisted = true;
+                                    let mid = if message_id.is_empty() {
+                                        ""
+                                    } else {
+                                        message_id.as_str()
+                                    };
+                                    publish_assistant_message_end_event(&event_bus, &ctx, mid);
                                     warn!(
                                         session_id = %ctx.session_id,
                                         error_code = %err.code,
@@ -575,6 +837,12 @@ pub(crate) fn spawn_chat_persist_task(
             });
             if persist("assistant_message_end", end_payload).await {
                 persisted_events += 1;
+                let mid = if message_id.is_empty() {
+                    ""
+                } else {
+                    message_id.as_str()
+                };
+                publish_assistant_message_end_event(&event_bus, &ctx, mid);
             }
             warn!(
                 session_id = %ctx.session_id,
@@ -645,6 +913,10 @@ async fn setup_project_chat_persistence(
         session_id,
         project_agent_id: pai,
         project_id: pid,
+        // Project chats don't have an org-level agent handle to
+        // broadcast — the sidebar's standalone-chat view wouldn't key
+        // on a project session anyway.
+        agent_id: None,
     })
 }
 
@@ -662,9 +934,22 @@ pub(crate) async fn setup_agent_chat_persistence(
             return None;
         }
     };
-    let jwt = jwt.to_string();
-    let matching = find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
+    let matching = find_matching_project_agents(state, &storage, jwt, &agent_id.to_string()).await;
+    setup_agent_chat_persistence_with_matched(&storage, agent_id, jwt, force_new, &matching).await
+}
 
+/// Variant of [`setup_agent_chat_persistence`] that reuses a pre-fetched
+/// `find_matching_project_agents` result. The chat handler calls
+/// `find_matching_project_agents` once per turn and feeds the result
+/// into both this function and the history loader so we don't double
+/// the network/storage traffic for every CEO message.
+pub(crate) async fn setup_agent_chat_persistence_with_matched(
+    storage: &Arc<StorageClient>,
+    agent_id: &AgentId,
+    jwt: &str,
+    force_new: bool,
+    matching: &[aura_os_storage::StorageProjectAgent],
+) -> Option<ChatPersistCtx> {
     let (pai, pid) = if let Some(pa) = matching.first() {
         let pid = pa.project_id.clone().unwrap_or_default();
         if pid.is_empty() {
@@ -681,7 +966,7 @@ pub(crate) async fn setup_agent_chat_persistence(
         return None;
     };
 
-    let session_id = match resolve_chat_session(&storage, &jwt, &pai, &pid, force_new).await {
+    let session_id = match resolve_chat_session(storage, jwt, &pai, &pid, force_new).await {
         Some(sid) => sid,
         None => {
             warn!(%agent_id, %pai, %pid, "agent chat persistence: failed to resolve/create chat session");
@@ -689,18 +974,16 @@ pub(crate) async fn setup_agent_chat_persistence(
         }
     };
     Some(ChatPersistCtx {
-        storage,
-        jwt,
+        storage: storage.clone(),
+        jwt: jwt.to_string(),
         session_id,
         project_agent_id: pai,
         project_id: pid,
+        agent_id: Some(agent_id.to_string()),
     })
 }
 
-const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
-    [("X-Accel-Buffering", HeaderValue::from_static("no"))];
-
-fn harness_broadcast_to_sse(
+pub(crate) fn harness_broadcast_to_sse(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
 ) -> impl futures_core::Stream<Item = Result<Event, Infallible>> + Send {
     stream::unfold((rx, false), |(mut rx, done)| async move {
@@ -738,28 +1021,6 @@ async fn remove_live_session(state: &AppState, key: &str) {
     reg.remove(key);
 }
 
-/// Cancel any in-flight super-agent spawn for `session_key` and bump its
-/// generation counter. Returns the new generation so the caller can register
-/// a freshly-spawned run under it. The generation is what lets the spawn's
-/// final cache write be rejected if it raced past cancellation.
-async fn cancel_super_agent_run(state: &AppState, session_key: &str) -> u64 {
-    let mut runs = state.super_agent_runs.lock().await;
-    let next_gen = runs.get(session_key).map(|r| r.generation + 1).unwrap_or(1);
-    if let Some(existing) = runs.remove(session_key) {
-        existing.cancel.cancel();
-        if let Some(join) = existing.join {
-            join.abort();
-        }
-        info!(
-            session_key,
-            prior_generation = existing.generation,
-            new_generation = next_gen,
-            "super agent: cancelled in-flight run"
-        );
-    }
-    next_gen
-}
-
 pub(crate) async fn reset_agent_session(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
@@ -767,16 +1028,6 @@ pub(crate) async fn reset_agent_session(
 ) -> ApiResult<StatusCode> {
     let session_key = format!("agent:{agent_id}");
     remove_live_session(&state, &session_key).await;
-    let sa_key = format!("super_agent:{agent_id}");
-    remove_live_session(&state, &sa_key).await;
-    // Cancel first so the spawned task stops reading from the proxy; then
-    // clear the cache. The generation bump guarantees any cache write that
-    // beats us to the lock from the cancelled task will be rejected.
-    cancel_super_agent_run(&state, &sa_key).await;
-    {
-        let mut cache = state.super_agent_messages.lock().await;
-        cache.remove(&sa_key);
-    }
     let _ = setup_agent_chat_persistence(&state, &agent_id, "", &jwt, true).await;
     info!(%agent_id, "Agent chat session reset");
     Ok(StatusCode::NO_CONTENT)
@@ -804,13 +1055,39 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
     // subsequent `tool_result` in the same event stream.
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
 
+    // Compute the index of the first *user* event that belongs to the
+    // "recent" window. Events at or after this index keep the full
+    // per-blob budget; events before it fall back to the older, tighter
+    // cap so long histories don't balloon the cold-start prompt.
+    let recent_start = {
+        let mut user_turns_from_end = 0usize;
+        let mut idx = events.len();
+        for (i, evt) in events.iter().enumerate().rev() {
+            if matches!(evt.role, ChatRole::User) {
+                user_turns_from_end += 1;
+                if user_turns_from_end >= HISTORY_RECENT_TURNS {
+                    idx = i;
+                    break;
+                }
+            }
+        }
+        idx
+    };
+
     events
         .iter()
-        .filter_map(|m| {
+        .enumerate()
+        .filter_map(|(i, m)| {
             let role = match m.role {
                 ChatRole::User => "user",
                 ChatRole::Assistant => "assistant",
                 _ => return None,
+            };
+
+            let max_blob = if i >= recent_start {
+                TOOL_BLOB_MAX_BYTES
+            } else {
+                TOOL_BLOB_OLD_MAX_BYTES
             };
 
             // The harness `ConversationMessage` shape is flat text, so we need
@@ -823,6 +1100,7 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
                 &m.content,
                 m.content_blocks.as_deref(),
                 &referenced_tool_use_ids,
+                max_blob,
             );
             if rendered.is_empty() {
                 return None;
@@ -866,6 +1144,7 @@ fn render_conversation_text(
     text: &str,
     blocks: Option<&[ChatContentBlock]>,
     referenced_tool_use_ids: &std::collections::HashSet<String>,
+    max_blob_bytes: usize,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     if !text.is_empty() {
@@ -890,6 +1169,7 @@ fn render_conversation_text(
                     }
                     let input_preview =
                         serde_json::to_string(input).unwrap_or_else(|_| "{}".to_string());
+                    let input_preview = truncate_for_history(&input_preview, max_blob_bytes);
                     parts.push(format!("[tool_use {name} input={input_preview}]"));
                 }
                 ChatContentBlock::ToolResult {
@@ -900,6 +1180,7 @@ fn render_conversation_text(
                     } else {
                         "tool_result"
                     };
+                    let content = truncate_for_history(content, max_blob_bytes);
                     parts.push(format!("[{label} {content}]"));
                 }
                 ChatContentBlock::TaskRef { title, .. } => {
@@ -1027,7 +1308,7 @@ async fn load_project_state_snapshot(
 /// Reconstruct conversation history in Claude API format from stored
 /// `SessionEvent`s. Unlike `session_events_to_conversation_history` (which
 /// only keeps text), this preserves tool_use / tool_result content blocks so
-/// the super agent can resume multi-turn tool conversations after a cold start.
+/// the agent can resume multi-turn tool conversations after a cold start.
 ///
 /// Dangling `tool_use` blocks (ones whose id has no matching `tool_result`
 /// in the event stream — typically left behind by a crashed harness) are
@@ -1035,7 +1316,9 @@ async fn load_project_state_snapshot(
 /// "tool_use without matching tool_result" 400 error on every subsequent
 /// prompt — which is exactly the class of bug that motivated this
 /// regression guard.
-pub fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_json::Value> {
+pub fn session_events_to_agent_history(
+    events: &[SessionEvent],
+) -> Vec<serde_json::Value> {
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
 
     let mut messages: Vec<serde_json::Value> = Vec::new();
@@ -1100,7 +1383,7 @@ pub fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<ser
                                     warn!(
                                         tool_use_id = %id,
                                         %name,
-                                        "skipping dangling tool_use (no matching tool_result) from super-agent history"
+                                        "skipping dangling tool_use (no matching tool_result) from agent history"
                                     );
                                     continue;
                                 }
@@ -1153,7 +1436,7 @@ pub fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<ser
     messages
 }
 
-async fn find_matching_project_agents(
+pub(super) async fn find_matching_project_agents(
     state: &AppState,
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
@@ -1327,7 +1610,7 @@ async fn fetch_all_sessions(
 /// `updated_at` (last row mutation). Missing / unparseable timestamps sort
 /// to the Unix epoch, so any session with a real timestamp always wins over
 /// a session with no recency signal at all.
-fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> DateTime<Utc> {
+pub(super) fn storage_session_sort_key(session: &aura_os_storage::StorageSession) -> DateTime<Utc> {
     let candidate = session
         .started_at
         .as_deref()
@@ -1495,6 +1778,22 @@ async fn load_current_session_events_for_agent_result(
     };
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
+    load_current_session_events_for_agent_with_matched_result(
+        storage, agent_id, jwt, &matching,
+    )
+    .await
+}
+
+/// Variant of [`load_current_session_events_for_agent_result`] that
+/// reuses a pre-fetched `find_matching_project_agents` result so the
+/// chat handler doesn't re-run the `list_orgs` / `list_projects` /
+/// `list_project_agents` fan-out twice per turn.
+async fn load_current_session_events_for_agent_with_matched_result(
+    storage: &StorageClient,
+    agent_id: &AgentId,
+    jwt: &str,
+    matching: &[aura_os_storage::StorageProjectAgent],
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     if matching.is_empty() {
         info!(
             %agent_id,
@@ -1502,7 +1801,7 @@ async fn load_current_session_events_for_agent_result(
         );
         return Ok(Vec::new());
     }
-    let sessions_outcome = fetch_all_sessions(storage, jwt, &matching).await;
+    let sessions_outcome = fetch_all_sessions(storage, jwt, matching).await;
     if sessions_outcome.all_failed() {
         if let Some(err) = sessions_outcome.first_error {
             return Err(err);
@@ -1536,6 +1835,25 @@ pub async fn load_current_session_events_for_agent(
     jwt: &str,
 ) -> Vec<SessionEvent> {
     match load_current_session_events_for_agent_result(state, agent_id, jwt).await {
+        Ok(messages) => messages,
+        Err(e) => {
+            warn!(error = %e, %agent_id, "failed to load current agent session from storage");
+            Vec::new()
+        }
+    }
+}
+
+pub async fn load_current_session_events_for_agent_with_matched(
+    storage: &StorageClient,
+    agent_id: &AgentId,
+    jwt: &str,
+    matching: &[aura_os_storage::StorageProjectAgent],
+) -> Vec<SessionEvent> {
+    match load_current_session_events_for_agent_with_matched_result(
+        storage, agent_id, jwt, matching,
+    )
+    .await
+    {
         Ok(messages) => messages,
         Err(e) => {
             warn!(error = %e, %agent_id, "failed to load current agent session from storage");
@@ -1791,7 +2109,47 @@ async fn open_harness_chat_stream(
     _commands: Option<Vec<String>>,
     attachments: Option<Vec<ChatAttachmentDto>>,
 ) -> ApiResult<SseResponse> {
-    let persist_unavailable = persist_ctx.is_none();
+    // Guiding invariant: no silent success. If the inbound user message
+    // cannot be persisted for ANY reason, we must return a non-2xx to the
+    // caller, we must NOT forward the turn to the harness, and we must
+    // NOT open an SSE body. The CEO's `send_to_agent` tool relied on the
+    // previous soft-success behavior to report `persisted: true` for
+    // writes that silently vanished — see the structured
+    // `chat_persist_failed` / `chat_persist_unavailable` shapes in
+    // `error.rs` for what callers now see on failure.
+    let ctx = match persist_ctx {
+        Some(ctx) => ctx,
+        None => {
+            error!(
+                session_key,
+                "chat stream rejected: persistence context unavailable (no project binding / storage down)"
+            );
+            return Err(ApiError::chat_persist_unavailable(
+                "Chat persistence unavailable: target agent is not bound to any project in storage, or storage is not configured. Call assign_agent_to_project before retrying.",
+                crate::error::ChatPersistErrorCtx::default(),
+            ));
+        }
+    };
+
+    let err_ctx = crate::error::ChatPersistErrorCtx {
+        session_id: Some(ctx.session_id.clone()),
+        project_id: Some(ctx.project_id.clone()),
+        project_agent_id: Some(ctx.project_agent_id.clone()),
+    };
+
+    // Persist the user turn BEFORE starting the harness session. If
+    // storage rejects the write we must not charge the caller credits
+    // for a turn that would never make it into the target agent's chat
+    // history, and we must not leave an orphaned harness turn mid-flight.
+    let persisted_user_evt = persist_user_message(&ctx, &user_content, &attachments)
+        .await
+        .map_err(|e| crate::error::map_chat_persist_storage_error(e, err_ctx.clone()))?;
+
+    // Snapshot the persistence identifiers so we can advertise them in
+    // SSE response headers for callers (e.g. the CEO's `send_to_agent`)
+    // that want to locate the saved turn without draining the stream.
+    let persist_snapshot: Option<(String, String)> =
+        Some((ctx.session_id.clone(), ctx.project_id.clone()));
 
     let (is_new, rx, commands_tx) = get_or_create_chat_session(
         state,
@@ -1802,17 +2160,7 @@ async fn open_harness_chat_stream(
     )
     .await?;
 
-    // Subscribe the persistence receiver *before* sending the user message so
-    // we don't miss early harness events in a fast-response scenario.
-    let persist_rx = if persist_ctx.is_some() {
-        Some(rx.resubscribe())
-    } else {
-        None
-    };
-
-    if let Some(ref ctx) = persist_ctx {
-        persist_user_message(ctx, &user_content, &attachments);
-    }
+    let persist_rx = rx.resubscribe();
 
     commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
@@ -1822,9 +2170,17 @@ async fn open_harness_chat_stream(
         }))
         .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
 
-    if let (Some(ctx), Some(prx)) = (persist_ctx, persist_rx) {
-        spawn_chat_persist_task(prx, ctx);
-    }
+    // Fan out the now-persisted user turn onto the local WebSocket event
+    // bus so the UI can live-refresh the target agent's chat panel when
+    // another agent (e.g. the CEO) writes into its history. See
+    // `useChatHistorySync` for the consumer.
+    publish_user_message_event(
+        &state.event_broadcast,
+        &ctx,
+        persisted_user_evt.id.as_str(),
+    );
+
+    spawn_chat_persist_task(persist_rx, ctx, state.event_broadcast.clone());
 
     let mut prefix: Vec<Result<Event, Infallible>> = Vec::new();
     if is_new {
@@ -1834,17 +2190,6 @@ async fn open_harness_chat_stream(
             .unwrap();
         prefix.push(Ok(progress_event));
     }
-    if persist_unavailable {
-        let warning_event = Event::default()
-            .event("error")
-            .json_data(&serde_json::json!({
-                "type": "error",
-                "message": "Chat history could not be saved — storage is unavailable",
-                "recoverable": true,
-            }))
-            .unwrap();
-        prefix.push(Ok(warning_event));
-    }
 
     let broadcast_stream = harness_broadcast_to_sse(rx);
 
@@ -1852,247 +2197,7 @@ async fn open_harness_chat_stream(
     let boxed: SseStream = Box::pin(stream);
 
     Ok((
-        SSE_NO_BUFFERING_HEADERS,
-        Sse::new(boxed).keep_alive(KeepAlive::default()),
-    ))
-}
-
-/// Resolve the active org for the super agent. Tries network first, then
-/// falls back to the org_id stored on local projects.
-async fn resolve_org_for_super_agent(state: &AppState, jwt: &str) -> (String, String) {
-    if let Some(ref client) = state.network_client {
-        if let Ok(orgs) = client.list_orgs(jwt).await {
-            if let Some(org) = orgs.first() {
-                return (org.name.clone(), org.id.clone());
-            }
-        }
-    }
-    // Fallback: derive org from local projects
-    if let Ok(projects) = state.project_service.list_projects() {
-        if let Some(p) = projects.first() {
-            let oid = p.org_id.to_string();
-            if oid != aura_os_core::OrgId::nil().to_string() {
-                return (String::new(), oid);
-            }
-        }
-    }
-    ("Default Org".into(), "default".into())
-}
-
-async fn handle_super_agent_stream(
-    state: &AppState,
-    jwt: &str,
-    auth_session: &aura_os_core::ZeroAuthSession,
-    agent: &Agent,
-    body: SendChatRequest,
-) -> ApiResult<SseResponse> {
-    let agent_id = agent.agent_id;
-    let sas = &state.super_agent_service;
-    let user_id = auth_session.user_id.as_str();
-
-    // Resolve org: try network first, then derive from local projects
-    let (org_name, org_id) = resolve_org_for_super_agent(state, jwt).await;
-
-    let sa_ctx = Arc::new(sas.build_context(user_id, &org_id, jwt));
-
-    // Always generate a fresh system prompt with current org info
-    let system_prompt = aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
-
-    let user_content = body.content;
-    let requested_model = body.model;
-    let attachments = body.attachments;
-
-    let domains = aura_os_super_agent::tier::classify_intent(&user_content);
-    let domain_tools = sas.tool_registry.tools_for_domains(&domains);
-    let tool_defs = sas.tool_registry.tool_definitions(&domain_tools);
-
-    let session_key = format!("super_agent:{agent_id}");
-    let force_new = body.new_session.unwrap_or(false);
-    if force_new {
-        remove_live_session(state, &session_key).await;
-        cancel_super_agent_run(state, &session_key).await;
-        let mut cache = state.super_agent_messages.lock().await;
-        cache.remove(&session_key);
-    }
-
-    // Load conversation history: prefer in-memory cache (full Claude API
-    // format with tool blocks), fall back to the *current* storage session
-    // for cold starts (e.g. after server restart). We intentionally do NOT
-    // aggregate prior sessions — that would re-inject events the user
-    // already cleared via "Clear session" (which rotates to a fresh storage
-    // session via `setup_agent_chat_persistence(force_new=true)`). UI
-    // history endpoints still aggregate across sessions so prior messages
-    // remain visible in the chat timeline; only LLM context is scoped to
-    // the current session.
-    let conversation_history: Vec<serde_json::Value> = if force_new {
-        Vec::new()
-    } else {
-        let cache = state.super_agent_messages.lock().await;
-        if let Some(cached) = cache.get(&session_key) {
-            info!(%agent_id, cached_messages = cached.len(), "super agent: loaded conversation from in-memory cache");
-            cached.clone()
-        } else {
-            drop(cache);
-            let stored = load_current_session_events_for_agent(state, &agent_id, jwt).await;
-            if stored.is_empty() {
-                Vec::new()
-            } else {
-                info!(%agent_id, stored_events = stored.len(), "super agent: reconstructing conversation from current storage session (cold start)");
-                let bounded =
-                    slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
-                session_events_to_super_agent_history(&bounded)
-            }
-        }
-    };
-
-    let persist_ctx =
-        setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt, force_new).await;
-    if persist_ctx.is_none() {
-        warn!(%agent_id, "super agent chat: persistence context unavailable");
-    }
-
-    let (tx, _) = tokio::sync::broadcast::channel::<HarnessOutbound>(256);
-    let rx = tx.subscribe();
-
-    let persist_rx = persist_ctx.as_ref().map(|_| tx.subscribe());
-
-    if let Some(ref pctx) = persist_ctx {
-        persist_user_message(pctx, &user_content, &attachments);
-    }
-
-    // Register a fresh run under `session_key` with a new cancellation token
-    // and a monotonic generation. Any prior in-flight spawn is cancelled so
-    // its subsequent cache write (guarded by generation below) will be
-    // rejected even if it races past cancellation.
-    let cancel_token = tokio_util::sync::CancellationToken::new();
-    let generation = {
-        let mut runs = state.super_agent_runs.lock().await;
-        let next_gen = runs
-            .get(&session_key)
-            .map(|r| r.generation + 1)
-            .unwrap_or(1);
-        if let Some(existing) = runs.insert(
-            session_key.clone(),
-            SuperAgentRun {
-                generation: next_gen,
-                cancel: cancel_token.clone(),
-                join: None,
-            },
-        ) {
-            existing.cancel.cancel();
-            if let Some(join) = existing.join {
-                join.abort();
-            }
-        }
-        next_gen
-    };
-
-    let stream_handle = aura_os_super_agent::stream::SuperAgentStream::new(
-        sas.router_url.clone(),
-        sas.http_client.clone(),
-        system_prompt,
-        tool_defs,
-        conversation_history,
-        sa_ctx,
-        Arc::new(aura_os_super_agent::tools::ToolRegistry::with_all_tools()),
-        tx,
-        requested_model,
-    )
-    .with_cancel(cancel_token.clone());
-
-    let content_for_run = user_content.clone();
-    let image_blocks_for_run: Option<Vec<serde_json::Value>> =
-        attachments.as_ref().and_then(|atts| {
-            let blocks: Vec<serde_json::Value> = atts
-                .iter()
-                .filter(|a| a.type_ == "image")
-                .map(|a| {
-                    serde_json::json!({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": a.media_type,
-                            "data": a.data,
-                        }
-                    })
-                })
-                .collect();
-            if blocks.is_empty() {
-                None
-            } else {
-                Some(blocks)
-            }
-        });
-    let messages_cache = state.super_agent_messages.clone();
-    let runs_registry = state.super_agent_runs.clone();
-    let cache_key = session_key.clone();
-    let run_cancel = cancel_token.clone();
-    let join = tokio::spawn(async move {
-        use aura_os_super_agent::stream::SuperAgentRunOutcome;
-        let outcome = stream_handle
-            .run(content_for_run, image_blocks_for_run)
-            .await;
-
-        // Only persist conversation if this spawn is still the authoritative
-        // run for `cache_key`. Any of the following means we discard:
-        //  - the run was cancelled (reset / superseded);
-        //  - a newer generation has been registered meanwhile;
-        //  - the registry entry was removed (explicit reset).
-        let mut runs = runs_registry.lock().await;
-        let is_current = runs
-            .get(&cache_key)
-            .map(|r| r.generation == generation)
-            .unwrap_or(false);
-        if is_current {
-            runs.remove(&cache_key);
-        }
-        drop(runs);
-
-        match outcome {
-            SuperAgentRunOutcome::Completed(messages)
-                if is_current && !run_cancel.is_cancelled() =>
-            {
-                messages_cache.lock().await.insert(cache_key, messages);
-            }
-            SuperAgentRunOutcome::Completed(_) => {
-                debug!(
-                    cache_key = %cache_key,
-                    generation,
-                    "super agent: discarding stale run result (superseded or cancelled)"
-                );
-            }
-            SuperAgentRunOutcome::Cancelled => {
-                debug!(
-                    cache_key = %cache_key,
-                    generation,
-                    "super agent: run ended via cancellation, cache untouched"
-                );
-            }
-        }
-    });
-
-    // Stash the join handle so reset can abort the task if the loop is
-    // blocked awaiting a long-running tool. The registry entry may already
-    // have been superseded by a newer spawn, in which case we just drop the
-    // join handle and rely on cancellation alone.
-    {
-        let mut runs = state.super_agent_runs.lock().await;
-        if let Some(run) = runs.get_mut(&session_key) {
-            if run.generation == generation {
-                run.join = Some(join);
-            }
-        }
-    }
-
-    if let (Some(pctx), Some(prx)) = (persist_ctx, persist_rx) {
-        spawn_chat_persist_task(prx, pctx);
-    }
-
-    let broadcast_stream = harness_broadcast_to_sse(rx);
-
-    let boxed: SseStream = Box::pin(broadcast_stream);
-    Ok((
-        SSE_NO_BUFFERING_HEADERS,
+        sse_response_headers(persist_snapshot.as_ref()),
         Sse::new(boxed).keep_alive(KeepAlive::default()),
     ))
 }
@@ -2100,24 +2205,47 @@ async fn handle_super_agent_stream(
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
-    crate::state::AuthSession(auth_session): crate::state::AuthSession,
+    crate::state::AuthSession(_auth_session): crate::state::AuthSession,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
-    let agent = match state.agent_service.get_agent_async("", &agent_id).await {
+    // Resolve the target agent with the *caller's* JWT rather than the
+    // ambient `SettingsStore::get_jwt()` cache. The cache is shared
+    // in-memory state that races under concurrent requests (e.g. the
+    // UI polling `remote_agent/state` for 12 agents in parallel while
+    // the CEO issues `send_to_agent`), which previously caused
+    // `get_agent_async` to query aura-network with the wrong bearer
+    // and surface spurious 404s. The local shadow is only used as a
+    // strict `NotFound` fallback; any other upstream failure bubbles
+    // up as a 5xx so we don't mask transient network issues behind
+    // "agent not found".
+    let agent = match state
+        .agent_service
+        .get_agent_with_jwt(&jwt, &agent_id)
+        .await
+    {
         Ok(a) => a,
-        Err(_) => state
+        Err(aura_os_agents::AgentError::NotFound) => state
             .agent_service
             .get_agent_local(&agent_id)
-            .map_err(|e| ApiError::not_found(format!("agent not found: {e}")))?,
+            .map_err(|_| {
+                warn!(
+                    %agent_id,
+                    "agent resolution failed: not in network or local shadow",
+                );
+                ApiError::not_found(format!(
+                    "agent {agent_id} not found in network or local shadow"
+                ))
+            })?,
+        Err(e) => {
+            warn!(%agent_id, error = %e, "agent resolution failed via network");
+            return Err(ApiError::internal(format!(
+                "resolving agent {agent_id}: {e}"
+            )));
+        }
     };
     require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
-
-    if agent.role == "super_agent" || agent.tags.contains(&"super_agent".to_string()) {
-        info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
-        return handle_super_agent_stream(&state, &jwt, &auth_session, &agent, body).await;
-    }
 
     if agent.adapter_type != "aura_harness" {
         info!(%agent_id, adapter = %agent.adapter_type, "Routing direct agent chat through external runtime");
@@ -2125,67 +2253,164 @@ pub(crate) async fn send_agent_event_stream(
     }
 
     let force_new = body.new_session.unwrap_or(false);
-    let persist_ctx =
-        setup_agent_chat_persistence(&state, &agent_id, &agent.name, &jwt, force_new).await;
+
+    // `setup_agent_chat_persistence` and the history loader both need
+    // the set of project agents bound to this agent id. Previously
+    // each called `find_matching_project_agents` independently, which
+    // doubled the `list_orgs` / `list_projects_by_org` /
+    // `list_project_agents` fan-out on every turn. Fetch it once here
+    // and thread it into both consumers.
+    let session_key = format!("agent:{agent_id}");
+    if force_new {
+        remove_live_session(&state, &session_key).await;
+    }
+    let live_session = has_live_session(&state, &session_key).await;
+
+    let (persist_ctx, conversation_messages) =
+        if let Some(ref storage) = state.storage_client {
+            let matching =
+                find_matching_project_agents(&state, storage, &jwt, &agent_id.to_string()).await;
+
+            let persist_fut = setup_agent_chat_persistence_with_matched(
+                storage, &agent_id, &jwt, force_new, &matching,
+            );
+
+            // LLM context rebuild on cold start: load only the current
+            // storage session, not the full multi-session aggregate. See
+            // `load_current_session_events_for_agent` doc-comment for
+            // rationale.
+            let should_load_history = !force_new && !live_session;
+            let history_fut = async {
+                if !should_load_history {
+                    return None;
+                }
+                let stored = load_current_session_events_for_agent_with_matched(
+                    storage, &agent_id, &jwt, &matching,
+                )
+                .await;
+                if stored.is_empty() {
+                    None
+                } else {
+                    let bounded = slice_recent_agent_events(
+                        stored,
+                        Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT),
+                        0,
+                    );
+                    Some(session_events_to_conversation_history(&bounded))
+                }
+            };
+
+            let (persist_ctx, conversation_messages) = tokio::join!(persist_fut, history_fut);
+            (persist_ctx, conversation_messages)
+        } else {
+            (None, None)
+        };
+
     if persist_ctx.is_none() {
         error!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
     } else {
         info!(%agent_id, "agent chat: persistence context ready");
     }
 
-    let session_key = format!("agent:{agent_id}");
-    if force_new {
-        remove_live_session(&state, &session_key).await;
-        let sa_key = format!("super_agent:{agent_id}");
-        remove_live_session(&state, &sa_key).await;
-        cancel_super_agent_run(&state, &sa_key).await;
-        {
-            let mut cache = state.super_agent_messages.lock().await;
-            cache.remove(&sa_key);
+    // Surface the byte size of the flat-text history we're about to
+    // ship into the harness `SessionConfig`. This is the cold-start
+    // payload (warm sessions skip it via `get_or_create_chat_session`).
+    // A `warn!` above `CONVERSATION_HISTORY_WARN_BYTES` makes the next
+    // context-bloat regression visible in logs without needing a user
+    // bug report.
+    if let Some(ref msgs) = conversation_messages {
+        let total_bytes: usize = msgs.iter().map(|m| m.content.len()).sum();
+        let count = msgs.len();
+        if total_bytes > CONVERSATION_HISTORY_WARN_BYTES {
+            warn!(
+                %agent_id,
+                history_messages = count,
+                history_bytes = total_bytes,
+                "agent chat: conversation history is large — possible context bloat"
+            );
+        } else {
+            info!(
+                %agent_id,
+                history_messages = count,
+                history_bytes = total_bytes,
+                "agent chat: conversation history prepared"
+            );
         }
     }
-    // LLM context rebuild on cold start: load only the current storage
-    // session, not the full multi-session aggregate. See
-    // `load_current_session_events_for_agent` doc-comment for rationale.
-    let (conversation_messages, project_state_snapshot) = if force_new {
-        (None, None)
-    } else if !has_live_session(&state, &session_key).await {
-        let stored = load_current_session_events_for_agent(&state, &agent_id, &jwt).await;
-        let conversation_messages = if stored.is_empty() {
-            None
-        } else {
-            let bounded =
-                slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
-            Some(session_events_to_conversation_history(&bounded))
-        };
+    // Project-state continuity: on cold start, load a specs+tasks snapshot
+    // for the project we're resolving the chat under so it can be appended
+    // to the harness system prompt. Warm sessions keep whatever snapshot
+    // was wired into the existing session, so we skip the fetch entirely.
+    let project_state_snapshot = if force_new || live_session {
+        None
+    } else {
         let snapshot_project_id = body
             .project_id
             .as_ref()
             .map(|project_id| project_id.to_string())
             .or_else(|| persist_ctx.as_ref().map(|ctx| ctx.project_id.clone()));
-        let project_state_snapshot = match snapshot_project_id {
+        match snapshot_project_id {
             Some(project_id) => load_project_state_snapshot(&state, &project_id, &jwt).await,
             None => None,
-        };
-        (conversation_messages, project_state_snapshot)
-    } else {
-        (None, None)
+        }
     };
 
     let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
-    let installed_tools = if let Some(org_id) = agent.org_id.as_ref() {
-        let tools = installed_workspace_app_tools(&state, org_id, &jwt).await;
-        (!tools.is_empty()).then_some(tools)
-    } else {
-        None
+
+    // Fetch org integrations exactly once per turn and feed both the
+    // tool catalog and the installed-integrations list from the same
+    // slice. Previously each of those helpers called
+    // `integrations_for_org_with_token` independently, doubling the
+    // upstream round-trip on every chat message.
+    let org_integrations = match agent.org_id.as_ref() {
+        Some(org_id) => Some(
+            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
+                &state,
+                org_id,
+                Some(&jwt),
+            )
+            .await,
+        ),
+        None => None,
     };
-    let installed_integrations = if let Some(org_id) = agent.org_id.as_ref() {
-        let integrations =
-            installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
-        (!integrations.is_empty()).then_some(integrations)
-    } else {
-        None
+
+    // Populate the dispatcher's permissions cache with the bundle the
+    // session was opened under. Keyed by the same string the harness
+    // will stamp as `X-Aura-Agent-Id`, so the dispatcher can answer
+    // capability checks without resolving the agent over the network
+    // (which 503s on local-only installs and was the original 403
+    // source for `list_agents` / `get_fleet_status`). Normalising
+    // here means session-open and dispatch agree on the bundle
+    // post-CEO-promotion.
+    let normalized_perms = agent
+        .permissions
+        .clone()
+        .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
+    state
+        .permissions_cache
+        .insert(agent_id.to_string(), normalized_perms.clone());
+
+    let installed_tools = build_session_installed_tools_with_integrations(
+        &state,
+        agent.org_id.as_ref(),
+        &normalized_perms,
+        &jwt,
+        "agent_chat",
+        &agent_id.to_string(),
+        Some(body.content.as_str()),
+        org_integrations.as_deref(),
+    )
+    .await;
+    let installed_integrations = match (agent.org_id.as_ref(), org_integrations.as_ref()) {
+        (Some(_), Some(ints)) => {
+            let installed =
+                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
+                    ints,
+                );
+            (!installed.is_empty()).then_some(installed)
+        }
+        _ => None,
     };
     let config = SessionConfig {
         system_prompt: Some(append_project_state_to_system_prompt(
@@ -2210,6 +2435,8 @@ pub(crate) async fn send_agent_event_stream(
         )?,
         installed_tools,
         installed_integrations,
+        agent_permissions: (&agent.permissions).into(),
+        intent_classifier: agent.intent_classifier.clone(),
         ..Default::default()
     };
 
@@ -2318,18 +2545,53 @@ pub(crate) async fn send_event_stream(
                 .and_then(|resolved| resolved.metadata.default_model.clone())
                 .filter(|value| !value.trim().is_empty())
         });
-    let installed_tools = if let Some(org_id) = instance.org_id.as_ref() {
-        let tools = installed_workspace_app_tools(&state, org_id, &jwt).await;
-        (!tools.is_empty()).then_some(tools)
-    } else {
-        None
+    let org_integrations = match instance.org_id.as_ref() {
+        Some(org_id) => Some(
+            crate::handlers::agents::workspace_tools::integrations_for_org_with_token(
+                &state,
+                org_id,
+                Some(&jwt),
+            )
+            .await,
+        ),
+        None => None,
     };
-    let installed_integrations = if let Some(org_id) = instance.org_id.as_ref() {
-        let integrations =
-            installed_workspace_integrations_for_org_with_token(&state, org_id, &jwt).await;
-        (!integrations.is_empty()).then_some(integrations)
-    } else {
-        None
+
+    // Populate the dispatcher's permissions cache for the instance
+    // session. Keyed by `agent_instance_id` (NOT `instance.agent_id`)
+    // because `stamp_agent_tool_auth` below passes the instance id
+    // through as the value of `X-Aura-Agent-Id` — the dispatcher
+    // reads the raw header value and must find an entry under that
+    // string. Stamping the template `agent_id` here would silently
+    // miss every project-agent-instance tool call.
+    let normalized_instance_perms = instance
+        .permissions
+        .clone()
+        .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
+    state
+        .permissions_cache
+        .insert(agent_instance_id.to_string(), normalized_instance_perms.clone());
+
+    let installed_tools = build_session_installed_tools_with_integrations(
+        &state,
+        instance.org_id.as_ref(),
+        &normalized_instance_perms,
+        &jwt,
+        "instance_chat",
+        &agent_instance_id.to_string(),
+        Some(body.content.as_str()),
+        org_integrations.as_deref(),
+    )
+    .await;
+    let installed_integrations = match (instance.org_id.as_ref(), org_integrations.as_ref()) {
+        (Some(_), Some(ints)) => {
+            let installed =
+                crate::handlers::agents::workspace_tools::installed_workspace_integrations_with_integrations(
+                    ints,
+                );
+            (!installed.is_empty()).then_some(installed)
+        }
+        _ => None,
     };
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
@@ -2352,6 +2614,8 @@ pub(crate) async fn send_event_stream(
         )?,
         installed_tools,
         installed_integrations,
+        agent_permissions: (&instance.permissions).into(),
+        intent_classifier: instance.intent_classifier.clone(),
         ..Default::default()
     };
 
@@ -2632,6 +2896,191 @@ mod tests {
         let empty = assistant_event("", None);
         let history = session_events_to_conversation_history(&[empty]);
         assert!(history.is_empty());
+    }
+
+    #[test]
+    fn truncate_for_history_is_noop_below_cap() {
+        let s = "hello world";
+        assert_eq!(truncate_for_history(s, 2048), s);
+    }
+
+    #[test]
+    fn truncate_for_history_keeps_prefix_and_marker() {
+        let big = "X".repeat(10_000);
+        let truncated = truncate_for_history(&big, 128);
+        assert!(truncated.len() < 512);
+        assert!(truncated.starts_with("XXXX"));
+        assert!(truncated.contains("[truncated 10000 bytes]"));
+    }
+
+    #[test]
+    fn truncate_for_history_respects_char_boundary() {
+        // A 4-byte UTF-8 char right at the cap must not split.
+        let s = format!("abc{}", "🦀".repeat(10));
+        let truncated = truncate_for_history(&s, 5);
+        assert!(truncated.starts_with("abc"));
+        assert!(truncated.contains("[truncated"));
+    }
+
+    #[test]
+    fn render_conversation_text_truncates_oversized_tool_result() {
+        let big = "Z".repeat(10_000);
+        let blocks = vec![
+            ChatContentBlock::ToolUse {
+                id: "tool-1".into(),
+                name: "list_agents".into(),
+                input: serde_json::json!({}),
+            },
+            ChatContentBlock::ToolResult {
+                tool_use_id: "tool-1".into(),
+                content: big.clone(),
+                is_error: Some(false),
+            },
+        ];
+        let referenced: std::collections::HashSet<String> =
+            std::iter::once("tool-1".to_string()).collect();
+        let rendered = render_conversation_text("", Some(&blocks), &referenced, 512);
+        assert!(rendered.len() < 2_000, "rendered still large: {}", rendered.len());
+        assert!(rendered.contains("[truncated 10000 bytes]"));
+        assert!(!rendered.contains(&big));
+    }
+
+    #[test]
+    fn conversation_history_uses_tight_cap_for_old_tool_results() {
+        // Ten assistant tool-result turns followed by two user turns so
+        // the first assistant turn sits well outside the recent window.
+        let big_old = "OLD".repeat(4_000); // 12_000 bytes
+        let big_recent = "NEW".repeat(4_000);
+
+        let old_assistant = assistant_event(
+            "",
+            Some(vec![
+                ChatContentBlock::ToolUse {
+                    id: "tool-old".into(),
+                    name: "list_agents".into(),
+                    input: serde_json::json!({}),
+                },
+                ChatContentBlock::ToolResult {
+                    tool_use_id: "tool-old".into(),
+                    content: big_old.clone(),
+                    is_error: Some(false),
+                },
+            ]),
+        );
+        let user_a = SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::nil(),
+            project_id: ProjectId::nil(),
+            role: ChatRole::User,
+            content: "first turn".into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: parse_dt(&None),
+        };
+        let recent_assistant = assistant_event(
+            "",
+            Some(vec![
+                ChatContentBlock::ToolUse {
+                    id: "tool-new".into(),
+                    name: "list_agents".into(),
+                    input: serde_json::json!({}),
+                },
+                ChatContentBlock::ToolResult {
+                    tool_use_id: "tool-new".into(),
+                    content: big_recent.clone(),
+                    is_error: Some(false),
+                },
+            ]),
+        );
+        let user_b = SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::nil(),
+            project_id: ProjectId::nil(),
+            role: ChatRole::User,
+            content: "second turn".into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: parse_dt(&None),
+        };
+
+        let history = session_events_to_conversation_history(&[
+            old_assistant,
+            user_a,
+            recent_assistant,
+            user_b,
+        ]);
+
+        // Old turn: capped at TOOL_BLOB_OLD_MAX_BYTES (256).
+        let old_rendered = &history[0].content;
+        assert!(
+            old_rendered.len() < 1_000,
+            "old assistant turn should be tightly capped, got {} bytes",
+            old_rendered.len()
+        );
+        assert!(old_rendered.contains("[truncated 12000 bytes]"));
+
+        // Recent turn: capped at TOOL_BLOB_MAX_BYTES (2048), so bigger
+        // than old but still well under the raw 12KB.
+        let recent_rendered = &history[2].content;
+        assert!(
+            recent_rendered.len() > old_rendered.len(),
+            "recent window must keep more context than old window"
+        );
+        assert!(recent_rendered.contains("[truncated 12000 bytes]"));
+        assert!(recent_rendered.len() < 4_000);
+    }
+
+    #[tokio::test]
+    async fn ceo_preset_installed_tools_are_unique_after_dedupe() {
+        // Regression: the CEO cross-agent manifest and the shared
+        // workspace tool manifest both emit `list_specs`, `create_spec`,
+        // `list_tasks`, `get_project`, `start_dev_loop`, etc. Without
+        // dedupe the combined list 400s Anthropic with
+        // `"tools: Tool names must be unique."` on every turn.
+        // This test exercises the full CEO wiring (real workspace
+        // manifest via `installed_workspace_app_tools` + real CEO
+        // cross-agent manifest) and pins the invariant that the final
+        // shipped list has unique names.
+        use crate::handlers::agents::tool_dedupe::dedupe_installed_tools_by_name;
+        use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
+
+        let store_dir = tempfile::tempdir().unwrap();
+        let store_path = store_dir.path().join("store");
+        let state = crate::build_app_state(&store_path).expect("build app state");
+        let org_id = OrgId::new();
+
+        let mut tools = installed_workspace_app_tools(&state, &org_id, "jwt-123").await;
+        tools.extend(aura_os_agent_tools::ceo::build_cross_agent_tools(
+            &AgentPermissions::ceo_preset(),
+        ));
+
+        let had_any_cross_agent_name = tools.iter().any(|t| t.name == "send_to_agent");
+        assert!(
+            had_any_cross_agent_name,
+            "sanity check: CEO cross-agent tools must be present before dedupe"
+        );
+
+        let duplicates = dedupe_installed_tools_by_name(&mut tools);
+
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        let unique_count = names
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>()
+            .len();
+        assert_eq!(
+            names.len(),
+            unique_count,
+            "CEO-preset tool list must be unique post-dedupe; dropped duplicates were: {duplicates:?}; final names: {names:?}"
+        );
+
+        // First-occurrence-wins is covered in
+        // `tool_dedupe::tests::dedupe_keeps_first_occurrence_and_drops_later_duplicates`.
+        // Here we only pin the most user-visible CEO invariant: the
+        // combined workspace + cross-agent list has no duplicate names
+        // so Anthropic won't 400 on session open.
     }
 
     fn spec(title: &str, order_index: u32) -> Spec {

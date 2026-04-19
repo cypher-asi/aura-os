@@ -10,7 +10,7 @@ use aura_os_core::parse_dt;
 use aura_os_core::*;
 use aura_os_network::NetworkAgent;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::{BatchOp, SettingsStore};
 
 pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentState>>>;
 
@@ -21,7 +21,6 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
     let org_id: Option<OrgId> = net.org_id.as_ref().and_then(|s| s.parse().ok());
     let created_at = parse_dt(&net.created_at);
     let updated_at = parse_dt(&net.updated_at);
-    let is_super = net.role.as_deref() == Some("super_agent");
     let machine_type = net
         .machine_type
         .clone()
@@ -51,12 +50,25 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,
-        tags: if is_super {
-            vec!["super_agent".to_string()]
-        } else {
-            Vec::new()
-        },
-        is_pinned: is_super,
+        tags: Vec::new(),
+        is_pinned: false,
+        listing_status: Default::default(),
+        expertise: Vec::new(),
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
+        // Read-time safety net for legacy records whose `permissions`
+        // column was never persisted: if this agent is the CEO by
+        // name+role but the bundle isn't the canonical preset, promote
+        // it in-memory so the harness tool manifest / sidekick toggles
+        // behave correctly until `ensure_canonical_ceo_permissions_persisted`
+        // patches the network record on the next bootstrap.
+        permissions: net
+            .permissions
+            .clone()
+            .normalized_for_identity(&net.name, net.role.as_deref()),
+        intent_classifier: net.intent_classifier.clone(),
         created_at,
         updated_at,
     }
@@ -71,7 +83,7 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
 // ---------------------------------------------------------------------------
 
 pub struct AgentService {
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     network_client: Option<Arc<aura_os_network::NetworkClient>>,
 }
 
@@ -85,7 +97,7 @@ impl AgentService {
     }
 
     pub fn new(
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
         network_client: Option<Arc<aura_os_network::NetworkClient>>,
     ) -> Self {
         Self {
@@ -106,6 +118,52 @@ impl AgentService {
         self.store
             .put_setting(&Self::agent_key(&agent.agent_id), &payload)
             .map_err(AgentError::Store)
+    }
+
+    /// Batch-persist agent shadows, writing only those whose serialized
+    /// bytes differ from what's already in the store.
+    ///
+    /// This is the fast path for hot routes like `GET /api/agents` that
+    /// used to call [`save_agent_shadow`] in a per-agent loop — each call
+    /// triggered a full `settings.json` rewrite in
+    /// [`SettingsStore::persist_cf`], so listing N agents caused N full
+    /// rewrites plus N held write-locks on the store. Here we:
+    ///   * serialize each agent once,
+    ///   * compare against the currently stored bytes (in-memory read),
+    ///   * submit only the changed/new entries as a single
+    ///     [`SettingsStore::write_batch`] — which triggers exactly one
+    ///     `persist_cf` for the whole set.
+    ///
+    /// Returns the number of rows actually written (0 means everything
+    /// was already up to date, which means no disk I/O was performed).
+    pub fn save_agent_shadows_if_changed(&self, agents: &[&Agent]) -> Result<usize, AgentError> {
+        if agents.is_empty() {
+            return Ok(0);
+        }
+        let mut ops = Vec::new();
+        for agent in agents {
+            let payload =
+                serde_json::to_vec(*agent).map_err(|e| AgentError::Parse(e.to_string()))?;
+            let key = Self::agent_key(&agent.agent_id);
+            let unchanged = matches!(
+                self.store.get_setting(&key),
+                Ok(existing) if existing == payload
+            );
+            if unchanged {
+                continue;
+            }
+            ops.push(BatchOp::Put {
+                cf: aura_os_store::ColumnFamilyName::Settings.as_str().to_string(),
+                key,
+                value: payload,
+            });
+        }
+        if ops.is_empty() {
+            return Ok(0);
+        }
+        let count = ops.len();
+        self.store.write_batch(ops).map_err(AgentError::Store)?;
+        Ok(count)
     }
 
     pub fn save_agent_runtime_config(
@@ -160,6 +218,16 @@ impl AgentService {
                 "local".to_string()
             };
         }
+        // Local-only fields never ride on the network record; preserve
+        // whatever is stored in the shadow so network round-trips don't
+        // wipe user-set values like `local_workspace_path`.
+        if agent.local_workspace_path.is_none() {
+            if let Ok(bytes) = self.store.get_setting(&Self::agent_key(&agent.agent_id)) {
+                if let Ok(shadow) = serde_json::from_slice::<Agent>(&bytes) {
+                    agent.local_workspace_path = shadow.local_workspace_path;
+                }
+            }
+        }
         Ok(())
     }
 
@@ -168,6 +236,31 @@ impl AgentService {
         self.store
             .delete_setting(&Self::agent_key(agent_id))
             .map_err(AgentError::Store)
+    }
+
+    /// Convert a batch of network-shape agents to core agents and
+    /// persist them to the local shadow store.
+    ///
+    /// Invoked from tool paths (`list_agents`, `get_agent`) so that the
+    /// catalog the LLM just saw is mirrored locally. Downstream code
+    /// like `send_agent_event_stream` falls back to `get_agent_local`
+    /// when aura-network resolution fails; without this hydration, the
+    /// fallback is always empty and a transient network hiccup surfaces
+    /// as a user-visible 404. Failures to persist individual rows are
+    /// swallowed intentionally — this is a cache, not the source of
+    /// truth, and we don't want a flaky store to break the tool call.
+    pub fn hydrate_shadow_from_network(&self, agents: &[NetworkAgent]) {
+        if agents.is_empty() {
+            return;
+        }
+        let mut owned: Vec<Agent> = Vec::with_capacity(agents.len());
+        for net in agents {
+            let mut agent = network_agent_to_core(net);
+            let _ = self.apply_runtime_config(&mut agent);
+            owned.push(agent);
+        }
+        let refs: Vec<&Agent> = owned.iter().collect();
+        let _ = self.save_agent_shadows_if_changed(&refs);
     }
     fn list_local_agents(&self) -> Result<Vec<Agent>, AgentError> {
         let entries = self
@@ -229,6 +322,39 @@ impl AgentService {
         let _ = self.save_agent_shadow(&agent);
         Ok(agent)
     }
+
+    /// Get agent from aura-network using an explicit JWT.
+    ///
+    /// Prefer this over `get_agent_async` on request-scoped code paths:
+    /// it avoids reading `SettingsStore::get_jwt()` (a shared in-memory
+    /// cache that can race when multiple users hit the server), ensures
+    /// the target agent is resolved with the **caller's** credentials,
+    /// and still updates the local shadow on success so subsequent
+    /// offline / fallback reads work. A `NotFound` upstream is mapped
+    /// to `AgentError::NotFound`; other network failures surface as
+    /// `AgentError::Network` so callers can distinguish "agent doesn't
+    /// exist" from "aura-network is flaky".
+    pub async fn get_agent_with_jwt(
+        &self,
+        jwt: &str,
+        agent_id: &AgentId,
+    ) -> Result<Agent, AgentError> {
+        let client = self
+            .network_client
+            .as_ref()
+            .ok_or_else(|| AgentError::Parse("aura-network is not configured".into()))?;
+        let net = client
+            .get_agent(&agent_id.to_string(), jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_os_network::NetworkError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Network(e),
+            })?;
+        let mut agent = network_agent_to_core(&net);
+        let _ = self.apply_runtime_config(&mut agent);
+        let _ = self.save_agent_shadow(&agent);
+        Ok(agent)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +367,7 @@ impl AgentService {
 // ---------------------------------------------------------------------------
 
 pub struct AgentInstanceService {
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
     storage_client: Option<Arc<StorageClient>>,
     network_client: Option<Arc<aura_os_network::NetworkClient>>,
     runtime_state: RuntimeAgentStateMap,
@@ -249,7 +375,7 @@ pub struct AgentInstanceService {
 
 impl AgentInstanceService {
     pub fn new(
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
         storage_client: Option<Arc<StorageClient>>,
         runtime_state: RuntimeAgentStateMap,
         network_client: Option<Arc<aura_os_network::NetworkClient>>,
@@ -352,6 +478,8 @@ impl AgentInstanceService {
             skills: Some(agent.skills.clone()),
             icon: agent.icon.clone(),
             harness: None,
+            permissions: Some(agent.permissions.clone()),
+            intent_classifier: agent.intent_classifier.clone(),
         };
         let spa = storage
             .create_project_agent(&project_id.to_string(), &jwt, &req)
@@ -534,6 +662,14 @@ fn synthesize_agent_from_project_agent(
         profile_id: None,
         tags: Vec::new(),
         is_pinned: false,
+        listing_status: Default::default(),
+        expertise: Vec::new(),
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
+        permissions: AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
     })
@@ -627,6 +763,17 @@ pub fn merge_agent_instance(
         total_input_tokens: spa.total_input_tokens.unwrap_or(0),
         total_output_tokens: spa.total_output_tokens.unwrap_or(0),
         model: spa.model.clone(),
+        // Prefer the live parent Agent's permissions when available so
+        // template edits propagate to fresh sessions. Fall back to the
+        // snapshot persisted on the storage record so offline / 404
+        // paths don't silently drop to an empty bundle.
+        permissions: agent
+            .map(|a| a.permissions.clone())
+            .or_else(|| spa.permissions.clone())
+            .unwrap_or_default(),
+        intent_classifier: agent
+            .and_then(|a| a.intent_classifier.clone())
+            .or_else(|| spa.intent_classifier.clone()),
         created_at: parse_dt(&spa.created_at),
         updated_at: parse_dt(&spa.updated_at),
     }
@@ -657,6 +804,8 @@ mod tests {
             model: None,
             total_input_tokens: None,
             total_output_tokens: None,
+            permissions: None,
+            intent_classifier: None,
             created_at: None,
             updated_at: None,
         };
@@ -678,5 +827,183 @@ mod tests {
         assert_eq!(agent.environment, "swarm_microvm");
         assert_eq!(agent.auth_source, "aura_managed");
         assert_eq!(agent.default_model.as_deref(), Some("claude-sonnet"));
+    }
+
+    fn minimal_network_agent(name: &str, role: Option<&str>) -> NetworkAgent {
+        NetworkAgent {
+            id: AgentId::new().to_string(),
+            name: name.to_string(),
+            role: role.map(str::to_string),
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            machine_type: None,
+            vm_id: None,
+            user_id: "u1".to_string(),
+            org_id: Some(OrgId::new().to_string()),
+            profile_id: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            jobs: None,
+            revenue_usd: None,
+            reputation: None,
+            permissions: AgentPermissions::empty(),
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn network_agent_to_core_repairs_empty_ceo_permissions() {
+        // Regression for the CEO-has-no-tools bug: this converter is
+        // hit by the project-agent-instance chat path. When the
+        // network record has empty permissions but the agent is
+        // clearly the CEO (name + role both "CEO"), we must return
+        // the canonical preset so `build_cross_agent_tools` takes the
+        // CEO branch and emits the full manifest.
+        let net = minimal_network_agent("CEO", Some("CEO"));
+        let agent = network_agent_to_core(&net);
+        assert!(
+            agent.permissions.is_ceo_preset(),
+            "CEO with empty network permissions must be promoted to the preset on read"
+        );
+    }
+
+    #[test]
+    fn network_agent_to_core_leaves_non_ceo_empty_permissions_alone() {
+        // The safety net is intentionally narrow: a non-CEO agent with
+        // empty permissions stays empty. Prevents other agents from
+        // silently picking up the CEO capability bundle.
+        let net = minimal_network_agent("Atlas", Some("Engineer"));
+        let agent = network_agent_to_core(&net);
+        assert!(!agent.permissions.is_ceo_preset());
+        assert!(agent.permissions.capabilities.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // save_agent_shadows_if_changed — batched, diff-only flush. This is
+    // the hot-path fix behind the slow `GET /api/agents` response; the
+    // tests below pin the contract that previously caused N full
+    // `settings.json` rewrites per list:
+    //   1. unchanged inputs produce zero writes,
+    //   2. changed inputs produce exactly one `persist_cf` call
+    //      regardless of how many rows changed.
+    // -----------------------------------------------------------------
+
+    fn sample_agent(name: &str) -> Agent {
+        let now = chrono::Utc::now();
+        Agent {
+            agent_id: AgentId::new(),
+            user_id: "u1".into(),
+            org_id: None,
+            name: name.into(),
+            role: "dev".into(),
+            personality: String::new(),
+            system_prompt: String::new(),
+            skills: vec![],
+            icon: None,
+            machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "aura_managed".into(),
+            integration_id: None,
+            default_model: None,
+            vm_id: None,
+            network_agent_id: None,
+            profile_id: None,
+            tags: vec![],
+            is_pinned: false,
+            listing_status: Default::default(),
+            expertise: vec![],
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
+            permissions: AgentPermissions::empty(),
+            intent_classifier: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn open_service() -> (AgentService, tempfile::TempDir) {
+        let dir = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(SettingsStore::open(dir.path()).unwrap());
+        (AgentService::new(store, None), dir)
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_writes_new_and_changed_rows_once() {
+        let (service, dir) = open_service();
+        let a = sample_agent("Atlas");
+        let b = sample_agent("Beta");
+
+        // First call: both rows are new, so both get batched into one
+        // write.
+        let written = service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("initial batched save");
+        assert_eq!(written, 2, "both new shadows should be queued");
+
+        // Sanity-check that both rows actually round-trip.
+        let a_round = service.get_agent_local(&a.agent_id).unwrap();
+        let b_round = service.get_agent_local(&b.agent_id).unwrap();
+        assert_eq!(a_round.name, "Atlas");
+        assert_eq!(b_round.name, "Beta");
+
+        // Second call with identical inputs must not touch the disk.
+        // We assert that by snapshotting the `settings.json` mtime and
+        // confirming it is unchanged afterwards — if
+        // `save_agent_shadows_if_changed` had fallen back to
+        // `save_agent_shadow`-per-row or unconditionally called
+        // `write_batch`, `persist_cf` would rewrite the file and bump
+        // the mtime.
+        let settings_path = dir.path().join("settings.json");
+        let mtime_before = std::fs::metadata(&settings_path).unwrap().modified().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        let written = service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("second batched save");
+        assert_eq!(written, 0, "unchanged inputs must not trigger writes");
+
+        let mtime_after = std::fs::metadata(&settings_path).unwrap().modified().unwrap();
+        assert_eq!(
+            mtime_before, mtime_after,
+            "settings.json must not be rewritten when nothing changed"
+        );
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_only_writes_diffs() {
+        let (service, _dir) = open_service();
+        let a = sample_agent("Atlas");
+        let mut b = sample_agent("Beta");
+
+        service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("seed both shadows");
+
+        // Mutate only `b`.
+        b.name = "Beta Prime".into();
+        b.updated_at = chrono::Utc::now();
+        let written = service
+            .save_agent_shadows_if_changed(&[&a, &b])
+            .expect("flush only the diff");
+        assert_eq!(written, 1, "only the mutated row should be written");
+
+        let b_round = service.get_agent_local(&b.agent_id).unwrap();
+        assert_eq!(b_round.name, "Beta Prime");
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_noop_on_empty_input() {
+        let (service, _dir) = open_service();
+        let written = service.save_agent_shadows_if_changed(&[]).unwrap();
+        assert_eq!(written, 0);
     }
 }

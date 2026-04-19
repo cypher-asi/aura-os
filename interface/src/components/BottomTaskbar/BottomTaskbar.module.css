@@ -1,7 +1,8 @@
 .bar {
   --taskbar-item-size: 28px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  position: relative;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   width: 100%;
   height: var(--control-height-sm);
@@ -12,25 +13,26 @@
   -webkit-backdrop-filter: blur(40px) saturate(1.4);
   flex-shrink: 0;
   box-sizing: border-box;
-  padding: 0 var(--space-2) 0 0;
-  column-gap: var(--space-2);
+  padding: 0 var(--space-2);
 }
 
 .left {
   display: flex;
   align-items: center;
-  justify-self: start;
   gap: 4px;
   min-width: 0;
 }
 
 .center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  justify-self: center;
+  gap: 4px;
   min-width: 0;
-  max-width: min(60vw, 520px);
 }
 
 .favorites {
@@ -96,7 +98,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  justify-self: end;
   min-width: 0;
   flex-shrink: 0;
 }

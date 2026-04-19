@@ -82,6 +82,7 @@ Edit `.env` and set:
 | `ANTHROPIC_API_KEY` | **Yes** | Your Anthropic API key for spec generation and agent execution |
 | `BILLING_SERVER_URL` | No | Credits/billing server (default: `https://billing.zero.tech`) |
 | `AURA_NETWORK_URL` | No | aura-network backend for orgs/sync (e.g. `https://your-network-host.example.com`). Omit for local-only. |
+| `AURA_NETWORK_FEEDBACK_URL` | No | Optional Feedback-only aura-network override. Leave unset normally so Feedback shares `AURA_NETWORK_URL`; set it only when intentionally testing a different aura-network deployment for `/api/feedback/*`. |
 | `AURA_NETWORK_AUTH_TOKEN` | No | Auth token for aura-network (when using `AURA_NETWORK_URL`) |
 | `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://your-storage-host.example.com`). Omit to disable. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
@@ -156,9 +157,9 @@ at remote services rather than treating the phone as a local-workspace host.
 Recommended mobile setup:
 
 ```bash
-AURA_NETWORK_URL=https://your-network-host.example.com
-AURA_STORAGE_URL=https://your-storage-host.example.com
-ORBIT_BASE_URL=https://your-orbit-host.example.com
+AURA_NETWORK_URL=https://aura-network.onrender.com
+AURA_STORAGE_URL=https://aura-storage.onrender.com
+ORBIT_BASE_URL=https://orbit-sfvu.onrender.com
 ```
 
 #### Use iOS Simulator / Android Emulator
@@ -474,7 +475,8 @@ For the current release-build plan and workflow map, see:
 | **aura-os-link** | Harness abstraction: WebSocket bridge, automaton client, local/swarm harness |
 | **aura-os-terminal** | PTY-based terminal for agent command execution |
 | **aura-os-process** | Process canvas: executor, store, and scheduler for orchestration graphs |
-| **aura-os-super-agent** | LLM super-agent: executor, scheduler, prompt management, and tool registry |
+| **aura-os-agent-runtime** | In-process agent runtime: executor, scheduler, prompt management, and tool registry |
+| **aura-os-agent-templates** | Portable agent templates (CEO preset system prompt, classifier, tool manifest) |
 
 ### Interface
 
@@ -508,7 +510,8 @@ aura-os/
     aura-os-link/              # Harness / workspace bridge
     aura-os-terminal/          # Terminal emulation
     aura-os-process/           # Process orchestration
-    aura-os-super-agent/       # LLM agent and tool registry
+    aura-os-agent-runtime/     # In-process agent runtime + tool registry
+    aura-os-agent-templates/   # Portable agent templates (CEO preset)
   interface/                   # React + TypeScript SPA
     src/
       api/                     # API client and SSE streams

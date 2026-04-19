@@ -4,7 +4,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use chrono::Utc;
 
-use aura_os_agents::{merge_agent_instance, AgentInstanceService};
+use aura_os_agents::{merge_agent_instance, AgentInstanceService, AgentService};
 use aura_os_core::{
     Agent, AgentId, AgentInstance, AgentInstanceId, AgentRuntimeConfig, AgentStatus, ProjectId,
 };
@@ -47,9 +47,72 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
         profile_id: None,
         tags: vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()],
         is_pinned: false,
+        listing_status: Default::default(),
+        expertise: Vec::new(),
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
+        permissions: aura_os_core::AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }
+}
+
+/// If an agent's name has been lost (empty after trim), restore it to the
+/// canonical `"New Agent"` placeholder and persist the repaired shadow. This
+/// lets the UI's first-message rename flow (`maybeRenameFromFirstPrompt`)
+/// trigger the same way it does for freshly created generic project agents,
+/// whose rename guard checks for the exact string `"New Agent"`. For library
+/// agents that never go through a chat rename flow, the placeholder at least
+/// keeps the sidebar from rendering a blank row and leaves the door open for
+/// a manual rename via the agent settings UI.
+///
+/// Intentionally scope-agnostic: project-scoped (`list_agent_instances` /
+/// `get_agent_instance`) and library-scoped (`list_agents` / `get_agent`)
+/// call sites both call in here so a corrupted record never reaches the UI
+/// with a blank name.
+///
+/// Returns `true` when the agent was mutated and a save was attempted.
+pub(super) fn repair_agent_name_in_place(
+    agent_service: &AgentService,
+    agent: &mut Agent,
+) -> bool {
+    if !repair_agent_name_only(agent) {
+        return false;
+    }
+    if let Err(e) = agent_service.save_agent_shadow(agent) {
+        tracing::warn!(
+            error = %e,
+            agent_id = %agent.agent_id,
+            "failed to repair missing agent name",
+        );
+    }
+    true
+}
+
+/// Mutation-only variant of [`repair_agent_name_in_place`] for callers that
+/// batch their shadow writes (see e.g. `list_agents`, which collects repaired
+/// rows and flushes them with a single `save_agent_shadows_if_changed` in a
+/// background task). Returns `true` when the agent's name was changed so the
+/// caller can decide whether to include it in its batch.
+pub(super) fn repair_agent_name_only(agent: &mut Agent) -> bool {
+    if !agent.name.trim().is_empty() {
+        return false;
+    }
+    agent.name = GENERAL_AGENT_NAME.to_string();
+    agent.updated_at = Utc::now();
+    true
+}
+
+fn repair_agent_name_if_missing(
+    agent_service: &AgentService,
+    agent: Option<Agent>,
+) -> Option<Agent> {
+    let mut agent = agent?;
+    repair_agent_name_in_place(agent_service, &mut agent);
+    Some(agent)
 }
 
 fn general_agent_runtime_config() -> AgentRuntimeConfig {
@@ -65,14 +128,30 @@ fn general_agent_runtime_config() -> AgentRuntimeConfig {
 fn attach_workspace_path(
     state: &AppState,
     project_id: &ProjectId,
-    project_name: &str,
+    project: Option<&aura_os_core::Project>,
     instance: &mut AgentInstance,
 ) {
+    let project_local_path = project.and_then(|p| p.local_workspace_path.as_deref());
+    let project_name = project.map(|p| p.name.as_str()).unwrap_or("");
+    // Load the agent template shadow so we can apply its `local_workspace_path`
+    // override when resolving for a local instance. Falls back gracefully when
+    // the template isn't cached locally.
+    let agent_local_path = if instance.machine_type == "local" {
+        state
+            .agent_service
+            .get_agent_local(&instance.agent_id)
+            .ok()
+            .and_then(|a| a.local_workspace_path)
+    } else {
+        None
+    };
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
         project_id,
         &state.data_dir,
         project_name,
+        project_local_path,
+        agent_local_path.as_deref(),
     ));
 }
 
@@ -142,6 +221,8 @@ pub(crate) async fn create_agent_instance(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
         harness: None,
+        permissions: Some(agent.permissions.clone()),
+        intent_classifier: agent.intent_classifier.clone(),
     };
     let storage_agent = storage
         .create_project_agent(&project_id.to_string(), &jwt, &req)
@@ -149,15 +230,7 @@ pub(crate) async fn create_agent_instance(
         .map_err(map_storage_error)?;
 
     let mut instance = merge_agent_instance(&storage_agent, Some(&agent), None);
-    attach_workspace_path(
-        &state,
-        &project_id,
-        project
-            .as_ref()
-            .map(|entry| entry.name.as_str())
-            .unwrap_or(""),
-        &mut instance,
-    );
+    attach_workspace_path(&state, &project_id, project.as_ref(), &mut instance);
     Ok(Json(instance))
 }
 
@@ -177,17 +250,19 @@ pub(crate) async fn list_agent_instances(
         .filter_map(|spa| spa.agent_id.clone())
         .collect();
 
-    let agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
+    let mut agent_map = resolve_merge_agents_for_ids(&state, &jwt, &needed_agent_ids).await;
+    for agent in agent_map.values_mut() {
+        repair_agent_name_in_place(&state.agent_service, agent);
+    }
 
     let project = state.project_service.get_project(&project_id).ok();
-    let project_name = project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
 
     let instances: Vec<AgentInstance> = storage_agents
         .iter()
         .map(|spa| {
             let agent = spa.agent_id.as_deref().and_then(|aid| agent_map.get(aid));
             let mut instance = merge_agent_instance(spa, agent, None);
-            attach_workspace_path(&state, &project_id, &project_name, &mut instance);
+            attach_workspace_path(&state, &project_id, project.as_ref(), &mut instance);
             instance
         })
         .collect();
@@ -210,11 +285,12 @@ pub(crate) async fn get_agent_instance(
             _ => map_storage_error(e),
         })?;
 
-    let agent = if let Some(ref aid) = storage_agent.agent_id {
+    let resolved = if let Some(ref aid) = storage_agent.agent_id {
         resolve_single_agent(&state, &jwt, aid).await
     } else {
         None
     };
+    let agent = repair_agent_name_if_missing(&state.agent_service, resolved);
     let mut instance = merge_agent_instance(&storage_agent, agent.as_ref(), None);
     let proj_id_str = storage_agent.project_id.clone().unwrap_or_default();
     let project = proj_id_str
@@ -224,12 +300,7 @@ pub(crate) async fn get_agent_instance(
     let resolved_project_id = proj_id_str
         .parse::<aura_os_core::ProjectId>()
         .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
-    attach_workspace_path(
-        &state,
-        &resolved_project_id,
-        project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-        &mut instance,
-    );
+    attach_workspace_path(&state, &resolved_project_id, project.as_ref(), &mut instance);
     Ok(Json(instance))
 }
 
@@ -263,11 +334,12 @@ pub(crate) async fn update_agent_instance(
             .get_agent_local(&parsed_agent_id)
             .map_err(|_| ApiError::bad_request("agent instance cannot be renamed"))?;
 
-        if !local_agent
+        let is_general = local_agent
             .tags
             .iter()
-            .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG)
-        {
+            .any(|tag| tag == PROJECT_LOCAL_GENERAL_AGENT_TAG);
+        let is_placeholder_name = local_agent.name == GENERAL_AGENT_NAME;
+        if !is_general && !is_placeholder_name {
             return Err(ApiError::bad_request(
                 "only project-local general agents can be renamed",
             ));
@@ -324,12 +396,7 @@ pub(crate) async fn update_agent_instance(
     let resolved_project_id = proj_id_str
         .parse::<aura_os_core::ProjectId>()
         .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
-    attach_workspace_path(
-        &state,
-        &resolved_project_id,
-        project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-        &mut instance,
-    );
+    attach_workspace_path(&state, &resolved_project_id, project.as_ref(), &mut instance);
     Ok(Json(instance))
 }
 
@@ -364,4 +431,158 @@ pub(crate) async fn delete_agent_instance(
             }
         })?;
     Ok(Json(()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aura_os_store::SettingsStore;
+    use std::sync::Arc;
+
+    fn make_agent(name: &str, tags: Vec<String>) -> Agent {
+        let now = Utc::now();
+        Agent {
+            agent_id: AgentId::new(),
+            user_id: "u1".to_string(),
+            org_id: None,
+            name: name.to_string(),
+            role: "general".to_string(),
+            personality: String::new(),
+            system_prompt: String::new(),
+            skills: Vec::new(),
+            icon: None,
+            machine_type: "local".to_string(),
+            adapter_type: "aura_harness".to_string(),
+            environment: "local_host".to_string(),
+            auth_source: "aura_managed".to_string(),
+            integration_id: None,
+            default_model: None,
+            vm_id: None,
+            network_agent_id: None,
+            profile_id: None,
+            tags,
+            is_pinned: false,
+            listing_status: Default::default(),
+            expertise: Vec::new(),
+            jobs: 0,
+            revenue_usd: 0.0,
+            reputation: 0.0,
+            local_workspace_path: None,
+            permissions: aura_os_core::AgentPermissions::empty(),
+            intent_classifier: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn make_service() -> (AgentService, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(SettingsStore::open(dir.path()).unwrap());
+        (AgentService::new(store, None), dir)
+    }
+
+    #[test]
+    fn repairs_empty_name_on_general_agent_and_persists_shadow() {
+        let (service, _dir) = make_service();
+        let agent = make_agent("", vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()]);
+        let agent_id = agent.agent_id.clone();
+        service.save_agent_shadow(&agent).unwrap();
+
+        let repaired =
+            repair_agent_name_if_missing(&service, Some(agent)).expect("repaired agent");
+        assert_eq!(repaired.name, GENERAL_AGENT_NAME);
+
+        let reloaded = service.get_agent_local(&agent_id).unwrap();
+        assert_eq!(reloaded.name, GENERAL_AGENT_NAME);
+    }
+
+    #[test]
+    fn repairs_whitespace_only_name_on_general_agent() {
+        let (service, _dir) = make_service();
+        let agent = make_agent("   ", vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()]);
+        let agent_id = agent.agent_id.clone();
+        service.save_agent_shadow(&agent).unwrap();
+
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
+        assert_eq!(repaired.name, GENERAL_AGENT_NAME);
+
+        let reloaded = service.get_agent_local(&agent_id).unwrap();
+        assert_eq!(reloaded.name, GENERAL_AGENT_NAME);
+    }
+
+    #[test]
+    fn preserves_existing_name() {
+        let (service, _dir) = make_service();
+        let agent = make_agent("My Named Agent", Vec::new());
+        let agent_id = agent.agent_id.clone();
+        service.save_agent_shadow(&agent).unwrap();
+
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
+        assert_eq!(repaired.name, "My Named Agent");
+
+        let reloaded = service.get_agent_local(&agent_id).unwrap();
+        assert_eq!(reloaded.name, "My Named Agent");
+    }
+
+    #[test]
+    fn repairs_untagged_project_agent_with_empty_name() {
+        // Project agents that aren't tagged project_local_general still get
+        // the same placeholder treatment so the UI sidebar never shows blanks;
+        // first-message rename (which is allowed for any agent whose current
+        // name is the placeholder) takes over from there.
+        let (service, _dir) = make_service();
+        let agent = make_agent("", Vec::new());
+        let agent_id = agent.agent_id.clone();
+        service.save_agent_shadow(&agent).unwrap();
+
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
+        assert_eq!(repaired.name, GENERAL_AGENT_NAME);
+
+        let reloaded = service.get_agent_local(&agent_id).unwrap();
+        assert_eq!(reloaded.name, GENERAL_AGENT_NAME);
+    }
+
+    #[test]
+    fn returns_none_when_input_is_none() {
+        let (service, _dir) = make_service();
+        assert!(repair_agent_name_if_missing(&service, None).is_none());
+    }
+
+    #[test]
+    fn agent_deserializes_with_missing_name_key_as_empty_string() {
+        let original = make_agent(
+            "Ignored",
+            vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()],
+        );
+        let mut value = serde_json::to_value(&original).unwrap();
+        value
+            .as_object_mut()
+            .expect("agent json object")
+            .remove("name");
+        let agent: Agent =
+            serde_json::from_value(value).expect("missing name key should deserialize to default");
+        assert_eq!(agent.name, "");
+    }
+
+    #[test]
+    fn repair_runs_on_agent_whose_stored_json_had_no_name_key() {
+        let (service, _dir) = make_service();
+        let original = make_agent("placeholder", Vec::new());
+        let agent_id = original.agent_id.clone();
+
+        let mut value = serde_json::to_value(&original).unwrap();
+        value
+            .as_object_mut()
+            .expect("agent json object")
+            .remove("name");
+        let reloaded: Agent = serde_json::from_value(value).unwrap();
+        assert_eq!(reloaded.name, "");
+        service.save_agent_shadow(&reloaded).unwrap();
+
+        let repaired = repair_agent_name_if_missing(&service, Some(reloaded)).unwrap();
+        assert_eq!(repaired.name, GENERAL_AGENT_NAME);
+
+        let disk = service.get_agent_local(&agent_id).unwrap();
+        assert_eq!(disk.name, GENERAL_AGENT_NAME);
+    }
 }

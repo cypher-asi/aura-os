@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use aura_os_core::*;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 use aura_os_tasks::{CompleteTaskParams, TaskService};
 
 use super::helpers::{create_task, CreateTestTask};
@@ -10,7 +10,7 @@ use super::helpers::{create_task, CreateTestTask};
 #[tokio::test]
 async fn dependency_promotion_on_completion() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(RocksStore::open(tmp.path()).expect("RocksStore should open"));
+    let store = Arc::new(SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
     aura_os_billing::testutil::store_zero_auth_session(&store);
 
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
@@ -132,7 +132,7 @@ async fn dependency_promotion_on_completion() {
 #[tokio::test]
 async fn initial_readiness_promotes_all_satisfiable() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(RocksStore::open(tmp.path()).expect("RocksStore should open"));
+    let store = Arc::new(SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
     aura_os_billing::testutil::store_zero_auth_session(&store);
 
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
@@ -221,7 +221,7 @@ async fn initial_readiness_promotes_all_satisfiable() {
 #[tokio::test]
 async fn concurrent_claims_produce_different_tasks() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(RocksStore::open(tmp.path()).expect("RocksStore should open"));
+    let store = Arc::new(SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
     aura_os_billing::testutil::store_zero_auth_session(&store);
 
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;

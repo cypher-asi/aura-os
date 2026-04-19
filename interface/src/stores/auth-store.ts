@@ -53,22 +53,42 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+/**
+ * Compute the initial store state synchronously from the localStorage mirror
+ * maintained by `auth-token`. This means authenticated users start with a real
+ * `user` on the very first React render, so the login route never flashes
+ * before the async `restoreSession()` catches up.
+ */
+function getInitialAuthState(): Pick<
+  AuthState,
+  "user" | "isLoading" | "zeroProRefreshError"
+> {
+  const cached = getStoredSession();
+  if (cached) {
+    return {
+      user: sessionToUser(cached),
+      isLoading: false,
+      zeroProRefreshError: getZeroProRefreshError(cached),
+    };
+  }
+  return { user: null, isLoading: true, zeroProRefreshError: null };
+}
+
 export const useAuthStore = create<AuthState>()((set) => ({
-  user: null,
-  isLoading: true,
-  zeroProRefreshError: null,
+  ...getInitialAuthState(),
 
   restoreSession: async () => {
     await hydrateStoredAuth();
 
-    // Restore from localStorage first (instant, no network call)
     const cached = getStoredSession();
     const hadCachedSession = Boolean(cached);
     const prevZeroProErr = cached ? getZeroProRefreshError(cached) : null;
     if (cached) {
-      set({ user: sessionToUser(cached), zeroProRefreshError: getZeroProRefreshError(cached) });
-      // Let the shell render immediately with the cached session while validation runs.
-      set({ isLoading: false });
+      set({
+        user: sessionToUser(cached),
+        zeroProRefreshError: getZeroProRefreshError(cached),
+        isLoading: false,
+      });
       await loadAndRunShellRealtimeBootstrap();
     }
 
@@ -93,9 +113,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
         set({ zeroProRefreshError: formatZeroProRefreshError(err) });
       }
     } finally {
-      if (!hadCachedSession) {
-        set({ isLoading: false });
-      }
+      set({ isLoading: false });
       markAuthRestoreComplete();
     }
   },

@@ -165,14 +165,17 @@ Feedback-specific data must be represented in structured metadata using these ca
 
 ### Vote Data
 
-Vote state is required. Since the current upstream social API does not yet expose vote endpoints, vote support must be added to aura-network during development, using the local aura-network database as the canonical store.
+Vote state is required. The upstream aura-network social API now exposes the
+vote endpoints and aggregates Aura OS needs, so Feedback should use the
+configured aura-network deployment as its canonical store.
 
-For the first version:
+Current contract:
 
-- vote data lives in the local aura-network Postgres database, not in Aura OS local persistence
+- vote data lives in aura-network, not in Aura OS local persistence
 - the aura-network HTTP API exposes vote endpoints that Aura OS can call
 - Aura OS acts as a thin proxy and aggregator on top of those endpoints
-- production aura-network will be updated later; local dev moves first
+- the default deployment path is the shared production/staging aura-network, not
+  a dedicated local Feedback database
 
 Each feedback item returned to the UI must include:
 
@@ -189,29 +192,35 @@ Each feedback item returned to the UI must include:
 
 ### Local Aura Network Database
 
-During development, aura-network runs locally in Docker with Postgres reachable at:
+Local aura-network plus Postgres is only needed when you are actively
+developing aura-network itself or validating unreleased schema changes. In that
+case the local database is typically:
 
 ```
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/aura_network
 ```
 
-This database is the source of truth for feedback posts, comments, and votes while the Feedback system is being built.
+That database is a temporary development target, not the default Aura OS
+configuration. Aura OS should normally point at the shared aura-network
+deployment via `AURA_NETWORK_URL`.
 
 Rules:
 
-- local aura-network must be running to develop or test the Feedback system end-to-end
-- schema changes must be made as new migrations under the aura-network repo
 - Aura OS must not introduce a parallel feedback-specific local store; it uses aura-network instead
-- contract changes must be kept backward-compatible until production aura-network adopts them
+- local aura-network is only required for unreleased aura-network work or migration validation
+- schema changes must be made as new migrations under the aura-network repo
+- contract changes must be kept backward-compatible while older aura-network deployments remain in service
 
 ### Split Aura Network Routing
 
-Aura OS server routes requests to aura-network per-app so Feedback development can target a local aura-network while the rest of the product keeps using the deployed backend:
+Aura OS supports an optional per-app override, but the default configuration is
+now a single shared aura-network deployment for all routes:
 
-- `AURA_NETWORK_URL` — production aura-network (`https://aura-network.onrender.com`). Used by every handler except the Feedback app.
-- `AURA_NETWORK_FEEDBACK_URL` — optional override used only by `/api/feedback/*` handlers. Point this at the local aura-network during Feedback development.
+- `AURA_NETWORK_URL` — primary aura-network base URL (`https://aura-network.onrender.com`). Used by all handlers, including Feedback, unless an explicit Feedback override is set.
+- `AURA_NETWORK_FEEDBACK_URL` — optional override used only by `/api/feedback/*` handlers. Leave unset in normal development and production. Set it only when intentionally targeting a different aura-network deployment for Feedback rollout testing.
 
-When `AURA_NETWORK_FEEDBACK_URL` is unset, the Feedback app falls back to `AURA_NETWORK_URL`. Unset it once production aura-network ships the vote and feedback-filter endpoints.
+When `AURA_NETWORK_FEEDBACK_URL` is unset, the Feedback app falls back to
+`AURA_NETWORK_URL`. That is now the expected default.
 
 ## Integration Requirements
 
@@ -227,14 +236,17 @@ The Feedback system must reuse existing aura-network post and comment flows for:
 
 Feedback data returned from Aura OS must be filtered so that the Feedback app only surfaces posts that represent feedback items.
 
-Aura-network must be extended to support feedback-specific behavior that does not exist today:
+Aura-network must provide feedback-specific behavior for:
 
 - vote data model
 - vote endpoints
 - one active vote per user per post
 - vote aggregates available in post responses
 
-These changes must land as new aura-network migrations and API surface in the local aura-network repo and be exercised against the local Postgres database before any production schema changes are considered.
+These changes should land as new aura-network migrations and API surface in the
+aura-network repo. Local Postgres validation is still appropriate for schema
+work, but Aura OS should default back to the shared deployment once those
+changes ship.
 
 ### Aura OS Server
 
@@ -315,7 +327,9 @@ Requirements:
 - New interfaces and stores should be strongly typed.
 - Server behavior should be covered by focused tests.
 - UI behavior should be covered by focused tests where nearby patterns already exist.
-- Aura-network schema changes must ship with new migrations and be validated against the local aura-network Postgres database before Aura OS integration is considered complete.
+- Aura-network schema changes must ship with new migrations and be validated
+  against a local aura-network Postgres database before the corresponding Aura
+  OS integration is considered complete.
 
 ## Non-Goals
 

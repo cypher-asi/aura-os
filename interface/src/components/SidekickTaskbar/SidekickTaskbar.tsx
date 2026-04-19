@@ -14,6 +14,7 @@ import {
   Loader2,
   Plus,
   Terminal,
+  Globe,
 } from "lucide-react";
 import { useSidekickStore, type SidekickTab } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
@@ -21,6 +22,7 @@ import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
+import { useBrowserPanelStore } from "../../stores/browser-panel-store";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import styles from "../Sidekick/Sidekick.module.css";
@@ -37,6 +39,7 @@ export function SidekickTaskbar() {
   const ctx = useProjectActions();
   const { features } = useAuraCapabilities();
   const addTerminal = useTerminalPanelStore((s) => s.addTerminal);
+  const addBrowserInstance = useBrowserPanelStore((s) => s.addInstance);
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
   const { status } = useAutomationStatus(projectId ?? "");
   const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });
@@ -55,6 +58,7 @@ export function SidekickTaskbar() {
   const tabs = useMemo<TabItem[]>(
     () => [
       { id: "terminal", icon: <Terminal size={16} />, title: "Terminal" },
+      { id: "browser", icon: <Globe size={16} />, title: "Browser" },
       {
         id: "run",
         icon: showRunProgress ? (
@@ -71,6 +75,7 @@ export function SidekickTaskbar() {
       { id: "sessions", icon: <Monitor size={16} />, title: "Sessions" },
       { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
       { id: "new-terminal", icon: <Plus size={16} />, title: "New terminal", kind: "action" },
+      { id: "new-browser", icon: <Plus size={16} />, title: "New browser", kind: "action" },
     ],
     [showRunProgress],
   );
@@ -94,9 +99,15 @@ export function SidekickTaskbar() {
   };
 
   const handleInlineAction = (id: string) => {
-    if (id !== "new-terminal") return;
-    addTerminal();
-    setActiveTab("terminal");
+    if (id === "new-terminal") {
+      addTerminal();
+      setActiveTab("terminal");
+      return;
+    }
+    if (id === "new-browser") {
+      addBrowserInstance();
+      setActiveTab("browser");
+    }
   };
 
   return (

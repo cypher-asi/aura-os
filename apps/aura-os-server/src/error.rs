@@ -8,6 +8,14 @@ pub(crate) struct ApiError {
     pub error: String,
     pub code: String,
     pub details: Option<String>,
+    /// Optional structured error payload for clients that need more than
+    /// a free-text `error`/`details`. New error shapes (e.g. the
+    /// `chat_persist_failed` / `chat_persist_unavailable` codes the CEO's
+    /// `send_to_agent` tool parses) live here so legacy callers that only
+    /// read `code` / `error` / `details` continue to work unchanged. The
+    /// field is omitted from the JSON body when `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
 }
 
 pub(crate) type ApiResult<T> = Result<T, (StatusCode, Json<ApiError>)>;
@@ -20,6 +28,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "not_found".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -31,6 +40,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "bad_request".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -42,6 +52,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "internal_error".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -53,6 +64,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "unauthorized".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -64,6 +76,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "forbidden".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -75,6 +88,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "insufficient_credits".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -86,6 +100,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "conflict".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -100,6 +115,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "conflict".to_string(),
                 details: Some(details.into()),
+                data: None,
             }),
         )
     }
@@ -111,6 +127,7 @@ impl ApiError {
                 error: msg.into(),
                 code: "service_unavailable".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
@@ -122,9 +139,112 @@ impl ApiError {
                 error: msg.into(),
                 code: "bad_gateway".to_string(),
                 details: None,
+                data: None,
             }),
         )
     }
+}
+
+/// Identifiers threaded into `chat_persist_*` errors so the CEO's
+/// `send_to_agent` tool (and any other consumer that's trying to land a
+/// message in another agent's chat history) can report *which* session
+/// could not be written to. All fields are optional because the failure
+/// can happen before the project binding / session has been resolved.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct ChatPersistErrorCtx {
+    pub session_id: Option<String>,
+    pub project_id: Option<String>,
+    pub project_agent_id: Option<String>,
+}
+
+/// Build the `data` payload shared by `chat_persist_failed` /
+/// `chat_persist_unavailable` responses. Kept in one place so the wire
+/// contract (field names, nullability) is enforced on every call site —
+/// the `send_to_agent` tool parses this exact shape.
+fn chat_persist_error_data(
+    code: &str,
+    reason: &str,
+    upstream_status: Option<u16>,
+    ctx: &ChatPersistErrorCtx,
+) -> serde_json::Value {
+    serde_json::json!({
+        "code": code,
+        "reason": reason,
+        "upstream_status": upstream_status,
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+    })
+}
+
+impl ApiError {
+    /// The agent has no project binding / storage session to persist to
+    /// — returned when `persist_ctx` resolves to `None`. The response is
+    /// HTTP 424 Failed Dependency: the request was well-formed but a
+    /// precondition on a separate resource (storage binding) is not met.
+    /// See `send_to_agent` in `exec_tools.rs` for the consumer shape.
+    pub(crate) fn chat_persist_unavailable(
+        reason: impl Into<String>,
+        ctx: ChatPersistErrorCtx,
+    ) -> (StatusCode, Json<Self>) {
+        let reason = reason.into();
+        let data = chat_persist_error_data("chat_persist_unavailable", &reason, None, &ctx);
+        (
+            StatusCode::FAILED_DEPENDENCY,
+            Json(Self {
+                error: reason.clone(),
+                code: "chat_persist_unavailable".to_string(),
+                details: Some(reason),
+                data: Some(data),
+            }),
+        )
+    }
+
+    /// Persisting the inbound user message failed. The harness must NOT
+    /// receive the user turn, the SSE stream must NOT be opened, and the
+    /// caller (typically the CEO's `send_to_agent` tool) must see a hard
+    /// failure so it can stop reporting `persisted: true` on writes that
+    /// silently vanished from the target agent's chat history.
+    pub(crate) fn chat_persist_failed(
+        reason: impl Into<String>,
+        upstream_status: Option<u16>,
+        ctx: ChatPersistErrorCtx,
+    ) -> (StatusCode, Json<Self>) {
+        let reason = reason.into();
+        let data =
+            chat_persist_error_data("chat_persist_failed", &reason, upstream_status, &ctx);
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(Self {
+                error: reason.clone(),
+                code: "chat_persist_failed".to_string(),
+                details: Some(reason),
+                data: Some(data),
+            }),
+        )
+    }
+}
+
+/// Translate a `StorageError` that occurred while persisting a chat
+/// user-message event into the structured `chat_persist_failed` shape.
+/// Preserves the upstream HTTP status when present so the CEO tool can
+/// distinguish 5xx storage outages from 4xx validation rejections.
+pub(crate) fn map_chat_persist_storage_error(
+    e: aura_os_storage::StorageError,
+    ctx: ChatPersistErrorCtx,
+) -> (StatusCode, Json<ApiError>) {
+    let upstream_status = match &e {
+        aura_os_storage::StorageError::Server { status, .. } => Some(*status),
+        _ => None,
+    };
+    let reason = match &e {
+        aura_os_storage::StorageError::Server { status, body } => {
+            let preview: String = body.chars().take(400).collect();
+            format!("storage returned {status}: {preview}")
+        }
+        other => other.to_string(),
+    };
+    ApiError::chat_persist_failed(reason, upstream_status, ctx)
 }
 
 /// Extracted context from a nested upstream error body of the form
@@ -182,6 +302,7 @@ pub(crate) fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode
                     error: body.clone(),
                     code: "network_error".to_string(),
                     details,
+                    data: None,
                 }),
             )
         }
@@ -210,6 +331,7 @@ pub(crate) fn map_integrations_error(
                     error: body.clone(),
                     code: "integrations_error".to_string(),
                     details: None,
+                    data: None,
                 }),
             )
         }
@@ -236,6 +358,7 @@ pub(crate) fn map_storage_error(e: aura_os_storage::StorageError) -> (StatusCode
                     error: body.clone(),
                     code: "storage_error".to_string(),
                     details: None,
+                    data: None,
                 }),
             )
         }
@@ -295,5 +418,98 @@ mod tests {
         };
         let (_, Json(api_err)) = map_network_error(err);
         assert!(api_err.details.is_none());
+    }
+
+    #[test]
+    fn chat_persist_unavailable_returns_424_with_structured_data() {
+        let ctx = ChatPersistErrorCtx {
+            session_id: None,
+            project_id: None,
+            project_agent_id: None,
+        };
+        let (status, Json(api_err)) =
+            ApiError::chat_persist_unavailable("no project binding", ctx);
+        assert_eq!(status, StatusCode::FAILED_DEPENDENCY);
+        assert_eq!(api_err.code, "chat_persist_unavailable");
+        let data = api_err.data.expect("data must be populated");
+        assert_eq!(data["code"], "chat_persist_unavailable");
+        assert_eq!(data["reason"], "no project binding");
+        assert!(data["upstream_status"].is_null());
+        assert!(data["session_id"].is_null());
+        assert!(data["project_id"].is_null());
+        assert!(data["project_agent_id"].is_null());
+    }
+
+    #[test]
+    fn chat_persist_failed_returns_502_with_upstream_status_and_ids() {
+        let ctx = ChatPersistErrorCtx {
+            session_id: Some("sess-1".into()),
+            project_id: Some("proj-1".into()),
+            project_agent_id: Some("pa-1".into()),
+        };
+        let (status, Json(api_err)) =
+            ApiError::chat_persist_failed("storage returned 503: upstream down", Some(503), ctx);
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+        assert_eq!(api_err.code, "chat_persist_failed");
+        let data = api_err.data.expect("data must be populated");
+        assert_eq!(data["code"], "chat_persist_failed");
+        assert_eq!(
+            data["reason"],
+            serde_json::Value::String("storage returned 503: upstream down".into())
+        );
+        assert_eq!(data["upstream_status"], 503);
+        assert_eq!(data["session_id"], "sess-1");
+        assert_eq!(data["project_id"], "proj-1");
+        assert_eq!(data["project_agent_id"], "pa-1");
+    }
+
+    #[test]
+    fn chat_persist_error_body_skips_data_when_none_in_legacy_paths() {
+        // Legacy ApiError constructors (not_found, etc.) must still emit
+        // bodies without a `data` key so existing clients that assert on
+        // the older shape don't break.
+        let (_, Json(api_err)) = ApiError::not_found("missing");
+        let serialized = serde_json::to_value(&api_err).unwrap();
+        assert!(
+            serialized.get("data").is_none(),
+            "non-chat errors must omit the `data` field entirely, got: {serialized}"
+        );
+    }
+
+    #[test]
+    fn map_chat_persist_storage_error_preserves_upstream_status() {
+        let err = aura_os_storage::StorageError::Server {
+            status: 503,
+            body: r#"{"error":"upstream down"}"#.to_string(),
+        };
+        let ctx = ChatPersistErrorCtx {
+            session_id: Some("sess-2".into()),
+            project_id: Some("proj-2".into()),
+            project_agent_id: Some("pa-2".into()),
+        };
+        let (status, Json(api_err)) = map_chat_persist_storage_error(err, ctx);
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+        assert_eq!(api_err.code, "chat_persist_failed");
+        let data = api_err.data.expect("data must be populated");
+        assert_eq!(data["upstream_status"], 503);
+        let reason = data["reason"].as_str().unwrap();
+        assert!(
+            reason.starts_with("storage returned 503"),
+            "reason should embed upstream status, got: {reason}"
+        );
+        assert_eq!(data["session_id"], "sess-2");
+    }
+
+    #[test]
+    fn map_chat_persist_storage_error_non_server_has_no_upstream_status() {
+        let err = aura_os_storage::StorageError::NotConfigured;
+        let (_, Json(api_err)) =
+            map_chat_persist_storage_error(err, ChatPersistErrorCtx::default());
+        assert_eq!(api_err.code, "chat_persist_failed");
+        let data = api_err.data.expect("data populated");
+        assert!(
+            data["upstream_status"].is_null(),
+            "no upstream HTTP status for non-Server storage errors"
+        );
     }
 }

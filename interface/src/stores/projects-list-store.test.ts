@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Project, AgentInstance } from "../types";
+import { emptyAgentPermissions } from "../types/permissions-wire";
 import { queryClient } from "../lib/query-client";
 
 const { mockApi, mockSessionStorage, mockLocalStorage, mockOrgStoreState } = vi.hoisted(() => {
@@ -92,6 +93,8 @@ function makeAgentInstance(overrides: Partial<AgentInstance> = {}): AgentInstanc
     current_session_id: null,
     total_input_tokens: 0,
     total_output_tokens: 0,
+    permissions: emptyAgentPermissions(),
+    intent_classifier: null,
     created_at: "2026-04-13T10:00:00.000Z",
     updated_at: "2026-04-13T10:00:00.000Z",
     ...overrides,

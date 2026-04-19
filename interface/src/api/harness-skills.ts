@@ -1,9 +1,23 @@
 import type { HarnessSkill, HarnessSkillActivation, HarnessSkillInstallation } from "../types";
 import { apiFetch } from "./core";
 
+export interface MySkillEntry {
+  name: string;
+  description: string;
+  path: string;
+  user_invocable: boolean;
+  model_invocable: boolean;
+}
+
 export const harnessSkillsApi = {
   listSkills: () =>
     apiFetch<HarnessSkill[]>(`/api/harness/skills`),
+  listMySkills: () =>
+    apiFetch<MySkillEntry[]>(`/api/harness/skills/mine`),
+  deleteMySkill: (name: string) =>
+    apiFetch<{ name: string; deleted: boolean }>(`/api/harness/skills/mine/${name}`, {
+      method: "DELETE",
+    }),
   getSkill: (name: string) =>
     apiFetch<HarnessSkill>(`/api/harness/skills/${name}`),
   createSkill: (data: {
@@ -15,8 +29,15 @@ export const harnessSkillsApi = {
     context?: string;
     user_invocable?: boolean;
     model_invocable?: boolean;
+    agent_id?: string;
   }) =>
-    apiFetch<{ name: string; path: string; created: boolean }>(`/api/harness/skills`, {
+    apiFetch<{
+      name: string;
+      path: string;
+      created: boolean;
+      registered: boolean;
+      installed_on_agent: boolean;
+    }>(`/api/harness/skills`, {
       method: "POST",
       body: JSON.stringify(data),
     }),

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use aura_os_core::listing_status::AgentListingStatus;
 use aura_os_core::*;
 use chrono::Utc;
 
@@ -104,6 +105,12 @@ mod session_status_serde {
     test_enum_variant!(rolled_over, SessionStatus::RolledOver, "rolled_over");
 }
 
+mod agent_listing_status_serde {
+    use super::*;
+    test_enum_variant!(closed, AgentListingStatus::Closed, "closed");
+    test_enum_variant!(hireable, AgentListingStatus::Hireable, "hireable");
+}
+
 // ---------------------------------------------------------------------------
 // Entity struct serde round-trips
 // ---------------------------------------------------------------------------
@@ -128,6 +135,7 @@ fn sample_project() -> Project {
         orbit_base_url: None,
         orbit_owner: None,
         orbit_repo: None,
+        local_workspace_path: None,
     }
 }
 
@@ -196,6 +204,14 @@ fn sample_agent() -> Agent {
         profile_id: None,
         tags: vec![],
         is_pinned: false,
+        listing_status: AgentListingStatus::Hireable,
+        expertise: vec!["coding".into(), "devops".into()],
+        jobs: 42,
+        revenue_usd: 1_234.56,
+        reputation: 4.75,
+        local_workspace_path: None,
+        permissions: AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }
@@ -227,6 +243,8 @@ fn sample_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInsta
         total_input_tokens: 0,
         total_output_tokens: 0,
         model: None,
+        permissions: aura_os_core::AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }
@@ -286,3 +304,21 @@ test_entity_round_trip!(session_round_trip, {
     let instance = sample_agent_instance(p.project_id, a.agent_id);
     sample_session(p.project_id, instance.agent_instance_id)
 });
+
+/// Non-default marketplace fields on `Agent` must survive a JSON
+/// round-trip without loss. The macro above already covers this via
+/// `sample_agent`, but an explicit test documents the contract and
+/// asserts on each field so regressions are obvious in the failure
+/// output.
+#[test]
+fn agent_marketplace_fields_survive_non_default_round_trip() {
+    let agent = sample_agent();
+    let json = serde_json::to_string(&agent).expect("serialize");
+    let back: Agent = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(back.listing_status, AgentListingStatus::Hireable);
+    assert_eq!(back.expertise, vec!["coding".to_string(), "devops".to_string()]);
+    assert_eq!(back.jobs, 42);
+    assert!((back.revenue_usd - 1_234.56).abs() < f64::EPSILON);
+    assert!((back.reputation - 4.75).abs() < f32::EPSILON);
+}
+

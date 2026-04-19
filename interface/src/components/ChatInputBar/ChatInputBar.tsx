@@ -17,6 +17,8 @@ import {
   FolderOpen,
   RotateCcw,
 } from "lucide-react";
+import { ContextUsageIndicator } from "./ContextUsageIndicator";
+import type { ContextUsageEntry } from "../../stores/context-usage-store";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import type { GenerationMode } from "../../constants/models";
@@ -79,7 +81,7 @@ interface Props {
   onProjectChange?: (projectId: string) => void;
   isVisible?: boolean;
   isCentered?: boolean;
-  contextUtilization?: number;
+  contextUsage?: ContextUsageEntry;
   onNewSession?: () => void;
 }
 
@@ -138,7 +140,7 @@ export const ChatInputBar = memo(
       onProjectChange,
       isVisible = true,
       isCentered = false,
-      contextUtilization,
+      contextUsage,
       onNewSession,
     },
     ref,
@@ -605,33 +607,12 @@ export const ChatInputBar = memo(
               </div>
             )}
           </div>
-          {contextUtilization != null && contextUtilization > 0 ? (
-            <>
-              <span
-                className={
-                  styles.contextIndicator +
-                  (contextUtilization >= 0.9
-                    ? ` ${styles.contextDanger}`
-                    : contextUtilization >= 0.7
-                      ? ` ${styles.contextWarning}`
-                      : "")
-                }
-                title={`Context window ${Math.round(contextUtilization * 100)}% used`}
-              >
-                {Math.round(contextUtilization * 100)}%
-              </span>
-              {onNewSession ? (
-                <button
-                  type="button"
-                  className={styles.newSessionButton}
-                  onClick={onNewSession}
-                  title="Start a new session and reset context."
-                  aria-label="Start new session"
-                >
-                  <RotateCcw size={10} />
-                </button>
-              ) : null}
-            </>
+          {contextUsage != null && contextUsage.utilization > 0 ? (
+            <ContextUsageIndicator
+              utilization={contextUsage.utilization}
+              estimatedTokens={contextUsage.estimatedTokens}
+              onNewSession={onNewSession}
+            />
           ) : onNewSession ? (
             <button
               type="button"

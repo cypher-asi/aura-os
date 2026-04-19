@@ -8,7 +8,7 @@ use tracing::debug;
 
 use aura_os_core::*;
 use aura_os_network::NetworkClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 
 fn parse_rfc3339_or_now(raw: Option<&str>) -> DateTime<Utc> {
     raw.and_then(|v| DateTime::parse_from_rfc3339(v).ok())
@@ -66,6 +66,8 @@ fn network_project_to_core(
         orbit_base_url: net_or_local(&net.orbit_base_url, local, |p| &p.orbit_base_url),
         orbit_owner: net_or_local(&net.orbit_owner, local, |p| &p.orbit_owner),
         orbit_repo: net_or_local(&net.orbit_repo, local, |p| &p.orbit_repo),
+        // Local-only: never sent by aura-network, always preserved from the local shadow.
+        local_workspace_path: local.and_then(|p| p.local_workspace_path.clone()),
     }
 }
 
@@ -165,6 +167,7 @@ pub struct CreateProjectInput {
     pub description: String,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub local_workspace_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -173,11 +176,14 @@ pub struct UpdateProjectInput {
     pub description: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    /// `None` leaves the existing value unchanged. `Some(None)` clears it;
+    /// `Some(Some(path))` sets it.
+    pub local_workspace_path: Option<Option<String>>,
 }
 
 pub struct ProjectService {
     network_client: Option<Arc<NetworkClient>>,
-    store: Arc<RocksStore>,
+    store: Arc<SettingsStore>,
 }
 
 impl ProjectService {
@@ -218,7 +224,7 @@ impl ProjectService {
         Ok(projects)
     }
 
-    pub fn new(store: Arc<RocksStore>) -> Self {
+    pub fn new(store: Arc<SettingsStore>) -> Self {
         Self {
             network_client: None,
             store,
@@ -227,7 +233,7 @@ impl ProjectService {
 
     pub fn new_with_network(
         network_client: Option<Arc<NetworkClient>>,
-        store: Arc<RocksStore>,
+        store: Arc<SettingsStore>,
     ) -> Self {
         Self {
             network_client,
@@ -261,6 +267,16 @@ impl ProjectService {
             orbit_base_url: None,
             orbit_owner: None,
             orbit_repo: None,
+            local_workspace_path: input
+                .local_workspace_path
+                .and_then(|value| {
+                    let trimmed = value.trim();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed.to_string())
+                    }
+                }),
         };
 
         self.save_project_shadow(&project)?;
@@ -312,6 +328,16 @@ impl ProjectService {
         }
         if input.test_command.is_some() {
             project.test_command = sanitize_command_option(input.test_command);
+        }
+        if let Some(new_path) = input.local_workspace_path {
+            project.local_workspace_path = new_path.and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            });
         }
 
         project.updated_at = Utc::now();

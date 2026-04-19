@@ -53,8 +53,22 @@ function messageContentMatches(
 
 /**
  * Merge stored (persisted) messages with ephemeral stream messages.
- * Deduplicates by ID and filters optimistic local messages that already have
- * a persisted equivalent in history.
+ *
+ * Strategy:
+ *   1. Stream messages whose stable `id` already exists in `stored` are
+ *      dropped, and the matched stored indices are recorded as anchors.
+ *      These come from `handleEventSaved`, which substitutes the saved
+ *      event (with its server-assigned `event_id`) into the stream when
+ *      the backend emits `message_end`.
+ *   2. If the tail of `stored` sequence-matches the *entire* remaining
+ *      stream by role+content, history has fully caught up and every
+ *      optimistic stream row can be dropped.
+ *   3. Otherwise, an optimistic stream row is content-dedup'd ONLY when
+ *      its candidate stored index is positionally anchored — i.e. it sits
+ *      immediately next to an already-matched anchor, or is the final
+ *      stored row. This prevents a stale older row with identical content
+ *      (e.g. a previous "test" message) from silently swallowing the
+ *      fresh optimistic bubble the user just sent.
  */
 function combineStoredAndStreamMessages(
   storedMessages: DisplaySessionEvent[],
@@ -67,30 +81,69 @@ function combineStoredAndStreamMessages(
     return storedMessages;
   }
 
-  const storedIds = new Set(storedMessages.map((message) => message.id));
-  const matchedStoredIndexes = new Set<number>();
-  const liveOnlyMessages = streamMessages.filter((message) => {
-    if (storedIds.has(message.id)) {
-      return false;
-    }
-
-    if (!isOptimisticLocalMessage(message)) {
-      return true;
-    }
-
-    for (let index = storedMessages.length - 1; index >= 0; index -= 1) {
-      if (matchedStoredIndexes.has(index)) {
-        continue;
-      }
-
-      if (messageContentMatches(storedMessages[index], message)) {
-        matchedStoredIndexes.add(index);
-        return false;
-      }
-    }
-
-    return true;
+  const storedIndexById = new Map<string, number>();
+  storedMessages.forEach((message, index) => {
+    storedIndexById.set(message.id, index);
   });
+
+  const matchedStoredIndexes = new Set<number>();
+  const streamAfterIdDedup: DisplaySessionEvent[] = [];
+  for (const message of streamMessages) {
+    const matchedIndex = storedIndexById.get(message.id);
+    if (matchedIndex !== undefined) {
+      matchedStoredIndexes.add(matchedIndex);
+      continue;
+    }
+    streamAfterIdDedup.push(message);
+  }
+
+  if (streamAfterIdDedup.length === 0) {
+    return storedMessages;
+  }
+
+  if (streamAfterIdDedup.length <= storedMessages.length) {
+    const offset = storedMessages.length - streamAfterIdDedup.length;
+    let tailMatches = true;
+    for (let i = 0; i < streamAfterIdDedup.length; i += 1) {
+      if (!messageContentMatches(storedMessages[offset + i], streamAfterIdDedup[i])) {
+        tailMatches = false;
+        break;
+      }
+    }
+    if (tailMatches) {
+      return storedMessages;
+    }
+  }
+
+  const liveOnlyMessages: DisplaySessionEvent[] = [];
+  for (const message of streamAfterIdDedup) {
+    if (!isOptimisticLocalMessage(message)) {
+      liveOnlyMessages.push(message);
+      continue;
+    }
+
+    let matched = -1;
+    for (let index = storedMessages.length - 1; index >= 0; index -= 1) {
+      if (matchedStoredIndexes.has(index)) continue;
+      if (!messageContentMatches(storedMessages[index], message)) continue;
+
+      const isAnchored =
+        matchedStoredIndexes.has(index - 1) ||
+        matchedStoredIndexes.has(index + 1) ||
+        index === storedMessages.length - 1;
+      if (isAnchored) {
+        matched = index;
+        break;
+      }
+    }
+
+    if (matched !== -1) {
+      matchedStoredIndexes.add(matched);
+    } else {
+      liveOnlyMessages.push(message);
+    }
+  }
+
   if (liveOnlyMessages.length === 0) {
     return storedMessages;
   }

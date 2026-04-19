@@ -1,7 +1,10 @@
 [package]
 name = "aura-os-server"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 aura-os-core = { path = "../../crates/aura-os-core" }
@@ -16,38 +19,57 @@ aura-os-tasks = { path = "../../crates/aura-os-tasks" }
 aura-os-sessions = { path = "../../crates/aura-os-sessions" }
 aura-os-link = { path = "../../crates/aura-os-link" }
 aura-os-terminal = { path = "../../crates/aura-os-terminal" }
-aura-os-super-agent = { path = "../../crates/aura-os-super-agent" }
+aura-os-browser = { path = "../../crates/aura-os-browser" }
+aura-os-agent-runtime = { path = "../../crates/aura-os-agent-runtime" }
+aura-os-agent-tools = { path = "../../crates/aura-os-agent-tools" }
+aura-os-agent-templates = { path = "../../crates/aura-os-agent-templates" }
+aura-protocol = { path = "../../crates/aura-protocol" }
 aura-os-process = { path = "../../crates/aura-os-process" }
 aura-os-network = { path = "../../crates/aura-os-network" }
 aura-os-storage = { path = "../../crates/aura-os-storage" }
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1"
-tokio = { version = "1", features = ["full"] }
-axum = { version = "0.7", features = ["ws"] }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
-tower-http = { version = "0.5", features = ["cors", "fs", "trace", "set-header"] }
+tower-http = { workspace = true, features = ["fs", "set-header"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
-tokio-util = { version = "0.7", features = ["rt"] }
+tokio-util = { workspace = true }
 futures-core = "0.3"
-futures-util = "0.3"
+futures-util = { workspace = true }
 tokio-tungstenite = { version = "0.29", features = ["native-tls"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-dirs = "5"
-base64 = "0.22"
-dashmap = "6"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dirs = { workspace = true }
+base64 = { workspace = true }
+dashmap = { workspace = true }
 dotenvy = "0.15"
 hostname = "0.4"
 local-ip-address = "0.6"
-uuid = { version = "1", features = ["v4"] }
+uuid = { workspace = true }
+url = { workspace = true }
+
+[features]
+default = []
+# Enables the real Chromium/CDP-backed browser backend. Requires a local
+# Chromium/Chrome executable at runtime; Chromium is launched lazily on
+# the first browser spawn so the server boots even without it.
+browser-cdp = ["aura-os-browser/cdp"]
 
 [dev-dependencies]
-tempfile = "3"
-tokio = { version = "1", features = ["full", "test-util"] }
-reqwest = { version = "0.11", features = ["json"] }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+reqwest = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
-uuid = { version = "1", features = ["v4"] }
+uuid = { workspace = true }
 aura-os-storage = { path = "../../crates/aura-os-storage", features = ["test-utils"] }
+
+[lints.clippy]
+all = "warn"
+
+[lints.rust]
+unsafe_code = "allow"

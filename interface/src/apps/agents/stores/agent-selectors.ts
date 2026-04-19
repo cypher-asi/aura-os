@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore } from "./agent-store";
 import type { Agent } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
@@ -77,7 +78,7 @@ export function useSortedAgents(): Agent[] {
 }
 
 export function useSuperAgent(): Agent | null {
-  return useAgentStore((s) => s.agents.find((a) => a.tags?.includes("super_agent")) ?? null);
+  return useAgentStore((s) => s.agents.find((a) => isSuperAgent(a)) ?? null);
 }
 
 export function useIsAgentPinned(agentId: string): boolean {

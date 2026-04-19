@@ -10,6 +10,10 @@ export interface UseTerminalOptions {
   cols?: number;
   rows?: number;
   cwd?: string;
+  /** Optional project context. When set, the server tags the terminal with
+   *  this project so passive URL discovery can attribute dev-server URLs
+   *  to the right project settings file. */
+  projectId?: string;
   /** When set, the terminal connects to the remote agent VM instead of the local shell. */
   remoteAgentId?: string;
 }
@@ -92,7 +96,12 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
       const cols = opts.cols ?? 80;
       const rows = opts.rows ?? 24;
 
-      const resp = await spawnTerminal({ cols, rows, cwd: opts.cwd });
+      const resp = await spawnTerminal({
+        cols,
+        rows,
+        cwd: opts.cwd,
+        projectId: opts.projectId,
+      });
 
       if (cancelled) {
         killTerminal(resp.id).catch(() => {});

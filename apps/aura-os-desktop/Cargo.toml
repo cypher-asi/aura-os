@@ -1,25 +1,28 @@
 [package]
 name = "aura-os-desktop"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-aura-os-server = { path = "../aura-os-server" }
+aura-os-server = { path = "../aura-os-server", features = ["browser-cdp"] }
 aura-os-ide = { path = "../aura-os-ide" }
-axum = "0.7"
-base64 = "0.22"
+axum = { workspace = true }
+base64 = { workspace = true }
 wry = "0.54"
 tao = "0.34"
-tokio = { version = "1", features = ["full"] }
-dirs = "5"
+tokio = { workspace = true }
+dirs = { workspace = true }
 dotenvy = "0.15"
 image = "0.25.10"
 rfd = "0.15.1"
 open = "5"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 cargo-packager-updater = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -41,3 +44,9 @@ installer-mode = "currentUser"
 
 [package.metadata.packager.macos]
 minimum-system-version = "10.15"
+
+[lints.clippy]
+all = "warn"
+
+[lints.rust]
+unsafe_code = "allow"

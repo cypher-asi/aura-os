@@ -21,6 +21,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 error: "billing account not provisioned".to_string(),
                 code: "billing_account_missing".to_string(),
                 details: Some(body),
+                data: None,
             }),
         ),
         aura_os_billing::BillingError::AccountProvisioningFailed { status, body } => (
@@ -29,6 +30,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 error: "unable to provision billing account".to_string(),
                 code: "billing_account_provisioning_failed".to_string(),
                 details: Some(format!("status={status} body={body}")),
+                data: None,
             }),
         ),
         aura_os_billing::BillingError::ServerError { status, body } => {
@@ -38,13 +40,14 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 404 => (StatusCode::BAD_GATEWAY, "billing_account_missing", "billing account not provisioned"),
                 _ => (StatusCode::BAD_GATEWAY, "billing_error", "billing server error"),
             };
-            (sc, Json(ApiError { error: msg.to_string(), code: code.to_string(), details: Some(body) }))
+            (sc, Json(ApiError { error: msg.to_string(), code: code.to_string(), details: Some(body), data: None }))
         }
         aura_os_billing::BillingError::Request(_) => {
             (StatusCode::BAD_GATEWAY, Json(ApiError {
                 error: "unable to reach billing server".to_string(),
                 code: "billing_unreachable".to_string(),
                 details: Some(e.to_string()),
+                data: None,
             }))
         }
         _ => ApiError::internal(format!("billing operation failed: {e}")),
@@ -180,8 +183,8 @@ mod tests {
     use aura_os_orgs::OrgService;
     use aura_os_projects::ProjectService;
     use aura_os_sessions::SessionService;
-    use aura_os_store::RocksStore;
-    use aura_os_super_agent::SuperAgentService;
+    use aura_os_store::SettingsStore;
+    use aura_os_agent_runtime::AgentRuntimeService;
     use aura_os_tasks::TaskService;
 
     use crate::HarnessHttpGateway;
@@ -248,8 +251,8 @@ mod tests {
     }
 
     fn build_test_state(billing_client: Arc<BillingClient>) -> (AppState, tempfile::TempDir) {
-        let db_dir = tempfile::tempdir().unwrap();
-        let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+        let store_dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
 
         let org_service = Arc::new(OrgService::new(store.clone()));
         let auth_service = Arc::new(AuthService::new());
@@ -274,8 +277,28 @@ mod tests {
         let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(64);
         let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
         let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
-        let super_agent_service = Arc::new(SuperAgentService::new(
-            "http://localhost:19080".to_string(),
+        let router_url = "http://localhost:19080".to_string();
+        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+            event_broadcast.clone(),
+            store_dir.path().to_path_buf(),
+            store.clone(),
+            agent_service.clone(),
+            org_service.clone(),
+            automaton_client.clone(),
+            None,
+            task_service.clone(),
+            router_url.clone(),
+            reqwest::Client::new(),
+        ));
+        let tool_registry = {
+            let mut registry = aura_os_agent_tools::build_all_tools_registry();
+            aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
+            Arc::new(registry)
+        };
+        let agent_runtime = Arc::new(AgentRuntimeService::new(
+            tool_registry,
+            process_executor,
+            router_url,
             project_service.clone(),
             agent_service.clone(),
             agent_instance_service.clone(),
@@ -290,12 +313,11 @@ mod tests {
             store.clone(),
             event_broadcast.clone(),
             local_harness.clone(),
-            db_dir.path().to_path_buf(),
         ));
 
         (
             AppState {
-                data_dir: db_dir.path().to_path_buf(),
+                data_dir: store_dir.path().to_path_buf(),
                 store,
                 org_service,
                 auth_service,
@@ -309,6 +331,7 @@ mod tests {
                 swarm_harness,
                 harness_sessions: Arc::new(Mutex::new(HashMap::new())),
                 terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
+                browser_manager: Arc::new(aura_os_browser::BrowserManager::new(aura_os_browser::BrowserConfig::default())),
                 network_client: None,
                 feedback_network_client: None,
                 storage_client: None,
@@ -324,11 +347,10 @@ mod tests {
                 task_output_cache: Arc::new(Mutex::new(HashMap::new())),
                 orbit_client: None,
                 validation_cache: Arc::new(dashmap::DashMap::new()),
-                super_agent_service,
-                super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
-                super_agent_runs: Arc::new(Mutex::new(HashMap::new())),
+                agent_runtime,
+                permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
             },
-            db_dir,
+            store_dir,
         )
     }
 
@@ -336,7 +358,7 @@ mod tests {
     async fn require_credits_caches_per_jwt() {
         let (billing_url, billing_state) = start_credit_server().await;
         let billing_client = Arc::new(BillingClient::with_base_url(billing_url));
-        let (state, _db_dir) = build_test_state(billing_client);
+        let (state, _store_dir) = build_test_state(billing_client);
 
         require_credits(&state, "tok-a").await.unwrap();
 

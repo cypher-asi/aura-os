@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   useAgentStore: vi.fn(),
   storeFetchAgents: vi.fn(),
   storeRemoveAgent: vi.fn(),
+  storePatchAgent: vi.fn(),
   pendingCreateAgentHandoff: null as { target: string; label?: string } | null,
   beginCreateAgentHandoff: vi.fn((target: string, label?: string) => {
     mocks.pendingCreateAgentHandoff = { target, label };
@@ -33,6 +34,7 @@ Object.assign(mocks.useAgentStore, {
   getState: () => ({
     fetchAgents: mocks.storeFetchAgents,
     removeAgent: mocks.storeRemoveAgent,
+    patchAgent: mocks.storePatchAgent,
   }),
 });
 
@@ -179,6 +181,25 @@ vi.mock("../../../stores/chat-history-store", () => ({
   agentHistoryKey: (agentId: string) => `agent:${agentId}`,
 }));
 
+vi.mock("../../../stores/auth-store", () => ({
+  useAuth: () => ({
+    user: { network_user_id: "user-1" },
+    isAuthenticated: true,
+  }),
+}));
+
+vi.mock("../../../stores/projects-list-store", () => ({
+  useProjectsListStore: Object.assign(
+    (selector: (state: { patchAgentTemplateFields: (agent: unknown) => void }) => unknown) =>
+      selector({ patchAgentTemplateFields: vi.fn() }),
+    {
+      getState: () => ({
+        patchAgentTemplateFields: vi.fn(),
+      }),
+    },
+  ),
+}));
+
 vi.mock("../../../stores/chat-handoff-store", () => ({
   useChatHandoffStore: (selector: (state: {
     pendingCreateAgentHandoff: typeof mocks.pendingCreateAgentHandoff;
@@ -226,6 +247,7 @@ describe("AgentList", () => {
     mocks.pendingCreateAgentHandoff = null;
     mocks.storeFetchAgents = vi.fn();
     mocks.storeRemoveAgent = vi.fn();
+    mocks.storePatchAgent = vi.fn();
     mocks.useAgentStore.mockImplementation((selector: (state: {
       togglePin: (agentId: string) => void;
       toggleFavorite: (agentId: string) => void;
@@ -291,9 +313,11 @@ describe("AgentList", () => {
     mocks.useParams.mockReturnValue({ agentId: undefined });
     const user = userEvent.setup();
     const prefetchHistory = vi.fn();
+    const fetchHistory = vi.fn(async () => {});
     const listEvents = vi.fn(async () => []);
     mocks.useChatHistoryStore.getState = () => ({
       prefetchHistory,
+      fetchHistory,
     });
     const client = await import("../../../api/client");
     vi.spyOn(client.api.agents, "listEvents").mockImplementation(listEvents);
@@ -312,6 +336,56 @@ describe("AgentList", () => {
     expect(listEvents).toHaveBeenCalledWith("agent-1", {
       limit: client.STANDALONE_AGENT_HISTORY_LIMIT,
     });
+  });
+
+  it("prefetches history for every visible agent on desktop sidebar mount", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useAgents.mockReturnValue({
+      agents: [agent, secondAgent],
+      status: "ready",
+      fetchAgents: vi.fn(async () => {}),
+    });
+    mocks.useSortedAgents.mockReturnValue([agent, secondAgent]);
+    const prefetchHistory = vi.fn();
+    const fetchHistory = vi.fn(async () => {});
+    mocks.useChatHistoryStore.getState = () => ({
+      prefetchHistory,
+      fetchHistory,
+    });
+
+    render(<AgentList />);
+
+    await waitFor(() => {
+      expect(fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-1",
+        expect.any(Function),
+      );
+      expect(fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-2",
+        expect.any(Function),
+      );
+    });
+  });
+
+  it("does not prefetch history on mount in mobile-library mode", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
+    mocks.useAgents.mockReturnValue({
+      agents: [agent, secondAgent],
+      status: "ready",
+      fetchAgents: mocks.fetchAgentsMock,
+    });
+    mocks.useSortedAgents.mockReturnValue([agent, secondAgent]);
+    const prefetchHistory = vi.fn();
+    const fetchHistory = vi.fn(async () => {});
+    mocks.useChatHistoryStore.getState = () => ({
+      prefetchHistory,
+      fetchHistory,
+    });
+
+    render(<AgentList mode="mobile-library" />);
+
+    await Promise.resolve();
+    expect(fetchHistory).not.toHaveBeenCalled();
   });
 
   it("opens the shared editor from the mobile create query", () => {

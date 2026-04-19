@@ -57,7 +57,7 @@ impl HarnessHttpGateway {
         Ok((status, [(header::CONTENT_TYPE, "application/json")], body).into_response())
     }
 
-    /// POST to register a skill on an agent (best-effort; used after super-agent setup).
+    /// POST to register a skill on an agent (best-effort; used after agent harness setup).
     pub(crate) async fn install_skill_for_agent(&self, agent_id: &str, skill_name: &str) -> bool {
         let path = format!("api/agents/{agent_id}/skills");
         let body = serde_json::json!({ "name": skill_name }).to_string();

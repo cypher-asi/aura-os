@@ -11,6 +11,7 @@ import type { ChatAttachment } from "../../api/streams";
 import type { Project } from "../../types";
 import type { GenerationMode } from "../../constants/models";
 import type { DisplaySessionEvent } from "../../types/stream";
+import type { ContextUsageEntry } from "../../stores/context-usage-store";
 import styles from "./ChatPanel.module.css";
 
 type ChatPanelHandoffMode = "create-agent";
@@ -51,7 +52,7 @@ export interface ChatPanelProps {
   mobileHeaderSummaryKind?: "details" | "switch";
   initialHandoff?: ChatPanelHandoffMode;
   onInitialHandoffReady?: () => void;
-  contextUtilization?: number;
+  contextUsage?: ContextUsageEntry;
   onNewSession?: () => void;
 }
 
@@ -82,7 +83,7 @@ export function ChatPanel({
   mobileHeaderSummaryKind = "details",
   initialHandoff,
   onInitialHandoffReady,
-  contextUtilization,
+  contextUsage,
   onNewSession,
 }: ChatPanelProps) {
   const {
@@ -396,7 +397,7 @@ export function ChatPanel({
           onProjectChange={onProjectChange}
           isVisible
           isCentered={isThreadEmpty}
-          contextUtilization={contextUtilization}
+          contextUsage={contextUsage}
           onNewSession={onNewSession}
         />
       </div>

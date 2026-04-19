@@ -4,10 +4,12 @@ import type {
   AgentInstanceId,
   Agent,
   AgentInstance,
+  AgentPermissions,
+  IntentClassifierSpec,
   Session,
   SessionEvent,
   Task,
-  SuperAgentOrchestration,
+  AgentOrchestration,
 } from "../types";
 import { apiFetch } from "./core";
 import { sendAgentEventStream, sendEventStream } from "./streams";
@@ -29,8 +31,25 @@ export interface PaginatedEventsResponse {
   next_cursor: string | null;
 }
 
+export interface ContextUsageResponse {
+  context_utilization: number;
+  /** Most recent absolute token count for the session's input context,
+   * as reported by the harness in `assistant_message_end.usage`. Absent
+   * when only the legacy `context_utilization` ratio is known (e.g.
+   * dev-loop fallback). */
+  estimated_context_tokens?: number;
+}
+
 export const agentTemplatesApi = {
-  list: () => apiFetch<Agent[]>("/api/agents"),
+  // `orgId` scopes the listing to the full org fleet (every member's
+  // agents, not just the caller's). Without it aura-network filters by
+  // `WHERE user_id = $1`, which means teammates' agents never appear.
+  // The server forwards the query to aura-network which verifies org
+  // membership before dropping the user_id filter.
+  list: (orgId?: string) => {
+    const qs = orgId ? `?org_id=${encodeURIComponent(orgId)}` : "";
+    return apiFetch<Agent[]>(`/api/agents${qs}`);
+  },
   create: (data: {
     org_id?: string;
     name: string;
@@ -45,6 +64,18 @@ export const agentTemplatesApi = {
     auth_source?: string;
     integration_id?: string | null;
     default_model?: string | null;
+    tags?: string[];
+    /** Marketplace listing status. Phase 2: sent alongside the legacy
+     * `listing_status:` tag so the server can validate centrally. */
+    listing_status?: string;
+    /** Marketplace expertise slugs. The server folds them into `tags`. */
+    expertise?: string[];
+    /** Local-only per-agent working directory override (absolute OS path). */
+    local_workspace_path?: string | null;
+    /** Required capability + scope bundle. Backend rejects creates without. */
+    permissions: AgentPermissions;
+    /** Optional intent-classifier spec; CEO agents ship one. */
+    intent_classifier?: IntentClassifierSpec | null;
   }) =>
     apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
   get: (agentId: AgentId, options?: ApiRequestOptions) =>
@@ -62,6 +93,20 @@ export const agentTemplatesApi = {
     auth_source?: string;
     integration_id?: string | null;
     default_model?: string | null;
+    tags?: string[];
+    listing_status?: string;
+    expertise?: string[];
+    /**
+     * Patch semantics for the local workspace override:
+     * - `undefined` (omitted): leave the stored value unchanged.
+     * - `null` or `""`: clear the override.
+     * - `string`: set the override to this absolute path.
+     */
+    local_workspace_path?: string | null;
+    /** Replaces the permissions bundle wholesale. `undefined` leaves it. */
+    permissions?: AgentPermissions;
+    /** Replaces the intent-classifier spec. `undefined` leaves it. */
+    intent_classifier?: IntentClassifierSpec | null;
   }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
@@ -104,7 +149,69 @@ export const agentTemplatesApi = {
   sendEventStream: sendAgentEventStream,
   resetSession: (agentId: AgentId) =>
     apiFetch<void>(`/api/agents/${agentId}/reset-session`, { method: "POST" }),
+  getContextUsage: (agentId: AgentId, options?: ApiRequestOptions) =>
+    apiFetch<ContextUsageResponse>(
+      `/api/agents/${agentId}/context-usage`,
+      { signal: options?.signal },
+    ),
+  getInstalledTools: (
+    agentId: AgentId,
+    options?: ApiRequestOptions,
+  ) =>
+    apiFetch<AgentInstalledToolsDiagnostic>(
+      `/api/agents/${agentId}/installed-tools`,
+      { signal: options?.signal },
+    ),
 };
+
+/**
+ * Source of an installed tool row. Mirrors the backend
+ * `InstalledToolDiagnosticRow.source` field.
+ *
+ * - `workspace`: app-provider / MCP / aura-native tools surfaced by the
+ *   org's installed workspace integrations.
+ * - `cross_agent`: tools added by
+ *   `aura_os_agent_runtime::ceo::build_cross_agent_tools` based on the
+ *   agent's `AgentPermissions` (CEO manifest or capability-gated subset).
+ * - `integration`: `InstalledIntegration` entries the harness sees
+ *   alongside the tool list.
+ */
+export type InstalledToolDiagnosticSource =
+  | "workspace"
+  | "cross_agent"
+  | "integration";
+
+export interface InstalledToolDiagnosticRow {
+  name: string;
+  endpoint: string;
+  source: InstalledToolDiagnosticSource;
+  /**
+   * Capability variant that caused a `cross_agent` tool to be added
+   * (camelCase, matches `Capability["type"]`). Absent for the full CEO
+   * manifest and for `workspace`/`integration` rows.
+   */
+  capability_origin?: string;
+  /**
+   * Whether the in-process dispatcher at `/api/agent_tools/:name` knows
+   * how to execute this tool. Always `true` for `workspace` /
+   * `integration` rows (they're dispatched via other endpoints).
+   */
+  registered: boolean;
+}
+
+export interface AgentInstalledToolsDiagnostic {
+  agent_id: string;
+  is_ceo_preset: boolean;
+  agent_permissions: AgentPermissions;
+  tools: InstalledToolDiagnosticRow[];
+  /**
+   * Cross-agent tool names whose endpoint points at
+   * `/api/agent_tools/:name` but that the dispatcher doesn't know
+   * about. A non-empty list indicates a wiring gap (e.g. the UI label
+   * doesn't match the registered tool name).
+   */
+  missing_registrations: string[];
+}
 
 export const agentInstancesApi = {
   createAgentInstance: (projectId: ProjectId, agentId: AgentId) =>
@@ -145,12 +252,35 @@ export const agentInstancesApi = {
       `/api/projects/${projectId}/agents/${agentInstanceId}/reset-session`,
       { method: "POST" },
     ),
+  getContextUsage: (
+    projectId: ProjectId,
+    agentInstanceId: AgentInstanceId,
+    options?: ApiRequestOptions,
+  ) =>
+    apiFetch<ContextUsageResponse>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/context-usage`,
+      { signal: options?.signal },
+    ),
 };
 
+export interface CleanupCeoResponse {
+  kept?: string;
+  deleted: string[];
+  failed: string[];
+}
+
 export const superAgentApi = {
-  setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/super-agent/setup", { method: "POST" }),
-  listOrchestrations: () => apiFetch<SuperAgentOrchestration[]>("/api/super-agent/orchestrations"),
-  getOrchestration: (id: string) => apiFetch<SuperAgentOrchestration>(`/api/super-agent/orchestrations/${id}`),
+  setup: () => apiFetch<{ agent: Agent; created: boolean }>("/api/agents/harness/setup", { method: "POST" }),
+  /**
+   * Dedupe CEO bootstrap agents on the server: keep the oldest CEO,
+   * delete the rest. Never creates a new agent.
+   */
+  cleanup: () =>
+    apiFetch<CleanupCeoResponse>("/api/agents/harness/cleanup", {
+      method: "POST",
+    }),
+  listOrchestrations: () => apiFetch<AgentOrchestration[]>("/api/agent-orchestrations"),
+  getOrchestration: (id: string) => apiFetch<AgentOrchestration>(`/api/agent-orchestrations/${id}`),
 };
 
 export const sessionsApi = {

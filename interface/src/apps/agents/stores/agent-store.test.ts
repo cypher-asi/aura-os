@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Agent, SessionEvent } from "../../../types";
+import { emptyAgentPermissions } from "../../../types/permissions-wire";
 import type { DisplaySessionEvent } from "../../../types/stream";
 
 const mockAgents: Agent[] = [
@@ -12,6 +13,7 @@ const mockAgents: Agent[] = [
     system_prompt: "",
     skills: [],
     icon: null,
+    permissions: emptyAgentPermissions(),
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
   },
@@ -24,6 +26,7 @@ const mockAgents: Agent[] = [
     system_prompt: "",
     skills: [],
     icon: null,
+    permissions: emptyAgentPermissions(),
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
   },

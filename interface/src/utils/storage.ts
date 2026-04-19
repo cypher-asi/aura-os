@@ -6,6 +6,7 @@ import {
   PROJECT_ORDER_KEY,
   TASKBAR_APP_ORDER_KEY,
   TASKBAR_APPS_COLLAPSED_KEY,
+  TASKBAR_HIDDEN_APPS_KEY,
 } from "../constants";
 
 type LastAgentMap = Record<string, string>;
@@ -239,6 +240,32 @@ export function setTaskbarAppOrder(ids: string[]): void {
       return;
     }
     localStorage.setItem(TASKBAR_APP_ORDER_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function getTaskbarHiddenAppIds(): string[] {
+  try {
+    const raw = localStorage.getItem(TASKBAR_HIDDEN_APPS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === "string");
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return [];
+}
+
+export function setTaskbarHiddenAppIds(ids: string[]): void {
+  try {
+    if (ids.length === 0) {
+      localStorage.removeItem(TASKBAR_HIDDEN_APPS_KEY);
+      return;
+    }
+    localStorage.setItem(TASKBAR_HIDDEN_APPS_KEY, JSON.stringify(ids));
   } catch {
     // ignore storage failures
   }

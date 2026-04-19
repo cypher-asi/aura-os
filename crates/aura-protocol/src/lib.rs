@@ -5,6 +5,22 @@
 //!
 //! This crate is consumed by both the harness server (`aura-node`) and
 //! any client implementation (e.g. `aura-os-link`).
+//!
+//! # Agent permissions model
+//!
+//! [`SessionInit::agent_permissions`] is **required** on every session.
+//! The harness enforces these permissions unconditionally — there is no
+//! role-based fallback, no named preset, and no legacy "no-permissions"
+//! default. Every caller opening a session must send an explicit
+//! [`AgentPermissionsWire`] value describing the scope + capability bundle
+//! the session is allowed to exercise.
+//!
+//! The single [`crate::SessionInit`] type drives all agent behavior: the
+//! free-text `role` field is a UI label with no system meaning; what an
+//! agent can actually do is determined entirely by its
+//! [`AgentPermissionsWire`] (capabilities + [`AgentScopeWire`]). Spawned
+//! child agents must carry a strict subset of their parent's permissions;
+//! see `aura_core::AgentPermissions::contains` on the harness side.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -100,6 +116,102 @@ pub struct SessionInit {
     /// Optional per-session provider override for BYOK/runtime isolation.
     #[serde(default)]
     pub provider_config: Option<SessionProviderConfig>,
+    /// Optional keyword-driven intent classifier spec. When present the harness
+    /// narrows the per-turn tool surface based on each user message using the
+    /// same tier-1 / tier-2 domain rules aura-os used to run in-process for
+    /// the CEO-preset agent. Ships as the profile-JSON subset that
+    /// `aura-tools::IntentClassifier::from_profile_json` accepts, plus a
+    /// `tool_domains` map from tool name to domain so the harness can narrow
+    /// `tool_definitions` (which are opaque to the classifier otherwise).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_classifier: Option<IntentClassifierSpec>,
+    /// Explicit [`AgentPermissionsWire`] bundle for this session. Required
+    /// on every session; the harness enforces scope + capability checks
+    /// unconditionally against these grants. See the module-level
+    /// "Agent permissions model" section for details.
+    pub agent_permissions: AgentPermissionsWire,
+}
+
+/// Wire-compatible mirror of `aura_core::AgentPermissions`.
+///
+/// Mirrored here so `aura-protocol` stays decoupled from the harness-core
+/// crates; the harness translates [`AgentPermissionsWire`] into its own
+/// `aura_core::AgentPermissions` at `SessionInit` time. Additive /
+/// forward-compatible: unknown capability variants deserialize into
+/// [`CapabilityWire::Unknown`] rather than rejecting the session.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct AgentPermissionsWire {
+    #[serde(default)]
+    pub scope: AgentScopeWire,
+    #[serde(default)]
+    pub capabilities: Vec<CapabilityWire>,
+}
+
+/// Wire-compatible mirror of `aura_core::AgentScope`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct AgentScopeWire {
+    #[serde(default)]
+    pub orgs: Vec<String>,
+    #[serde(default)]
+    pub projects: Vec<String>,
+    #[serde(default)]
+    pub agent_ids: Vec<String>,
+}
+
+/// Wire-compatible mirror of `aura_core::Capability` (externally-tagged
+/// camel-case enum matching the core serialization format).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub enum CapabilityWire {
+    SpawnAgent,
+    ControlAgent,
+    ReadAgent,
+    ManageOrgMembers,
+    ManageBilling,
+    InvokeProcess,
+    PostToFeed,
+    GenerateMedia,
+    #[serde(rename_all = "camelCase")]
+    ReadProject { id: String },
+    #[serde(rename_all = "camelCase")]
+    WriteProject { id: String },
+    /// Forward-compat fallback for capabilities introduced after this
+    /// protocol version. Deserialized via `#[serde(other)]` so a newer
+    /// harness / server can round-trip older wire bundles without
+    /// rejecting the session. Producers should never emit this variant.
+    #[serde(other)]
+    Unknown,
+}
+
+/// Keyword-driven classifier spec shipped in [`SessionInit`].
+///
+/// Matches the JSON shape that
+/// `aura-tools::IntentClassifier::from_profile_json` deserializes, extended
+/// with `tool_domains` so the harness can answer "which domain does this
+/// tool belong to?" without hard-coding the mapping in its binary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct IntentClassifierSpec {
+    /// Domain names that are always visible (tier-1). Snake-case strings
+    /// like `"project"`, `"agent"`, `"execution"`, `"monitoring"`.
+    pub tier1_domains: Vec<String>,
+    /// Keyword rules that expand the visible domain set tier-2 on demand.
+    pub classifier_rules: Vec<IntentClassifierRule>,
+    /// Mapping from tool name → domain. Any tool whose domain is in the
+    /// resolved visible set is kept on a turn.
+    #[serde(default)]
+    pub tool_domains: HashMap<String, String>,
+}
+
+/// One keyword → domain rule for [`IntentClassifierSpec`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "typescript", derive(TS), ts(export))]
+pub struct IntentClassifierRule {
+    pub domain: String,
+    pub keywords: Vec<String>,
 }
 
 /// Optional per-session provider override used for BYOK-style runtime resolution.
@@ -335,6 +447,15 @@ pub struct AssistantMessageEnd {
     pub stop_reason: String,
     pub usage: SessionUsage,
     pub files_changed: FilesChanged,
+    /// Phase 5 billing roll-up: the originating user whose budget
+    /// should absorb this turn's cost. When `None`, the immediate
+    /// agent owner is billed (today's behavior). Populated by the
+    /// harness when a spawned agent's work should roll up to the
+    /// ancestor user via `walk_parent_chain`. Strictly additive —
+    /// older harness builds never set this field; older clients
+    /// ignore it on deserialize.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub originating_user_id: Option<String>,
 }
 
 /// Token usage information for a session.
@@ -576,5 +697,47 @@ mod ts_export {
     fn export_typescript_bindings() {
         InboundMessage::export_all().unwrap();
         OutboundMessage::export_all().unwrap();
+    }
+}
+
+#[cfg(test)]
+mod capability_wire_tests {
+    use super::*;
+
+    #[test]
+    fn capability_wire_unknown_variant_round_trips_as_unknown() {
+        let json = r#"{"type":"futureCapability"}"#;
+        let c: CapabilityWire = serde_json::from_str(json).unwrap();
+        assert!(matches!(c, CapabilityWire::Unknown));
+    }
+
+    #[test]
+    fn capability_wire_known_variants_still_deserialize() {
+        let spawn: CapabilityWire =
+            serde_json::from_str(r#"{"type":"spawnAgent"}"#).unwrap();
+        assert!(matches!(spawn, CapabilityWire::SpawnAgent));
+        let read_project: CapabilityWire =
+            serde_json::from_str(r#"{"type":"readProject","id":"proj-1"}"#).unwrap();
+        assert!(matches!(
+            read_project,
+            CapabilityWire::ReadProject { ref id } if id == "proj-1"
+        ));
+    }
+
+    #[test]
+    fn agent_permissions_with_unknown_capability_deserializes() {
+        // An older server receiving a newer bundle must accept the
+        // session rather than fail deserialization.
+        let json = r#"{
+            "scope": { "orgs": [], "projects": [], "agent_ids": [] },
+            "capabilities": [
+                {"type": "spawnAgent"},
+                {"type": "someFutureCapability", "extra": "ignored"}
+            ]
+        }"#;
+        let perms: AgentPermissionsWire = serde_json::from_str(json).unwrap();
+        assert_eq!(perms.capabilities.len(), 2);
+        assert!(matches!(perms.capabilities[0], CapabilityWire::SpawnAgent));
+        assert!(matches!(perms.capabilities[1], CapabilityWire::Unknown));
     }
 }

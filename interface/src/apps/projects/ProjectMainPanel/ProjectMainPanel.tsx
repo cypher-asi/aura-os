@@ -12,8 +12,8 @@ export function ProjectMainPanel({ children }: { children?: ReactNode }) {
 
   useEffect(() => {
     if (status !== "ready") return;
-    setTerminalTarget({ cwd: workspacePath, remoteAgentId });
-  }, [remoteAgentId, setTerminalTarget, status, workspacePath]);
+    setTerminalTarget({ cwd: workspacePath, remoteAgentId, projectId });
+  }, [projectId, remoteAgentId, setTerminalTarget, status, workspacePath]);
 
   return (
     <ResponsiveMainLane>

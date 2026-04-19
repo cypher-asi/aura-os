@@ -137,9 +137,13 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
     setHasLoadedExistingAgents(false);
     setAgentsError(null);
 
-    void api.agents.list()
+    void api.agents.list(activeOrg?.org_id)
       .then((agents) => {
         if (cancelled) return;
+        // The server already filters to the active org when
+        // `activeOrg?.org_id` is passed; we still re-check here as
+        // defense-in-depth for the brief window where `activeOrg` is
+        // null (first mount) and the list comes back unscoped.
         const visibleRemoteAgents = agents.filter((agent) => (
           agent.org_id === activeOrg?.org_id &&
           agent.machine_type === "remote" &&
@@ -190,7 +194,6 @@ export function ProjectAgentSetupView({ mode = "create" }: { mode?: ProjectAgent
       setAttachingId(null);
     }
   }, [finishAttach, projectId]);
-
   if (!projectId) {
     return null;
   }

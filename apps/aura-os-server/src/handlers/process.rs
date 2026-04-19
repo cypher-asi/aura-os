@@ -534,7 +534,7 @@ pub(crate) async fn trigger_process(
         .map_err(|_| ApiError::bad_request("invalid process ID"))?;
 
     let run = state
-        .super_agent_service
+        .agent_runtime
         .process_executor
         .trigger_with_auth(&process_id, ProcessRunTrigger::Manual, Some(&jwt))
         .await
@@ -743,7 +743,7 @@ pub(crate) async fn cancel_run(
         .map_err(|_| ApiError::bad_request("invalid run ID"))?;
 
     state
-        .super_agent_service
+        .agent_runtime
         .process_executor
         .cancel_run(&process_id, &run_id, Some(&jwt))
         .await
@@ -984,9 +984,9 @@ mod tests {
 
     #[tokio::test]
     async fn require_process_storage_client_accepts_public_jwt_clients() {
-        let db_dir = tempfile::tempdir().expect("tempdir");
-        let db_path = db_dir.path().join("settings.db");
-        let mut state = crate::build_app_state(&db_path).expect("build app state");
+        let store_dir = tempfile::tempdir().expect("tempdir");
+        let store_path = store_dir.path().join("store");
+        let mut state = crate::build_app_state(&store_path).expect("build app state");
 
         state.storage_client = Some(Arc::new(StorageClient::with_base_url(
             "http://localhost:8080",

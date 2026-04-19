@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Menu, Modal, Button } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import { Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
+import { Pencil, Pin, PinOff, Star, StarOff, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { ProjectsPlusButton } from "../../../components/ProjectsPlusButton";
@@ -19,8 +19,10 @@ import {
   useAgentStore,
   useSortedAgents,
 } from "../stores";
+import { useAuth } from "../../../stores/auth-store";
 import { useChatHandoffStore } from "../../../stores/chat-handoff-store";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
+import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { useOverlayScrollbar } from "../../../hooks/use-overlay-scrollbar";
 import { createAgentChatHandoffState } from "../../../utils/chat-handoff";
@@ -28,13 +30,23 @@ import { standaloneAgentHandoffTarget } from "../../../utils/chat-handoff";
 import { getApiErrorDetails, getApiErrorMessage } from "../../../utils/api-errors";
 
 import type { Agent } from "../../../types";
+import { isSuperAgent as isSuperAgentByPerms } from "../../../types/permissions";
 import styles from "./AgentList.module.css";
 
-function buildAgentMenuItems(agent: Agent, pinnedIds: Set<string>, favoriteIds: Set<string>): MenuItem[] {
-  const isSuperAgent = agent.tags?.includes("super_agent");
+function buildAgentMenuItems(
+  agent: Agent,
+  pinnedIds: Set<string>,
+  favoriteIds: Set<string>,
+  isOwnAgent: boolean,
+): MenuItem[] {
+  const isSuperAgent = isSuperAgentByPerms(agent);
   const isPinned = agent.is_pinned || pinnedIds.has(agent.agent_id);
   const isFavorite = favoriteIds.has(agent.agent_id);
   const items: MenuItem[] = [];
+
+  if (isOwnAgent) {
+    items.push({ id: "edit", label: "Edit", icon: <Pencil size={14} /> });
+  }
 
   if (!isSuperAgent) {
     items.push(
@@ -157,6 +169,8 @@ export function AgentList({ mode = "default" }: AgentListProps) {
 
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
+  const [editTarget, setEditTarget] = useState<Agent | null>(null);
+  const { user } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -229,6 +243,46 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
   }, [isMobileLibrary]);
 
+  const prefetchAgentIds = useMemo(
+    () => (isDesktopSidebar ? agents.map((a) => a.agent_id) : []),
+    [agents, isDesktopSidebar],
+  );
+
+  useEffect(() => {
+    if (prefetchAgentIds.length === 0) return;
+    // Prefetch last-message previews for the sidebar with a small concurrency
+    // gate so first paint isn't blocked by a flood of parallel requests. The
+    // chat-history store TTL-caches, so repeats are cheap.
+    const CONCURRENCY = 4;
+    let cancelled = false;
+    const queue = [...prefetchAgentIds];
+    const worker = async () => {
+      while (!cancelled && queue.length > 0) {
+        const id = queue.shift();
+        if (!id) break;
+        try {
+          await useChatHistoryStore.getState().fetchHistory(
+            agentHistoryKey(id),
+            () =>
+              api.agents.listEvents(id, {
+                limit: STANDALONE_AGENT_HISTORY_LIMIT,
+              }),
+          );
+        } catch {
+          // errors are stored on the history entry; keep draining the queue
+        }
+      }
+    };
+    const workers = Array.from(
+      { length: Math.min(CONCURRENCY, prefetchAgentIds.length) },
+      () => worker(),
+    );
+    void Promise.all(workers);
+    return () => {
+      cancelled = true;
+    };
+  }, [prefetchAgentIds]);
+
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       const target = (e.target as HTMLElement).closest("button[id]");
@@ -251,6 +305,9 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     (actionId: string) => {
       if (!ctxMenu) return;
       switch (actionId) {
+        case "edit":
+          setEditTarget(ctxMenu.agent);
+          break;
         case "pin":
         case "unpin":
           togglePin(ctxMenu.agent.agent_id);
@@ -391,7 +448,12 @@ export function AgentList({ mode = "default" }: AgentListProps) {
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
           >
             <Menu
-              items={buildAgentMenuItems(ctxMenu.agent, pinnedIds, favoriteIds)}
+              items={buildAgentMenuItems(
+                ctxMenu.agent,
+                pinnedIds,
+                favoriteIds,
+                !!user?.network_user_id && user.network_user_id === ctxMenu.agent.user_id,
+              )}
               onChange={handleMenuAction}
               background="solid"
               border="solid"
@@ -450,6 +512,18 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         isTransitioning={!!pendingCreatedAgentId}
         titleOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
         submitLabelOverride={isMobileLibrary ? "Create Remote Agent" : undefined}
+      />
+
+      <AgentEditorModal
+        isOpen={!!editTarget}
+        agent={editTarget ?? undefined}
+        onClose={() => setEditTarget(null)}
+        onSaved={(updated) => {
+          useAgentStore.getState().patchAgent(updated);
+          useProjectsListStore.getState().patchAgentTemplateFields(updated);
+          void fetchAgents({ force: true });
+          setEditTarget(null);
+        }}
       />
     </>
   );

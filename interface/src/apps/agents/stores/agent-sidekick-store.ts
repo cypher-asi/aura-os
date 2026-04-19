@@ -12,6 +12,7 @@ export type AgentSidekickTab =
   | "profile"
   | "chats"
   | "skills"
+  | "permissions"
   | "projects"
   | "tasks"
   | "processes"

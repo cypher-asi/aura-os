@@ -9,18 +9,29 @@ use serde::de::DeserializeOwned;
 use crate::batch::BatchOp;
 use crate::error::{StoreError, StoreResult};
 
-/// Column families used by the store.
+/// Logical column families. Each maps to a `<name>.json` file on disk.
+///
+/// This is a historical holdover from the RocksDB-backed predecessor; the
+/// current implementation is a plain JSON-file store per family.
+///
+/// NOTE: `super_agent_orchestrations` is a historical name from when
+/// "super agents" were a distinct type. That distinction has been
+/// unified into `Agent` + `AgentPermissions`; renaming the column
+/// family here would require a data migration (existing on-disk
+/// JSON files are keyed by this CF name), so the legacy name is
+/// retained intentionally. Comments only — storage key is stable.
 pub(crate) const CF_NAMES: &[&str] = &["settings", "super_agent_orchestrations"];
 
 type CfMap = BTreeMap<String, Vec<u8>>;
 
-pub struct RocksStore {
+/// Local JSON-backed key-value store (see crate-level docs for why the name).
+pub struct SettingsStore {
     data: RwLock<BTreeMap<String, CfMap>>,
     pub(crate) session_cache: RwLock<Option<ZeroAuthSession>>,
     dir: PathBuf,
 }
 
-impl RocksStore {
+impl SettingsStore {
     pub fn open(path: &Path) -> StoreResult<Self> {
         fs::create_dir_all(path)?;
 

@@ -2,12 +2,18 @@
 name = "aura-protocol"
 description = "Shared wire protocol types for the Aura harness WebSocket API"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 ts-rs = { version = "10", optional = true, features = ["serde-json-impl"] }
 
 [features]
 typescript = ["ts-rs"]
+
+[lints]
+workspace = true

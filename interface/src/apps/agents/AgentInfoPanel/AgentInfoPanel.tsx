@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Text, Button, Modal } from "@cypher-asi/zui";
 import { Loader2, FolderOpen, X } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
-import { SuperAgentDashboardPanel } from "../../../components/SuperAgentDashboardPanel";
+import { AgentOrchestrationDashboard } from "../../../components/AgentOrchestrationDashboard";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { api } from "../../../api/client";
@@ -19,11 +19,20 @@ import { SkillPreview } from "./SkillPreview";
 import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import { ProfileTab } from "./ProfileTab";
 import { ChatsTab } from "./ChatsTab";
+import { PermissionsTab } from "./PermissionsTab";
 import type { Agent } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {
   variant?: "default" | "mobileStandalone";
+  /**
+   * Override the agent resolved from `useSelectedAgent`. Used by apps that
+   * reuse this panel (e.g. the Marketplace) to display an agent that isn't
+   * in the local agent store. When provided, ownership still comes from
+   * `agent.user_id`, so non-owned agents remain read-only.
+   */
+  agent?: Agent | null;
 }
 
 type ProjectBinding = {
@@ -192,8 +201,9 @@ function ProjectsTab({
   );
 }
 
-export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
-  const { selectedAgent, setSelectedAgent } = useSelectedAgent();
+export function AgentInfoPanel({ variant = "default", agent: agentOverride }: AgentInfoPanelProps) {
+  const { selectedAgent: storeSelectedAgent, setSelectedAgent } = useSelectedAgent();
+  const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
   const navigate = useNavigate();
   const {
@@ -290,6 +300,9 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
 
         {effectiveTab === "chats" && <ChatsTab agent={a} projectBindings={projectBindings} />}
         {effectiveTab === "skills" && <SkillsTab agent={a} />}
+        {effectiveTab === "permissions" && (
+          <PermissionsTab agent={a} isOwnAgent={isOwnAgent} />
+        )}
         {effectiveTab === "projects" && (
           <ProjectsTab
             projectBindings={projectBindings}
@@ -308,8 +321,8 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
         {effectiveTab === "memory" && <MemoryTab agent={a} />}
         {effectiveTab === "stats" && <div className={styles.tabEmptyState}>No stats yet</div>}
 
-        {effectiveTab === "profile" && a.tags?.includes("super_agent") && (
-          <SuperAgentDashboardPanel agent={a} />
+        {effectiveTab === "profile" && isSuperAgent(a) && (
+          <AgentOrchestrationDashboard agent={a} />
         )}
       </div>
 

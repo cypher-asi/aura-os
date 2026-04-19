@@ -390,20 +390,20 @@ impl MockNetwork {
 async fn build_test_app_with_feedback_network(
     seed_events: Vec<Value>,
 ) -> (Router, tempfile::TempDir) {
-    use aura_os_store::RocksStore;
+    use aura_os_store::SettingsStore;
 
     let mock = MockNetwork::new(seed_events);
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move { axum::serve(listener, mock.router()).await.ok() });
 
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let store_dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
     let (app, _state) = build_test_app_from_store(
         store,
-        db_dir.path().to_path_buf(),
+        store_dir.path().to_path_buf(),
         Some(Arc::new(NetworkClient::with_base_url(&format!(
             "http://{addr}"
         )))),
@@ -411,7 +411,7 @@ async fn build_test_app_with_feedback_network(
         None,
         None,
     );
-    (app, db_dir)
+    (app, store_dir)
 }
 
 fn response_status(response: &axum::http::Response<Body>) -> StatusCode {

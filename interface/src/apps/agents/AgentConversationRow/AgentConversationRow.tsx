@@ -1,6 +1,7 @@
 import { Pin } from "lucide-react";
 import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
+import { isSuperAgent } from "../../../types/permissions";
 import type { DisplaySessionEvent } from "../../../types/stream";
 import { Avatar } from "../../../components/Avatar";
 import { useAvatarState } from "../../../hooks/use-avatar-state";
@@ -40,12 +41,14 @@ export function AgentConversationRow({
   const messagePreview = lastMessage
     ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(lastMessage.content)}`
     : "";
+  const fallback = agentRole || "Open this agent";
   const preview = showMetadataOnly
-    ? agentDescription
-    : agentDescription || messagePreview;
+    ? agentDescription || fallback
+    : messagePreview || agentDescription || fallback;
   const { status, isLocal } = useAvatarState(agent.agent_id);
   const pinnedIds = useAgentStore((s) => s.pinnedAgentIds);
   const isPinned = agent.is_pinned || pinnedIds.has(agent.agent_id);
+  const isCeo = isSuperAgent(agent);
 
   return (
     <button
@@ -69,19 +72,17 @@ export function AgentConversationRow({
         <span className={styles.top}>
           <span className={styles.name}>
             {agent.name}
-            {agent.tags?.includes("super_agent") && (
-              <span className={styles.ceoBadge}>CEO</span>
-            )}
-            {!agent.tags?.includes("super_agent") && agentRole && (
+            {isCeo && <span className={styles.ceoBadge}>CEO</span>}
+            {!isCeo && agentRole && (
               <span className={styles.roleBadge}>{agentRole}</span>
             )}
-            {isPinned && !agent.tags?.includes("super_agent") && (
+            {isPinned && !isCeo && (
               <Pin size={11} className={styles.pinIcon} />
             )}
           </span>
           <span className={styles.time}>{formatChatTime(agent.updated_at)}</span>
         </span>
-        {preview ? <span className={styles.preview}>{preview}</span> : null}
+        <span className={styles.preview}>{preview}</span>
       </span>
     </button>
   );

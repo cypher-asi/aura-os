@@ -25,6 +25,7 @@ pub fn make_project(name: &str, _folder: &str) -> Project {
         orbit_base_url: None,
         orbit_owner: None,
         orbit_repo: None,
+        local_workspace_path: None,
     }
 }
 
@@ -115,6 +116,8 @@ pub fn make_agent_instance(name: &str) -> AgentInstance {
         total_input_tokens: 0,
         total_output_tokens: 0,
         model: None,
+        permissions: crate::permissions::AgentPermissions::empty(),
+        intent_classifier: None,
         created_at: now,
         updated_at: now,
     }

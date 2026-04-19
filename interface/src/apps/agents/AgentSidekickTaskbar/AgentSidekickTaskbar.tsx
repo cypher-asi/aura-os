@@ -11,6 +11,7 @@ import {
   BarChart3,
   Database,
   Pencil,
+  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import { useAgentSidekickStore, type AgentSidekickTab } from "../stores/agent-sidekick-store";
@@ -18,11 +19,13 @@ import { useShallow } from "zustand/react/shallow";
 import { useSelectedAgent } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
+import type { Agent } from "../../../types";
 
 const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Profile" },
   { id: "chats", icon: <MessageSquare size={16} />, title: "Chats" },
   { id: "skills", icon: <Zap size={16} />, title: "Skills" },
+  { id: "permissions", icon: <ShieldCheck size={16} />, title: "Permissions" },
   { id: "memory", icon: <Database size={16} />, title: "Memory" },
   { id: "projects", icon: <FolderOpen size={16} />, title: "Projects" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
@@ -31,7 +34,16 @@ const TAB_ICONS: TabItem[] = [
   { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
 ];
 
-export function AgentSidekickTaskbar() {
+interface AgentSidekickTaskbarProps {
+  /**
+   * Override the agent resolved from `useSelectedAgent`. Used by apps that
+   * reuse this taskbar (e.g. the Marketplace) with an agent that isn't in
+   * the local agent store.
+   */
+  agent?: Agent | null;
+}
+
+export function AgentSidekickTaskbar({ agent: agentOverride }: AgentSidekickTaskbarProps = {}) {
   const { activeTab, setActiveTab, requestEdit, requestDelete } = useAgentSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
@@ -40,7 +52,8 @@ export function AgentSidekickTaskbar() {
       requestDelete: s.requestDelete,
     })),
   );
-  const { selectedAgent } = useSelectedAgent();
+  const { selectedAgent: storeSelectedAgent } = useSelectedAgent();
+  const selectedAgent = agentOverride ?? storeSelectedAgent;
   const { user } = useAuth();
 
   const isOwnAgent =

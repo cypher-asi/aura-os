@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-const { mockApps, mockSetTaskbarAppOrder } = vi.hoisted(() => ({
+const { mockApps, mockSetTaskbarAppOrder, mockSetTaskbarHiddenAppIds } = vi.hoisted(() => ({
   mockApps: [
     { id: "agents", basePath: "/agents", label: "Agents", preload: vi.fn() },
     { id: "projects", basePath: "/projects", label: "Projects", preload: vi.fn() },
@@ -10,6 +10,7 @@ const { mockApps, mockSetTaskbarAppOrder } = vi.hoisted(() => ({
     { id: "desktop", basePath: "/desktop", label: "Desktop", preload: vi.fn() },
   ],
   mockSetTaskbarAppOrder: vi.fn(),
+  mockSetTaskbarHiddenAppIds: vi.fn(),
 }));
 
 const mockSetActiveTab = vi.fn();
@@ -18,6 +19,8 @@ vi.mock("../apps/registry", () => ({ apps: mockApps }));
 vi.mock("../utils/storage", () => ({
   getTaskbarAppOrder: () => [],
   setTaskbarAppOrder: mockSetTaskbarAppOrder,
+  getTaskbarHiddenAppIds: () => [],
+  setTaskbarHiddenAppIds: mockSetTaskbarHiddenAppIds,
 }));
 
 import {
@@ -29,6 +32,7 @@ import {
 
 beforeEach(() => {
   mockSetTaskbarAppOrder.mockReset();
+  mockSetTaskbarHiddenAppIds.mockReset();
   mockSetActiveTab.mockReset();
   for (const app of mockApps) {
     app.preload.mockReset();
@@ -36,6 +40,7 @@ beforeEach(() => {
   useAppStore.setState({
     apps: mockApps,
     taskbarAppOrder: ["agents", "projects", "tasks", "feed"],
+    taskbarHiddenAppIds: [],
   });
 });
 
@@ -90,6 +95,62 @@ describe("app-store", () => {
 
       expect(useAppStore.getState().taskbarAppOrder).toEqual(["feed", "agents", "projects", "tasks", "feedback"]);
       expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith(["feed", "agents", "projects", "tasks", "feedback"]);
+    });
+  });
+
+  describe("taskbar hidden apps", () => {
+    it("normalizes hidden ids, dropping unknown + pinned apps", () => {
+      useAppStore
+        .getState()
+        .saveTaskbarHiddenAppIds(["feed", "desktop", "profile", "unknown", "feed"]);
+
+      expect(useAppStore.getState().taskbarHiddenAppIds).toEqual(["feed"]);
+      expect(mockSetTaskbarHiddenAppIds).toHaveBeenCalledWith(["feed"]);
+    });
+
+    it("persists order + hidden atomically via saveTaskbarAppsLayout", () => {
+      useAppStore
+        .getState()
+        .saveTaskbarAppsLayout(
+          ["agents", "feedback", "projects", "tasks", "feed"],
+          ["feedback", "tasks"],
+        );
+
+      expect(useAppStore.getState().taskbarAppOrder).toEqual([
+        "agents",
+        "feedback",
+        "projects",
+        "tasks",
+        "feed",
+      ]);
+      expect(useAppStore.getState().taskbarHiddenAppIds).toEqual(["feedback", "tasks"]);
+      expect(mockSetTaskbarAppOrder).toHaveBeenCalledWith([
+        "agents",
+        "feedback",
+        "projects",
+        "tasks",
+        "feed",
+      ]);
+      expect(mockSetTaskbarHiddenAppIds).toHaveBeenCalledWith(["feedback", "tasks"]);
+    });
+
+    it("preserves order when an app is unhidden later", () => {
+      useAppStore
+        .getState()
+        .saveTaskbarAppsLayout(
+          ["agents", "projects", "tasks", "feed", "feedback"],
+          ["tasks"],
+        );
+      useAppStore.getState().saveTaskbarHiddenAppIds([]);
+
+      expect(useAppStore.getState().taskbarAppOrder).toEqual([
+        "agents",
+        "projects",
+        "tasks",
+        "feed",
+        "feedback",
+      ]);
+      expect(useAppStore.getState().taskbarHiddenAppIds).toEqual([]);
     });
   });
 });

@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use aura_os_core::*;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::SettingsStore;
 use aura_os_tasks::TaskService;
 
 pub(crate) struct TestCtx {
     pub(crate) task_service: Arc<TaskService>,
     pub(crate) storage_client: Arc<StorageClient>,
-    pub(crate) store: Arc<RocksStore>,
+    pub(crate) store: Arc<SettingsStore>,
     pub(crate) spec_id: String,
     pub(crate) project_id: String,
     pub(crate) _tmp: tempfile::TempDir,
@@ -16,7 +16,7 @@ pub(crate) struct TestCtx {
 
 pub(crate) async fn setup() -> TestCtx {
     let tmp = tempfile::TempDir::new().expect("temp dir creation should succeed");
-    let store = Arc::new(RocksStore::open(tmp.path()).expect("RocksStore should open"));
+    let store = Arc::new(SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
     aura_os_billing::testutil::store_zero_auth_session(&store);
 
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
@@ -56,7 +56,7 @@ pub(crate) async fn setup() -> TestCtx {
 
 pub(crate) struct CreateTestTask<'a> {
     pub(crate) sc: &'a StorageClient,
-    pub(crate) store: &'a RocksStore,
+    pub(crate) store: &'a SettingsStore,
     pub(crate) pid: &'a str,
     pub(crate) spec_id: &'a str,
     pub(crate) title: &'a str,

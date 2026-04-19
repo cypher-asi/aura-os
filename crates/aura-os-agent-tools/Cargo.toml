@@ -1,0 +1,40 @@
+[package]
+name = "aura-os-agent-tools"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+aura-os-agent-runtime = { path = "../aura-os-agent-runtime" }
+aura-os-agent-templates = { path = "../aura-os-agent-templates" }
+aura-os-agents = { path = "../aura-os-agents" }
+aura-os-billing = { path = "../aura-os-billing" }
+aura-os-core = { path = "../aura-os-core" }
+aura-os-link = { path = "../aura-os-link" }
+aura-os-network = { path = "../aura-os-network" }
+aura-os-orgs = { path = "../aura-os-orgs" }
+aura-os-process = { path = "../aura-os-process" }
+aura-os-projects = { path = "../aura-os-projects" }
+aura-os-sessions = { path = "../aura-os-sessions" }
+aura-os-storage = { path = "../aura-os-storage" }
+aura-os-store = { path = "../aura-os-store" }
+aura-os-tasks = { path = "../aura-os-tasks" }
+aura-protocol = { path = "../aura-protocol" }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+futures-util = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

@@ -9,9 +9,11 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
-use aura_protocol::{InboundMessage, SessionInit};
+use aura_protocol::InboundMessage;
 
-use crate::harness::{HarnessLink, HarnessSession, SessionConfig};
+use crate::harness::{
+    build_remote_handshake, build_session_init, HarnessLink, HarnessSession, SessionConfig,
+};
 use crate::ws_bridge::spawn_ws_bridge;
 
 const AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -197,15 +199,11 @@ impl HarnessLink for SwarmHarness {
 
         info!(agent_id = %agent_id, "Swarm agent ready");
 
-        // 3. Create session (config envelope matches gateway contract)
-        let session_body = serde_json::json!({
-            "config": {
-                "system_prompt": config.system_prompt,
-                "model": config.model,
-                "max_tokens": config.max_tokens,
-                "max_turns": config.max_turns,
-            }
-        });
+        // 3. Create session (config envelope matches gateway contract).
+        //    The HTTP bootstrap only needs the subset of SessionConfig that
+        //    the gateway uses to allocate a container; the full SessionInit
+        //    is sent over the WebSocket below via `build_session_init`.
+        let session_body = build_remote_handshake(&config);
 
         let session_response = self
             .client
@@ -265,25 +263,9 @@ impl HarnessLink for SwarmHarness {
         let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
         commands_tx
-            .send(InboundMessage::SessionInit(Box::new(SessionInit {
-                system_prompt: config.system_prompt,
-                model: config.model,
-                max_tokens: config.max_tokens,
-                temperature: None,
-                max_turns: config.max_turns,
-                installed_tools: config.installed_tools,
-                installed_integrations: config.installed_integrations,
-                workspace: config.workspace,
-                project_path: config.project_path,
-                token: config.token,
-                project_id: config.project_id,
-                conversation_messages: config.conversation_messages,
-                aura_agent_id: config.agent_id.clone(),
-                aura_session_id: config.aura_session_id,
-                aura_org_id: config.aura_org_id,
-                agent_id: config.agent_id,
-                provider_config: config.provider_config,
-            })))
+            .send(InboundMessage::SessionInit(Box::new(build_session_init(
+                &config,
+            ))))
             .context("swarm session_init send failed")?;
 
         Ok(HarnessSession {

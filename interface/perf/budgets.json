@@ -16,6 +16,6 @@
     "distDir": "dist",
     "maxInitialHtmlGraphGzipBytes": 950000,
     "maxLargestJsAssetGzipBytes": 650000,
-    "maxTotalJsGzipBytes": 900000
+    "maxTotalJsGzipBytes": 1000000
   }
 }

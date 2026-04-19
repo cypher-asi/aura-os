@@ -30,6 +30,7 @@ const DEFAULT_FRONTEND_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_FRONTEND_PORT: u16 = 5173;
 const HOST_STORAGE_KEY: &str = "aura-host-origin";
 const FRONTEND_DEV_SERVER_POLL_INTERVAL: Duration = Duration::from_secs(1);
+const WINDOW_SHOW_FALLBACK_DELAY: Duration = Duration::from_secs(3);
 const VITE_CLI_RELATIVE_PATH: &str = "node_modules/vite/bin/vite.js";
 
 #[derive(Debug)]
@@ -56,6 +57,10 @@ pub(crate) enum UserEvent {
     AttachFrontendDevServer {
         frontend_url: String,
     },
+    /// Stop managed sidecars and exit the event loop so a pending platform
+    /// installer can overwrite this process's files. Posted by the updater
+    /// immediately before calling `std::process::exit`.
+    ShutdownForUpdate,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -239,14 +244,37 @@ fn init_data_dirs() -> (PathBuf, PathBuf, Option<PathBuf>) {
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
     info!(path = %data_dir.display(), "data directory ready");
 
-    let db_path = data_dir.join("db");
+    let store_path = data_dir.join("store");
+    migrate_legacy_db_dir(&data_dir, &store_path);
     let webview_data_dir = data_dir.join("webview");
     let interface_dir = find_interface_dir();
     match interface_dir {
         Some(ref dir) => info!(path = %dir.display(), "serving interface"),
         None => warn!("no interface dist found; pages will not load"),
     }
-    (db_path, webview_data_dir, interface_dir)
+    (store_path, webview_data_dir, interface_dir)
+}
+
+/// One-shot migration: the local settings store used to live in `<data>/db/`
+/// (when it was briefly backed by RocksDB). It's now plain JSON under
+/// `<data>/store/`. If the old path exists and the new one doesn't, rename.
+fn migrate_legacy_db_dir(data_dir: &std::path::Path, store_path: &std::path::Path) {
+    let legacy = data_dir.join("db");
+    if legacy.exists() && !store_path.exists() {
+        match std::fs::rename(&legacy, store_path) {
+            Ok(()) => info!(
+                from = %legacy.display(),
+                to = %store_path.display(),
+                "migrated legacy db/ directory to store/"
+            ),
+            Err(err) => warn!(
+                error = %err,
+                from = %legacy.display(),
+                to = %store_path.display(),
+                "failed to migrate legacy db/ directory; continuing with fresh store/"
+            ),
+        }
+    }
 }
 
 fn harness_binary_name() -> &'static str {
@@ -912,7 +940,7 @@ fn bind_listener() -> (StdTcpListener, u16, String) {
 
 fn spawn_server(
     std_listener: StdTcpListener,
-    db_path: PathBuf,
+    store_path: PathBuf,
     interface_dir: Option<PathBuf>,
     ide_proxy: Arc<EventLoopProxy<UserEvent>>,
     route_state: RouteState,
@@ -922,14 +950,22 @@ fn spawn_server(
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
         rt.block_on(async move {
-            let updater_data_dir = db_path
+            let updater_data_dir = store_path
                 .parent()
                 .map(std::path::Path::to_path_buf)
-                .unwrap_or_else(|| db_path.clone());
+                .unwrap_or_else(|| store_path.clone());
             let update_state = UpdateState::load(&updater_data_dir);
+            {
+                let shutdown_proxy = Arc::clone(&ide_proxy);
+                update_state.set_shutdown_hook(move || {
+                    if let Err(error) = shutdown_proxy.send_event(UserEvent::ShutdownForUpdate) {
+                        warn!(%error, "failed to post ShutdownForUpdate event");
+                    }
+                });
+            }
 
-            let app_state =
-                aura_os_server::build_app_state(&db_path).expect("failed to open database");
+            let app_state = aura_os_server::build_app_state(&store_path)
+                .expect("failed to open local settings store");
             let desktop_routes = Router::new()
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))
@@ -1223,7 +1259,7 @@ mod tests {
         let script = build_initialization_script(Some("http://127.0.0.1:19847"));
         assert!(script.contains("aura-host-origin"));
         assert!(script.contains("http://127.0.0.1:19847"));
-        assert!(script.contains("window.ipc.postMessage('ready')"));
+        assert!(!script.contains("window.ipc.postMessage('ready')"));
     }
 
     #[test]
@@ -1285,23 +1321,16 @@ fn create_main_window(
     (window, id)
 }
 
-const READY_SCRIPT: &str = "\
-    if (document.readyState === 'loading') { \
-        document.addEventListener('DOMContentLoaded', function() { window.ipc.postMessage('ready'); }); \
-    } else { \
-        window.ipc.postMessage('ready'); \
-    }";
-
 fn build_initialization_script(host_origin: Option<&str>) -> String {
     match host_origin {
         Some(origin) => {
             let host_literal = serde_json::to_string(origin)
                 .expect("failed to serialize host origin for initialization script");
             format!(
-                "try {{ window.localStorage.setItem('{HOST_STORAGE_KEY}', {host_literal}); }} catch {{}}; {READY_SCRIPT}"
+                "try {{ window.localStorage.setItem('{HOST_STORAGE_KEY}', {host_literal}); }} catch {{}};"
             )
         }
-        None => READY_SCRIPT.to_string(),
+        None => String::new(),
     }
 }
 
@@ -1355,7 +1384,7 @@ fn spawn_fallback_show_timer(proxy: EventLoopProxy<UserEvent>, window_id: Window
         return;
     }
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(WINDOW_SHOW_FALLBACK_DELAY);
         let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
     });
 }
@@ -1482,6 +1511,12 @@ fn handle_user_event(
             } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
                 ide_win.set_visible(true);
             }
+        }
+        UserEvent::ShutdownForUpdate => {
+            info!("updater requested shutdown; stopping sidecars and exiting event loop");
+            stop_managed_frontend_dev_server(managed_frontend_dev_server);
+            stop_managed_local_harness(managed_local_harness);
+            *control_flow = ControlFlow::Exit;
         }
         UserEvent::AttachFrontendDevServer {
             frontend_url: next_frontend_url,
@@ -1634,8 +1669,8 @@ fn main() {
     aura_os_server::ensure_user_bins_on_path();
     init_logging();
 
-    let (db_path, webview_data_dir, interface_dir) = init_data_dirs();
-    let data_dir = db_path.parent().unwrap_or(&db_path);
+    let (store_path, webview_data_dir, interface_dir) = init_data_dirs();
+    let data_dir = store_path.parent().unwrap_or(&store_path);
     let route_state = RouteState::load(data_dir);
     install_panic_hook(data_dir);
     install_native_crash_handler(data_dir);
@@ -1648,7 +1683,7 @@ fn main() {
 
     let ready_rx = spawn_server(
         std_listener,
-        db_path,
+        store_path,
         interface_dir,
         ide_proxy,
         route_state.clone(),

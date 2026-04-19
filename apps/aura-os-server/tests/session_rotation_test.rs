@@ -36,6 +36,8 @@ async fn reset_session_retires_prior_active_sessions() {
                 skills: None,
                 icon: None,
                 harness: None,
+                permissions: None,
+                intent_classifier: None,
             },
         )
         .await

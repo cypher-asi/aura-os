@@ -19,14 +19,15 @@ use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 
 use crate::harness_gateway::HarnessHttpGateway;
+use aura_os_browser::BrowserManager;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_storage::StorageTaskFileChangeSummary;
-use aura_os_store::RocksStore;
-use aura_os_super_agent::SuperAgentService;
+use aura_os_store::SettingsStore;
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
@@ -106,11 +107,11 @@ pub struct CachedSession {
 /// Thread-safe in-memory cache keyed by JWT string.
 pub type ValidationCache = Arc<DashMap<String, CachedSession>>;
 
-pub(crate) fn persist_zero_auth_session(store: &RocksStore, session: &ZeroAuthSession) {
+pub(crate) fn persist_zero_auth_session(store: &SettingsStore, session: &ZeroAuthSession) {
     store.cache_zero_auth_session(session);
 }
 
-pub(crate) fn clear_zero_auth_session(store: &RocksStore) {
+pub(crate) fn clear_zero_auth_session(store: &SettingsStore) {
     store.clear_zero_auth_session_cache();
 }
 
@@ -256,24 +257,6 @@ impl ChatSession {
 
 pub type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
 
-/// In-memory cache of super-agent conversation messages (full Claude API format
-/// including tool_use / tool_result blocks). Keyed by session key, e.g.
-/// `"super_agent:{agent_id}"`.
-pub type SuperAgentConversationCache = Arc<Mutex<HashMap<String, Vec<serde_json::Value>>>>;
-
-/// Tracks a single in-flight super-agent spawn. `generation` increases every
-/// time a new run supersedes a prior one (on reset or `new_session=true`), and
-/// is used to gate the final cache write so a stale task cannot overwrite a
-/// freshly-cleared context. `cancel` stops the proxy stream and tool loop
-/// mid-flight when reset fires.
-pub struct SuperAgentRun {
-    pub generation: u64,
-    pub cancel: tokio_util::sync::CancellationToken,
-    pub join: Option<tokio::task::JoinHandle<()>>,
-}
-
-pub type SuperAgentRunRegistry = Arc<Mutex<HashMap<String, SuperAgentRun>>>;
-
 /// Accumulated live output for a running or recently completed task.
 #[derive(Clone, Default)]
 pub struct CachedTaskOutput {
@@ -308,7 +291,7 @@ pub type CreditCacheRef = Arc<Mutex<HashMap<String, CreditCache>>>;
 #[derive(Clone)]
 pub struct AppState {
     pub data_dir: PathBuf,
-    pub store: Arc<RocksStore>,
+    pub store: Arc<SettingsStore>,
     pub org_service: Arc<OrgService>,
     pub auth_service: Arc<AuthService>,
     pub billing_client: Arc<BillingClient>,
@@ -321,6 +304,8 @@ pub struct AppState {
     pub swarm_harness: Arc<dyn HarnessLink>,
     pub harness_sessions: HarnessSessionRegistry,
     pub terminal_manager: Arc<TerminalManager>,
+    /// In-app browser sessions + project-aware URL resolver.
+    pub browser_manager: Arc<BrowserManager>,
     /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
     pub network_client: Option<Arc<NetworkClient>>,
     /// Optional aura-network client dedicated to the Feedback app. Falls back
@@ -357,15 +342,14 @@ pub struct AppState {
     pub orbit_client: Option<Arc<aura_os_network::OrbitClient>>,
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
-    pub super_agent_service: Arc<SuperAgentService>,
-    /// In-memory cache of super-agent conversation messages so multi-turn
-    /// context survives across requests (mirrors how the harness keeps state
-    /// for normal agents).
-    pub super_agent_messages: SuperAgentConversationCache,
-    /// In-flight super-agent runs keyed by `super_agent:{agent_id}`. Reset
-    /// uses this to cancel the running spawn and bump its generation so a
-    /// late cache write cannot reintroduce the cleared context.
-    pub super_agent_runs: SuperAgentRunRegistry,
+    pub agent_runtime: Arc<AgentRuntimeService>,
+    /// Session-open permissions cache consulted by the cross-agent tool
+    /// dispatcher. Populated in `chat.rs` when a harness session is
+    /// opened for an agent / agent-instance so the dispatcher can answer
+    /// capability checks without a round-trip to aura-network. See
+    /// [`aura_os_agent_runtime::policy::PermissionsCache`] for the TTL
+    /// and lookup semantics.
+    pub permissions_cache: aura_os_agent_runtime::policy::PermissionsCache,
 }
 
 impl AppState {

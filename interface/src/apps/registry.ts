@@ -16,15 +16,19 @@ import {
   FileText,
   FolderOpen,
   GitCommitVertical,
+  Plug,
+  Store,
 } from "lucide-react";
 import type { AuraApp, AuraAppModule } from "./types";
 import { agentsRoutes } from "./agents/routes";
+import { marketplaceRoutes } from "./marketplace/routes";
 import { projectsRoutes } from "./projects/routes";
 import { tasksRoutes } from "./tasks/routes";
 import { processRoutes } from "./process/routes";
 import { feedRoutes } from "./feed/routes";
 import { notesRoutes } from "./notes/routes";
 import { feedbackRoutes } from "./feedback/routes";
+import { integrationsRoutes } from "./integrations/routes";
 import { profileRoutes } from "./profile/routes";
 import { desktopRoutes } from "./desktop/routes";
 
@@ -151,6 +155,8 @@ function createAppDefinition(
 
 const loadAgentsApp = () =>
   import("./agents/AgentsApp").then((module) => module.AgentsApp);
+const loadMarketplaceApp = () =>
+  import("./marketplace/MarketplaceApp").then((module) => module.MarketplaceApp);
 const loadProjectsApp = () =>
   import("./projects/ProjectsApp").then((module) => module.ProjectsApp);
 const loadTasksApp = () =>
@@ -161,6 +167,8 @@ const loadFeedApp = () =>
   import("./feed/FeedApp").then((module) => module.FeedApp);
 const loadFeedbackApp = () =>
   import("./feedback/FeedbackApp").then((module) => module.FeedbackApp);
+const loadIntegrationsApp = () =>
+  import("./integrations/IntegrationsApp").then((module) => module.IntegrationsApp);
 const loadNotesApp = () =>
   import("./notes/NotesApp").then((module) => module.NotesApp);
 const loadProfileApp = () =>
@@ -184,6 +192,23 @@ export const apps: AuraApp[] = [
       hasSidekickPanel: true,
       hasSidekickTaskbar: true,
       includePrefetch: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "marketplace",
+      label: "Marketplace",
+      icon: Store,
+      basePath: "/marketplace",
+      searchPlaceholder: "Search talent",
+      routes: marketplaceRoutes,
+    },
+    loadMarketplaceApp,
+    {
+      hasDesktopLeftMenuPane: true,
+      hasResponsiveControls: true,
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
     },
   ),
   createAppDefinition(
@@ -288,6 +313,20 @@ export const apps: AuraApp[] = [
       hasResponsiveControls: true,
       hasSidekickPanel: true,
       hasSidekickTaskbar: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "integrations",
+      label: "Integrations",
+      icon: Plug,
+      basePath: "/integrations",
+      searchPlaceholder: "Search integrations",
+      routes: integrationsRoutes,
+    },
+    loadIntegrationsApp,
+    {
+      hasResponsiveControls: true,
     },
   ),
   createAppDefinition(

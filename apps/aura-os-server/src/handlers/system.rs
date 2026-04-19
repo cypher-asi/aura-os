@@ -1,7 +1,9 @@
+use axum::extract::State;
 use axum::Json;
 use serde::Serialize;
 
 use crate::error::ApiResult;
+use crate::state::AppState;
 
 pub(crate) async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({
@@ -38,5 +40,21 @@ pub(crate) async fn get_environment_info() -> ApiResult<Json<EnvironmentInfoResp
         hostname,
         ip,
         cwd,
+    }))
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct WorkspaceDefaultsResponse {
+    /// Base directory where aura-os stores per-project workspaces by default.
+    /// A specific project's default folder is `{workspace_root}/{project_id}`.
+    pub workspace_root: String,
+}
+
+pub(crate) async fn get_workspace_defaults(
+    State(state): State<AppState>,
+) -> ApiResult<Json<WorkspaceDefaultsResponse>> {
+    let workspace_root = state.data_dir.join("workspaces");
+    Ok(Json(WorkspaceDefaultsResponse {
+        workspace_root: workspace_root.display().to_string(),
     }))
 }

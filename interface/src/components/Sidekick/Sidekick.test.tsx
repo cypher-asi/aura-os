@@ -179,8 +179,9 @@ describe("SidekickTaskbar", () => {
       .getAllByRole("button")
       .map((button) => button.getAttribute("aria-label") ?? button.getAttribute("title"));
 
-    expect(labels.slice(0, 9)).toEqual([
+    expect(labels.slice(0, 11)).toEqual([
       "Terminal",
+      "Browser",
       "Run",
       "Specs",
       "Tasks",
@@ -189,6 +190,7 @@ describe("SidekickTaskbar", () => {
       "Sessions",
       "Files",
       "New terminal",
+      "New browser",
     ]);
   });
 

@@ -13,6 +13,7 @@ use aura_os_projects::CreateProjectInput;
 use crate::dto::{CreateProjectRequest, ImportedProjectFile};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::conversions_pub::resolve_workspace_path;
+use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
     installed_workspace_app_tools, installed_workspace_integrations_for_org_with_token,
 };
@@ -94,6 +95,8 @@ pub(crate) fn project_from_network(
         orbit_base_url: prefer_network(&net.orbit_base_url, local, |p| &p.orbit_base_url),
         orbit_owner: prefer_network(&net.orbit_owner, local, |p| &p.orbit_owner),
         orbit_repo: prefer_network(&net.orbit_repo, local, |p| &p.orbit_repo),
+        // Local-only: never sent by aura-network.
+        local_workspace_path: local.and_then(|p| p.local_workspace_path.clone()),
     })
 }
 
@@ -148,11 +151,18 @@ pub(crate) fn resolve_project_workspace_path_for_machine(
     project_name: Option<&str>,
     machine_type: &str,
 ) -> Option<String> {
+    let project_local_path = state
+        .project_service
+        .get_project(project_id)
+        .ok()
+        .and_then(|p| p.local_workspace_path);
     Some(resolve_workspace_path(
         machine_type,
         project_id,
         &state.data_dir,
         project_name.unwrap_or(""),
+        project_local_path.as_deref(),
+        None,
     ))
 }
 
@@ -240,7 +250,18 @@ pub(crate) async fn project_tool_session_config(
             .await;
     let installed_tools = match state.project_service.get_project(project_id).ok() {
         Some(project) => {
-            let tools = installed_workspace_app_tools(state, &project.org_id, jwt).await;
+            let mut tools = installed_workspace_app_tools(state, &project.org_id, jwt).await;
+            // Defensive: even though this path only concatenates workspace
+            // tools (no cross-agent tools), a malformed integration
+            // manifest or an MCP discovery that echoes a legacy name
+            // could still produce a duplicate. Funnelling through the
+            // shared helper keeps the "tool names must be unique"
+            // invariant observable in logs from every entry point.
+            dedupe_and_log_installed_tools(
+                "project_tool_session",
+                &project_id.to_string(),
+                &mut tools,
+            );
             if tools.is_empty() {
                 None
             } else {
@@ -292,6 +313,7 @@ pub(super) fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput
         description: req.description.clone(),
         build_command: req.build_command.clone(),
         test_command: req.test_command.clone(),
+        local_workspace_path: normalize_optional_path(&req.local_workspace_path),
     }
 }
 
@@ -377,7 +399,17 @@ pub(super) fn build_local_shadow(project_id: ProjectId, req: &CreateProjectReque
         orbit_base_url: req.orbit_base_url.clone(),
         orbit_owner: req.orbit_owner.clone(),
         orbit_repo: req.orbit_repo.clone(),
+        local_workspace_path: normalize_optional_path(&req.local_workspace_path),
     }
+}
+
+/// Trim and empty-collapse an optional path. Used to turn empty-string inputs
+/// (common from web forms) into a proper `None`.
+pub(crate) fn normalize_optional_path(value: &Option<String>) -> Option<String> {
+    value
+        .as_ref()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 #[cfg(test)]

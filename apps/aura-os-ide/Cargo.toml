@@ -1,12 +1,18 @@
 [package]
 name = "aura-os-ide"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 tao = "0.34"
 wry = "0.54"
-tracing = "0.1"
+tracing = { workspace = true }
 image = "0.25.10"
 urlencoding = "2"
 open = "5"
+
+[lints]
+workspace = true

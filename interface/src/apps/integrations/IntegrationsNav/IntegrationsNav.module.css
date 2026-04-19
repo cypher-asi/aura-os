@@ -1,0 +1,75 @@
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding-top: var(--space-2);
+  scrollbar-width: none;
+}
+
+.list::-webkit-scrollbar {
+  display: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--control-height-sm, 28px);
+  padding: 0 16px 0 34px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.row:hover {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+}
+
+.rowActive,
+.rowActive:hover {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.statusDotConnected {
+  background: var(--color-success-500, #22c55e);
+}
+
+.statusDotDisabled {
+  background: var(--color-text-muted);
+  opacity: 0.5;
+}

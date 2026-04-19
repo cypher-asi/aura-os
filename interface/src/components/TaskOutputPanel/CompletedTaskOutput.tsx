@@ -111,7 +111,13 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
         <div className={styles.taskBody}>
           <LLMOutput content={taskOutput.text} />
         </div>
-      ) : null}
+      ) : (
+        <div className={styles.taskBodyEmpty}>
+          {status === "failed"
+            ? "Task failed without producing output."
+            : "No output captured for this run."}
+        </div>
+      )}
     </div>
   );
 }

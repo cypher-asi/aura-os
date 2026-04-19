@@ -1,16 +1,16 @@
+import { useNavigate } from "react-router-dom";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
-import { Settings, Users, Mail, CreditCard, LogOut } from "lucide-react";
+import { Settings, Users, Mail, CreditCard, LogOut, Plug } from "lucide-react";
 import { OrgSettingsGeneral } from "../OrgSettingsGeneral";
 import { OrgSettingsMembers } from "../OrgSettingsMembers";
 import { OrgSettingsInvites } from "../OrgSettingsInvites";
 import { OrgSettingsBilling } from "../OrgSettingsBilling";
-import { OrgSettingsIntegrations } from "../OrgSettingsIntegrations";
 import { useAuth } from "../../stores/auth-store";
 import { useOrgSettingsData } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
 
-type Section = "general" | "members" | "invites" | "billing" | "integrations";
+type Section = "general" | "members" | "invites" | "billing";
 
 interface Props {
   isOpen: boolean;
@@ -23,7 +23,7 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "members", label: "Members", icon: <Users size={14} /> },
   { id: "invites", label: "Invites", icon: <Mail size={14} /> },
   { id: "billing", label: "Billing", icon: <CreditCard size={14} /> },
-  { id: "integrations", label: "Integrations", icon: <Settings size={14} /> },
+  { id: "integrations", label: "Integrations", icon: <Plug size={14} /> },
 ];
 
 function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsData> }) {
@@ -41,16 +41,6 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
       {data.section === "billing" && (
         <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} onBillingEmailChange={data.setBillingEmail} isAdminOrOwner={data.isAdminOrOwner} saving={data.saving} onSave={data.handleSaveBilling} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} />
       )}
-      {data.section === "integrations" && (
-        <OrgSettingsIntegrations
-          integrations={data.integrations}
-          busyId={data.integrationBusyId}
-          canManage={data.isAdminOrOwner}
-          onCreate={data.createIntegration}
-          onUpdate={data.updateIntegration}
-          onDelete={data.deleteIntegration}
-        />
-      )}
     </>
   );
 }
@@ -58,6 +48,20 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
 export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const data = useOrgSettingsData(isOpen, initialSection);
   const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleNavChange = (id: string) => {
+    // Integrations were promoted to a top-level app. Keep the tab in the
+    // Team Settings nav for discoverability, but clicking it closes the
+    // modal and deep-links into the Integrations app instead of rendering
+    // the old inline form.
+    if (id === "integrations") {
+      onClose();
+      navigate("/integrations");
+      return;
+    }
+    data.setSection(id as Section);
+  };
 
   if (!data.activeOrg) {
     return (
@@ -84,7 +88,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
             <h3>{data.activeOrg.name}</h3>
             <span>Team settings</span>
           </div>
-          <Navigator items={NAV_ITEMS} value={data.section} onChange={(id) => data.setSection(id as Section)} />
+          <Navigator items={NAV_ITEMS} value={data.section} onChange={handleNavChange} />
           <div className={styles.navFooter}>
             <Button
               variant="ghost"

@@ -12,6 +12,10 @@ import type {
   ProcessRunTrigger,
   ProcessEventStatus,
 } from "./enums";
+import type {
+  AgentPermissions,
+  IntentClassifierSpec,
+} from "./permissions-wire";
 
 export interface Project {
   project_id: ProjectId;
@@ -31,6 +35,12 @@ export interface Project {
   orbit_base_url?: string;
   orbit_owner?: string;
   orbit_repo?: string;
+  /**
+   * Local-only, per-machine override for the project's working directory.
+   * Absolute OS path. Never synced to aura-network; local agents and the
+   * project terminal default to this folder when set.
+   */
+  local_workspace_path?: string | null;
 }
 
 export interface Spec {
@@ -114,6 +124,38 @@ export interface Agent {
   profile_id?: string;
   tags: string[];
   is_pinned: boolean;
+  /**
+   * Marketplace listing status. Absent on records produced before Phase 3;
+   * consumers should treat `undefined` as `"closed"`.
+   */
+  listing_status?: "closed" | "hireable";
+  /** Marketplace expertise slugs; see `MARKETPLACE_EXPERTISE`. */
+  expertise?: string[];
+  /** Aggregated marketplace stats (computed server-side). */
+  jobs?: number;
+  revenue_usd?: number;
+  reputation?: number;
+  /**
+   * Local-only override for the agent's working directory, applied only when
+   * the agent runs on a local machine. Takes precedence over the project's
+   * `local_workspace_path` when both are set.
+   */
+  local_workspace_path?: string | null;
+  /**
+   * Required capability + scope bundle. The harness enforces these
+   * unconditionally on every session — there is no role-based fallback.
+   * Regular agents carry an empty bundle; CEO/super-agents carry the
+   * universe-scope CEO preset. Use `isSuperAgent(agent)` from
+   * `@/types/permissions` to detect CEO agents — never branch on `role`
+   * or tags.
+   */
+  permissions: AgentPermissions;
+  /**
+   * Optional per-turn intent classifier. When present the harness narrows
+   * the per-turn tool surface based on each user message. Populated for
+   * CEO-style agents; `null`/absent for regular agents.
+   */
+  intent_classifier?: IntentClassifierSpec | null;
   created_at: string;
   updated_at: string;
 }
@@ -142,6 +184,8 @@ export interface AgentInstance {
   total_input_tokens: number;
   total_output_tokens: number;
   model?: string;
+  permissions: AgentPermissions;
+  intent_classifier?: IntentClassifierSpec | null;
   created_at: string;
   updated_at: string;
 }
@@ -357,18 +401,18 @@ export interface RemoteVmState {
   created_at?: string
 }
 
-export interface SuperAgentOrchestration {
+export interface AgentOrchestration {
   orchestration_id: string;
   agent_id: string;
   org_id: string;
   intent: string;
-  plan: SuperAgentStep[];
+  plan: AgentOrchestrationStep[];
   status: OrchestrationStatus;
   created_at: string;
   updated_at: string;
 }
 
-export interface SuperAgentStep {
+export interface AgentOrchestrationStep {
   step_index: number;
   tool_name: string;
   tool_input: unknown;

@@ -17,8 +17,8 @@ use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
-use aura_os_store::{RocksStore, StoreError};
-use aura_os_super_agent::SuperAgentService;
+use aura_os_store::{SettingsStore, StoreError};
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
@@ -94,13 +94,39 @@ fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.trim().is_empty())
 }
 
+/// Build the [`aura_os_browser::BrowserManager`] using the real Chromium
+/// CDP backend when the `cdp` feature is enabled, falling back to the
+/// stub backend otherwise. The CDP backend launches Chromium lazily on
+/// first use, so a missing executable only surfaces on first spawn.
+fn build_browser_manager(settings_root: PathBuf) -> Arc<aura_os_browser::BrowserManager> {
+    let config = aura_os_browser::BrowserConfig::default().with_settings_root(settings_root);
+
+    #[cfg(feature = "browser-cdp")]
+    {
+        let cdp_config = aura_os_browser::CdpBackendConfig::from_env();
+        info!(
+            sandbox_disabled = cdp_config.disable_sandbox,
+            "browser: initialising CDP backend (Chromium launched lazily)"
+        );
+        return Arc::new(aura_os_browser::BrowserManager::with_backend(
+            config,
+            Arc::new(aura_os_browser::CdpBackend::with_config(cdp_config)),
+        ));
+    }
+    #[allow(unreachable_code)]
+    {
+        info!("browser: using stub backend (enable the `browser-cdp` feature for real rendering)");
+        Arc::new(aura_os_browser::BrowserManager::new(config))
+    }
+}
+
 struct CoreServices {
     org_service: Arc<OrgService>,
     auth_service: Arc<AuthService>,
     billing_client: Arc<BillingClient>,
 }
 
-fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
+fn init_core_services(store: &Arc<SettingsStore>) -> CoreServices {
     CoreServices {
         org_service: Arc::new(OrgService::new(store.clone())),
         auth_service: Arc::new(AuthService::new()),
@@ -119,7 +145,7 @@ struct DomainServices {
 }
 
 fn init_domain_services(
-    store: &Arc<RocksStore>,
+    store: &Arc<SettingsStore>,
     network_client: &Option<Arc<NetworkClient>>,
     storage_client: &Option<Arc<StorageClient>>,
 ) -> DomainServices {
@@ -297,12 +323,13 @@ pub(crate) fn ensure_local_harness_running() {
     maybe_spawn_local_harness();
 }
 
-pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
-    let data_dir = db_path
+pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
+    let data_dir = store_path
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| Path::new(".").to_path_buf());
-    let store = Arc::new(RocksStore::open(db_path)?);
+    let browser_settings_root = data_dir.join("browser");
+    let store = Arc::new(SettingsStore::open(store_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let feedback_network_client = NetworkClient::from_env_key("AURA_NETWORK_FEEDBACK_URL")
         .map(Arc::new)
@@ -347,8 +374,32 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         let port = std::env::var("AURA_SERVER_PORT").unwrap_or_else(|_| "3100".to_string());
         Some(format!("http://{host}:{port}"))
     });
-    let super_agent_service = Arc::new(
-        SuperAgentService::new(
+    // Build the tool registry + process executor outside the runtime so
+    // Tier D's slim `aura-os-agent-runtime` doesn't need to pull in
+    // tool-implementation deps. Tools live in `aura-os-agent-tools`; the
+    // `ProcessExecutor` is owned by the server because it depends on the
+    // data directory + storage client.
+    let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+        event_broadcast.clone(),
+        data_dir.clone(),
+        store.clone(),
+        domain.agent_service.clone(),
+        core.org_service.clone(),
+        automaton_client.clone(),
+        storage_client.clone(),
+        domain.task_service.clone(),
+        router_url.clone(),
+        reqwest::Client::new(),
+    ));
+    let tool_registry = {
+        let mut registry = aura_os_agent_tools::build_all_tools_registry();
+        aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
+        Arc::new(registry)
+    };
+    let agent_runtime = Arc::new(
+        AgentRuntimeService::new(
+            tool_registry,
+            process_executor,
             router_url,
             domain.project_service.clone(),
             domain.agent_service.clone(),
@@ -364,13 +415,12 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
             store.clone(),
             event_broadcast.clone(),
             domain.local_harness.clone(),
-            data_dir.clone(),
         )
         .with_local_server_base_url(local_server_base_url.unwrap_or_default()),
     );
 
     // Spawn scheduled process execution.
-    super_agent_service.spawn_scheduler();
+    agent_runtime.spawn_scheduler();
 
     spawn_health_checks(&storage_client, &network_client, &integrations_client);
     if let Some(ref client) = network_client {
@@ -389,6 +439,11 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         event_broadcast.clone(),
     );
 
+    // Emit the active cross-agent tool policy mode once at startup
+    // so operators can confirm the env flag landed before any traffic
+    // hits the dispatcher.
+    crate::handlers::agent_tools::log_active_policy_mode();
+
     Ok(AppState {
         data_dir,
         store,
@@ -406,6 +461,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         chat_sessions: Arc::new(Mutex::new(HashMap::new())),
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
+        browser_manager: build_browser_manager(browser_settings_root.clone()),
         network_client,
         feedback_network_client,
         storage_client,
@@ -421,8 +477,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client,
         validation_cache,
-        super_agent_service,
-        super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
-        super_agent_runs: Arc::new(Mutex::new(HashMap::new())),
+        agent_runtime,
+        permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     })
 }

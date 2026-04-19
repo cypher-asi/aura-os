@@ -17,6 +17,8 @@ export interface TerminalInstance {
 export interface TerminalTarget {
   cwd?: string;
   remoteAgentId?: string;
+  /** Optional project tag used for passive URL discovery. */
+  projectId?: string;
 }
 
 function loadPanelState(): { height: number; collapsed: boolean } {
@@ -48,10 +50,14 @@ function createTerminalInstance(): TerminalInstance {
 }
 
 function targetChanged(
-  state: Pick<TerminalPanelState, "cwd" | "remoteAgentId">,
+  state: Pick<TerminalPanelState, "cwd" | "remoteAgentId" | "projectId">,
   target: TerminalTarget,
 ): boolean {
-  return state.cwd !== target.cwd || state.remoteAgentId !== target.remoteAgentId;
+  return (
+    state.cwd !== target.cwd ||
+    state.remoteAgentId !== target.remoteAgentId ||
+    state.projectId !== target.projectId
+  );
 }
 
 interface TerminalPanelState {
@@ -63,6 +69,8 @@ interface TerminalPanelState {
   cwd?: string;
   /** When set, terminals connect to this remote agent's VM shell. */
   remoteAgentId?: string;
+  /** Optional project tag that flows through to the backend for discovery. */
+  projectId?: string;
   /** False until the owning panel has resolved whether this is local or remote. */
   modeReady: boolean;
   targetVersion: number;
@@ -88,6 +96,7 @@ export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => 
   contentReady: false,
   cwd: undefined,
   remoteAgentId: undefined,
+  projectId: undefined,
   modeReady: false,
   targetVersion: 0,
 
@@ -101,6 +110,7 @@ export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => 
     set({
       cwd: target.cwd,
       remoteAgentId: target.remoteAgentId,
+      projectId: target.projectId,
       modeReady: true,
       targetVersion: state.targetVersion + 1,
       terminals,
@@ -109,11 +119,21 @@ export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => 
   },
 
   setCwd: (cwd) => {
-    get().setTerminalTarget({ cwd, remoteAgentId: get().remoteAgentId });
+    const s = get();
+    s.setTerminalTarget({
+      cwd,
+      remoteAgentId: s.remoteAgentId,
+      projectId: s.projectId,
+    });
   },
 
   setRemoteAgentId: (id) => {
-    get().setTerminalTarget({ cwd: get().cwd, remoteAgentId: id });
+    const s = get();
+    s.setTerminalTarget({
+      cwd: s.cwd,
+      remoteAgentId: id,
+      projectId: s.projectId,
+    });
   },
 
   addTerminal: () => {

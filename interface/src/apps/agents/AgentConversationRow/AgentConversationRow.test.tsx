@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { Agent } from "../../../types";
+import { emptyAgentPermissions } from "../../../types/permissions-wire";
 import type { DisplaySessionEvent } from "../../../types/stream";
 
 vi.mock("../../../hooks/use-avatar-state", () => ({
@@ -22,6 +23,7 @@ const baseAgent: Agent = {
   skills: [],
   icon: null,
   machine_type: "local",
+  permissions: emptyAgentPermissions(),
   created_at: "2026-03-20T00:00:00Z",
   updated_at: "2026-03-20T00:00:00Z",
 };
@@ -33,7 +35,7 @@ const lastMessage: DisplaySessionEvent = {
 } as DisplaySessionEvent;
 
 describe("AgentConversationRow", () => {
-  it("shows the latest chat message by default", () => {
+  it("shows the latest chat message as the preview by default", () => {
     render(
       <AgentConversationRow
         agent={baseAgent}
@@ -47,11 +49,70 @@ describe("AgentConversationRow", () => {
 
     expect(screen.getByText("Rose")).toBeInTheDocument();
     expect(screen.getAllByText("Architect")).toHaveLength(1);
-    expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
-    expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
+    expect(screen.getByText("Latest chat reply")).toBeInTheDocument();
+    expect(screen.queryByText("Plans features end to end.")).not.toBeInTheDocument();
   });
 
-  it("shows role and summary in metadata mode", () => {
+  it("prefixes the preview with 'You: ' for user messages", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={{ ...lastMessage, role: "user", content: "hey there" } as DisplaySessionEvent}
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseEnter={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("You: hey there")).toBeInTheDocument();
+  });
+
+  it("falls back to the personality when there is no last message", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={undefined}
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseEnter={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
+  });
+
+  it("falls back to role, then 'Open this agent', when no message and no personality", () => {
+    const { rerender } = render(
+      <AgentConversationRow
+        agent={{ ...baseAgent, personality: "" }}
+        lastMessage={undefined}
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseEnter={() => {}}
+      />,
+    );
+
+    // Role appears twice: once as badge, once as preview fallback.
+    expect(screen.getAllByText("Architect")).toHaveLength(2);
+
+    rerender(
+      <AgentConversationRow
+        agent={{ ...baseAgent, role: "", personality: "" }}
+        lastMessage={undefined}
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseEnter={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Open this agent")).toBeInTheDocument();
+  });
+
+  it("prefers personality over last message in metadata-only mode", () => {
     render(
       <AgentConversationRow
         agent={baseAgent}
@@ -64,23 +125,7 @@ describe("AgentConversationRow", () => {
       />,
     );
 
-    expect(screen.getAllByText("Architect")).toHaveLength(1);
     expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
     expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
-  });
-
-  it("falls back to the latest message when the agent has no summary fields", () => {
-    render(
-      <AgentConversationRow
-        agent={{ ...baseAgent, role: "", personality: "" }}
-        lastMessage={lastMessage}
-        isSelected={false}
-        onClick={() => {}}
-        onContextMenu={() => {}}
-        onMouseEnter={() => {}}
-      />,
-    );
-
-    expect(screen.getByText("Latest chat reply")).toBeInTheDocument();
   });
 });

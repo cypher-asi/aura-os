@@ -8,7 +8,8 @@ import { useStandaloneAgentMeta } from "./use-agent-chat-meta";
 import { agentHistoryKey } from "../stores/chat-history-store";
 import { useAgentStore } from "../apps/agents/stores";
 import { useProjectsListStore } from "../stores/projects-list-store";
-import { useContextUtilization, useContextUsageStore } from "../stores/context-usage-store";
+import { useContextUsage, useContextUsageStore } from "../stores/context-usage-store";
+import { useHydrateContextUtilization } from "./use-hydrate-context-utilization";
 import type { ChatPanelProps } from "../components/ChatPanel";
 import type { AgentInstance, Project } from "../types";
 
@@ -69,7 +70,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
   );
 
   const { streamKey, sendMessage, stopStreaming, resetEvents, markNextSendAsNewSession } = useAgentChatStream({ agentId });
-  const contextUtilization = useContextUtilization(streamKey);
+  const contextUsage = useContextUsage(streamKey);
 
   const { agentName, machineType, templateAgentId, adapterType, defaultModel } =
     useStandaloneAgentMeta(agentId);
@@ -101,11 +102,20 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     if (!agentId) return;
     api.agents.resetSession(agentId).catch(() => {});
     markNextSendAsNewSession();
-    useContextUsageStore.getState().clearContextUtilization(streamKey);
-    // Intentionally keep historyKey cache + stream events so prior messages
-    // remain visible. The next send posts new_session=true and lands in a
-    // fresh storage session; the model's context no longer includes these.
+    const store = useContextUsageStore.getState();
+    store.clearContextUtilization(streamKey);
+    // Mark a reset sentinel so the hydration hook doesn't resurrect the old
+    // session's value if the view remounts before the next send (e.g. nav
+    // away and back) or if the reset API call is slow to propagate.
+    store.markResetPending(streamKey);
   }, [agentId, markNextSendAsNewSession, streamKey]);
+
+  const contextUsageFetcher = useMemo(() => {
+    if (!agentId) return undefined;
+    return (signal: AbortSignal) => api.agents.getContextUsage(agentId, { signal });
+  }, [agentId]);
+
+  useHydrateContextUtilization(streamKey, contextUsageFetcher, agentId);
 
   const { historyMessages, historyResolved, isLoading, historyError, wrapSend } =
     useChatHistorySync({
@@ -117,6 +127,12 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     onSwitch: onAgentSwitch,
     onClear,
       hydrateToStream: false,
+      // Standalone agent chats are keyed by the org-level `agent_id`
+      // (see `agentHistoryKey`), so we subscribe to that axis — not
+      // `project_agent_id`. Without this, a `send_to_agent` delivery
+      // persists into the target agent's session but the chat panel
+      // stays stale until the user hits F5.
+      watchAgentId: agentId,
     });
 
   const wrappedSend = useMemo(
@@ -144,7 +160,7 @@ export function useAgentChatWindow(agentId: string | undefined): ChatPanelProps 
     projects: agentProjects,
     selectedProjectId: effectiveProjectId,
     onProjectChange: handleProjectChange,
-    contextUtilization,
+    contextUsage,
     onNewSession: handleNewSession,
   };
 }
