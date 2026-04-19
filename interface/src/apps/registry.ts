@@ -82,9 +82,7 @@ function createAppDefinition(
 
   return {
     ...metadata,
-    preload: () => {
-      void loadAppOnce();
-    },
+    preload: () => loadAppOnce(),
     LeftPanel: wrapLazyAppComponent(loadAppOnce, (app) => app.LeftPanel),
     MainPanel: wrapLazyAppComponent(loadAppOnce, (app) => app.MainPanel) as AuraApp["MainPanel"],
     ...(options?.hasDesktopLeftMenuPane

@@ -17,6 +17,7 @@ import { initWebVitalsLite } from "./lib/perf/web-vitals-lite";
 import { installPreloadRecovery } from "./lib/preload-recovery";
 import { syncQueryHostOriginToStorage } from "./lib/host-config";
 import { signalDesktopReady } from "./lib/desktop-ready";
+import { awaitInitialShellAppReady } from "./lib/boot-shell";
 
 // Must run before any module that reads the host origin (e.g. host-store,
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
@@ -40,14 +41,19 @@ createRoot(rootEl).render(
 );
 markReactRootRenderScheduled();
 
-// Tie the desktop window's first visibility to React's first committed paint
-// rather than to a component-specific `useLayoutEffect` (AppShell / LoginView)
-// or a wall-clock fallback in the Rust layer. `App`'s first render is already
-// the correct branch (authenticated → shell, otherwise → login) because of
-// the synchronous session seed in `auth-token.ts`, so we can reveal the
-// window as soon as that frame has painted. The double `requestAnimationFrame`
-// lands us AFTER React's commit and the browser's next paint — the definitive
-// "correct UI is on-screen now" moment.
+// Tie the desktop window's first visibility to BOTH (a) React's first committed
+// paint, and (b) resolution of the initial shell app's lazy module (see
+// `App.tsx` → `preloadInitialShellApp`). Waiting on just first paint reveals a
+// window whose first frame contains only shell chrome — the initial route's
+// `Suspense` boundary renders `fallback={null}` while its module is still in
+// flight, producing a visible "empty shell, then content fills in" blink. By
+// joining on the preload Promise (which has its own ~400ms safety timeout so it
+// can never deadlock the reveal), the very first on-screen frame already
+// contains route content.
+//
+// `App`'s first render is already the correct branch (authenticated → shell,
+// otherwise → login) because of the synchronous boot-auth seed in
+// `auth-token.ts`, so the branch is stable by the time we reveal.
 function schedulePostFirstPaint(callback: () => void): void {
   if (typeof window === "undefined") {
     setTimeout(callback, 0);
@@ -61,5 +67,7 @@ function schedulePostFirstPaint(callback: () => void): void {
   raf(() => raf(callback));
 }
 schedulePostFirstPaint(() => {
-  signalDesktopReady();
+  void awaitInitialShellAppReady().then(() => {
+    signalDesktopReady();
+  });
 });

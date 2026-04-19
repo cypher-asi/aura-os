@@ -32,8 +32,13 @@ export interface AuraApp {
    * layout's base — typically `<appId>` / `<appId>/:id`).
    */
   routes: RouteObject[];
-  /** Starts loading the app module without activating any optional prefetch side effects. */
-  preload?: () => void;
+  /**
+   * Starts loading the app module without activating any optional prefetch side effects.
+   * Returns the underlying module Promise so callers (e.g. the boot reveal gate in
+   * `lib/boot-shell.ts`) can await readiness of the initial shell app before revealing
+   * the desktop window, avoiding an "empty shell chrome, then content fills in" blink.
+   */
+  preload?: () => Promise<unknown>;
   /** Called on hover/focus of the nav rail item to warm caches before navigation. */
   onPrefetch?: () => void;
 }

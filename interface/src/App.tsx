@@ -10,6 +10,7 @@ import { getInitialShellPath } from "./utils/last-app-path";
 import { getLastApp } from "./utils/storage";
 import { bootstrapNativeTestAuth } from "./lib/native-test-auth";
 import { hydrateStoredAuth, isLoggedInSync } from "./lib/auth-token";
+import { preloadInitialShellApp } from "./lib/boot-shell";
 
 const InviteAcceptView = lazy(() =>
   import("./views/InviteAcceptView").then((m) => ({ default: m.InviteAcceptView })),
@@ -38,6 +39,19 @@ const IdeView = lazy(() => import("./views/IdeView").then((m) => ({ default: m.I
  * rendered and `AppShell` is never constructed until the user signs in.
  */
 const initiallyLoggedIn = isLoggedInSync();
+
+// Eagerly kick off the lazy-import of the initial shell app's module BEFORE
+// React commits its first render. Without this, the first paint lands the shell
+// chrome but the initial route's `Suspense` boundary is still rendering
+// `fallback={null}` — producing a visible "empty shell, then content fills in"
+// blink the moment the desktop window becomes visible. `main.tsx` gates
+// `signalDesktopReady()` on this Promise (see `awaitInitialShellAppReady`), so
+// the first on-screen frame already contains real content.
+// Skipped when we're rendering `LoginView` at boot: the login view is
+// statically imported and there's no shell code to warm.
+if (initiallyLoggedIn) {
+  void preloadInitialShellApp();
+}
 
 function LastAppRedirect() {
   const previousPath = useAppUIStore((s) => s.previousPath);
