@@ -73,18 +73,40 @@ jobs:
         id: metadata
         shell: bash
         run: |
-          base_version="$(grep '^version' repo/apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')"
+          version="$(
+            python3 <<'PY'
+            import re
+            from pathlib import Path
+
+            patterns = [
+              re.compile(r"^aura-os-desktop_(.+?)_x64-setup\.exe$"),
+              re.compile(r"^aura-os-desktop_(.+?)_x86_64\.AppImage$"),
+              re.compile(r"^aura-os-desktop_(.+?)_amd64\.deb$"),
+              re.compile(r"^Aura_(.+?)_aarch64\.dmg$"),
+              re.compile(r"^Aura_(.+?)_x64\.dmg$"),
+            ]
+
+            for path in sorted(Path("all-artifacts").iterdir()):
+              for pattern in patterns:
+                match = pattern.match(path.name)
+                if match:
+                  print(match.group(1))
+                  raise SystemExit(0)
+
+            raise SystemExit("Could not determine release version from downloaded artifacts")
+            PY
+          )"
 
           case "${{ github.event.workflow_run.name }}" in
             "Release Nightly")
               echo "channel=nightly" >> "$GITHUB_OUTPUT"
-              echo "version=${base_version}-nightly.${{ github.event.workflow_run.run_number }}.${{ github.event.workflow_run.run_attempt }}" >> "$GITHUB_OUTPUT"
+              echo "version=${version}" >> "$GITHUB_OUTPUT"
               echo "release_url=https://github.com/${{ github.repository }}/releases/tag/nightly" >> "$GITHUB_OUTPUT"
               ;;
             "Release Stable")
               echo "channel=stable" >> "$GITHUB_OUTPUT"
-              echo "version=${base_version}" >> "$GITHUB_OUTPUT"
-              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/v${base_version}" >> "$GITHUB_OUTPUT"
+              echo "version=${version}" >> "$GITHUB_OUTPUT"
+              echo "release_url=https://github.com/${{ github.repository }}/releases/tag/v${version}" >> "$GITHUB_OUTPUT"
               ;;
             *)
               echo "Unsupported triggering workflow: ${{ github.event.workflow_run.name }}" >&2
