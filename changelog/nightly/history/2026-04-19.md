@@ -1,71 +1,73 @@
-# One Agent model, a new in-app browser, and a marketplace debut
+# One Agent model, a new in-app browser, and a Talent Marketplace
 
 - Date: `2026-04-19`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.301.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.301.1
+- Version: `0.1.0-nightly.302.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.302.1
 
-A heavy day across the stack: the long-running super-agent unification finally collapses into a single permissions-driven Agent model, a real Chromium-backed browser lands inside the projects sidekick, the Talent Marketplace ships its first end-to-end slice, and a long tail of CEO chat reliability work makes cross-agent messaging actually work end to end. Mobile parity, login-flash fixes, and release infrastructure hardening round out the day.
+A heavy day across the stack: the super-agent split is gone — there is now a single Agent type governed by permissions — while the product gains a Chromium-backed browser in the projects sidekick and a new Talent Marketplace. A long reliability arc hardened CEO chat routing, context usage, desktop startup, and the release changelog pipeline.
 
-## 6:15 PM — Aura platform overhaul: unified agents, in-app browser, marketplace, and a long CEO reliability arc
+## 6:15 PM — Unified agents, a sidekick browser, and a Marketplace
 
-The bulk of today's work: the super-agent path is collapsed into a permissions-driven Agent model, a real headless-browser surface lands in the projects sidekick, the Talent Marketplace ships its first slice, and a long sequence of fixes finally makes the CEO's cross-agent chat reliable end to end.
+The bulk of the day: agents collapse into a single permissions-driven model, a Chromium-backed browser lands in the projects sidekick, the Talent Marketplace ships, and CEO chat reliability gets a long, focused overhaul.
 
-- Collapsed the dedicated super-agent stack into a single Agent model: an agent's powers now come purely from a required AgentPermissions bundle (CEO is just the ceo_preset), the legacy in-process SuperAgentStream and host-mode toggle are gone, and the crates were renamed from aura-os-super-agent{,-profile} to aura-os-agent-{runtime,templates}. The interface follows suit with a permissions-derived super-agent check and a new Permissions sidekick tab for editing scope and capabilities. (`7fbb3a1`, `e100b41`, `926ac39`, `78683e4`, `2c0f977`, `9ba6107`, `79b0904`)
-- Shipped a real in-app browser in the Projects sidekick: a new aura-os-browser crate plus REST/WebSocket endpoints back a Chromium CDP backend with screencast frames, real input forwarding, project-aware initial URLs from terminal-discovered localhost ports, multi-tab UI, and per-user session ownership with project-scoped authorization. Address bar, wheel, and tab UX got polish and tests, and Chrome/Edge are now auto-discovered with isolated temp profiles. (`a50892f`, `c93e583`, `e00e1a0`, `3b75b94`, `350f2c5`, `ff91081`, `7c763d2`, `440e296`)
-- Launched the first end-to-end slice of the Agent Talent Marketplace: a new top-level app with sidebar, sort/filter, and hire flow, plus first-class listing_status and expertise fields on Agent records, a backfill script, and a migration doc. The Marketplace sidebar uses the shared OverlayScrollbar to match other apps. (`3e18960`, `f93027d`)
-- Reorganized the taskbar and integrations surface: pinned apps and the new LayoutGrid Apps organizer let users reorder and hide apps with drag-and-drop, integrations moved out of Team Settings into a dedicated Integrations app grouped by category, AI providers were split into their own Providers group (gated behind a feature flag), and the bottom taskbar got a true-center layout. (`011598e`, `73e591c`, `23a5c50`, `c12a77d`, `52a0f6f`, `ac48a2c`, `889c5db`, `1dca30c`)
-- Made CEO cross-agent chat actually work: cross-agent tool endpoints are now absolutized and stamped with JWT + org headers, harness-native and dispatcher tools are deduped before reaching Anthropic, send_to_agent posts to the local server with a real reply drained from the SSE stream, persistence failures surface as hard errors instead of silent drops, and a new Home project is auto-bound for direct CEO chats. Agent listings are scoped to the active org while preserving NULL-org records, and a corrupted CEO permissions bundle is repaired on read. (`64852c2`, `921b6eb`, `ce304a1`, `3e14ff1`, `18da7c3`, `c23075f`, `a5cb01d`, `89cce06`, `8a085cc`, `23ad8d5`, `811b040`, `553deed`, `dd955b7`, `b9de762`, `fdd2f5e`, `7282f72`, `0798c25`, `a3c2891`)
-- Slashed CEO chat context bloat and latency: list_agents and get_agent now return slim id/name/role summaries scoped to the active org, tool blobs in conversation history are truncated, the CEO turn caches its tool registry and runs persistence + history loads concurrently with parallel project lookups, and a hover popover on the chat context indicator now shows used vs total tokens. A new cross-platform get_current_time tool replaces shell-dependent date lookups. (`2af30d7`, `b6f6c99`, `bc47efd`, `df7667f`, `5062b53`, `5bfd148`, `da7a0fc`, `cfaf243`, `aa01d1e`)
-- Built out the Skills experience: users can author, list, and delete their own skills via a new "My Skills" section in the agent Skills tab, with create now registering with the harness so new skills appear immediately, an in-app delete confirmation modal replacing browser dialogs, optimistic and silent reconciliation on mutations, and frontmatter ordering that survives the harness's own SKILL.md rewrite. (`e9760ea`, `f58b09f`, `9e36512`, `b2d2307`, `e861fc2`, `b9b6db4`)
-- Added an installed-tools diagnostic and security plumbing for cross-agent tools: a new Permissions panel surfaces the exact tool list shipped to the harness with missing-registration warnings, capability-gated readProject/writeProject grants now light up native project tools automatically, and a fresh aura-os-agent-tools split adds a per-call policy re-check, a permissions cache, and an audit ring buffer with an AURA_TOOL_POLICY_MODE=audit safety valve. (`38166ab`, `2b804b5`, `9220e39`, `82d1b30`)
-- Reliability and polish across the desktop shell: fixed a Windows auto-update sidecar lock that was blocking installs, hardened the update banner against being painted over, made the desktop window wait for a real React-mounted UI before showing, gave each app its own remembered sidekick width with lazy-provider-safe retargeting, repaired blank agent names and missing chat-history previews, and added an Agent right-click Edit action plus a simplified agent editor with a System Prompt field. (`3d4c839`, `712e572`, `e01c574`, `7dfafe9`, `2e60bea`, `67aed23`, `fad98d5`, `dbb62e5`, `8dc6a31`, `c2023a3`, `8f31b22`, `91af267`, `0ee88a2`, `a241c7b`)
-- Project workspace and storage cleanups: a per-machine Local workspace folder override on Projects and Agents (with a server-resolved default path surfaced inline in the picker), a renamed on-disk store/ directory with first-launch migration from the old db/ path, and a split Github / Orbit settings layout with a read-only Orbit URL. (`1fb31df`, `fa25a90`, `a3dd6a6`, `c5fbc57`)
-- Auth startup hardening: cached sessions are now seeded synchronously from localStorage so the API client has a token on the very first call, login routes are gated until the initial restoreSession resolves, and the login panel no longer flashes for already-authenticated users on cold start. (`52f9dc5`, `9da41eb`, `7460ab4`, `5de2b45`)
-- Release infrastructure: changelog generation moved to Claude Opus 4.7 in its own publishing workflow, with version derived from release artifacts, immutable nightly release URLs in updater manifests, and a hardened metadata handoff between release and changelog jobs. (`efe0f24`, `df6cbe0`, `f212d4d`, `340d9ae`, `ac4e3c5`)
-- Deployment correctness for remote harnesses: the integrations control-plane base URL now reads AURA_SERVER_BASE_URL like the rest of the server (documented in .env.example and the Render deployment guide), so cross-agent tool callbacks no longer point at 127.0.0.1 from production swarm nodes. (`f9cbc36`, `430ff60`)
+- Collapsed the dedicated super-agent path into the regular Agent model: what makes an agent a CEO is now an AgentPermissions bundle plus an optional intent classifier, and every chat turn flows through the harness via a single dispatcher. The legacy in-process SuperAgentStream, host-mode toggles, migration helpers, and the Local/Cloud UI were all retired, and the crates were renamed to aura-os-agent-runtime and aura-os-agent-templates. (`a769bc2`, `2419f49`, `e2173a0`, `c93e583`, `d147923`, `17855d8`, `aba4546`, `505dfb9`, `79b0904`, `6e63a65`, `63ff4f9`, `e100b41`, `9ba6107`, `7fbb3a1`, `926ac39`, `78683e4`, `64f9f81`)
+- Shipped a real in-app browser in the projects sidekick: a new aura-os-browser crate with a Chromium/CDP backend, REST + WebSocket endpoints, tabbed BrowserPanel with address bar and dev-URL auto-discovery, project-aware initial URLs, per-user session ownership, URL normalization, and fixes for wheel-delta inversion. Executable auto-discovery and isolated temp profiles make it work out-of-the-box on dev machines. (`a50892f`, `c93e583`, `e00e1a0`, `3b75b94`, `350f2c5`, `ff91081`, `7c763d2`, `440e296`)
+- Introduced the Agent Talent Marketplace: a new top-level app for browsing, filtering, and hiring published agents, with typed listing_status and expertise fields on the Agent record, a /api/marketplace/agents endpoint, and agent-scoped permissions editing via a new Permissions sidekick tab. (`3e18960`, `2c0f977`, `f93027d`)
+- Reworked the taskbar and Integrations: apps split integrations out of Team Settings into a dedicated Integrations app with grouped Providers, added a drag-and-drop Apps organizer for taskbar visibility and ordering, and centered the bottom taskbar layout. A long sequence of AppsModal drag-overlay fixes followed (vertical-axis constraint, body portal, stable cross-section DnD). (`ac48a2c`, `889c5db`, `011598e`, `73e591c`, `23a5c50`, `c12a77d`, `52a0f6f`, `d4eab9b`, `1dca30c`)
+- Hardened CEO cross-agent messaging end-to-end: deduplicated installed_tools before shipping to the LLM, stripped harness-native duplicates by walking the real harness catalog, absolutized tool endpoints and stamped JWT + org id on them, realigned send_to_agent with the harness contract, drained the target's SSE reply back to the caller under strict size/time budgets, and surfaced persistence status so silent drops became visible. (`b9de762`, `fdd2f5e`, `7282f72`, `0798c25`, `64852c2`, `921b6eb`, `ce304a1`, `dd955b7`, `3e14ff1`, `c23075f`, `18da7c3`, `a5cb01d`, `c1dc471`)
+- Fixed CEO chats exhausting context in two turns: slimmed list_agents/get_agent responses to id/name/role, scoped listings to the caller's org, capped tool blobs in history replay, replaced the per-turn classifier with a static CEO_CORE_TOOLS allowlist, and added a bottom-bar context-usage popover showing used/total tokens that hydrates on chat open. (`b6f6c99`, `bc47efd`, `5062b53`, `5bfd148`, `da7a0fc`, `cfaf243`, `2af30d7`)
+- Stabilized the agents sidebar: chat previews now load on mount with concurrency-gated prefetch and row heights stay constant, the CEO's permissions safety net repairs empty bundles on read and on project-instance chats, agent listings scope to the active org with a user-scoped backstop for NULL-org rows, and a diagnostic endpoint shows the exact installed_tools list shipped to the harness (with duplicate detection). (`c2023a3`, `811b040`, `553deed`, `38166ab`, `8a085cc`, `23ad8d5`, `a3c2891`, `2b804b5`, `9220e39`)
+- Cut CEO chat latency and per-turn work: process-wide ToolRegistry and metadata caches, concurrent persistence + history loading, parallelized org/project lookups, session-resolution shortcut, 5s TTL cache around network agent lookups invalidated by mutations, and a batched settings.json flush so GET /api/agents no longer rewrites disk once per row. (`2af30d7`, `df7667f`)
+- Added a Skills workflow on the agent: Create Skill registers with the harness and keeps its user-created marker after the harness overwrites SKILL.md, a "My Skills" section lists user-authored work separately from the shop, skills can be deleted via a proper in-app modal, and section updates are now silent + optimistic instead of flashing the whole pane. (`e9760ea`, `f58b09f`, `9e36512`, `b2d2307`, `e861fc2`, `b9b6db4`)
+- Windows auto-update now succeeds: the installer can replace binaries because Aura terminates its sidecar children on update, and the update banner stays opaque and on top of other overlays. Desktop UI also gets a Notes flicker fix on app switches and a retargeting sidekick width that remembers per-app preferences through lazy provider remounts. (`3d4c839`, `712e572`, `7dfafe9`, `2e60bea`, `e01c574`)
+- Split the agent tools into a new aura-os-agent-tools peer crate so the runtime no longer pulls the full domain graph, and added per-call capability re-checks, a TTL permissions cache, and an audit ring buffer/tracing target for the cross-agent dispatcher (with an AURA_TOOL_POLICY_MODE=audit safety valve). (`82d1b30`)
+- Tightened auth and storage on the way in: sessions are seeded synchronously from localStorage so the first render is authenticated, the local KV store was renamed from RocksStore to SettingsStore with an on-disk migration from db/ to store/, per-user browser/terminal session ownership + project-scoped authz landed, and a new /api/system/workspace_defaults powers an improved folder picker. (`52f9dc5`, `a3dd6a6`, `3b75b94`, `fa25a90`, `1fb31df`)
 
-## 1:30 AM — Changelog generation: drop deprecated Anthropic temperature param
+## 12:36 AM — Release changelog moved to its own workflow
 
-Maintenance fix to the daily changelog generator after switching models.
+The daily changelog pipeline was extracted from the release workflows and tightened around artifact metadata and updater URLs.
 
-- Removed the deprecated temperature parameter from the daily changelog generation script so calls to Anthropic stop emitting an unsupported argument. (`3f9cd0a`)
+- Published the changelog from a dedicated publish-release-changelog workflow instead of inline in release-nightly/release-stable, deriving the version directly from release artifacts so the two always agree. (`df6cbe0`, `f212d4d`)
+- Switched updater manifests to immutable nightly release URLs and hardened the desktop manifest/downloads validators that back them. (`340d9ae`)
+- Upgraded the changelog generator to Claude Opus 4.7. (`efe0f24`)
 
-## 1:40 AM — Mobile parity, regression coverage, and a router-level login redirect
+## 1:11 AM — CEO fleet visibility and remote harness callbacks
 
-Mobile remote flows reach parity with desktop and gain regression coverage, alongside a router-level guard that eliminates the last login-form flash for authenticated users.
+Two production-grade fixes: the CEO's list_agents now matches the sidebar's org+user merge, and cross-agent tool endpoints read from the same base-URL variable the rest of the server already honors.
 
-- Brought mobile to parity with the remote app: rebuilt MobileTopbar, MobileShell, MobileOrganizationView, and the Projects routes (Files, Tasks, Work, Agent setup) so navigation, agent editing, and project surfaces work cleanly on phones; the Feed commit grid is also hidden when there is no activity. (`d3fa7e2`)
-- Added mobile runtime plumbing and broad regression coverage: new host-config, native-runtime, preload-recovery, and service-worker registration utilities are tested, the mobile shell and organization view get unit tests, and Playwright e2e gains an authenticated-app helper plus updated PWA-mobile and responsive specs. (`b769e19`)
-- Refreshed mobile release docs (rubric, UI release gate, release workflows, README) to match the new mobile flows. (`56708c1`)
-- Eliminated the residual login-panel flash for authenticated users by short-circuiting /login at the route level via a LoginRoute wrapper that calls Navigate to / when a session is already cached. (`d18b401`)
+- CEO's list_agents tool now mirrors the server's sidebar strategy by concurrently merging org-scoped and user-scoped lookups, so legacy NULL-org agents no longer vanish from the CEO's view (e.g. 15 visible agents instead of 4). (`430ff60`)
+- Aligned the integrations control-plane base URL with AURA_SERVER_BASE_URL so remote harnesses on Render stop hitting the loopback fallback when calling cross-agent tools; documented the variable in .env.example and the Render deployment guide. (`f9cbc36`)
 
-## 1:54 AM — New agents auto-bind to a Home project so first chat persists
+## 1:15 AM — Release changelog metadata handoff hardened
 
-Generalized the CEO's Home-project bootstrap so every newly created agent is immediately chat-ready, with self-healing for legacy orphans.
+Another pass on the release changelog pipeline tightens how version metadata flows between the nightly/stable workflows and the new publish workflow.
 
-- Generalized the CEO's ensure-home-project helper into a shared home_project module and call it both on POST /api/agents and lazily during chat persistence setup, so new and existing orphan agents get a Home project binding and their first chat turn no longer hard-fails. Existing CEO Home projects are reused via the legacy [aura:ceo-home] marker. (`4d3026a`)
+- Stabilized how the nightly and stable release workflows hand off version and artifact metadata to the changelog publisher so downstream jobs get a consistent, well-formed payload. (`ac4e3c5`)
 
-## 1:56 AM — Mobile validation hardening, login-flash root fix, and changelog retries
+## 1:28 AM — No more login flash for authenticated users
 
-Tightened up the merged mobile work, replaced layered login guards with a single boot-time gate, and hardened changelog generation against transient Anthropic failures.
+Restored a dedicated startup-only auth flag so cached-session users never see the login form for a frame at /login.
 
-- Hardened the merged mobile parity work with additional MobileShell, MobileTopbar, AgentEditorForm, and FeedMainPanel tweaks and tests, plus updated layout-capability and responsive-unification e2e coverage and refreshed mobile release-rubric / UI gate docs. (`4d7e4bc`)
-- Eliminated the login-form flash at the root by holding the entire route tree until restoreSession resolves: App now returns null while hasResolvedInitialSession is false, producing a brief black screen and then the final view instead of a flash. (`7ad2133`)
-- Hardened the daily changelog generator with retry/backoff on Anthropic failures so transient errors no longer fail the publish job. (`8de9cb4`)
-- Refreshed the desktop visual audit Playwright spec. (`1e362e9`)
+- Reintroduced hasResolvedInitialSession on the auth store and gated LoginView on it while leaving RequireAuth keyed off isLoading, so authenticated users still get an instant shell paint but the login form no longer flashes during cold start at /login. (`5de2b45`)
 
-## 2:18 AM — Refuse loopback control-plane URL on remote harness deployments
+## 1:30 AM — Mobile parity, desktop cold start, and agent self-healing
 
-Closes the last remote-deployment hole where cross-agent tool endpoints could silently fall back to 127.0.0.1.
+Mobile project flows reach parity with desktop, a multi-step sequence finally eliminates the desktop login flash by binding window reveal to first paint and durable session storage, and new agents auto-bind to a Home project so their first chat actually persists.
 
-- Cross-agent tool endpoints stamped for a swarm/remote harness now refuse the http://127.0.0.1 fallback when AURA_SERVER_BASE_URL is unset, surfacing a named error at session-init and diagnostic time and emitting a boot-time warning (fatal under AURA_STRICT_CONFIG=1) when the deployment looks remote but the variable is missing. (`a6a9666`)
+- Brought mobile project flows to parity with desktop: rebuilt MobileOrganizationView, ProjectAgentSetup, ProjectFiles, ProjectTasks, and the mobile shell/topbar, added a runtime capability layer, and backed it with mobile shell, preload-recovery, and e2e regression coverage plus refreshed release docs. (`d3fa7e2`, `b769e19`, `56708c1`, `4d7e4bc`, `1e362e9`)
+- Eliminated the desktop boot login flash for good: the auth store is seeded synchronously, the route tree is held until the first restore resolves, /login redirects at the route level for cached sessions, and the desktop window now only becomes visible at React's first committed paint (with the emergency fallback raised to 15s). (`d18b401`, `7ad2133`, `801749e`)
+- Made desktop auth restart-safe: the zero-auth session moved from a process-local cache into the JSON-backed SettingsStore, and the Tauri shell now preloads aura-session / aura-jwt into the webview before the bundle runs so reopening the app lands directly in the shell. (`5ece265`)
+- New agents created via POST /api/agents now auto-bind to a Home project, so a freshly created agent's first chat persists instead of failing with "target agent is not bound to any project in storage"; existing orphan agents self-heal on their next chat attempt. (`4d3026a`)
+- Refused to ship a loopback control-plane URL to a remote harness: session init and diagnostic now emit a named error when the deployment looks remote but AURA_SERVER_BASE_URL is missing, with a boot-time warning (fatal under AURA_STRICT_CONFIG=1) and a shared resolver between server, desktop, and integrations. (`a6a9666`, `8da37ce`)
+- Windows desktop polish: release builds use the GUI subsystem so no conhost terminal attaches alongside the webview, and the main webview now starts from about:blank to prevent WebView2 painting stale cached content on launch. (`b767cfc`, `dfe7cc5`)
+- Hardened the changelog generator's Anthropic integration: removed the deprecated temperature parameter and added retry handling for transient failures. (`3f9cd0a`, `8de9cb4`)
 
 ## Highlights
 
 - Unified Agent model replaces the super-agent path
-- New in-app Chromium browser in the projects sidekick
-- Talent Marketplace app debuts end-to-end
-- CEO cross-agent chat reliability overhaul
-- Desktop login-flash and update reliability fixes
+- Project sidekick gains a real Chromium browser
+- Talent Marketplace app shipped end-to-end
+- Desktop cold start no longer flashes the login screen
+- Release changelog moved to its own hardened workflow
 
