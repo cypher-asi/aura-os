@@ -229,6 +229,9 @@ platform :ios do
       force: true,
       automatic_release: false,
       submit_for_review: ENV["IOS_SUBMIT_FOR_REVIEW"] == "1",
+      submission_information: {
+        export_compliance_uses_encryption: false
+      },
       # App Store Connect API keys cannot run the IAP portion of precheck yet.
       # We don't ship in-app purchases in the app, so keep precheck on for the
       # rest of the submission while skipping the unsupported IAP check.
