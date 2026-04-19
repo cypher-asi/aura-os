@@ -8,7 +8,6 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../MobileShell";
-import { signalDesktopReady } from "../../lib/desktop-ready";
 import { markShellVisible } from "../../lib/perf/startup-perf";
 
 const BuyCreditsModal = lazy(() =>
@@ -114,9 +113,11 @@ function AppContent() {
 }
 
 export function AppShell() {
+  // Window visibility is signaled from `main.tsx` after React's first paint,
+  // so this component does not need to call `signalDesktopReady()` anymore.
+  // Keeping `markShellVisible()` for startup perf instrumentation only.
   useLayoutEffect(() => {
     markShellVisible();
-    signalDesktopReady();
   }, []);
 
   return (

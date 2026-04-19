@@ -7,12 +7,11 @@ import {
   Topbar,
   Badge,
 } from "@cypher-asi/zui";
-import { lazy, Suspense, useLayoutEffect } from "react";
+import { lazy, Suspense } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { HOST_BADGE_VARIANT, useLoginForm } from "./use-login-form";
 import { LoginForm } from "./LoginForm";
 import { ResetPasswordForm } from "./ResetPasswordForm";
-import { signalDesktopReady } from "../../lib/desktop-ready";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
 import { useAuthStore } from "../../stores/auth-store";
@@ -33,17 +32,10 @@ export function LoginView() {
   );
   const f = useLoginForm();
 
-  useLayoutEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      signalDesktopReady();
-    }
-  }, [isAuthenticated, isLoading]);
-
-  // `App` holds the whole route tree back until the boot-time restore has
-  // finished, so by the time `LoginView` mounts we already know whether the
-  // user is authenticated. The `isAuthenticated || isLoading` short-circuit
-  // is still useful post-login while the redirect effect in `useLoginForm`
-  // commits and while a manual `refreshSession()` is in flight.
+  // Keep the short-circuit: it covers post-login while the redirect effect in
+  // `useLoginForm` commits and while a manual `refreshSession()` is in flight.
+  // The boot-time flash fix lives in `main.tsx` (paint-tied desktop-ready) and
+  // `App.tsx` (synchronous session seed → first-render correctness), not here.
   if (isAuthenticated || isLoading) {
     return null;
   }

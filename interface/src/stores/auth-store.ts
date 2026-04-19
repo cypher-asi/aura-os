@@ -47,15 +47,12 @@ interface AuthState {
   isLoading: boolean;
   /**
    * Flips `true` exactly once, after the first boot-time `restoreSession()`
-   * (or a login/register/logout) finishes. `LoginView` gates its render on
-   * this so the real form never paints during the startup window when a
-   * cached session is present but has not yet been revalidated — that window
-   * is short but long enough to briefly show the login panel at `/login` for
-   * users who are already authenticated.
-   *
-   * Kept separate from `isLoading` on purpose: `RequireAuth` still keys off
-   * `isLoading` so authenticated users render their shell on the very first
-   * paint (no startup-only blocking).
+   * (or a login/register/logout) finishes. This field is now informational
+   * only — no component gates rendering on it. The boot-flash fix lives in
+   * the render layer: `getInitialAuthState()` seeds `user` synchronously
+   * from the localStorage session mirror, so the very first React paint is
+   * already on the correct branch, and `main.tsx` ties desktop-window
+   * visibility to that first paint (not to this flag).
    */
   hasResolvedInitialSession: boolean;
   zeroProRefreshError: string | null;

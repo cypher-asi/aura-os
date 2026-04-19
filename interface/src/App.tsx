@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useAuth, useAuthStore } from "./stores/auth-store";
 import { useAppUIStore } from "./stores/app-ui-store";
 import { RequireAuth } from "./components/RequireAuth";
@@ -71,12 +70,20 @@ function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
 }
 
 export default function App() {
-  const { hasResolvedInitialSession, restoreSession } = useAuthStore(
-    useShallow((s) => ({
-      hasResolvedInitialSession: s.hasResolvedInitialSession,
-      restoreSession: s.restoreSession,
-    })),
-  );
+  // `getInitialAuthState()` seeds `user` synchronously from the localStorage
+  // session mirror, so the very first render is already on the correct branch
+  // (shell for authenticated users, LoginView for everyone else). That is why
+  // this component does NOT gate rendering on any async flag — adding such a
+  // gate reintroduced a boot-time window where the Rust 3s fallback could
+  // make the webview visible before React committed the correct frame, which
+  // is the root cause of the login-screen flash we chased for many commits.
+  //
+  // The effect below keeps the session fresh in the background: hydrate from
+  // IndexedDB, optionally import a native test token, then validate with the
+  // server. If the backend returns 401, the auth store clears `user` and
+  // `RequireAuth` handles the transition to `/login` — but only after the
+  // first paint has already committed the correct-for-now frame.
+  const restoreSession = useAuthStore((s) => s.restoreSession);
 
   useEffect(() => {
     let active = true;
@@ -98,16 +105,6 @@ export default function App() {
       active = false;
     };
   }, [restoreSession]);
-
-  // Hold the whole route tree until the boot-time session restore finishes.
-  // Returning `null` before the flag flips means no route — including `/login`
-  // — can ever paint during the startup window, so an authenticated user can
-  // never see the login form flash before the shell. The body already has
-  // `background:#000`, so the visible result is a short black screen followed
-  // by the real view (shell or login) once auth is resolved.
-  if (!hasResolvedInitialSession) {
-    return null;
-  }
 
   return (
     <BrowserRouter>

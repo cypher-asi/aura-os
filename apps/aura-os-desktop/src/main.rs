@@ -30,7 +30,16 @@ const DEFAULT_FRONTEND_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_FRONTEND_PORT: u16 = 5173;
 const HOST_STORAGE_KEY: &str = "aura-host-origin";
 const FRONTEND_DEV_SERVER_POLL_INTERVAL: Duration = Duration::from_secs(1);
-const WINDOW_SHOW_FALLBACK_DELAY: Duration = Duration::from_secs(3);
+// Emergency-only rescue timer. The primary trigger to show the window is the
+// IPC `ready` signal from the frontend (scheduled in `main.tsx` after React's
+// first committed paint). The old 3 s value was short enough to routinely
+// race the frontend's first paint and make the webview visible while React
+// was still rendering `null`, which was the root cause of the login-screen
+// flash chased across multiple commits. 15 s only kicks in if the frontend
+// catastrophically fails to signal ready (JS bundle crash, network pipe
+// stall, etc.), in which case showing a blank window is the desired
+// behavior so the user isn't staring at an invisible process.
+const WINDOW_SHOW_FALLBACK_DELAY: Duration = Duration::from_secs(15);
 const VITE_CLI_RELATIVE_PATH: &str = "node_modules/vite/bin/vite.js";
 
 #[derive(Debug)]
