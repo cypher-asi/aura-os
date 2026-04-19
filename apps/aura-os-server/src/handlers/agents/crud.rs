@@ -761,11 +761,53 @@ pub(crate) async fn list_agents(
     Query(query): Query<ListAgentsQuery>,
 ) -> ApiResult<Json<Vec<Agent>>> {
     if let Some(ref client) = state.network_client {
+        // When the caller passes `org_id`, we want BOTH:
+        //   - every agent in that org's fleet (teammates' agents,
+        //     enabled by commit 8a085cc0 "scope agent listing to
+        //     the active org fleet"), AND
+        //   - the caller's own agents regardless of org stamp —
+        //     otherwise legacy rows with `org_id IS NULL` (created
+        //     before the UI started stamping activeOrg on create)
+        //     silently disappear from the sidebar.
+        //
+        // Issue the two list calls concurrently and merge by
+        // `agent_id`, with the org-scoped entry winning on conflict
+        // so fleet-membership metadata (e.g. the other member's
+        // user_id) isn't clobbered by the caller-scoped view of the
+        // same record.
         let net_agents = match query.org_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-            Some(org_id) => client
-                .list_agents_by_org(org_id, &jwt)
-                .await
-                .map_err(map_network_error)?,
+            Some(org_id) => {
+                let org_scoped = client.list_agents_by_org(org_id, &jwt);
+                let user_scoped = client.list_agents(&jwt);
+                let (org_agents, user_agents) = tokio::join!(org_scoped, user_scoped);
+                let org_agents = org_agents.map_err(map_network_error)?;
+                // The user-scoped call is a best-effort backstop for
+                // legacy NULL-org agents; if it fails (e.g. transient
+                // aura-network blip), fall back to the org view alone
+                // rather than failing the whole sidebar refresh.
+                let user_agents = match user_agents {
+                    Ok(list) => list,
+                    Err(err) => {
+                        warn!(
+                            error = %err,
+                            "list_agents: user-scoped backstop failed; returning org-scoped result only"
+                        );
+                        Vec::new()
+                    }
+                };
+
+                let mut merged: Vec<NetworkAgent> =
+                    Vec::with_capacity(org_agents.len() + user_agents.len());
+                let mut seen = std::collections::HashSet::with_capacity(
+                    org_agents.len() + user_agents.len(),
+                );
+                for na in org_agents.into_iter().chain(user_agents.into_iter()) {
+                    if seen.insert(na.id.clone()) {
+                        merged.push(na);
+                    }
+                }
+                merged
+            }
             None => client.list_agents(&jwt).await.map_err(map_network_error)?,
         };
         let agents: Vec<Agent> = net_agents
