@@ -1,5 +1,24 @@
 [
   {
+    "date": "2026-04-19",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.301.1",
+    "title": "One Agent model, a new in-app browser, and a marketplace debut",
+    "intro": "A heavy day across the stack: the long-running super-agent unification finally collapses into a single permissions-driven Agent model, a real Chromium-backed browser lands inside the projects sidekick, the Talent Marketplace ships its first end-to-end slice, and a long tail of CEO chat reliability work makes cross-agent messaging actually work end to end. Mobile parity, login-flash fixes, and release infrastructure hardening round out the day.",
+    "entryCount": 6,
+    "highlights": [
+      "Unified Agent model replaces the super-agent path",
+      "New in-app Chromium browser in the projects sidekick",
+      "Talent Marketplace app debuts end-to-end",
+      "CEO cross-agent chat reliability overhaul",
+      "Desktop login-flash and update reliability fixes"
+    ],
+    "rawCommitCount": 128,
+    "generatedAt": "2026-04-19T09:32:53.658Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.301.1",
+    "path": "history/2026-04-19.json"
+  },
+  {
     "date": "2026-04-18",
     "channel": "nightly",
     "version": "0.1.0-nightly.289.1",
