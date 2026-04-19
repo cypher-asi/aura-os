@@ -155,3 +155,89 @@ describe("auth-token", () => {
     });
   });
 });
+
+describe("auth-token boot-injected global", () => {
+  // These exercise the module-load seed in `seedCachedSessionFromBoot()`.
+  // Because that seed runs at import time we re-import the module fresh for
+  // each case after mutating `window.__AURA_BOOT_AUTH__`.
+
+  const BOOT_AUTH_KEY = "__AURA_BOOT_AUTH__";
+  type WindowWithBoot = Window & { __AURA_BOOT_AUTH__?: unknown };
+
+  function setBootGlobal(value: unknown): void {
+    (window as WindowWithBoot)[BOOT_AUTH_KEY] = value;
+  }
+
+  function clearBootGlobal(): void {
+    delete (window as WindowWithBoot)[BOOT_AUTH_KEY];
+  }
+
+  beforeEach(() => {
+    clearBootGlobal();
+    window.localStorage.removeItem("aura-jwt");
+    window.localStorage.removeItem("aura-session");
+    window.localStorage.removeItem("aura-idb:auth:session");
+    vi.resetModules();
+  });
+
+  it("seeds the cached session from the injected global when isLoggedIn is true", async () => {
+    setBootGlobal({
+      isLoggedIn: true,
+      session: { ...mockSession },
+      jwt: mockSession.access_token,
+    });
+
+    const mod = await import("./auth-token");
+    expect(mod.isLoggedInSync()).toBe(true);
+    expect(mod.getStoredSession()).toEqual(mockSession);
+    expect(mod.getBootAuthSource()).toBe("injected");
+  });
+
+  it("reports not logged in when injected global says isLoggedIn is false, even with localStorage data", async () => {
+    window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+    window.localStorage.setItem("aura-jwt", mockSession.access_token);
+    setBootGlobal({ isLoggedIn: false, session: null, jwt: null });
+
+    const mod = await import("./auth-token");
+    expect(mod.isLoggedInSync()).toBe(false);
+    expect(mod.getStoredSession()).toBeNull();
+    expect(mod.getBootAuthSource()).toBe("injected");
+  });
+
+  it("falls back to localStorage when no injected global is present", async () => {
+    window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+    window.localStorage.setItem("aura-jwt", mockSession.access_token);
+
+    const mod = await import("./auth-token");
+    expect(mod.isLoggedInSync()).toBe(true);
+    expect(mod.getStoredSession()).toEqual(mockSession);
+    expect(mod.getBootAuthSource()).toBe("localStorage");
+  });
+
+  it("reports source 'none' when neither global nor localStorage has a session", async () => {
+    const mod = await import("./auth-token");
+    expect(mod.isLoggedInSync()).toBe(false);
+    expect(mod.getBootAuthSource()).toBe("none");
+  });
+
+  it("backfills access_token from the injected jwt when the injected session is missing one", async () => {
+    const sessionWithoutToken = { ...mockSession, access_token: undefined };
+    setBootGlobal({
+      isLoggedIn: true,
+      session: sessionWithoutToken,
+      jwt: "token-from-jwt-field",
+    });
+
+    const mod = await import("./auth-token");
+    expect(mod.isLoggedInSync()).toBe(true);
+    expect(mod.getStoredJwt()).toBe("token-from-jwt-field");
+  });
+
+  it("ignores malformed global values", async () => {
+    setBootGlobal({ isLoggedIn: "yes", session: null });
+
+    const mod = await import("./auth-token");
+    expect(mod.getBootAuthSource()).toBe("none");
+    expect(mod.isLoggedInSync()).toBe(false);
+  });
+});

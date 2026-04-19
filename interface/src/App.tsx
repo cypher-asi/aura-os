@@ -19,18 +19,23 @@ const IdeView = lazy(() => import("./views/IdeView").then((m) => ({ default: m.I
 /**
  * Canonical, explicit boot-time auth decision.
  *
- * Computed once at module load from the synchronous localStorage session
- * mirror. This is THE single source of truth for "should the app open on the
- * shell or on login?" — the Zustand store's initial seed (in `auth-store.ts`)
- * is wired to the same `isLoggedInSync()` primitive so the two can never
- * disagree on the very first render.
+ * Computed once at module load via `isLoggedInSync()`. On desktop, that call
+ * reads `window.__AURA_BOOT_AUTH__`, a frozen global that the Rust layer
+ * defines in the webview initialization script directly from the on-disk
+ * `SettingsStore` (see
+ * `apps/aura-os-desktop/src/main.rs::build_initialization_script`). Because
+ * the global is set before any page scripts run, this boolean is available
+ * and correct on the very first React render — no dependence on webview
+ * localStorage being populated in time.
  *
- * If this boolean is `true`, we mount the authenticated shell routes
- * immediately and never construct `LoginView` at boot. If it's `false`,
- * `LoginView` is the only thing rendered and `AppShell` is never constructed
- * until the user signs in. Once sign-in (or a background 401) happens,
- * React re-renders against the live `useAuthStore` selector below and the
- * tree transitions naturally.
+ * On web/mobile (no injected global), the same primitive falls back to the
+ * localStorage session mirror. The Zustand store's initial seed (in
+ * `auth-store.ts`) shares this primitive so the two can never disagree on
+ * the first render.
+ *
+ * If `true`, we mount the authenticated shell routes immediately and never
+ * construct `LoginView` at boot. If `false`, `LoginView` is the only thing
+ * rendered and `AppShell` is never constructed until the user signs in.
  */
 const initiallyLoggedIn = isLoggedInSync();
 

@@ -65,9 +65,12 @@ interface AuthState {
 }
 
 /**
- * Seed the auth store synchronously from the localStorage/IndexedDB mirror
- * maintained by `auth-token`, using the shared `isLoggedInSync()` primitive
- * so the store and the router can never disagree on the boot decision.
+ * Seed the auth store synchronously from whichever source `auth-token`
+ * picked at module import: on desktop that is the `window.__AURA_BOOT_AUTH__`
+ * global injected by the Rust initialization script (read from the on-disk
+ * `SettingsStore`); on web/mobile it is the localStorage/IndexedDB mirror.
+ * Either way this uses the shared `isLoggedInSync()` primitive so the store
+ * and the router in `App.tsx` can never disagree on the boot decision.
  *
  * The canonical boot-time "show shell vs show login" decision is made in
  * `App.tsx` via `initiallyLoggedIn = isLoggedInSync()` at module scope. This
