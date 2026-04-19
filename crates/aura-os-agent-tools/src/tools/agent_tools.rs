@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use serde_json::json;
+use tracing::warn;
 
 use aura_os_core::{AgentId, Capability, ToolDomain};
 
@@ -28,6 +29,33 @@ fn to_agent_summary(agent: &aura_os_network::NetworkAgent) -> serde_json::Value 
         "name": agent.name,
         "role": agent.role,
     })
+}
+
+/// Merge an org-scoped and a user-scoped agent listing into a single
+/// deduplicated view, preferring the org-scoped record on `id` collision.
+///
+/// Mirrors the merge strategy in `apps/aura-os-server` `list_agents`
+/// handler (commit 23ad8d56): the org-scoped call returns every
+/// teammate's agent in the org, while the user-scoped call acts as a
+/// best-effort backstop so legacy rows with `org_id IS NULL` — created
+/// before the UI started stamping `activeOrg` on create — don't
+/// silently disappear from the caller's view. Org entries are
+/// emitted first, then any user-only ids, preserving the relative
+/// order of each input.
+fn merge_network_agents(
+    org_agents: Vec<aura_os_network::NetworkAgent>,
+    user_agents: Vec<aura_os_network::NetworkAgent>,
+) -> Vec<aura_os_network::NetworkAgent> {
+    let mut merged: Vec<aura_os_network::NetworkAgent> =
+        Vec::with_capacity(org_agents.len() + user_agents.len());
+    let mut seen =
+        std::collections::HashSet::with_capacity(org_agents.len() + user_agents.len());
+    for na in org_agents.into_iter().chain(user_agents.into_iter()) {
+        if seen.insert(na.id.clone()) {
+            merged.push(na);
+        }
+    }
+    merged
 }
 
 // ---------------------------------------------------------------------------
@@ -67,16 +95,31 @@ impl AgentTool for ListAgentsTool {
         if let Some(network) = ctx.network_client.as_deref() {
             // Scope the catalog fetch to the caller's org so the CEO
             // sees every teammate's agent in the org, not just the
-            // ones owned by the JWT's user_id. aura-network's
-            // `list_agents?org_id=X` drops the user_id filter (and
-            // authorizes via org membership) once org_id is supplied.
+            // ones owned by the JWT's user_id (commit 8a085cc0).
+            // aura-network's `list_agents?org_id=X` drops the user_id
+            // filter (and authorizes via org membership) once org_id
+            // is supplied.
             //
-            // Guard against the `DEFAULT_ORG_SENTINEL` string used by
-            // the server dispatcher when it genuinely can't resolve an
-            // org: sending `?org_id=default` to aura-network will 403
-            // because nobody is a member of that literal. Fall back
-            // to the user-scoped call in that case so the CEO at
-            // least sees its own bootstrap-seeded agents.
+            // The strict `WHERE org_id = $1` filter on the server
+            // hides legacy rows with `org_id IS NULL` — agents
+            // created before the UI started stamping `activeOrg` on
+            // create, or created during an activeOrg-null window on
+            // mount. Commit 23ad8d56 patched this for the HTTP
+            // handler in apps/aura-os-server by running the
+            // org-scoped and user-scoped lookups concurrently and
+            // merging by id. Mirror that here so the CEO's
+            // `list_agents` tool returns the same view as the
+            // sidebar — otherwise NULL-org agents the caller owns
+            // are silently invisible to the CEO (4 shown where the
+            // sidebar shows 15).
+            //
+            // Guard against the `DEFAULT_ORG_SENTINEL` string used
+            // by the server dispatcher when it genuinely can't
+            // resolve an org: sending `?org_id=default` to
+            // aura-network will 403 because nobody is a member of
+            // that literal. Fall back to the user-scoped call in
+            // that case so the CEO at least sees its own
+            // bootstrap-seeded agents.
             let trimmed = ctx.org_id.trim();
             let agents = if trimmed.is_empty() || trimmed == "default" {
                 network
@@ -84,10 +127,25 @@ impl AgentTool for ListAgentsTool {
                     .await
                     .map_err(|e| tool_err("list_agents", e))?
             } else {
-                network
-                    .list_agents_by_org(trimmed, &ctx.jwt)
-                    .await
-                    .map_err(|e| tool_err("list_agents", e))?
+                let org_scoped = network.list_agents_by_org(trimmed, &ctx.jwt);
+                let user_scoped = network.list_agents(&ctx.jwt);
+                let (org_agents, user_agents) = tokio::join!(org_scoped, user_scoped);
+                let org_agents = org_agents.map_err(|e| tool_err("list_agents", e))?;
+                // The user-scoped call is a best-effort backstop for
+                // legacy NULL-org agents; if it fails (e.g. transient
+                // aura-network blip), fall back to the org view
+                // alone rather than failing the whole tool call.
+                let user_agents = match user_agents {
+                    Ok(list) => list,
+                    Err(err) => {
+                        warn!(
+                            error = %err,
+                            "list_agents tool: user-scoped backstop failed; returning org-scoped result only"
+                        );
+                        Vec::new()
+                    }
+                };
+                merge_network_agents(org_agents, user_agents)
             };
             let summaries: Vec<serde_json::Value> =
                 agents.iter().map(to_agent_summary).collect();
@@ -730,5 +788,120 @@ mod tests {
             rendered.len(),
             raw.len()
         );
+    }
+
+    fn minimal_agent(id: &str, user_id: &str, org_id: Option<&str>) -> NetworkAgent {
+        NetworkAgent {
+            id: id.into(),
+            name: format!("agent-{id}"),
+            role: Some("engineer".into()),
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+            machine_type: None,
+            vm_id: None,
+            user_id: user_id.into(),
+            org_id: org_id.map(str::to_string),
+            profile_id: None,
+            tags: None,
+            listing_status: None,
+            expertise: None,
+            jobs: None,
+            revenue_usd: None,
+            reputation: None,
+            permissions: Default::default(),
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn merge_prefers_org_record_on_id_collision() {
+        // Same agent id appears in both lists, but with different
+        // `user_id` values (simulating aura-network's org view
+        // exposing a teammate's `user_id` field that the caller's
+        // user-scoped view doesn't carry). The org entry must win
+        // so fleet-membership metadata isn't clobbered — matches
+        // the server handler's merge semantics from commit
+        // 23ad8d56.
+        let org = vec![minimal_agent("shared", "teammate", Some("org-1"))];
+        let user = vec![minimal_agent("shared", "caller", None)];
+
+        let merged = merge_network_agents(org, user);
+
+        assert_eq!(merged.len(), 1, "id collisions should dedupe");
+        assert_eq!(merged[0].id, "shared");
+        assert_eq!(
+            merged[0].user_id, "teammate",
+            "org record must win on conflict"
+        );
+        assert_eq!(
+            merged[0].org_id.as_deref(),
+            Some("org-1"),
+            "org metadata preserved"
+        );
+    }
+
+    #[test]
+    fn merge_includes_user_only_agents() {
+        // The whole point of the merge: a legacy NULL-org agent the
+        // caller owns is invisible to the strict org-scoped view
+        // and must be restored from the user-scoped backstop.
+        let org = vec![minimal_agent("org-only", "teammate", Some("org-1"))];
+        let user = vec![minimal_agent("null-org", "caller", None)];
+
+        let merged = merge_network_agents(org, user);
+
+        let ids: std::collections::BTreeSet<&str> =
+            merged.iter().map(|a| a.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            ["null-org", "org-only"].into_iter().collect(),
+            "both lists contribute their unique ids"
+        );
+    }
+
+    #[test]
+    fn merge_is_order_stable_org_first() {
+        // Emitting org entries first (in their original order)
+        // followed by user-only entries keeps the output
+        // deterministic for downstream consumers / tests.
+        let org = vec![
+            minimal_agent("a", "t", Some("org-1")),
+            minimal_agent("b", "t", Some("org-1")),
+        ];
+        let user = vec![
+            minimal_agent("a", "caller", None),
+            minimal_agent("c", "caller", None),
+        ];
+
+        let merged = merge_network_agents(org, user);
+
+        let ordered_ids: Vec<&str> = merged.iter().map(|a| a.id.as_str()).collect();
+        assert_eq!(
+            ordered_ids,
+            vec!["a", "b", "c"],
+            "org entries come first, then user-only ids"
+        );
+    }
+
+    #[test]
+    fn merge_empty_user_backstop_returns_org_only() {
+        // When the user-scoped call is skipped (empty Vec — the
+        // fallback path used when the backstop errors), merging
+        // must still yield the org-scoped list untouched.
+        let org = vec![
+            minimal_agent("a", "t", Some("org-1")),
+            minimal_agent("b", "t", Some("org-1")),
+        ];
+
+        let merged = merge_network_agents(org.clone(), Vec::new());
+
+        assert_eq!(merged.len(), org.len());
+        assert_eq!(merged[0].id, "a");
+        assert_eq!(merged[1].id, "b");
     }
 }
