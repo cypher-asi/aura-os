@@ -28,6 +28,7 @@ on:
           - preflight
           - beta
           - release
+          - github_release
       track:
         description: "Google Play track"
         required: true
@@ -177,6 +178,7 @@ jobs:
             release) CHANNEL="stable" ;;
             beta) CHANNEL="beta" ;;
             preflight) CHANNEL="preflight" ;;
+            github_release) CHANNEL="github" ;;
           esac
           VERSION="${GITHUB_REF_NAME#v}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
