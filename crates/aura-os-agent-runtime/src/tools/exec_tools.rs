@@ -283,16 +283,6 @@ impl AgentTool for SendToAgentTool {
             .ok_or_else(|| AgentRuntimeError::ToolError("content is required".into()))?;
         let attachments = input.get("attachments").cloned();
 
-        let network = ctx
-            .network_client
-            .as_ref()
-            .ok_or_else(|| AgentRuntimeError::Internal("network client not available".into()))?;
-
-        let url = format!(
-            "{}/api/agents/{}/events/stream",
-            network.base_url(),
-            agent_id
-        );
         let mut body = json!({
             "content": content,
             "action": "message"
@@ -303,20 +293,68 @@ impl AgentTool for SendToAgentTool {
             }
         }
 
-        let resp = network
-            .http_client()
-            .post(&url)
-            .bearer_auth(&ctx.jwt)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| tool_err("send_to_agent", e))?;
+        // The per-agent chat endpoint (`/api/agents/:id/events/stream`)
+        // is owned by aura-os-server — it schedules the target agent's
+        // next harness turn and streams its response back over SSE.
+        // aura-network does NOT expose this route, so posting to
+        // `network.base_url()` always returned 404. Route through the
+        // local server base URL instead (always populated from
+        // AURA_SERVER_BASE_URL / host+port in app_builder); only fall
+        // back to the network client as a legacy safety net.
+        //
+        // The channel send inside `send_agent_event_stream` schedules
+        // the turn synchronously before the SSE stream is returned,
+        // so dropping the response body after checking the status
+        // still delivers the message.
+        let path = format!("/api/agents/{agent_id}/events/stream");
+        let (response_status, response_body): (reqwest::StatusCode, Option<String>) =
+            if let Some(base) = ctx.local_server_base_url.as_deref() {
+                let url = format!("{base}{path}");
+                let resp = ctx
+                    .local_http_client
+                    .post(&url)
+                    .bearer_auth(&ctx.jwt)
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(|e| tool_err("send_to_agent", e))?;
+                let status = resp.status();
+                let err_body = if status.is_success() {
+                    None
+                } else {
+                    Some(resp.text().await.unwrap_or_default())
+                };
+                (status, err_body)
+            } else {
+                let network = ctx.network_client.as_ref().ok_or_else(|| {
+                    AgentRuntimeError::Internal(
+                        "send_to_agent: neither local_server_base_url nor network_client is configured".into(),
+                    )
+                })?;
+                let url = format!("{}{path}", network.base_url());
+                let resp = network
+                    .http_client()
+                    .post(&url)
+                    .bearer_auth(&ctx.jwt)
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(|e| tool_err("send_to_agent", e))?;
+                let status = resp.status();
+                let err_body = if status.is_success() {
+                    None
+                } else {
+                    Some(resp.text().await.unwrap_or_default())
+                };
+                (status, err_body)
+            };
 
-        let status = resp.status();
-        if !status.is_success() {
-            let err_body = resp.text().await.unwrap_or_default();
+        if !response_status.is_success() {
             return Ok(ToolResult {
-                content: json!({ "error": err_body, "status": status.as_u16() }),
+                content: json!({
+                    "error": response_body.unwrap_or_default(),
+                    "status": response_status.as_u16()
+                }),
                 is_error: true,
             });
         }
