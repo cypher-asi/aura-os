@@ -13,9 +13,7 @@ use aura_protocol::{
 };
 
 use crate::prompt::ceo_system_prompt;
-use aura_os_agent_templates::{
-    classify_intent, classify_intent_with, default_classifier_rules, is_tier1, AgentTemplate,
-};
+use aura_os_agent_templates::{classify_intent_with, default_classifier_rules, AgentTemplate};
 
 /// URL path prefix every cross-agent tool is proxied through.
 ///
@@ -68,6 +66,47 @@ const AURA_NATIVE_PROJECT_WRITE_TOOLS: &[&str] = &[
     "stop_dev_loop",
 ];
 
+/// Static tool allowlist for [`AgentPermissions::ceo_preset`] agents.
+///
+/// Mirrors the tier-1 slice of
+/// [`aura_os_agent_templates::ceo_tool_manifest`] plus the
+/// `load_domain_tools` meta-tool, which lets the CEO fetch additional
+/// domains on demand without the harness having to run an intent
+/// classifier. Pulling the tier-1 slice directly (rather than letting a
+/// per-turn classifier rebuild it) matches how non-CEO agents construct
+/// their cross-agent tool list — see the capability-gated branch below —
+/// and is what keeps a trivial "who are my agents" turn from shipping
+/// ~30 tool definitions to the LLM.
+const CEO_CORE_TOOLS: &[&str] = &[
+    // Project (tier 1)
+    "create_project",
+    "import_project",
+    "list_projects",
+    "get_project",
+    "update_project",
+    "delete_project",
+    "archive_project",
+    "get_project_stats",
+    // Agent (tier 1)
+    "list_agents",
+    "get_agent",
+    "assign_agent_to_project",
+    // Execution (tier 1)
+    "start_dev_loop",
+    "pause_dev_loop",
+    "stop_dev_loop",
+    "get_loop_status",
+    "send_to_agent",
+    // Monitoring (tier 1)
+    "get_fleet_status",
+    "get_progress_report",
+    "get_project_cost",
+    // Billing (tier 1 head)
+    "get_credit_balance",
+    // Meta-tool (always on; lets the LLM ask for additional domains)
+    "load_domain_tools",
+];
+
 /// Returns true if any capability in `caps` is a [`Capability::ReadProject`]
 /// grant (regardless of target project id).
 fn has_any_read_project(caps: &[Capability]) -> bool {
@@ -105,7 +144,11 @@ pub fn ceo_agent_template(org_name: &str, org_id: &str) -> CeoAgentTemplate {
                 .to_string(),
         system_prompt: ceo_system_prompt(org_name, org_id),
         permissions: AgentPermissions::ceo_preset(),
-        intent_classifier: Some(ceo_intent_classifier_spec()),
+        // CEO agents run with a static tool allowlist (see CEO_CORE_TOOLS);
+        // shipping an IntentClassifierSpec causes the harness to re-filter
+        // the list per turn and has silently dropped tier-1 tools like
+        // `send_to_agent` in practice.
+        intent_classifier: None,
     }
 }
 
@@ -139,8 +182,8 @@ pub fn ceo_classify_intent(message: &str) -> Vec<aura_os_core::ToolDomain> {
 ///
 /// The unified chat path installs these alongside workspace + integration
 /// tools when opening a harness session. For the CEO preset we emit the
-/// full `ceo_tool_manifest` so the bootstrap agent keeps parity with the
-/// legacy in-process super-agent. For agents carrying only a subset of
+/// static [`CEO_CORE_TOOLS`] allowlist (~21 tier-1 names plus the
+/// `load_domain_tools` meta-tool). For agents carrying only a subset of
 /// the cross-agent capabilities we emit a narrower list gated by
 /// [`Capability`].
 ///
@@ -152,23 +195,24 @@ pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledT
     build_cross_agent_tools_for_message(permissions, None)
 }
 
-/// Message-aware variant of [`build_cross_agent_tools`] that narrows a
-/// CEO-preset manifest down to tier-1 domains plus any tier-2 domains
-/// the intent classifier matched for `message`.
+/// Chat-path entry point kept for signature compatibility.
 ///
-/// For CEO-preset agents the unfiltered manifest is ~55 tools — too
-/// much to feed into the LLM on every turn (both for token budget and
-/// decision latency). Callers in the chat path should pass
-/// `Some(user_message)`; callers that don't have the message yet
-/// (e.g. installed-tools diagnostics) can pass `None` to keep the
-/// pre-filter behaviour.
-///
-/// Non-CEO permissions are unaffected — they already ship a narrowly
-/// gated subset.
+/// Historically this was a message-aware variant of
+/// [`build_cross_agent_tools`] that ran an intent classifier over the
+/// user's message and narrowed a ~55-tool CEO manifest down to tier-1
+/// plus any tier-2 domains the classifier matched. That per-turn
+/// narrowing has been removed in favour of a static
+/// [`CEO_CORE_TOOLS`] allowlist — the classifier was silently dropping
+/// tier-1 tools like `send_to_agent` in practice, and a static list
+/// matches how non-CEO agents already construct their cross-agent tool
+/// list (see the capability-gated branch below). The `message`
+/// parameter is retained so the chat path can keep calling through
+/// this entry point without a signature change; it is currently
+/// ignored.
 #[must_use]
 pub fn build_cross_agent_tools_for_message(
     permissions: &AgentPermissions,
-    message: Option<&str>,
+    _message: Option<&str>,
 ) -> Vec<InstalledTool> {
     // Build the name -> (description, schema) map *once* so each
     // InstalledTool gets the real metadata the LLM needs to call the
@@ -177,30 +221,16 @@ pub fn build_cross_agent_tools_for_message(
     let metadata = crate::tools::tool_metadata_map();
     let metadata = &*metadata;
 
-    // CEO preset: full manifest, one InstalledTool per registered tool.
+    // CEO preset: static tier-1 allowlist, no classifier. See
+    // `CEO_CORE_TOOLS` for the rationale. The harness receives this
+    // list verbatim and does not re-filter it, which prevents the
+    // "classifier silently strips send_to_agent" failure mode the
+    // previous per-turn narrowing caused.
     if permissions.is_ceo_preset() {
-        let manifest = AgentTemplate::ceo_default().tool_manifest;
-        // When the caller supplied the user's message, narrow the
-        // manifest to tier-1 plus whichever tier-2 domains the
-        // classifier matched. This keeps trivial questions like
-        // "who are my agents" from dragging the full 55-tool
-        // payload through the LLM on every turn.
-        return match message {
-            Some(msg) => {
-                let domains = classify_intent(msg);
-                manifest
-                    .into_iter()
-                    .filter(|entry| {
-                        is_tier1(&entry.domain) || domains.contains(&entry.domain)
-                    })
-                    .map(|entry| installed_tool_for(&entry.name, metadata))
-                    .collect()
-            }
-            None => manifest
-                .into_iter()
-                .map(|entry| installed_tool_for(&entry.name, metadata))
-                .collect(),
-        };
+        return CEO_CORE_TOOLS
+            .iter()
+            .map(|name| installed_tool_for(name, metadata))
+            .collect();
     }
 
     // Non-CEO agents: narrowly gated cross-agent tools only.
@@ -395,7 +425,10 @@ mod tests {
         assert_eq!(t.role, "CEO");
         assert!(t.system_prompt.contains("Acme"));
         assert!(t.system_prompt.contains("org-123"));
-        assert!(t.intent_classifier.is_some());
+        assert!(
+            t.intent_classifier.is_none(),
+            "CEO template must not ship an IntentClassifierSpec — see CEO_CORE_TOOLS"
+        );
     }
 
     #[test]
@@ -488,28 +521,55 @@ mod tests {
     }
 
     #[test]
-    fn ceo_preset_still_ships_full_manifest() {
-        // Guardrail: the CEO fast-path must not regress just because
-        // the non-CEO branch learned about project tools.
+    fn ceo_preset_ships_static_core_allowlist() {
+        // Guardrail: the CEO fast-path must emit exactly the
+        // `CEO_CORE_TOOLS` set, regardless of the user message. This
+        // replaces the old "ships full manifest" guarantee — the full
+        // manifest was the source of the 100% context utilisation bug.
         let tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        let names = tool_names(&tools);
-        // A representative sampling from the full manifest: one cross-
-        // agent name, one aura-native read name, and one aura-native
-        // write name so a regression on either branch would trip.
-        for expected in &[
-            "create_agent",
-            "list_agents",
-            "send_to_agent",
-            "list_specs",
-            "create_spec",
-            "list_tasks",
-            "run_task",
-        ] {
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(
+            names.len(),
+            CEO_CORE_TOOLS.len(),
+            "CEO manifest should be exactly CEO_CORE_TOOLS; got {names:?}"
+        );
+        for expected in CEO_CORE_TOOLS {
             assert!(
                 names.contains(expected),
-                "CEO manifest missing `{expected}`; got {names:?}"
+                "CEO_CORE_TOOLS entry `{expected}` missing from emitted manifest; got {names:?}"
             );
         }
+    }
+
+    #[test]
+    fn ceo_preset_ignores_message_parameter() {
+        // The message-aware variant must return the same allowlist whether
+        // or not a message is supplied — the static allowlist deliberately
+        // side-steps per-turn classification, which is what caused the
+        // classifier to silently drop `send_to_agent` on simple prompts.
+        let perms = AgentPermissions::ceo_preset();
+        let without = build_cross_agent_tools_for_message(&perms, None);
+        let with = build_cross_agent_tools_for_message(
+            &perms,
+            Some("hi, what's the weather"),
+        );
+        let names_without: Vec<&str> = without.iter().map(|t| t.name.as_str()).collect();
+        let names_with: Vec<&str> = with.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names_without, names_with);
+    }
+
+    #[test]
+    fn ceo_allowlist_includes_send_to_agent_and_meta_tool() {
+        // Explicit regression guard for the two tools that were reported
+        // missing from CEO turns: `send_to_agent` (the inter-agent chat
+        // capability) and `load_domain_tools` (the meta-tool that lets
+        // the LLM expand its own tool surface on demand).
+        let tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert!(names.contains(&"send_to_agent"),
+            "CEO manifest must always expose send_to_agent; got {names:?}");
+        assert!(names.contains(&"load_domain_tools"),
+            "CEO manifest must always expose load_domain_tools; got {names:?}");
     }
 
     #[test]
@@ -530,14 +590,13 @@ mod tests {
 
         // Every tool must ship a non-empty description; the empty
         // string was the pre-fix behaviour that made the LLM believe
-        // the tools didn't exist.
+        // the tools didn't exist. Only names that are part of
+        // `CEO_CORE_TOOLS` can be asserted here — tier-2/process tools
+        // are no longer shipped up-front on the CEO path.
         for name in [
             "send_to_agent",
             "list_agents",
             "get_agent",
-            "create_spec",
-            "run_task",
-            "trigger_process",
         ] {
             assert!(
                 !find(name).description.is_empty(),
@@ -565,13 +624,7 @@ mod tests {
         };
         check_required("send_to_agent", "agent_id");
         check_required("send_to_agent", "content");
-        check_required("create_spec", "project_id");
-        check_required("run_task", "task_id");
-        // Exercises the fallback branch in `tool_metadata_map` that
-        // inlines metadata for the five process tools (since
-        // `TriggerProcessTool` needs a live executor and so doesn't
-        // live in `with_all_tools()`).
-        check_required("trigger_process", "process_id");
+        check_required("get_project", "project_id");
     }
 
     #[test]

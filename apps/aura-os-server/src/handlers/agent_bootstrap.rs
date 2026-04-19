@@ -141,9 +141,10 @@ async fn ensure_canonical_ceo_permissions_persisted(
     if canonical.permissions.is_ceo_preset() {
         return;
     }
-    let classifier = canonical.intent_classifier.clone().or_else(|| {
-        Some(aura_os_agent_runtime::ceo::ceo_intent_classifier_spec())
-    });
+    // See the note in handlers/agents/conversions.rs: CEO agents ship
+    // `intent_classifier: None` and rely on the static `CEO_CORE_TOOLS`
+    // allowlist. Keep whatever the canonical record carries so we don't
+    // stamp a stale classifier onto a freshly-repaired permissions bundle.
     let req = aura_os_network::UpdateAgentRequest {
         name: None,
         role: None,
@@ -158,7 +159,7 @@ async fn ensure_canonical_ceo_permissions_persisted(
         listing_status: None,
         expertise: None,
         permissions: Some(aura_os_core::AgentPermissions::ceo_preset()),
-        intent_classifier: classifier,
+        intent_classifier: canonical.intent_classifier.clone(),
     };
     match network.update_agent(&canonical.id, jwt, &req).await {
         Ok(_) => info!(

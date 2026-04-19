@@ -48,6 +48,48 @@ fn sse_response_headers(persist_snapshot: Option<&(String, String)>) -> HeaderMa
 const DEFAULT_AGENT_HISTORY_WINDOW_LIMIT: usize = 80;
 const MAX_AGENT_HISTORY_WINDOW_LIMIT: usize = 400;
 
+/// Maximum bytes of a single `tool_use` input / `tool_result` content
+/// blob we embed into the flat-text conversation history replayed to
+/// the harness on a cold start. Anything beyond this is replaced with
+/// a "... [truncated N bytes]" marker.
+///
+/// Tool payloads like the old `list_agents` response used to land here
+/// in the tens-of-kilobytes range because the full `NetworkAgent`
+/// record carries multi-KB `system_prompt` / `personality` fields per
+/// agent. Even after slimming those tools, a buggy or verbose tool
+/// could still blow the context — this cap is the defense in depth.
+const TOOL_BLOB_MAX_BYTES: usize = 2048;
+
+/// Tighter cap used for tool blobs in turns *outside* the recent
+/// window; older tool traffic only needs to leave a breadcrumb of
+/// "this happened".
+const TOOL_BLOB_OLD_MAX_BYTES: usize = 256;
+
+/// How many of the most recent turns keep the full
+/// `TOOL_BLOB_MAX_BYTES` budget when replaying history. Turns beyond
+/// this fall back to `TOOL_BLOB_OLD_MAX_BYTES`.
+const HISTORY_RECENT_TURNS: usize = 2;
+
+/// Log-level threshold on the total size of the flat-text
+/// `conversation_messages` array shipped to the harness in
+/// `SessionConfig`. Anything above this triggers a `warn!` so future
+/// context bloat regressions surface without needing user bug reports.
+const CONVERSATION_HISTORY_WARN_BYTES: usize = 64 * 1024;
+
+/// Truncate a string to at most `max_bytes` bytes on a UTF-8 char
+/// boundary and append a marker noting the original length. A no-op
+/// when `s.len() <= max_bytes`.
+fn truncate_for_history(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}... [truncated {} bytes]", &s[..end], s.len())
+}
+
 use aura_os_core::{
     AgentId, AgentInstanceId, AgentPermissions, ChatContentBlock, ChatRole, HarnessMode, OrgId,
     ProjectId, SessionEvent,
@@ -915,13 +957,39 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
     // subsequent `tool_result` in the same event stream.
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
 
+    // Compute the index of the first *user* event that belongs to the
+    // "recent" window. Events at or after this index keep the full
+    // per-blob budget; events before it fall back to the older, tighter
+    // cap so long histories don't balloon the cold-start prompt.
+    let recent_start = {
+        let mut user_turns_from_end = 0usize;
+        let mut idx = events.len();
+        for (i, evt) in events.iter().enumerate().rev() {
+            if matches!(evt.role, ChatRole::User) {
+                user_turns_from_end += 1;
+                if user_turns_from_end >= HISTORY_RECENT_TURNS {
+                    idx = i;
+                    break;
+                }
+            }
+        }
+        idx
+    };
+
     events
         .iter()
-        .filter_map(|m| {
+        .enumerate()
+        .filter_map(|(i, m)| {
             let role = match m.role {
                 ChatRole::User => "user",
                 ChatRole::Assistant => "assistant",
                 _ => return None,
+            };
+
+            let max_blob = if i >= recent_start {
+                TOOL_BLOB_MAX_BYTES
+            } else {
+                TOOL_BLOB_OLD_MAX_BYTES
             };
 
             // The harness `ConversationMessage` shape is flat text, so we need
@@ -934,6 +1002,7 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
                 &m.content,
                 m.content_blocks.as_deref(),
                 &referenced_tool_use_ids,
+                max_blob,
             );
             if rendered.is_empty() {
                 return None;
@@ -979,6 +1048,7 @@ fn render_conversation_text(
     text: &str,
     blocks: Option<&[ChatContentBlock]>,
     referenced_tool_use_ids: &std::collections::HashSet<String>,
+    max_blob_bytes: usize,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     if !text.is_empty() {
@@ -1003,6 +1073,7 @@ fn render_conversation_text(
                     }
                     let input_preview =
                         serde_json::to_string(input).unwrap_or_else(|_| "{}".to_string());
+                    let input_preview = truncate_for_history(&input_preview, max_blob_bytes);
                     parts.push(format!("[tool_use {name} input={input_preview}]"));
                 }
                 ChatContentBlock::ToolResult {
@@ -1013,6 +1084,7 @@ fn render_conversation_text(
                     } else {
                         "tool_result"
                     };
+                    let content = truncate_for_history(content, max_blob_bytes);
                     parts.push(format!("[{label} {content}]"));
                 }
                 ChatContentBlock::TaskRef { title, .. } => {
@@ -2017,6 +2089,32 @@ pub(crate) async fn send_agent_event_stream(
         info!(%agent_id, "agent chat: persistence context ready");
     }
 
+    // Surface the byte size of the flat-text history we're about to
+    // ship into the harness `SessionConfig`. This is the cold-start
+    // payload (warm sessions skip it via `get_or_create_chat_session`).
+    // A `warn!` above `CONVERSATION_HISTORY_WARN_BYTES` makes the next
+    // context-bloat regression visible in logs without needing a user
+    // bug report.
+    if let Some(ref msgs) = conversation_messages {
+        let total_bytes: usize = msgs.iter().map(|m| m.content.len()).sum();
+        let count = msgs.len();
+        if total_bytes > CONVERSATION_HISTORY_WARN_BYTES {
+            warn!(
+                %agent_id,
+                history_messages = count,
+                history_bytes = total_bytes,
+                "agent chat: conversation history is large — possible context bloat"
+            );
+        } else {
+            info!(
+                %agent_id,
+                history_messages = count,
+                history_bytes = total_bytes,
+                "agent chat: conversation history prepared"
+            );
+        }
+    }
+
     let integration = resolve_integration(&state, &agent, &jwt).await?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
 
@@ -2509,6 +2607,140 @@ mod tests {
         let empty = assistant_event("", None);
         let history = session_events_to_conversation_history(&[empty]);
         assert!(history.is_empty());
+    }
+
+    #[test]
+    fn truncate_for_history_is_noop_below_cap() {
+        let s = "hello world";
+        assert_eq!(truncate_for_history(s, 2048), s);
+    }
+
+    #[test]
+    fn truncate_for_history_keeps_prefix_and_marker() {
+        let big = "X".repeat(10_000);
+        let truncated = truncate_for_history(&big, 128);
+        assert!(truncated.len() < 512);
+        assert!(truncated.starts_with("XXXX"));
+        assert!(truncated.contains("[truncated 10000 bytes]"));
+    }
+
+    #[test]
+    fn truncate_for_history_respects_char_boundary() {
+        // A 4-byte UTF-8 char right at the cap must not split.
+        let s = format!("abc{}", "🦀".repeat(10));
+        let truncated = truncate_for_history(&s, 5);
+        assert!(truncated.starts_with("abc"));
+        assert!(truncated.contains("[truncated"));
+    }
+
+    #[test]
+    fn render_conversation_text_truncates_oversized_tool_result() {
+        let big = "Z".repeat(10_000);
+        let blocks = vec![
+            ChatContentBlock::ToolUse {
+                id: "tool-1".into(),
+                name: "list_agents".into(),
+                input: serde_json::json!({}),
+            },
+            ChatContentBlock::ToolResult {
+                tool_use_id: "tool-1".into(),
+                content: big.clone(),
+                is_error: Some(false),
+            },
+        ];
+        let referenced: std::collections::HashSet<String> =
+            std::iter::once("tool-1".to_string()).collect();
+        let rendered = render_conversation_text("", Some(&blocks), &referenced, 512);
+        assert!(rendered.len() < 2_000, "rendered still large: {}", rendered.len());
+        assert!(rendered.contains("[truncated 10000 bytes]"));
+        assert!(!rendered.contains(&big));
+    }
+
+    #[test]
+    fn conversation_history_uses_tight_cap_for_old_tool_results() {
+        // Ten assistant tool-result turns followed by two user turns so
+        // the first assistant turn sits well outside the recent window.
+        let big_old = "OLD".repeat(4_000); // 12_000 bytes
+        let big_recent = "NEW".repeat(4_000);
+
+        let old_assistant = assistant_event(
+            "",
+            Some(vec![
+                ChatContentBlock::ToolUse {
+                    id: "tool-old".into(),
+                    name: "list_agents".into(),
+                    input: serde_json::json!({}),
+                },
+                ChatContentBlock::ToolResult {
+                    tool_use_id: "tool-old".into(),
+                    content: big_old.clone(),
+                    is_error: Some(false),
+                },
+            ]),
+        );
+        let user_a = SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::nil(),
+            project_id: ProjectId::nil(),
+            role: ChatRole::User,
+            content: "first turn".into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: parse_dt(&None),
+        };
+        let recent_assistant = assistant_event(
+            "",
+            Some(vec![
+                ChatContentBlock::ToolUse {
+                    id: "tool-new".into(),
+                    name: "list_agents".into(),
+                    input: serde_json::json!({}),
+                },
+                ChatContentBlock::ToolResult {
+                    tool_use_id: "tool-new".into(),
+                    content: big_recent.clone(),
+                    is_error: Some(false),
+                },
+            ]),
+        );
+        let user_b = SessionEvent {
+            event_id: SessionEventId::new(),
+            agent_instance_id: AgentInstanceId::nil(),
+            project_id: ProjectId::nil(),
+            role: ChatRole::User,
+            content: "second turn".into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: parse_dt(&None),
+        };
+
+        let history = session_events_to_conversation_history(&[
+            old_assistant,
+            user_a,
+            recent_assistant,
+            user_b,
+        ]);
+
+        // Old turn: capped at TOOL_BLOB_OLD_MAX_BYTES (256).
+        let old_rendered = &history[0].content;
+        assert!(
+            old_rendered.len() < 1_000,
+            "old assistant turn should be tightly capped, got {} bytes",
+            old_rendered.len()
+        );
+        assert!(old_rendered.contains("[truncated 12000 bytes]"));
+
+        // Recent turn: capped at TOOL_BLOB_MAX_BYTES (2048), so bigger
+        // than old but still well under the raw 12KB.
+        let recent_rendered = &history[2].content;
+        assert!(
+            recent_rendered.len() > old_rendered.len(),
+            "recent window must keep more context than old window"
+        );
+        assert!(recent_rendered.contains("[truncated 12000 bytes]"));
+        assert!(recent_rendered.len() < 4_000);
     }
 
     #[tokio::test]

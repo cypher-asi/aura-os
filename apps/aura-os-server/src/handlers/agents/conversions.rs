@@ -60,10 +60,13 @@ fn effective_permissions_and_classifier(
             agent_id = %net.id,
             "CEO agent has non-preset permissions in network record; applying read-time preset"
         );
-        let classifier = net.intent_classifier.clone().or_else(|| {
-            Some(aura_os_agent_runtime::ceo::ceo_intent_classifier_spec())
-        });
-        return (permissions, classifier);
+        // CEO agents no longer ship an IntentClassifierSpec — the CEO
+        // cross-agent tool list is a static allowlist (see
+        // `aura_os_agent_runtime::ceo::CEO_CORE_TOOLS`). Preserve whatever
+        // the network record carries (typically `None`) so legacy
+        // deployments that still have a stored classifier don't have it
+        // retroactively clobbered by the read-time repair path.
+        return (permissions, net.intent_classifier.clone());
     }
     (permissions, net.intent_classifier.clone())
 }
@@ -543,9 +546,13 @@ mod tests {
             agent.permissions.is_ceo_preset(),
             "empty CEO bundles are repaired to the canonical preset"
         );
+        // CEO agents no longer ship an IntentClassifierSpec — the
+        // read-time repair path preserves whatever the network record
+        // carries (typically `None`) rather than synthesising the old
+        // canonical classifier. See CEO_CORE_TOOLS for the rationale.
         assert!(
-            agent.intent_classifier.is_some(),
-            "canonical intent classifier is filled when absent"
+            agent.intent_classifier.is_none(),
+            "read-time repair no longer fills a canonical classifier"
         );
     }
 

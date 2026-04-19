@@ -55,6 +55,34 @@ fn cache_put(cache: &AgentToolCache, key: String, value: serde_json::Value, ttl:
     }
 }
 
+/// Render a `NetworkAgent` as a compact summary suitable for inclusion
+/// in the CEO's conversation history.
+///
+/// The raw `NetworkAgent` record includes `system_prompt` and
+/// `personality` strings that can each be multiple KB. Multiplied by a
+/// typical org fleet size (5-30 agents), a single `list_agents` call
+/// used to push tens of kilobytes of text into the LLM's context —
+/// which then rode along with every subsequent turn because the
+/// harness's `Session.messages` vector is append-only. That was the
+/// dominant cause of the "context filled up after two simple
+/// commands" bug.
+///
+/// The summary keeps only the fields the CEO needs to decide *which*
+/// agent to talk to (id/name/role/skills) and surface the catalog in
+/// chat UIs (icon/tags/listing status). When the CEO genuinely needs
+/// the full record it can call `get_agent` with `include_details: true`.
+fn to_agent_summary(agent: &aura_os_network::NetworkAgent) -> serde_json::Value {
+    json!({
+        "id": agent.id,
+        "name": agent.name,
+        "role": agent.role,
+        "icon": agent.icon,
+        "tags": agent.tags,
+        "listing_status": agent.listing_status,
+        "skills": agent.skills,
+    })
+}
+
 /// Invalidate the cached `list_agents` / `get_agent` payloads.
 ///
 /// Called from any tool that mutates the agent catalog so subsequent
@@ -117,7 +145,9 @@ impl AgentTool for ListAgentsTool {
             // network lookup transiently flakes, turning a recoverable
             // timeout into a spurious 404 for the CEO's `send_to_agent`.
             ctx.agent_service.hydrate_shadow_from_network(&agents);
-            let value = serde_json::to_value(&agents).unwrap_or_default();
+            let summaries: Vec<serde_json::Value> =
+                agents.iter().map(to_agent_summary).collect();
+            let value = serde_json::Value::Array(summaries);
             cache_put(
                 &LIST_AGENTS_CACHE,
                 cache_key,
@@ -134,8 +164,21 @@ impl AgentTool for ListAgentsTool {
             .agent_service
             .list_agents()
             .map_err(|e| tool_err("list_agents", e))?;
+        let summaries: Vec<serde_json::Value> = agents
+            .iter()
+            .map(|a| {
+                json!({
+                    "id": a.agent_id.to_string(),
+                    "name": a.name,
+                    "role": a.role,
+                    "icon": a.icon,
+                    "tags": a.tags,
+                    "skills": a.skills,
+                })
+            })
+            .collect();
         Ok(ToolResult {
-            content: serde_json::to_value(&agents).unwrap_or_default(),
+            content: serde_json::Value::Array(summaries),
             is_error: false,
         })
     }
@@ -153,7 +196,7 @@ impl AgentTool for GetAgentTool {
         "get_agent"
     }
     fn description(&self) -> &str {
-        "Get details of a specific agent"
+        "Get details of a specific agent. Returns a compact summary by default; pass include_details=true to also include the full system prompt, personality, and marketplace metadata (verbose)."
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
@@ -163,7 +206,12 @@ impl AgentTool for GetAgentTool {
         json!({
             "type": "object",
             "properties": {
-                "agent_id": { "type": "string", "description": "Agent ID" }
+                "agent_id": { "type": "string", "description": "Agent ID" },
+                "include_details": {
+                    "type": "boolean",
+                    "description": "If true, include the full system_prompt, personality, and marketplace metadata. Defaults to false to keep conversation context small.",
+                    "default": false
+                }
             },
             "required": ["agent_id"]
         })
@@ -177,9 +225,18 @@ impl AgentTool for GetAgentTool {
         let agent_id_str = input["agent_id"]
             .as_str()
             .ok_or_else(|| AgentRuntimeError::ToolError("agent_id is required".into()))?;
+        let include_details = input
+            .get("include_details")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         if let Some(network) = ctx.network_client.as_deref() {
-            let cache_key = format!("{}:{}:{}", ctx.org_id, agent_id_str, ctx.jwt);
+            // Cache by (org, agent, jwt, include_details) so the slim
+            // and verbose variants can't shadow each other.
+            let cache_key = format!(
+                "{}:{}:{}:{}",
+                ctx.org_id, agent_id_str, ctx.jwt, include_details
+            );
             if let Some(cached) = cache_get(&GET_AGENT_CACHE, &cache_key) {
                 return Ok(ToolResult {
                     content: cached,
@@ -195,7 +252,11 @@ impl AgentTool for GetAgentTool {
             // aura-network flakes on the next request.
             ctx.agent_service
                 .hydrate_shadow_from_network(std::slice::from_ref(&agent));
-            let value = serde_json::to_value(&agent).unwrap_or_default();
+            let value = if include_details {
+                serde_json::to_value(&agent).unwrap_or_default()
+            } else {
+                to_agent_summary(&agent)
+            };
             cache_put(
                 &GET_AGENT_CACHE,
                 cache_key,
@@ -215,8 +276,20 @@ impl AgentTool for GetAgentTool {
             .agent_service
             .get_agent_local(&aid)
             .map_err(|e| tool_err("get_agent", e))?;
+        let value = if include_details {
+            serde_json::to_value(&agent).unwrap_or_default()
+        } else {
+            json!({
+                "id": agent.agent_id.to_string(),
+                "name": agent.name,
+                "role": agent.role,
+                "icon": agent.icon,
+                "tags": agent.tags,
+                "skills": agent.skills,
+            })
+        };
         Ok(ToolResult {
-            content: serde_json::to_value(&agent).unwrap_or_default(),
+            content: value,
             is_error: false,
         })
     }
@@ -664,5 +737,74 @@ impl AgentTool for RemoteAgentActionTool {
             &json!({}),
         )
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aura_os_network::NetworkAgent;
+
+    fn fixture_agent() -> NetworkAgent {
+        NetworkAgent {
+            id: "agent-1".into(),
+            name: "Barret".into(),
+            role: Some("engineer".into()),
+            personality: Some("A".repeat(2000)),
+            system_prompt: Some("S".repeat(5000)),
+            skills: Some(vec!["rust".into()]),
+            icon: Some("robot".into()),
+            harness: Some("local".into()),
+            machine_type: Some("m1".into()),
+            vm_id: None,
+            user_id: "user-1".into(),
+            org_id: Some("org-1".into()),
+            profile_id: None,
+            tags: Some(vec!["core".into()]),
+            listing_status: Some("closed".into()),
+            expertise: Some(vec!["rust".into()]),
+            jobs: Some(12),
+            revenue_usd: Some(1234.5),
+            reputation: Some(4.2),
+            permissions: Default::default(),
+            intent_classifier: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn to_agent_summary_drops_verbose_fields() {
+        let agent = fixture_agent();
+        let summary = to_agent_summary(&agent);
+        let rendered = serde_json::to_string(&summary).expect("serializes");
+
+        // Essentials present
+        assert!(rendered.contains("agent-1"));
+        assert!(rendered.contains("Barret"));
+        assert!(rendered.contains("engineer"));
+        assert!(rendered.contains("rust"));
+
+        // Verbose fields removed
+        assert!(
+            !rendered.contains(&"A".repeat(2000)),
+            "personality leaked into summary"
+        );
+        assert!(
+            !rendered.contains(&"S".repeat(5000)),
+            "system_prompt leaked into summary"
+        );
+        assert!(!rendered.contains("revenue_usd"));
+        assert!(!rendered.contains("reputation"));
+        assert!(!rendered.contains("\"jobs\""));
+
+        // And the resulting payload is tiny compared to the raw record.
+        let raw = serde_json::to_string(&agent).expect("serializes raw");
+        assert!(
+            rendered.len() < raw.len() / 10,
+            "summary ({} bytes) not materially smaller than raw ({} bytes)",
+            rendered.len(),
+            raw.len()
+        );
     }
 }
