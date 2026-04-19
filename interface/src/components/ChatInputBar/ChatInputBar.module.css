@@ -280,7 +280,11 @@
 .contextUsageCard {
   position: absolute;
   bottom: calc(100% + 6px);
-  left: 0;
+  /* Anchor to the right edge of the wrapper so the card expands leftward
+   * into the chat content area rather than rightward into the sidekick,
+   * which clips popovers at its column edge. */
+  right: 0;
+  left: auto;
   z-index: 100;
   background: var(--color-bg-secondary, #1a1a1a);
   border: 1px solid var(--color-border);
