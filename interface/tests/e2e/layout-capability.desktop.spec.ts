@@ -30,8 +30,9 @@ test("desktop browser projects root keeps desktop welcome layout", async ({ page
 
   await page.goto("/projects");
 
-  await expect(page.getByText("Welcome to AURA")).toBeVisible();
-  await expect(page.getByText("Pick up work without hunting through the app.")).toHaveCount(0);
+  await expect(page.getByRole("tree", { name: "Projects" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Search" })).toBeVisible();
+  await expect(page.getByPlaceholder("What do you want to create?")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open host settings" })).toBeVisible();
 });
@@ -137,7 +138,7 @@ test("desktop browser tasks route keeps the desktop kanban layout", async ({ pag
 
   await expect(page.getByText("Backlog")).toBeVisible();
   await expect(page.getByText("Ready")).toBeVisible();
-  await expect(page.getByText("Patch auth flow")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Builder Bot Patch auth flow/i })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
 });
 

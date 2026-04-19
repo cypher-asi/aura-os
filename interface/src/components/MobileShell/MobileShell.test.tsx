@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { InitialEntry } from "@remix-run/router";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -266,9 +267,10 @@ vi.mock("./MobileShell.module.css", () => ({
 
 import { MobileShell } from "../MobileShell";
 
-function renderMobile(path = "/projects") {
+function renderMobile(path: InitialEntry | InitialEntry[] = "/projects") {
+  const initialEntries = Array.isArray(path) ? path : [path];
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={initialEntries}>
       <Routes>
         <Route element={<MobileShell />}>
           <Route path="/projects/organization" element={<div>Organization workspace</div>} />
@@ -279,6 +281,7 @@ function renderMobile(path = "/projects") {
           <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Project agent chat</div>} />
           <Route path="/projects/:projectId/tasks" element={<div>Project tasks</div>} />
           <Route path="/projects/:projectId/work" element={<div>Project work</div>} />
+          <Route path="/projects/:projectId/files" element={<div>Project files</div>} />
           <Route path="/projects/:projectId/process" element={<div>Project process</div>} />
           <Route path="/projects/:projectId/stats" element={<div>Project stats</div>} />
           <Route path="/agents" element={<div>Agents</div>} />
@@ -396,13 +399,13 @@ describe("MobileShell", () => {
 
   it("shows a direct back-to-project action on the workspace route", async () => {
     const user = userEvent.setup();
-    renderMobile("/projects/organization");
+    renderMobile([{ pathname: "/projects/organization", state: { returnTo: "/projects/proj-1/files" } }]);
 
     expect(screen.getByRole("button", { name: "Back to project" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Back to project" }));
 
-    expect(await screen.findByText("Project agent chat")).toBeInTheDocument();
+    expect(await screen.findByText("Project files")).toBeInTheDocument();
   });
 
   it("renders update banner", () => {

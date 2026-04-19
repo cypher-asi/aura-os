@@ -85,14 +85,14 @@ Before merge, all of the following must be true:
   - The UI/UX review agent signs off or lists only non-blocking follow-ups.
   - The agentic-experience review agent signs off or lists only non-blocking follow-ups.
 
-## 6. Current Review Focus
+## 6. Typical Review Focus
 
-For this branch, priority is:
+For mobile project-work improvements, priority is usually:
 
-1. Add a real remote-files surface for mobile project work.
+1. Add a real remote-files surface for mobile project work when the product supports remote workspaces.
 2. Expose attach-existing-agent from project context instead of leaving it route-only.
-3. Reuse the shared agent editor for mobile project creation while keeping mobile remote-only.
-4. Preserve desktop behavior for all shared shell, routing, and editor code touched by the branch.
+3. Reuse the shared agent editor for mobile project creation while keeping mobile-specific runtime guardrails intact.
+4. Preserve desktop behavior for all shared shell, routing, and editor code touched by the change.
 5. Keep mobile surfaces simple enough that users do not see the same context repeated in multiple places on one screen.
 
 ## 7. Screenshot Proof

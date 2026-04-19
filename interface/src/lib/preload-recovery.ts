@@ -2,7 +2,7 @@ const PRELOAD_RECOVERY_KEY = "aura-preload-recovery";
 
 type PreloadRecoveryWindow = {
   addEventListener: (type: string, listener: (event: Event) => void) => void;
-  sessionStorage: Pick<Storage, "getItem" | "setItem">;
+  sessionStorage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
   location: Pick<Location, "reload">;
 };
 
@@ -15,6 +15,10 @@ export function installPreloadRecoveryForRuntime({
 }): void {
   if (!isProd || !runtimeWindow) {
     return;
+  }
+
+  if (runtimeWindow.sessionStorage.getItem(PRELOAD_RECOVERY_KEY)) {
+    runtimeWindow.sessionStorage.removeItem(PRELOAD_RECOVERY_KEY);
   }
 
   runtimeWindow.addEventListener("vite:preloadError", (event) => {

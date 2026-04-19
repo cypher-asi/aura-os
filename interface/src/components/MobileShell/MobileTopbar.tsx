@@ -5,7 +5,7 @@ import { ArrowLeft, ChevronDown, Link2, Menu, Plus, Settings2, Sparkles, X } fro
 import { useMobileDrawerStore } from "../../stores/mobile-drawer-store";
 import { projectAgentAttachRoute, projectAgentCreateRoute, projectRootPath } from "../../utils/mobileNavigation";
 import type { MobileShellState } from "./useMobileShellState";
-import { resolveProjectAgentPath } from "./mobile-shell-utils";
+import { resolveWorkspaceReturnPath } from "./mobile-shell-utils";
 import styles from "./MobileShell.module.css";
 
 export function MobileTopbar({ state }: { state: MobileShellState }) {
@@ -58,7 +58,7 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 iconOnly
                 icon={<ArrowLeft size={20} />}
                 aria-label="Back to project"
-                onClick={() => navigate(resolveProjectAgentPath(state.mobileTargetProjectId))}
+                onClick={() => navigate(resolveWorkspaceReturnPath(state.mobileTargetProjectId, state.location.state))}
               />
             ) : state.showProjectBack && state.currentProjectId ? (
               <Button
@@ -143,7 +143,11 @@ export function MobileTopbar({ state }: { state: MobileShellState }) {
                 aria-label="Open workspace"
                 onClick={() => {
                   if (state.isPhoneLayout) {
-                    navigate("/projects/organization");
+                    navigate("/projects/organization", {
+                      state: state.currentProjectId
+                        ? { returnTo: state.location.pathname }
+                        : undefined,
+                    });
                     return;
                   }
                   setAccountOpen(true);

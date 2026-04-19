@@ -14,6 +14,15 @@ vi.mock("../../../stores/feed-store", () => ({
   useFeed: () => mockUseFeed(),
 }));
 
+vi.mock("../../../lib/auth-token", () => ({
+  authHeaders: () => ({}),
+  getStoredJwt: () => null,
+  getStoredSession: () => null,
+  hydrateStoredAuth: async () => null,
+  setStoredAuth: async () => {},
+  clearStoredAuth: async () => {},
+}));
+
 vi.mock("../../../components/Lane", () => ({
   Lane: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));

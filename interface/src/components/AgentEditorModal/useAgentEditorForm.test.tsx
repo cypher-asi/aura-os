@@ -205,6 +205,8 @@ describe("useAgentEditorForm", () => {
   });
 
   it("keeps new agents pinned to Aura-managed billing and Aura runtimes", async () => {
+    mockUseAuraCapabilities.mockReturnValue({ isMobileLayout: true, isMobileClient: true });
+
     const { result } = renderHook(() =>
       useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
     );

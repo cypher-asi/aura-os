@@ -165,24 +165,16 @@ Before I implement a mobile UI decision:
 5. Run the mobile, native, and desktop verification matrix.
 6. Do not claim parity or completion unless the gate is fully green.
 
-## Current Branch Outcome
+## Example Scope Notes
 
-For the remote-files and project-agent mobile parity pass on `codex/mobile-remote-parity`, the branch now addresses these previously-blocking product gaps:
+For mobile project-agent and remote-files work, the shared release gate should usually call out only durable product constraints, not branch-specific proof claims:
 
-1. Project-context mobile agent actions are now discoverable through an `Add Project Agent` sheet.
-2. Mobile project agent creation now uses the shared editor while staying remote-only.
-3. Mobile project files now stay on-device as a remote workspace browser instead of redirecting away.
-4. Desktop-specific behavior stays on the desktop path even when the window is narrow.
+1. Project-context agent actions should be discoverable from the active project.
+2. Mobile project agent creation should reuse shared editor behavior whenever possible while preserving mobile-specific guardrails.
+3. Mobile project files should stay in the project context instead of redirecting away.
+4. Desktop-specific behavior should remain on the desktop path even when the viewport is narrow.
 
-Combined native proof captured on this branch now covers:
+Typical intentional or environment-dependent limitations for this scope:
 
-1. project agent root
-2. add-agent action sheet
-3. create-remote-agent route
-4. attach-existing-agent route
-5. remote files list
-
-The remaining limitations for this scope are intentional or environment-dependent:
-
-1. Mobile file access is preview-only. Remote file editing still requires desktop until the remote write path is productized and verified.
-2. Remote file preview needs at least one real remote file in the target workspace; empty workspaces can only prove the list state.
+1. Mobile file access may be preview-only until a true remote write path is productized and verified.
+2. Remote file preview requires at least one real remote file in the target workspace; empty workspaces can only prove the list state.
