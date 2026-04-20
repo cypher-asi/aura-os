@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_delete, network_get, network_post, require_network, require_str};
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
@@ -23,6 +23,9 @@ impl AgentTool for ListFeedTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `list_feed` is a read-only social surface; no
@@ -73,6 +76,9 @@ impl AgentTool for CreatePostTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::PostToFeed)]
     }
@@ -120,6 +126,9 @@ impl AgentTool for GetPostTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `get_post` is read-only; no capability yet.
         &[]
@@ -162,6 +171,9 @@ impl AgentTool for AddCommentTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::PostToFeed)]
@@ -214,6 +226,9 @@ impl AgentTool for DeleteCommentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::PostToFeed)]
     }
@@ -255,6 +270,9 @@ impl AgentTool for FollowProfileTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): following a profile is a personal social
@@ -300,6 +318,9 @@ impl AgentTool for UnfollowProfileTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): see `follow_profile`.
@@ -348,6 +369,9 @@ impl AgentTool for ListFollowsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Social
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `list_follows` is a read-only own-profile peek

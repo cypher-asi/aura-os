@@ -1029,6 +1029,47 @@ pub(crate) async fn update_agent(
         }
     };
     let _ = state.agent_service.save_agent_shadow(&agent);
+
+    // Invalidate any live harness session + dispatcher permissions cache
+    // keyed off this agent so a later chat turn re-evaluates the
+    // freshly-saved `permissions` bundle.
+    //
+    // Why this is needed: harness sessions cache the `installed_tools`
+    // list they were seeded with at startup, and the dispatcher caches
+    // `AgentPermissions` per stamped-agent-id to avoid reloading on
+    // every tool call. Without invalidation, toggling a capability in
+    // the UI takes effect only on the next process restart — which
+    // surfaced as the reported "I enabled caps but the tools never
+    // appeared" regression. The next `POST /api/.../chat` will cold-
+    // start a new session via `setup_agent_chat_persistence` and re-
+    // seed tools through `build_cross_agent_tools`, which now flows
+    // through the unified capability-aware `build_session_tools`
+    // filter.
+    //
+    // Scope of invalidation:
+    // * `agent:{id}` direct-chat session — removed outright, so the
+    //   next user turn cold-starts with the new capability bundle.
+    // * `instance:*` project sessions — left intact here because the
+    //   agent_instance → agent_id lookup requires a storage round-trip
+    //   per key; the `permissions_cache.remove` below is enough to
+    //   re-run `check_capabilities` with the new bundle on the next
+    //   tool call, so the enforcement path is correct even if the
+    //   instance's harness-visible tool list lags until its own
+    //   `/reset-session` or a process restart.
+    //
+    // Best-effort: failures to acquire the locks are silently dropped
+    // rather than failing the update — the worst case is a stale
+    // session that will self-correct on the next `reset_agent_session`
+    // or a server restart.
+    {
+        let session_key = format!("agent:{agent_id}");
+        let mut reg = state.chat_sessions.lock().await;
+        reg.remove(&session_key);
+    }
+    state
+        .permissions_cache
+        .remove(&agent_id.to_string());
+
     Ok(Json(agent))
 }
 

@@ -25,5 +25,5 @@ pub mod task_tools;
 mod tests;
 
 pub use aura_os_agent_runtime::tools::{
-    AgentTool, AgentToolContext, CapabilityRequirement, ToolRegistry, ToolResult,
+    AgentTool, AgentToolContext, CapabilityRequirement, Surface, ToolRegistry, ToolResult,
 };

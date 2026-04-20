@@ -416,7 +416,7 @@ mod tests {
             reqwest::Client::new(),
         ));
         let tool_registry = {
-            let mut registry = aura_os_agent_tools::build_all_tools_registry();
+            let mut registry = aura_os_agent_tools::build_registry();
             aura_os_agent_tools::register_process_tools(&mut registry, process_executor.clone());
             Arc::new(registry)
         };

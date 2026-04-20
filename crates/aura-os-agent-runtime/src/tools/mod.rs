@@ -34,6 +34,34 @@ pub struct ToolResult {
     pub is_error: bool,
 }
 
+/// Declarative *session inclusion policy* for a tool.
+///
+/// Orthogonal to [`AgentTool::required_capabilities`] (which governs
+/// *access*). `Surface` only says whether a tool is shipped in the
+/// session's default `installed_tools` payload or whether the LLM has
+/// to promote its domain first via `load_domain_tools`.
+///
+/// Replaces the old hand-maintained "tier-1 vs tier-2" split that lived
+/// in `aura-os-agent-tools::build_tier1_registry`. The canonical
+/// source for "is this tool shipped by default?" is now each tool's
+/// own `surface()` method.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Surface {
+    /// Always ship the tool in every session whose agent's
+    /// [`AgentPermissions`] satisfy `required_capabilities()`.
+    Always,
+    /// Ship only after the LLM has promoted the tool's
+    /// [`ToolDomain`] via the `load_domain_tools` meta-tool.
+    OnDemand,
+}
+
+impl Default for Surface {
+    fn default() -> Self {
+        Self::Always
+    }
+}
+
 /// A capability requirement declared by an [`AgentTool`].
 ///
 /// Some tools need a fixed capability (e.g. `spawn_agent` always needs
@@ -124,6 +152,19 @@ pub trait AgentTool: Send + Sync {
     /// `aura_os_agent_templates::HARNESS_SIDE_STREAMING_TOOL_NAMES`.
     fn is_streaming(&self) -> bool {
         false
+    }
+
+    /// Session inclusion policy. Defaults to [`Surface::Always`] —
+    /// any tool the agent has the capabilities for is shipped in the
+    /// default session payload. Heavy / rarely-needed tools override
+    /// to [`Surface::OnDemand`] so the LLM must explicitly call
+    /// `load_domain_tools("<domain>")` first.
+    ///
+    /// Replaces the old `build_tier1_registry` hand-maintained list;
+    /// the registry filter in `aura_os_agent_tools::session` reads
+    /// this method to decide which tools to ship by default.
+    fn surface(&self) -> Surface {
+        Surface::Always
     }
 
     /// Resolve concrete capability requirements given the runtime

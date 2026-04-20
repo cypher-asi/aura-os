@@ -178,6 +178,16 @@ pub enum CapabilityWire {
     ReadProject { id: String },
     #[serde(rename_all = "camelCase")]
     WriteProject { id: String },
+    /// Wildcard read access over every project in the bundle's scope.
+    /// Satisfies any `ReadProject { id }` requirement without having to
+    /// enumerate ids. Used by the CEO preset so the unified tool-surface
+    /// filter can drop the old `is_ceo_preset()` short-circuit.
+    ReadAllProjects,
+    /// Wildcard write access over every project in the bundle's scope.
+    /// Strict superset of [`ReadAllProjects`]; satisfies any
+    /// `WriteProject { id }` requirement (and, by the write-implies-read
+    /// rule, any `ReadProject { id }` requirement too).
+    WriteAllProjects,
     /// Forward-compat fallback for capabilities introduced after this
     /// protocol version. Deserialized via `#[serde(other)]` so a newer
     /// harness / server can round-trip older wire bundles without

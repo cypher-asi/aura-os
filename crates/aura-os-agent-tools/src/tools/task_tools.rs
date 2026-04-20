@@ -6,7 +6,7 @@ use aura_os_core::ToolDomain;
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
@@ -25,6 +25,9 @@ impl AgentTool for ListTasksTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::ReadProjectFromArg("project_id")]
@@ -72,6 +75,9 @@ impl AgentTool for ListTasksBySpecTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::ReadProjectFromArg("project_id")]
@@ -122,6 +128,9 @@ impl AgentTool for GetTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
@@ -170,6 +179,9 @@ impl AgentTool for CreateTaskTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
@@ -235,6 +247,9 @@ impl AgentTool for UpdateTaskTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
@@ -302,6 +317,9 @@ impl AgentTool for DeleteTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
@@ -351,6 +369,9 @@ impl AgentTool for ExtractTasksTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
@@ -398,6 +419,9 @@ impl AgentTool for TransitionTaskTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
@@ -452,6 +476,9 @@ impl AgentTool for RetryTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
@@ -502,6 +529,9 @@ impl AgentTool for RunTaskTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
@@ -551,6 +581,9 @@ impl AgentTool for GetTaskOutputTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Task
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::ReadProjectFromArg("project_id")]

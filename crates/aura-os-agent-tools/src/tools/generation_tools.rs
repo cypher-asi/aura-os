@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::require_str;
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 fn router_url() -> String {
@@ -27,6 +27,9 @@ impl AgentTool for GenerateImageTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Generation
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::GenerateMedia)]
@@ -100,6 +103,9 @@ impl AgentTool for Generate3dModelTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Generation
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::GenerateMedia)]
     }
@@ -167,6 +173,9 @@ impl AgentTool for Get3dStatusTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Generation
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::GenerateMedia)]

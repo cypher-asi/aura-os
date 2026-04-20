@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, network_post, require_network, require_str};
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
@@ -23,6 +23,9 @@ impl AgentTool for BrowseFilesTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `browse_files` operates on the caller's host
@@ -69,6 +72,9 @@ impl AgentTool for ReadFileTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `read_file` is same as `browse_files` — no
         // per-path capability model yet.
@@ -113,6 +119,9 @@ impl AgentTool for GetEnvironmentInfoTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `get_environment_info` is public diagnostic
@@ -208,6 +217,9 @@ impl AgentTool for GetRemoteAgentStateTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::System
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ReadAgent)]

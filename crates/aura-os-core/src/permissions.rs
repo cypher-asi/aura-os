@@ -41,6 +41,16 @@ pub enum Capability {
     ReadProject { id: String },
     #[serde(rename_all = "camelCase")]
     WriteProject { id: String },
+    /// Wildcard read access over every project. Satisfies any
+    /// `ReadProject { id }` requirement without enumerating ids.
+    /// Held by the CEO preset so the unified tool-surface filter
+    /// can drop the legacy `is_ceo_preset()` short-circuit.
+    ReadAllProjects,
+    /// Wildcard write access over every project; strict superset of
+    /// [`Capability::ReadAllProjects`]. Satisfies any
+    /// `WriteProject { id }` requirement and (by write-implies-read)
+    /// any `ReadProject { id }` requirement.
+    WriteAllProjects,
 }
 
 /// Orgs / projects / agents an agent may touch. Empty on every axis
@@ -87,6 +97,14 @@ impl AgentPermissions {
                 Capability::InvokeProcess,
                 Capability::PostToFeed,
                 Capability::GenerateMedia,
+                // Wildcard project caps replace the legacy
+                // `is_ceo_preset()` short-circuit in `policy::check_capabilities`
+                // and the tool-surface filter: the CEO now satisfies
+                // `ReadProject { id }` / `WriteProject { id }` through
+                // the normal `holds_capability` path like any other
+                // bundle that happens to carry a wildcard.
+                Capability::ReadAllProjects,
+                Capability::WriteAllProjects,
             ],
         }
     }
@@ -158,6 +176,8 @@ impl From<Capability> for CapabilityWire {
             Capability::GenerateMedia => CapabilityWire::GenerateMedia,
             Capability::ReadProject { id } => CapabilityWire::ReadProject { id },
             Capability::WriteProject { id } => CapabilityWire::WriteProject { id },
+            Capability::ReadAllProjects => CapabilityWire::ReadAllProjects,
+            Capability::WriteAllProjects => CapabilityWire::WriteAllProjects,
         }
     }
 }
@@ -193,6 +213,8 @@ impl TryFrom<CapabilityWire> for Capability {
             CapabilityWire::GenerateMedia => Capability::GenerateMedia,
             CapabilityWire::ReadProject { id } => Capability::ReadProject { id },
             CapabilityWire::WriteProject { id } => Capability::WriteProject { id },
+            CapabilityWire::ReadAllProjects => Capability::ReadAllProjects,
+            CapabilityWire::WriteAllProjects => Capability::WriteAllProjects,
             CapabilityWire::Unknown => return Err(UnknownCapability),
         })
     }

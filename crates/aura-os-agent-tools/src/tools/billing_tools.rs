@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, network_post, require_network};
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
@@ -81,6 +81,9 @@ impl AgentTool for GetTransactionsTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageBilling)]
     }
@@ -128,6 +131,9 @@ impl AgentTool for GetBillingAccountTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageBilling)]
     }
@@ -169,6 +175,9 @@ impl AgentTool for PurchaseCreditsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Billing
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageBilling)]

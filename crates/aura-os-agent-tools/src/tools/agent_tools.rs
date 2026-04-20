@@ -7,7 +7,7 @@ use aura_os_core::{AgentId, Capability, ToolDomain};
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str, tool_err,
 };
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 /// Render a `NetworkAgent` as the minimal summary the CEO needs to
@@ -359,6 +359,9 @@ impl AgentTool for CreateAgentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::SpawnAgent)]
     }
@@ -422,6 +425,9 @@ impl AgentTool for UpdateAgentTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ControlAgent)]
     }
@@ -482,6 +488,9 @@ impl AgentTool for DeleteAgentTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ControlAgent)]
@@ -577,6 +586,9 @@ impl AgentTool for UpdateAgentInstanceTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
@@ -634,6 +646,9 @@ impl AgentTool for DeleteAgentInstanceTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::WriteProjectFromArg("project_id")]
     }
@@ -682,6 +697,9 @@ impl AgentTool for RemoteAgentActionTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Agent
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ControlAgent)]

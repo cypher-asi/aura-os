@@ -6,7 +6,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ProcessId, ProcessRunTrigger, ToolDomain};
 use aura_os_process::ProcessExecutor;
 
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
@@ -45,6 +45,9 @@ impl AgentTool for CreateProcessTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
@@ -144,6 +147,9 @@ impl AgentTool for ListProcessesTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
     }
@@ -195,6 +201,9 @@ impl AgentTool for TriggerProcessTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::InvokeProcess)]
     }
@@ -242,6 +251,9 @@ impl AgentTool for DeleteProcessTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): deletion needs the owning project's write cap but
@@ -293,6 +305,9 @@ impl AgentTool for ListProcessRunsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Process
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::InvokeProcess)]

@@ -15,6 +15,7 @@
 //! two crates are peers and do not re-export each other's surface.
 
 pub mod ceo;
+pub mod session;
 pub mod tier;
 pub mod tools;
 
@@ -22,17 +23,33 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
 use aura_os_agent_runtime::tools::{
-    AgentTool, CapabilityRequirement, ToolRegistry,
+    AgentTool, CapabilityRequirement, Surface, ToolRegistry,
 };
-use aura_os_core::Capability;
+use aura_os_core::{AgentPermissions, Capability, ToolDomain};
 
-/// Build a tool registry containing the tier-1 tool slice — the
-/// narrow allowlist the CEO preset ships and the canonical source for
-/// the "always on" tools.
+/// Build the canonical [`ToolRegistry`] containing every
+/// stateless tool. Does not include the process workflow tools
+/// (`create_process`, `trigger_process`, etc.) because
+/// [`tools::process_tools::TriggerProcessTool`] holds an
+/// `Arc<ProcessExecutor>` that only exists after the server's
+/// `app_builder` has constructed one from its data directory. Use
+/// [`register_process_tools`] on a mutable registry to add those at
+/// boot.
+///
+/// There used to be two entry points here — `build_tier1_registry`
+/// and `build_all_tools_registry` — with the tier-1 slice serving as
+/// the CEO preset's narrow allowlist. The surface-vs-OnDemand split
+/// is now declared per-tool via [`AgentTool::surface`], so a single
+/// registry + a capability/surface filter ([`session::build_session_tool_names`])
+/// replaces the two-builder pattern.
 #[must_use]
-pub fn build_tier1_registry() -> ToolRegistry {
+pub fn build_registry() -> ToolRegistry {
     let mut registry = ToolRegistry::new();
 
+    // Always-surface project / agent / exec / monitoring / billing
+    // tools — the ones the CEO preset used to load via
+    // `build_tier1_registry`. They keep the default
+    // `Surface::Always` from `AgentTool`.
     registry.register(Arc::new(tools::project_tools::CreateProjectTool));
     registry.register(Arc::new(tools::project_tools::ImportProjectTool));
     registry.register(Arc::new(tools::project_tools::ListProjectsTool));
@@ -58,25 +75,23 @@ pub fn build_tier1_registry() -> ToolRegistry {
 
     registry.register(Arc::new(tools::billing_tools::GetCreditBalanceTool));
 
-    // System tools (Tier 1): `get_current_time` is a basic question
-    // the CEO needs to answer without loading a domain. Also the
-    // stable replacement for the harness's `run_command date` flow,
-    // which is broken on Windows (cmd's built-in `date` is
-    // interactive and exits 1).
     registry.register(Arc::new(tools::system_tools::GetCurrentTimeTool));
 
+    // Meta-tool: promotes `Surface::OnDemand` domains into the live
+    // session's tool surface.
     registry.register(Arc::new(tier::LoadDomainToolsTool));
 
-    registry
-}
+    // `list_agent_instances` was previously tier-2 (hidden from the
+    // CEO until `load_domain_tools` was called), which produced the
+    // reported bug where the CEO could not see its own project
+    // agents. It's `Surface::Always` now so it ships on every turn
+    // for any bundle that satisfies its `ReadProjectFromArg`
+    // requirement (including the CEO preset via
+    // `Capability::ReadAllProjects`).
+    registry.register(Arc::new(tools::agent_tools::ListAgentInstancesTool));
 
-/// Build a tool registry containing every tier-1 + tier-2 tool. Does
-/// not include the dynamically-registered process tools (which need
-/// a live `ProcessExecutor`); use [`register_process_tools`] on a
-/// mutable registry to add those.
-#[must_use]
-pub fn build_all_tools_registry() -> ToolRegistry {
-    let mut registry = build_tier1_registry();
+    // --- Surface::OnDemand tools below: shipped only when the LLM
+    // promotes their `ToolDomain` via `load_domain_tools`. ---
 
     registry.register(Arc::new(tools::spec_tools::ListSpecsTool));
     registry.register(Arc::new(tools::spec_tools::GetSpecTool));
@@ -101,7 +116,6 @@ pub fn build_all_tools_registry() -> ToolRegistry {
     registry.register(Arc::new(tools::agent_tools::CreateAgentTool));
     registry.register(Arc::new(tools::agent_tools::UpdateAgentTool));
     registry.register(Arc::new(tools::agent_tools::DeleteAgentTool));
-    registry.register(Arc::new(tools::agent_tools::ListAgentInstancesTool));
     registry.register(Arc::new(tools::agent_tools::UpdateAgentInstanceTool));
     registry.register(Arc::new(tools::agent_tools::DeleteAgentInstanceTool));
     registry.register(Arc::new(tools::agent_tools::RemoteAgentActionTool));
@@ -145,8 +159,20 @@ pub fn build_all_tools_registry() -> ToolRegistry {
     registry
 }
 
+/// Backwards-compatible alias for [`build_registry`]. The unified
+/// registry no longer splits on tier — every tool is registered once
+/// and filtered at session-open time via [`AgentTool::surface`].
+#[deprecated(
+    note = "Use `build_registry()`; the tier-1 / tier-2 split has been \
+            replaced by the declarative `AgentTool::surface` method."
+)]
+#[must_use]
+pub fn build_all_tools_registry() -> ToolRegistry {
+    build_registry()
+}
+
 /// Register the five process workflow tools against an existing
-/// registry. Kept separate from [`build_all_tools_registry`] because
+/// registry. Kept separate from [`build_registry`] because
 /// `TriggerProcessTool` holds an `Arc<ProcessExecutor>` that only
 /// exists at runtime (after the server constructs one from the data
 /// directory + storage client).
@@ -161,40 +187,15 @@ pub fn register_process_tools(
     registry.register(Arc::new(tools::process_tools::ListProcessRunsTool));
 }
 
-/// Process-wide cached set of tier-1 tool names — the registry view
-/// used as the CEO preset's static allowlist. Built from
-/// [`build_tier1_registry`] and sorted so the harness sees a
-/// deterministic order regardless of the underlying HashMap iteration.
-static SHARED_TIER1_TOOL_NAMES: LazyLock<Vec<String>> = LazyLock::new(|| {
-    let registry = build_tier1_registry();
-    let mut names = registry.tool_names();
-    names.sort();
-    names
-});
-
-/// Names of every tool registered in [`build_tier1_registry`].
-///
-/// This is the canonical source for the CEO preset's always-on tool
-/// allowlist. Callers must not cache the returned `Vec` — the
-/// underlying [`LazyLock`] already shares one heap allocation across
-/// the process and clones are cheap.
-#[must_use]
-pub fn ceo_tier1_tool_names() -> Vec<String> {
-    SHARED_TIER1_TOOL_NAMES.clone()
-}
-
-/// Process-wide cached `build_all_tools_registry()`.
+/// Process-wide cached [`build_registry`] output.
 ///
 /// Every tool in the registry is stateless (no captured
 /// `ProcessExecutor` — see [`register_process_tools`] for that branch),
 /// so the built registry is safe to share across all requests.
 static SHARED_ALL_TOOLS: LazyLock<Arc<ToolRegistry>> =
-    LazyLock::new(|| Arc::new(build_all_tools_registry()));
+    LazyLock::new(|| Arc::new(build_registry()));
 
-/// Return the process-wide cached [`build_all_tools_registry`]
-/// instance. Callers that previously wrote
-/// `ToolRegistry::with_all_tools()` on every request should use this
-/// instead to avoid rebuilding the full tool table.
+/// Return the process-wide cached [`build_registry`] instance.
 #[must_use]
 pub fn shared_all_tools_registry() -> Arc<ToolRegistry> {
     SHARED_ALL_TOOLS.clone()
@@ -215,6 +216,11 @@ pub fn all_dispatchable_tool_names() -> std::collections::HashSet<String> {
         "trigger_process",
         "delete_process",
         "list_process_runs",
+        // Synthetic agent-spawn name — not backed by an `AgentTool`
+        // impl but dispatched by a bespoke handler branch in the
+        // server's `/api/agent_tools/:name` route. Included here so the
+        // "fully dispatchable" diagnostic recognises it.
+        "spawn_agent",
     ] {
         names.insert(name.to_string());
     }
@@ -363,58 +369,122 @@ pub fn ceo_agent_template() -> aura_os_agent_templates::AgentTemplate {
     aura_os_agent_templates::AgentTemplate::ceo(ceo_tool_manifest(), shared_streaming_tool_names())
 }
 
-/// Names of tools that an agent with the given `permissions` would be
-/// able to invoke *if* they were shipped in the harness session's
-/// `installed_tools` list.
+/// Does `permissions` satisfy the build-time approximation of
+/// `tool.required_capabilities()`?
 ///
-/// Build-time approximation of
-/// [`aura_os_agent_runtime::policy::check_capabilities`] used by
-/// [`crate::ceo::build_cross_agent_tools`] to decide which tool names
-/// to expose to the LLM. Because the agent has not yet produced any
-/// call arguments, `*FromArg` requirements are treated conservatively
-/// as "agent holds any `ReadProject` / `WriteProject` grant", and
-/// `AnyOf` as "agent holds at least one member". Per-call dispatch
-/// still re-checks via the policy module, so this layer can err on
-/// the side of showing slightly more tools without risking escalation.
+/// Per-call dispatch still re-checks with the full policy module on
+/// resolved arguments, so this layer can err on the side of "show"
+/// without risking privilege escalation.
+///
+/// * `Exact(cap)` — bundle must contain `cap` (e.g. `SpawnAgent`).
+/// * `ReadProjectFromArg(_)` — bundle must hold some `ReadProject`,
+///   `WriteProject`, `ReadAllProjects`, or `WriteAllProjects`.
+/// * `WriteProjectFromArg(_)` — bundle must hold some `WriteProject`
+///   or `WriteAllProjects`.
+/// * `AnyOf(caps)` — bundle must contain at least one member (with
+///   the same wildcard lifting for the `ReadProject` / `WriteProject`
+///   slots).
+///
+/// With the new [`Capability::ReadAllProjects`] / [`Capability::WriteAllProjects`]
+/// wildcards in [`AgentPermissions::ceo_preset`], the CEO no longer
+/// needs a separate `is_ceo_preset()` short-circuit — it satisfies
+/// every requirement through the normal path like any other bundle
+/// that happens to carry a wildcard.
 #[must_use]
-pub fn build_time_cross_agent_tool_names(
-    permissions: &aura_os_core::AgentPermissions,
-) -> Vec<String> {
-    let has_any_read_project = permissions
-        .capabilities
-        .iter()
-        .any(|c| matches!(c, Capability::ReadProject { .. } | Capability::WriteProject { .. }));
-    let has_any_write_project = permissions
-        .capabilities
-        .iter()
-        .any(|c| matches!(c, Capability::WriteProject { .. }));
+pub fn permissions_satisfy_requirements(
+    permissions: &AgentPermissions,
+    requirements: &[CapabilityRequirement],
+) -> bool {
+    if requirements.is_empty() {
+        return true;
+    }
+    let caps = &permissions.capabilities;
+    let has_any_read_project = caps.iter().any(|c| {
+        matches!(
+            c,
+            Capability::ReadProject { .. }
+                | Capability::WriteProject { .. }
+                | Capability::ReadAllProjects
+                | Capability::WriteAllProjects
+        )
+    });
+    let has_any_write_project = caps.iter().any(|c| {
+        matches!(
+            c,
+            Capability::WriteProject { .. } | Capability::WriteAllProjects
+        )
+    });
+    requirements.iter().all(|req| match req {
+        CapabilityRequirement::Exact(cap) => holds(caps, cap, has_any_read_project, has_any_write_project),
+        CapabilityRequirement::ReadProjectFromArg(_) => has_any_read_project,
+        CapabilityRequirement::WriteProjectFromArg(_) => has_any_write_project,
+        CapabilityRequirement::AnyOf(options) => options
+            .iter()
+            .any(|c| holds(caps, c, has_any_read_project, has_any_write_project)),
+    })
+}
 
+fn holds(
+    held: &[Capability],
+    needed: &Capability,
+    has_any_read_project: bool,
+    has_any_write_project: bool,
+) -> bool {
+    match needed {
+        Capability::ReadProject { id } => held.iter().any(|h| match h {
+            Capability::ReadProject { id: hid } | Capability::WriteProject { id: hid } => hid == id,
+            Capability::ReadAllProjects | Capability::WriteAllProjects => true,
+            _ => false,
+        }) || has_any_read_project && id.is_empty(),
+        Capability::WriteProject { id } => held.iter().any(|h| match h {
+            Capability::WriteProject { id: hid } => hid == id,
+            Capability::WriteAllProjects => true,
+            _ => false,
+        }) || has_any_write_project && id.is_empty(),
+        other => held.contains(other),
+    }
+}
+
+/// Names of tools a session should ship for an agent with the given
+/// `permissions` and the given set of currently-loaded on-demand
+/// `loaded_domains`.
+///
+/// A tool is included iff:
+/// 1. its `required_capabilities()` are satisfied by `permissions`
+///    ([`permissions_satisfy_requirements`]), *and*
+/// 2. its `surface()` is [`Surface::Always`] OR its `domain()` is in
+///    `loaded_domains` (the LLM has promoted that domain this session
+///    via `load_domain_tools`).
+///
+/// This is the unified replacement for the old pair
+/// `build_time_cross_agent_tool_names` (non-CEO branch) +
+/// `ceo_tier1_tool_names` (CEO branch). Both preset and non-preset
+/// bundles now follow exactly the same code path — what differs is
+/// the capabilities they carry.
+#[must_use]
+pub fn build_session_tool_names(
+    permissions: &AgentPermissions,
+    loaded_domains: &[ToolDomain],
+) -> Vec<String> {
     let mut names: Vec<String> = SHARED_ALL_TOOLS
         .list_tools()
         .into_iter()
+        .filter(|tool| permissions_satisfy_requirements(permissions, tool.required_capabilities()))
         .filter(|tool| {
-            let reqs = tool.required_capabilities();
-            if reqs.is_empty() {
-                return true;
-            }
-            reqs.iter().all(|req| match req {
-                CapabilityRequirement::Exact(cap) => {
-                    permissions.is_ceo_preset() || permissions.capabilities.contains(cap)
-                }
-                CapabilityRequirement::ReadProjectFromArg(_) => {
-                    permissions.is_ceo_preset() || has_any_read_project
-                }
-                CapabilityRequirement::WriteProjectFromArg(_) => {
-                    permissions.is_ceo_preset() || has_any_write_project
-                }
-                CapabilityRequirement::AnyOf(caps) => {
-                    permissions.is_ceo_preset()
-                        || caps.iter().any(|c| permissions.capabilities.contains(c))
-                }
-            })
+            tool.surface() == Surface::Always || loaded_domains.contains(&tool.domain())
         })
         .map(|t| t.name().to_string())
         .collect();
     names.sort();
     names
+}
+
+/// Build-time approximation kept for source-compat with existing
+/// callers (e.g. the installed-tools diagnostic). Equivalent to
+/// [`build_session_tool_names`] called with an empty
+/// `loaded_domains` — the set of tools a fresh session would ship
+/// before the LLM promoted any domain.
+#[must_use]
+pub fn build_time_cross_agent_tool_names(permissions: &AgentPermissions) -> Vec<String> {
+    build_session_tool_names(permissions, &[])
 }

@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, require_network, require_str, tool_err};
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
@@ -208,6 +208,9 @@ impl AgentTool for GetLeaderboardTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `get_leaderboard` is public-ish marketplace
         // data; no capability defined. Leave unrestricted.
@@ -255,6 +258,9 @@ impl AgentTool for GetUsageStatsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `get_usage_stats` is user/org scoped; the
@@ -314,6 +320,9 @@ impl AgentTool for ListSessionsTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::ReadProjectFromArg("project_id")]
     }
@@ -362,6 +371,9 @@ impl AgentTool for ListLogEntriesTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Monitoring
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `list_log_entries` is admin-style global read.

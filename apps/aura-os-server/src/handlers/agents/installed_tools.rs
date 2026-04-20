@@ -288,6 +288,8 @@ fn capability_wire_tag(cap: &Capability) -> &'static str {
         Capability::GenerateMedia => "generateMedia",
         Capability::ReadProject { .. } => "readProject",
         Capability::WriteProject { .. } => "writeProject",
+        Capability::ReadAllProjects => "readAllProjects",
+        Capability::WriteAllProjects => "writeAllProjects",
     }
 }
 

@@ -6,7 +6,7 @@ use aura_os_core::{Capability, ToolDomain};
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------
@@ -25,6 +25,9 @@ impl AgentTool for ListOrgsTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): `list_orgs` is scoped by the caller's JWT
@@ -73,6 +76,9 @@ impl AgentTool for CreateOrgTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -115,6 +121,9 @@ impl AgentTool for GetOrgTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         // TODO(tier-a): no `ReadOrg` capability defined; JWT
@@ -159,6 +168,9 @@ impl AgentTool for UpdateOrgTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
@@ -211,6 +223,9 @@ impl AgentTool for ListMembersTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
     }
@@ -252,6 +267,9 @@ impl AgentTool for UpdateMemberRoleTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
@@ -306,6 +324,9 @@ impl AgentTool for RemoveMemberTool {
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
     }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
+    }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]
     }
@@ -354,6 +375,9 @@ impl AgentTool for ManageInvitesTool {
     }
     fn domain(&self) -> ToolDomain {
         ToolDomain::Org
+    }
+    fn surface(&self) -> Surface {
+        Surface::OnDemand
     }
     fn required_capabilities(&self) -> &'static [CapabilityRequirement] {
         &[CapabilityRequirement::Exact(Capability::ManageOrgMembers)]

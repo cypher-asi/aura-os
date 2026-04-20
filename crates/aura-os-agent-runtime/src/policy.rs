@@ -40,21 +40,12 @@ impl PolicyDecision {
 ///
 /// Semantics:
 /// * An empty `required` list always allows (ambient / unscoped tools).
-/// * The CEO preset (`AgentPermissions::is_ceo_preset`) short-circuits to
-///   allow; the preset is meant to model "unrestricted root" and must
-///   therefore pass every requirement including scoped project caps.
 /// * For each required capability, the agent must hold an overlapping
-///   capability:
-///   - Unscoped variants (`SpawnAgent`, `ReadAgent`, …) require an exact
-///     match in the bundle's `capabilities` list.
-///   - `ReadProject { id }` is satisfied by either (a) the bundle
-///     containing `ReadProject { id }` for the same id, (b) the bundle
-///     containing `WriteProject { id }` for the same id (write implies
-///     read), or (c) the bundle having universe scope along with an
-///     unscoped `ReadAgent` — matching the `normalized_for_identity`
-///     pattern used by legacy CEO records.
-///   - `WriteProject { id }` is satisfied by an exact `WriteProject { id }`
-///     in the bundle, or by the CEO preset short-circuit above.
+///   capability — see [`holds_capability`] for the matching rules. The
+///   CEO preset no longer takes a separate fast path: it holds
+///   [`Capability::ReadAllProjects`] + [`Capability::WriteAllProjects`]
+///   wildcards which make it satisfy project-scoped requirements
+///   through the normal path.
 /// * Requirements compose with AND semantics: any single denial short-
 ///   circuits to a deny decision naming the offending capability.
 #[must_use]
@@ -63,13 +54,6 @@ pub fn check_capabilities(
     required: &[Capability],
 ) -> PolicyDecision {
     if required.is_empty() {
-        return PolicyDecision::allow();
-    }
-
-    // CEO preset holds everything. Check this first so callers can lean
-    // on the preset as a "bypass" without having to enumerate
-    // per-project scopes.
-    if agent_permissions.is_ceo_preset() {
         return PolicyDecision::allow();
     }
 
@@ -85,16 +69,30 @@ pub fn check_capabilities(
     PolicyDecision::allow()
 }
 
-fn holds_capability(perms: &AgentPermissions, needed: &Capability) -> bool {
+/// Does `perms` hold a capability that satisfies `needed`?
+///
+/// * Unscoped variants match exactly on the bundle.
+/// * `ReadProject { id }` is satisfied by (a) `ReadProject { id }` in
+///   the bundle, (b) `WriteProject { id }` in the bundle (write implies
+///   read), (c) [`Capability::ReadAllProjects`], or (d)
+///   [`Capability::WriteAllProjects`] (wildcard write implies wildcard
+///   read).
+/// * `WriteProject { id }` is satisfied by (a) `WriteProject { id }`
+///   in the bundle or (b) [`Capability::WriteAllProjects`].
+/// * The two wildcard variants are exact-match only (no recursion).
+#[must_use]
+pub fn holds_capability(perms: &AgentPermissions, needed: &Capability) -> bool {
     match needed {
         Capability::ReadProject { id } => perms.capabilities.iter().any(|held| match held {
             Capability::ReadProject { id: held_id } => held_id == id,
             Capability::WriteProject { id: held_id } => held_id == id,
+            Capability::ReadAllProjects | Capability::WriteAllProjects => true,
             _ => false,
         }),
         Capability::WriteProject { id } => {
             perms.capabilities.iter().any(|held| match held {
                 Capability::WriteProject { id: held_id } => held_id == id,
+                Capability::WriteAllProjects => true,
                 _ => false,
             })
         }
@@ -114,6 +112,8 @@ fn describe_capability(c: &Capability) -> String {
         Capability::GenerateMedia => "generateMedia".to_string(),
         Capability::ReadProject { id } => format!("readProject({id})"),
         Capability::WriteProject { id } => format!("writeProject({id})"),
+        Capability::ReadAllProjects => "readAllProjects".to_string(),
+        Capability::WriteAllProjects => "writeAllProjects".to_string(),
     }
 }
 

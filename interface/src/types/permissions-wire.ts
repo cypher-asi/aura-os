@@ -36,7 +36,9 @@ export type Capability =
   | { type: "postToFeed" }
   | { type: "generateMedia" }
   | { type: "readProject"; id: string }
-  | { type: "writeProject"; id: string };
+  | { type: "writeProject"; id: string }
+  | { type: "readAllProjects" }
+  | { type: "writeAllProjects" };
 
 export interface AgentPermissions {
   scope: AgentScope;
@@ -76,4 +78,6 @@ export const CEO_CORE_CAPABILITY_TYPES = [
   "invokeProcess",
   "postToFeed",
   "generateMedia",
+  "readAllProjects",
+  "writeAllProjects",
 ] as const satisfies ReadonlyArray<Capability["type"]>;
