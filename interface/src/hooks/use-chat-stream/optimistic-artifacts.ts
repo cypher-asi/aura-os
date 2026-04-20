@@ -5,20 +5,21 @@ import { orderIndexFromTitle } from "../../utils/collections";
 type SidekickState = ReturnType<typeof useSidekickStore.getState>;
 
 export function pushPendingSpec(
-  content: { id: string; name: string; input: Record<string, unknown> },
+  content: { id: string; name?: string; input?: Record<string, unknown> },
   projectId: string,
   sidekick: SidekickState,
   pendingSpecIdsRef: { current: string[] },
 ) {
   const pendingId = `pending-${content.id}`;
   const now = new Date().toISOString();
-  const title = (content.input.title as string) || "Generating…";
+  const input = content.input ?? {};
+  const title = (input.title as string) || "Generating spec…";
   sidekick.pushSpec({
     spec_id: pendingId,
     project_id: projectId,
     title,
     order_index: orderIndexFromTitle(title) ?? Date.now(),
-    markdown_contents: (content.input.markdown_contents as string) || "",
+    markdown_contents: (input.markdown_contents as string) || "",
     created_at: now,
     updated_at: now,
   });
@@ -28,20 +29,21 @@ export function pushPendingSpec(
 }
 
 export function pushPendingTask(
-  content: { id: string; name: string; input: Record<string, unknown> },
+  content: { id: string; name?: string; input?: Record<string, unknown> },
   projectId: string,
   sidekick: SidekickState,
   pendingTaskIdsRef: { current: string[] },
 ) {
   const pendingId = `pending-${content.id}`;
   const now = new Date().toISOString();
-  const title = (content.input.title as string) || "Creating…";
+  const input = content.input ?? {};
+  const title = (input.title as string) || "Creating task…";
   sidekick.pushTask({
     task_id: pendingId,
     project_id: projectId,
-    spec_id: (content.input.spec_id as string) || "",
+    spec_id: (input.spec_id as string) || "",
     title,
-    description: (content.input.description as string) || "",
+    description: (input.description as string) || "",
     status: "pending",
     order_index: orderIndexFromTitle(title) ?? Date.now(),
     dependency_ids: [],
@@ -57,7 +59,9 @@ export function pushPendingTask(
     created_at: now,
     updated_at: now,
   });
-  pendingTaskIdsRef.current.push(pendingId);
+  if (!pendingTaskIdsRef.current.includes(pendingId)) {
+    pendingTaskIdsRef.current.push(pendingId);
+  }
 }
 
 export function removePendingArtifact(

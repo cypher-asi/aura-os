@@ -105,15 +105,38 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         setProgressText(event.content.stage);
         break;
       case EventType.ToolCallStarted:
-      case EventType.ToolUseStart:
-        handleToolCallStarted(refs, setters, event.content as { id: string; name: string });
+      case EventType.ToolUseStart: {
+        const tcs = event.content as { id: string; name: string };
+        handleToolCallStarted(refs, setters, tcs);
+        // Surface optimistic spec/task placeholders the moment the tool
+        // actually starts running so the sidekick doesn't sit empty for
+        // the duration of the tool call.
+        if (tcs.name === "create_spec") {
+          pushPendingSpec({ id: tcs.id, name: tcs.name }, projectId, sidekickRef.current, pendingSpecIdsRef);
+        } else if (tcs.name === "create_task") {
+          pushPendingTask({ id: tcs.id, name: tcs.name }, projectId, sidekickRef.current, pendingTaskIdsRef);
+        }
         break;
-      case EventType.ToolCallSnapshot:
-        handleToolCallSnapshot(refs, setters, event.content);
+      }
+      case EventType.ToolCallSnapshot: {
+        const snap = event.content;
+        handleToolCallSnapshot(refs, setters, snap);
+        // Update the optimistic placeholder title as the model streams
+        // arguments (`title`, `spec_id`, `description`, ...). pushSpec /
+        // pushTask upsert by id, so re-calling here is safe.
+        if (snap.name === "create_spec") {
+          pushPendingSpec(snap, projectId, sidekickRef.current, pendingSpecIdsRef);
+        } else if (snap.name === "create_task") {
+          pushPendingTask(snap, projectId, sidekickRef.current, pendingTaskIdsRef);
+        }
         break;
+      }
       case EventType.ToolCall: {
         const c = event.content;
         coreHandleToolCall(refs, setters, c);
+        // `ToolCall` is the finalized args payload; if we missed the
+        // earlier start/snapshot events (e.g. network gap), still seed a
+        // placeholder here. pushPendingSpec/Task are idempotent by id.
         if (c.name === "create_spec") pushPendingSpec(c, projectId, sidekickRef.current, pendingSpecIdsRef);
         if (c.name === "create_task") pushPendingTask(c, projectId, sidekickRef.current, pendingTaskIdsRef);
         break;
