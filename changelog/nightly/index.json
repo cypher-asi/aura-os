@@ -2,21 +2,21 @@
   {
     "date": "2026-04-19",
     "channel": "nightly",
-    "version": "0.1.0-nightly.308.1",
-    "title": "Unified agents, a new browser sidekick, and a flash-free desktop boot",
-    "intro": "A dense day across Aura: the super-agent plumbing collapsed into a single permissions-driven Agent model, a Chromium-backed browser tab landed in the Projects sidekick, a new Talent Marketplace and Integrations app arrived, and a long chain of chat, context, and boot-time fixes made the CEO experience and desktop startup dramatically tighter. Release infrastructure and mobile pipelines were also overhauled.",
+    "version": "0.1.0-nightly.309.1",
+    "title": "Unified agent model, in-app browser, and a flash-free desktop boot",
+    "intro": "A big day across the stack. The dedicated \"super-agent\" path was collapsed into a single permissions-driven Agent model, a real Chromium-backed browser tab landed inside the projects sidekick, and the CEO-to-agent chat loop got dozens of correctness, context-size, and performance fixes. Desktop cold start was rebuilt to eliminate the login-screen flash, mobile parity flows shipped, and the release pipeline picked up dedicated changelog publishing plus Android and iOS lanes.",
     "entryCount": 6,
     "highlights": [
-      "Single unified Agent model with permissions-driven CEO",
-      "Chromium browser sidekick for Projects",
-      "Talent Marketplace and dedicated Integrations app",
-      "CEO chat context, routing, and tool wiring overhauled",
-      "Flash-free desktop boot with injected auth state",
-      "Mobile parity flows and Android/iOS release lanes"
+      "Single Agent model replaces the super-agent path",
+      "Chromium-backed browser tab in projects sidekick",
+      "Talent Marketplace and Integrations apps",
+      "Desktop boot no longer flashes the login screen",
+      "Dozens of CEO chat correctness and context-size fixes",
+      "Dedicated release changelog workflow + mobile release lanes"
     ],
-    "rawCommitCount": 143,
-    "generatedAt": "2026-04-19T21:21:50.907Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.308.1",
+    "rawCommitCount": 147,
+    "generatedAt": "2026-04-20T02:38:04.237Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.309.1",
     "path": "history/2026-04-19.json"
   },
   {
