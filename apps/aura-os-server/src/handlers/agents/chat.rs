@@ -1592,6 +1592,16 @@ fn normalize_agent_history_limit(limit: Option<usize>) -> Option<usize> {
     limit.map(|value| value.min(MAX_AGENT_HISTORY_WINDOW_LIMIT))
 }
 
+/// Translate a caller's `(limit, offset)` window into the minimum total
+/// number of events the storage loader must return so the final slice is
+/// correct. Used as a short-circuit hint for
+/// [`load_events_oldest_first_bounded`]: once we've collected this many
+/// events walking sessions newest-first we can stop reading older
+/// sessions. Returns `None` when the caller asked for an unbounded load.
+fn target_window_size(limit: Option<usize>, offset: usize) -> Option<usize> {
+    normalize_agent_history_limit(limit).map(|l| l.saturating_add(offset))
+}
+
 fn slice_recent_agent_events(
     messages: Vec<SessionEvent>,
     limit: Option<usize>,
@@ -1701,10 +1711,85 @@ fn latest_storage_session(
         .max_by(|left, right| storage_session_sort_key(left).cmp(&storage_session_sort_key(right)))
 }
 
+/// Maximum number of per-session `list_events` requests we fan out in a
+/// single parallel batch while walking sessions newest-first. Larger
+/// batches give more parallelism at the cost of wasted storage traffic
+/// when the target window is already filled by the first session or two.
+const SESSION_FETCH_BATCH: usize = 4;
+
+/// Load events across sessions in chronological (oldest-first) order,
+/// fanning per-session `list_events` calls out in parallel batches and
+/// short-circuiting once enough events have been collected to satisfy
+/// `target_size` (the caller's `limit + offset` window).
+///
+/// Pre-optimization this function walked every session sequentially with
+/// `list_events(None, None)` — which paginates in 500-event chunks until
+/// exhaustion — then the HTTP handler sliced the result down to the last
+/// `limit` events. For accounts with many historical sessions that meant
+/// O(total lifetime events) of storage reads on every chat open. Walking
+/// newest-first with a target lets us stop after the most recent session
+/// (the common case) while still returning the same chronological slice
+/// the caller expected.
+async fn load_events_oldest_first_bounded(
+    storage: &StorageClient,
+    jwt: &str,
+    sessions: &[&aura_os_storage::StorageSession],
+    target_size: Option<usize>,
+    default_project_agent_id: Option<&str>,
+) -> Result<(Vec<SessionEvent>, usize), aura_os_storage::StorageError> {
+    if sessions.is_empty() {
+        return Ok((Vec::new(), 0));
+    }
+
+    let newest_first: Vec<&aura_os_storage::StorageSession> =
+        sessions.iter().rev().copied().collect();
+
+    let mut per_session_events: Vec<Vec<SessionEvent>> = Vec::with_capacity(newest_first.len());
+    let mut total_events = 0usize;
+    let mut sessions_read = 0usize;
+    for chunk in newest_first.chunks(SESSION_FETCH_BATCH) {
+        let futs = chunk.iter().map(|session| async move {
+            let storage_events = storage.list_events(&session.id, jwt, None, None).await?;
+            let project_agent_id = session
+                .project_agent_id
+                .as_deref()
+                .or(default_project_agent_id)
+                .unwrap_or_default();
+            let project_id = session.project_id.as_deref().unwrap_or_default();
+            Ok::<_, aura_os_storage::StorageError>(events_to_session_history(
+                &storage_events,
+                project_agent_id,
+                project_id,
+            ))
+        });
+        let results: Vec<Result<Vec<SessionEvent>, _>> = join_all(futs).await;
+        for result in results {
+            let events = result?;
+            total_events += events.len();
+            per_session_events.push(events);
+            sessions_read += 1;
+        }
+        if let Some(target) = target_size {
+            if total_events >= target {
+                break;
+            }
+        }
+    }
+
+    // `per_session_events` is newest-session-first; reverse to chronological.
+    per_session_events.reverse();
+    let mut history = Vec::with_capacity(total_events);
+    for events in per_session_events {
+        history.extend(events);
+    }
+    Ok((history, sessions_read))
+}
+
 async fn load_latest_agent_events_from_storage_result(
     state: &AppState,
     agent_id: &AgentId,
     jwt: &str,
+    target_size: Option<usize>,
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     let Some(ref storage) = state.storage_client else {
         warn!(%agent_id, "latest agent events: no storage client available");
@@ -1744,15 +1829,17 @@ async fn load_latest_agent_events_from_storage_result(
         sessions_outcome.sessions.iter().collect();
     ordered.sort_by_key(|session| storage_session_sort_key(session));
 
-    let mut history = Vec::new();
-    for session in &ordered {
-        let storage_events = storage.list_events(&session.id, jwt, None, None).await?;
-        history.extend(events_to_session_history(
-            &storage_events,
-            session.project_agent_id.as_deref().unwrap_or_default(),
-            session.project_id.as_deref().unwrap_or_default(),
-        ));
-    }
+    let (history, sessions_read) =
+        load_events_oldest_first_bounded(storage, jwt, &ordered, target_size, None).await?;
+
+    info!(
+        %agent_id,
+        sessions_total = ordered.len(),
+        sessions_read,
+        reconstructed_messages = history.len(),
+        target_size,
+        "latest agent events: events fetched"
+    );
     Ok(history)
 }
 
@@ -1760,6 +1847,7 @@ async fn load_project_session_history(
     state: &AppState,
     agent_instance_id: &AgentInstanceId,
     jwt: &str,
+    target_size: Option<usize>,
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     let Some(ref storage) = state.storage_client else {
         return Ok(Vec::new());
@@ -1785,35 +1873,22 @@ async fn load_project_session_history(
     let mut ordered: Vec<&aura_os_storage::StorageSession> = sessions.iter().collect();
     ordered.sort_by_key(|session| storage_session_sort_key(session));
 
-    let mut history = Vec::new();
-    let mut events_total = 0usize;
-    let mut user_messages = 0usize;
-    let mut assistant_ends = 0usize;
-    for session in &ordered {
-        let storage_events = storage.list_events(&session.id, &jwt, None, None).await?;
-        events_total += storage_events.len();
-        user_messages += storage_events
-            .iter()
-            .filter(|e| e.event_type.as_deref() == Some("user_message"))
-            .count();
-        assistant_ends += storage_events
-            .iter()
-            .filter(|e| e.event_type.as_deref() == Some("assistant_message_end"))
-            .count();
-        history.extend(events_to_session_history(
-            &storage_events,
-            &agent_instance_id.to_string(),
-            session.project_id.as_deref().unwrap_or_default(),
-        ));
-    }
+    let instance_id_str = agent_instance_id.to_string();
+    let (history, sessions_read) = load_events_oldest_first_bounded(
+        storage,
+        jwt,
+        &ordered,
+        target_size,
+        Some(&instance_id_str),
+    )
+    .await?;
 
     info!(
         %agent_instance_id,
         sessions_total,
-        events_total,
-        user_messages,
-        assistant_ends,
+        sessions_read,
         reconstructed_messages = history.len(),
+        target_size,
         "project session history loaded"
     );
     Ok(history)
@@ -1968,9 +2043,11 @@ pub(crate) async fn list_agent_events(
     Query(query): Query<AgentEventsQuery>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let _ = state.require_storage_client()?;
-    let messages = load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt)
-        .await
-        .map_err(map_storage_error)?;
+    let target_size = target_window_size(query.limit, query.offset);
+    let messages =
+        load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt, target_size)
+            .await
+            .map_err(map_storage_error)?;
     Ok(Json(slice_recent_agent_events(
         messages,
         query.limit,
@@ -2013,9 +2090,18 @@ pub(crate) async fn list_agent_events_paginated(
     Query(query): Query<PaginatedEventsQuery>,
 ) -> ApiResult<Json<PaginatedEventsResponse>> {
     let _ = state.require_storage_client()?;
-    let messages = load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt)
-        .await
-        .map_err(map_storage_error)?;
+    // When either cursor is present we need the full transcript so the
+    // `before`/`after` anchor can be located; otherwise we only need
+    // enough events to fill the requested window.
+    let target_size = if query.before.is_some() || query.after.is_some() {
+        None
+    } else {
+        target_window_size(query.limit, 0)
+    };
+    let messages =
+        load_latest_agent_events_from_storage_result(&state, &agent_id, &jwt, target_size)
+            .await
+            .map_err(map_storage_error)?;
 
     let filtered = apply_cursor_filter(messages, query.before.as_deref(), query.after.as_deref());
 
@@ -2531,7 +2617,12 @@ pub(crate) async fn list_events(
     AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
-    let messages = load_project_session_history(&state, &agent_instance_id, &jwt)
+    // Project-scoped UI endpoint has no explicit limit parameter yet, but
+    // the `AgentChatView` currently renders at most the last
+    // `MAX_AGENT_HISTORY_WINDOW_LIMIT` messages — cap the load so we don't
+    // walk every historical session just to throw most of it away.
+    let target_size = Some(MAX_AGENT_HISTORY_WINDOW_LIMIT);
+    let messages = load_project_session_history(&state, &agent_instance_id, &jwt, target_size)
         .await
         .map_err(map_storage_error)?;
     Ok(Json(messages))
