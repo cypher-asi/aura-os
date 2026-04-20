@@ -149,6 +149,7 @@ export function useTasksProjectListModel(
   handleContextMenu: MouseEventHandler<HTMLDivElement>;
   handleKeyDown: KeyboardEventHandler<HTMLDivElement>;
   isEmptyState: boolean;
+  searchActive: boolean;
 } {
   const data = useProjectListData("tasks");
   useTasksProjectListEffects(data);
@@ -187,5 +188,6 @@ export function useTasksProjectListModel(
     handleContextMenu,
     handleKeyDown,
     isEmptyState: !data.loadingProjects && data.projects.length === 0,
+    searchActive,
   };
 }

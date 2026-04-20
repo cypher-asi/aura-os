@@ -17,6 +17,8 @@ interface StubTreeProps {
   entries: readonly unknown[];
 }
 
+const mockUseLeftMenuProjectReorder = vi.fn(() => undefined);
+
 vi.mock("../../../features/left-menu", () => ({
   buildLeftMenuEntries: () => [],
   LeftMenuTree: ({ ariaLabel, entries }: StubTreeProps) => (
@@ -26,10 +28,13 @@ vi.mock("../../../features/left-menu", () => ({
     expandedIds: [],
     toggleGroup: vi.fn(),
   }),
+  useLeftMenuProjectReorder: (
+    ...args: Parameters<typeof mockUseLeftMenuProjectReorder>
+  ) => mockUseLeftMenuProjectReorder(...args),
 }));
 
 vi.mock("../../../hooks/use-sidebar-search", () => ({
-  useSidebarSearch: () => ({ setAction: () => {} }),
+  useSidebarSearch: () => ({ query: "", setAction: () => {} }),
 }));
 
 vi.mock("../../../components/ProjectsPlusButton/ProjectsPlusButton", () => ({
@@ -72,6 +77,7 @@ function withRouter(node: ReactNode) {
 
 describe("NotesNav", () => {
   beforeEach(() => {
+    mockUseLeftMenuProjectReorder.mockClear();
     useProjectsListStore.setState({
       projects: [],
       loadingProjects: false,
@@ -117,5 +123,28 @@ describe("NotesNav", () => {
     expect(
       screen.getByRole("navigation", { name: "Notes navigation" }),
     ).toBeInTheDocument();
+  });
+
+  it("wires the shared project-reorder hook with a resolver that unwraps project entry ids", () => {
+    useProjectsListStore.setState({
+      projects: [
+        {
+          project_id: "p1",
+          name: "First",
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(withRouter(<NotesNav />));
+
+    expect(mockUseLeftMenuProjectReorder).toHaveBeenCalled();
+    const lastCall = mockUseLeftMenuProjectReorder.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    const [, options] = lastCall as [unknown, { searchActive: boolean; resolveProjectId: (id: string) => string | null }];
+    expect(options.searchActive).toBe(false);
+    expect(options.resolveProjectId("project::p1")).toBe("p1");
+    expect(options.resolveProjectId("folder::p1::foo")).toBeNull();
+    expect(options.resolveProjectId("note::p1::foo.md")).toBeNull();
   });
 });

@@ -2,7 +2,10 @@ import { PageEmptyState } from "@cypher-asi/zui";
 import { FolderGit2 } from "lucide-react";
 import { ProjectListModals } from "../../../../components/ProjectList/ProjectListModals";
 import { ExplorerContextMenu } from "../../../../components/ProjectList/ExplorerContextMenu";
-import { LeftMenuTree } from "../../../../features/left-menu";
+import {
+  LeftMenuTree,
+  useLeftMenuProjectReorder,
+} from "../../../../features/left-menu";
 import styles from "../../../../features/left-menu/LeftMenuTree/LeftMenuTree.module.css";
 import { useTasksProjectListModel } from "./use-tasks-project-list-model";
 
@@ -20,6 +23,9 @@ const explorerNodeStyles = {
 
 export function TasksProjectList() {
   const model = useTasksProjectListModel(explorerNodeStyles);
+  const rootReorder = useLeftMenuProjectReorder(model.entries, {
+    searchActive: model.searchActive,
+  });
 
   if (model.isEmptyState) {
     return (
@@ -40,6 +46,7 @@ export function TasksProjectList() {
         entries={model.entries}
         onContextMenu={model.handleContextMenu}
         onKeyDown={model.handleKeyDown}
+        rootReorder={rootReorder}
       />
 
       <ExplorerContextMenu actions={model.actions} />

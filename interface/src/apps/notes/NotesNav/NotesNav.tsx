@@ -6,6 +6,7 @@ import {
   buildLeftMenuEntries,
   LeftMenuTree,
   useLeftMenuExpandedGroups,
+  useLeftMenuProjectReorder,
 } from "../../../features/left-menu";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
@@ -103,7 +104,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
   const activeRelPath = useNotesStore((s) => s.activeRelPath);
   const activeProjectId = useNotesStore((s) => s.activeProjectId);
 
-  const { setAction } = useSidebarSearch("notes");
+  const { query: sidebarQuery, setAction } = useSidebarSearch("notes");
 
   const projectActions = useProjectListActions();
   const projectMap = useMemo(
@@ -220,6 +221,15 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
     [data, expandedIdsSet, selectedLeafId, toggleGroup, selectNote, navigate],
   );
 
+  const resolveNotesProjectId = useCallback((entryId: string) => {
+    const parsed = parseNotesExplorerId(entryId);
+    return parsed?.kind === "project" ? parsed.projectId : null;
+  }, []);
+  const rootReorder = useLeftMenuProjectReorder(entries, {
+    searchActive: sidebarQuery.trim().length > 0,
+    resolveProjectId: resolveNotesProjectId,
+  });
+
   return (
     <div className={styles.root}>
       {projects.length === 0 && !loadingProjects ? (
@@ -233,6 +243,7 @@ export function NotesNav({ onCreateNote }: NotesNavProps = {}) {
           entries={entries}
           onContextMenu={notesMenu.handleContextMenu}
           onKeyDown={notesMenu.handleKeyDown}
+          rootReorder={rootReorder}
         />
       )}
 

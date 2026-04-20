@@ -5,7 +5,10 @@ import type { MenuItem } from "@cypher-asi/zui";
 import { Cpu, FolderOpen, Pencil, Trash2 } from "lucide-react";
 import { InlineRenameInput } from "../../../../components/InlineRenameInput";
 import { DeleteProjectModal } from "../../../../components/DeleteProjectModal";
-import { LeftMenuTree } from "../../../../features/left-menu";
+import {
+  LeftMenuTree,
+  useLeftMenuProjectReorder,
+} from "../../../../features/left-menu";
 import { ProcessForm } from "../ProcessForm";
 import { useProcessListState } from "./use-process-list";
 import treeStyles from "../../../../features/left-menu/LeftMenuTree/LeftMenuTree.module.css";
@@ -175,6 +178,9 @@ function ProcessListModalsSection({ state }: { state: ProcessListState }) {
 }
 
 function ProcessListContent({ state }: { state: ProcessListState }) {
+  const rootReorder = useLeftMenuProjectReorder(state.entries, {
+    searchActive: state.searchActive,
+  });
   return (
     <div className={treeStyles.root}>
       <LeftMenuTree
@@ -182,6 +188,7 @@ function ProcessListContent({ state }: { state: ProcessListState }) {
         entries={state.entries}
         onContextMenu={state.handleContextMenu}
         onKeyDown={state.handleKeyDown}
+        rootReorder={rootReorder}
       />
       <ProcessListMenus state={state} />
       <ProcessListModalsSection state={state} />

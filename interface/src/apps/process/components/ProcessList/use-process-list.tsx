@@ -175,6 +175,7 @@ function useProcessEntries(
   data: ReturnType<typeof useProcessStoreData>;
   entries: ReturnType<typeof buildLeftMenuEntries>;
   isEmptyState: boolean;
+  searchActive: boolean;
 } {
   const explorer = useProcessExplorerData(explorerStyles, onAddProcess);
   const selectedNodeId = pendingSelectId ?? explorer.data.processId ?? null;
@@ -184,8 +185,9 @@ function useProcessEntries(
     selectedNodeId,
     onSelectProcess,
   );
+  const searchActive = explorer.data.searchQuery.trim().length > 0;
 
-  return { ...explorer, entries };
+  return { ...explorer, entries, searchActive };
 }
 
 function useProcessCoreHandlers(params: {
@@ -278,6 +280,7 @@ export function useProcessListState(
   isEmptyState: boolean;
   processFormProjectId: string | null;
   renameTarget: RenameTargetExt | null;
+  searchActive: boolean;
   setDeleteProjectError: (value: string | null) => void;
   setDeleteProjectTarget: (value: ProjectRecord | null) => void;
   setPendingSelectId: (value: string | null) => void;
@@ -323,6 +326,7 @@ export function useProcessListState(
     isEmptyState: explorer.isEmptyState,
     processFormProjectId: ui.processFormProjectId,
     renameTarget: ui.renameTarget,
+    searchActive: explorer.searchActive,
     setDeleteProjectError: ui.setDeleteProjectError,
     setDeleteProjectTarget: ui.setDeleteProjectTarget,
     setPendingSelectId: ui.setPendingSelectId,

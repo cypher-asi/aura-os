@@ -114,6 +114,12 @@ vi.mock("../ProjectList/useProjectListData", () => ({
   useProjectListData: () => mockProjectListData,
 }));
 
+vi.mock("../../stores/projects-list-store", () => ({
+  useProjectsListStore: (
+    selector: (state: { saveProjectOrder: typeof mockSaveProjectOrder }) => unknown,
+  ) => selector({ saveProjectOrder: mockSaveProjectOrder }),
+}));
+
 vi.mock("../ProjectList/useExplorerMenus", () => ({
   useExplorerMenus: () => ({
     handleContextMenu: vi.fn(),
