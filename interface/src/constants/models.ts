@@ -39,19 +39,55 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     tier: "sonnet",
     mode: "chat",
   },
-  { id: "aura-claude-opus-4-6", label: "Opus 4.6", tier: "opus", mode: "chat" },
-  { id: "aura-claude-opus-4-7", label: "Opus 4.7", tier: "opus", mode: "chat" },
+  {
+    id: "aura-claude-opus-4-6",
+    label: "Opus 4.6",
+    tier: "opus",
+    mode: "chat",
+  },
+  {
+    id: "aura-claude-opus-4-7",
+    label: "Opus 4.7",
+    tier: "opus",
+    mode: "chat",
+  },
   { id: "aura-gpt-5-4", label: "GPT-5.4", tier: "gpt", mode: "chat" },
-  { id: "aura-gpt-5-4-mini", label: "GPT-5.4 mini", tier: "gpt", mode: "chat" },
-  { id: "aura-gpt-5-4-nano", label: "GPT-5.4 nano", tier: "gpt", mode: "chat" },
-  { id: "aura-kimi-k2-5", label: "Kimi K2.5", tier: "sonnet", mode: "chat" },
+  {
+    id: "aura-gpt-5-4-mini",
+    label: "GPT-5.4 mini",
+    tier: "gpt",
+    mode: "chat",
+  },
+  {
+    id: "aura-gpt-5-4-nano",
+    label: "GPT-5.4 nano",
+    tier: "gpt",
+    mode: "chat",
+  },
+  {
+    id: "aura-kimi-k2-5",
+    label: "Kimi K2.5",
+    tier: "sonnet",
+    mode: "chat",
+  },
+  {
+    id: "aura-kimi-k2-6",
+    label: "Kimi K2.6",
+    tier: "sonnet",
+    mode: "chat",
+  },
   {
     id: "aura-deepseek-v3-2",
     label: "DeepSeek V3.2",
     tier: "sonnet",
     mode: "chat",
   },
-  { id: "aura-oss-120b", label: "GPT-OSS 120B", tier: "haiku", mode: "chat" },
+  {
+    id: "aura-oss-120b",
+    label: "GPT-OSS 120B",
+    tier: "haiku",
+    mode: "chat",
+  },
 ];
 
 export const IMAGE_MODELS: ModelOption[] = [
@@ -95,10 +131,12 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-o4-mini": "aura-o4-mini",
   "o4-mini": "aura-o4-mini",
   "aura-kimi-k2-5": "aura-kimi-k2-5",
+  "aura-kimi-k2-6": "aura-kimi-k2-6",
   "aura-deepseek-v3-2": "aura-deepseek-v3-2",
   "aura-oss-120b": "aura-oss-120b",
   "aura-qwen2-5-coder-7b": "aura-qwen2-5-coder-7b",
   "accounts/fireworks/models/kimi-k2p5": "aura-kimi-k2-5",
+  "accounts/fireworks/models/kimi-k2p6": "aura-kimi-k2-6",
   "accounts/fireworks/models/deepseek-v3p2": "aura-deepseek-v3-2",
   "accounts/fireworks/models/gpt-oss-120b": "aura-oss-120b",
   "accounts/fireworks/models/qwen2p5-coder-7b": "aura-qwen2-5-coder-7b",
@@ -117,58 +155,18 @@ export const CODEX_MODELS: ModelOption[] = [
 export const GEMINI_MODELS: ModelOption[] = [
   { id: "auto", label: "Auto", tier: "sonnet", mode: "chat" },
   { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", tier: "opus", mode: "chat" },
-  {
-    id: "gemini-2.5-flash",
-    label: "Gemini 2.5 Flash",
-    tier: "sonnet",
-    mode: "chat",
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    label: "Gemini 2.5 Flash Lite",
-    tier: "haiku",
-    mode: "chat",
-  },
-  {
-    id: "gemini-2.0-flash",
-    label: "Gemini 2.0 Flash",
-    tier: "sonnet",
-    mode: "chat",
-  },
-  {
-    id: "gemini-2.0-flash-lite",
-    label: "Gemini 2.0 Flash Lite",
-    tier: "haiku",
-    mode: "chat",
-  },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", tier: "sonnet", mode: "chat" },
+  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite", tier: "haiku", mode: "chat" },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", tier: "sonnet", mode: "chat" },
+  { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite", tier: "haiku", mode: "chat" },
 ];
 
 export const OPENCODE_MODELS: ModelOption[] = [
-  {
-    id: "openai/gpt-5.2-codex",
-    label: "openai/gpt-5.2-codex",
-    tier: "sonnet",
-    mode: "chat",
-  },
+  { id: "openai/gpt-5.2-codex", label: "openai/gpt-5.2-codex", tier: "sonnet", mode: "chat" },
   { id: "openai/gpt-5.4", label: "openai/gpt-5.4", tier: "opus", mode: "chat" },
-  {
-    id: "openai/gpt-5.2",
-    label: "openai/gpt-5.2",
-    tier: "sonnet",
-    mode: "chat",
-  },
-  {
-    id: "openai/gpt-5.1-codex-max",
-    label: "openai/gpt-5.1-codex-max",
-    tier: "opus",
-    mode: "chat",
-  },
-  {
-    id: "openai/gpt-5.1-codex-mini",
-    label: "openai/gpt-5.1-codex-mini",
-    tier: "haiku",
-    mode: "chat",
-  },
+  { id: "openai/gpt-5.2", label: "openai/gpt-5.2", tier: "sonnet", mode: "chat" },
+  { id: "openai/gpt-5.1-codex-max", label: "openai/gpt-5.1-codex-max", tier: "opus", mode: "chat" },
+  { id: "openai/gpt-5.1-codex-mini", label: "openai/gpt-5.1-codex-mini", tier: "haiku", mode: "chat" },
 ];
 
 export const CURSOR_MODELS: ModelOption[] = [
@@ -255,10 +253,9 @@ export function persistModel(modelId: string, adapterType?: string): void {
 /** Chat model options formatted for <Select> dropdowns across the app. */
 export const CHAT_MODEL_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "Default" },
-  ...AVAILABLE_MODELS.filter((m) => m.mode === "chat").map((m) => ({
-    value: m.id,
-    label: m.label,
-  })),
+  ...AVAILABLE_MODELS
+    .filter((m) => m.mode === "chat")
+    .map((m) => ({ value: m.id, label: m.label })),
 ];
 
 export function modelLabel(
@@ -317,19 +314,6 @@ export function sortModelsForMenu(models: ModelOption[]): ModelOption[] {
       providerOrder[modelProviderGroup(left)] -
       providerOrder[modelProviderGroup(right)];
     if (providerDelta !== 0) return providerDelta;
-
-    const tierRank = (model: ModelOption): number => {
-      const label = model.label.toLowerCase();
-      if (label.includes("pro")) return 0;
-      if (label.includes("opus")) return 1;
-      if (label.includes("sonnet")) return 2;
-      if (label.includes("mini")) return 3;
-      if (label.includes("nano")) return 4;
-      return 5;
-    };
-
-    const tierDelta = tierRank(left) - tierRank(right);
-    if (tierDelta !== 0) return tierDelta;
 
     const versionDelta = versionWeight(right.label) - versionWeight(left.label);
     if (versionDelta !== 0) return versionDelta;

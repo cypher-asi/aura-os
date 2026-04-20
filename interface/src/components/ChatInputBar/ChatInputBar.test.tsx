@@ -36,9 +36,7 @@ vi.mock("./useFileAttachments", () => ({
 import { ChatInputBar } from "../ChatInputBar";
 import type { AttachmentItem } from "../ChatInputBar";
 
-function makeProps(
-  overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {},
-) {
+function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) {
   return {
     input: "",
     onInputChange: vi.fn(),
@@ -60,9 +58,7 @@ beforeEach(() => {
 describe("ChatInputBar", () => {
   it("renders the textarea with placeholder", () => {
     render(<ChatInputBar {...makeProps()} />);
-    expect(
-      screen.getByPlaceholderText("What do you want to create?"),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("What do you want to create?")).toBeInTheDocument();
   });
 
   it("renders the current input value", () => {
@@ -75,10 +71,7 @@ describe("ChatInputBar", () => {
     const onInputChange = vi.fn();
     render(<ChatInputBar {...makeProps({ onInputChange })} />);
 
-    await user.type(
-      screen.getByPlaceholderText("What do you want to create?"),
-      "H",
-    );
+    await user.type(screen.getByPlaceholderText("What do you want to create?"), "H");
     expect(onInputChange).toHaveBeenCalled();
   });
 
@@ -90,12 +83,7 @@ describe("ChatInputBar", () => {
     const textarea = screen.getByPlaceholderText("What do you want to create?");
     await user.click(textarea);
     await user.keyboard("{Enter}");
-    expect(onSend).toHaveBeenCalledWith(
-      "Test message",
-      undefined,
-      undefined,
-      undefined,
-    );
+    expect(onSend).toHaveBeenCalledWith("Test message", undefined, undefined, undefined);
   });
 
   it("does not call onSend on Shift+Enter", async () => {
@@ -125,21 +113,14 @@ describe("ChatInputBar", () => {
     render(<ChatInputBar {...makeProps({ input: "click test", onSend })} />);
 
     await user.click(screen.getByRole("button", { name: "Send" }));
-    expect(onSend).toHaveBeenCalledWith(
-      "click test",
-      undefined,
-      undefined,
-      undefined,
-    );
+    expect(onSend).toHaveBeenCalledWith("click test", undefined, undefined, undefined);
   });
 
   it("shows stop button when streaming", () => {
     mockIsStreaming = true;
     render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Send" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
   });
 
   it("calls onStop when stop button is clicked", async () => {
@@ -153,48 +134,27 @@ describe("ChatInputBar", () => {
   });
 
   it("shows default model label when selectedModel set in store", () => {
-    mockSelectedModel = "claude-opus-4-6";
+    mockSelectedModel = "aura-claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByText("Opus 4.6")).toBeInTheDocument();
   });
 
   it("shows selected model label", () => {
-    mockSelectedModel = "claude-sonnet-4-6";
+    mockSelectedModel = "aura-claude-sonnet-4-6";
     render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByText("Sonnet 4.6")).toBeInTheDocument();
   });
 
   it("opens model dropdown on click and calls setSelectedModel", async () => {
     const user = userEvent.setup();
-    mockSelectedModel = "claude-opus-4-6";
+    mockSelectedModel = "aura-claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);
 
     await user.click(screen.getByText("Opus 4.6"));
-    expect(screen.getByText("Opus 4.7")).toBeInTheDocument();
-    expect(screen.getByText("GPT-5.4")).toBeInTheDocument();
-    expect(screen.getByText("Show all models")).toBeInTheDocument();
-    expect(screen.queryByText("GPT-OSS 120B")).not.toBeInTheDocument();
+    expect(screen.getByText("Kimi K2.6")).toBeInTheDocument();
 
     await user.click(screen.getByText("Sonnet 4.6"));
-    expect(mockSetSelectedModel).toHaveBeenCalledWith(
-      "test-stream",
-      "aura-claude-sonnet-4-6",
-      undefined,
-    );
-  });
-
-  it("shows all models grouped by provider after expanding", async () => {
-    const user = userEvent.setup();
-    mockSelectedModel = "aura-gpt-5-4";
-    render(<ChatInputBar {...makeProps()} />);
-
-    await user.click(screen.getByText("GPT-5.4"));
-    await user.click(screen.getByText("Show all models"));
-
-    expect(screen.getByText("OpenAI")).toBeInTheDocument();
-    expect(screen.getByText("Anthropic")).toBeInTheDocument();
-    expect(screen.getByText("Open source")).toBeInTheDocument();
-    expect(screen.getByText("GPT-OSS 120B")).toBeInTheDocument();
+    expect(mockSetSelectedModel).toHaveBeenCalledWith("test-stream", "aura-claude-sonnet-4-6", undefined);
   });
 
   it("shows a fixed codex model without opening a dropdown", async () => {
@@ -203,7 +163,7 @@ describe("ChatInputBar", () => {
     render(<ChatInputBar {...makeProps({ adapterType: "codex" })} />);
 
     await user.click(screen.getByText("Codex"));
-    expect(screen.queryByText("GPT-OSS 120B")).not.toBeInTheDocument();
+    expect(screen.queryByText("Kimi K2.6")).not.toBeInTheDocument();
   });
 
   it("renders attachment previews", () => {
@@ -253,24 +213,19 @@ describe("ChatInputBar", () => {
       name: "test.png",
       attachmentType: "image",
     };
-    render(
-      <ChatInputBar {...makeProps({ input: "", attachments: [attachment] })} />,
-    );
+    render(<ChatInputBar {...makeProps({ input: "", attachments: [attachment] })} />);
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
   });
 
   it("preserves mixed text and image pastes for the browser to handle", () => {
-    const textarea = render(
-      <ChatInputBar {...makeProps()} />,
-    ).getByPlaceholderText("What do you want to create?");
+    const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
     const event = createEvent.paste(textarea, {
       clipboardData: {
         items: [
           {
             kind: "file",
             type: "image/png",
-            getAsFile: () =>
-              new File(["img"], "pasted.png", { type: "image/png" }),
+            getAsFile: () => new File(["img"], "pasted.png", { type: "image/png" }),
           },
           {
             kind: "string",
@@ -313,9 +268,7 @@ describe("ChatInputBar", () => {
     });
 
     try {
-      const textarea = render(
-        <ChatInputBar {...makeProps()} />,
-      ).getByPlaceholderText("What do you want to create?");
+      const textarea = render(<ChatInputBar {...makeProps()} />).getByPlaceholderText("What do you want to create?");
       const event = createEvent.paste(textarea, {
         clipboardData: {
           items: [
