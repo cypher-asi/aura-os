@@ -129,7 +129,23 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
     is_zero_pro: true,
     created_at: nowIso(),
     validated_at: nowIso(),
+    access_token: "eval-jwt-token",
   };
+
+  // Seed the authenticated session into localStorage before any app script
+  // runs. `src/lib/auth-token.ts` reads `aura-jwt`/`aura-session` synchronously
+  // at module import to decide between `LoginView` and the authenticated
+  // shell; without this seed the test flow bounces through `/login` and the
+  // default-app redirect (`/agents`), landing on the wrong UI.
+  await page.addInitScript((seedSession) => {
+    try {
+      window.localStorage.setItem("aura-jwt", seedSession.access_token);
+      window.localStorage.setItem("aura-session", JSON.stringify(seedSession));
+      window.localStorage.setItem("aura-last-app", "projects");
+    } catch {
+      /* no-op: localStorage may be unavailable in restricted contexts */
+    }
+  }, session);
 
   const mockProfile = {
     id: "profile-1",
