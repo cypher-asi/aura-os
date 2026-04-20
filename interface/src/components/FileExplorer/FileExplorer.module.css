@@ -31,6 +31,46 @@
   width: 100%;
 }
 
+.pathHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-secondary, transparent);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  min-height: 26px;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.pathCrumbs {
+  direction: ltr;
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pathCrumb {
+  color: var(--color-text-muted);
+}
+
+.pathCrumbLeaf {
+  color: var(--color-text-default);
+  font-weight: 500;
+}
+
+.pathSeparator {
+  color: var(--color-text-subtle, rgba(255, 255, 255, 0.25));
+  margin: 0 3px;
+}
+
 .refreshBar {
   display: flex;
   justify-content: flex-end;

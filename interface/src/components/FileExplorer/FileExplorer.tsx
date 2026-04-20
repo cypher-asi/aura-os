@@ -2,6 +2,7 @@ import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
 import { Folder, FolderOpen } from "lucide-react";
 import { useFileExplorerState } from "./useFileExplorerState";
 import { MobileFileList } from "./MobileFileList";
+import { FileExplorerHeader } from "./FileExplorerHeader";
 import styles from "./FileExplorer.module.css";
 
 interface FileExplorerProps {
@@ -68,18 +69,22 @@ export function FileExplorer({
 
   if (s.isMobileLayout) {
     return (
-      <MobileFileList
-        nodes={s.filteredData}
-        features={s.features}
-        isRemote={s.isRemote}
-        onFileSelect={onFileSelect}
-        rootPath={rootPath}
-      />
+      <>
+        {rootPath && <FileExplorerHeader rootPath={rootPath} />}
+        <MobileFileList
+          nodes={s.filteredData}
+          features={s.features}
+          isRemote={s.isRemote}
+          onFileSelect={onFileSelect}
+          rootPath={rootPath}
+        />
+      </>
     );
   }
 
   return (
     <div className={styles.explorerContainer}>
+      {rootPath && <FileExplorerHeader rootPath={rootPath} />}
       <Explorer
         data={s.filteredData}
         expandOnSelect

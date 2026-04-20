@@ -81,6 +81,35 @@ export function useFileExplorerState({
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [triggerRefresh]);
 
+  // Keep the files list feeling live without a dedicated backend watcher:
+  // while the tab/window is visible and a workspace is wired up, re-fetch
+  // the directory listing every 3s. The backend call is a cheap listing
+  // and debounceRef already coalesces overlapping triggers.
+  useEffect(() => {
+    if (!rootPath) return;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (intervalId != null) return;
+      intervalId = setInterval(triggerRefresh, 3000);
+    };
+    const stop = () => {
+      if (intervalId != null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") start();
+      else stop();
+    };
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      stop();
+    };
+  }, [rootPath, triggerRefresh]);
+
   useEffect(() => {
     if (!rootPath) return;
 
@@ -212,6 +241,7 @@ export function useFileExplorerState({
     filteredData,
     defaultExpandedIds,
     handleSelect,
+    rootPath,
   };
 }
 
