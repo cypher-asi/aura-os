@@ -31,7 +31,10 @@ import {
   backfillToolCallInput,
   isTaskBackfillTool,
 } from "./optimistic-artifacts";
-import { useContextUsageStore } from "../../stores/context-usage-store";
+import {
+  useContextUsageStore,
+  approxTokensFromText,
+} from "../../stores/context-usage-store";
 
 export interface DispatchDeps {
   projectId: string;
@@ -93,12 +96,21 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
   const onEvent = (event: AuraEvent) => {
     switch (event.type) {
       case EventType.Delta:
-      case EventType.TextDelta:
-        handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), (event.content as { text: string }).text);
+      case EventType.TextDelta: {
+        const text = (event.content as { text: string }).text;
+        handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), text);
+        useContextUsageStore
+          .getState()
+          .bumpEstimatedTokens(coreKey, approxTokensFromText(text));
         break;
+      }
       case EventType.ThinkingDelta: {
         const tc = event.content as { text?: string; thinking?: string };
-        handleThinkingDelta(refs, setters, tc.text ?? tc.thinking ?? "");
+        const text = tc.text ?? tc.thinking ?? "";
+        handleThinkingDelta(refs, setters, text);
+        useContextUsageStore
+          .getState()
+          .bumpEstimatedTokens(coreKey, approxTokensFromText(text));
         break;
       }
       case EventType.Progress:
@@ -144,6 +156,14 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.ToolResult: {
         const c = event.content as { id: string; name: string; result: string; is_error: boolean };
         coreHandleToolResult(refs, setters, c);
+        // Tool results count against the context window; approximate
+        // from the result body so the Context pill moves immediately
+        // rather than only after the next AssistantMessageEnd.
+        if (typeof c.result === "string" && c.result.length > 0) {
+          useContextUsageStore
+            .getState()
+            .bumpEstimatedTokens(coreKey, approxTokensFromText(c.result));
+        }
         void bridgeLoopToolResult(c.name, c.is_error, projectId, agentInstanceId, selectedModel);
         if (c.name === "create_spec") {
           if (c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
