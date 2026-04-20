@@ -310,6 +310,28 @@ pub struct CreditCache {
 }
 pub type CreditCacheRef = Arc<Mutex<HashMap<String, CreditCache>>>;
 
+/// Cached result of `find_matching_project_agents` — the list of
+/// project-agent bindings an org-level agent has across the caller's
+/// orgs. Populating this avoids re-running the orgs → projects →
+/// project_agents fan-out on every chat open or turn.
+///
+/// Bindings change only on explicit agent create / project-agent
+/// create / delete flows, so a short TTL is enough and we don't wire
+/// up invalidation paths: repeated reads within the TTL window
+/// (e.g. the chat view's initial history fetch + sidebar preview
+/// prefetches) all hit this cache.
+#[derive(Clone)]
+pub struct CachedAgentDiscovery {
+    pub project_agents: Vec<aura_os_storage::StorageProjectAgent>,
+    pub cached_at: Instant,
+}
+
+/// TTL for [`CachedAgentDiscovery`]. Kept short so a newly created
+/// binding surfaces without requiring explicit invalidation.
+pub const AGENT_DISCOVERY_TTL: std::time::Duration = std::time::Duration::from_secs(30);
+
+pub type AgentDiscoveryCache = Arc<DashMap<String, CachedAgentDiscovery>>;
+
 #[derive(Clone)]
 pub struct AppState {
     pub data_dir: PathBuf,
@@ -364,6 +386,12 @@ pub struct AppState {
     pub orbit_client: Option<Arc<aura_os_network::OrbitClient>>,
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
+    /// Per-(JWT,agent_id) cache of matched project-agent bindings.
+    /// Short-TTL wrapper around `find_matching_project_agents` that
+    /// eliminates the orgs/projects/project_agents fan-out on repeat
+    /// chat opens and sidebar preview prefetches. See
+    /// [`CachedAgentDiscovery`] for details.
+    pub agent_discovery_cache: AgentDiscoveryCache,
     pub agent_runtime: Arc<AgentRuntimeService>,
     /// Session-open permissions cache consulted by the cross-agent tool
     /// dispatcher. Populated in `chat.rs` when a harness session is

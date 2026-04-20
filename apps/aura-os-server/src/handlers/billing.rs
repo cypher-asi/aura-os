@@ -347,6 +347,7 @@ mod tests {
                 task_output_cache: Arc::new(Mutex::new(HashMap::new())),
                 orbit_client: None,
                 validation_cache: Arc::new(dashmap::DashMap::new()),
+                agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
                 agent_runtime,
                 permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
             },

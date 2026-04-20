@@ -489,6 +489,7 @@ mod tests {
             task_output_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             orbit_client: None,
             validation_cache: cache,
+            agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
             agent_runtime,
             permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
         }

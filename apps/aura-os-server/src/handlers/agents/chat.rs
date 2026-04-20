@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Instant;
 
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, HeaderName, HeaderValue, StatusCode};
@@ -106,7 +107,9 @@ use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
-use crate::state::{AppState, AuthJwt, ChatSession};
+use crate::state::{
+    AppState, AuthJwt, CachedAgentDiscovery, ChatSession, AGENT_DISCOVERY_TTL,
+};
 
 use super::conversions::events_to_session_history;
 use super::runtime::{
@@ -985,6 +988,10 @@ pub(crate) async fn setup_agent_chat_persistence(
                 );
                 super::home_project::ensure_agent_home_project_and_binding(state, jwt, &agent)
                     .await;
+                // Bust the discovery cache so the re-read below sees
+                // the just-created binding rather than the empty
+                // snapshot the first call populated.
+                invalidate_agent_discovery_cache(state, jwt, &agent_id.to_string());
                 matching =
                     find_matching_project_agents(state, &storage, jwt, &agent_id.to_string())
                         .await;
@@ -1500,12 +1507,52 @@ pub fn session_events_to_agent_history(
     messages
 }
 
+/// Build the lookup key for [`AppState::agent_discovery_cache`].
+///
+/// The JWT is part of the key so cached bindings never leak across
+/// users. JWTs are opaque to us — we just treat the whole string as an
+/// isolation token.
+fn agent_discovery_cache_key(jwt: &str, agent_id_str: &str) -> String {
+    format!("{jwt}::{agent_id_str}")
+}
+
+/// Invalidate any cached [`find_matching_project_agents`] result for
+/// this `(jwt, agent_id)`. Callers that mutate bindings (e.g. the
+/// lazy Home-project auto-bind path) should invoke this so the next
+/// read sees the fresh state without waiting for TTL expiry.
+pub(super) fn invalidate_agent_discovery_cache(state: &AppState, jwt: &str, agent_id_str: &str) {
+    state
+        .agent_discovery_cache
+        .remove(&agent_discovery_cache_key(jwt, agent_id_str));
+}
+
 pub(super) async fn find_matching_project_agents(
     state: &AppState,
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
     agent_id_str: &str,
 ) -> Vec<aura_os_storage::StorageProjectAgent> {
+    let cache_key = agent_discovery_cache_key(jwt, agent_id_str);
+
+    // Short-TTL cache: the orgs → projects → project_agents fan-out
+    // underneath this function is the dominant fixed cost on every
+    // chat open and every chat turn. Bindings change only on explicit
+    // create/delete paths, so returning a ≤30s stale result here is
+    // safe and covers the cold-boot burst (active chat + sidebar
+    // preview prefetches) with a single underlying walk.
+    if let Some(entry) = state.agent_discovery_cache.get(&cache_key) {
+        if entry.cached_at.elapsed() < AGENT_DISCOVERY_TTL {
+            let matched = entry.project_agents.clone();
+            info!(
+                matched = matched.len(),
+                %agent_id_str,
+                age_ms = entry.cached_at.elapsed().as_millis() as u64,
+                "agent matching: discovery cache hit"
+            );
+            return matched;
+        }
+    }
+
     let all_projects = match projects::list_all_projects_from_network(state, jwt).await {
         Ok(p) => {
             info!(count = p.len(), %agent_id_str, "agent matching: projects discovered from network");
@@ -1564,6 +1611,15 @@ pub(super) async fn find_matching_project_agents(
         .collect();
 
     info!(matched = matched.len(), %agent_id_str, "agent matching: total project agents matched");
+
+    state.agent_discovery_cache.insert(
+        cache_key,
+        CachedAgentDiscovery {
+            project_agents: matched.clone(),
+            cached_at: Instant::now(),
+        },
+    );
+
     matched
 }
 
@@ -2593,7 +2649,16 @@ pub(crate) async fn send_agent_event_stream(
         )?,
         installed_tools,
         installed_integrations,
-        agent_permissions: (&agent.permissions).into(),
+        // Use the same normalized bundle that `installed_tools` was
+        // built from so the harness sees a single consistent view of
+        // the agent's permissions. The raw `agent.permissions` bundle
+        // can legitimately diverge after `normalized_for_identity`
+        // promotes a legacy CEO record to the canonical preset — if
+        // we ship tools via `normalized_perms` but declare
+        // `agent_permissions` from the unnormalized source, the
+        // harness dispatcher's capability checks disagree with the
+        // surfaced toolset.
+        agent_permissions: (&normalized_perms).into(),
         intent_classifier: agent.intent_classifier.clone(),
         ..Default::default()
     };
