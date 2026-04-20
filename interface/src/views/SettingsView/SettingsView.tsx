@@ -1,5 +1,6 @@
 import { Page, Panel, Text } from "@cypher-asi/zui";
 import { formatBuildTime, getBuildInfo } from "../../lib/build-info";
+import { SettingsUpdateControl } from "./SettingsUpdateControl";
 import styles from "./SettingsView.module.css";
 
 export function SettingsView() {
@@ -31,6 +32,7 @@ export function SettingsView() {
             <Text as="span" variant="muted" size="sm" data-testid="settings-channel">
               ({channelLabel})
             </Text>
+            <SettingsUpdateControl />
           </dd>
           <dt>
             <Text as="span" variant="muted" size="sm">
