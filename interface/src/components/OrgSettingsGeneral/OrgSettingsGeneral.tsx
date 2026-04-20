@@ -62,15 +62,6 @@ export function OrgSettingsGeneral({ teamName, onTeamNameChange, teamSaving, tea
         </div>
         <div className={styles.settingsRow}>
           <div className={styles.rowInfo}>
-            <span className={styles.rowLabel}>Updates</span>
-            <span className={styles.rowDescription}>Check for and install new versions of Aura</span>
-          </div>
-          <div className={styles.rowControl}>
-            <UpdateControl />
-          </div>
-        </div>
-        <div className={styles.settingsRow}>
-          <div className={styles.rowInfo}>
             <span className={styles.rowLabel}>Commit</span>
             <span className={styles.rowDescription}>Source revision this build was cut from</span>
           </div>
@@ -89,6 +80,15 @@ export function OrgSettingsGeneral({ teamName, onTeamNameChange, teamSaving, tea
             <Text as="span" size="sm" data-testid="settings-build-time">
               {formatBuildTime(build.buildTime)}
             </Text>
+          </div>
+        </div>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>Updates</span>
+            <span className={styles.rowDescription}>Check for and install new versions of Aura</span>
+          </div>
+          <div className={styles.rowControl}>
+            <UpdateControl />
           </div>
         </div>
       </div>
