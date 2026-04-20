@@ -56,6 +56,20 @@ fn create_skill_name_valid(name: &str) -> bool {
 /// ~/.aura/skills/ on disk).
 pub(crate) const USER_CREATED_SOURCE_MARKER: &str = "user-created";
 
+/// Returns `true` iff `~/.aura/skills/<name>/SKILL.md` exists. Used by the
+/// catalog proxy in `list_skills` to hide skills the user has deleted even
+/// when the harness hasn't rescanned its catalog yet.
+pub(crate) fn skill_exists_on_disk(name: &str) -> bool {
+    let Some(home) = dirs::home_dir() else {
+        return false;
+    };
+    home.join(".aura")
+        .join("skills")
+        .join(name)
+        .join("SKILL.md")
+        .exists()
+}
+
 fn build_skill_frontmatter(payload: &CreateSkillBody) -> String {
     let mut frontmatter = format!(
         "---\ndescription: \"{}\"\n",
@@ -464,11 +478,16 @@ pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusC
 /// `~/.aura/skills/<name>/` from disk and fires a best-effort
 /// `DELETE api/skills/<name>` at the harness catalog.
 ///
-/// Safety: the on-disk SKILL.md must carry the `source: "user-created"`
-/// marker. This prevents this endpoint from being used to delete
-/// shop-installed skills that happen to share the same on-disk layout.
-/// Callers who want to remove a shop-installed skill should uninstall
-/// it from every agent and let the harness rescan.
+/// Preconditions:
+/// - The on-disk SKILL.md must carry the `source: "user-created"`
+///   marker. This prevents this endpoint from being used to delete
+///   shop-installed skills that happen to share the same on-disk layout.
+/// - The skill must NOT be installed on any local agent. Deleting a
+///   skill that is still installed elsewhere would orphan installation
+///   records on other agents (the previous best-effort harness rescan
+///   was unreliable), so this endpoint refuses with 409 and returns
+///   the offending agents so the UI can ask the user to uninstall
+///   them first.
 pub(crate) async fn delete_my_skill(
     State(state): State<AppState>,
     Path(name): Path<String>,
@@ -481,7 +500,7 @@ pub(crate) async fn delete_my_skill(
     let skill_dir = home.join(".aura").join("skills").join(&name);
     let skill_path = skill_dir.join("SKILL.md");
 
-    // Existence + ownership check before removing anything.
+    // Existence + ownership check before touching anything else.
     let content =
         std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
     let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
@@ -489,6 +508,77 @@ pub(crate) async fn delete_my_skill(
         // Refuse to nuke a non-user-created skill file through this
         // endpoint even if the filename matches.
         return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Precondition: make sure no local agent still has this skill
+    // installed. We query the harness per-agent because it owns the
+    // per-agent installation records — our local `Agent.skills` field
+    // is a hint, not the source of truth.
+    let agents = state
+        .agent_service
+        .list_agents()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let checks = agents.iter().map(|agent| {
+        let harness_http = state.harness_http.clone();
+        let agent_id = agent.agent_id.to_string();
+        async move {
+            let value = harness_http
+                .fetch_json(
+                    Method::GET,
+                    &format!("api/agents/{agent_id}/skills"),
+                )
+                .await;
+            (agent_id, value)
+        }
+    });
+    let per_agent = futures_util::future::join_all(checks).await;
+    let mut blocking = Vec::new();
+    for (agent_id, value) in per_agent {
+        let Some(value) = value else { continue };
+        let list = value
+            .as_array()
+            .cloned()
+            .or_else(|| {
+                value
+                    .get("skills")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+            })
+            .or_else(|| {
+                value
+                    .get("installations")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+            })
+            .unwrap_or_default();
+        let has_skill = list
+            .iter()
+            .any(|entry| entry.get("skill_name").and_then(|v| v.as_str()) == Some(&name));
+        if has_skill {
+            let agent_name = agents
+                .iter()
+                .find(|a| a.agent_id.to_string() == agent_id)
+                .map(|a| a.name.clone())
+                .unwrap_or_default();
+            blocking.push(serde_json::json!({
+                "agent_id": agent_id,
+                "name": agent_name,
+            }));
+        }
+    }
+
+    if !blocking.is_empty() {
+        let body = serde_json::json!({
+            "error": "installed_on_agents",
+            "message": "Uninstall this skill from all agents before deleting it.",
+            "agents": blocking,
+        });
+        return Ok((
+            StatusCode::CONFLICT,
+            [(header::CONTENT_TYPE, "application/json")],
+            body.to_string(),
+        )
+            .into_response());
     }
 
     // Remove the whole skill directory so supporting files (if any)
@@ -500,10 +590,10 @@ pub(crate) async fn delete_my_skill(
     }
 
     // Best-effort harness catalog deregister. The local harness may or
-    // may not support DELETE on api/skills/{name}; either way we don't
-    // want the on-disk delete to fail just because the in-memory
-    // catalog doesn't update, and the harness will reconcile on its
-    // next rescan regardless.
+    // may not support DELETE on api/skills/{name}; the catalog proxy in
+    // `list_skills` now also filters out entries whose on-disk file is
+    // gone, so stale harness state no longer leaks into the UI's
+    // "Available" section.
     let _ = state
         .harness_http
         .proxy_json(Method::DELETE, &format!("api/skills/{name}"), None, None)

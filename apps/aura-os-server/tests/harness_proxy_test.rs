@@ -730,6 +730,297 @@ async fn delete_my_skill_removes_user_created_and_refuses_shop_skill() {
     );
 }
 
+/// Mock harness that reports the current installation state for each
+/// agent_id from a shared map. Used by the `delete_my_skill_*` cascade
+/// tests below to exercise the server-side precondition that blocks a
+/// delete while the skill is still installed anywhere.
+#[cfg(unix)]
+async fn start_installation_tracking_mock_harness(
+    installs: Arc<Mutex<std::collections::HashMap<String, Vec<String>>>>,
+) -> String {
+    let installs_get = installs.clone();
+    let agent_skills_get = move |axum::extract::Path(agent_id): axum::extract::Path<String>| {
+        let installs = installs_get.clone();
+        async move {
+            let skills = installs
+                .lock()
+                .unwrap()
+                .get(&agent_id)
+                .cloned()
+                .unwrap_or_default();
+            let entries: Vec<serde_json::Value> = skills
+                .into_iter()
+                .map(|skill_name| {
+                    json!({
+                        "agent_id": agent_id,
+                        "skill_name": skill_name,
+                        "source_url": null,
+                        "installed_at": "2025-01-01T00:00:00Z",
+                        "version": null,
+                        "approved_paths": [],
+                        "approved_commands": [],
+                    })
+                })
+                .collect();
+            axum::Json(entries).into_response()
+        }
+    };
+
+    let noop_post = |_req: Request<Body>| async move {
+        axum::Json(json!({ "ok": true })).into_response()
+    };
+    let noop_delete = |_req: Request<Body>| async move {
+        axum::Json(json!({ "ok": true })).into_response()
+    };
+
+    let mock_app = Router::new()
+        .route("/api/skills", post(noop_post).delete(noop_delete))
+        .route("/api/skills/:name", delete(noop_delete))
+        .route(
+            "/api/agents/:agent_id/skills",
+            get(agent_skills_get).post(noop_post),
+        )
+        .route("/api/agents/:agent_id/skills/:name", delete(noop_delete));
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let url = format!("http://{addr}");
+
+    tokio::spawn(async move {
+        axum::serve(listener, mock_app).await.ok();
+    });
+
+    url
+}
+
+/// Helper: persist a minimal `Agent` into the local shadow store used by
+/// `state.agent_service.list_agents()`. The cascade precondition in
+/// `delete_my_skill` enumerates agents from that store.
+#[cfg(unix)]
+fn persist_test_agent(state: &aura_os_server::AppState, name: &str) -> aura_os_core::AgentId {
+    use aura_os_core::*;
+    let agent_id = AgentId::new();
+    let agent = Agent {
+        agent_id,
+        user_id: "u1".into(),
+        org_id: None,
+        name: name.into(),
+        role: "dev".into(),
+        personality: String::new(),
+        system_prompt: String::new(),
+        skills: vec![],
+        icon: None,
+        machine_type: "local".into(),
+        adapter_type: "aura_harness".into(),
+        environment: "local_host".into(),
+        auth_source: "local".into(),
+        integration_id: None,
+        default_model: None,
+        vm_id: None,
+        network_agent_id: None,
+        profile_id: None,
+        tags: vec![],
+        is_pinned: false,
+        listing_status: Default::default(),
+        expertise: vec![],
+        jobs: 0,
+        revenue_usd: 0.0,
+        reputation: 0.0,
+        local_workspace_path: None,
+        permissions: AgentPermissions::empty(),
+        intent_classifier: None,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    };
+    state.agent_service.save_agent_shadow(&agent).unwrap();
+    agent_id
+}
+
+/// Regression for a bug where deleting a user-authored skill in one agent
+/// left every *other* agent's installation record pointing at a SKILL.md
+/// file that no longer existed. Now the server refuses the delete with
+/// 409 and tells the caller which agents are still holding on to it.
+#[cfg(unix)]
+#[tokio::test]
+async fn delete_my_skill_blocked_when_installed_on_any_agent() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+
+    let installs: Arc<Mutex<std::collections::HashMap<String, Vec<String>>>> =
+        Arc::new(Mutex::new(std::collections::HashMap::new()));
+    let mock_url = start_installation_tracking_mock_harness(installs.clone()).await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let (app, state, _db) = build_test_app_with_mocks().await;
+
+    // Two agents exist locally; only CEO has the skill installed.
+    let ceo_id = persist_test_agent(&state, "CEO Agent");
+    let _other_id = persist_test_agent(&state, "Other Agent");
+
+    // Author a skill on disk with the user-created marker.
+    let req = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "cascade-skill",
+            "description": "Installed elsewhere",
+            "body": "# Body",
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    installs
+        .lock()
+        .unwrap()
+        .insert(ceo_id.to_string(), vec!["cascade-skill".to_string()]);
+
+    // Delete must be blocked with 409 and name the blocker.
+    let req = json_request("DELETE", "/api/harness/skills/mine/cascade-skill", None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    let body = response_json(resp).await;
+    assert_eq!(body["error"], "installed_on_agents");
+    let blockers = body["agents"]
+        .as_array()
+        .expect("agents should be an array");
+    assert_eq!(blockers.len(), 1);
+    assert_eq!(blockers[0]["agent_id"], ceo_id.to_string());
+    assert_eq!(blockers[0]["name"], "CEO Agent");
+
+    // The on-disk SKILL.md must still be there since delete was rejected.
+    let skill_path = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("cascade-skill")
+        .join("SKILL.md");
+    assert!(
+        skill_path.exists(),
+        "blocked delete must NOT remove the skill file"
+    );
+
+    // Once the blocking agent uninstalls, the delete must succeed.
+    installs.lock().unwrap().insert(ceo_id.to_string(), vec![]);
+
+    let req = json_request("DELETE", "/api/harness/skills/mine/cascade-skill", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(
+        !skill_path.exists(),
+        "happy-path delete must remove the skill file"
+    );
+}
+
+/// Sanity check: with no local agents having the skill installed, the
+/// existing happy path still works (and the enumeration is tolerant of
+/// a harness that 404s / is offline for per-agent fetches).
+#[cfg(unix)]
+#[tokio::test]
+async fn delete_my_skill_proceeds_when_not_installed_anywhere() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+
+    let installs: Arc<Mutex<std::collections::HashMap<String, Vec<String>>>> =
+        Arc::new(Mutex::new(std::collections::HashMap::new()));
+    let mock_url = start_installation_tracking_mock_harness(installs.clone()).await;
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let (app, state, _db) = build_test_app_with_mocks().await;
+    let _a = persist_test_agent(&state, "Solo Agent");
+
+    let req = json_request(
+        "POST",
+        "/api/harness/skills",
+        Some(json!({
+            "name": "unblocked-skill",
+            "description": "Nobody has it",
+            "body": "# Body",
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let skill_path = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("unblocked-skill")
+        .join("SKILL.md");
+
+    let req = json_request("DELETE", "/api/harness/skills/mine/unblocked-skill", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(!skill_path.exists());
+}
+
+/// Regression for the second half of the reported bug: the "Available"
+/// list kept rendering a skill that had just been deleted, because the
+/// harness catalog (in-memory) hadn't rescanned yet. The proxy now
+/// drops entries whose on-disk SKILL.md is gone, making the filesystem
+/// the source of truth for the catalog the UI sees.
+#[cfg(unix)]
+#[tokio::test]
+async fn list_skills_filters_entries_missing_on_disk() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+
+    let home_dir = tempfile::tempdir().unwrap();
+    unsafe {
+        std::env::set_var("HOME", home_dir.path());
+    }
+
+    let skills_root = home_dir.path().join(".aura").join("skills");
+    let kept_dir = skills_root.join("kept-skill");
+    std::fs::create_dir_all(&kept_dir).unwrap();
+    std::fs::write(
+        kept_dir.join("SKILL.md"),
+        "---\ndescription: \"still here\"\n---\n# body\n",
+    )
+    .unwrap();
+    // `ghost-skill` is intentionally NOT present on disk — the harness
+    // catalog may still return it if it hasn't rescanned.
+
+    let catalog_handler = || async {
+        axum::Json(json!([
+            { "name": "kept-skill", "description": "still here", "source": "user" },
+            { "name": "ghost-skill", "description": "already deleted", "source": "user" }
+        ]))
+        .into_response()
+    };
+    let mock_app = Router::new().route("/api/skills", get(catalog_handler));
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let mock_url = format!("http://{addr}");
+    tokio::spawn(async move {
+        axum::serve(listener, mock_app).await.ok();
+    });
+    unsafe {
+        std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
+    }
+
+    let (app, _, _db) = build_test_app_with_mocks().await;
+
+    let req = json_request("GET", "/api/harness/skills", None);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = response_json(resp).await;
+    let arr = body.as_array().expect("catalog should be an array");
+    assert_eq!(arr.len(), 1, "expected ghost-skill to be filtered, got {arr:?}");
+    assert_eq!(arr[0]["name"], "kept-skill");
+}
+
 #[tokio::test]
 async fn delete_my_skill_rejects_invalid_name() {
     let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();

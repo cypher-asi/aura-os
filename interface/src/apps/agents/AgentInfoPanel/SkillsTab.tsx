@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Text, Button, ButtonMore, Modal } from "@cypher-asi/zui";
 import { Zap, Loader2, Plus, Trash2, ChevronDown, ChevronRight, FilePlus2, Store } from "lucide-react";
 import { api } from "../../../api/client";
-import type { MySkillEntry } from "../../../api/harness-skills";
+import type { MySkillEntry, SkillInstalledAgentRef } from "../../../api/harness-skills";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
@@ -105,6 +105,10 @@ interface DeleteSkillConfirmModalProps {
   skillName: string;
   deleting: boolean;
   error: string | null;
+  /** Populated when the server rejects the delete because the skill is
+   *  still installed on one or more agents. Drives the inline "uninstall
+   *  from these agents first" hint so the user knows exactly what to do. */
+  blockingAgents: SkillInstalledAgentRef[];
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -114,9 +118,11 @@ function DeleteSkillConfirmModal({
   skillName,
   deleting,
   error,
+  blockingAgents,
   onClose,
   onConfirm,
 }: DeleteSkillConfirmModalProps) {
+  const blocked = blockingAgents.length > 0;
   return (
     <Modal
       isOpen={isOpen}
@@ -126,9 +132,13 @@ function DeleteSkillConfirmModal({
       footer={
         <div className={styles.deleteConfirmFooter}>
           <Button variant="ghost" onClick={onClose} disabled={deleting}>
-            Cancel
+            {blocked ? "Close" : "Cancel"}
           </Button>
-          <Button variant="danger" onClick={onConfirm} disabled={deleting}>
+          <Button
+            variant="danger"
+            onClick={onConfirm}
+            disabled={deleting || blocked}
+          >
             {deleting ? (
               <>
                 <Loader2 size={14} className={styles.spin} /> Deleting...
@@ -142,10 +152,23 @@ function DeleteSkillConfirmModal({
     >
       <Text size="sm">
         Delete the skill <strong>{skillName}</strong>? This permanently removes{" "}
-        <code>~/.aura/skills/{skillName}/</code> and cannot be undone. Any agent
-        that has this skill installed will lose it.
+        <code>~/.aura/skills/{skillName}/</code> and cannot be undone. Uninstall
+        this skill from every agent first — delete is blocked while any agent
+        still has it.
       </Text>
-      {error && (
+      {blocked && (
+        <div className={styles.deleteConfirmError} role="alert">
+          <Text size="xs" weight="medium">
+            Still installed on:
+          </Text>
+          <ul>
+            {blockingAgents.map((a) => (
+              <li key={a.agent_id}>{a.name || a.agent_id}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {!blocked && error && (
         <Text size="xs" className={styles.deleteConfirmError}>
           {error}
         </Text>
@@ -169,6 +192,10 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   // confirmation modal. `null` = modal closed.
   const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Populated from a 409 response body when the server refuses to delete
+  // because the skill is still installed elsewhere. The modal renders these
+  // inline so the user knows exactly which agents to clean up first.
+  const [blockingAgents, setBlockingAgents] = useState<SkillInstalledAgentRef[]>([]);
   const viewSkill = useAgentSidekickStore((s) => s.viewSkill);
   const installationByName = new Map(installations.map((i) => [i.skill_name, i]));
 
@@ -281,6 +308,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
 
   const requestDeleteMySkill = useCallback((name: string) => {
     setDeleteError(null);
+    setBlockingAgents([]);
     setPendingDeleteName(name);
   }, []);
 
@@ -290,6 +318,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     if (pendingDeleteName && actionLoading[pendingDeleteName]) return;
     setPendingDeleteName(null);
     setDeleteError(null);
+    setBlockingAgents([]);
   }, [pendingDeleteName, actionLoading]);
 
   const confirmDeleteMySkill = useCallback(async () => {
@@ -297,26 +326,18 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     if (!name) return;
 
     setDeleteError(null);
+    setBlockingAgents([]);
     setActionLoading((prev) => ({ ...prev, [name]: true }));
     try {
-      // Uninstall from the current agent first so its installation
-      // record doesn't outlive the underlying SKILL.md file and
-      // render as a ghost row on next fetch.
-      if (installedNameSet.has(name)) {
-        try {
-          await api.harnessSkills.uninstallAgentSkill(agentId, name);
-        } catch (err) {
-          console.error(`Failed to uninstall ${name} from agent before delete`, err);
-        }
-      }
+      // No pre-emptive uninstall here. The server is the source of truth for
+      // "still installed anywhere?" — hiding the real state by quietly
+      // uninstalling from the current agent first was exactly how the
+      // original cascade bug slipped through (other agents kept their
+      // installation records pointing at a SKILL.md that had been deleted).
       await api.harnessSkills.deleteMySkill(name);
 
-      // Optimistically drop the skill from all three local lists so
-      // the row vanishes in place instead of waiting for the refetch
-      // round-trip. Then reconcile silently with the server — if the
-      // harness catalog still lists it (in-memory staleness before
-      // the next rescan) we'll just quietly pick it back up in the
-      // Available section without flashing the whole sidekick.
+      // Optimistically drop the skill from all three local lists so the
+      // row vanishes in place instead of waiting for the refetch round-trip.
       setMySkills((prev) => prev.filter((s) => s.name !== name));
       setInstallations((prev) => prev.filter((i) => i.skill_name !== name));
       setCatalog((prev) => prev.filter((s) => s.name !== name));
@@ -325,15 +346,30 @@ export function SkillsTab({ agent }: SkillsTabProps) {
       void fetchData({ silent: true });
     } catch (err) {
       console.error(`Failed to delete skill ${name}`, err);
-      const msg =
-        (err as { body?: { error?: string }; message?: string })?.body?.error ??
-        (err as { message?: string })?.message ??
-        "Failed to delete skill. Please try again.";
-      setDeleteError(msg);
+      const body = (err as {
+        body?: {
+          error?: string;
+          message?: string;
+          agents?: SkillInstalledAgentRef[];
+        };
+      })?.body;
+      if (body?.error === "installed_on_agents" && Array.isArray(body.agents)) {
+        setBlockingAgents(body.agents);
+        // Keep the modal open; the inline blocker list replaces the
+        // generic error string in this case.
+        setDeleteError(null);
+      } else {
+        const msg =
+          body?.message ??
+          body?.error ??
+          (err as { message?: string })?.message ??
+          "Failed to delete skill. Please try again.";
+        setDeleteError(msg);
+      }
     } finally {
       setActionLoading((prev) => ({ ...prev, [name]: false }));
     }
-  }, [pendingDeleteName, agentId, installedNameSet, fetchData]);
+  }, [pendingDeleteName, fetchData]);
 
   return (
     <div className={styles.skillsListWrap}>
@@ -478,6 +514,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         skillName={pendingDeleteName ?? ""}
         deleting={pendingDeleteName ? !!actionLoading[pendingDeleteName] : false}
         error={deleteError}
+        blockingAgents={blockingAgents}
         onClose={closeDeleteConfirm}
         onConfirm={confirmDeleteMySkill}
       />

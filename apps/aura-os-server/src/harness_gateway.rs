@@ -79,4 +79,37 @@ impl HarnessHttpGateway {
             .send()
             .await;
     }
+
+    /// Fetch a JSON document from the harness for internal use.
+    ///
+    /// Unlike [`Self::proxy_json`] (which returns an `axum::Response` destined
+    /// for a client), this returns the parsed `serde_json::Value` so callers
+    /// can inspect the body as part of a larger server-side decision. Returns
+    /// `None` on any transport/status/parse failure — callers should treat
+    /// failures as "no data" (best-effort).
+    pub(crate) async fn fetch_json(
+        &self,
+        method: Method,
+        path: &str,
+    ) -> Option<serde_json::Value> {
+        let path = path.trim_start_matches('/');
+        let url = format!("{}/{path}", self.base_url);
+        let req = match method {
+            Method::GET => self.client.get(&url),
+            Method::POST => self.client.post(&url),
+            Method::PUT => self.client.put(&url),
+            Method::DELETE => self.client.delete(&url),
+            _ => return None,
+        };
+        let resp = req
+            .header("Content-Type", "application/json")
+            .send()
+            .await
+            .ok()?;
+        if !resp.status().is_success() {
+            return None;
+        }
+        let text = resp.text().await.ok()?;
+        serde_json::from_str(&text).ok()
+    }
 }
