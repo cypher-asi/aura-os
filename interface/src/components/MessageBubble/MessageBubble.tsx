@@ -34,6 +34,7 @@ function FileAttachmentBlock({ text }: { text: string }) {
           <span className={styles.fileAttachmentName}>{fileName}</span>
         </>
       }
+      className={styles.fileAttachmentBlock}
       contentClassName={styles.fileAttachmentContent}
     >
       <pre>
@@ -77,6 +78,25 @@ export const MessageBubble = memo(function MessageBubble({
     && !hasRenderableBlocks
     && !hasThinking
     && (hasToolCalls || hasTimeline);
+
+  // A user message is "widget-only" when every renderable block is either
+  // a file attachment (`[File: ...]`) or qualifies as a large-text doc.
+  // In that case we drop the grey chat-bubble chrome so the widget itself
+  // reads as the message, matching the app background.
+  const userBlocksAreAllWidgets = (() => {
+    if (message.role !== "user") return false;
+    if (hasContentBlocks && message.contentBlocks) {
+      const textBlocks = message.contentBlocks.filter((b) => b.type === "text");
+      if (textBlocks.length === 0) return false;
+      if (message.contentBlocks.some((b) => b.type !== "text")) return false;
+      return textBlocks.every((b) => {
+        const t = (b as { type: "text"; text: string }).text;
+        return FILE_PREFIX_RE.test(t) || isLargeText(t);
+      });
+    }
+    if (hasContent && isLargeText(message.content)) return true;
+    return false;
+  })();
 
   if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking && !hasArtifactRefs) return null;
 
@@ -163,14 +183,16 @@ export const MessageBubble = memo(function MessageBubble({
     <div
       className={`${styles.message} ${
         message.role === "user" ? styles.messageUser : styles.messageAssistant
-      }`}
+      } ${userBlocksAreAllWidgets ? styles.messageUserWidgetOnly : ""}`}
     >
       <div
         className={`${styles.bubble} ${
           message.role === "user"
             ? styles.bubbleUser
             : styles.bubbleAssistant
-        } ${isAssistantToolOnly ? styles.bubbleAssistantCompact : ""}`}
+        } ${isAssistantToolOnly ? styles.bubbleAssistantCompact : ""} ${
+          userBlocksAreAllWidgets ? styles.bubbleUserWidgetOnly : ""
+        }`}
       >
         {message.role === "user" ? (
           renderUserContent()

@@ -10,6 +10,16 @@
   margin-left: auto;
 }
 
+/* Widen a user message that contains only a document / long-text widget
+   so the widget can stretch to the column width instead of sitting in an
+   awkward right-aligned 85% column. */
+.messageUserWidgetOnly {
+  align-self: stretch;
+  margin-left: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
 .messageAssistant {
   align-self: stretch;
   width: 100%;
@@ -32,6 +42,19 @@
   display: flex;
   align-items: center;
   padding: var(--space-2) var(--space-3);
+}
+
+/* When the user message is only a document / long-text widget, drop the
+   grey chat-bubble chrome so the widget's own dark card reads as a
+   first-class element on the app surface. */
+.bubbleUserWidgetOnly {
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+  border-radius: 0;
+  display: block;
+  max-width: 100%;
+  width: 100%;
 }
 
 .userMessageBlocks {
@@ -60,6 +83,10 @@
 }
 
 /* File attachment block — content-specific styles (structure in ResponseBlock) */
+.fileAttachmentBlock {
+  background: var(--color-bg, #000);
+}
+
 .fileAttachmentIcon {
   flex-shrink: 0;
   opacity: 0.5;

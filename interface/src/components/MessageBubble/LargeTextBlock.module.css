@@ -4,6 +4,7 @@
   overflow: hidden;
   width: 100%;
   font-size: 12px;
+  background: var(--color-bg, #000);
 }
 
 .header {
@@ -126,7 +127,7 @@
   left: 0;
   right: 0;
   height: 48px;
-  background: linear-gradient(transparent, var(--color-bg-secondary, #1e1e1e));
+  background: linear-gradient(transparent, var(--color-bg, #000));
   pointer-events: none;
 }
 
