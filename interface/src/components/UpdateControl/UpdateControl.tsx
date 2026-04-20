@@ -37,7 +37,7 @@ export function UpdateControl() {
         as="div"
         variant="muted"
         size="sm"
-        className={styles.updateControl}
+        className={styles.updateUnsupported}
         data-testid="settings-update-unsupported"
       >
         Updates are delivered automatically by the server.

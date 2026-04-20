@@ -26,3 +26,10 @@
 .updateError {
   color: var(--color-danger, #d9534f);
 }
+
+.updateUnsupported {
+  text-align: right;
+  max-width: 200px;
+  margin-top: 0;
+  line-height: 1.4;
+}
