@@ -41,7 +41,20 @@ describe("chat-ui-store", () => {
     useChatUIStore.getState().init("stream-1");
     useChatUIStore.getState().setSelectedModel("stream-1", "claude-sonnet-4-6", "default");
     expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe("claude-sonnet-4-6");
-    expect(persistModel).toHaveBeenCalledWith("claude-sonnet-4-6", "default");
+    expect(persistModel).toHaveBeenCalledWith("claude-sonnet-4-6", "default", undefined);
+  });
+
+  it("setSelectedModel forwards agentId to persistModel", async () => {
+    const { persistModel } = await import("../constants/models");
+    useChatUIStore.getState().init("stream-1", "default", null, "agent-xyz");
+    useChatUIStore
+      .getState()
+      .setSelectedModel("stream-1", "claude-sonnet-4-6", "default", "agent-xyz");
+    expect(persistModel).toHaveBeenCalledWith(
+      "claude-sonnet-4-6",
+      "default",
+      "agent-xyz",
+    );
   });
 
   it("getSelectedModel returns null for unknown stream", () => {

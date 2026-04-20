@@ -150,9 +150,9 @@ export const ChatInputBar = memo(
     const selectedModel = chatUI.selectedModel;
     const onModelChange = useCallback(
       (model: string) => {
-        chatUI.setSelectedModel(streamKey, model, adapterType);
+        chatUI.setSelectedModel(streamKey, model, adapterType, agentId);
       },
-      [chatUI.setSelectedModel, streamKey, adapterType],
+      [chatUI.setSelectedModel, streamKey, adapterType, agentId],
     );
     const [isDragOver, setIsDragOver] = useState(false);
     const [modelMenuOpen, setModelMenuOpen] = useState(false);

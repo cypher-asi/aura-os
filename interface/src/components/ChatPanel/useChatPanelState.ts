@@ -60,8 +60,8 @@ export function useChatPanelState({
   const queue = useMessageQueue(streamKey);
 
   useEffect(() => {
-    chatUI.init(streamKey, adapterType, defaultModel);
-  }, [streamKey, adapterType, defaultModel, chatUI.init]);
+    chatUI.init(streamKey, adapterType, defaultModel, agentId);
+  }, [streamKey, adapterType, defaultModel, agentId, chatUI.init]);
 
   const resetKeyMountRef = useRef(true);
   useEffect(() => {
@@ -110,13 +110,14 @@ export function useChatPanelState({
   }, [isAutoFollowing, streamKey]);
 
   useEffect(() => {
-    chatUI.syncAvailableModels(streamKey, adapterType, defaultModel);
+    chatUI.syncAvailableModels(streamKey, adapterType, defaultModel, agentId);
   }, [
     adapterType,
     defaultModel,
     availableModels,
     chatUI.syncAvailableModels,
     streamKey,
+    agentId,
   ]);
 
   const handleRemoveAttachment = useCallback(

@@ -16,11 +16,26 @@ interface ChatUIState {
 }
 
 interface ChatUIActions {
-  init: (streamKey: string, adapterType?: string, defaultModel?: string | null) => void;
-  setSelectedModel: (streamKey: string, model: string, adapterType?: string) => void;
+  init: (
+    streamKey: string,
+    adapterType?: string,
+    defaultModel?: string | null,
+    agentId?: string,
+  ) => void;
+  setSelectedModel: (
+    streamKey: string,
+    model: string,
+    adapterType?: string,
+    agentId?: string,
+  ) => void;
   getSelectedModel: (streamKey: string) => string | null;
   setProjectId: (streamKey: string, id: string | null) => void;
-  syncAvailableModels: (streamKey: string, adapterType?: string, defaultModel?: string | null) => void;
+  syncAvailableModels: (
+    streamKey: string,
+    adapterType?: string,
+    defaultModel?: string | null,
+    agentId?: string,
+  ) => void;
 }
 
 type ChatUIStore = ChatUIState & ChatUIActions;
@@ -31,10 +46,10 @@ const getStream = (state: ChatUIState, key: string): StreamState =>
 export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
   streams: {},
 
-  init: (streamKey, adapterType, defaultModel) => {
+  init: (streamKey, adapterType, defaultModel, agentId) => {
     const existing = get().streams[streamKey];
     if (existing && existing.selectedModel !== null) return;
-    const model = loadPersistedModel(adapterType, defaultModel);
+    const model = loadPersistedModel(adapterType, defaultModel, agentId);
     set((s) => ({
       streams: {
         ...s.streams,
@@ -43,8 +58,8 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
     }));
   },
 
-  setSelectedModel: (streamKey, model, adapterType) => {
-    persistModel(model, adapterType);
+  setSelectedModel: (streamKey, model, adapterType, agentId) => {
+    persistModel(model, adapterType, agentId);
     set((s) => ({
       streams: {
         ...s.streams,
@@ -64,19 +79,23 @@ export const useChatUIStore = create<ChatUIStore>()((set, get) => ({
     }));
   },
 
-  syncAvailableModels: (streamKey, adapterType, defaultModel) => {
+  syncAvailableModels: (streamKey, adapterType, defaultModel, agentId) => {
     const models = availableModelsForAdapter(adapterType);
     set((s) => {
       const current = getStream(s, streamKey);
       if (current.selectedModel && models.some((m) => m.id === current.selectedModel)) {
         return s;
       }
+      // The current selection isn't valid for this adapter; prefer a
+      // per-agent persisted value over the adapter default so switching
+      // adapters and back doesn't wipe the agent's remembered model.
+      const persisted = loadPersistedModel(adapterType, defaultModel, agentId);
       return {
         streams: {
           ...s.streams,
           [streamKey]: {
             ...current,
-            selectedModel: defaultModelForAdapter(adapterType, defaultModel),
+            selectedModel: persisted || defaultModelForAdapter(adapterType, defaultModel),
           },
         },
       };

@@ -180,6 +180,7 @@ describe("ChatInputBar", () => {
       "test-stream",
       "aura-claude-sonnet-4-6",
       undefined,
+      undefined,
     );
   });
 

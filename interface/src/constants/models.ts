@@ -191,6 +191,10 @@ export function getModelMode(modelId: string): GenerationMode {
   return KNOWN_MODELS.find((m) => m.id === normalized)?.mode ?? "chat";
 }
 
+function agentStorageKey(agentId: string): string {
+  return `aura-selected-model:agent:${agentId}`;
+}
+
 function storageKey(adapterType?: string): string {
   return `aura-selected-model:${adapterType ?? "default"}`;
 }
@@ -228,12 +232,25 @@ export function defaultModelForAdapter(
 export function loadPersistedModel(
   adapterType?: string,
   explicitDefault?: string | null,
+  agentId?: string,
 ): string {
   try {
     const models = [
       ...availableModelsForAdapter(adapterType),
       ...LEGACY_HIDDEN_CHAT_MODELS,
     ];
+    // Agent-scoped key is authoritative so switching agents (or app
+    // restarts) restores each agent's last model independently.
+    if (agentId) {
+      const agentStored = normalizeManagedModelId(
+        localStorage.getItem(agentStorageKey(agentId)),
+      );
+      if (agentStored && models.some((m) => m.id === agentStored)) {
+        return agentStored;
+      }
+    }
+    // Fall back to the legacy adapter-scoped key so existing users keep
+    // their last selection on first read after upgrade.
     const stored = normalizeManagedModelId(
       localStorage.getItem(storageKey(adapterType)),
     );
@@ -244,8 +261,16 @@ export function loadPersistedModel(
   return defaultModelForAdapter(adapterType, explicitDefault);
 }
 
-export function persistModel(modelId: string, adapterType?: string): void {
+export function persistModel(
+  modelId: string,
+  adapterType?: string,
+  agentId?: string,
+): void {
   try {
+    if (agentId) localStorage.setItem(agentStorageKey(agentId), modelId);
+    // Keep the adapter-scoped key in sync so agents that haven't saved a
+    // per-agent preference still land on the user's most recent choice
+    // on first open.
     localStorage.setItem(storageKey(adapterType), modelId);
   } catch {
     // localStorage may be unavailable
