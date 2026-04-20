@@ -764,6 +764,7 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
                 disabled={!canEdit}
                 onChange={() => toggleGlobalCapability(type)}
                 aria-label={meta.label}
+                className={styles.permsCapabilityToggle}
               />
             </div>
           );

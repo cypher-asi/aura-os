@@ -2070,6 +2070,12 @@ pub(crate) async fn get_or_create_chat_session(
     }
 
     let harness = state.harness_for(harness_mode);
+    // Snapshot `agent_id` before the config moves into `open_session`
+    // so we can tag the resulting `ChatSession`. The registry uses
+    // this back-reference to invalidate live sessions when the agent's
+    // permissions change — see `handlers::agents::crud::update_agent`
+    // for the consumer side.
+    let session_agent_id = session_config.agent_id.clone();
     let session = harness.open_session(session_config).await.map_err(|e| {
         let error_message = e.to_string();
         warn!(
@@ -2093,6 +2099,7 @@ pub(crate) async fn get_or_create_chat_session(
                 commands_tx: session.commands_tx,
                 events_tx: session.events_tx,
                 model: requested_model,
+                agent_id: session_agent_id,
             },
         );
     }

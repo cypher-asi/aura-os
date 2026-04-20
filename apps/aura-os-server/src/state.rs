@@ -258,6 +258,17 @@ pub struct ChatSession {
     pub commands_tx: mpsc::UnboundedSender<HarnessInbound>,
     pub events_tx: broadcast::Sender<HarnessOutbound>,
     pub model: Option<String>,
+    /// Aura agent id that owns this session, if known at startup.
+    ///
+    /// Populated from `SessionConfig::agent_id` when the session is
+    /// first opened. Used by the permissions-update flow in
+    /// `handlers::agents::crud::update_agent` to invalidate every live
+    /// session owned by a given agent — direct `agent:{id}` sessions
+    /// *and* any `instance:{id}` sessions whose underlying agent's
+    /// capability bundle just changed — so the next chat turn cold-
+    /// starts with a fresh `installed_tools` list via the unified
+    /// `build_session_tools` filter.
+    pub agent_id: Option<String>,
 }
 
 impl ChatSession {

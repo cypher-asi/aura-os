@@ -642,6 +642,36 @@
   color: var(--color-text-muted);
 }
 
+/* Override for the zui `Toggle` component in the capability list so the
+ * track is clearly outlined against the dark panel background and the
+ * knob stays high-contrast in both checked and unchecked states. The
+ * zui internals use CSS-module hashed class names so we target the
+ * structural slider span (`input + span`) via the custom className
+ * that `<Toggle>` forwards to its outer `<label>`. The `!important`s
+ * are the minimum needed to win over the hashed-class rules shipped
+ * with zui without rewriting the upstream component.
+ */
+.permsCapabilityToggle > input + span {
+  background-color: var(--color-bg) !important;
+  border: 1px solid var(--color-border);
+  box-sizing: content-box;
+}
+
+.permsCapabilityToggle > input + span::after {
+  background-color: var(--color-text-secondary) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.permsCapabilityToggle > input:checked + span {
+  background-color: var(--color-bg) !important;
+  border-color: var(--color-accent);
+}
+
+.permsCapabilityToggle > input:checked + span::after {
+  background-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
 .permsProjectGroup {
   display: flex;
   flex-direction: column;

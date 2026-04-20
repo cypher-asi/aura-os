@@ -1047,28 +1047,38 @@ pub(crate) async fn update_agent(
     // filter.
     //
     // Scope of invalidation:
-    // * `agent:{id}` direct-chat session — removed outright, so the
-    //   next user turn cold-starts with the new capability bundle.
-    // * `instance:*` project sessions — left intact here because the
-    //   agent_instance → agent_id lookup requires a storage round-trip
-    //   per key; the `permissions_cache.remove` below is enough to
-    //   re-run `check_capabilities` with the new bundle on the next
-    //   tool call, so the enforcement path is correct even if the
-    //   instance's harness-visible tool list lags until its own
-    //   `/reset-session` or a process restart.
+    // * Every live `ChatSession` whose `agent_id` matches this agent —
+    //   including both the direct `agent:{id}` session and any
+    //   project-bound `instance:{id}` sessions whose underlying agent
+    //   is this one. Back-reference via `ChatSession::agent_id`
+    //   (populated in `get_or_create_chat_session` from
+    //   `SessionConfig::agent_id`) so we can resolve all affected
+    //   sessions from a single in-memory sweep instead of a per-key
+    //   storage round-trip.
+    // * The dispatcher's `permissions_cache` entry for this agent.
+    //   This is what guarantees correctness even if a session slipped
+    //   past the sweep: the next tool call re-loads permissions and
+    //   re-runs `check_capabilities` against the fresh bundle.
     //
-    // Best-effort: failures to acquire the locks are silently dropped
+    // Best-effort: lock contention failures are silently dropped
     // rather than failing the update — the worst case is a stale
-    // session that will self-correct on the next `reset_agent_session`
-    // or a server restart.
+    // session that will self-correct on the next `reset_*_session`
+    // call or a server restart.
+    let target_agent_id = agent_id.to_string();
     {
-        let session_key = format!("agent:{agent_id}");
         let mut reg = state.chat_sessions.lock().await;
-        reg.remove(&session_key);
+        let keys_to_drop: Vec<String> = reg
+            .iter()
+            .filter_map(|(key, session)| {
+                let owner = session.agent_id.as_deref()?;
+                (owner == target_agent_id).then(|| key.clone())
+            })
+            .collect();
+        for key in keys_to_drop {
+            reg.remove(&key);
+        }
     }
-    state
-        .permissions_cache
-        .remove(&agent_id.to_string());
+    state.permissions_cache.remove(&target_agent_id);
 
     Ok(Json(agent))
 }
