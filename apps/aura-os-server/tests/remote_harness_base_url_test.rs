@@ -5,15 +5,19 @@
 //! the same path the live chat handler uses to stamp cross-agent tool
 //! endpoints, minus the streaming plumbing — and asserts that:
 //!
-//! 1. When the agent's `machine_type` is `remote` and
-//!    `AURA_SERVER_BASE_URL` is unset, the server refuses to stamp
-//!    `http://127.0.0.1:<port>` onto the manifest and surfaces a
-//!    named 500 error that includes the env var name. This used to
-//!    silently succeed and then fail later with `os error 10061` on
-//!    every cross-agent tool invocation.
+//! 1. When the agent's `machine_type` is `remote` and neither
+//!    `AURA_SERVER_BASE_URL` nor `VITE_API_URL` is set, the server
+//!    refuses to stamp `http://127.0.0.1:<port>` onto the manifest and
+//!    surfaces a named 500 error that includes the env var name. This
+//!    used to silently succeed and then fail later with
+//!    `os error 10061` on every cross-agent tool invocation.
 //! 2. When `AURA_SERVER_BASE_URL` is set to a public URL, the
 //!    diagnostic succeeds and none of the stamped endpoints contain a
 //!    loopback host.
+//! 3. When only `VITE_API_URL` is set (the Render happy path — one env
+//!    var feeds both the frontend build and the server's self-callback
+//!    URL), the diagnostic must also succeed with no loopback in any
+//!    stamped endpoint.
 
 mod common;
 
@@ -72,9 +76,9 @@ async fn start_mock_network_serving_agent(agent_json: Value) -> String {
 }
 
 /// Cross-test env-var mutex. These tests mutate process-wide env vars
-/// (`AURA_SERVER_BASE_URL` specifically) and must not race — running
-/// them in the same process in parallel would leak a half-set value
-/// into the other test's handler.
+/// (`AURA_SERVER_BASE_URL` and `VITE_API_URL`) and must not race —
+/// running them in the same process in parallel would leak a half-set
+/// value into the other test's handler.
 fn env_lock() -> &'static StdMutex<()> {
     static LOCK: StdMutex<()> = StdMutex::new(());
     &LOCK
@@ -129,14 +133,15 @@ fn build_app_with_network(network_url: &str) -> axum::Router {
 
 // Env-var mutations are process-wide; we deliberately hold the sync
 // `Mutex` across `.await` so no other test can flip
-// `AURA_SERVER_BASE_URL` while we're driving the server. Clippy's
-// default warning assumes any Mutex crossing an await is a deadlock
-// risk, which doesn't apply to this test-only env guard.
+// `AURA_SERVER_BASE_URL` / `VITE_API_URL` while we're driving the
+// server. Clippy's default warning assumes any Mutex crossing an await
+// is a deadlock risk, which doesn't apply to this test-only env guard.
 #[allow(clippy::await_holding_lock)]
 #[tokio::test]
 async fn installed_tools_diagnostic_refuses_loopback_for_remote_agent() {
     let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
     let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+    let _vite = EnvGuard::unset("VITE_API_URL");
     let _host = EnvGuard::unset("AURA_SERVER_HOST");
     let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -152,13 +157,17 @@ async fn installed_tools_diagnostic_refuses_loopback_for_remote_agent() {
     assert_eq!(
         resp.status(),
         StatusCode::INTERNAL_SERVER_ERROR,
-        "remote-harness + no AURA_SERVER_BASE_URL must surface as a named error"
+        "remote-harness + no AURA_SERVER_BASE_URL / VITE_API_URL must surface as a named error"
     );
     let body = response_json(resp).await;
     let error_message = body["error"].as_str().unwrap_or_default();
     assert!(
         error_message.contains("AURA_SERVER_BASE_URL"),
         "error message must name the offending env var, got: {error_message}"
+    );
+    assert!(
+        error_message.contains("VITE_API_URL"),
+        "error message must also name the VITE_API_URL fallback env var, got: {error_message}"
     );
     assert!(
         error_message.contains("127.0.0.1"),
@@ -171,6 +180,7 @@ async fn installed_tools_diagnostic_refuses_loopback_for_remote_agent() {
 async fn installed_tools_diagnostic_stamps_public_base_url_for_remote_agent() {
     let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
     let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com");
+    let _vite = EnvGuard::unset("VITE_API_URL");
     let _host = EnvGuard::unset("AURA_SERVER_HOST");
     let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -205,6 +215,50 @@ async fn installed_tools_diagnostic_stamps_public_base_url_for_remote_agent() {
         assert!(
             !endpoint.contains("localhost"),
             "no stamped endpoint may contain localhost once AURA_SERVER_BASE_URL is set, got: {endpoint}"
+        );
+    }
+}
+
+#[allow(clippy::await_holding_lock)]
+#[tokio::test]
+async fn installed_tools_diagnostic_stamps_vite_api_url_for_remote_agent() {
+    let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+    let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+    let _vite = EnvGuard::set("VITE_API_URL", "https://aura.example.com");
+    let _host = EnvGuard::unset("AURA_SERVER_HOST");
+    let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+    let network_url = start_mock_network_serving_agent(network_agent_json("remote")).await;
+    let app = build_app_with_network(&network_url);
+
+    let req = json_request(
+        "GET",
+        &format!("/api/agents/{AGENT_UUID}/installed-tools"),
+        None,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "VITE_API_URL alone must let the diagnostic succeed on Render-style deployments"
+    );
+    let body = response_json(resp).await;
+    let tools = body["tools"]
+        .as_array()
+        .expect("tools array must be present in diagnostic payload");
+    assert!(
+        !tools.is_empty(),
+        "CEO preset must produce cross-agent tools"
+    );
+    for tool in tools {
+        let endpoint = tool["endpoint"].as_str().unwrap_or_default();
+        assert!(
+            !endpoint.contains("127.0.0.1"),
+            "no stamped endpoint may contain loopback once VITE_API_URL is set, got: {endpoint}"
+        );
+        assert!(
+            !endpoint.contains("localhost"),
+            "no stamped endpoint may contain localhost once VITE_API_URL is set, got: {endpoint}"
         );
     }
 }

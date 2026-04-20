@@ -231,10 +231,10 @@ async fn build_session_installed_tools_with_integrations(
                 context,
                 fallback_url = %fallback_url,
                 "refusing to ship loopback control-plane URL to remote harness; \
-                 set AURA_SERVER_BASE_URL to the server's public URL"
+                 set AURA_SERVER_BASE_URL (or reuse VITE_API_URL) to the server's public URL"
             );
             return Err(ApiError::internal(format!(
-                "AURA_SERVER_BASE_URL must be set when the harness runs off-box; \
+                "AURA_SERVER_BASE_URL (or VITE_API_URL) must be set when the harness runs off-box; \
                  refusing to ship `{fallback_url}` to the harness"
             )));
         }

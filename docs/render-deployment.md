@@ -21,9 +21,17 @@ Single Web Service that builds both frontend and backend. The backend serves the
 |----------|-------|
 | `AURA_SERVER_PORT` | `10000` |
 | `AURA_SERVER_HOST` | `0.0.0.0` |
-| `AURA_SERVER_BASE_URL` | `https://YOUR-SERVICE.onrender.com` |
+| `VITE_API_URL` | `https://YOUR-SERVICE.onrender.com` |
 | `AURA_ROUTER_URL` | `https://aura-router.onrender.com` |
 | `Z_BILLING_URL` | `https://z-billing.onrender.com` |
+
+`VITE_API_URL` is consumed twice from the same Render env: the Vite build bakes it into the frontend bundle so the UI knows where to call, and the `aura-os-server` process reads it at runtime to stamp cross-agent tool callback URLs (so remote harness agents can reach back into the service over its public URL instead of loopback). One env var, two jobs — no duplication.
+
+### Optional overrides
+
+| Variable | Value |
+|----------|-------|
+| `AURA_SERVER_BASE_URL` | `https://YOUR-SERVICE.onrender.com` — explicit override that wins over `VITE_API_URL`. Only needed when the frontend and backend must advertise different public URLs (e.g. a separate CDN origin). Leave unset otherwise. |
 
 ### Recommended (full functionality)
 
@@ -67,11 +75,11 @@ open https://YOUR-SERVICE.onrender.com
 
 - Port 10000 is Render's default. The server reads `AURA_SERVER_PORT`.
 - Host `0.0.0.0` is required — Render rejects `127.0.0.1` bindings.
-- `AURA_SERVER_BASE_URL` is the server's own public URL. It's stamped into cross-agent tool endpoints (`send_to_agent`, `spawn_agent`, etc.) so the remote harness / `aura-swarm` can call back in. Without it the server falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>`, and `0.0.0.0` is normalized to `127.0.0.1` — which is unreachable from any other host.
+- `VITE_API_URL` (or the explicit `AURA_SERVER_BASE_URL` override) is the server's own public URL. It's stamped into cross-agent tool endpoints (`send_to_agent`, `spawn_agent`, etc.) so the remote harness / `aura-swarm` can call back in. Without it the server falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>`, and `0.0.0.0` is normalized to `127.0.0.1` — which is unreachable from any other host.
 - Render instances still have ephemeral local disk. Browser-owned persisted state remains in the browser, server auth uses the in-memory validation cache, and any local backend compatibility state should be treated as rebuildable.
 - The build takes ~2-3 minutes (Node frontend + Rust backend).
 - `LOCAL_HARNESS_URL` should NOT be set on Render unless a harness service is deployed alongside.
 
 ## Troubleshooting
 
-- `external tool callback unreachable: http://127.0.0.1:<port>/api/agent_tools/...` — the server is handing remote harnesses a loopback URL because `AURA_SERVER_BASE_URL` is not set. Set it to the service's public https URL (e.g. `https://YOUR-SERVICE.onrender.com`) and redeploy.
+- `external tool callback unreachable: http://127.0.0.1:<port>/api/agent_tools/...` — the server is handing remote harnesses a loopback URL because neither `VITE_API_URL` nor the optional `AURA_SERVER_BASE_URL` override is set. Set `VITE_API_URL` to the service's public https URL (e.g. `https://YOUR-SERVICE.onrender.com`) and redeploy; this also fixes the frontend bundle in the same build.

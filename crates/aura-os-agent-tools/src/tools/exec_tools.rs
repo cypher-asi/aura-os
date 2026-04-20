@@ -523,8 +523,9 @@ impl AgentTool for SendToAgentTool {
         // aura-network does NOT expose this route, so posting to
         // `network.base_url()` always returned 404. Route through the
         // local server base URL instead (always populated from
-        // AURA_SERVER_BASE_URL / host+port in app_builder); only fall
-        // back to the network client as a legacy safety net.
+        // AURA_SERVER_BASE_URL / VITE_API_URL / host+port in
+        // app_builder); only fall back to the network client as a
+        // legacy safety net.
         //
         // The server awaits the storage `create_event` call for the user
         // turn before opening SSE, so a 2xx here means the message is

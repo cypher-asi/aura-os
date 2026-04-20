@@ -457,12 +457,16 @@ fn legacy_org_integration_tool_manifest_entries() -> &'static [OrgIntegrationToo
 /// or host (e.g. `aura-swarm` on Render) — can reach the server at a
 /// publicly routable URL rather than loopback.
 ///
-/// Reads `AURA_SERVER_BASE_URL` (the single source of truth shared with
+/// Reads `AURA_SERVER_BASE_URL` first, then falls back to `VITE_API_URL`
+/// (which Render deployments already set so the Vite build can bake it
+/// into the frontend bundle — reusing it here avoids requiring operators
+/// to duplicate the same value under two different names). This is the
+/// single source of truth shared with
 /// [`apps/aura-os-server/src/app_builder.rs`](../../../apps/aura-os-server/src/app_builder.rs),
 /// where it also feeds `AgentRuntimeService.local_server_base_url` used
-/// by the `send_to_agent` tool). Any deployment where the harness runs
-/// on a different host MUST set this env var to the server's public URL
-/// — otherwise cross-agent tool callbacks fail with
+/// by the `send_to_agent` tool. Any deployment where the harness runs
+/// on a different host MUST set one of these env vars to the server's
+/// public URL — otherwise cross-agent tool callbacks fail with
 /// `external tool callback unreachable: http://127.0.0.1:...`.
 ///
 /// Falls back to `http://<AURA_SERVER_HOST>:<AURA_SERVER_PORT>` for
@@ -486,10 +490,10 @@ pub fn control_plane_api_base_url() -> String {
 /// from a swarm pod that has no loopback route to the control plane.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ControlPlaneBaseUrlError {
-    /// `AURA_SERVER_BASE_URL` is unset and the derived fallback points
-    /// at loopback, which a remote harness cannot reach. Carries the
-    /// fallback URL the caller was about to ship so the error message
-    /// can name the offending value.
+    /// Neither `AURA_SERVER_BASE_URL` nor `VITE_API_URL` is set and the
+    /// derived fallback points at loopback, which a remote harness
+    /// cannot reach. Carries the fallback URL the caller was about to
+    /// ship so the error message can name the offending value.
     MissingForRemoteHarness { fallback_url: String },
 }
 
@@ -498,7 +502,7 @@ impl std::fmt::Display for ControlPlaneBaseUrlError {
         match self {
             ControlPlaneBaseUrlError::MissingForRemoteHarness { fallback_url } => write!(
                 f,
-                "AURA_SERVER_BASE_URL must be set when the harness runs off-box; \
+                "AURA_SERVER_BASE_URL (or VITE_API_URL) must be set when the harness runs off-box; \
                  refusing to ship `{fallback_url}` to the harness"
             ),
         }
@@ -509,10 +513,10 @@ impl std::error::Error for ControlPlaneBaseUrlError {}
 
 /// Fallible variant of [`control_plane_api_base_url`].
 ///
-/// When `remote_harness` is `true` and `AURA_SERVER_BASE_URL` is unset
-/// AND the derived fallback host is loopback, returns
-/// [`ControlPlaneBaseUrlError::MissingForRemoteHarness`] so the caller
-/// can fail fast instead of silently shipping
+/// When `remote_harness` is `true` and neither `AURA_SERVER_BASE_URL`
+/// nor `VITE_API_URL` is set AND the derived fallback host is loopback,
+/// returns [`ControlPlaneBaseUrlError::MissingForRemoteHarness`] so the
+/// caller can fail fast instead of silently shipping
 /// `http://127.0.0.1:<port>` to a harness running in a different pod
 /// / container / host (which manifests as
 /// `tcp connect error: ... os error 10061` on every cross-agent tool
@@ -536,11 +540,21 @@ pub fn control_plane_api_base_url_or_error(
     Ok(fallback_url)
 }
 
-/// Trim + normalise the explicit `AURA_SERVER_BASE_URL` override, if
-/// present. Kept private so both entry points apply identical trimming
-/// rules (trailing slash + whitespace) to the explicit value.
+/// Trim + normalise the explicit control-plane base URL override, if
+/// any. Reads `AURA_SERVER_BASE_URL` first (higher priority so existing
+/// deployments that set it keep winning), then falls back to
+/// `VITE_API_URL` — the same var the Vite build already consumes, so a
+/// single Render env var is sufficient to configure both the frontend
+/// bundle and the server's self-callback URL. Kept private so both
+/// entry points apply identical trimming rules (trailing slash +
+/// whitespace) to the explicit value.
 fn explicit_control_plane_base_url() -> Option<String> {
-    std::env::var("AURA_SERVER_BASE_URL")
+    read_trimmed_base_url_env("AURA_SERVER_BASE_URL")
+        .or_else(|| read_trimmed_base_url_env("VITE_API_URL"))
+}
+
+fn read_trimmed_base_url_env(key: &str) -> Option<String> {
+    std::env::var(key)
         .ok()
         .map(|value| value.trim().trim_end_matches('/').to_string())
         .filter(|value| !value.is_empty())
@@ -960,9 +974,10 @@ mod tests {
     //
     // These tests mutate process-wide env vars, so they take a shared
     // mutex and must snapshot/restore every variable they touch.
-    // `AURA_SERVER_BASE_URL` is read by `app_builder.rs` at server
-    // startup; leaking a stale value from a test into another test
-    // (or the wider suite) would poison unrelated runs.
+    // `AURA_SERVER_BASE_URL` and `VITE_API_URL` are both read by
+    // `app_builder.rs` at server startup; leaking a stale value from
+    // a test into another test (or the wider suite) would poison
+    // unrelated runs.
 
     use std::sync::Mutex;
 
@@ -1002,6 +1017,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1014,6 +1030,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com/");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1026,6 +1043,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::set("AURA_SERVER_HOST", "10.0.0.5");
         let _port = EnvGuard::set("AURA_SERVER_PORT", "9000");
 
@@ -1038,6 +1056,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::set("AURA_SERVER_HOST", "0.0.0.0");
         let _port = EnvGuard::set("AURA_SERVER_PORT", "3100");
 
@@ -1050,6 +1069,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1062,6 +1082,46 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "   ");
+        let _vite = EnvGuard::unset("VITE_API_URL");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "http://127.0.0.1:3100");
+    }
+
+    #[test]
+    fn control_plane_uses_vite_api_url_when_base_url_unset() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::set("VITE_API_URL", " https://aura.example.com/ ");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "https://aura.example.com");
+    }
+
+    #[test]
+    fn control_plane_prefers_aura_server_base_url_over_vite_api_url() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com");
+        let _vite = EnvGuard::set("VITE_API_URL", "https://vite.example.com");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(control_plane_api_base_url(), "https://aura.example.com");
+    }
+
+    #[test]
+    fn control_plane_ignores_empty_vite_api_url() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::set("VITE_API_URL", "   ");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1074,6 +1134,23 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::set("AURA_SERVER_BASE_URL", "https://aura.example.com");
+        let _vite = EnvGuard::unset("VITE_API_URL");
+        let _host = EnvGuard::unset("AURA_SERVER_HOST");
+        let _port = EnvGuard::unset("AURA_SERVER_PORT");
+
+        assert_eq!(
+            control_plane_api_base_url_or_error(true).unwrap(),
+            "https://aura.example.com"
+        );
+    }
+
+    #[test]
+    fn control_plane_api_base_url_or_error_returns_ok_when_vite_api_url_set() {
+        let _lock = CONTROL_PLANE_ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::set("VITE_API_URL", "https://aura.example.com");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1089,6 +1166,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1104,6 +1182,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::unset("AURA_SERVER_HOST");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 
@@ -1120,6 +1199,10 @@ mod tests {
             "error message must name the env var: {rendered}"
         );
         assert!(
+            rendered.contains("VITE_API_URL"),
+            "error message must name the VITE_API_URL fallback env var: {rendered}"
+        );
+        assert!(
             rendered.contains("127.0.0.1:3100"),
             "error message must name the offending fallback URL: {rendered}"
         );
@@ -1131,6 +1214,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::set("AURA_SERVER_HOST", "10.0.0.5");
         let _port = EnvGuard::unset("AURA_SERVER_PORT");
 

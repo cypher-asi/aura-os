@@ -2017,8 +2017,9 @@ fn main() {
     // so every agent-runtime loopback callback
     // (`send_to_agent`, `list_agents`, spec fetches, etc.) hits a
     // closed port and surfaces as `external tool callback unreachable`.
-    // Explicit `AURA_SERVER_BASE_URL` overrides still win because
-    // `control_plane_api_base_url` checks that first.
+    // Explicit `AURA_SERVER_BASE_URL` (or `VITE_API_URL`) overrides
+    // still win because `control_plane_api_base_url` checks those
+    // first.
     std::env::set_var("AURA_SERVER_HOST", "127.0.0.1");
     std::env::set_var("AURA_SERVER_PORT", server_port.to_string());
 

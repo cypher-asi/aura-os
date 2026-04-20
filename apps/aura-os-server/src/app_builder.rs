@@ -524,8 +524,20 @@ mod tests {
     fn resolve_local_server_base_url_uses_canonical_explicit_base_url() {
         let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::set("AURA_SERVER_BASE_URL", " https://aura.example.com/ ");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::set("AURA_SERVER_HOST", "10.0.0.5");
         let _port = EnvGuard::set("AURA_SERVER_PORT", "9000");
+
+        assert_eq!(resolve_local_server_base_url(), "https://aura.example.com");
+    }
+
+    #[test]
+    fn resolve_local_server_base_url_uses_vite_api_url_when_base_url_unset() {
+        let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
+        let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::set("VITE_API_URL", " https://aura.example.com/ ");
+        let _host = EnvGuard::set("AURA_SERVER_HOST", "0.0.0.0");
+        let _port = EnvGuard::set("AURA_SERVER_PORT", "3100");
 
         assert_eq!(resolve_local_server_base_url(), "https://aura.example.com");
     }
@@ -534,6 +546,7 @@ mod tests {
     fn resolve_local_server_base_url_normalizes_host_port_fallback() {
         let _lock = env_lock().lock().unwrap_or_else(|e| e.into_inner());
         let _base = EnvGuard::unset("AURA_SERVER_BASE_URL");
+        let _vite = EnvGuard::unset("VITE_API_URL");
         let _host = EnvGuard::set("AURA_SERVER_HOST", "0.0.0.0");
         let _port = EnvGuard::set("AURA_SERVER_PORT", "3100");
 

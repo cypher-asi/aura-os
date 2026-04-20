@@ -96,10 +96,11 @@ async fn main() {
 
 /// Boot-time sanity check: if the deployment looks like it'll route
 /// harness sessions off-box (a `SWARM_BASE_URL` is configured, or
-/// `LOCAL_HARNESS_URL` resolves to a non-loopback host) and
-/// `AURA_SERVER_BASE_URL` is unset, log a hard `warn!` naming the env
-/// var so the operator sees the real misconfig at deploy time rather
-/// than on the first cross-agent tool call hours later.
+/// `LOCAL_HARNESS_URL` resolves to a non-loopback host) and neither
+/// `AURA_SERVER_BASE_URL` nor `VITE_API_URL` is set, log a hard
+/// `warn!` naming the env vars so the operator sees the real misconfig
+/// at deploy time rather than on the first cross-agent tool call hours
+/// later.
 ///
 /// When `AURA_STRICT_CONFIG=1` is set the process also exits with
 /// status 1 — Render / CI can opt into fail-fast without breaking
@@ -115,9 +116,9 @@ fn validate_control_plane_base_url_config() {
         }) => {
             warn!(
                 fallback_url = %fallback_url,
-                "AURA_SERVER_BASE_URL is unset but the harness target appears to be off-box; \
+                "AURA_SERVER_BASE_URL (and VITE_API_URL fallback) are unset but the harness target appears to be off-box; \
                  cross-agent tool callbacks will attempt to reach `{fallback_url}` and fail. \
-                 Set AURA_SERVER_BASE_URL to the server's public URL."
+                 Set AURA_SERVER_BASE_URL (or reuse VITE_API_URL) to the server's public URL."
             );
             if std::env::var("AURA_STRICT_CONFIG").as_deref() == Ok("1") {
                 warn!("AURA_STRICT_CONFIG=1 set; exiting due to control-plane base URL misconfig");
