@@ -966,6 +966,10 @@ pub(crate) async fn update_agent(
 
     let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
 
+    // Snapshot what the caller asked us to persist so we can apply
+    // request-side fallbacks after the aura-network round-trip. See
+    // the post-PUT reconciliation block below.
+    let submitted_permissions = body.permissions.clone();
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name.map(|value| value.trim().to_string()),
         role: body.role,
@@ -987,7 +991,7 @@ pub(crate) async fn update_agent(
         tags: dual_write_tags,
         listing_status: marketplace.listing_status,
         expertise: marketplace.expertise,
-        permissions: body.permissions,
+        permissions: submitted_permissions.clone(),
         intent_classifier: body.intent_classifier,
     };
     let net_agent = client
@@ -999,6 +1003,31 @@ pub(crate) async fn update_agent(
         .save_agent_runtime_config(&agent_id, &runtime_config)
         .map_err(|e| ApiError::internal(format!("saving agent runtime config: {e}")))?;
     let mut agent = agent_from_network(&net_agent);
+
+    // Defensive reconciliation: if the caller sent a `permissions`
+    // bundle but aura-network's PUT response came back with something
+    // that doesn't match (classic symptom: upstream persists the
+    // column but doesn't echo it in the response, or an older
+    // deployment that silently drops the field), trust what we just
+    // sent. Without this the UI's `patchAgent(updated)` call wipes
+    // every toggle the user just saved because `agent_from_network`
+    // defaulted `permissions` to empty.
+    //
+    // We do NOT re-fetch the agent to verify — a single PUT that
+    // returns 200 is the source of truth for persistence. We only
+    // override the local projection of the response when it
+    // disagrees with the request payload.
+    if let Some(submitted) = submitted_permissions.as_ref() {
+        if agent.permissions != *submitted {
+            warn!(
+                agent_id = %agent_id,
+                submitted_capabilities = submitted.capabilities.len(),
+                response_capabilities = agent.permissions.capabilities.len(),
+                "aura-network PUT response did not echo the submitted `permissions` bundle; using the request-side value"
+            );
+            agent.permissions = submitted.clone();
+        }
+    }
     state
         .agent_service
         .apply_runtime_config(&mut agent)

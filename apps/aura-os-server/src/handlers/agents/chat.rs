@@ -2629,6 +2629,31 @@ pub(crate) async fn send_event_stream(
         None => None,
     };
 
+    // Prefer the parent agent's **current** permissions bundle over
+    // the instance-time snapshot so a toggle flip on the agent
+    // template's `PermissionsTab` takes effect on the very next turn
+    // of every project-bound chat. The snapshot in
+    // `instance.permissions` was always documented as a
+    // "parent-lookup-failed" fallback — without this lookup the
+    // instance session was the only place that silently kept serving
+    // stale capabilities, which is exactly the
+    // "toggled ReadAgent on but `list_agents` still isn't available"
+    // bug that prompted this change.
+    //
+    // If the parent agent can't be found (template deleted, network
+    // down, stale instance record) we fall back to the stored
+    // snapshot rather than failing the chat — same behavior as
+    // before, just gated by an explicit attempt instead of
+    // unconditionally trusting the snapshot.
+    let fresh_parent_permissions = state
+        .agent_service
+        .get_agent_async("", &instance.agent_id)
+        .await
+        .or_else(|_| state.agent_service.get_agent_local(&instance.agent_id))
+        .ok()
+        .map(|parent| parent.permissions);
+    let effective_permissions = fresh_parent_permissions.unwrap_or_else(|| instance.permissions.clone());
+
     // Populate the dispatcher's permissions cache for the instance
     // session. Keyed by `agent_instance_id` (NOT `instance.agent_id`)
     // because `stamp_agent_tool_auth` below passes the instance id
@@ -2636,8 +2661,7 @@ pub(crate) async fn send_event_stream(
     // reads the raw header value and must find an entry under that
     // string. Stamping the template `agent_id` here would silently
     // miss every project-agent-instance tool call.
-    let normalized_instance_perms = instance
-        .permissions
+    let normalized_instance_perms = effective_permissions
         .clone()
         .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
     state
@@ -2687,7 +2711,7 @@ pub(crate) async fn send_event_stream(
         )?,
         installed_tools,
         installed_integrations,
-        agent_permissions: (&instance.permissions).into(),
+        agent_permissions: (&effective_permissions).into(),
         intent_classifier: instance.intent_classifier.clone(),
         ..Default::default()
     };
