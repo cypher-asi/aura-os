@@ -173,6 +173,13 @@ export function useChatHistorySync({
     if (invalidateBeforeFetch) {
       useChatHistoryStore.getState().invalidateHistory(historyKey);
     }
+    // Kick off IDB hydration in parallel with the network fetch. On a
+    // cold app open IDB usually resolves first and paints the last-seen
+    // transcript, so the chat view stops flashing a spinner before the
+    // server round-trip completes. `hydrateFromCache` no-ops if the
+    // in-memory entry is already populated from a prior navigation, or
+    // if the network fetch wins the race.
+    void useChatHistoryStore.getState().hydrateFromCache(historyKey);
     useChatHistoryStore.getState().fetchHistory(historyKey, fetchFn);
     onSwitch?.();
   }, [historyKey, fetchFn, invalidateBeforeFetch, onSwitch, onClear]);

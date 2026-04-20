@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => {
     >,
     fetchHistory: vi.fn(async () => {}),
     invalidateHistory: vi.fn(),
+    hydrateFromCache: vi.fn(async () => {}),
   };
 
   const eventListeners = new Map<string, Set<(event: unknown) => void>>();

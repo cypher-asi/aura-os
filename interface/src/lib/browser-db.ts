@@ -1,5 +1,6 @@
 const DB_NAME = "aura-browser-store";
-const DB_VERSION = 1;
+// Bump this when adding new object stores so `onupgradeneeded` creates them.
+const DB_VERSION = 2;
 const LOCAL_FALLBACK_PREFIX = "aura-idb";
 
 export const BROWSER_DB_STORES = {
@@ -8,6 +9,11 @@ export const BROWSER_DB_STORES = {
   projects: "projects",
   agents: "agents",
   ui: "ui",
+  // Chat transcripts per history key (standalone or project-scoped).
+  // Hydrated synchronously-ish on chat mount so the view paints prior
+  // messages while the background refetch resolves, rather than flashing
+  // a spinner on every app open.
+  chatHistory: "chatHistory",
 } as const;
 
 export type BrowserDbStoreName =

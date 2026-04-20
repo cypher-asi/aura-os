@@ -2,6 +2,12 @@ import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { queryClient } from "../lib/query-client";
 import {
+  BROWSER_DB_STORES,
+  browserDbDelete,
+  browserDbGet,
+  browserDbSet,
+} from "../lib/browser-db";
+import {
   CHAT_HISTORY_STALE_TIME_MS,
   chatHistoryQueryKeys,
   chatHistoryQueryOptions,
@@ -33,10 +39,44 @@ type ChatHistoryState = {
   prefetchHistory: (key: string, fetchFn: () => Promise<SessionEvent[]>) => void;
   invalidateHistory: (key: string) => void;
   clearHistory: (key: string) => void;
+  /**
+   * Synchronously-ish populate the entry from IndexedDB if available.
+   * Used by `useChatHistorySync` on mount so the chat view can paint
+   * the last-seen transcript while the network revalidation is still
+   * in flight — removing the spinner flash that used to follow every
+   * cold browser reload.
+   */
+  hydrateFromCache: (key: string) => Promise<void>;
 };
 
 const HISTORY_TTL_MS = 30_000;
 const ERROR_TTL_MS = 10_000;
+
+/**
+ * Shape we round-trip through IndexedDB for a single history key.
+ * Stored events are already in display form (produced by
+ * `buildDisplayEvents`) so hydration is just a shallow copy.
+ */
+type PersistedHistory = {
+  events: DisplaySessionEvent[];
+  lastMessageAt: string | null;
+  persistedAt: number;
+};
+
+function persistHistoryToCache(
+  key: string,
+  events: DisplaySessionEvent[],
+  lastMessageAt: string | null,
+): void {
+  const payload: PersistedHistory = {
+    events,
+    lastMessageAt,
+    persistedAt: Date.now(),
+  };
+  void browserDbSet(BROWSER_DB_STORES.chatHistory, key, payload).catch((err) => {
+    console.warn("[chat-history] persist failed for", key, err);
+  });
+}
 
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
   entries: {},
@@ -96,6 +136,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
           },
         }));
         useMessageStore.getState().setThread(key, data.events);
+        persistHistoryToCache(key, data.events, data.lastMessageAt);
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : "Failed to fetch history";
@@ -158,6 +199,48 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         },
       },
     }));
+    void browserDbDelete(BROWSER_DB_STORES.chatHistory, key).catch(() => {});
+  },
+
+  hydrateFromCache: async (key): Promise<void> => {
+    // Don't stomp an already-loaded entry. This is the common case after
+    // the first navigation — subsequent mounts hit the in-memory cache
+    // and never reach here.
+    const existing = get().entries[key];
+    if (existing && existing.status !== "idle") return;
+
+    const persisted = await browserDbGet<PersistedHistory>(
+      BROWSER_DB_STORES.chatHistory,
+      key,
+    );
+    if (!persisted || !Array.isArray(persisted.events)) return;
+
+    // Another concurrent `fetchHistory` may have beaten us to the store
+    // (e.g. the view mounted, kicked off a fresh network fetch, and that
+    // resolved before IDB). In that case the in-memory entry is fresher
+    // than the cache — bail out.
+    if (get().entries[key]?.status === "ready") return;
+
+    set((s) => ({
+      entries: {
+        ...s.entries,
+        [key]: {
+          events: persisted.events,
+          status: "ready",
+          // Mark as stale (persistedAt is typically older than the TTL)
+          // so the caller's subsequent `fetchHistory(key, fn)` still
+          // issues a network refetch. `useChatHistorySync`'s
+          // `isFetchStale` check only matches `fetchedAt === 0`, so
+          // using the real persisted timestamp here paints the cached
+          // transcript immediately instead of queueing behind the
+          // round-trip.
+          fetchedAt: persisted.persistedAt || 1,
+          error: null,
+          lastMessageAt: persisted.lastMessageAt ?? null,
+        },
+      },
+    }));
+    useMessageStore.getState().setThread(key, persisted.events);
   },
 }));
 
