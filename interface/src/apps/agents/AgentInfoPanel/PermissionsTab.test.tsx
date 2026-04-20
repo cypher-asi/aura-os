@@ -120,6 +120,11 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
   } as Agent;
 }
 
+// Must mirror `CEO_CORE_CAPABILITY_TYPES` in
+// `interface/src/types/permissions-wire.ts` so `hasAllCoreCapabilities`
+// considers this bundle a full CEO preset — if it drifts out of sync,
+// `canEdit` flips to true and the switches in this suite stop being
+// disabled.
 const ceoPermissions: AgentPermissions = {
   scope: { orgs: [], projects: [], agent_ids: [] },
   capabilities: [
@@ -131,6 +136,8 @@ const ceoPermissions: AgentPermissions = {
     { type: "invokeProcess" },
     { type: "postToFeed" },
     { type: "generateMedia" },
+    { type: "readAllProjects" },
+    { type: "writeAllProjects" },
   ],
 };
 
@@ -169,7 +176,7 @@ describe("PermissionsTab", () => {
     for (const sw of switches) {
       expect(sw).toBeDisabled();
     }
-    expect(screen.queryByText("Save changes")).not.toBeInTheDocument();
+    expect(screen.queryByText(/saving/i)).not.toBeInTheDocument();
   });
 
   it("resolves project scope chips to friendly names from the store", () => {
@@ -188,7 +195,7 @@ describe("PermissionsTab", () => {
     expect(screen.getByText("Alpha")).toBeInTheDocument();
   });
 
-  it("toggling a global capability enables Save, calls api.agents.update, and patches the store", async () => {
+  it("autosaves after a debounce window when a capability is toggled on", async () => {
     const agent = makeAgent();
     const updatedAgent = makeAgent({
       permissions: {
@@ -201,18 +208,17 @@ describe("PermissionsTab", () => {
     render(<PermissionsTab agent={agent} isOwnAgent />);
 
     expect(screen.queryByText("Save changes")).not.toBeInTheDocument();
+    expect(screen.queryByText("Discard")).not.toBeInTheDocument();
 
     const spawnToggle = screen.getByRole("switch", { name: /Spawn agents/i });
     fireEvent.click(spawnToggle);
 
-    const saveButton = await screen.findByText("Save changes");
-    expect(saveButton).toBeInTheDocument();
-
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledTimes(1);
-    });
+    await waitFor(
+      () => {
+        expect(mockUpdate).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2000 },
+    );
     expect(mockUpdate).toHaveBeenCalledWith("agent-1", {
       permissions: {
         scope: { orgs: [], projects: [], agent_ids: [] },
@@ -220,9 +226,61 @@ describe("PermissionsTab", () => {
       },
     });
     expect(mockPatchAgent).toHaveBeenCalledWith(updatedAgent);
+    await waitFor(() => {
+      expect(screen.getByText(/saved/i)).toBeInTheDocument();
+    });
   });
 
-  it("non-owners see disabled switches and no Save/Discard bar", () => {
+  it("coalesces rapid toggles back to the saved state without firing a PUT", async () => {
+    const agent = makeAgent();
+    render(<PermissionsTab agent={agent} isOwnAgent />);
+
+    const spawnToggle = screen.getByRole("switch", { name: /Spawn agents/i });
+    // Flick on then off within the debounce window — the draft ends
+    // up matching the last-saved bundle again, so autosave should be
+    // a no-op and we should never see a PUT.
+    fireEvent.click(spawnToggle);
+    fireEvent.click(spawnToggle);
+
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("shows an error with a retry button when autosave fails, and retry re-fires the PUT", async () => {
+    const agent = makeAgent();
+    const updatedAgent = makeAgent({
+      permissions: {
+        scope: { orgs: [], projects: [], agent_ids: [] },
+        capabilities: [{ type: "spawnAgent" }],
+      },
+    });
+    mockUpdate
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce(updatedAgent);
+
+    render(<PermissionsTab agent={agent} isOwnAgent />);
+
+    const spawnToggle = screen.getByRole("switch", { name: /Spawn agents/i });
+    fireEvent.click(spawnToggle);
+
+    await waitFor(
+      () => {
+        expect(mockUpdate).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2000 },
+    );
+    const retryButton = await screen.findByRole("button", { name: /retry/i });
+    expect(screen.getByText(/save failed/i)).toBeInTheDocument();
+
+    fireEvent.click(retryButton);
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledTimes(2);
+    });
+    expect(mockPatchAgent).toHaveBeenCalledWith(updatedAgent);
+  });
+
+  it("non-owners see disabled switches and no save UI", () => {
     const agent = makeAgent();
     render(<PermissionsTab agent={agent} isOwnAgent={false} />);
 
@@ -232,5 +290,6 @@ describe("PermissionsTab", () => {
     }
     expect(screen.queryByText("Save changes")).not.toBeInTheDocument();
     expect(screen.queryByText("Discard")).not.toBeInTheDocument();
+    expect(screen.queryByText(/saving/i)).not.toBeInTheDocument();
   });
 });

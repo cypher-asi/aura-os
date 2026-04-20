@@ -143,6 +143,16 @@ export const CAPABILITY_LABELS: Record<
     description: "Edit a specific project's contents.",
     Icon: Edit3,
   },
+  readAllProjects: {
+    label: "Read all projects",
+    description: "View every project in the org.",
+    Icon: BookOpen,
+  },
+  writeAllProjects: {
+    label: "Write all projects",
+    description: "Edit every project in the org.",
+    Icon: Edit3,
+  },
 };
 
 /**

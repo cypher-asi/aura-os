@@ -691,25 +691,58 @@
   gap: 6px;
 }
 
-.permsSaveBar {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  gap: var(--space-2);
-  justify-content: flex-end;
-  align-items: center;
-  padding: var(--space-3);
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
-  backdrop-filter: blur(4px);
-  flex-wrap: wrap;
-}
-
 .permsSaveError {
   color: var(--color-danger, #ef4444);
   font-size: 11px;
   margin-right: auto;
   min-width: 0;
+}
+
+.permsAutosaveStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+}
+
+.permsAutosaveStatusSaved {
+  color: var(--color-success, #16a34a);
+}
+
+.permsAutosaveStatusError {
+  color: var(--color-danger, #ef4444);
+}
+
+.permsAutosaveSpinner {
+  animation: permsAutosaveSpin 1s linear infinite;
+}
+
+@keyframes permsAutosaveSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.permsAutosaveRetry {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 0 4px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.permsAutosaveRetry:hover {
+  opacity: 0.8;
 }
 
 .permsFallbackToggle {

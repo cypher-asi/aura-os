@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Text, Toggle } from "@cypher-asi/zui";
-import { AlertTriangle, Plus, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, Check, Loader2, Plus, ShieldCheck, X } from "lucide-react";
 import { api } from "../../../api/client";
 import type {
   AgentInstalledToolsDiagnostic,
@@ -83,6 +83,66 @@ function permissionsEqual(
   if (ca.length !== cb.length) return false;
   for (let i = 0; i < ca.length; i++) if (ca[i] !== cb[i]) return false;
   return true;
+}
+
+/**
+ * Subtle inline indicator that echoes the autosave lifecycle: spinner
+ * while a PUT is in flight, a check-mark for a brief "Saved" flash,
+ * and a red error label with a retry affordance when the last save
+ * failed. Rendered in the Scope section header because it's the
+ * first section the user's eye lands on — not in the Capabilities
+ * header, even though that's where most toggles live, so scope edits
+ * don't feel silently un-saved.
+ */
+function AutosaveStatus({
+  status,
+  onRetry,
+}: {
+  status:
+    | { kind: "idle" }
+    | { kind: "saving" }
+    | { kind: "saved" }
+    | { kind: "error"; message: string };
+  onRetry: () => void;
+}) {
+  if (status.kind === "idle") {
+    return null;
+  }
+  if (status.kind === "saving") {
+    return (
+      <span className={styles.permsAutosaveStatus} aria-live="polite">
+        <Loader2 size={12} className={styles.permsAutosaveSpinner} />
+        <span>Saving…</span>
+      </span>
+    );
+  }
+  if (status.kind === "saved") {
+    return (
+      <span
+        className={`${styles.permsAutosaveStatus} ${styles.permsAutosaveStatusSaved}`}
+        aria-live="polite"
+      >
+        <Check size={12} />
+        <span>Saved</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`${styles.permsAutosaveStatus} ${styles.permsAutosaveStatusError}`}
+      role="alert"
+    >
+      <AlertTriangle size={12} />
+      <span title={status.message}>Save failed</span>
+      <button
+        type="button"
+        className={styles.permsAutosaveRetry}
+        onClick={onRetry}
+      >
+        Retry
+      </button>
+    </span>
+  );
 }
 
 /**
@@ -500,23 +560,87 @@ function ProjectAccessModePicker({
   );
 }
 
+/**
+ * Debounce window between a toggle flip and the PUT that persists it.
+ * Keeps the save count proportional to what the user did — rapid
+ * on/off flicker coalesces into a single request — without making the
+ * "saved" indicator feel sluggish.
+ */
+const AUTOSAVE_DEBOUNCE_MS = 350;
+/**
+ * How long the transient "Saved" badge stays visible after a
+ * successful autosave before fading back to the idle state.
+ */
+const SAVED_INDICATOR_MS = 1500;
+
+type SaveStatus =
+  | { kind: "idle" }
+  | { kind: "saving" }
+  | { kind: "saved" }
+  | { kind: "error"; message: string };
+
 export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
   const initial = useMemo<AgentPermissions>(
     () => agent.permissions ?? emptyAgentPermissions(),
-    [agent.permissions],
+    // `agent.permissions` is only read on first render / agent switch;
+    // subsequent edits flow through the local `draft` and are persisted
+    // via the autosave effect below. We intentionally do NOT resync
+    // `draft` from `agent.permissions` on every store patch, because
+    // our own successful save patches the store and we'd otherwise
+    // clobber any keystrokes the user made while the PUT was in
+    // flight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [agent.agent_id],
   );
   const [draft, setDraft] = useState<AgentPermissions>(initial);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [projectPickerStep, setProjectPickerStep] = useState<
     null | { stage: "project" } | { stage: "mode"; projectId: string }
   >(null);
   const [toolsRefreshKey, setToolsRefreshKey] = useState(0);
 
+  // Source of truth for "what the server last confirmed". The autosave
+  // effect diffs against this to decide whether a new PUT is warranted.
+  // Updated in three places:
+  //   1. on agent switch (reset to the freshly-rendered bundle),
+  //   2. after a successful PUT (set to the server's echoed bundle),
+  //   3. never on external prop changes — see the comment on `initial`.
+  const lastSavedRef = useRef<AgentPermissions>(initial);
+  // Mirror of the latest `draft` for the unmount/agent-switch flush.
+  // Kept in a ref so the flush effect doesn't have to depend on
+  // `draft` (which would re-register the cleanup on every keystroke).
+  const draftRef = useRef<AgentPermissions>(initial);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    setDraft(agent.permissions ?? emptyAgentPermissions());
-    setSaveError(null);
-  }, [agent.agent_id, agent.permissions]);
+    draftRef.current = draft;
+  }, [draft]);
+
+  useEffect(() => {
+    const next = agent.permissions ?? emptyAgentPermissions();
+    setDraft(next);
+    lastSavedRef.current = next;
+    draftRef.current = next;
+    setStatus({ kind: "idle" });
+    // Any debounce / saved-badge timer from the previous agent has no
+    // business running against the new one.
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    if (savedBadgeTimerRef.current !== null) {
+      clearTimeout(savedBadgeTimerRef.current);
+      savedBadgeTimerRef.current = null;
+    }
+    // Intentionally keyed on `agent_id` only: we don't want a
+    // successful PUT's `patchAgent` round-trip (which mutates
+    // `agent.permissions` via the store) to race against pending
+    // keystrokes and snap the draft back to a stale snapshot. The
+    // autosave effect below keeps `draft` in sync with the server
+    // through its own explicit flow.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.agent_id]);
 
   const projects = useProjectsListStore((s) => s.projects);
   const agents = useAgentStore((s) => s.agents);
@@ -539,7 +663,6 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
   const isCeoPreset =
     hasUniverseScope(draft) && hasAllCoreCapabilities(draft);
   const canEdit = isOwnAgent && !isCeoPreset;
-  const dirty = !permissionsEqual(draft, agent.permissions);
 
   const globalEnabled = useMemo(() => {
     const set = new Set(draft.capabilities.map((c) => c.type));
@@ -626,27 +749,81 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
     });
   };
 
-  const onDiscard = () => {
-    setDraft(agent.permissions ?? emptyAgentPermissions());
-    setSaveError(null);
-  };
+  const performSave = useCallback(
+    async (snapshot: AgentPermissions) => {
+      setStatus({ kind: "saving" });
+      try {
+        const updated = await api.agents.update(agent.agent_id, {
+          permissions: snapshot,
+        });
+        // Adopt the server's echoed bundle as the new "last saved"
+        // baseline — falling back to our own snapshot when the
+        // response omits `permissions`, which defeats the
+        // autosave-loop check the next time the user flips a toggle.
+        lastSavedRef.current = updated.permissions ?? snapshot;
+        useAgentStore.getState().patchAgent(updated);
+        setToolsRefreshKey((k) => k + 1);
+        setStatus({ kind: "saved" });
+        if (savedBadgeTimerRef.current !== null) {
+          clearTimeout(savedBadgeTimerRef.current);
+        }
+        savedBadgeTimerRef.current = setTimeout(() => {
+          savedBadgeTimerRef.current = null;
+          // Only drop back to "idle" if nothing else has happened
+          // since — avoids blinking away a fresh "Saving…" that
+          // arrived between the success and this timeout.
+          setStatus((cur) => (cur.kind === "saved" ? { kind: "idle" } : cur));
+        }, SAVED_INDICATOR_MS);
+      } catch (err) {
+        setStatus({ kind: "error", message: getApiErrorMessage(err) });
+      }
+    },
+    [agent.agent_id],
+  );
 
-  const onSave = async () => {
-    if (!canEdit || !dirty) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const updated = await api.agents.update(agent.agent_id, {
-        permissions: draft,
-      });
-      useAgentStore.getState().patchAgent(updated);
-      setToolsRefreshKey((k) => k + 1);
-    } catch (err) {
-      setSaveError(getApiErrorMessage(err));
-    } finally {
-      setSaving(false);
+  // Debounced autosave: any time the draft diverges from the last
+  // server-confirmed bundle, wait out the debounce window and PUT.
+  // Re-triggering the effect (e.g. the user flips another toggle
+  // before the timer fires) cancels the pending timer via the cleanup
+  // function so rapid flicker coalesces into a single request.
+  useEffect(() => {
+    if (!canEdit) return;
+    if (permissionsEqual(draft, lastSavedRef.current)) return;
+
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
     }
-  };
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      void performSave(draft);
+    }, AUTOSAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, [draft, canEdit, performSave]);
+
+  // If the user navigates away (unmount) or switches agents while a
+  // debounce is still pending, flush the latest draft immediately
+  // rather than silently dropping it.
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current !== null) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        if (!permissionsEqual(draftRef.current, lastSavedRef.current)) {
+          void performSave(draftRef.current);
+        }
+      }
+      if (savedBadgeTimerRef.current !== null) {
+        clearTimeout(savedBadgeTimerRef.current);
+        savedBadgeTimerRef.current = null;
+      }
+    };
+  }, [performSave]);
 
   const projectCapIds = useMemo(
     () =>
@@ -680,6 +857,16 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
       <div className={styles.section}>
         <div className={styles.permsSectionHeader}>
           <span className={styles.permsSectionTitle}>Scope</span>
+          {canEdit && (
+            <AutosaveStatus
+              status={status}
+              onRetry={() => {
+                if (!permissionsEqual(draft, lastSavedRef.current)) {
+                  void performSave(draft);
+                }
+              }}
+            />
+          )}
         </div>
         {universeScope ? (
           <div className={styles.permsChipRow}>
@@ -859,31 +1046,6 @@ export function PermissionsTab({ agent, isOwnAgent }: PermissionsTabProps) {
         )}
       </div>
 
-      {canEdit && dirty && (
-        <div className={styles.permsSaveBar}>
-          {saveError && (
-            <span className={styles.permsSaveError}>{saveError}</span>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDiscard}
-            disabled={saving}
-          >
-            Discard
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              void onSave();
-            }}
-            disabled={saving}
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
-      )}
     </>
   );
 }
