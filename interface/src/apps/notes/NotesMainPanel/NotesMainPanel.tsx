@@ -313,7 +313,9 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
         <div ref={scrollRef} className={styles.scrollArea}>
           <div
             ref={setCenterColumnRef}
-            className={styles.centerColumn}
+            className={`${styles.centerColumn} ${
+              mode === "markdown" ? styles.centerColumnMarkdown : ""
+            }`}
           >
             {!note ? null : mode === "wysiwyg" && editor ? (
               <>

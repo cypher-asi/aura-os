@@ -7,14 +7,21 @@
 }
 
 .toolbar {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-5);
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
-  padding: var(--space-3) var(--space-5) 0;
-  flex-shrink: 0;
+  background: transparent;
   color: var(--color-text-secondary);
   font-size: 12px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.toolbar > * {
+  pointer-events: auto;
 }
 
 .saveState {
@@ -34,9 +41,8 @@
 
 .modeToggle {
   display: inline-flex;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  padding: 2px;
+  gap: 4px;
+  padding: 0;
   background: transparent;
 }
 
@@ -46,23 +52,33 @@
   color: var(--color-text-secondary);
   font: inherit;
   font-size: 11px;
-  padding: 2px 10px;
+  padding: 2px 6px;
   border-radius: 0;
   cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.modeButton:hover {
+  opacity: 0.85;
 }
 
 .modeButton[data-active="true"] {
-  color: #fff;
-  background: color-mix(in srgb, var(--color-bg-secondary, #181818) 84%, white 16%);
+  color: var(--color-text);
+  opacity: 1;
+  border-bottom: 1px solid var(--color-link-accent, #22c55e);
 }
 
 .scrollArea {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-2) var(--space-5);
   width: 100%;
   box-sizing: border-box;
   scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .scrollArea::-webkit-scrollbar {
@@ -75,6 +91,18 @@
   margin-left: max(0px, calc(50vw - 340px - var(--left-panel-width, 248px) - 1px - var(--space-5)));
   margin-right: auto;
   padding-bottom: 40vh;
+}
+
+/* Markdown mode stretches the raw-markdown <textarea> to fill the full pane
+ * (no 680px column, no 40vh trailing padding) so editing feels symmetric
+ * with the WYSIWYG mode. */
+.centerColumnMarkdown {
+  max-width: none;
+  margin: 0;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 @media (max-width: 900px) {
@@ -132,12 +160,37 @@
 
 .editor :global(ul),
 .editor :global(ol) {
-  margin: 0 0 0.75em 1.25em;
-  padding: 0;
+  margin: 0 0 0.75em;
+  padding-left: 1.5em;
+}
+
+.editor :global(ul) {
+  list-style: disc outside;
+}
+
+.editor :global(ol) {
+  list-style: decimal outside;
+}
+
+.editor :global(ul ul) {
+  list-style: circle outside;
+}
+
+.editor :global(ul ul ul) {
+  list-style: square outside;
 }
 
 .editor :global(li) {
   margin: 0.1em 0;
+}
+
+.editor :global(li > p) {
+  margin: 0;
+}
+
+.editor :global(li > ul),
+.editor :global(li > ol) {
+  margin: 0.1em 0 0.1em;
 }
 
 .editor :global(blockquote) {
@@ -172,9 +225,13 @@
 }
 
 .editor :global(a) {
-  color: var(--color-link, #62b7ff);
+  color: var(--color-link-accent, #22c55e);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.editor :global(a:hover) {
+  color: color-mix(in srgb, var(--color-link-accent, #22c55e) 80%, white 20%);
 }
 
 .editor :global(p.is-editor-empty:first-child::before) {
@@ -187,7 +244,8 @@
 
 .markdownArea {
   width: 100%;
-  min-height: 60vh;
+  min-height: 100%;
+  flex: 1;
   border: none;
   outline: none;
   resize: none;
@@ -196,6 +254,7 @@
   font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 13px;
   line-height: 1.6;
+  display: block;
 }
 
 .bubbleMenu {
