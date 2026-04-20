@@ -243,19 +243,46 @@ export function AgentList({ mode = "default" }: AgentListProps) {
     );
   }, [isMobileLibrary]);
 
-  const prefetchAgentIds = useMemo(
-    () => (isDesktopSidebar ? agents.map((a) => a.agent_id) : []),
-    [agents, isDesktopSidebar],
-  );
+  // Prefetch last-message previews for the OTHER agents in the sidebar so
+  // each row can render a recent-message snippet. Excludes the currently
+  // selected agent because `AgentChatView` is already fetching that one —
+  // queuing it here would just put the foreground request at the back of
+  // the line on cold boot. The currently-selected fetch also gates our
+  // start so the active chat's history round-trip doesn't contend with
+  // preview prefetches for every other agent.
+  const prefetchAgentIds = useMemo(() => {
+    if (!isDesktopSidebar) return [];
+    return agents.map((a) => a.agent_id).filter((id) => id !== agentId);
+  }, [agents, isDesktopSidebar, agentId]);
+
+  const activeHistoryResolved = useChatHistoryStore((s) => {
+    if (!isDesktopSidebar || !agentId) return true;
+    const entry = s.entries[agentHistoryKey(agentId)];
+    return entry?.status === "ready" || entry?.status === "error";
+  });
 
   useEffect(() => {
     if (prefetchAgentIds.length === 0) return;
-    // Prefetch last-message previews for the sidebar with a small concurrency
-    // gate so first paint isn't blocked by a flood of parallel requests. The
-    // chat-history store TTL-caches, so repeats are cheap.
-    const CONCURRENCY = 4;
+    if (!activeHistoryResolved) return;
+    // Small concurrency gate + idle scheduling so the foreground chat has
+    // finished loading before we spray the storage backend with preview
+    // fetches for every other agent. The chat-history store TTL-caches,
+    // so repeats are cheap.
+    const CONCURRENCY = 2;
     let cancelled = false;
     const queue = [...prefetchAgentIds];
+    const runWhenIdle = (cb: () => void) => {
+      const ric = (
+        window as unknown as {
+          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        }
+      ).requestIdleCallback;
+      if (typeof ric === "function") {
+        ric(cb, { timeout: 500 });
+      } else {
+        setTimeout(cb, 0);
+      }
+    };
     const worker = async () => {
       while (!cancelled && queue.length > 0) {
         const id = queue.shift();
@@ -273,15 +300,18 @@ export function AgentList({ mode = "default" }: AgentListProps) {
         }
       }
     };
-    const workers = Array.from(
-      { length: Math.min(CONCURRENCY, prefetchAgentIds.length) },
-      () => worker(),
-    );
-    void Promise.all(workers);
+    runWhenIdle(() => {
+      if (cancelled) return;
+      const workers = Array.from(
+        { length: Math.min(CONCURRENCY, prefetchAgentIds.length) },
+        () => worker(),
+      );
+      void Promise.all(workers);
+    });
     return () => {
       cancelled = true;
     };
-  }, [prefetchAgentIds]);
+  }, [prefetchAgentIds, activeHistoryResolved]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
