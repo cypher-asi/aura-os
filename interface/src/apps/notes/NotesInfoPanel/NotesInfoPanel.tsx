@@ -1,46 +1,8 @@
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 import { OverlayScrollbar } from "../../../components/OverlayScrollbar";
+import { useAuthStore } from "../../../stores/auth-store";
 import { useActiveNote, useNotesStore } from "../../../stores/notes-store";
 import styles from "./NotesInfoPanel.module.css";
-
-interface TocItem {
-  id: string;
-  level: number;
-  text: string;
-}
-
-function parseToc(content: string): TocItem[] {
-  const items: TocItem[] = [];
-  let inFrontmatter = false;
-  let seenFrontmatterFence = false;
-  let inCodeFence = false;
-  const lines = content.split(/\r?\n/);
-  let counter = 0;
-  for (const raw of lines) {
-    const line = raw ?? "";
-    if (!seenFrontmatterFence && line.trim() === "---") {
-      inFrontmatter = true;
-      seenFrontmatterFence = true;
-      continue;
-    }
-    if (inFrontmatter) {
-      if (line.trim() === "---") inFrontmatter = false;
-      continue;
-    }
-    if (line.trim().startsWith("```")) {
-      inCodeFence = !inCodeFence;
-      continue;
-    }
-    if (inCodeFence) continue;
-    const match = /^(#{1,4})\s+(.+?)\s*#*\s*$/.exec(line);
-    if (!match) continue;
-    const level = match[1].length;
-    const text = match[2].trim();
-    counter += 1;
-    items.push({ id: `toc-${counter}`, level, text });
-  }
-  return items;
-}
 
 function formatDate(iso?: string): string {
   if (!iso) return "—";
@@ -54,25 +16,54 @@ function formatDate(iso?: string): string {
   }
 }
 
-function levelClass(level: number): string {
-  if (level === 2) return styles.tocLevel2;
-  if (level === 3) return styles.tocLevel3;
-  if (level >= 4) return styles.tocLevel4;
-  return "";
+/** Date-only formatter for the "Created at" row (time is redundant there). */
+function formatDateOnly(iso?: string): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString([], { dateStyle: "medium" });
+  } catch {
+    return iso;
+  }
+}
+
+const UUID_RE =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/**
+ * Display the `created_by` frontmatter value, falling back to the current
+ * user's display name when the stored value is still a raw user_id from the
+ * pre-display-name era. Any other non-empty string is passed through, so
+ * display names authored by other users still render correctly.
+ */
+function resolveCreatedBy(
+  value: string | undefined,
+  selfUserId: string | null | undefined,
+  selfDisplayName: string | null | undefined,
+): string {
+  if (!value) return "—";
+  if (UUID_RE.test(value) && selfUserId && value === selfUserId) {
+    return selfDisplayName || value;
+  }
+  return value;
 }
 
 export function NotesInfoPanel() {
   const note = useActiveNote();
   const revealInFolder = useNotesStore((s) => s.revealInFolder);
+  const user = useAuthStore((s) => s.user);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  const tocItems = useMemo(() => (note ? parseToc(note.content) : []), [note]);
 
   if (!note) {
     // Auto-selection fills the active note moments after mount; avoid a
     // flashing placeholder in the meantime.
     return <div className={styles.panel} />;
   }
+
+  const createdBy = resolveCreatedBy(
+    note.frontmatter.created_by,
+    user?.user_id,
+    user?.display_name,
+  );
 
   return (
     <div className={styles.panel}>
@@ -93,11 +84,14 @@ export function NotesInfoPanel() {
           </button>
         </div>
         <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>Created</span>
+          <span className={styles.infoLabel}>Created at</span>
           <span className={styles.infoValue}>
-            {formatDate(note.frontmatter.created_at)}
-            {note.frontmatter.created_by ? ` · ${note.frontmatter.created_by}` : ""}
+            {formatDateOnly(note.frontmatter.created_at)}
           </span>
+        </div>
+        <div className={styles.infoRow}>
+          <span className={styles.infoLabel}>Created by</span>
+          <span className={styles.infoValue}>{createdBy}</span>
         </div>
         <div className={styles.infoRow}>
           <span className={styles.infoLabel}>Last updated</span>
@@ -106,25 +100,6 @@ export function NotesInfoPanel() {
         <div className={styles.infoRow}>
           <span className={styles.infoLabel}>Word count</span>
           <span className={styles.infoValue}>{note.wordCount}</span>
-        </div>
-        <div className={styles.infoRow}>
-          <span className={styles.infoLabel}>Table of contents</span>
-          {tocItems.length === 0 ? (
-            <span className={`${styles.infoValue} ${styles.tocEmpty}`}>
-              No headings yet
-            </span>
-          ) : (
-            <ul className={styles.tocList}>
-              {tocItems.map((item) => (
-                <li
-                  key={item.id}
-                  className={`${styles.tocItem} ${levelClass(item.level)}`}
-                >
-                  <button type="button">{item.text}</button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
       <OverlayScrollbar scrollRef={scrollRef} />

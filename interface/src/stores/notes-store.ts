@@ -115,7 +115,7 @@ interface NotesState {
   commentsByNote: Record<string, NotesComment[]>;
   activeProjectId: string | null;
   activeRelPath: string | null;
-  sidekickTab: "info" | "comments";
+  sidekickTab: "toc" | "info" | "comments";
 }
 
 interface NotesActions {
@@ -152,7 +152,7 @@ interface NotesActions {
     id: string,
   ) => Promise<void>;
   revealInFolder: (absPath: string) => Promise<void>;
-  setSidekickTab: (tab: "info" | "comments") => void;
+  setSidekickTab: (tab: "toc" | "info" | "comments") => void;
 }
 
 type NotesStore = NotesState & NotesActions;
@@ -206,7 +206,7 @@ export const useNotesStore = create<NotesStore>()((set, get) => ({
   commentsByNote: {},
   activeProjectId: null,
   activeRelPath: null,
-  sidekickTab: "info",
+  sidekickTab: "toc",
 
   loadTree: async (projectId) => {
     set((state) => ({

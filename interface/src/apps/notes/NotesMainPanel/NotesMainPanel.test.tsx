@@ -35,6 +35,10 @@ vi.mock("@tiptap/react", () => ({
     commands: { setContent: vi.fn() },
     storage: { markdown: { getMarkdown: () => "" } },
   }),
+  // NotesMainPanel now defines a custom keybindings extension via
+  // `Extension.create({ ... })`; the stub returns a no-op object so the
+  // module can evaluate without booting real ProseMirror.
+  Extension: { create: () => ({}) },
 }));
 vi.mock("@tiptap/react/menus", () => ({
   BubbleMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,

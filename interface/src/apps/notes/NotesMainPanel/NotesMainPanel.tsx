@@ -375,7 +375,7 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
             }`}
           >
             {!note ? null : mode === "wysiwyg" && editor ? (
-              <>
+              <div data-notes-editor-root>
                 <BubbleMenu
                   editor={editor}
                   options={{ placement: "top" }}
@@ -384,7 +384,7 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
                   <BubbleToolbar editor={editor} />
                 </BubbleMenu>
                 <EditorContent editor={editor} />
-              </>
+              </div>
             ) : (
               <textarea
                 className={styles.markdownArea}

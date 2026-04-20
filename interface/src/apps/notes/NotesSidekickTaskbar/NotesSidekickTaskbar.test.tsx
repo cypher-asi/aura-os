@@ -36,7 +36,17 @@ import { useNotesStore } from "../../../stores/notes-store";
 
 describe("NotesSidekickTaskbar", () => {
   beforeEach(() => {
-    useNotesStore.setState({ sidekickTab: "info" });
+    useNotesStore.setState({ sidekickTab: "toc" });
+  });
+
+  it("lists tabs in TOC, Info, Comments order", () => {
+    render(<NotesSidekickTaskbar />);
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.map((b) => b.getAttribute("aria-label"))).toEqual([
+      "Table of contents",
+      "Info",
+      "Comments",
+    ]);
   });
 
   it("reflects the current sidekick tab", () => {
@@ -50,6 +60,9 @@ describe("NotesSidekickTaskbar", () => {
       "aria-pressed",
       "false",
     );
+    expect(
+      screen.getByRole("button", { name: "Table of contents" }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 
   it("flips the store state when the user clicks another tab", () => {

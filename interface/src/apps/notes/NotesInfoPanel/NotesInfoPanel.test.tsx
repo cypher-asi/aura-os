@@ -7,8 +7,9 @@ vi.mock("../../../components/OverlayScrollbar", () => ({
 
 import { NotesInfoPanel } from "./NotesInfoPanel";
 import { useNotesStore, makeNoteKey } from "../../../stores/notes-store";
+import { useAuthStore } from "../../../stores/auth-store";
 
-function seedActiveNote(content: string) {
+function seedActiveNote(content: string, createdBy: string = "Ada") {
   const projectId = "proj-1";
   const relPath = "Notes/Idea.md";
   const key = makeNoteKey(projectId, relPath);
@@ -22,7 +23,7 @@ function seedActiveNote(content: string) {
         absPath: "C:/projects/proj-1/Notes/Idea.md",
         frontmatter: {
           created_at: "2025-04-10T12:00:00.000Z",
-          created_by: "Ada",
+          created_by: createdBy,
         },
         updatedAt: "2025-04-11T09:00:00.000Z",
         wordCount: 42,
@@ -47,21 +48,8 @@ describe("NotesInfoPanel", () => {
     expect(screen.queryByText(/Word count/)).not.toBeInTheDocument();
   });
 
-  it("renders title, location, word count and TOC headings", () => {
-    seedActiveNote(
-      [
-        "---",
-        "title: Ignore this frontmatter heading",
-        "# not-a-heading",
-        "---",
-        "# Top",
-        "## Middle",
-        "```",
-        "# heading in code fence",
-        "```",
-        "### Inner",
-      ].join("\n"),
-    );
+  it("renders title, location, created-at/by, and word count rows", () => {
+    seedActiveNote("# Top\n\nbody");
 
     render(<NotesInfoPanel />);
 
@@ -71,22 +59,32 @@ describe("NotesInfoPanel", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
 
-    const headings = ["Top", "Middle", "Inner"];
-    for (const heading of headings) {
-      expect(
-        screen.getByRole("button", { name: heading }),
-      ).toBeInTheDocument();
-    }
-    expect(
-      screen.queryByRole("button", { name: "heading in code fence" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Created at")).toBeInTheDocument();
+    expect(screen.getByText("Created by")).toBeInTheDocument();
+    expect(screen.getByText("Ada")).toBeInTheDocument();
+    // TOC moved to its own panel; nothing TOC-related should render here.
+    expect(screen.queryByText("Table of contents")).not.toBeInTheDocument();
     expect(screen.queryByText("No headings yet")).not.toBeInTheDocument();
   });
 
-  it("shows a 'No headings yet' placeholder when the note has no markdown headings", () => {
-    seedActiveNote("Just a body paragraph with no headings.");
+  it("resolves a UUID created_by to the current user's display name", () => {
+    const selfId = "11111111-2222-3333-4444-555555555555";
+    useAuthStore.setState({
+      user: {
+        user_id: selfId,
+        display_name: "Rainer",
+        profile_image: "",
+        primary_zid: "",
+        zero_wallet: "",
+        wallets: [],
+        is_zero_pro: false,
+        is_access_granted: false,
+      },
+    });
+    seedActiveNote("# Top", selfId);
     render(<NotesInfoPanel />);
-    expect(screen.getByText("No headings yet")).toBeInTheDocument();
+    expect(screen.getByText("Rainer")).toBeInTheDocument();
+    expect(screen.queryByText(selfId)).not.toBeInTheDocument();
   });
 
   it("fires revealInFolder when the Location path is clicked", () => {

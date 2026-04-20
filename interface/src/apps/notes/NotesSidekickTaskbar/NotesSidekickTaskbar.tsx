@@ -1,16 +1,17 @@
-import { Info, MessageSquare } from "lucide-react";
+import { Info, ListTree, MessageSquare } from "lucide-react";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar/SidekickTabBar";
 import { useNotesStore } from "../../../stores/notes-store";
 
-type NotesSidekickTab = "info" | "comments";
+type NotesSidekickTab = "toc" | "info" | "comments";
 
 const TABS: readonly TabItem[] = [
+  { id: "toc", icon: <ListTree size={16} />, title: "Table of contents" },
   { id: "info", icon: <Info size={16} />, title: "Info" },
   { id: "comments", icon: <MessageSquare size={16} />, title: "Comments" },
 ];
 
 function isNotesSidekickTab(id: string): id is NotesSidekickTab {
-  return id === "info" || id === "comments";
+  return id === "toc" || id === "info" || id === "comments";
 }
 
 export function NotesSidekickTaskbar() {
