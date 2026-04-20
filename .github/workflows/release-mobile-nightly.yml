@@ -101,6 +101,9 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
           echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
 
+      - name: Verify Android release secrets
+        run: node scripts/ci/verify-android-release-secrets.mjs github_release
+
       - name: Build signed Android nightly APK
         working-directory: interface/android
         env:

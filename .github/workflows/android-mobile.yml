@@ -200,6 +200,9 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify Android release secrets
+        run: node scripts/ci/verify-android-release-secrets.mjs ${{ steps.plan.outputs.lane }}
+
       - name: Upload bundle with fastlane
         working-directory: interface/android
         env:
