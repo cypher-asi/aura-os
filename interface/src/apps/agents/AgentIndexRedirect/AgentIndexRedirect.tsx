@@ -11,6 +11,19 @@ export function AgentIndexRedirect() {
   const sortedAgents = useSortedAgents();
   const { isMobileLayout } = useAuraCapabilities();
 
+  // Fast path: if we have a cached last-used agent id, redirect before
+  // the `fetchAgents` network round-trip even completes. The downstream
+  // `AgentChatView` can happily load its own history in parallel with
+  // the agent list, so there's no reason to gate first paint on the
+  // list coming back. If the cached id is stale (agent was deleted
+  // remotely), the chat view will render an empty/error state and the
+  // user can pick another agent from the sidebar — same fallback as
+  // any other missing-agent navigation.
+  const lastId = isMobileLayout ? null : getLastStandaloneAgentId();
+  if (lastId) {
+    return <Navigate to={`/agents/${lastId}`} replace />;
+  }
+
   if (status === "idle" || status === "loading") {
     return (
       <PageEmptyState
@@ -28,13 +41,9 @@ export function AgentIndexRedirect() {
     );
   }
 
-  const lastId = getLastStandaloneAgentId();
-  const lastAgent = lastId ? agents.find((a) => a.agent_id === lastId) : null;
-  if (lastAgent) {
-    return <Navigate to={`/agents/${lastAgent.agent_id}`} replace />;
-  }
-
-  if (lastId) {
+  // `lastId` wasn't set (or was cleared above because the backing agent
+  // no longer exists): fall back to the first sorted agent.
+  if (getLastStandaloneAgentId()) {
     clearLastStandaloneAgentId();
   }
 

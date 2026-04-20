@@ -1,16 +1,14 @@
 /* eslint-disable react-refresh/only-export-components -- route modules mix lazy components and route tables by design */
-import { lazy } from "react";
 import type { RouteObject } from "react-router-dom";
+import { AgentChatView } from "../../components/AgentChatView";
 import { AgentIndexRedirect } from "./AgentIndexRedirect";
 
-const AgentChatView = lazy(() =>
-  import("../../components/AgentChatView").then((m) => ({ default: m.AgentChatView })),
-);
-
 /**
- * Routes owned by the Agents app. Kept as a thin, statically-importable module
- * so `apps/registry.ts` can assemble the full route tree without pulling in
- * the heavy agent panel code — the elements themselves are lazy-loaded.
+ * Routes owned by the Agents app. `AgentChatView` is imported eagerly —
+ * the projects app already pulls it into the initial bundle (see
+ * `apps/projects/routes.tsx`) so lazy-loading here only added a dynamic
+ * import round-trip to the cold-boot critical path without saving any
+ * bytes in practice.
  */
 export const agentsRoutes: RouteObject[] = [
   { path: "agents", element: <AgentIndexRedirect /> },
