@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import { type Editor, EditorContent, Extension, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -66,6 +66,60 @@ function rejoinFrontmatter(frontmatter: string, body: string): string {
   const trimmedBody = body.replace(/^\n+/, "");
   return `${frontmatter}\n\n${trimmedBody}`;
 }
+
+/**
+ * Supplemental keymap for the note editor.
+ *
+ * - `Tab` / `Shift-Tab`: sink/lift the current list item regardless of where
+ *   the caret sits inside the item (StarterKit only sinks at the very start
+ *   of the item, which trips up users who indent mid-word).
+ * - `Enter` inside a code block drops out of the block cleanly so the next
+ *   line isn't still styled as code. For inline marks like `code` and
+ *   `highlight`, we clear them on newline so formatting doesn't bleed across
+ *   paragraphs.
+ */
+const NotesKeymap = Extension.create({
+  name: "notesKeymap",
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        if (this.editor.can().sinkListItem("listItem")) {
+          return this.editor.chain().focus().sinkListItem("listItem").run();
+        }
+        return false;
+      },
+      "Shift-Tab": () => {
+        if (this.editor.can().liftListItem("listItem")) {
+          return this.editor.chain().focus().liftListItem("listItem").run();
+        }
+        return false;
+      },
+      Enter: () => {
+        const { editor } = this;
+        // Exit fenced code blocks on Enter-on-empty-last-line — TipTap ships
+        // `exitCode`, which no-ops when not applicable, so we can try it
+        // first and fall through on failure.
+        if (editor.isActive("codeBlock") && editor.commands.exitCode()) {
+          return true;
+        }
+        // Shed inline code/highlight marks on newline so the next paragraph
+        // starts clean.
+        const carryMarks = ["code", "highlight"];
+        const activeCarryMarks = carryMarks.filter((m) => editor.isActive(m));
+        if (activeCarryMarks.length === 0) return false;
+        const chain = editor.chain().focus();
+        for (const mark of activeCarryMarks) {
+          chain.unsetMark(mark);
+        }
+        chain.splitBlock();
+        for (const mark of activeCarryMarks) {
+          chain.unsetMark(mark);
+        }
+        return chain.run();
+      },
+    };
+  },
+});
 
 export function NotesMainPanel({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
@@ -187,6 +241,9 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
           breaks: false,
           transformPastedText: true,
         }),
+        // Keep NotesKeymap after StarterKit so Tab/Shift-Tab/Enter on lists
+        // and code blocks take precedence over the default behavior.
+        NotesKeymap,
       ],
       content: body,
       onUpdate: ({ editor: ed }) => {
