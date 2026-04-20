@@ -444,36 +444,7 @@ jobs:
       - name: Clean stale macOS DMG mounts
         if: matrix.target == 'macos'
         shell: bash
-        run: |
-          python3 <<'PY'
-          import re
-          import subprocess
-
-          info = subprocess.run(
-              ["hdiutil", "info"],
-              capture_output=True,
-              text=True,
-              check=True,
-          ).stdout.splitlines()
-
-          stale_mount = re.compile(r"^/Volumes/Aura(?: \d+)?$")
-          devices = []
-
-          for line in info:
-              if not line.startswith("/dev/disk"):
-                  continue
-              parts = line.split("\t")
-              device = parts[0]
-              mount_point = parts[-1].strip() if len(parts) > 2 else ""
-              if stale_mount.match(mount_point):
-                  devices.append((device, mount_point))
-
-          for device, mount_point in devices:
-              print(f"Detaching stale DMG mount {mount_point} ({device})")
-              subprocess.run(["hdiutil", "detach", device], check=True)
-          PY
-
-          rm -f "$AURA_RELEASE_DIR"/rw.Aura*.dmg
+        run: python3 infra/scripts/release/cleanup-stale-macos-dmg.py
 
       - name: Prepare macOS signing inputs
         if: matrix.target == 'macos'
@@ -602,31 +573,40 @@ jobs:
           }
 
           should_retry_packaging() {
-            if [ "${{ matrix.target }}" = "macos" ] && grep -q "hdiutil: create failed - Resource busy" packager.log; then
-              echo "Retrying macOS packaging after transient hdiutil create failure..."
+            if [ "${{ matrix.target }}" = "macos" ] \
+              && grep -Eq "hdiutil: .*Resource busy" packager.log; then
               return 0
             fi
 
             if [ "${{ matrix.target }}" = "linux" ] \
-              && grep -Eq "ERROR https://github\\.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-[^:]+: status code 5[0-9][0-9]" packager.log; then
-              echo "Retrying Linux packaging after transient AppRun download failure..."
+              && grep -Eq "ERROR .*: status code (429|5[0-9][0-9])" packager.log; then
               return 0
             fi
 
             return 1
           }
 
-          if package_once; then
-            exit 0
-          fi
+          cleanup_retryable_packaging_failure() {
+            if [ "${{ matrix.target }}" = "macos" ]; then
+              python3 infra/scripts/release/cleanup-stale-macos-dmg.py
+            fi
 
-          if ! should_retry_packaging; then
-            exit 1
-          fi
+            rm -f packager.log
+            sleep 5
+          }
 
-          rm -f packager.log
-          sleep 5
-          package_once
+          max_attempts=3
+          attempt=1
+
+          while ! package_once; do
+            if [ "$attempt" -ge "$max_attempts" ] || ! should_retry_packaging; then
+              exit 1
+            fi
+
+            attempt=$((attempt + 1))
+            echo "Retrying packaging after transient platform packaging failure (attempt ${attempt}/${max_attempts})..."
+            cleanup_retryable_packaging_failure
+          done
 
       - name: Collect artifacts
         id: artifacts
