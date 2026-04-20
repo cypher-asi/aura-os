@@ -831,6 +831,17 @@ pub(crate) async fn list_agents(
                         agent.icon = shadow.icon;
                     }
                 }
+                // Read-time reconciliation: aura-network's list response
+                // historically drops the `permissions` column for non-CEO
+                // agents, which meant every app-boot sidebar refresh
+                // clobbered the shadow (and the UI toggles) with the
+                // empty default. Mirrors the PUT-side defensive
+                // reconciliation — see
+                // `AgentService::reconcile_permissions_with_shadow` for
+                // the full rationale.
+                state
+                    .agent_service
+                    .reconcile_permissions_with_shadow(&mut agent);
                 // Repair blank names in-memory so the "New Agent" placeholder
                 // (and the UI renames that key off it) cascade to both
                 // library and project listings. Persistence happens in the
@@ -891,6 +902,13 @@ pub(crate) async fn get_agent(
                 agent.icon = shadow.icon;
             }
         }
+        // Read-time permissions reconciliation — see
+        // `AgentService::reconcile_permissions_with_shadow`. Must run
+        // before `save_agent_shadow` so an empty network response
+        // never overwrites the last-known-good toggles on disk.
+        state
+            .agent_service
+            .reconcile_permissions_with_shadow(&mut agent);
         repair_agent_name_in_place(&state.agent_service, &mut agent);
         let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(agent));

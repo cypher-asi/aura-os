@@ -115,6 +115,27 @@ impl AgentPermissions {
         Self::default()
     }
 
+    /// True iff this bundle carries **no** capabilities and **no**
+    /// scope restrictions — the same shape produced by
+    /// [`Self::empty`] / [`Self::default`].
+    ///
+    /// Used as the read-time reconciliation trigger when an
+    /// `aura-network` GET response round-trips through
+    /// [`network_agent_to_core`] with a missing/dropped `permissions`
+    /// column: if the freshly-fetched bundle is empty *and* the local
+    /// shadow has a non-empty bundle, we prefer the shadow. This
+    /// mirrors the PUT-side defensive reconciliation in
+    /// `handlers::agents::crud::update_agent`, which already trusts
+    /// the caller's submitted bundle when the PUT response fails to
+    /// echo it back. Without a symmetric read-side rule, every
+    /// `GET /agents` / `GET /agents/:id` clobbered the shadow with
+    /// the empty default on app boot, which is exactly the "toggles
+    /// survive in the session but vanish after restart" symptom.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.capabilities.is_empty() && self.scope.is_universe()
+    }
+
     /// True iff `self` has universe scope and every capability variant
     /// from [`Self::ceo_preset`]. Used by the CEO bootstrap to decide
     /// whether an existing agent already plays the CEO role.

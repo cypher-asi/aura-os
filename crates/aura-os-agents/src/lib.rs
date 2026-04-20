@@ -257,6 +257,12 @@ impl AgentService {
         for net in agents {
             let mut agent = network_agent_to_core(net);
             let _ = self.apply_runtime_config(&mut agent);
+            // Prefer the local shadow's `permissions` when the
+            // network response came back empty — see
+            // [`Self::reconcile_permissions_with_shadow`] for the full
+            // round-trip rationale. Without this, every hydration
+            // wipes the toggles the user just saved.
+            self.reconcile_permissions_with_shadow(&mut agent);
             owned.push(agent);
         }
         let refs: Vec<&Agent> = owned.iter().collect();
@@ -297,6 +303,50 @@ impl AgentService {
         Ok(agent)
     }
 
+    /// Read-time counterpart to the PUT-side reconciliation in
+    /// `handlers::agents::crud::update_agent`.
+    ///
+    /// aura-network has historically round-tripped the `permissions`
+    /// column inconsistently: the upstream either never persisted it
+    /// (older deployments) or silently drops it from the response JSON
+    /// on `GET /agents` / `GET /agents/:id`. When that happens,
+    /// [`network_agent_to_core`] / `agent_from_network` produce an
+    /// `Agent` whose `permissions` bundle is empty (`capabilities: []`,
+    /// universe scope) — and every caller that then writes the agent
+    /// through [`Self::save_agent_shadow`] clobbers the freshly-saved
+    /// local bundle. That's the "toggles survive the session but
+    /// vanish after an app restart" regression.
+    ///
+    /// This helper is the narrow fix: if the freshly-fetched bundle is
+    /// empty *and* the local shadow has a non-empty bundle, adopt the
+    /// shadow's bundle before persisting or returning. The PUT side
+    /// already applies the symmetric "trust what we just sent" rule
+    /// when the PUT response fails to echo the submitted bundle, so
+    /// both round-trips now treat the local shadow as the fallback
+    /// source of truth for `permissions` whenever aura-network drops
+    /// the column.
+    ///
+    /// Deliberately scoped to `permissions` — every other column on
+    /// the network response is still authoritative.
+    pub fn reconcile_permissions_with_shadow(&self, agent: &mut Agent) {
+        if !agent.permissions.is_empty() {
+            return;
+        }
+        let shadow = match self.get_agent_local(&agent.agent_id) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        if shadow.permissions.is_empty() {
+            return;
+        }
+        tracing::warn!(
+            agent_id = %agent.agent_id,
+            shadow_capabilities = shadow.permissions.capabilities.len(),
+            "aura-network response did not include a `permissions` bundle; using last-known shadow value"
+        );
+        agent.permissions = shadow.permissions;
+    }
+
     // -- network ---------------------------------------------------------------
 
     /// Get agent from aura-network. Returns error if network is not configured or agent not found.
@@ -319,6 +369,7 @@ impl AgentService {
             })?;
         let mut agent = network_agent_to_core(&net);
         let _ = self.apply_runtime_config(&mut agent);
+        self.reconcile_permissions_with_shadow(&mut agent);
         let _ = self.save_agent_shadow(&agent);
         Ok(agent)
     }
@@ -352,6 +403,7 @@ impl AgentService {
             })?;
         let mut agent = network_agent_to_core(&net);
         let _ = self.apply_runtime_config(&mut agent);
+        self.reconcile_permissions_with_shadow(&mut agent);
         let _ = self.save_agent_shadow(&agent);
         Ok(agent)
     }
@@ -1005,5 +1057,97 @@ mod tests {
         let (service, _dir) = open_service();
         let written = service.save_agent_shadows_if_changed(&[]).unwrap();
         assert_eq!(written, 0);
+    }
+
+    // -----------------------------------------------------------------
+    // reconcile_permissions_with_shadow — GET-side counterpart to the
+    // PUT-side reconciliation in `crud::update_agent`. Pins the
+    // contract that an empty network response never clobbers a
+    // non-empty shadow, while still letting a genuine "clear all
+    // toggles" roundtrip flow through.
+    // -----------------------------------------------------------------
+
+    fn agent_with_permissions(name: &str, perms: AgentPermissions) -> Agent {
+        let mut a = sample_agent(name);
+        a.permissions = perms;
+        a
+    }
+
+    #[test]
+    fn reconcile_prefers_shadow_when_network_response_drops_permissions() {
+        let (service, _dir) = open_service();
+        let mut seeded = agent_with_permissions(
+            "Atlas",
+            AgentPermissions {
+                scope: AgentScope::default(),
+                capabilities: vec![Capability::SpawnAgent, Capability::ReadAgent],
+            },
+        );
+        service
+            .save_agent_shadow(&seeded)
+            .expect("seed shadow with non-empty permissions");
+
+        // Simulate a fresh network response for the same agent whose
+        // `permissions` column came back empty.
+        seeded.permissions = AgentPermissions::empty();
+        service.reconcile_permissions_with_shadow(&mut seeded);
+
+        assert!(
+            !seeded.permissions.is_empty(),
+            "empty network permissions must be rescued from the shadow"
+        );
+        assert!(seeded
+            .permissions
+            .capabilities
+            .contains(&Capability::SpawnAgent));
+        assert!(seeded
+            .permissions
+            .capabilities
+            .contains(&Capability::ReadAgent));
+    }
+
+    #[test]
+    fn reconcile_is_noop_when_network_response_has_permissions() {
+        let (service, _dir) = open_service();
+        let mut seeded = agent_with_permissions(
+            "Atlas",
+            AgentPermissions {
+                scope: AgentScope::default(),
+                capabilities: vec![Capability::SpawnAgent],
+            },
+        );
+        service.save_agent_shadow(&seeded).unwrap();
+
+        // Fresh response has a DIFFERENT non-empty bundle — the
+        // network is authoritative in this case.
+        seeded.permissions = AgentPermissions {
+            scope: AgentScope::default(),
+            capabilities: vec![Capability::PostToFeed],
+        };
+        service.reconcile_permissions_with_shadow(&mut seeded);
+
+        assert_eq!(seeded.permissions.capabilities, vec![Capability::PostToFeed]);
+    }
+
+    #[test]
+    fn reconcile_allows_intentional_clear_when_shadow_is_also_empty() {
+        // When the user deliberately toggles everything off, both the
+        // shadow and the next network fetch are empty. Reconciliation
+        // must NOT synthesize permissions in that case.
+        let (service, _dir) = open_service();
+        let seeded = agent_with_permissions("Atlas", AgentPermissions::empty());
+        service.save_agent_shadow(&seeded).unwrap();
+
+        let mut fetched = seeded.clone();
+        service.reconcile_permissions_with_shadow(&mut fetched);
+        assert!(fetched.permissions.is_empty());
+    }
+
+    #[test]
+    fn reconcile_is_noop_when_no_shadow_exists() {
+        let (service, _dir) = open_service();
+        let mut fresh = agent_with_permissions("Atlas", AgentPermissions::empty());
+        service.reconcile_permissions_with_shadow(&mut fresh);
+        assert!(fresh.permissions.is_empty());
     }
 }

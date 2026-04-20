@@ -301,6 +301,12 @@ async fn load_agent(state: &AppState, jwt: &str, agent_id: &AgentId) -> ApiResul
             .map_err(map_network_error)?;
         let mut agent = agent_from_network(&net_agent);
         let _ = state.agent_service.apply_runtime_config(&mut agent);
+        // Powered by `getInstalledTools` in the Permissions tab; a
+        // dropped `permissions` column here would show an empty tool
+        // list even though the shadow has the toggles saved.
+        state
+            .agent_service
+            .reconcile_permissions_with_shadow(&mut agent);
         return Ok(agent);
     }
     state
