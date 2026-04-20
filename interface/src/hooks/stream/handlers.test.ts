@@ -199,6 +199,39 @@ describe("stream/handlers", () => {
 
       expect(setters.calls.setProgressText?.[0]).toBe("");
     });
+
+    it("does not create a duplicate thinking segment for consecutive deltas", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleThinkingDelta(refs, setters, "hello ");
+      handleThinkingDelta(refs, setters, "world");
+
+      const thinkingItems = refs.timeline.current.filter(
+        (t) => t.kind === "thinking",
+      );
+      expect(thinkingItems).toHaveLength(1);
+      expect(thinkingItems[0]).toMatchObject({
+        kind: "thinking",
+        text: "hello world",
+      });
+    });
+
+    it("tracks thinking text per segment when split by other timeline items", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleThinkingDelta(refs, setters, "first ");
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "run" });
+      handleThinkingDelta(refs, setters, "second");
+
+      const thinkingItems = refs.timeline.current.filter(
+        (t) => t.kind === "thinking",
+      );
+      expect(thinkingItems).toHaveLength(2);
+      expect(thinkingItems[0]).toMatchObject({ text: "first " });
+      expect(thinkingItems[1]).toMatchObject({ text: "second" });
+    });
   });
 
   describe("handleTextDelta", () => {

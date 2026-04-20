@@ -43,16 +43,43 @@ export function ActivityTimeline({
     return map;
   }, [toolCalls]);
 
-  const items: RenderedItem[] = [];
+  // Consolidate contiguous `thinking` timeline entries into a single rendered
+  // ThinkingBlock to avoid duplicate blocks when the stream briefly toggles
+  // between thinking states. We walk the timeline twice: first to build a
+  // merged list, then to apply the per-kind render rules below.
+  const mergedTimeline: TimelineItem[] = [];
   for (const item of timeline) {
+    const prev = mergedTimeline[mergedTimeline.length - 1];
+    if (
+      item.kind === "thinking" &&
+      prev &&
+      prev.kind === "thinking"
+    ) {
+      const mergedText = (prev.text ?? "") + (item.text ?? "");
+      mergedTimeline[mergedTimeline.length - 1] = {
+        ...prev,
+        text: mergedText || undefined,
+      };
+      continue;
+    }
+    mergedTimeline.push(item);
+  }
+
+  const items: RenderedItem[] = [];
+  for (const item of mergedTimeline) {
     if (item.kind === "thinking") {
-      if (!thinkingText) continue;
+      // Prefer per-segment text (set by handleThinkingDelta) so that when
+      // multiple thinking runs occur within one turn each block shows only
+      // the text that actually belongs to it. Fall back to the global
+      // `thinkingText` for historical messages that predate per-segment text.
+      const segmentText = item.text ?? thinkingText;
+      if (!segmentText) continue;
       items.push({
         key: item.id,
         kind: "thinking",
         node: (
           <ThinkingBlock
-            text={thinkingText}
+            text={segmentText}
             isStreaming={isStreaming}
             durationMs={thinkingDurationMs}
             defaultExpanded={defaultThinkingExpanded}

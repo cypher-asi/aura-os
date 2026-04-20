@@ -24,7 +24,7 @@ export interface ArtifactRef {
 }
 
 export type TimelineItem =
-  | { kind: "thinking"; id: string }
+  | { kind: "thinking"; id: string; text?: string }
   | { kind: "text"; content: string; id: string }
   | { kind: "tool"; toolCallId: string; id: string };
 

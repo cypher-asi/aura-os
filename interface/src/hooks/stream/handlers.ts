@@ -366,8 +366,16 @@ export function handleThinkingDelta(
   refs.thinkingBuffer.current += text;
 
   const tl = refs.timeline.current;
-  if (tl.length === 0 || tl[tl.length - 1].kind !== "thinking") {
-    tl.push({ kind: "thinking", id: nextTimelineId() });
+  // Reuse the most recent thinking segment whenever possible. A new segment
+  // should only appear when a non-thinking item (tool call, text, etc.) was
+  // pushed in between — otherwise we emit a second `thinking` timeline item
+  // that renders the same global buffer and surfaces as a duplicate block.
+  const lastIdx = tl.length - 1;
+  const last = lastIdx >= 0 ? tl[lastIdx] : null;
+  if (last && last.kind === "thinking") {
+    last.text = (last.text ?? "") + text;
+  } else {
+    tl.push({ kind: "thinking", id: nextTimelineId(), text });
   }
 
   if (refs.thinkingRaf.current === null) {
