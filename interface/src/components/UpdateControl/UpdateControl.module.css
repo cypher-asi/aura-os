@@ -1,0 +1,28 @@
+.updateControl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.updateStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.updateActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.updateCheckIcon {
+  color: var(--color-accent, var(--color-text));
+  flex-shrink: 0;
+}
+
+.updateError {
+  color: var(--color-danger, #d9534f);
+}

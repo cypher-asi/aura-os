@@ -12,7 +12,7 @@ const TERMINAL_STATUSES = new Set([
   "idle",
 ]);
 
-export type SettingsUpdaterStatus =
+export type UpdateStatusValue =
   | "checking"
   | "available"
   | "downloading"
@@ -22,10 +22,10 @@ export type SettingsUpdaterStatus =
   | "idle"
   | "unknown";
 
-export interface SettingsUpdaterState {
+export interface UpdateStatusState {
   supported: boolean;
   loaded: boolean;
-  status: SettingsUpdaterStatus;
+  status: UpdateStatusValue;
   currentVersion: string | null;
   availableVersion: string | null;
   error: string | null;
@@ -36,7 +36,7 @@ export interface SettingsUpdaterState {
   installUpdate: () => Promise<void>;
 }
 
-export function useSettingsUpdater(): SettingsUpdaterState {
+export function useUpdateStatus(): UpdateStatusState {
   const { features } = useAuraCapabilities();
   const [data, setData] = useState<DesktopUpdateStatusResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -116,7 +116,7 @@ export function useSettingsUpdater(): SettingsUpdaterState {
     }
   }, [features.nativeUpdater, poll]);
 
-  const status = (data?.update.status ?? "unknown") as SettingsUpdaterStatus;
+  const status = (data?.update.status ?? "unknown") as UpdateStatusValue;
   const availableVersion = data?.update.version ?? null;
   const currentVersion = data?.current_version ?? null;
   const error = data?.update.error ?? null;

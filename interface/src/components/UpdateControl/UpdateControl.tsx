@@ -1,7 +1,7 @@
 import { Button, Spinner, Text } from "@cypher-asi/zui";
 import { Check, Download, RefreshCw } from "lucide-react";
-import { useSettingsUpdater } from "./useSettingsUpdater";
-import styles from "./SettingsView.module.css";
+import { useUpdateStatus } from "./useUpdateStatus";
+import styles from "./UpdateControl.module.css";
 
 function formatLastChecked(timestamp: number | null, locale?: string): string | null {
   if (!timestamp) return null;
@@ -17,7 +17,7 @@ function formatLastChecked(timestamp: number | null, locale?: string): string | 
   });
 }
 
-export function SettingsUpdateControl() {
+export function UpdateControl() {
   const {
     supported,
     loaded,
@@ -29,7 +29,7 @@ export function SettingsUpdateControl() {
     installPending,
     checkForUpdates,
     installUpdate,
-  } = useSettingsUpdater();
+  } = useUpdateStatus();
 
   if (!supported) {
     return (

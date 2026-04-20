@@ -1,5 +1,6 @@
 import { Input, Text } from "@cypher-asi/zui";
 import { formatBuildTime, getBuildInfo } from "../../lib/build-info";
+import { UpdateControl } from "../UpdateControl";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 interface Props {
@@ -57,6 +58,15 @@ export function OrgSettingsGeneral({ teamName, onTeamNameChange, teamSaving, tea
             <Text as="span" variant="muted" size="sm" data-testid="settings-channel">
               ({channelLabel})
             </Text>
+          </div>
+        </div>
+        <div className={styles.settingsRow}>
+          <div className={styles.rowInfo}>
+            <span className={styles.rowLabel}>Updates</span>
+            <span className={styles.rowDescription}>Check for and install new versions of Aura</span>
+          </div>
+          <div className={styles.rowControl}>
+            <UpdateControl />
           </div>
         </div>
         <div className={styles.settingsRow}>
