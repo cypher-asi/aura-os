@@ -23,7 +23,7 @@
 }
 
 .banner[data-variant="ready"] {
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  background: black;
 }
 
 .banner[data-variant="info"] {
