@@ -141,6 +141,32 @@ export function mergeTaskIntoProjectLayout(
   };
 }
 
+// Drop a spec from the layout cache after a successful delete so every view
+// reading `initialSpecs` (Sidekick SpecList/TaskList, mobile work/tasks views,
+// etc.) reflects the removal immediately instead of waiting for a full page
+// refetch.
+export function removeSpecFromProjectLayout(
+  current: ProjectLayoutBundle | undefined,
+  specId: string,
+): ProjectLayoutBundle | undefined {
+  if (!current) return current;
+  const nextSpecs = current.specs.filter((s) => s.spec_id !== specId);
+  if (nextSpecs.length === current.specs.length) return current;
+  return { ...current, specs: nextSpecs };
+}
+
+// Drop a task from the layout cache after a successful delete so every view
+// reading `initialTasks` reflects the removal immediately.
+export function removeTaskFromProjectLayout(
+  current: ProjectLayoutBundle | undefined,
+  taskId: string,
+): ProjectLayoutBundle | undefined {
+  if (!current) return current;
+  const nextTasks = current.tasks.filter((t) => t.task_id !== taskId);
+  if (nextTasks.length === current.tasks.length) return current;
+  return { ...current, tasks: nextTasks };
+}
+
 // Apply an authoritative status transition (from `task_completed` /
 // `task_failed` / `task_started` WS events) to the layout cache without
 // waiting for a follow-up `task_saved` snapshot. Matches the patch shape

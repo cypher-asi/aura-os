@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Spec, Task } from "../../types";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
@@ -9,6 +10,11 @@ import { EmptyState } from "../../components/EmptyState";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import { api } from "../../api/client";
+import {
+  projectQueryKeys,
+  removeTaskFromProjectLayout,
+  type ProjectLayoutBundle,
+} from "../../queries/project-queries";
 import { useTaskListData } from "./useTaskListData";
 import styles from "../aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
@@ -33,6 +39,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const pushTask = useSidekickStore((s) => s.pushTask);
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
+  const queryClient = useQueryClient();
 
   const specMap = useMemo(() => new Map(specs.map((s) => [s.spec_id, s])), [specs]);
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.task_id, t])), [tasks]);
@@ -157,6 +164,12 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       if (target.kind === "task") {
         const { task } = target;
         removeTask(task.task_id);
+        // Drop the task from the project-layout cache so Kanban / mobile
+        // views that read `initialTasks` reflect the delete immediately.
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => removeTaskFromProjectLayout(current, task.task_id),
+        );
         api.deleteTask(projectId, task.task_id).catch((err) => {
           console.error("Failed to delete task", err);
           pushTask(task);
@@ -165,7 +178,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       }
       setSpecDeleteTarget(target.spec);
     },
-    [menu, closeMenu, projectId, removeTask, pushTask, setSpecDeleteTarget],
+    [menu, closeMenu, projectId, queryClient, removeTask, pushTask, setSpecDeleteTarget],
   );
 
   const isEmpty = tasks.length === 0;

@@ -1,6 +1,12 @@
 import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useSidekickStore } from "../stores/sidekick-store";
+import {
+  projectQueryKeys,
+  removeSpecFromProjectLayout,
+  type ProjectLayoutBundle,
+} from "../queries/project-queries";
 import type { ProjectId, Spec } from "../types";
 import { getApiErrorDetails, getApiErrorMessage } from "../utils/api-errors";
 
@@ -26,6 +32,7 @@ export function useDeleteSpec(projectId: ProjectId | undefined): UseDeleteSpecRe
   const [deleteTarget, setDeleteTarget] = useState<Spec | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const closeDeleteModal = useCallback(() => {
     setDeleteTarget(null);
@@ -40,6 +47,13 @@ export function useDeleteSpec(projectId: ProjectId | undefined): UseDeleteSpecRe
     try {
       await api.deleteSpec(projectId, spec.spec_id);
       useSidekickStore.getState().removeSpec(spec.spec_id);
+      // Keep the project-layout cache in sync so views sourcing `initialSpecs`
+      // (Sidekick lists, mobile work/tasks views, …) drop the spec immediately
+      // instead of waiting for a refetch.
+      queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+        projectQueryKeys.layout(projectId),
+        (current) => removeSpecFromProjectLayout(current, spec.spec_id),
+      );
       setDeleteTarget(null);
     } catch (err) {
       console.error("Failed to delete spec", err);
@@ -49,7 +63,7 @@ export function useDeleteSpec(projectId: ProjectId | undefined): UseDeleteSpecRe
     } finally {
       setDeleteLoading(false);
     }
-  }, [deleteTarget, projectId]);
+  }, [deleteTarget, projectId, queryClient]);
 
   return {
     deleteTarget,
