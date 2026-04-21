@@ -1,18 +1,4 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
-.chartWrap {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2) var(--space-5);
-  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
-}
-
-.chartInner {
+.list {
   display: flex;
   flex-direction: column;
   max-width: 560px;
@@ -115,12 +101,7 @@
 }
 
 @media (max-width: 900px) {
-  .chartWrap {
-    padding: var(--space-3);
-    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
-  }
-
-  .chartInner {
+  .list {
     max-width: 560px;
     margin-left: auto;
     margin-right: auto;
@@ -128,11 +109,6 @@
 }
 
 @media (max-width: 640px) {
-  .chartWrap {
-    padding: 12px;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  }
-
   .row {
     padding: 6px var(--space-2);
   }
