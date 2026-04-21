@@ -183,6 +183,28 @@ impl TaskService {
         task.completed_by_agent_instance_id = task.assigned_agent_instance_id;
         task.execution_notes = notes;
         task.files_changed = files_changed;
+
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_files_changed: Vec<aura_os_storage::StorageTaskFileChangeSummary> = task
+            .files_changed
+            .iter()
+            .map(|fc| aura_os_storage::StorageTaskFileChangeSummary {
+                op: fc.op.clone(),
+                path: fc.path.clone(),
+                lines_added: fc.lines_added,
+                lines_removed: fc.lines_removed,
+            })
+            .collect();
+        let update = aura_os_storage::UpdateTaskRequest {
+            execution_notes: Some(task.execution_notes.clone()),
+            files_changed: Some(storage_files_changed),
+            ..Default::default()
+        };
+        storage
+            .update_task(&task_id.to_string(), &jwt, &update)
+            .await?;
+
         Ok(task)
     }
 
@@ -197,6 +219,17 @@ impl TaskService {
             .transition_task(project_id, spec_id, task_id, TaskStatus::Failed)
             .await?;
         task.execution_notes = reason.to_string();
+
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let update = aura_os_storage::UpdateTaskRequest {
+            execution_notes: Some(task.execution_notes.clone()),
+            ..Default::default()
+        };
+        storage
+            .update_task(&task_id.to_string(), &jwt, &update)
+            .await?;
+
         Ok(task)
     }
 
