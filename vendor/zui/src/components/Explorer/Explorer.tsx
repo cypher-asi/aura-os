@@ -232,10 +232,6 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
     [node.id, node.label, onRenameCommit, onRenameCancel]
   );
 
-  const stopPropagation = useCallback((e: React.SyntheticEvent) => {
-    e.stopPropagation();
-  }, []);
-
   const renderLabelContent = () => {
     if (!searchQuery.trim() || !isMatch) {
       return node.label;
@@ -260,27 +256,6 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
     );
   };
 
-  const renderLabel = () => {
-    if (isEditing) {
-      return (
-        <input
-          ref={handleRenameInputMount}
-          className={styles.labelInput}
-          defaultValue={node.label}
-          onKeyDown={handleRenameKeyDown}
-          onBlur={handleRenameBlur}
-          onClick={stopPropagation}
-          onMouseDown={stopPropagation}
-          onPointerDown={stopPropagation}
-          onDoubleClick={stopPropagation}
-          spellCheck={false}
-          aria-label="Rename"
-        />
-      );
-    }
-    return renderLabelContent();
-  };
-
   const chevronElement = hasChildren ? (
     <Item.Chevron
       className={styles.chevronButton}
@@ -291,6 +266,66 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
   ) : (
     chevronPosition === 'left' ? <Item.Spacer className={styles.leafSpacer} /> : null
   );
+
+  // While this node is being renamed, render a non-button row so the <input>
+  // can own focus and keyboard/blur events. (An <input> nested inside a
+  // <button> is invalid HTML; browsers route focus to the button and the
+  // input becomes inert.)
+  if (isEditing) {
+    return (
+      <div className={styles.item}>
+        <div
+          className={clsx(
+            styles.itemContent,
+            styles.itemEditing,
+            !compact && styles.itemMenuHeight,
+            isSelected && styles.itemSelected
+          )}
+          style={indent > 0 ? { paddingLeft: indent } : undefined}
+          role="treeitem"
+          aria-level={level + 1}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+        >
+          {chevronPosition === 'left' && (
+            hasChildren
+              ? <span className={clsx(styles.chevronButton, styles.leafSpacer)} />
+              : <span className={styles.leafSpacer} />
+          )}
+          {node.icon ? (
+            <span className={styles.icon}>{node.icon}</span>
+          ) : (
+            <span className={styles.iconSpacer} />
+          )}
+          <input
+            ref={handleRenameInputMount}
+            className={styles.labelInput}
+            defaultValue={node.label}
+            onKeyDown={handleRenameKeyDown}
+            onBlur={handleRenameBlur}
+            spellCheck={false}
+            aria-label="Rename"
+          />
+        </div>
+
+        {hasChildren && (
+          <div className={clsx(styles.children, !isExpanded && styles.childrenCollapsed)}>
+            <div className={styles.childrenInner}>
+              {node.children!.map((child) => (
+                <ExplorerItem
+                  key={child.id}
+                  node={child}
+                  level={level + 1}
+                  path={[...path, child.id]}
+                  activeDropPosition={activeDropPosition}
+                  dropTargetId={dropTargetId}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.item}>
@@ -326,7 +361,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
         ) : (
           <span className={styles.iconSpacer} />
         )}
-        <Item.Label className={styles.label}>{renderLabel()}</Item.Label>
+        <Item.Label className={styles.label}>{renderLabelContent()}</Item.Label>
         {node.suffix && <span className={styles.suffix}>{node.suffix}</span>}
 
         {chevronPosition === 'right' && chevronElement}

@@ -177,6 +177,15 @@
   line-height: 1.4;
 }
 
+/* Row shown in place of the button while renaming */
+.itemEditing {
+  cursor: text;
+}
+
+.itemEditing:hover {
+  background: transparent;
+}
+
 /* Suffix (e.g. status icons after the label) */
 .suffix {
   display: inline-flex;
