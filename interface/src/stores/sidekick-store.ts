@@ -3,7 +3,12 @@ import type { ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 import type { LogEntry } from "../hooks/use-log-stream";
 import { compareSpecs } from "../utils/collections";
-import { createSidekickSlice, type SidekickSliceState } from "./shared/sidekick-slice";
+import {
+  createSidekickSlice,
+  persistActiveTab,
+  type SidekickSliceState,
+} from "./shared/sidekick-slice";
+import { SIDEKICK_ACTIVE_TAB_KEY } from "../constants";
 
 export type SidekickTab =
   | "terminal"
@@ -15,6 +20,22 @@ export type SidekickTab =
   | "sessions"
   | "log"
   | "files";
+
+const SIDEKICK_TABS = new Set<SidekickTab>([
+  "terminal",
+  "browser",
+  "run",
+  "specs",
+  "tasks",
+  "stats",
+  "sessions",
+  "log",
+  "files",
+]);
+
+function isSidekickTab(value: string): value is SidekickTab {
+  return SIDEKICK_TABS.has(value as SidekickTab);
+}
 
 export type PreviewItem =
   | { kind: "spec"; spec: Spec }
@@ -105,7 +126,10 @@ function patchSpecInHistory(
 const titleListeners = new Set<AgentInstanceUpdateListener>();
 
 export const useSidekickStore = create<SidekickState>()((set, get) => ({
-  ...createSidekickSlice<SidekickTab, PreviewItem>("terminal", set, get),
+  ...createSidekickSlice<SidekickTab, PreviewItem>("terminal", set, get, {
+    storageKey: SIDEKICK_ACTIVE_TAB_KEY,
+    isValidTab: isSidekickTab,
+  }),
   infoContent: null,
   showInfo: false,
   specs: [],
@@ -115,6 +139,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   streamingAgentInstanceId: null,
 
   setActiveTab: (tab) => {
+    persistActiveTab(SIDEKICK_ACTIVE_TAB_KEY, tab);
     set({ activeTab: tab, showInfo: false, previewItem: null, previewHistory: [], canGoBack: false });
   },
 

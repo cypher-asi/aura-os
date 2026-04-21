@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { MemoryFact, MemoryEvent, MemoryProcedure, HarnessSkill, HarnessSkillInstallation } from "../../../types";
 import { createSidekickSlice, type SidekickSliceState } from "../../../stores/shared/sidekick-slice";
+import { AGENT_SIDEKICK_ACTIVE_TAB_KEY } from "../../../constants";
 
 export type AgentPreviewItem =
   | { kind: "skill"; skill: HarnessSkill; installation?: HarnessSkillInstallation }
@@ -20,6 +21,23 @@ export type AgentSidekickTab =
   | "stats"
   | "memory";
 
+const AGENT_SIDEKICK_TABS = new Set<AgentSidekickTab>([
+  "profile",
+  "chats",
+  "skills",
+  "permissions",
+  "projects",
+  "tasks",
+  "processes",
+  "logs",
+  "stats",
+  "memory",
+]);
+
+function isAgentSidekickTab(value: string): value is AgentSidekickTab {
+  return AGENT_SIDEKICK_TABS.has(value as AgentSidekickTab);
+}
+
 interface AgentSidekickState extends SidekickSliceState<AgentSidekickTab, AgentPreviewItem> {
   showEditor: boolean;
   showDeleteConfirm: boolean;
@@ -37,7 +55,10 @@ interface AgentSidekickState extends SidekickSliceState<AgentSidekickTab, AgentP
 }
 
 export const useAgentSidekickStore = create<AgentSidekickState>()((set, get) => ({
-  ...createSidekickSlice<AgentSidekickTab, AgentPreviewItem>("profile", set, get),
+  ...createSidekickSlice<AgentSidekickTab, AgentPreviewItem>("profile", set, get, {
+    storageKey: AGENT_SIDEKICK_ACTIVE_TAB_KEY,
+    isValidTab: isAgentSidekickTab,
+  }),
   showEditor: false,
   showDeleteConfirm: false,
 

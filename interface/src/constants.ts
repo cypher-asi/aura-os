@@ -9,3 +9,6 @@ export const PROJECT_ORDER_KEY = "aura-project-order";
 export const TASKBAR_APPS_COLLAPSED_KEY = "aura-taskbar-apps-collapsed";
 export const TASKBAR_APP_ORDER_KEY = "aura-taskbar-app-order";
 export const TASKBAR_HIDDEN_APPS_KEY = "aura-taskbar-hidden-apps";
+export const SIDEKICK_ACTIVE_TAB_KEY = "aura-sidekick-active-tab";
+export const AGENT_SIDEKICK_ACTIVE_TAB_KEY = "aura-agent-sidekick-active-tab";
+export const PROCESS_SIDEKICK_ACTIVE_TAB_KEY = "aura-process-sidekick-active-tab";

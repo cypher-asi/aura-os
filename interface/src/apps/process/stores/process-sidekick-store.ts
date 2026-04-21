@@ -1,8 +1,25 @@
 import { create } from "zustand";
 import type { ProcessNode, ProcessRun } from "../../../types";
-import { createSidekickSlice, type SidekickSliceState } from "../../../stores/shared/sidekick-slice";
+import {
+  createSidekickSlice,
+  persistActiveTab,
+  type SidekickSliceState,
+} from "../../../stores/shared/sidekick-slice";
+import { PROCESS_SIDEKICK_ACTIVE_TAB_KEY } from "../../../constants";
 
 export type ProcessSidekickTab = "process" | "runs" | "events" | "stats" | "log";
+
+const PROCESS_SIDEKICK_TABS = new Set<ProcessSidekickTab>([
+  "process",
+  "runs",
+  "events",
+  "stats",
+  "log",
+]);
+
+function isProcessSidekickTab(value: string): value is ProcessSidekickTab {
+  return PROCESS_SIDEKICK_TABS.has(value as ProcessSidekickTab);
+}
 export type NodeSidekickTab = "info" | "config" | "connections" | "output";
 
 export type NodeRunStatus = "running" | "completed" | "failed" | "skipped";
@@ -37,9 +54,15 @@ interface ProcessSidekickState extends SidekickSliceState<ProcessSidekickTab, Pr
 }
 
 export const useProcessSidekickStore = create<ProcessSidekickState>()((set, get) => ({
-  ...createSidekickSlice<ProcessSidekickTab, ProcessRun>("process", set, get),
+  ...createSidekickSlice<ProcessSidekickTab, ProcessRun>("process", set, get, {
+    storageKey: PROCESS_SIDEKICK_ACTIVE_TAB_KEY,
+    isValidTab: isProcessSidekickTab,
+  }),
   // Override: process store does not clear preview on tab switch
-  setActiveTab: (tab: ProcessSidekickTab) => set({ activeTab: tab }),
+  setActiveTab: (tab: ProcessSidekickTab) => {
+    persistActiveTab(PROCESS_SIDEKICK_ACTIVE_TAB_KEY, tab);
+    set({ activeTab: tab });
+  },
   activeNodeTab: "info" as NodeSidekickTab,
   previewRun: null,
   selectedNode: null,
