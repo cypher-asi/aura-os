@@ -3,16 +3,11 @@ import { useShallow } from "zustand/react/shallow";
 import { invalidateTaskTurns } from "./task-turn-cache";
 import { removePersistedTaskOutputText } from "./event-store/task-output-cache";
 
-const STORAGE_KEY = "aura-task-output-panel";
 const TASKS_STORAGE_KEY = "aura-task-output-panel-tasks";
-const DEFAULT_HEIGHT = 200;
-const MIN_HEIGHT = 80;
-const MAX_HEIGHT = 500;
 const MAX_PERSISTED_TASKS = 20;
 const PERSIST_DEBOUNCE_MS = 150;
 
 export type PanelTaskStatus = "active" | "completed" | "failed" | "interrupted";
-export type OutputPanelTab = "run" | "terminal";
 
 export interface PanelTaskEntry {
   taskId: string;
@@ -21,20 +16,6 @@ export interface PanelTaskEntry {
   projectId: string;
   agentInstanceId?: string;
   updatedAt: number;
-}
-
-function loadPanelState(): { height: number; collapsed: boolean } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return { height: DEFAULT_HEIGHT, collapsed: false };
-}
-
-function savePanelState(height: number, collapsed: boolean) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ height, collapsed }));
-  } catch { /* ignore */ }
 }
 
 function loadPersistedTasks(): PanelTaskEntry[] {
@@ -66,26 +47,31 @@ function savePersistedTasks(tasks: PanelTaskEntry[]) {
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-function schedulePersist(height: number, collapsed: boolean, tasks: PanelTaskEntry[]) {
+function schedulePersist(tasks: PanelTaskEntry[]) {
   if (persistTimer != null) {
     clearTimeout(persistTimer);
   }
   persistTimer = setTimeout(() => {
-    savePanelState(height, collapsed);
     savePersistedTasks(tasks);
     persistTimer = null;
   }, PERSIST_DEBOUNCE_MS);
 }
 
 interface TaskOutputPanelState {
-  panelHeight: number;
-  collapsed: boolean;
-  activeTab: OutputPanelTab;
   tasks: PanelTaskEntry[];
 
-  setActiveTab: (tab: OutputPanelTab) => void;
-  toggleCollapse: () => void;
   addTask: (taskId: string, projectId: string, title?: string, agentInstanceId?: string) => void;
+  /**
+   * Rehydrate an "active" row for a task the server says is currently
+   * streaming (from `GET /loop/status` → `active_tasks`). Used on page
+   * refresh / WS reconnect so the Run panel doesn't silently drop rows
+   * whose `task_started` events were missed because they fired before
+   * the new session connected. Safe to call repeatedly: an existing
+   * row for the same task is promoted back to "active" (and its
+   * `agentInstanceId` is filled in if it was missing), while rows we
+   * already know about are not re-created.
+   */
+  hydrateActiveTask: (taskId: string, projectId: string, agentInstanceId?: string) => void;
   completeTask: (taskId: string) => void;
   failTask: (taskId: string) => void;
   dismissTask: (taskId: string) => void;
@@ -97,27 +83,19 @@ interface TaskOutputPanelState {
    * on project load). Used to resolve "active" rehydrated entries whose real
    * status has moved on while the UI was closed. Entries not present in
    * `updates` are left untouched so live in-progress runs continue to tick.
+   * When `title` is provided and differs from a placeholder (e.g. the raw
+   * task id left behind by `hydrateActiveTask`), the row's title is updated
+   * too so rehydrated rows show a proper label once `listTasks` arrives.
    */
-  reconcileStatuses: (updates: Array<{ taskId: string; status: PanelTaskStatus }>) => void;
-  handleMouseDown: (e: React.MouseEvent) => void;
+  reconcileStatuses: (
+    updates: Array<{ taskId: string; status: PanelTaskStatus; title?: string }>,
+  ) => void;
 }
 
-const saved = loadPanelState();
 const restoredTasks = loadPersistedTasks();
 
 export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get) => ({
-  panelHeight: saved.height,
-  collapsed: saved.collapsed,
-  activeTab: "run" as OutputPanelTab,
   tasks: restoredTasks,
-
-  setActiveTab: (tab) => {
-    set({ activeTab: tab });
-  },
-
-  toggleCollapse: () => {
-    set((s) => ({ collapsed: !s.collapsed }));
-  },
 
   addTask: (taskId, projectId, title, agentInstanceId) => {
     set((s) => {
@@ -133,6 +111,39 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
       };
       const filtered = s.tasks.filter((t) => t.taskId !== taskId);
       return { tasks: [...filtered, entry] };
+    });
+  },
+
+  hydrateActiveTask: (taskId, projectId, agentInstanceId) => {
+    set((s) => {
+      const existing = s.tasks.find((t) => t.taskId === taskId);
+      if (existing) {
+        const nextAgent = existing.agentInstanceId ?? agentInstanceId;
+        if (existing.status === "active" && existing.agentInstanceId === nextAgent) {
+          return s;
+        }
+        return {
+          tasks: s.tasks.map((t) =>
+            t.taskId === taskId
+              ? {
+                  ...t,
+                  status: "active" as const,
+                  agentInstanceId: nextAgent,
+                  updatedAt: Date.now(),
+                }
+              : t,
+          ),
+        };
+      }
+      const entry: PanelTaskEntry = {
+        taskId,
+        title: taskId,
+        status: "active",
+        projectId,
+        agentInstanceId,
+        updatedAt: Date.now(),
+      };
+      return { tasks: [...s.tasks, entry] };
     });
   },
 
@@ -188,50 +199,46 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
 
   reconcileStatuses: (updates) => {
     if (updates.length === 0) return;
-    const updateMap = new Map(updates.map((u) => [u.taskId, u.status]));
+    const updateMap = new Map(
+      updates.map((u) => [u.taskId, { status: u.status, title: u.title }] as const),
+    );
     set((s) => {
       let changed = false;
       const nextTasks = s.tasks.map((t) => {
-        const nextStatus = updateMap.get(t.taskId);
-        if (!nextStatus || nextStatus === t.status) return t;
+        const update = updateMap.get(t.taskId);
+        if (!update) return t;
+        const nextTitle =
+          update.title && update.title !== t.title && t.title === t.taskId
+            ? update.title
+            : t.title;
+        const statusChanged = update.status !== t.status;
+        const titleChanged = nextTitle !== t.title;
+        if (!statusChanged && !titleChanged) return t;
         changed = true;
-        return { ...t, status: nextStatus, updatedAt: Date.now() };
+        return {
+          ...t,
+          status: update.status,
+          title: nextTitle,
+          updatedAt: Date.now(),
+        };
       });
       return changed ? { tasks: nextTasks } : s;
     });
   },
-
-  handleMouseDown: (e) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startHeight = get().panelHeight;
-
-    const onMove = (ev: MouseEvent) => {
-      const delta = startY - ev.clientY;
-      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, startHeight + delta));
-      set({ panelHeight: newHeight });
-    };
-
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  },
 }));
 
 useTaskOutputPanelStore.subscribe((state, prevState) => {
-  if (
-    state.panelHeight === prevState.panelHeight &&
-    state.collapsed === prevState.collapsed &&
-    state.tasks === prevState.tasks
-  ) {
-    return;
-  }
-  schedulePersist(state.panelHeight, state.collapsed, state.tasks);
+  if (state.tasks === prevState.tasks) return;
+  schedulePersist(state.tasks);
 });
+
+// One-time cleanup: earlier builds persisted the bottom panel's height
+// and collapsed flag under this key. The bottom panel has been
+// removed, so drop the stale entry on first load to keep localStorage
+// tidy. Safe to keep for a few releases.
+try {
+  localStorage.removeItem("aura-task-output-panel");
+} catch { /* ignore */ }
 
 export function useTasksForProject(projectId: string | undefined, agentInstanceId?: string | undefined) {
   return useTaskOutputPanelStore(

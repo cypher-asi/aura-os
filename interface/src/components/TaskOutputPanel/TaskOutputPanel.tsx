@@ -1,11 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { Text, Item, ModalConfirm, Tabs } from "@cypher-asi/zui";
-import { Trash2, Play, Pause, Square, Loader2, Plus, X } from "lucide-react";
+import { Text, ModalConfirm } from "@cypher-asi/zui";
+import { Trash2, Play, Pause, Square, Loader2, X } from "lucide-react";
 import {
   useTaskOutputPanelStore,
   useTasksForProject,
-  type OutputPanelTab,
 } from "../../stores/task-output-panel-store";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useShallow } from "zustand/react/shallow";
@@ -128,17 +127,6 @@ function useStickyBottomContent(resetKey?: unknown) {
   return { contentRef, bottomRef, handleContentScroll };
 }
 
-/**
- * Back-compat no-op. Task status tracking is now installed app-wide by
- * `bootstrapTaskStreamSubscriptions` at module load, so callers no
- * longer need to opt in per-mount. Kept as an empty hook so existing
- * call sites (Sidekick, TaskOutputPanel) don't need coordinated
- * deletes in the same commit.
- */
-export function useActiveTaskTracking(_projectId: string | undefined) {
-  // Intentionally empty - see module doc above.
-}
-
 function AutomationControls({ projectId }: { projectId: string }) {
   const {
     canPlay, canPause, canStop, starting, preparing,
@@ -227,55 +215,6 @@ function AutomationControls({ projectId }: { projectId: string }) {
         />
       )}
     </>
-  );
-}
-
-function PanelTabs({
-  activeTab,
-  onTabChange,
-  isRunning,
-}: {
-  activeTab: OutputPanelTab;
-  onTabChange: (tab: OutputPanelTab) => void;
-  isRunning: boolean;
-}) {
-  const addTerminal = useTerminalPanelStore((s) => s.addTerminal);
-
-  const tabs = [
-    {
-      id: "run",
-      label: (
-        <>
-          <span className={isRunning ? styles.tabDotActive : styles.tabDotIdle} />
-          Run
-        </>
-      ),
-    },
-    { id: "terminal", label: "Terminal" },
-  ];
-
-  return (
-    <div className={styles.headerTabs}>
-      <Tabs
-        tabs={tabs as any}
-        value={activeTab}
-        onChange={(id) => onTabChange(id as OutputPanelTab)}
-        size="sm"
-        className={styles.panelTabsRoot}
-        tabClassName={styles.panelTabBtn}
-      />
-      <button
-        type="button"
-        className={styles.addTerminalBtn}
-        onClick={() => {
-          addTerminal();
-          onTabChange("terminal");
-        }}
-        title="New terminal"
-      >
-        <Plus size={13} />
-      </button>
-    </div>
   );
 }
 
@@ -384,100 +323,6 @@ export function TerminalSidekickPane() {
     <div className={styles.terminalContent}>
       <TerminalInstanceTabs />
       <TerminalPanelBody embedded />
-    </div>
-  );
-}
-
-export function TaskOutputPanel() {
-  const { panelHeight, collapsed, toggleCollapse, handleMouseDown, activeTab } = useTaskOutputPanelStore(
-    useShallow((s) => ({
-      panelHeight: s.panelHeight,
-      collapsed: s.collapsed,
-      toggleCollapse: s.toggleCollapse,
-      handleMouseDown: s.handleMouseDown,
-      activeTab: s.activeTab,
-    })),
-  );
-  const setActiveTab = useTaskOutputPanelStore((s) => s.setActiveTab);
-  const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
-  const stickyBottom = useStickyBottomContent(activeTab);
-  const ctx = useProjectActions();
-  const projectId = ctx?.project.project_id;
-  const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
-  const projectTasks = useTasksForProject(projectId, agentInstanceId);
-
-  const hasActiveTasks = projectTasks.some((t) => t.status === "active");
-  const hasCompleted = projectTasks.some((t) => t.status !== "active");
-
-  return (
-    <div
-      className={collapsed ? styles.panelCollapsed : styles.panel}
-      style={{ height: collapsed ? 30 : panelHeight }}
-    >
-      <div data-resize-handle className={styles.resizeHandle} onMouseDown={collapsed ? undefined : handleMouseDown} />
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Item.Chevron expanded={!collapsed} onToggle={toggleCollapse} size="sm" />
-          <PanelTabs activeTab={activeTab} onTabChange={setActiveTab} isRunning={hasActiveTasks} />
-        </div>
-        <div className={styles.headerActions}>
-          {projectId && <AutomationControls projectId={projectId} />}
-          {activeTab === "run" && hasCompleted && (
-            <button
-              type="button"
-              className={styles.headerBtn}
-              onClick={clearCompleted}
-              title="Clear completed"
-              aria-label="Clear completed task output"
-            >
-              <Trash2 size={11} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {activeTab === "run" && (
-        <div className={styles.contentShell}>
-          <div
-            className={styles.content}
-            ref={stickyBottom.contentRef}
-            onScroll={stickyBottom.handleContentScroll}
-          >
-            {projectTasks.length === 0 ? (
-              <div className={styles.emptyState}>
-                <Text size="sm" className={styles.emptyText}>No tasks</Text>
-              </div>
-            ) : (
-              projectTasks.map((entry) =>
-                entry.status === "active" ? (
-                  <ActiveTaskStream
-                    key={entry.taskId}
-                    taskId={entry.taskId}
-                    title={entry.title}
-                  />
-                ) : (
-                  <CompletedTaskOutput
-                    key={entry.taskId}
-                    taskId={entry.taskId}
-                    projectId={entry.projectId}
-                    title={entry.title}
-                    status={entry.status}
-                  />
-                ),
-              )
-            )}
-            <div ref={stickyBottom.bottomRef} />
-          </div>
-          <OverlayScrollbar scrollRef={stickyBottom.contentRef} />
-        </div>
-      )}
-
-      {activeTab === "terminal" && (
-        <div className={styles.terminalContent}>
-          <TerminalInstanceTabs />
-          <TerminalPanelBody embedded />
-        </div>
-      )}
     </div>
   );
 }

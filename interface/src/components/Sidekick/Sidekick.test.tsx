@@ -111,7 +111,6 @@ vi.mock("../FileExplorer", () => ({
 vi.mock("../TaskOutputPanel", () => ({
   RunSidekickPane: () => <div data-testid="run-sidekick-pane" />,
   TerminalSidekickPane: () => <div data-testid="terminal-sidekick-pane" />,
-  useActiveTaskTracking: vi.fn(),
 }));
 vi.mock("../../views/SpecList", () => ({
   SpecList: () => <div data-testid="spec-list" />,

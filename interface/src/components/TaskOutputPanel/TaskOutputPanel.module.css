@@ -1,58 +1,3 @@
-.panel {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
-  position: relative;
-}
-
-.panelCollapsed {
-  composes: panel;
-}
-
-.panelCollapsed .content,
-.panelCollapsed .contentShell,
-.panelCollapsed .terminalContent {
-  display: none;
-}
-
-/* ── Resize handle (invisible hit area, matches Lane) ── */
-
-.resizeHandle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 16px;
-  cursor: row-resize;
-  z-index: 10;
-  user-select: none;
-  transform: translateY(-50%);
-}
-
-.panel:has([data-resize-handle]:hover) {
-  border-top-color: #fff;
-}
-
-/* ── Header bar ── */
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-2, 8px) 0 var(--space-1, 4px);
-  height: 30px;
-  min-height: 30px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  user-select: none;
-  position: relative;
-  z-index: 1;
-}
-
 .sidekickPane {
   display: flex;
   flex: 1;
@@ -70,86 +15,6 @@
   box-sizing: border-box;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
-}
-
-.headerLeft {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  gap: 0;
-  min-width: 0;
-}
-
-.headerTabs {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  gap: 0;
-  min-width: 0;
-}
-
-.panelTabsRoot {
-  border-bottom: none;
-  align-self: stretch;
-  display: flex !important;
-  flex-direction: column;
-}
-
-.panelTabsRoot > div {
-  flex: 1;
-  align-items: center;
-}
-
-.panelTabBtn {
-  min-height: 0 !important;
-  padding: 4px 8px !important;
-  font-size: 11px !important;
-  line-height: 1;
-}
-
-.tabDotIdle,
-.tabDotActive {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  margin-right: 4px;
-  flex-shrink: 0;
-}
-
-.tabDotIdle {
-  background: var(--color-danger, #ef4444);
-}
-
-.tabDotActive {
-  background: var(--color-success, #4c9);
-}
-
-.addTerminalBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted, #888);
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-  flex-shrink: 0;
-}
-
-.addTerminalBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text, #d4d4d4);
-}
-
-.headerLabel {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted, #888);
 }
 
 .headerActions {
@@ -183,12 +48,6 @@
   opacity: 0.25;
   cursor: default;
   pointer-events: none;
-}
-
-.wifiIcon {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 2px;
 }
 
 .headerBtn {

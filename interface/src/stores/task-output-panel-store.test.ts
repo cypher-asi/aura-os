@@ -42,7 +42,6 @@ import {
   resetTaskTurnCache,
 } from "./task-turn-cache";
 
-const STORAGE_KEY = "aura-task-output-panel";
 const TASKS_STORAGE_KEY = "aura-task-output-panel-tasks";
 
 function makeTask(overrides: Partial<PanelTaskEntry> = {}): PanelTaskEntry {
@@ -57,13 +56,9 @@ function makeTask(overrides: Partial<PanelTaskEntry> = {}): PanelTaskEntry {
 }
 
 beforeEach(() => {
-  localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(TASKS_STORAGE_KEY);
   resetTaskTurnCache();
   useTaskOutputPanelStore.setState({
-    panelHeight: 200,
-    collapsed: false,
-    activeTab: "run",
     tasks: [],
   });
   vi.clearAllMocks();
@@ -71,36 +66,8 @@ beforeEach(() => {
 
 describe("task-output-panel-store", () => {
   describe("initial state", () => {
-    it("has default panel height", () => {
-      expect(useTaskOutputPanelStore.getState().panelHeight).toBe(200);
-    });
-
-    it("is not collapsed", () => {
-      expect(useTaskOutputPanelStore.getState().collapsed).toBe(false);
-    });
-
-    it("defaults to run tab", () => {
-      expect(useTaskOutputPanelStore.getState().activeTab).toBe("run");
-    });
-
     it("starts with empty tasks", () => {
       expect(useTaskOutputPanelStore.getState().tasks).toEqual([]);
-    });
-  });
-
-  describe("setActiveTab", () => {
-    it("switches tab", () => {
-      useTaskOutputPanelStore.getState().setActiveTab("terminal");
-      expect(useTaskOutputPanelStore.getState().activeTab).toBe("terminal");
-    });
-  });
-
-  describe("toggleCollapse", () => {
-    it("toggles collapsed state", () => {
-      useTaskOutputPanelStore.getState().toggleCollapse();
-      expect(useTaskOutputPanelStore.getState().collapsed).toBe(true);
-      useTaskOutputPanelStore.getState().toggleCollapse();
-      expect(useTaskOutputPanelStore.getState().collapsed).toBe(false);
     });
   });
 
@@ -251,7 +218,6 @@ describe("task-output-panel-store", () => {
 
 describe("task-output-panel-store rehydration", () => {
   beforeEach(() => {
-    localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(TASKS_STORAGE_KEY);
     vi.resetModules();
   });
