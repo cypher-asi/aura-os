@@ -13,7 +13,7 @@ import { DebugLogList } from "./DebugLogList";
 import styles from "./DebugRunDetailView.module.css";
 
 function statusLabel(status: DebugRunStatus | undefined): string {
-  if (!status) return "loading";
+  if (!status) return "—";
   return status;
 }
 
@@ -25,7 +25,12 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 function runTitle(metadata: DebugRunMetadata | undefined): string {
-  if (!metadata) return "Run";
+  // Always render as "Run · <started>" so the header footprint is stable
+  // between the loading state and the hydrated state. When metadata has
+  // not loaded yet we render an em-dash placeholder rather than a
+  // shorter "Run" string, which would cause the right-hand channel
+  // label to reflow the moment metadata arrives.
+  if (!metadata) return "Run · —";
   const started = metadata.started_at ? new Date(metadata.started_at) : null;
   if (started && !Number.isNaN(started.getTime())) {
     return `Run · ${started.toLocaleString()}`;
@@ -90,9 +95,7 @@ export function DebugRunDetailView() {
           <span className={styles.titleMain}>{runTitle(metadata)}</span>
           <span className={styles.titleSub}>
             {statusLabel(metadata?.status)}
-            {metadata?.ended_at
-              ? ` · ended ${formatDate(metadata.ended_at)}`
-              : ""}
+            {` · ended ${formatDate(metadata?.ended_at)}`}
           </span>
         </div>
         <div className={styles.channelLabel}>

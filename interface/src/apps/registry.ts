@@ -343,6 +343,8 @@ export const apps: AuraApp[] = [
     loadDebugApp,
     {
       hasResponsiveControls: true,
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
     },
   ),
   createAppDefinition(

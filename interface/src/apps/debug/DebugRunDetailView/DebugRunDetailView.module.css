@@ -17,15 +17,18 @@
   gap: 12px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--color-border-subtle);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-height: 46px;
 }
 
 .title {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 0;
+  min-width: 240px;
+  min-height: 30px;
   margin-right: auto;
+  flex: 1 1 auto;
 }
 
 .titleMain {
@@ -43,6 +46,9 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .channelLabel {
