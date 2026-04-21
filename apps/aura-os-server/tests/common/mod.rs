@@ -12,6 +12,7 @@ use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex};
 
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
@@ -24,7 +25,6 @@ use aura_os_server::AppState;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_store::SettingsStore;
-use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 
 pub fn store_zero_auth_session(store: &SettingsStore) {
@@ -344,7 +344,9 @@ pub fn build_test_app_from_store(
         credit_cache: Arc::new(Mutex::new(HashMap::new())),
         event_broadcast,
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
-        browser_manager: Arc::new(aura_os_browser::BrowserManager::new(aura_os_browser::BrowserConfig::default())),
+        browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
+            aura_os_browser::BrowserConfig::default(),
+        )),
         feedback_network_client: network_client.clone(),
         network_client,
         storage_client,
@@ -370,8 +372,14 @@ pub fn build_test_app_from_store(
 pub fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let store_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(SettingsStore::open(store_dir.path()).unwrap());
-    let (app, state) =
-        build_test_app_from_store(store, store_dir.path().to_path_buf(), None, None, None, None);
+    let (app, state) = build_test_app_from_store(
+        store,
+        store_dir.path().to_path_buf(),
+        None,
+        None,
+        None,
+        None,
+    );
     (app, state, store_dir)
 }
 

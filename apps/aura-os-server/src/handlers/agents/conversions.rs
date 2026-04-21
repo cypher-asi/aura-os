@@ -165,8 +165,7 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
 /// backward-compatibility fallback for agents that predate Phase 3.
 fn listing_status_from_tags(tags: &[String]) -> Option<AgentListingStatus> {
     for tag in tags {
-        if let Some(raw) =
-            tag.strip_prefix(aura_os_core::listing_status::LISTING_STATUS_TAG_PREFIX)
+        if let Some(raw) = tag.strip_prefix(aura_os_core::listing_status::LISTING_STATUS_TAG_PREFIX)
         {
             if let Ok(parsed) = AgentListingStatus::from_str(raw) {
                 return Some(parsed);

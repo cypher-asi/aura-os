@@ -6,6 +6,7 @@ pub mod state;
 pub mod tools;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use thiserror::Error;
 use tokio::sync::broadcast;
@@ -106,7 +107,7 @@ impl AgentRuntimeService {
         Self {
             tool_registry,
             router_url,
-            http_client: reqwest::Client::new(),
+            http_client: build_local_http_client(),
             event_listener,
             process_executor,
             project_service,
@@ -198,5 +199,65 @@ impl AgentRuntimeService {
             local_server_base_url: self.local_server_base_url.clone(),
             local_http_client: self.http_client.clone(),
         }
+    }
+}
+
+/// Short connect timeout for the reqwest client used by every
+/// agent-runtime loopback callback (most visibly `send_to_agent`
+/// POSTing `/api/agents/:id/events/stream`). Without this, a
+/// wrong-port URL — e.g. a stale `VITE_API_URL=http://127.0.0.1:19847`
+/// while the embedded server actually bound an ephemeral port —
+/// falls into the OS-level TCP SYN timeout (~21s on Windows) and
+/// surfaces to the LLM as "operation timed out" with no signal about
+/// where to look. 3s is plenty for an in-process loopback connect
+/// but short enough to fail fast and surface the URL in the error.
+///
+/// **No overall request timeout** is set: `SendToAgentTool` legitimately
+/// streams SSE for up to `DRAIN_MAX_WAIT` (60s) after headers arrive,
+/// and capping total request time would truncate healthy long replies.
+const LOCAL_HTTP_CLIENT_CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Shared factory for the agent-runtime HTTP client. Exposed so
+/// tests and auxiliary binaries can construct a client with the
+/// same connect-timeout policy as the real service without
+/// depending on `AgentRuntimeService::new`.
+pub fn build_local_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .connect_timeout(LOCAL_HTTP_CLIENT_CONNECT_TIMEOUT)
+        .build()
+        .expect("reqwest client builder with connect_timeout must build")
+}
+
+#[cfg(test)]
+mod local_http_client_tests {
+    use super::*;
+    use std::time::Instant;
+
+    /// Construct a client and issue a request to an address nothing
+    /// listens on. If the connect timeout was wired correctly the
+    /// request errors within a couple of seconds — comfortably under
+    /// the 5s bound below. Without the timeout, Windows would make
+    /// this hang ~21s and macOS/Linux ~75s (default TCP SYN retries).
+    #[tokio::test]
+    async fn build_local_http_client_enforces_connect_timeout() {
+        let client = build_local_http_client();
+        // RFC 5737 TEST-NET-1 — guaranteed non-routable, so `connect`
+        // can never complete. We deliberately do NOT use 127.0.0.1:<dead>
+        // here because loopback refuses connections instantly (no
+        // timeout path exercised).
+        let url = "http://192.0.2.1:9/";
+        let start = Instant::now();
+        let result = client.get(url).send().await;
+        let elapsed = start.elapsed();
+
+        assert!(result.is_err(), "expected connect failure, got {result:?}");
+        assert!(
+            elapsed < Duration::from_secs(5),
+            "connect should fail within ~{:?} (connect_timeout = {:?}); \
+             took {:?}",
+            Duration::from_secs(5),
+            LOCAL_HTTP_CLIENT_CONNECT_TIMEOUT,
+            elapsed
+        );
     }
 }

@@ -6,7 +6,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ProcessId, ProcessRunTrigger, ToolDomain};
 use aura_os_process::ProcessExecutor;
 
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
+use super::{AgentTool, AgentToolContext, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {

@@ -157,8 +157,8 @@ mod tests {
     #[test]
     fn rejects_unknown_expertise_slug_as_bad_request() {
         let slugs = vec!["not-a-thing".into()];
-        let err = normalize_marketplace_fields(None, Some(&slugs))
-            .expect_err("unknown slug must fail");
+        let err =
+            normalize_marketplace_fields(None, Some(&slugs)).expect_err("unknown slug must fail");
         assert_eq!(err.0, axum::http::StatusCode::BAD_REQUEST);
     }
 

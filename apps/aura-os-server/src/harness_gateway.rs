@@ -87,11 +87,7 @@ impl HarnessHttpGateway {
     /// can inspect the body as part of a larger server-side decision. Returns
     /// `None` on any transport/status/parse failure — callers should treat
     /// failures as "no data" (best-effort).
-    pub(crate) async fn fetch_json(
-        &self,
-        method: Method,
-        path: &str,
-    ) -> Option<serde_json::Value> {
+    pub(crate) async fn fetch_json(&self, method: Method, path: &str) -> Option<serde_json::Value> {
         let path = path.trim_start_matches('/');
         let url = format!("{}/{path}", self.base_url);
         let req = match method {

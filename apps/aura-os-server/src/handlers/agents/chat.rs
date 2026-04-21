@@ -107,9 +107,7 @@ use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::installed_workspace_app_tools;
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
-use crate::state::{
-    AppState, AuthJwt, CachedAgentDiscovery, ChatSession, AGENT_DISCOVERY_TTL,
-};
+use crate::state::{AppState, AuthJwt, CachedAgentDiscovery, ChatSession, AGENT_DISCOVERY_TTL};
 
 use super::conversions::events_to_session_history;
 use super::runtime::{
@@ -188,10 +186,7 @@ async fn build_session_installed_tools_with_integrations(
         Vec::new()
     };
     tools.extend(
-        aura_os_agent_tools::ceo::build_cross_agent_tools_for_message(
-            permissions,
-            user_message,
-        ),
+        aura_os_agent_tools::ceo::build_cross_agent_tools_for_message(permissions, user_message),
     );
 
     // `build_cross_agent_tools` emits endpoints as the bare path
@@ -296,10 +291,7 @@ async fn resolve_chat_session(
                 // structurally unreadable the very next persist will
                 // surface the error, and the UI loader applies the same
                 // sort key so writer/reader can't diverge.
-                if let Some(newest) = sessions
-                    .iter()
-                    .max_by_key(|s| storage_session_sort_key(s))
-                {
+                if let Some(newest) = sessions.iter().max_by_key(|s| storage_session_sort_key(s)) {
                     return Some(newest.id.clone());
                 }
             }
@@ -430,10 +422,9 @@ pub(crate) async fn persist_user_message(
         Ok(evt) => Ok(evt),
         Err(e) => {
             let (upstream_status, body_preview) = match &e {
-                aura_os_storage::StorageError::Server { status, body } => (
-                    Some(*status),
-                    body.chars().take(400).collect::<String>(),
-                ),
+                aura_os_storage::StorageError::Server { status, body } => {
+                    (Some(*status), body.chars().take(400).collect::<String>())
+                }
                 _ => (None, String::new()),
             };
             error!(
@@ -976,11 +967,7 @@ pub(crate) async fn setup_agent_chat_persistence(
     // still fails we fall through to the `None` return and the caller
     // raises the existing error.
     if matching.is_empty() {
-        match state
-            .agent_service
-            .get_agent_with_jwt(jwt, agent_id)
-            .await
-        {
+        match state.agent_service.get_agent_with_jwt(jwt, agent_id).await {
             Ok(agent) => {
                 info!(
                     %agent_id,
@@ -993,8 +980,7 @@ pub(crate) async fn setup_agent_chat_persistence(
                 // snapshot the first call populated.
                 invalidate_agent_discovery_cache(state, jwt, &agent_id.to_string());
                 matching =
-                    find_matching_project_agents(state, &storage, jwt, &agent_id.to_string())
-                        .await;
+                    find_matching_project_agents(state, &storage, jwt, &agent_id.to_string()).await;
             }
             Err(e) => {
                 warn!(
@@ -1387,9 +1373,7 @@ async fn load_project_state_snapshot(
 /// "tool_use without matching tool_result" 400 error on every subsequent
 /// prompt — which is exactly the class of bug that motivated this
 /// regression guard.
-pub fn session_events_to_agent_history(
-    events: &[SessionEvent],
-) -> Vec<serde_json::Value> {
+pub fn session_events_to_agent_history(events: &[SessionEvent]) -> Vec<serde_json::Value> {
     let referenced_tool_use_ids = collect_referenced_tool_use_ids(events);
 
     let mut messages: Vec<serde_json::Value> = Vec::new();
@@ -1973,10 +1957,8 @@ async fn load_current_session_events_for_agent_result(
     };
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
-    load_current_session_events_for_agent_with_matched_result(
-        storage, agent_id, jwt, &matching,
-    )
-    .await
+    load_current_session_events_for_agent_with_matched_result(storage, agent_id, jwt, &matching)
+        .await
 }
 
 /// Variant of [`load_current_session_events_for_agent_result`] that
@@ -2387,11 +2369,7 @@ async fn open_harness_chat_stream(
     // bus so the UI can live-refresh the target agent's chat panel when
     // another agent (e.g. the CEO) writes into its history. See
     // `useChatHistorySync` for the consumer.
-    publish_user_message_event(
-        &state.event_broadcast,
-        &ctx,
-        persisted_user_evt.id.as_str(),
-    );
+    publish_user_message_event(&state.event_broadcast, &ctx, persisted_user_evt.id.as_str());
 
     spawn_chat_persist_task(persist_rx, ctx, state.event_broadcast.clone());
 
@@ -2479,45 +2457,41 @@ pub(crate) async fn send_agent_event_stream(
     }
     let live_session = has_live_session(&state, &session_key).await;
 
-    let (persist_ctx, conversation_messages) =
-        if let Some(ref storage) = state.storage_client {
-            let matching =
-                find_matching_project_agents(&state, storage, &jwt, &agent_id.to_string()).await;
+    let (persist_ctx, conversation_messages) = if let Some(ref storage) = state.storage_client {
+        let matching =
+            find_matching_project_agents(&state, storage, &jwt, &agent_id.to_string()).await;
 
-            let persist_fut = setup_agent_chat_persistence_with_matched(
-                storage, &agent_id, &jwt, force_new, &matching,
-            );
+        let persist_fut = setup_agent_chat_persistence_with_matched(
+            storage, &agent_id, &jwt, force_new, &matching,
+        );
 
-            // LLM context rebuild on cold start: load only the current
-            // storage session, not the full multi-session aggregate. See
-            // `load_current_session_events_for_agent` doc-comment for
-            // rationale.
-            let should_load_history = !force_new && !live_session;
-            let history_fut = async {
-                if !should_load_history {
-                    return None;
-                }
-                let stored = load_current_session_events_for_agent_with_matched(
-                    storage, &agent_id, &jwt, &matching,
-                )
-                .await;
-                if stored.is_empty() {
-                    None
-                } else {
-                    let bounded = slice_recent_agent_events(
-                        stored,
-                        Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT),
-                        0,
-                    );
-                    Some(session_events_to_conversation_history(&bounded))
-                }
-            };
-
-            let (persist_ctx, conversation_messages) = tokio::join!(persist_fut, history_fut);
-            (persist_ctx, conversation_messages)
-        } else {
-            (None, None)
+        // LLM context rebuild on cold start: load only the current
+        // storage session, not the full multi-session aggregate. See
+        // `load_current_session_events_for_agent` doc-comment for
+        // rationale.
+        let should_load_history = !force_new && !live_session;
+        let history_fut = async {
+            if !should_load_history {
+                return None;
+            }
+            let stored = load_current_session_events_for_agent_with_matched(
+                storage, &agent_id, &jwt, &matching,
+            )
+            .await;
+            if stored.is_empty() {
+                None
+            } else {
+                let bounded =
+                    slice_recent_agent_events(stored, Some(DEFAULT_AGENT_HISTORY_WINDOW_LIMIT), 0);
+                Some(session_events_to_conversation_history(&bounded))
+            }
         };
+
+        let (persist_ctx, conversation_messages) = tokio::join!(persist_fut, history_fut);
+        (persist_ctx, conversation_messages)
+    } else {
+        (None, None)
+    };
 
     if persist_ctx.is_none() {
         error!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
@@ -2808,7 +2782,8 @@ pub(crate) async fn send_event_stream(
         .or_else(|_| state.agent_service.get_agent_local(&instance.agent_id))
         .ok()
         .map(|parent| parent.permissions);
-    let effective_permissions = fresh_parent_permissions.unwrap_or_else(|| instance.permissions.clone());
+    let effective_permissions =
+        fresh_parent_permissions.unwrap_or_else(|| instance.permissions.clone());
 
     // Populate the dispatcher's permissions cache for the instance
     // session. Keyed by `agent_instance_id` (NOT `instance.agent_id`)
@@ -2820,9 +2795,10 @@ pub(crate) async fn send_event_stream(
     let normalized_instance_perms = effective_permissions
         .clone()
         .normalized_for_identity(&instance.name, Some(instance.role.as_str()));
-    state
-        .permissions_cache
-        .insert(agent_instance_id.to_string(), normalized_instance_perms.clone());
+    state.permissions_cache.insert(
+        agent_instance_id.to_string(),
+        normalized_instance_perms.clone(),
+    );
 
     let installed_tools = build_session_installed_tools_with_integrations(
         &state,
@@ -3193,7 +3169,11 @@ mod tests {
         let referenced: std::collections::HashSet<String> =
             std::iter::once("tool-1".to_string()).collect();
         let rendered = render_conversation_text("", Some(&blocks), &referenced, 512);
-        assert!(rendered.len() < 2_000, "rendered still large: {}", rendered.len());
+        assert!(
+            rendered.len() < 2_000,
+            "rendered still large: {}",
+            rendered.len()
+        );
         assert!(rendered.contains("[truncated 10000 bytes]"));
         assert!(!rendered.contains(&big));
     }

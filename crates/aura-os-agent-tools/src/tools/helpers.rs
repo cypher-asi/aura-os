@@ -175,8 +175,8 @@ async fn parse_response(resp: reqwest::Response) -> Result<ToolResult, AgentRunt
             is_error: false,
         });
     }
-    let body: serde_json::Value = serde_json::from_str(&text)
-        .unwrap_or_else(|_| json!({ "raw": text }));
+    let body: serde_json::Value =
+        serde_json::from_str(&text).unwrap_or_else(|_| json!({ "raw": text }));
     Ok(ToolResult {
         content: body,
         is_error: false,

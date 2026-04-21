@@ -89,7 +89,10 @@ mod tests {
     #[test]
     fn as_str_roundtrips_through_from_str() {
         for status in [AgentListingStatus::Closed, AgentListingStatus::Hireable] {
-            assert_eq!(AgentListingStatus::from_str(status.as_str()).unwrap(), status);
+            assert_eq!(
+                AgentListingStatus::from_str(status.as_str()).unwrap(),
+                status
+            );
         }
     }
 

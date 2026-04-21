@@ -175,9 +175,13 @@ pub enum CapabilityWire {
     PostToFeed,
     GenerateMedia,
     #[serde(rename_all = "camelCase")]
-    ReadProject { id: String },
+    ReadProject {
+        id: String,
+    },
     #[serde(rename_all = "camelCase")]
-    WriteProject { id: String },
+    WriteProject {
+        id: String,
+    },
     /// Wildcard read access over every project in the bundle's scope.
     /// Satisfies any `ReadProject { id }` requirement without having to
     /// enumerate ids. Used by the CEO preset so the unified tool-surface
@@ -723,8 +727,7 @@ mod capability_wire_tests {
 
     #[test]
     fn capability_wire_known_variants_still_deserialize() {
-        let spawn: CapabilityWire =
-            serde_json::from_str(r#"{"type":"spawnAgent"}"#).unwrap();
+        let spawn: CapabilityWire = serde_json::from_str(r#"{"type":"spawnAgent"}"#).unwrap();
         assert!(matches!(spawn, CapabilityWire::SpawnAgent));
         let read_project: CapabilityWire =
             serde_json::from_str(r#"{"type":"readProject","id":"proj-1"}"#).unwrap();

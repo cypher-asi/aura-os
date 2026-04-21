@@ -1,8 +1,8 @@
 mod common;
 
-use std::sync::{LazyLock, Mutex};
 #[cfg(unix)]
 use std::sync::Arc;
+use std::sync::{LazyLock, Mutex};
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -341,9 +341,8 @@ async fn start_clobbering_mock_harness(home: std::path::PathBuf) -> String {
         }
     };
 
-    let agent_skills_post = |_req: Request<Body>| async move {
-        axum::Json(json!({ "ok": true })).into_response()
-    };
+    let agent_skills_post =
+        |_req: Request<Body>| async move { axum::Json(json!({ "ok": true })).into_response() };
 
     let mock_app = Router::new()
         .route("/api/skills", post(skills_post))
@@ -381,10 +380,7 @@ async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(String, Strin
 
     let mock_app = Router::new()
         .route("/api/skills", post(record.clone()))
-        .route(
-            "/api/agents/:agent_id/skills",
-            post(record.clone()),
-        );
+        .route("/api/agents/:agent_id/skills", post(record.clone()));
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -623,7 +619,11 @@ async fn list_my_skills_returns_only_user_created_entries() {
 
     // Simulate a shop-installed skill by writing a SKILL.md that lacks the
     // user-created marker. list_my_skills must NOT include it.
-    let shop_dir = home_dir.path().join(".aura").join("skills").join("shop-skill");
+    let shop_dir = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("shop-skill");
     std::fs::create_dir_all(&shop_dir).unwrap();
     std::fs::write(
         shop_dir.join("SKILL.md"),
@@ -632,7 +632,11 @@ async fn list_my_skills_returns_only_user_created_entries() {
     .unwrap();
 
     // Also drop a malformed SKILL.md to confirm the scanner skips it gracefully.
-    let bad_dir = home_dir.path().join(".aura").join("skills").join("broken-skill");
+    let bad_dir = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("broken-skill");
     std::fs::create_dir_all(&bad_dir).unwrap();
     std::fs::write(bad_dir.join("SKILL.md"), "no frontmatter here\n").unwrap();
 
@@ -683,12 +687,20 @@ async fn delete_my_skill_removes_user_created_and_refuses_shop_skill() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::CREATED);
 
-    let skill_dir = home_dir.path().join(".aura").join("skills").join("doomed-skill");
+    let skill_dir = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("doomed-skill");
     assert!(skill_dir.join("SKILL.md").exists());
 
     // Drop a shop-style SKILL.md (no user-created marker). DELETE must
     // refuse to remove it — that would be a foot-gun.
-    let shop_dir = home_dir.path().join(".aura").join("skills").join("shop-skill");
+    let shop_dir = home_dir
+        .path()
+        .join(".aura")
+        .join("skills")
+        .join("shop-skill");
     std::fs::create_dir_all(&shop_dir).unwrap();
     std::fs::write(
         shop_dir.join("SKILL.md"),
@@ -766,12 +778,10 @@ async fn start_installation_tracking_mock_harness(
         }
     };
 
-    let noop_post = |_req: Request<Body>| async move {
-        axum::Json(json!({ "ok": true })).into_response()
-    };
-    let noop_delete = |_req: Request<Body>| async move {
-        axum::Json(json!({ "ok": true })).into_response()
-    };
+    let noop_post =
+        |_req: Request<Body>| async move { axum::Json(json!({ "ok": true })).into_response() };
+    let noop_delete =
+        |_req: Request<Body>| async move { axum::Json(json!({ "ok": true })).into_response() };
 
     let mock_app = Router::new()
         .route("/api/skills", post(noop_post).delete(noop_delete))
@@ -1017,7 +1027,11 @@ async fn list_skills_filters_entries_missing_on_disk() {
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;
     let arr = body.as_array().expect("catalog should be an array");
-    assert_eq!(arr.len(), 1, "expected ghost-skill to be filtered, got {arr:?}");
+    assert_eq!(
+        arr.len(),
+        1,
+        "expected ghost-skill to be filtered, got {arr:?}"
+    );
     assert_eq!(arr[0]["name"], "kept-skill");
 }
 

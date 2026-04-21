@@ -2375,7 +2375,10 @@ mod tests {
             harness_upstream_provider_family(Some("aura-kimi-k2-5")),
             Some("fireworks".to_string())
         );
-        assert_eq!(harness_upstream_provider_family(Some("unknown-model")), None);
+        assert_eq!(
+            harness_upstream_provider_family(Some("unknown-model")),
+            None
+        );
     }
 
     #[test]

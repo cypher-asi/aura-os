@@ -75,13 +75,11 @@ async fn authorize_optional_project_id(
     let parsed = match ProjectId::from_str(&raw_project_id) {
         Ok(project_id) => project_id,
         Err(_) => {
-            return Err(
-                (
-                    axum::http::StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({ "error": "invalid project id" })),
-                )
-                    .into_response(),
+            return Err((
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": "invalid project id" })),
             )
+                .into_response())
         }
     };
     if let Some(client) = &state.network_client {

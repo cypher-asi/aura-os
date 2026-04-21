@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{OrgId, ProjectId, ToolDomain};
 use aura_os_network::{CreateProjectRequest, UpdateProjectRequest};
 
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentTool, AgentToolContext, CapabilityRequirement, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 fn require_network(

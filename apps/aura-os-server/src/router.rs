@@ -11,10 +11,10 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, browser, dev_loop, feed, feedback, files, follows, generation,
-    harness_proxy, leaderboard, log, marketplace, notes, org_tools, orgs, process, project_stats,
-    agent_bootstrap, agent_tools, projects, remote_files, remote_terminal, specs, swarm, system,
-    tasks, terminal, users, ws,
+    agent_bootstrap, agent_tools, agents, auth, billing, browser, dev_loop, feed, feedback, files,
+    follows, generation, harness_proxy, leaderboard, log, marketplace, notes, org_tools, orgs,
+    process, project_stats, projects, remote_files, remote_terminal, specs, swarm, system, tasks,
+    terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -690,7 +690,10 @@ fn harness_proxy_routes() -> Router<AppState> {
         // `/skills/mine` is registered before `/skills/:name` so the static path
         // wins over the dynamic param route. (Axum prefers static segments, but
         // keeping them ordered makes the intent obvious.)
-        .route("/api/harness/skills/mine", get(harness_proxy::list_my_skills))
+        .route(
+            "/api/harness/skills/mine",
+            get(harness_proxy::list_my_skills),
+        )
         .route(
             "/api/harness/skills/mine/:name",
             delete(harness_proxy::delete_my_skill),

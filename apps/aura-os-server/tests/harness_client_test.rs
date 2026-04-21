@@ -197,7 +197,10 @@ async fn submit_tx_accepts_arbitrary_kind_and_bytes() {
     let r = rec.lock().await;
     // No JWT was provided, so no Authorization header should have been sent.
     let auth = r.seen_authorizations.first().cloned().flatten();
-    assert!(auth.is_none(), "expected no Authorization header, got {auth:?}");
+    assert!(
+        auth.is_none(),
+        "expected no Authorization header, got {auth:?}"
+    );
 
     let body = r.last_tx_body.as_ref().expect("tx body recorded");
     assert_eq!(body["kind"], "system");
@@ -277,9 +280,7 @@ async fn http_error_status_is_surfaced() {
     // client maps non-2xx responses into `HarnessClientError::Status`.
     let app = Router::new().route(
         "/tx",
-        post(|_: Request<Body>| async {
-            (StatusCode::INTERNAL_SERVER_ERROR, "boom".to_string())
-        }),
+        post(|_: Request<Body>| async { (StatusCode::INTERNAL_SERVER_ERROR, "boom".to_string()) }),
     );
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

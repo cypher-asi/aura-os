@@ -86,7 +86,11 @@ async fn delete_session_removes_session_from_storage() {
         pa_id = pa.id,
         session_id = session.id,
     );
-    let resp = app.clone().oneshot(json_request("GET", &get_uri, None)).await.unwrap();
+    let resp = app
+        .clone()
+        .oneshot(json_request("GET", &get_uri, None))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
@@ -98,8 +102,11 @@ async fn delete_session_returns_404_for_unknown_id() {
     let pa_id = uuid::Uuid::new_v4().to_string();
     let session_id = uuid::Uuid::new_v4().to_string();
 
-    let uri =
-        format!("/api/projects/{project_id}/agents/{pa_id}/sessions/{session_id}");
-    let resp = app.clone().oneshot(json_request("DELETE", &uri, None)).await.unwrap();
+    let uri = format!("/api/projects/{project_id}/agents/{pa_id}/sessions/{session_id}");
+    let resp = app
+        .clone()
+        .oneshot(json_request("DELETE", &uri, None))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }

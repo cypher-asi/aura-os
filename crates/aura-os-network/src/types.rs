@@ -560,7 +560,12 @@ pub struct PlatformStats {
     pub date: Option<String>,
     #[serde(default, alias = "daily_active_users", alias = "dau")]
     pub daily_active_users: i32,
-    #[serde(default, alias = "total_users", alias = "user_count", alias = "userCount")]
+    #[serde(
+        default,
+        alias = "total_users",
+        alias = "user_count",
+        alias = "userCount"
+    )]
     pub total_users: i32,
     #[serde(
         default,

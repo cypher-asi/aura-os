@@ -351,7 +351,10 @@ async fn list_events_without_explicit_limit_fetches_full_history_across_pages() 
     let all_events = sc.list_events(&session.id, JWT, None, None).await.unwrap();
     assert_eq!(all_events.len(), 125);
 
-    let first_page = sc.list_events(&session.id, JWT, Some(100), None).await.unwrap();
+    let first_page = sc
+        .list_events(&session.id, JWT, Some(100), None)
+        .await
+        .unwrap();
     assert_eq!(first_page.len(), 100);
 }
 

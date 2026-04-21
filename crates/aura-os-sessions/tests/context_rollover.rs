@@ -16,8 +16,9 @@ use common::*;
 #[tokio::test]
 async fn should_rollover_respects_threshold() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     let svc = SessionService::new(store, 0.5, 200_000);
 
     let base = Session::dummy(ProjectId::new());
@@ -50,8 +51,9 @@ async fn should_rollover_respects_threshold() {
 #[tokio::test]
 async fn should_rollover_triggers_on_max_tasks() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     let svc = SessionService::new(store, 0.99, 200_000);
 
     let base = Session::dummy(ProjectId::new());
@@ -78,8 +80,9 @@ async fn should_rollover_triggers_on_max_tasks() {
 async fn rollover_session_marks_old_and_creates_new() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.5);
@@ -137,8 +140,9 @@ async fn rollover_session_marks_old_and_creates_new() {
 async fn rollover_chain_creates_linked_sessions() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.3);
@@ -202,8 +206,9 @@ async fn rollover_chain_creates_linked_sessions() {
 async fn update_context_usage_accumulates() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.8);
@@ -272,8 +277,9 @@ async fn update_context_usage_accumulates() {
 async fn context_usage_caps_at_one() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.8);
@@ -318,8 +324,9 @@ async fn context_usage_caps_at_one() {
 async fn exact_context_usage_overrides_additive_estimate() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.8);
@@ -362,8 +369,9 @@ async fn exact_context_usage_overrides_additive_estimate() {
 async fn end_to_end_usage_triggers_rollover() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let threshold = 0.5;
@@ -463,8 +471,9 @@ async fn end_to_end_usage_triggers_rollover() {
 async fn record_task_worked_persists_count() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.99);
@@ -508,8 +517,9 @@ async fn record_task_worked_persists_count() {
 async fn tasks_worked_count_survives_reload_from_storage() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store =
-        Arc::new(aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"));
+    let store = Arc::new(
+        aura_os_store::SettingsStore::open(tmp.path()).expect("SettingsStore should open"),
+    );
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.99);

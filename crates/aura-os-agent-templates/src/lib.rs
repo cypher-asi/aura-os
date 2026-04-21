@@ -24,8 +24,8 @@ pub mod prompt;
 pub mod template;
 pub mod tier;
 
-pub use template::{AgentTemplate, ToolManifestEntry, CEO_PRESET_NAME};
 pub use prompt::{build_dynamic_context, ceo_system_prompt};
+pub use template::{AgentTemplate, ToolManifestEntry, CEO_PRESET_NAME};
 pub use tier::{
     classify_intent, classify_intent_with, default_classifier_rules, is_tier1, ClassifierRule,
     HARNESS_SIDE_STREAMING_TOOL_NAMES, LOADABLE_DOMAINS, TIER1_DOMAINS,

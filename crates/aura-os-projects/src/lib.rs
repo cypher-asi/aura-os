@@ -267,16 +267,14 @@ impl ProjectService {
             orbit_base_url: None,
             orbit_owner: None,
             orbit_repo: None,
-            local_workspace_path: input
-                .local_workspace_path
-                .and_then(|value| {
-                    let trimmed = value.trim();
-                    if trimmed.is_empty() {
-                        None
-                    } else {
-                        Some(trimmed.to_string())
-                    }
-                }),
+            local_workspace_path: input.local_workspace_path.and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            }),
         };
 
         self.save_project_shadow(&project)?;

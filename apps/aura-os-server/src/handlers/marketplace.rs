@@ -417,7 +417,15 @@ mod tests {
         let profiles = HashMap::new();
         let mut entries = vec![
             build_marketplace_agent(
-                sample_agent_with_stats("low", AgentListingStatus::Hireable, vec![], 1, 0.0, 0.0, 0),
+                sample_agent_with_stats(
+                    "low",
+                    AgentListingStatus::Hireable,
+                    vec![],
+                    1,
+                    0.0,
+                    0.0,
+                    0,
+                ),
                 &profiles,
             ),
             build_marketplace_agent(

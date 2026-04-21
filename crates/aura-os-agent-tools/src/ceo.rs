@@ -8,9 +8,7 @@
 //! flows agree byte-for-byte.
 
 use aura_os_core::{AgentPermissions, Capability};
-use aura_protocol::{
-    InstalledTool, IntentClassifierRule, IntentClassifierSpec, ToolAuth,
-};
+use aura_protocol::{InstalledTool, IntentClassifierRule, IntentClassifierSpec, ToolAuth};
 
 use aura_os_agent_runtime::prompt::ceo_system_prompt;
 use aura_os_agent_runtime::tools::CapabilityRequirement;
@@ -145,17 +143,13 @@ pub fn aura_native_project_tool_origin(name: &str) -> Option<Capability> {
         .iter()
         .any(|r| matches!(r, CapabilityRequirement::WriteProjectFromArg(_)));
     if has_write {
-        return Some(Capability::WriteProject {
-            id: String::new(),
-        });
+        return Some(Capability::WriteProject { id: String::new() });
     }
     let has_read = reqs
         .iter()
         .any(|r| matches!(r, CapabilityRequirement::ReadProjectFromArg(_)));
     if has_read {
-        return Some(Capability::ReadProject {
-            id: String::new(),
-        });
+        return Some(Capability::ReadProject { id: String::new() });
     }
     None
 }
@@ -205,8 +199,8 @@ pub fn stamp_agent_tool_auth(
         // an already-absolute form as well so the helper stays robust
         // if the call order ever gets reshuffled.
         let endpoint = &tool.endpoint;
-        let is_cross_agent = endpoint.starts_with(AGENT_TOOL_PATH_PREFIX)
-            || endpoint.contains("/api/agent_tools/");
+        let is_cross_agent =
+            endpoint.starts_with(AGENT_TOOL_PATH_PREFIX) || endpoint.contains("/api/agent_tools/");
         if !is_cross_agent {
             continue;
         }
@@ -428,10 +422,7 @@ mod tests {
         // classifier to silently drop `send_to_agent` on simple prompts.
         let perms = AgentPermissions::ceo_preset();
         let without = build_cross_agent_tools_for_message(&perms, None);
-        let with = build_cross_agent_tools_for_message(
-            &perms,
-            Some("hi, what's the weather"),
-        );
+        let with = build_cross_agent_tools_for_message(&perms, Some("hi, what's the weather"));
         let names_without: Vec<&str> = without.iter().map(|t| t.name.as_str()).collect();
         let names_with: Vec<&str> = with.iter().map(|t| t.name.as_str()).collect();
         assert_eq!(names_without, names_with);
@@ -445,10 +436,14 @@ mod tests {
         // the LLM expand its own tool surface on demand).
         let tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
         let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
-        assert!(names.contains(&"send_to_agent"),
-            "CEO manifest must always expose send_to_agent; got {names:?}");
-        assert!(names.contains(&"load_domain_tools"),
-            "CEO manifest must always expose load_domain_tools; got {names:?}");
+        assert!(
+            names.contains(&"send_to_agent"),
+            "CEO manifest must always expose send_to_agent; got {names:?}"
+        );
+        assert!(
+            names.contains(&"load_domain_tools"),
+            "CEO manifest must always expose load_domain_tools; got {names:?}"
+        );
     }
 
     #[test]
@@ -467,11 +462,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("`{name}` missing from CEO manifest"))
         };
 
-        for name in [
-            "send_to_agent",
-            "list_agents",
-            "get_agent",
-        ] {
+        for name in ["send_to_agent", "list_agents", "get_agent"] {
             assert!(
                 !find(name).description.is_empty(),
                 "`{name}` must ship a non-empty description to the harness"
@@ -569,7 +560,8 @@ mod tests {
 
         for tool in &tools {
             assert!(
-                tool.endpoint.starts_with("http://127.0.0.1:3100/api/agent_tools/"),
+                tool.endpoint
+                    .starts_with("http://127.0.0.1:3100/api/agent_tools/"),
                 "cross-agent endpoint should be absolute after rewrite; got {}",
                 tool.endpoint
             );
@@ -661,8 +653,7 @@ mod tests {
         absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
 
         assert_eq!(
-            tools[0].endpoint,
-            "https://example.com/api/orgs/acme/tool-actions/workspace_tool",
+            tools[0].endpoint, "https://example.com/api/orgs/acme/tool-actions/workspace_tool",
             "absolute workspace endpoints must not be rewritten"
         );
         assert_eq!(
@@ -685,9 +676,7 @@ mod tests {
         // back to `"default"` if absent, which silently scopes tool
         // execution to the wrong org).
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
-        assert!(tools
-            .iter()
-            .all(|t| matches!(t.auth, ToolAuth::None)));
+        assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::None)));
 
         stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
 
@@ -838,7 +827,9 @@ mod tests {
         let mut tools = build_cross_agent_tools(&AgentPermissions::ceo_preset());
         absolutize_agent_tool_endpoints(&mut tools, "http://127.0.0.1:3100");
         stamp_agent_tool_auth(&mut tools, "jwt-abc", Some("org-42"), Some("agent-007"));
-        assert!(tools.iter().all(|t| matches!(t.auth, ToolAuth::Headers { .. })));
+        assert!(tools
+            .iter()
+            .all(|t| matches!(t.auth, ToolAuth::Headers { .. })));
     }
 
     #[test]

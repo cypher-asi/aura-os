@@ -359,12 +359,8 @@ pub(crate) async fn create_feedback(
             head
         });
 
-    let metadata = build_feedback_metadata(
-        &req.category,
-        &req.status,
-        &req.product,
-        req.body.trim(),
-    );
+    let metadata =
+        build_feedback_metadata(&req.category, &req.status, &req.product, req.body.trim());
 
     let post = client
         .create_post(&aura_os_network::client::CreatePostParams {

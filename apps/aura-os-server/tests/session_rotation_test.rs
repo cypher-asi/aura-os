@@ -81,15 +81,26 @@ async fn reset_session_retires_prior_active_sessions() {
         assert_eq!(s.status.as_deref(), Some("active"));
     }
 
-    let uri = format!("/api/projects/{project_id}/agents/{pa_id}/reset-session", pa_id = pa.id);
-    let resp = app.clone().oneshot(json_request("POST", &uri, None)).await.unwrap();
+    let uri = format!(
+        "/api/projects/{project_id}/agents/{pa_id}/reset-session",
+        pa_id = pa.id
+    );
+    let resp = app
+        .clone()
+        .oneshot(json_request("POST", &uri, None))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     let after = storage.list_sessions(&pa.id, TEST_JWT).await.unwrap();
 
     // One brand-new active session from the reset, plus the two prior
     // sessions now flipped to completed.
-    assert_eq!(after.len(), 3, "reset should create exactly one new session");
+    assert_eq!(
+        after.len(),
+        3,
+        "reset should create exactly one new session"
+    );
 
     let active_ids: Vec<&str> = after
         .iter()

@@ -86,7 +86,10 @@ pub(crate) async fn kill_browser(
     let session_id = id
         .parse()
         .map_err(|_| ApiError::bad_request("invalid session id"))?;
-    if !state.browser_manager.is_owned_by(session_id, &session.user_id) {
+    if !state
+        .browser_manager
+        .is_owned_by(session_id, &session.user_id)
+    {
         return Err(ApiError::not_found("browser session not found"));
     }
     state
@@ -159,7 +162,11 @@ fn parse_project_id(raw: &str) -> ApiResult<ProjectId> {
         .map_err(|_| ApiError::bad_request("invalid project id"))
 }
 
-async fn ensure_project_access(state: &AppState, jwt: &str, project_id: &ProjectId) -> ApiResult<()> {
+async fn ensure_project_access(
+    state: &AppState,
+    jwt: &str,
+    project_id: &ProjectId,
+) -> ApiResult<()> {
     if let Some(client) = &state.network_client {
         client
             .get_project(&project_id.to_string(), jwt)

@@ -42,9 +42,9 @@ use chromiumoxide::cdp::browser_protocol::input::{
 };
 use chromiumoxide::cdp::browser_protocol::page::{
     EnableParams as PageEnableParams, EventFrameNavigated, EventFrameStartedLoading,
-    EventFrameStoppedLoading, EventLoadEventFired, EventScreencastFrame, GetNavigationHistoryParams,
-    NavigateToHistoryEntryParams, ReloadParams, ScreencastFrameAckParams, StartScreencastFormat,
-    StartScreencastParams, StopScreencastParams,
+    EventFrameStoppedLoading, EventLoadEventFired, EventScreencastFrame,
+    GetNavigationHistoryParams, NavigateToHistoryEntryParams, ReloadParams,
+    ScreencastFrameAckParams, StartScreencastFormat, StartScreencastParams, StopScreencastParams,
 };
 use chromiumoxide::{Browser, BrowserConfig as ChromiumBrowserConfig, Page};
 use dashmap::DashMap;
@@ -156,7 +156,10 @@ fn default_profile_dir() -> PathBuf {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    env::temp_dir().join(format!("aura-browser-profile-{}-{millis}", std::process::id()))
+    env::temp_dir().join(format!(
+        "aura-browser-profile-{}-{millis}",
+        std::process::id()
+    ))
 }
 
 /// Command forwarded from the public trait methods to the per-session task.
@@ -391,12 +394,7 @@ async fn set_viewport(page: &Page, width: u16, height: u16) -> Result<(), Error>
     Ok(())
 }
 
-async fn start_screencast(
-    page: &Page,
-    quality: i64,
-    width: u16,
-    height: u16,
-) -> Result<(), Error> {
+async fn start_screencast(page: &Page, quality: i64, width: u16, height: u16) -> Result<(), Error> {
     let params = StartScreencastParams {
         format: Some(StartScreencastFormat::Jpeg),
         quality: Some(quality),

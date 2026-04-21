@@ -238,14 +238,12 @@ impl MockNetwork {
                                 .into_iter()
                                 .find(|e| e.get("id").and_then(Value::as_str) == Some(&post_id))
                             {
-                                Some(event) => (
-                                    StatusCode::OK,
-                                    Json(inflate_event(&event, &votes, &viewer)),
-                                ),
-                                None => (
-                                    StatusCode::NOT_FOUND,
-                                    Json(json!({"error": "not found"})),
-                                ),
+                                Some(event) => {
+                                    (StatusCode::OK, Json(inflate_event(&event, &votes, &viewer)))
+                                }
+                                None => {
+                                    (StatusCode::NOT_FOUND, Json(json!({"error": "not found"})))
+                                }
                             }
                         }
                     }
@@ -277,15 +275,11 @@ impl MockNetwork {
                                         merge_object(metadata_slot, patch);
                                     }
                                     let votes = votes.lock().unwrap();
-                                    (
-                                        StatusCode::OK,
-                                        Json(inflate_event(event, &votes, &viewer)),
-                                    )
+                                    (StatusCode::OK, Json(inflate_event(event, &votes, &viewer)))
                                 }
-                                None => (
-                                    StatusCode::NOT_FOUND,
-                                    Json(json!({"error": "not found"})),
-                                ),
+                                None => {
+                                    (StatusCode::NOT_FOUND, Json(json!({"error": "not found"})))
+                                }
                             }
                         }
                     }

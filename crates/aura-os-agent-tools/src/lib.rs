@@ -22,9 +22,7 @@ pub mod tools;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
-use aura_os_agent_runtime::tools::{
-    AgentTool, CapabilityRequirement, Surface, ToolRegistry,
-};
+use aura_os_agent_runtime::tools::{AgentTool, CapabilityRequirement, Surface, ToolRegistry};
 use aura_os_core::{AgentPermissions, Capability, ToolDomain};
 
 /// Build the canonical [`ToolRegistry`] containing every
@@ -162,10 +160,8 @@ pub fn build_registry() -> ToolRegistry {
 /// Backwards-compatible alias for [`build_registry`]. The unified
 /// registry no longer splits on tier — every tool is registered once
 /// and filtered at session-open time via [`AgentTool::surface`].
-#[deprecated(
-    note = "Use `build_registry()`; the tier-1 / tier-2 split has been \
-            replaced by the declarative `AgentTool::surface` method."
-)]
+#[deprecated(note = "Use `build_registry()`; the tier-1 / tier-2 split has been \
+            replaced by the declarative `AgentTool::surface` method.")]
 #[must_use]
 pub fn build_all_tools_registry() -> ToolRegistry {
     build_registry()
@@ -183,7 +179,9 @@ pub fn register_process_tools(
     registry.register(Arc::new(tools::process_tools::CreateProcessTool));
     registry.register(Arc::new(tools::process_tools::ListProcessesTool));
     registry.register(Arc::new(tools::process_tools::DeleteProcessTool));
-    registry.register(Arc::new(tools::process_tools::TriggerProcessTool { executor }));
+    registry.register(Arc::new(tools::process_tools::TriggerProcessTool {
+        executor,
+    }));
     registry.register(Arc::new(tools::process_tools::ListProcessRunsTool));
 }
 
@@ -192,8 +190,7 @@ pub fn register_process_tools(
 /// Every tool in the registry is stateless (no captured
 /// `ProcessExecutor` — see [`register_process_tools`] for that branch),
 /// so the built registry is safe to share across all requests.
-static SHARED_ALL_TOOLS: LazyLock<Arc<ToolRegistry>> =
-    LazyLock::new(|| Arc::new(build_registry()));
+static SHARED_ALL_TOOLS: LazyLock<Arc<ToolRegistry>> = LazyLock::new(|| Arc::new(build_registry()));
 
 /// Return the process-wide cached [`build_registry`] instance.
 #[must_use]
@@ -262,28 +259,36 @@ fn build_tool_metadata_map() -> HashMap<String, (String, serde_json::Value)> {
     map.insert(
         "create_process".to_string(),
         (
-            tools::process_tools::CreateProcessTool.description().to_string(),
+            tools::process_tools::CreateProcessTool
+                .description()
+                .to_string(),
             tools::process_tools::CreateProcessTool.parameters_schema(),
         ),
     );
     map.insert(
         "list_processes".to_string(),
         (
-            tools::process_tools::ListProcessesTool.description().to_string(),
+            tools::process_tools::ListProcessesTool
+                .description()
+                .to_string(),
             tools::process_tools::ListProcessesTool.parameters_schema(),
         ),
     );
     map.insert(
         "delete_process".to_string(),
         (
-            tools::process_tools::DeleteProcessTool.description().to_string(),
+            tools::process_tools::DeleteProcessTool
+                .description()
+                .to_string(),
             tools::process_tools::DeleteProcessTool.parameters_schema(),
         ),
     );
     map.insert(
         "list_process_runs".to_string(),
         (
-            tools::process_tools::ListProcessRunsTool.description().to_string(),
+            tools::process_tools::ListProcessRunsTool
+                .description()
+                .to_string(),
             tools::process_tools::ListProcessRunsTool.parameters_schema(),
         ),
     );
@@ -415,7 +420,9 @@ pub fn permissions_satisfy_requirements(
         )
     });
     requirements.iter().all(|req| match req {
-        CapabilityRequirement::Exact(cap) => holds(caps, cap, has_any_read_project, has_any_write_project),
+        CapabilityRequirement::Exact(cap) => {
+            holds(caps, cap, has_any_read_project, has_any_write_project)
+        }
         CapabilityRequirement::ReadProjectFromArg(_) => has_any_read_project,
         CapabilityRequirement::WriteProjectFromArg(_) => has_any_write_project,
         CapabilityRequirement::AnyOf(options) => options
@@ -431,16 +438,22 @@ fn holds(
     has_any_write_project: bool,
 ) -> bool {
     match needed {
-        Capability::ReadProject { id } => held.iter().any(|h| match h {
-            Capability::ReadProject { id: hid } | Capability::WriteProject { id: hid } => hid == id,
-            Capability::ReadAllProjects | Capability::WriteAllProjects => true,
-            _ => false,
-        }) || has_any_read_project && id.is_empty(),
-        Capability::WriteProject { id } => held.iter().any(|h| match h {
-            Capability::WriteProject { id: hid } => hid == id,
-            Capability::WriteAllProjects => true,
-            _ => false,
-        }) || has_any_write_project && id.is_empty(),
+        Capability::ReadProject { id } => {
+            held.iter().any(|h| match h {
+                Capability::ReadProject { id: hid } | Capability::WriteProject { id: hid } => {
+                    hid == id
+                }
+                Capability::ReadAllProjects | Capability::WriteAllProjects => true,
+                _ => false,
+            }) || has_any_read_project && id.is_empty()
+        }
+        Capability::WriteProject { id } => {
+            held.iter().any(|h| match h {
+                Capability::WriteProject { id: hid } => hid == id,
+                Capability::WriteAllProjects => true,
+                _ => false,
+            }) || has_any_write_project && id.is_empty()
+        }
         other => held.contains(other),
     }
 }
@@ -470,9 +483,7 @@ pub fn build_session_tool_names(
         .list_tools()
         .into_iter()
         .filter(|tool| permissions_satisfy_requirements(permissions, tool.required_capabilities()))
-        .filter(|tool| {
-            tool.surface() == Surface::Always || loaded_domains.contains(&tool.domain())
-        })
+        .filter(|tool| tool.surface() == Surface::Always || loaded_domains.contains(&tool.domain()))
         .map(|t| t.name().to_string())
         .collect();
     names.sort();

@@ -6,7 +6,7 @@ use aura_os_core::ToolDomain;
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str,
 };
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
+use super::{AgentTool, AgentToolContext, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------

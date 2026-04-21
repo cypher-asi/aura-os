@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Explorer } from "@cypher-asi/zui";
-import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { EmptyState } from "../../components/EmptyState";
@@ -11,10 +10,8 @@ import {
   SidekickItemContextMenu,
   useSidekickItemContextMenu,
 } from "../../components/SidekickItemContextMenu";
-import type { ExplorerNodeWithSuffix } from "../../lib/zui-compat";
 import type { Session } from "../../types";
 import { useSessionListData } from "./useSessionListData";
-import { displaySessionStatus } from "./displaySessionStatus";
 import styles from "../aura.module.css";
 
 const SESSIONS_ROOT_ID = "__sessions_root__";
@@ -71,17 +68,15 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
   }, [sessions]);
 
   const explorerData: ExplorerNode[] = useMemo(() => {
-    const children: ExplorerNodeWithSuffix[] = sessions.map((session, index) => {
+    const children: ExplorerNode[] = sessions.map((session, index) => {
       const number = sessions.length - index;
       const summary = summaries[session.session_id];
       const label = summary
         ? `S${number} · ${truncate(summary, 80)}`
         : `S${number}`;
-      const status = displaySessionStatus(session.status, index === 0);
       return {
         id: session.session_id,
         label,
-        suffix: <TaskStatusIcon status={status} />,
         metadata: { type: "session" },
       };
     });

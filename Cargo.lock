@@ -470,6 +470,7 @@ name = "aura-os-desktop"
 version = "0.1.0"
 dependencies = [
  "aura-os-ide",
+ "aura-os-integrations",
  "aura-os-server",
  "aura-os-store",
  "axum",

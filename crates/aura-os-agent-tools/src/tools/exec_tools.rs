@@ -7,7 +7,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 use aura_os_link::AutomatonStartParams;
 
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, ToolResult};
+use super::{AgentTool, AgentToolContext, CapabilityRequirement, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 fn tool_err(action: &str, e: impl std::fmt::Display) -> AgentRuntimeError {
@@ -301,6 +301,52 @@ const DRAIN_MAX_BYTES: usize = 256 * 1024;
 /// warn-threshold in `dispatch_agent_tool`.
 const DRAIN_MAX_REPLY_CHARS: usize = 32 * 1024;
 
+/// Map a transport-level reqwest failure from the initial
+/// `send_to_agent` POST into a `ToolError` that names the URL we
+/// were trying to reach **and** which env var most likely caused it,
+/// instead of the generic `action: err` format used by other tools.
+///
+/// In production the symptom is "operation timed out" on
+/// `127.0.0.1:19847` (the desktop's preferred control-plane port)
+/// while the embedded server actually bound an ephemeral port, or
+/// while nothing is listening at all. With the short connect timeout
+/// now configured in `aura-os-agent-runtime::build_local_http_client`
+/// we get here in ~3s with `is_connect() || is_timeout()` true —
+/// surface every piece of context we have so the operator can
+/// correlate the tool error directly with a stale env override
+/// without grepping logs.
+fn send_to_agent_transport_err(
+    full_url: &str,
+    resolved_base_url: &str,
+    err: reqwest::Error,
+) -> AgentRuntimeError {
+    if err.is_connect() || err.is_timeout() {
+        let server_base_url = std::env::var("AURA_SERVER_BASE_URL")
+            .ok()
+            .unwrap_or_else(|| "<unset>".to_string());
+        let vite_api_url = std::env::var("VITE_API_URL")
+            .ok()
+            .unwrap_or_else(|| "<unset>".to_string());
+        let server_host = std::env::var("AURA_SERVER_HOST")
+            .ok()
+            .unwrap_or_else(|| "<unset>".to_string());
+        let server_port = std::env::var("AURA_SERVER_PORT")
+            .ok()
+            .unwrap_or_else(|| "<unset>".to_string());
+        AgentRuntimeError::ToolError(format!(
+            "send_to_agent: transport failure contacting {full_url} \
+             (base={resolved_base_url}); \
+             AURA_SERVER_BASE_URL={server_base_url}, \
+             VITE_API_URL={vite_api_url}, \
+             AURA_SERVER_HOST={server_host}, \
+             AURA_SERVER_PORT={server_port}; \
+             underlying error: {err}"
+        ))
+    } else {
+        tool_err("send_to_agent", err)
+    }
+}
+
 async fn parse_response(resp: reqwest::Response) -> Result<SendResponse, AgentRuntimeError> {
     let status = resp.status();
     let headers = resp.headers().clone();
@@ -548,12 +594,13 @@ impl AgentTool for SendToAgentTool {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| tool_err("send_to_agent", e))?;
+                .map_err(|e| send_to_agent_transport_err(&url, base, e))?;
             parse_response(resp).await?
         } else {
             let network = ctx.network_client.as_ref().ok_or_else(|| {
                 AgentRuntimeError::Internal(
-                    "send_to_agent: neither local_server_base_url nor network_client is configured".into(),
+                    "send_to_agent: neither local_server_base_url nor network_client is configured"
+                        .into(),
                 )
             })?;
             let url = format!("{}{path}", network.base_url());
@@ -873,10 +920,7 @@ mod send_to_agent_tests {
 
         let tool = SendToAgentTool;
         let result = tool
-            .execute(
-                json!({ "agent_id": "agent-xyz", "content": "hi" }),
-                &ctx,
-            )
+            .execute(json!({ "agent_id": "agent-xyz", "content": "hi" }), &ctx)
             .await
             .expect("tool should return Ok even on server 5xx");
 
@@ -918,10 +962,7 @@ mod send_to_agent_tests {
 
         let tool = SendToAgentTool;
         let result = tool
-            .execute(
-                json!({ "agent_id": "agent-xyz", "content": "hi" }),
-                &ctx,
-            )
+            .execute(json!({ "agent_id": "agent-xyz", "content": "hi" }), &ctx)
             .await
             .expect("tool should return Ok");
 
@@ -1044,10 +1085,7 @@ mod send_to_agent_tests {
 
         let tool = SendToAgentTool;
         let result = tool
-            .execute(
-                json!({ "agent_id": "agent-xyz", "content": "hi" }),
-                &ctx,
-            )
+            .execute(json!({ "agent_id": "agent-xyz", "content": "hi" }), &ctx)
             .await
             .expect("tool should complete");
 
@@ -1065,10 +1103,7 @@ mod send_to_agent_tests {
 
         let tool = SendToAgentTool;
         let result = tool
-            .execute(
-                json!({ "agent_id": "agent-xyz", "content": "hi" }),
-                &ctx,
-            )
+            .execute(json!({ "agent_id": "agent-xyz", "content": "hi" }), &ctx)
             .await
             .expect("tool should return Ok");
 

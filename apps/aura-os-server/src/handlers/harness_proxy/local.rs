@@ -158,10 +158,7 @@ pub(crate) async fn create_skill(
             .to_string();
             state
                 .harness_http
-                .post_json_ignore_result(
-                    &format!("api/agents/{agent_id}/skills"),
-                    install_body,
-                )
+                .post_json_ignore_result(&format!("api/agents/{agent_id}/skills"), install_body)
                 .await;
             true
         }
@@ -464,8 +461,7 @@ pub(crate) async fn list_my_skills() -> Result<axum::response::Response, StatusC
 
     results.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let body =
-        serde_json::to_string(&results).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let body = serde_json::to_string(&results).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok((
         StatusCode::OK,
         [(header::CONTENT_TYPE, "application/json")],
@@ -501,8 +497,7 @@ pub(crate) async fn delete_my_skill(
     let skill_path = skill_dir.join("SKILL.md");
 
     // Existence + ownership check before touching anything else.
-    let content =
-        std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
+    let content = std::fs::read_to_string(&skill_path).map_err(|_| StatusCode::NOT_FOUND)?;
     let source = extract_frontmatter_field(&content, "source").unwrap_or_default();
     if source != USER_CREATED_SOURCE_MARKER {
         // Refuse to nuke a non-user-created skill file through this
@@ -523,10 +518,7 @@ pub(crate) async fn delete_my_skill(
         let agent_id = agent.agent_id.to_string();
         async move {
             let value = harness_http
-                .fetch_json(
-                    Method::GET,
-                    &format!("api/agents/{agent_id}/skills"),
-                )
+                .fetch_json(Method::GET, &format!("api/agents/{agent_id}/skills"))
                 .await;
             (agent_id, value)
         }
@@ -538,12 +530,7 @@ pub(crate) async fn delete_my_skill(
         let list = value
             .as_array()
             .cloned()
-            .or_else(|| {
-                value
-                    .get("skills")
-                    .and_then(|v| v.as_array())
-                    .cloned()
-            })
+            .or_else(|| value.get("skills").and_then(|v| v.as_array()).cloned())
             .or_else(|| {
                 value
                     .get("installations")
@@ -585,8 +572,7 @@ pub(crate) async fn delete_my_skill(
     // also go away. Only the SKILL.md has been verified, so this is a
     // targeted directory name under ~/.aura/skills/.
     if skill_dir.exists() {
-        std::fs::remove_dir_all(&skill_dir)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        std::fs::remove_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
     // Best-effort harness catalog deregister. The local harness may or

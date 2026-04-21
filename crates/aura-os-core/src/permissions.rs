@@ -38,9 +38,13 @@ pub enum Capability {
     PostToFeed,
     GenerateMedia,
     #[serde(rename_all = "camelCase")]
-    ReadProject { id: String },
+    ReadProject {
+        id: String,
+    },
     #[serde(rename_all = "camelCase")]
-    WriteProject { id: String },
+    WriteProject {
+        id: String,
+    },
     /// Wildcard read access over every project. Satisfies any
     /// `ReadProject { id }` requirement without enumerating ids.
     /// Held by the CEO preset so the unified tool-surface filter
@@ -170,8 +174,8 @@ impl AgentPermissions {
     /// the in-memory view correct between now and then.
     #[must_use]
     pub fn normalized_for_identity(self, name: &str, role: Option<&str>) -> Self {
-        let looks_like_ceo = name.eq_ignore_ascii_case("CEO")
-            && role.is_some_and(|r| r.eq_ignore_ascii_case("CEO"));
+        let looks_like_ceo =
+            name.eq_ignore_ascii_case("CEO") && role.is_some_and(|r| r.eq_ignore_ascii_case("CEO"));
         if looks_like_ceo && !self.is_ceo_preset() {
             Self::ceo_preset()
         } else {
@@ -337,15 +341,13 @@ mod tests {
 
     #[test]
     fn normalized_for_identity_upgrades_empty_ceo_to_preset() {
-        let upgraded =
-            AgentPermissions::empty().normalized_for_identity("CEO", Some("CEO"));
+        let upgraded = AgentPermissions::empty().normalized_for_identity("CEO", Some("CEO"));
         assert!(upgraded.is_ceo_preset());
     }
 
     #[test]
     fn normalized_for_identity_is_case_insensitive() {
-        let upgraded =
-            AgentPermissions::empty().normalized_for_identity("ceo", Some("Ceo"));
+        let upgraded = AgentPermissions::empty().normalized_for_identity("ceo", Some("Ceo"));
         assert!(upgraded.is_ceo_preset());
     }
 
@@ -355,19 +357,19 @@ mod tests {
             scope: AgentScope::default(),
             capabilities: vec![Capability::ReadAgent],
         };
-        let same = perms.clone().normalized_for_identity("Atlas", Some("Engineer"));
+        let same = perms
+            .clone()
+            .normalized_for_identity("Atlas", Some("Engineer"));
         assert_eq!(same, perms);
     }
 
     #[test]
     fn normalized_for_identity_requires_both_name_and_role_to_match() {
         // name matches but role doesn't — must not promote.
-        let only_name =
-            AgentPermissions::empty().normalized_for_identity("CEO", Some("Engineer"));
+        let only_name = AgentPermissions::empty().normalized_for_identity("CEO", Some("Engineer"));
         assert!(!only_name.is_ceo_preset());
         // role matches but name doesn't — must not promote.
-        let only_role =
-            AgentPermissions::empty().normalized_for_identity("Atlas", Some("CEO"));
+        let only_role = AgentPermissions::empty().normalized_for_identity("Atlas", Some("CEO"));
         assert!(!only_role.is_ceo_preset());
         // role missing entirely — must not promote (prevents pre-
         // schema records from hijacking the preset).
@@ -384,9 +386,7 @@ mod tests {
 
     #[test]
     fn capability_serde_is_camel_case_external_tag() {
-        let c = Capability::ReadProject {
-            id: "p".into(),
-        };
+        let c = Capability::ReadProject { id: "p".into() };
         let v = serde_json::to_value(&c).unwrap();
         assert_eq!(v["type"], "readProject");
         assert_eq!(v["id"], "p");

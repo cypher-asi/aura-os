@@ -12,13 +12,13 @@ use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 
 use crate::harness_gateway::HarnessHttpGateway;
+use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_store::{SettingsStore, StoreError};
-use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 

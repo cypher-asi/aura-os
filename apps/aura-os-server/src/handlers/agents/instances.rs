@@ -75,10 +75,7 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
 /// with a blank name.
 ///
 /// Returns `true` when the agent was mutated and a save was attempted.
-pub(super) fn repair_agent_name_in_place(
-    agent_service: &AgentService,
-    agent: &mut Agent,
-) -> bool {
+pub(super) fn repair_agent_name_in_place(agent_service: &AgentService, agent: &mut Agent) -> bool {
     if !repair_agent_name_only(agent) {
         return false;
     }
@@ -300,7 +297,12 @@ pub(crate) async fn get_agent_instance(
     let resolved_project_id = proj_id_str
         .parse::<aura_os_core::ProjectId>()
         .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
-    attach_workspace_path(&state, &resolved_project_id, project.as_ref(), &mut instance);
+    attach_workspace_path(
+        &state,
+        &resolved_project_id,
+        project.as_ref(),
+        &mut instance,
+    );
     Ok(Json(instance))
 }
 
@@ -396,7 +398,12 @@ pub(crate) async fn update_agent_instance(
     let resolved_project_id = proj_id_str
         .parse::<aura_os_core::ProjectId>()
         .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
-    attach_workspace_path(&state, &resolved_project_id, project.as_ref(), &mut instance);
+    attach_workspace_path(
+        &state,
+        &resolved_project_id,
+        project.as_ref(),
+        &mut instance,
+    );
     Ok(Json(instance))
 }
 
@@ -488,8 +495,7 @@ mod tests {
         let agent_id = agent.agent_id.clone();
         service.save_agent_shadow(&agent).unwrap();
 
-        let repaired =
-            repair_agent_name_if_missing(&service, Some(agent)).expect("repaired agent");
+        let repaired = repair_agent_name_if_missing(&service, Some(agent)).expect("repaired agent");
         assert_eq!(repaired.name, GENERAL_AGENT_NAME);
 
         let reloaded = service.get_agent_local(&agent_id).unwrap();
@@ -550,10 +556,7 @@ mod tests {
 
     #[test]
     fn agent_deserializes_with_missing_name_key_as_empty_string() {
-        let original = make_agent(
-            "Ignored",
-            vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()],
-        );
+        let original = make_agent("Ignored", vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()]);
         let mut value = serde_json::to_value(&original).unwrap();
         value
             .as_object_mut()

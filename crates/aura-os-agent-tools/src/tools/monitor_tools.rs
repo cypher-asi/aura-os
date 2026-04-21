@@ -4,7 +4,7 @@ use serde_json::json;
 use aura_os_core::{Capability, ToolDomain};
 
 use super::helpers::{network_get, require_network, require_str, tool_err};
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
+use super::{AgentTool, AgentToolContext, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 // ---------------------------------------------------------------------------

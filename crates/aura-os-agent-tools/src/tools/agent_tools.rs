@@ -7,7 +7,7 @@ use aura_os_core::{AgentId, Capability, ToolDomain};
 use super::helpers::{
     network_delete, network_get, network_post, network_put, require_network, require_str, tool_err,
 };
-use super::{AgentToolContext, AgentTool, CapabilityRequirement, Surface, ToolResult};
+use super::{AgentTool, AgentToolContext, CapabilityRequirement, Surface, ToolResult};
 use aura_os_agent_runtime::AgentRuntimeError;
 
 /// Render a `NetworkAgent` as the minimal summary the CEO needs to
@@ -48,8 +48,7 @@ fn merge_network_agents(
 ) -> Vec<aura_os_network::NetworkAgent> {
     let mut merged: Vec<aura_os_network::NetworkAgent> =
         Vec::with_capacity(org_agents.len() + user_agents.len());
-    let mut seen =
-        std::collections::HashSet::with_capacity(org_agents.len() + user_agents.len());
+    let mut seen = std::collections::HashSet::with_capacity(org_agents.len() + user_agents.len());
     for na in org_agents.into_iter().chain(user_agents.into_iter()) {
         if seen.insert(na.id.clone()) {
             merged.push(na);
@@ -147,8 +146,7 @@ impl AgentTool for ListAgentsTool {
                 };
                 merge_network_agents(org_agents, user_agents)
             };
-            let summaries: Vec<serde_json::Value> =
-                agents.iter().map(to_agent_summary).collect();
+            let summaries: Vec<serde_json::Value> = agents.iter().map(to_agent_summary).collect();
             return Ok(ToolResult {
                 content: serde_json::Value::Array(summaries),
                 is_error: false,
@@ -786,8 +784,7 @@ mod tests {
         let summary = to_agent_summary(&agent);
 
         let obj = summary.as_object().expect("summary is a JSON object");
-        let keys: std::collections::BTreeSet<&str> =
-            obj.keys().map(String::as_str).collect();
+        let keys: std::collections::BTreeSet<&str> = obj.keys().map(String::as_str).collect();
         assert_eq!(
             keys,
             ["id", "name", "role"].into_iter().collect(),
@@ -873,8 +870,7 @@ mod tests {
 
         let merged = merge_network_agents(org, user);
 
-        let ids: std::collections::BTreeSet<&str> =
-            merged.iter().map(|a| a.id.as_str()).collect();
+        let ids: std::collections::BTreeSet<&str> = merged.iter().map(|a| a.id.as_str()).collect();
         assert_eq!(
             ids,
             ["null-org", "org-only"].into_iter().collect(),

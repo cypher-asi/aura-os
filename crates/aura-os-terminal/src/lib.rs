@@ -257,10 +257,10 @@ impl TerminalManager {
 
     /// Look up the project id associated with a terminal, if any.
     pub fn project_id_of(&self, id: TerminalId) -> Option<String> {
-        self.sessions
-            .lock()
-            .ok()
-            .and_then(|s| s.get(&id).and_then(|session| session.info.project_id.clone()))
+        self.sessions.lock().ok().and_then(|s| {
+            s.get(&id)
+                .and_then(|session| session.info.project_id.clone())
+        })
     }
 
     pub fn list(&self) -> Vec<TerminalInfo> {

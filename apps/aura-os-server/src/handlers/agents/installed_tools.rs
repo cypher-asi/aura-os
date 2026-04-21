@@ -189,8 +189,7 @@ pub(crate) async fn get_installed_tools_diagnostic(
     let mut shipped: Vec<InstalledTool> = workspace_tools.clone();
     shipped.extend(cross_agent_tools.iter().cloned());
     let duplicate_names = dedupe_installed_tools_by_name(&mut shipped);
-    let final_shipped_names: Vec<String> =
-        shipped.iter().map(|tool| tool.name.clone()).collect();
+    let final_shipped_names: Vec<String> = shipped.iter().map(|tool| tool.name.clone()).collect();
 
     Ok(Json(AgentInstalledToolsDiagnostic {
         agent_id: agent_id.to_string(),

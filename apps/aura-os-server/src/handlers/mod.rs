@@ -1,3 +1,5 @@
+pub(crate) mod agent_bootstrap;
+pub(crate) mod agent_tools;
 pub(crate) mod agents;
 pub(crate) mod auth;
 pub(crate) mod billing;
@@ -25,8 +27,6 @@ pub(crate) mod remote_terminal;
 pub(crate) mod spec_disk;
 pub(crate) mod specs;
 pub(crate) mod sse;
-pub(crate) mod agent_bootstrap;
-pub(crate) mod agent_tools;
 pub(crate) mod swarm;
 pub(crate) mod system;
 pub(crate) mod tasks;

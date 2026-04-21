@@ -316,9 +316,11 @@ fn agent_marketplace_fields_survive_non_default_round_trip() {
     let json = serde_json::to_string(&agent).expect("serialize");
     let back: Agent = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(back.listing_status, AgentListingStatus::Hireable);
-    assert_eq!(back.expertise, vec!["coding".to_string(), "devops".to_string()]);
+    assert_eq!(
+        back.expertise,
+        vec!["coding".to_string(), "devops".to_string()]
+    );
     assert_eq!(back.jobs, 42);
     assert!((back.revenue_usd - 1_234.56).abs() < f64::EPSILON);
     assert!((back.reputation - 4.75).abs() < f32::EPSILON);
 }
-

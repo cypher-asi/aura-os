@@ -211,8 +211,7 @@ impl ApiError {
         ctx: ChatPersistErrorCtx,
     ) -> (StatusCode, Json<Self>) {
         let reason = reason.into();
-        let data =
-            chat_persist_error_data("chat_persist_failed", &reason, upstream_status, &ctx);
+        let data = chat_persist_error_data("chat_persist_failed", &reason, upstream_status, &ctx);
         (
             StatusCode::BAD_GATEWAY,
             Json(Self {
@@ -427,8 +426,7 @@ mod tests {
             project_id: None,
             project_agent_id: None,
         };
-        let (status, Json(api_err)) =
-            ApiError::chat_persist_unavailable("no project binding", ctx);
+        let (status, Json(api_err)) = ApiError::chat_persist_unavailable("no project binding", ctx);
         assert_eq!(status, StatusCode::FAILED_DEPENDENCY);
         assert_eq!(api_err.code, "chat_persist_unavailable");
         let data = api_err.data.expect("data must be populated");

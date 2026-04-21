@@ -362,9 +362,7 @@ async fn latest_context_usage_for_session(
         .find_map(|evt| {
             let content = evt.content.as_ref()?;
             let usage = content.get("usage")?;
-            let raw = usage
-                .get("context_utilization")
-                .and_then(|v| v.as_f64())?;
+            let raw = usage.get("context_utilization").and_then(|v| v.as_f64())?;
             if !raw.is_finite() {
                 return None;
             }
@@ -424,7 +422,8 @@ pub(crate) async fn get_agent_context_usage(
         {
             latest = match latest {
                 Some(existing)
-                    if storage_session_sort_key(&existing) >= storage_session_sort_key(&candidate) =>
+                    if storage_session_sort_key(&existing)
+                        >= storage_session_sort_key(&candidate) =>
                 {
                     Some(existing)
                 }

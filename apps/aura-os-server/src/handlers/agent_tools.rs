@@ -367,7 +367,11 @@ pub(crate) async fn dispatch_agent_tool(
             // row before execute; don't duplicate it post-execute.
             // Everything else gets the usual allow / skipped row.
             if !policy_audit_fallthrough {
-                let decision = if policy_skipped { PERMIT_SKIPPED } else { PERMIT_ALLOW };
+                let decision = if policy_skipped {
+                    PERMIT_SKIPPED
+                } else {
+                    PERMIT_ALLOW
+                };
                 record_allow(
                     &audit_log,
                     &invocation_id,
@@ -405,7 +409,11 @@ pub(crate) async fn dispatch_agent_tool(
         }
         Err(err) => {
             if !policy_audit_fallthrough {
-                let decision = if policy_skipped { PERMIT_SKIPPED } else { PERMIT_ALLOW };
+                let decision = if policy_skipped {
+                    PERMIT_SKIPPED
+                } else {
+                    PERMIT_ALLOW
+                };
                 record_allow(
                     &audit_log,
                     &invocation_id,
@@ -689,10 +697,7 @@ mod tests {
         assert_eq!(super::org_id_option("default"), None);
         assert_eq!(super::org_id_option(""), None);
         assert_eq!(super::org_id_option("   "), None);
-        assert_eq!(
-            super::org_id_option("org-42"),
-            Some("org-42".to_string())
-        );
+        assert_eq!(super::org_id_option("org-42"), Some("org-42".to_string()));
     }
 
     // -----------------------------------------------------------------

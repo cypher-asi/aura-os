@@ -89,13 +89,11 @@ pub fn holds_capability(perms: &AgentPermissions, needed: &Capability) -> bool {
             Capability::ReadAllProjects | Capability::WriteAllProjects => true,
             _ => false,
         }),
-        Capability::WriteProject { id } => {
-            perms.capabilities.iter().any(|held| match held {
-                Capability::WriteProject { id: held_id } => held_id == id,
-                Capability::WriteAllProjects => true,
-                _ => false,
-            })
-        }
+        Capability::WriteProject { id } => perms.capabilities.iter().any(|held| match held {
+            Capability::WriteProject { id: held_id } => held_id == id,
+            Capability::WriteAllProjects => true,
+            _ => false,
+        }),
         other => perms.capabilities.contains(other),
     }
 }
@@ -358,17 +356,10 @@ mod tests {
         let perms = with_caps(vec![Capability::ReadAgent, Capability::ControlAgent]);
         // AND: all held → allow
         assert!(
-            check_capabilities(
-                &perms,
-                &[Capability::ReadAgent, Capability::ControlAgent]
-            )
-            .allowed
+            check_capabilities(&perms, &[Capability::ReadAgent, Capability::ControlAgent]).allowed
         );
         // AND: one missing → deny
-        let d = check_capabilities(
-            &perms,
-            &[Capability::ReadAgent, Capability::SpawnAgent],
-        );
+        let d = check_capabilities(&perms, &[Capability::ReadAgent, Capability::SpawnAgent]);
         assert!(!d.allowed);
         assert!(d.reason.unwrap().contains("spawnAgent"));
     }
@@ -383,7 +374,9 @@ mod tests {
         let perms = AgentPermissions::ceo_preset();
         cache.insert("agent-007", perms.clone());
 
-        let got = cache.get("agent-007").expect("cached entry must be present");
+        let got = cache
+            .get("agent-007")
+            .expect("cached entry must be present");
         assert_eq!(got, perms);
         assert_eq!(cache.len(), 1);
         assert!(!cache.is_empty());

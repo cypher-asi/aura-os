@@ -243,8 +243,13 @@ pub(crate) async fn installed_workspace_app_tool_catalog(
     bearer_token: &str,
 ) -> InstalledWorkspaceToolCatalog {
     let integrations = integrations_for_org_with_token(state, org_id, Some(bearer_token)).await;
-    installed_workspace_app_tool_catalog_with_integrations(state, org_id, bearer_token, &integrations)
-        .await
+    installed_workspace_app_tool_catalog_with_integrations(
+        state,
+        org_id,
+        bearer_token,
+        &integrations,
+    )
+    .await
 }
 
 pub(crate) async fn installed_workspace_app_tool_catalog_with_integrations(

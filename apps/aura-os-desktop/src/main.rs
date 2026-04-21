@@ -9,8 +9,8 @@ mod route_state;
 mod updater;
 
 use aura_os_store::SettingsStore;
-use axum::Router;
 use axum::routing::{get as axum_get, post as axum_post};
+use axum::Router;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener as StdTcpListener, ToSocketAddrs};
@@ -26,7 +26,7 @@ use tracing::{debug, info, warn};
 use tracing_subscriber::EnvFilter;
 use wry::{WebContext, WebViewBuilder};
 
-use route_state::{RouteState, normalize_restore_route};
+use route_state::{normalize_restore_route, RouteState};
 use updater::UpdateState;
 
 const PREFERRED_PORT: u16 = 19847;
@@ -881,10 +881,7 @@ fn wait_for_frontend_dev_server_with_probe<F: FnMut() -> bool>(
 /// `candidate.probe_url` responds. Called before `create_main_webview` so the
 /// webview's first navigation can go straight to Vite and avoid the visible
 /// "axum bundle first, then reload into Vite" flash.
-fn wait_for_frontend_dev_server(
-    candidate: &FrontendDevServerCandidate,
-    timeout: Duration,
-) -> bool {
+fn wait_for_frontend_dev_server(candidate: &FrontendDevServerCandidate, timeout: Duration) -> bool {
     if timeout.is_zero() {
         return probe_vite_dev_server(&candidate.probe_url);
     }
@@ -926,21 +923,19 @@ fn spawn_frontend_dev_server_poller(
         "waiting for Vite frontend dev server"
     );
 
-    std::thread::spawn(move || {
-        loop {
-            if probe_vite_dev_server(&frontend_dev_candidate.probe_url) {
-                info!(
-                    frontend = %frontend_dev_candidate.probe_url,
-                    "Vite frontend dev server became available"
-                );
-                let _ = proxy.send_event(UserEvent::AttachFrontendDevServer {
-                    frontend_url: frontend_dev_candidate.frontend_url.clone(),
-                });
-                break;
-            }
-
-            std::thread::sleep(FRONTEND_DEV_SERVER_POLL_INTERVAL);
+    std::thread::spawn(move || loop {
+        if probe_vite_dev_server(&frontend_dev_candidate.probe_url) {
+            info!(
+                frontend = %frontend_dev_candidate.probe_url,
+                "Vite frontend dev server became available"
+            );
+            let _ = proxy.send_event(UserEvent::AttachFrontendDevServer {
+                frontend_url: frontend_dev_candidate.frontend_url.clone(),
+            });
+            break;
         }
+
+        std::thread::sleep(FRONTEND_DEV_SERVER_POLL_INTERVAL);
     });
 }
 
@@ -1054,6 +1049,94 @@ fn stop_managed_frontend_dev_server(frontend_dev_server: &mut Option<Child>) {
             );
         }
     }
+}
+
+/// Parse an explicit control-plane override URL just far enough to
+/// decide whether it points at loopback on a port **different from**
+/// the one we actually bound. Used by the desktop startup self-heal
+/// to strip stale `AURA_SERVER_BASE_URL` / `VITE_API_URL` values that
+/// would otherwise make
+/// `aura_os_integrations::control_plane_api_base_url()` pin every
+/// `send_to_agent` callback to a port nothing listens on (classic
+/// symptom: "operation timed out" on 127.0.0.1:19847 even though the
+/// embedded server bound an ephemeral port because 19847 was taken).
+///
+/// Returns `false` when:
+///   * the URL can't be parsed as `http[s]://host[:port][/...]`,
+///   * the host is not a recognised loopback literal (`127.0.0.1`,
+///     `::1`, `localhost`), or
+///   * no explicit port is present, or
+///   * the explicit port already equals `bound_port`.
+///
+/// We deliberately don't strip non-loopback overrides — prod
+/// deployments legitimately set these to a public URL.
+fn url_is_loopback_with_port_other_than(url: &str, bound_port: u16) -> bool {
+    match parse_loopback_port(url) {
+        Some(port) => port != bound_port,
+        None => false,
+    }
+}
+
+/// Companion to [`url_is_loopback_with_port_other_than`] used by the
+/// startup diagnostics log: returns `true` if `url` is a non-loopback
+/// URL (prod override — mismatch is not our concern) **or** a loopback
+/// URL whose port matches `bound_port`. Any surviving `false` after
+/// the self-heal ran indicates a loopback override the self-heal
+/// missed and is logged at error level.
+fn url_loopback_port_matches(url: &str, bound_port: u16) -> bool {
+    match parse_loopback_port(url) {
+        Some(port) => port == bound_port,
+        None => true,
+    }
+}
+
+/// Extract the explicit port from a loopback-hosted URL, if any.
+/// Returns `None` for any non-loopback host and for loopback URLs
+/// without an explicit port (we can't compare against `bound_port`
+/// in that case, so the caller defaults to "match").
+fn parse_loopback_port(url: &str) -> Option<u16> {
+    let trimmed = url.trim();
+    // Scheme is case-insensitive per RFC 3986 — users legitimately
+    // type `HTTP://...` in env files and we don't want the log to be
+    // misleadingly quiet for those.
+    let scheme_prefix_len = if trimmed.len() >= 7 && trimmed[..7].eq_ignore_ascii_case("http://") {
+        7
+    } else if trimmed.len() >= 8 && trimmed[..8].eq_ignore_ascii_case("https://") {
+        8
+    } else {
+        return None;
+    };
+    let without_scheme = &trimmed[scheme_prefix_len..];
+    let authority = without_scheme
+        .split_once('/')
+        .map(|(a, _)| a)
+        .unwrap_or(without_scheme);
+    let authority = authority
+        .split_once('?')
+        .map(|(a, _)| a)
+        .unwrap_or(authority);
+    let authority = authority
+        .split_once('#')
+        .map(|(a, _)| a)
+        .unwrap_or(authority);
+    let (host, port_str) = if let Some(stripped) = authority.strip_prefix('[') {
+        // IPv6 literal: `[::1]:port`.
+        let (host, rest) = stripped.split_once(']')?;
+        let port_str = rest.strip_prefix(':')?;
+        (host.to_string(), port_str)
+    } else {
+        let (host, port_str) = authority.split_once(':')?;
+        (host.to_string(), port_str)
+    };
+    if !host_is_loopback(&host) {
+        return None;
+    }
+    port_str.parse::<u16>().ok()
+}
+
+fn host_is_loopback(host: &str) -> bool {
+    let normalized = host.trim().trim_start_matches('[').trim_end_matches(']');
+    matches!(normalized, "127.0.0.1" | "::1") || normalized.eq_ignore_ascii_case("localhost")
 }
 
 fn bind_listener() -> (StdTcpListener, u16, String) {
@@ -1183,7 +1266,7 @@ fn set_square_corners(_window: &tao::window::Window) {
         use tao::platform::windows::WindowExtWindows;
         use windows::Win32::Foundation::HWND;
         use windows::Win32::Graphics::Dwm::{
-            DWM_WINDOW_CORNER_PREFERENCE, DWMWA_WINDOW_CORNER_PREFERENCE, DwmSetWindowAttribute,
+            DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWM_WINDOW_CORNER_PREFERENCE,
         };
 
         let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
@@ -1220,11 +1303,11 @@ fn set_square_corners(_window: &tao::window::Window) {
 #[cfg(test)]
 mod tests {
     use super::{
-        BootstrappedAuthLiterals, append_query_param, apply_restore_route,
-        build_frontend_dev_server_candidate, build_frontend_dev_server_config,
-        build_initialization_script, interface_dir_candidates, is_local_bind_host, parse_host_port,
-        resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
-        wait_for_frontend_dev_server_with_probe,
+        append_query_param, apply_restore_route, build_frontend_dev_server_candidate,
+        build_frontend_dev_server_config, build_initialization_script, interface_dir_candidates,
+        is_local_bind_host, parse_host_port, resolve_frontend_target_with_probe,
+        should_poll_for_frontend_dev_server, wait_for_frontend_dev_server_with_probe,
+        BootstrappedAuthLiterals,
     };
     use std::cell::Cell;
     use std::path::{Path, PathBuf};
@@ -1565,8 +1648,8 @@ fn set_black_background(_window: &tao::window::Window) {
     {
         use tao::platform::windows::WindowExtWindows;
         use windows::Win32::Foundation::HWND;
-        use windows::Win32::Graphics::Gdi::{BLACK_BRUSH, GetStockObject};
-        use windows::Win32::UI::WindowsAndMessaging::{GCL_HBRBACKGROUND, SetClassLongPtrW};
+        use windows::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH};
+        use windows::Win32::UI::WindowsAndMessaging::{SetClassLongPtrW, GCL_HBRBACKGROUND};
 
         let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
         unsafe {
@@ -1619,7 +1702,11 @@ fn build_initialization_script(
     // yet been hydrated from IndexedDB. See
     // `interface/src/lib/auth-token.ts::readBootInjectedAuth()`.
     let (boot_auth_is_logged_in, boot_auth_session, boot_auth_jwt) = match bootstrapped_auth {
-        Some(auth) => ("true", auth.session_literal.as_str(), auth.jwt_literal.as_str()),
+        Some(auth) => (
+            "true",
+            auth.session_literal.as_str(),
+            auth.jwt_literal.as_str(),
+        ),
         None => ("false", "null", "null"),
     };
     statements.push(format!(
@@ -2007,6 +2094,52 @@ fn main() {
     let bootstrapped_auth = load_bootstrapped_auth_literals(&store_path);
     let (std_listener, server_port, url) = bind_listener();
 
+    // Snapshot pre-sync env so the startup diagnostics line can show
+    // exactly what was in the environment before we touched it — the
+    // production `send_to_agent` timeout on 19847 is driven by a
+    // stale explicit override pinning the URL to a port we no longer
+    // listen on, and without this log there is no way to correlate
+    // which env var caused it post-hoc.
+    let pre_sync_server_base_url = std::env::var("AURA_SERVER_BASE_URL").ok();
+    let pre_sync_vite_api_url = std::env::var("VITE_API_URL").ok();
+    let pre_sync_server_host = std::env::var("AURA_SERVER_HOST").ok();
+    let pre_sync_server_port = std::env::var("AURA_SERVER_PORT").ok();
+
+    // Self-heal stale loopback overrides. When the installer / a
+    // previous desktop run / a leftover shell var pins
+    // `AURA_SERVER_BASE_URL` or `VITE_API_URL` to
+    // `http://127.0.0.1:19847` but the current bind landed on an
+    // ephemeral port (because 19847 was already taken), those
+    // explicit values win inside
+    // `aura_os_integrations::control_plane_api_base_url()` and every
+    // loopback callback (send_to_agent, list_agents, spec fetches)
+    // silently POSTs into a closed port — which on Windows surfaces
+    // as a ~21s "operation timed out" instead of an immediate
+    // connection refused. Strip the stale value so the fallback
+    // derived from the real bound port takes over. Non-loopback
+    // overrides (prod deployments pointing at a public URL) are
+    // untouched.
+    if let Some(existing) = pre_sync_server_base_url.as_deref() {
+        if url_is_loopback_with_port_other_than(existing, server_port) {
+            warn!(
+                existing = %existing,
+                bound_port = server_port,
+                "stripping stale loopback AURA_SERVER_BASE_URL so embedded server URL matches bound port"
+            );
+            std::env::remove_var("AURA_SERVER_BASE_URL");
+        }
+    }
+    if let Some(existing) = pre_sync_vite_api_url.as_deref() {
+        if url_is_loopback_with_port_other_than(existing, server_port) {
+            warn!(
+                existing = %existing,
+                bound_port = server_port,
+                "stripping stale loopback VITE_API_URL so embedded server URL matches bound port"
+            );
+            std::env::remove_var("VITE_API_URL");
+        }
+    }
+
     // Sync the actually-bound loopback address back into the process
     // env before `spawn_server` runs `build_app_state`. Without this,
     // `aura_os_integrations::control_plane_api_base_url_fallback` reads
@@ -2019,9 +2152,41 @@ fn main() {
     // closed port and surfaces as `external tool callback unreachable`.
     // Explicit `AURA_SERVER_BASE_URL` (or `VITE_API_URL`) overrides
     // still win because `control_plane_api_base_url` checks those
-    // first.
+    // first — hence the stale-loopback self-heal above.
     std::env::set_var("AURA_SERVER_HOST", "127.0.0.1");
     std::env::set_var("AURA_SERVER_PORT", server_port.to_string());
+
+    // Single structured line that correlates the actually-bound port
+    // with the URL every loopback callback will derive. Emitted
+    // immediately after the self-heal + env sync so logs show the
+    // final post-resolution state. Any surviving mismatch here is
+    // almost certainly a non-loopback override pointing at the wrong
+    // port — log it at error level so we don't silently eat another
+    // 21s timeout round-trip in production.
+    let resolved_base_url = aura_os_integrations::control_plane_api_base_url();
+    let resolved_port_matches = url_loopback_port_matches(&resolved_base_url, server_port);
+    if resolved_port_matches {
+        info!(
+            bound_port = server_port,
+            resolved_base_url = %resolved_base_url,
+            aura_server_base_url_pre_sync = ?pre_sync_server_base_url,
+            vite_api_url_pre_sync = ?pre_sync_vite_api_url,
+            aura_server_host_pre_sync = ?pre_sync_server_host,
+            aura_server_port_pre_sync = ?pre_sync_server_port,
+            "control plane URL resolved"
+        );
+    } else {
+        tracing::error!(
+            bound_port = server_port,
+            resolved_base_url = %resolved_base_url,
+            aura_server_base_url = ?std::env::var("AURA_SERVER_BASE_URL").ok(),
+            vite_api_url = ?std::env::var("VITE_API_URL").ok(),
+            aura_server_host = ?std::env::var("AURA_SERVER_HOST").ok(),
+            aura_server_port = ?std::env::var("AURA_SERVER_PORT").ok(),
+            "control_plane_url_mismatch: resolved base URL does not match bound port; \
+             send_to_agent and other loopback tool callbacks will fail"
+        );
+    }
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -2117,4 +2282,83 @@ fn main() {
         frontend_target.using_frontend_dev_server,
         route_state,
     );
+}
+
+#[cfg(test)]
+mod loopback_port_tests {
+    use super::{url_is_loopback_with_port_other_than, url_loopback_port_matches};
+
+    #[test]
+    fn stripped_when_loopback_port_differs() {
+        assert!(url_is_loopback_with_port_other_than(
+            "http://127.0.0.1:19847",
+            52345
+        ));
+        assert!(url_is_loopback_with_port_other_than(
+            "http://localhost:19847/",
+            52345
+        ));
+        assert!(url_is_loopback_with_port_other_than(
+            "http://[::1]:19847",
+            52345
+        ));
+        assert!(url_is_loopback_with_port_other_than(
+            "HTTP://LOCALHOST:19847",
+            52345
+        ));
+    }
+
+    #[test]
+    fn kept_when_loopback_port_matches_bound_port() {
+        assert!(!url_is_loopback_with_port_other_than(
+            "http://127.0.0.1:19847",
+            19847
+        ));
+        assert!(!url_is_loopback_with_port_other_than(
+            "http://localhost:19847/api",
+            19847
+        ));
+    }
+
+    #[test]
+    fn kept_for_non_loopback_hosts() {
+        assert!(!url_is_loopback_with_port_other_than(
+            "https://api.aura.dev:443",
+            19847
+        ));
+        assert!(!url_is_loopback_with_port_other_than(
+            "http://10.0.0.1:19847",
+            19847
+        ));
+        assert!(!url_is_loopback_with_port_other_than(
+            "https://render-app.onrender.com",
+            19847
+        ));
+    }
+
+    #[test]
+    fn kept_when_port_missing_or_unparseable() {
+        // No explicit port — we can't prove a mismatch, so don't strip.
+        assert!(!url_is_loopback_with_port_other_than(
+            "http://127.0.0.1",
+            19847
+        ));
+        assert!(!url_is_loopback_with_port_other_than(
+            "http://localhost/",
+            19847
+        ));
+        // Garbage input — never strip.
+        assert!(!url_is_loopback_with_port_other_than("not a url", 19847));
+        assert!(!url_is_loopback_with_port_other_than("", 19847));
+    }
+
+    #[test]
+    fn matches_helper_mirrors_the_strip_helper() {
+        // Non-loopback override — not our concern; treated as "match".
+        assert!(url_loopback_port_matches("https://api.aura.dev", 19847));
+        // Loopback + correct port — match.
+        assert!(url_loopback_port_matches("http://127.0.0.1:19847", 19847));
+        // Loopback + wrong port — mismatch (would trigger the error log).
+        assert!(!url_loopback_port_matches("http://127.0.0.1:3100", 19847));
+    }
 }

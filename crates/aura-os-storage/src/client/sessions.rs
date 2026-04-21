@@ -66,11 +66,7 @@ impl StorageClient {
         .await
     }
 
-    pub async fn delete_session(
-        &self,
-        session_id: &str,
-        jwt: &str,
-    ) -> Result<(), StorageError> {
+    pub async fn delete_session(&self, session_id: &str, jwt: &str) -> Result<(), StorageError> {
         validate_url_id(session_id, "session_id")?;
         self.delete_authed(
             &format!("{}/api/sessions/{}", self.base_url, session_id),

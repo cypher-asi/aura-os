@@ -286,11 +286,7 @@ fn resolve_rel_path(root: &Path, rel: &str) -> ApiResult<PathBuf> {
     // prefixes, UNC paths, or leading `/`/`\` separators.
     if trimmed.starts_with('/')
         || trimmed.starts_with('\\')
-        || trimmed
-            .chars()
-            .nth(1)
-            .map(|c| c == ':')
-            .unwrap_or(false)
+        || trimmed.chars().nth(1).map(|c| c == ':').unwrap_or(false)
     {
         return Err(ApiError::bad_request(format!(
             "absolute path is not allowed: `{rel}`"
@@ -583,10 +579,9 @@ pub(crate) async fn list_tree(
 ) -> ApiResult<Json<TreeResponse>> {
     let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let root_for_walk = root.clone();
-    let nodes =
-        tokio::task::spawn_blocking(move || walk_notes(&root_for_walk, &root_for_walk))
-            .await
-            .unwrap_or_default();
+    let nodes = tokio::task::spawn_blocking(move || walk_notes(&root_for_walk, &root_for_walk))
+        .await
+        .unwrap_or_default();
     Ok(Json(TreeResponse {
         nodes,
         root: to_forward_slashes(&root),
@@ -624,7 +619,10 @@ pub(crate) async fn read_note(
     let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let abs = resolve_rel_path(&root, &query.path)?;
     if !abs.is_file() {
-        return Err(ApiError::not_found(format!("note not found: {}", query.path)));
+        return Err(ApiError::not_found(format!(
+            "note not found: {}",
+            query.path
+        )));
     }
     let content = tokio::fs::read_to_string(&abs)
         .await
@@ -912,7 +910,10 @@ pub(crate) async fn rename_entry(
     let from = resolve_rel_path(&root, &req.from)?;
     let to = resolve_rel_path(&root, &req.to)?;
     if !from.exists() {
-        return Err(ApiError::not_found(format!("source not found: {}", req.from)));
+        return Err(ApiError::not_found(format!(
+            "source not found: {}",
+            req.from
+        )));
     }
     if to.exists() {
         return Err(ApiError::conflict(format!(
@@ -1030,7 +1031,10 @@ pub(crate) async fn list_comments(
     let root = ensure_notes_root(&state.data_dir, &state.project_service, &project_id)?;
     let note_abs = resolve_rel_path(&root, &query.path)?;
     if !note_abs.is_file() {
-        return Err(ApiError::not_found(format!("note not found: {}", query.path)));
+        return Err(ApiError::not_found(format!(
+            "note not found: {}",
+            query.path
+        )));
     }
     let file = load_comments(&note_abs).await?;
     Ok(Json(file.comments))
@@ -1061,10 +1065,7 @@ pub(crate) async fn add_comment(
     }
     let mut file = load_comments(&note_abs).await?;
     let comment = NoteComment {
-        id: format!(
-            "cm_{}",
-            uuid::Uuid::new_v4().as_simple().to_string()
-        ),
+        id: format!("cm_{}", uuid::Uuid::new_v4().as_simple().to_string()),
         author_id: session.user_id.clone(),
         author_name: req
             .author_name
@@ -1102,7 +1103,10 @@ pub(crate) async fn delete_comment(
     let before = file.comments.len();
     file.comments.retain(|c| c.id != req.id);
     if file.comments.len() == before {
-        return Err(ApiError::not_found(format!("comment not found: {}", req.id)));
+        return Err(ApiError::not_found(format!(
+            "comment not found: {}",
+            req.id
+        )));
     }
     save_comments(&note_abs, &file).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
@@ -1137,7 +1141,10 @@ mod tests {
 
     #[test]
     fn extract_title_without_heading() {
-        assert_eq!(extract_title("plain first line\n\nrest"), "plain first line");
+        assert_eq!(
+            extract_title("plain first line\n\nrest"),
+            "plain first line"
+        );
     }
 
     #[test]
@@ -1198,7 +1205,9 @@ mod tests {
             _ => panic!("expected folder first"),
         }
         match &nodes[1] {
-            TreeNode::Note { title, rel_path, .. } => {
+            TreeNode::Note {
+                title, rel_path, ..
+            } => {
                 assert_eq!(title, "Z Root");
                 assert_eq!(rel_path, "z-root.md");
             }
@@ -1294,7 +1303,10 @@ mod tests {
             std::fs::read_to_string(dst.join("a/b/leaf.md")).unwrap(),
             "leaf"
         );
-        assert_eq!(std::fs::read_to_string(dst.join("root.md")).unwrap(), "root");
+        assert_eq!(
+            std::fs::read_to_string(dst.join("root.md")).unwrap(),
+            "root"
+        );
         // Original is untouched.
         assert!(src.join("a/b/leaf.md").is_file());
     }
@@ -1368,7 +1380,10 @@ mod tests {
         let next = maybe_rename_for_title(&original, "Hello world")
             .await
             .unwrap();
-        assert_eq!(next.file_name().unwrap().to_string_lossy(), "hello-world.md");
+        assert_eq!(
+            next.file_name().unwrap().to_string_lossy(),
+            "hello-world.md"
+        );
         assert!(next.exists());
         assert!(!original.exists());
     }
@@ -1411,7 +1426,10 @@ mod tests {
         let next = maybe_rename_for_title(&original, "Hello world")
             .await
             .unwrap();
-        assert_eq!(next.file_name().unwrap().to_string_lossy(), "hello-world-2.md");
+        assert_eq!(
+            next.file_name().unwrap().to_string_lossy(),
+            "hello-world-2.md"
+        );
         assert!(next.exists());
         assert!(!original.exists());
     }
