@@ -59,6 +59,16 @@ export function SidekickTaskbar() {
     () => [
       { id: "terminal", icon: <Terminal size={16} />, title: "Terminal" },
       { id: "browser", icon: <Globe size={16} />, title: "Browser" },
+      { id: "specs", icon: <File size={16} />, title: "Specs" },
+      {
+        id: "tasks",
+        icon: showRunProgress ? (
+          <Loader2 size={16} className={styles.automationSpinner} />
+        ) : (
+          <Check size={16} />
+        ),
+        title: "Tasks",
+      },
       {
         id: "run",
         icon: showRunProgress ? (
@@ -68,8 +78,6 @@ export function SidekickTaskbar() {
         ),
         title: "Run",
       },
-      { id: "specs", icon: <File size={16} />, title: "Specs" },
-      { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
       { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
       { id: "log", icon: <ScrollText size={16} />, title: "Log" },
       { id: "sessions", icon: <Monitor size={16} />, title: "Sessions" },
