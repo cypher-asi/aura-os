@@ -32,21 +32,40 @@ export function fail(message) {
 }
 
 export function run(command, args, options = {}) {
+  const {
+    retries = 0,
+    retryDelayMs = 1_000,
+    label = null,
+    ...spawnOptions
+  } = options;
   const rendered = [command, ...args].join(" ");
-  console.log(`\n> ${rendered}`);
+  const attemptCount = Math.max(1, retries + 1);
 
-  const result = spawnSync(commandName(command), args, {
-    cwd: repoRoot,
-    stdio: "inherit",
-    ...options,
-  });
+  for (let attempt = 1; attempt <= attemptCount; attempt += 1) {
+    const suffix = attemptCount > 1 ? ` (attempt ${attempt}/${attemptCount})` : "";
+    const prefix = label ? `[${label}] ` : "";
+    console.log(`\n> ${prefix}${rendered}${suffix}`);
 
-  if (result.error) {
-    fail(`Unable to run "${rendered}": ${result.error.message}`);
-  }
+    const result = spawnSync(commandName(command), args, {
+      cwd: repoRoot,
+      stdio: "inherit",
+      ...spawnOptions,
+    });
 
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+    if (result.error) {
+      if (attempt === attemptCount) {
+        fail(`Unable to run "${rendered}": ${result.error.message}`);
+      }
+    } else if (result.status === 0) {
+      return;
+    } else if (attempt === attemptCount) {
+      process.exit(result.status ?? 1);
+    }
+
+    console.warn(
+      `\n[ci-parity] ${label ?? rendered} failed on attempt ${attempt}/${attemptCount}; retrying in ${retryDelayMs}ms...`,
+    );
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, retryDelayMs);
   }
 }
 

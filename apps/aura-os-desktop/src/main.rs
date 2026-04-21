@@ -89,6 +89,9 @@ pub(crate) enum UserEvent {
     AttachFrontendDevServer {
         frontend_url: String,
     },
+    InstallUpdate {
+        state: UpdateState,
+    },
     /// Stop managed sidecars and exit the event loop so a pending platform
     /// installer can overwrite this process's files. Posted by the updater
     /// immediately before calling `std::process::exit`.
@@ -352,7 +355,7 @@ fn harness_resource_candidates() -> Vec<PathBuf> {
     candidates
 }
 
-fn find_bundled_harness_binary() -> Option<PathBuf> {
+fn configured_harness_binary() -> Option<PathBuf> {
     if let Some(explicit) = env_string("AURA_HARNESS_BIN") {
         let path = PathBuf::from(explicit);
         if path.exists() {
@@ -360,10 +363,131 @@ fn find_bundled_harness_binary() -> Option<PathBuf> {
         }
         warn!(path = %path.display(), "configured AURA_HARNESS_BIN does not exist");
     }
+    None
+}
 
+fn find_bundled_harness_binary() -> Option<PathBuf> {
     harness_resource_candidates()
         .into_iter()
         .find(|path| path.is_file())
+}
+
+fn staged_harness_binary_name(source: &Path) -> String {
+    let metadata = source.metadata().ok();
+    let byte_len = metadata.as_ref().map(std::fs::Metadata::len).unwrap_or(0);
+    let modified_secs = metadata
+        .and_then(|value| value.modified().ok())
+        .and_then(|value| value.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|value| value.as_secs())
+        .unwrap_or(0);
+    let stem = source
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("aura-node");
+    let suffix = format!(
+        "{stem}-{}-{byte_len}-{modified_secs}",
+        env!("CARGO_PKG_VERSION")
+    );
+    match source.extension().and_then(|value| value.to_str()) {
+        Some(ext) if !ext.is_empty() => format!("{suffix}.{ext}"),
+        _ => suffix,
+    }
+}
+
+fn stage_bundled_harness_binary(source: &Path, data_dir: &Path) -> Result<PathBuf, String> {
+    let staged_dir = data_dir.join("runtime/sidecar");
+    std::fs::create_dir_all(&staged_dir).map_err(|error| {
+        format!(
+            "failed to create staged harness directory {}: {error}",
+            staged_dir.display()
+        )
+    })?;
+
+    let staged_binary = staged_dir.join(staged_harness_binary_name(source));
+    if staged_binary.is_file() {
+        return Ok(staged_binary);
+    }
+
+    let temp_name = format!(
+        ".{}.tmp-{}-{}",
+        staged_binary
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("aura-node"),
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|value| value.as_nanos())
+            .unwrap_or(0)
+    );
+    let temp_binary = staged_dir.join(temp_name);
+
+    std::fs::copy(source, &temp_binary).map_err(|error| {
+        format!(
+            "failed to copy bundled harness {} to {}: {error}",
+            source.display(),
+            temp_binary.display()
+        )
+    })?;
+
+    let source_permissions =
+        source
+            .metadata()
+            .map(|value| value.permissions())
+            .map_err(|error| {
+                format!(
+                    "failed to read bundled harness permissions {}: {error}",
+                    source.display()
+                )
+            })?;
+    if let Err(error) = std::fs::set_permissions(&temp_binary, source_permissions) {
+        let _ = std::fs::remove_file(&temp_binary);
+        return Err(format!(
+            "failed to preserve bundled harness permissions on {}: {error}",
+            temp_binary.display()
+        ));
+    }
+
+    if let Err(error) = std::fs::rename(&temp_binary, &staged_binary) {
+        if staged_binary.exists() {
+            let _ = std::fs::remove_file(&temp_binary);
+            return Ok(staged_binary);
+        }
+        let _ = std::fs::remove_file(&temp_binary);
+        return Err(format!(
+            "failed to move staged harness into place {} -> {}: {error}",
+            temp_binary.display(),
+            staged_binary.display()
+        ));
+    }
+
+    Ok(staged_binary)
+}
+
+fn resolve_managed_harness_binary(data_dir: &Path) -> Option<PathBuf> {
+    if let Some(explicit) = configured_harness_binary() {
+        return Some(explicit);
+    }
+
+    let bundled = find_bundled_harness_binary()?;
+    match stage_bundled_harness_binary(&bundled, data_dir) {
+        Ok(staged) => {
+            info!(
+                source = %bundled.display(),
+                staged = %staged.display(),
+                "staged bundled local harness sidecar for runtime launch"
+            );
+            Some(staged)
+        }
+        Err(error) => {
+            warn!(
+                error = %error,
+                source = %bundled.display(),
+                "failed to stage bundled local harness sidecar; falling back to packaged resource"
+            );
+            Some(bundled)
+        }
+    }
 }
 
 fn parse_host_port(url: &str) -> Option<(String, u16)> {
@@ -446,7 +570,7 @@ fn probe_http_ok(base_url: &str, path: &str) -> bool {
 fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     let explicit_harness_url =
         env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
-    let harness_binary = find_bundled_harness_binary();
+    let harness_binary = resolve_managed_harness_binary(data_dir);
     let harness_url = explicit_harness_url
         .clone()
         .unwrap_or_else(|| format!("http://127.0.0.1:{PREFERRED_LOCAL_HARNESS_PORT}"));
@@ -460,7 +584,7 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
 
     let Some(harness_binary) = harness_binary else {
         if explicit_harness_url.is_some() {
-            info!(url = %harness_url, "no bundled local harness sidecar found; relying on configured external harness");
+            info!(url = %harness_url, "no managed local harness sidecar found; relying on configured external harness");
         } else {
             info!("no bundled local harness sidecar found; local harness support stays disabled");
         }
@@ -509,16 +633,16 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
             let deadline = std::time::Instant::now() + Duration::from_secs(10);
             while std::time::Instant::now() < deadline {
                 if probe_http_ok(&harness_url, "/health") {
-                    info!(pid, url = %harness_url, binary = %harness_binary.display(), "started bundled local harness sidecar");
+                    info!(pid, url = %harness_url, binary = %harness_binary.display(), "started managed local harness sidecar");
                     return Some(child);
                 }
                 std::thread::sleep(Duration::from_millis(250));
             }
-            warn!(pid, url = %harness_url, binary = %harness_binary.display(), "bundled local harness sidecar did not become healthy before timeout");
+            warn!(pid, url = %harness_url, binary = %harness_binary.display(), "managed local harness sidecar did not become healthy before timeout");
             Some(child)
         }
         Err(error) => {
-            warn!(%error, binary = %harness_binary.display(), "failed to start bundled local harness sidecar");
+            warn!(%error, binary = %harness_binary.display(), "failed to start managed local harness sidecar");
             None
         }
     }
@@ -1207,6 +1331,10 @@ fn spawn_server(
                     }
                 });
             }
+            let update_install_state = handlers::UpdateInstallRouteState {
+                proxy: ide_proxy.clone(),
+                update_state: update_state.clone(),
+            };
 
             let app_state = aura_os_server::build_app_state(&store_path)
                 .expect("failed to open local settings store");
@@ -1233,7 +1361,7 @@ fn spawn_server(
                 )
                 .route(
                     "/api/update-install",
-                    axum_post(handlers::post_update_install).with_state(update_state.clone()),
+                    axum_post(handlers::post_update_install).with_state(update_install_state),
                 )
                 .route(
                     "/api/update-check",
@@ -1304,9 +1432,10 @@ fn set_square_corners(_window: &tao::window::Window) {
 mod tests {
     use super::{
         append_query_param, apply_restore_route, build_frontend_dev_server_candidate,
-        build_frontend_dev_server_config, build_initialization_script, interface_dir_candidates,
-        is_local_bind_host, parse_host_port, resolve_frontend_target_with_probe,
-        should_poll_for_frontend_dev_server, wait_for_frontend_dev_server_with_probe,
+        build_frontend_dev_server_config, build_initialization_script, harness_binary_name,
+        interface_dir_candidates, is_local_bind_host, parse_host_port,
+        resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
+        stage_bundled_harness_binary, wait_for_frontend_dev_server_with_probe,
         BootstrappedAuthLiterals,
     };
     use std::cell::Cell;
@@ -1641,6 +1770,55 @@ mod tests {
         assert!(!is_local_bind_host("0.0.0.0"));
         assert!(!is_local_bind_host("harness.example.com"));
     }
+
+    fn unique_test_dir(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "aura-os-desktop-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|value| value.as_nanos())
+                .unwrap_or(0)
+        ))
+    }
+
+    #[test]
+    fn stage_bundled_harness_binary_copies_into_runtime_dir() {
+        let root = unique_test_dir("stage-sidecar");
+        let source_dir = root.join("install/resources/sidecar");
+        let data_dir = root.join("data");
+        std::fs::create_dir_all(&source_dir).unwrap();
+        std::fs::create_dir_all(&data_dir).unwrap();
+
+        let source = source_dir.join(harness_binary_name());
+        std::fs::write(&source, b"fake-sidecar-binary").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&source).unwrap().permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&source, perms).unwrap();
+        }
+
+        let staged = stage_bundled_harness_binary(&source, &data_dir).unwrap();
+        assert_ne!(staged, source);
+        assert!(staged.starts_with(data_dir.join("runtime/sidecar")));
+        assert_eq!(std::fs::read(&staged).unwrap(), b"fake-sidecar-binary");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_ne!(
+                std::fs::metadata(&staged).unwrap().permissions().mode() & 0o111,
+                0
+            );
+        }
+
+        let staged_again = stage_bundled_harness_binary(&source, &data_dir).unwrap();
+        assert_eq!(staged_again, staged);
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }
 
 fn set_black_background(_window: &tao::window::Window) {
@@ -1926,6 +2104,14 @@ fn handle_user_event(
                 main_window.set_visible(true);
             } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
                 ide_win.set_visible(true);
+            }
+        }
+        UserEvent::InstallUpdate { state } => {
+            // Stop the managed sidecar before launching the installer so the
+            // update does not have to replace an in-use helper binary.
+            stop_managed_local_harness(managed_local_harness);
+            if let Err(error) = updater::start_install(state) {
+                warn!(error = %error, "failed to start updater install");
             }
         }
         UserEvent::ShutdownForUpdate => {

@@ -25,6 +25,24 @@ env:
   AURA_UPDATE_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
 jobs:
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve nightly version
+        id: version
+        shell: bash
+        run: |
+          BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          RUN_SEQ="${{ github.run_number }}"
+          VERSION="${BASE}-nightly.${RUN_SEQ}.1"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
   build-sidecar:
     strategy:
       fail-fast: false
@@ -130,6 +148,7 @@ jobs:
           compression-level: 0
 
   build-app:
+    needs: resolve-version
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -220,27 +239,17 @@ jobs:
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
 
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ="${{ github.run_number }}"
-          RUN_ATTEMPT="${{ github.run_attempt }}"
-          NIGHTLY="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
-          echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
-
       - name: Patch Cargo.toml version
         shell: bash
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.resolve-version.outputs.version }}"
           sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
           rm -f apps/aura-os-desktop/Cargo.toml.bak
 
       - name: Build interface
         working-directory: interface
         env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_VERSION: ${{ needs.resolve-version.outputs.version }}
           APP_COMMIT: ${{ github.sha }}
           APP_CHANNEL: nightly
         run: |
@@ -305,7 +314,7 @@ jobs:
           compression-level: 0
 
   package:
-    needs: [build-sidecar, build-app]
+    needs: [resolve-version, build-sidecar, build-app]
     env:
       CARGO_TARGET_DIR: ../.aura-shared-target
       AURA_RELEASE_DIR: ../.aura-shared-target/release
@@ -365,20 +374,10 @@ jobs:
       - name: Check desktop runtime parity
         run: node scripts/ci/check-runtime.mjs desktop
 
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ="${{ github.run_number }}"
-          RUN_ATTEMPT="${{ github.run_attempt }}"
-          NIGHTLY="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
-          echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
-
       - name: Patch Cargo.toml version
         shell: bash
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${{ needs.resolve-version.outputs.version }}"
           sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/aura-os-desktop/Cargo.toml
           rm -f apps/aura-os-desktop/Cargo.toml.bak
 
@@ -626,7 +625,7 @@ jobs:
           if [ "${{ matrix.target }}" = "macos" ]; then
             for bundle in dist/*.app.tar.gz; do
               [ -e "$bundle" ] || continue
-              renamed="dist/aura-os-desktop_${{ steps.version.outputs.version }}_${{ matrix.arch }}.app.tar.gz"
+              renamed="dist/aura-os-desktop_${{ needs.resolve-version.outputs.version }}_${{ matrix.arch }}.app.tar.gz"
               mv "$bundle" "$renamed"
               if [ -f "${bundle}.sig" ]; then
                 mv "${bundle}.sig" "${renamed}.sig"
@@ -635,7 +634,7 @@ jobs:
             if ! ls dist/*.app.tar.gz >/dev/null 2>&1; then
               for app_bundle in dist/*.app; do
                 [ -e "$app_bundle" ] || continue
-                archive_path="dist/aura-os-desktop_${{ steps.version.outputs.version }}_${{ matrix.arch }}.app.tar.gz"
+                archive_path="dist/aura-os-desktop_${{ needs.resolve-version.outputs.version }}_${{ matrix.arch }}.app.tar.gz"
                 COPYFILE_DISABLE=1 tar -czf "$archive_path" -C dist "$(basename "$app_bundle")"
                 break
               done
@@ -663,7 +662,7 @@ jobs:
       - name: Generate artifact summary and checksums
         shell: bash
         run: |
-          node infra/scripts/release/desktop-release-summary.mjs dist nightly "${{ steps.version.outputs.version }}"
+          node infra/scripts/release/desktop-release-summary.mjs dist nightly "${{ needs.resolve-version.outputs.version }}"
           mv dist/release-summary.json "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.json"
           mv dist/release-summary.md "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md"
           mv dist/checksums.txt "dist/checksums-${{ matrix.target }}-${{ matrix.arch }}.txt"
@@ -676,6 +675,7 @@ jobs:
           path: dist/
 
   package-android-apk:
+    needs: resolve-version
     if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
     runs-on: ubuntu-latest
     env:
@@ -740,30 +740,20 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
           echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
 
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ="${{ github.run_number }}"
-          RUN_ATTEMPT="${{ github.run_attempt }}"
-          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
       - name: Build signed Android APK
         working-directory: interface/android
         env:
-          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_VERSION: ${{ needs.resolve-version.outputs.version }}
           APP_COMMIT: ${{ github.sha }}
           APP_CHANNEL: nightly
-          ANDROID_VERSION_NAME: ${{ steps.version.outputs.version }}
+          ANDROID_VERSION_NAME: ${{ needs.resolve-version.outputs.version }}
         run: bundle exec fastlane android github_release
 
       - name: Collect Android APK artifact
         shell: bash
         run: |
           mkdir -p dist
-          cp interface/android/app/build/outputs/apk/release/app-release.apk "dist/aura-os-android_${{ steps.version.outputs.version }}.apk"
+          cp interface/android/app/build/outputs/apk/release/app-release.apk "dist/aura-os-android_${{ needs.resolve-version.outputs.version }}.apk"
 
       - name: Generate Android artifact summary
         shell: bash
@@ -784,22 +774,11 @@ jobs:
           path: dist/
 
   release:
-    needs: [package, package-android-apk]
+    needs: [resolve-version, package, package-android-apk]
     if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ="${{ github.run_number }}"
-          RUN_ATTEMPT="${{ github.run_attempt }}"
-          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -808,6 +787,14 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
+      - name: Validate artifact versions
+        run: |
+          node infra/scripts/release/validate-release-artifact-versions.mjs \
+            --artifacts-dir all-artifacts \
+            --channel nightly \
+            --version "${{ needs.resolve-version.outputs.version }}" \
+            --output-dir release-validation
+
       - name: Write release metadata
         shell: bash
         run: |
@@ -815,9 +802,9 @@ jobs:
           jq -n \
             --arg channel nightly \
             --arg workflow "Release Nightly" \
-            --arg version "${{ steps.version.outputs.version }}" \
-            --arg tag "${{ steps.version.outputs.tag }}" \
-            --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" \
+            --arg version "${{ needs.resolve-version.outputs.version }}" \
+            --arg tag "${{ needs.resolve-version.outputs.tag }}" \
+            --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ needs.resolve-version.outputs.tag }}" \
             '{
               channel: $channel,
               workflow: $workflow,
@@ -835,16 +822,17 @@ jobs:
       - name: Create immutable nightly release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Aura ${{ steps.version.outputs.version }}
+          tag_name: ${{ needs.resolve-version.outputs.tag }}
+          name: Aura ${{ needs.resolve-version.outputs.version }}
           draft: false
           prerelease: true
           make_latest: false
+          overwrite_files: true
           files: all-artifacts/**/*
           body: |
             Automated nightly build from `main` at ${{ github.sha }}.
 
-            **Version**: `${{ steps.version.outputs.version }}`
+            **Version**: `${{ needs.resolve-version.outputs.version }}`
 
       - name: Prune existing nightly release alias assets
         env:
@@ -867,27 +855,29 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
-          name: "Nightly (${{ steps.version.outputs.version }})"
+          name: "Nightly (${{ needs.resolve-version.outputs.version }})"
           draft: false
           prerelease: true
           make_latest: false
+          overwrite_files: true
           files: all-artifacts/**/*
           body: |
             Automated nightly build from `main` at ${{ github.sha }}.
 
-            **Version**: `${{ steps.version.outputs.version }}`
-            **Immutable release**: `https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}`
+            **Version**: `${{ needs.resolve-version.outputs.version }}`
+            **Immutable release**: `https://github.com/${{ github.repository }}/releases/tag/${{ needs.resolve-version.outputs.tag }}`
 
       - name: Attach release summary to job
         shell: bash
         run: |
+          cat release-validation/artifact-versions-nightly.md >> "$GITHUB_STEP_SUMMARY"
           shopt -s nullglob
           for file in all-artifacts/release-summary-*.md; do
             cat "$file" >> "$GITHUB_STEP_SUMMARY"
           done
 
   preview-manifests:
-    needs: package
+    needs: [resolve-version, package]
     if: github.ref_name != 'main' || (github.event_name == 'workflow_dispatch' && !inputs.publish_live)
     runs-on: ubuntu-latest
     steps:
@@ -900,17 +890,6 @@ jobs:
         with:
           node-version: 25.9.0
 
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          BASE=$(grep '^version' apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ="${{ github.run_number }}"
-          RUN_ATTEMPT="${{ github.run_attempt }}"
-          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -918,11 +897,19 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
+      - name: Validate artifact versions
+        run: |
+          node infra/scripts/release/validate-release-artifact-versions.mjs \
+            --artifacts-dir all-artifacts \
+            --channel nightly \
+            --version "${{ needs.resolve-version.outputs.version }}" \
+            --output-dir manifest-validation
+
       - name: Generate preview update manifests
         shell: bash
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          TAG="${{ needs.resolve-version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
@@ -976,7 +963,7 @@ jobs:
             manifest-validation/**
 
   publish-manifests:
-    needs: [package, release]
+    needs: [resolve-version, package, release]
     if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
     runs-on: ubuntu-latest
     permissions:
@@ -999,17 +986,6 @@ jobs:
         with:
           node-version: 25.9.0
 
-      - name: Compute nightly version
-        id: version
-        shell: bash
-        run: |
-          BASE=$(grep '^version' repo/apps/aura-os-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-          RUN_SEQ="${{ github.run_number }}"
-          RUN_ATTEMPT="${{ github.run_attempt }}"
-          VERSION="${BASE}-nightly.${RUN_SEQ}.${RUN_ATTEMPT}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -1017,12 +993,21 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
+      - name: Validate artifact versions
+        run: |
+          cd repo
+          node infra/scripts/release/validate-release-artifact-versions.mjs \
+            --artifacts-dir ../all-artifacts \
+            --channel nightly \
+            --version "${{ needs.resolve-version.outputs.version }}" \
+            --output-dir ../manifest-validation
+
       - name: Generate update manifests
         shell: bash
         run: |
           cd repo
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          TAG="${{ needs.resolve-version.outputs.tag }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
           generate_manifest() {
@@ -1095,6 +1080,7 @@ jobs:
       - name: Attach nightly manifest summary
         shell: bash
         run: |
+          cat manifest-validation/artifact-versions-nightly.md >> "$GITHUB_STEP_SUMMARY"
           cat manifest-validation/desktop-manifests-nightly.md >> "$GITHUB_STEP_SUMMARY"
           cat manifest-validation/desktop-downloads-nightly.md >> "$GITHUB_STEP_SUMMARY"
 
@@ -1104,5 +1090,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add nightly/ downloads/nightly.json
-          git diff --cached --quiet || git commit -m "Update nightly manifests for ${{ steps.version.outputs.version }}"
+          git diff --cached --quiet || git commit -m "Update nightly manifests for ${{ needs.resolve-version.outputs.version }}"
           git push
