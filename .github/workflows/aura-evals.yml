@@ -1,4 +1,4 @@
-name: Aura Evals
+name: Aura Functional Evals
 
 on:
   pull_request:

@@ -1,4 +1,4 @@
-name: Release Mobile Nightly
+name: Mobile Nightly GitHub Release
 
 on:
   push:
@@ -142,7 +142,7 @@ jobs:
             mobile-release-summary/**
 
   build-ios:
-    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'ios' || inputs.platform == 'both'
+    if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'ios' || inputs.platform == 'both')
     runs-on: macos-latest
     env:
       FASTLANE_SKIP_UPDATE_CHECK: "1"
@@ -299,8 +299,9 @@ jobs:
             **Version**: `${{ steps.version.outputs.version }}`
 
             Assets:
-            - Android APK
-            - iOS IPA
+            - Includes the mobile artifacts produced by the successful jobs in this run.
+            - Pushes to `main` currently publish the Android APK automatically.
+            - iOS IPA publication to this GitHub Release remains manual-only via workflow dispatch.
 
       - name: Attach mobile release summaries
         shell: bash
