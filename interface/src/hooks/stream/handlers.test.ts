@@ -341,6 +341,48 @@ describe("stream/handlers", () => {
       vi.advanceTimersByTime(42);
       expect(setters.calls.setStreamingText).toEqual(["Hello,", "Hello,\n- bullet"]);
     });
+
+    it("folds text that arrives after a tool_call_started back into the earlier text item so the trailing prose renders above the tool cards (matches the post-turn persisted layout)", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleTextDelta(refs, setters, null, "Issuing them");
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "run" });
+      handleToolCallStarted(refs, setters, { id: "tc2", name: "run" });
+      handleTextDelta(refs, setters, null, "tightly.");
+
+      // Expected: a single text item followed by the tool items, with a
+      // blank-line break separating the pre- and post-tool paragraphs.
+      expect(refs.timeline.current).toHaveLength(3);
+      expect(refs.timeline.current[0]).toMatchObject({
+        kind: "text",
+        content: "Issuing them\n\ntightly.",
+      });
+      expect(refs.timeline.current[1]).toMatchObject({ kind: "tool", toolCallId: "tc1" });
+      expect(refs.timeline.current[2]).toMatchObject({ kind: "tool", toolCallId: "tc2" });
+      // Stream buffer and text item content stay in lockstep so the
+      // word-by-word reveal prefix maps correctly.
+      expect(refs.streamBuffer.current).toBe("Issuing them\n\ntightly.");
+    });
+
+    it("uses the tool_result separator (not a double break) when one already fired before merging across tools", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleTextDelta(refs, setters, null, "before");
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "run" });
+      handleToolResult(refs, setters, { id: "tc1", name: "run", result: "", is_error: false });
+      handleTextDelta(refs, setters, null, "after");
+
+      expect(refs.timeline.current).toHaveLength(2);
+      expect(refs.timeline.current[0]).toMatchObject({
+        kind: "text",
+        content: "before\n\nafter",
+      });
+      expect(refs.timeline.current[1]).toMatchObject({ kind: "tool", toolCallId: "tc1" });
+      expect(refs.needsSeparator.current).toBe(false);
+      expect(refs.streamBuffer.current).toBe("before\n\nafter");
+    });
   });
 
   describe("handleToolCallStarted", () => {

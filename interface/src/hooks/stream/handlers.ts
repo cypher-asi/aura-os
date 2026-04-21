@@ -400,18 +400,47 @@ export function handleTextDelta(
   if (refs.thinkingStart.current !== null && closureThinkingDurationMs === null) {
     setters.setThinkingDurationMs(Date.now() - refs.thinkingStart.current);
   }
-  if (refs.needsSeparator.current && refs.streamBuffer.current.length > 0) {
-    refs.streamBuffer.current += "\n\n";
-    refs.needsSeparator.current = false;
-  }
-  refs.streamBuffer.current += text;
 
+  // Find the most recent text item in the timeline, even if non-text items
+  // (tool calls, thinking) sit between it and the tail. When the model streams
+  // `text -> tool_call -> more text` in a single turn, appending the trailing
+  // prose to the existing text item keeps the layout identical to the
+  // persisted view (all prose above the tool cards) instead of flashing the
+  // tail below the tools until the run finishes and history is refetched.
   const tl = refs.timeline.current;
-  const last = tl.length > 0 ? tl[tl.length - 1] : null;
-  if (last && last.kind === "text") {
-    last.content += text;
+  let lastTextIdx = -1;
+  for (let i = tl.length - 1; i >= 0; i--) {
+    if (tl[i].kind === "text") {
+      lastTextIdx = i;
+      break;
+    }
+  }
+  const lastItem = tl.length > 0 ? tl[tl.length - 1] : null;
+  const mergingAcrossNonText =
+    lastTextIdx !== -1 && lastItem !== null && lastItem.kind !== "text";
+
+  let chunk = text;
+  if (refs.needsSeparator.current && refs.streamBuffer.current.length > 0) {
+    // A prior tool_result requested a paragraph break before the next text.
+    chunk = "\n\n" + chunk;
+    refs.needsSeparator.current = false;
+  } else if (mergingAcrossNonText) {
+    // No tool_result separator fired (e.g. the tool is still pending), but
+    // we're folding this delta back into an earlier text item across a tool.
+    // Insert a blank-line break so pre- and post-tool prose render as
+    // distinct paragraphs inside the merged markdown block.
+    chunk = "\n\n" + chunk;
+  }
+
+  refs.streamBuffer.current += chunk;
+
+  if (lastTextIdx !== -1) {
+    const item = tl[lastTextIdx];
+    if (item.kind === "text") {
+      item.content += chunk;
+    }
   } else {
-    tl.push({ kind: "text", content: text, id: nextTimelineId() });
+    tl.push({ kind: "text", content: chunk, id: nextTimelineId() });
   }
 
   scheduleStreamingTextReveal(refs, setters);
