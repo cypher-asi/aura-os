@@ -96,6 +96,20 @@ impl AgentService {
         format!("agent_runtime:{agent_id}")
     }
 
+    /// Settings key for the org's canonical CEO `agent_id`.
+    ///
+    /// Populated by `setup_ceo_agent` on every bootstrap run so that
+    /// read-time reconciliation can identify "this agent_id is still
+    /// the CEO" even after the user renames it (the narrow name+role
+    /// `"CEO"`/`"CEO"` identity heuristic in
+    /// [`AgentPermissions::normalized_for_identity`] stops matching
+    /// once the display name changes). Used by
+    /// [`Self::reconcile_permissions_with_shadow`] as a last-resort
+    /// repair when both the network response and local shadow come
+    /// back with empty permissions — heals users whose shadow was
+    /// already corrupted by the pre-fix PUT flow.
+    const CEO_AGENT_ID_KEY: &'static str = "bootstrap:ceo_agent_id";
+
     pub fn new(
         store: Arc<SettingsStore>,
         network_client: Option<Arc<aura_os_network::NetworkClient>>,
@@ -112,11 +126,56 @@ impl AgentService {
 
     // -- local shadow ----------------------------------------------------------
 
+    /// Belt-and-suspenders guard: if the incoming `agent.permissions`
+    /// bundle is empty and the existing shadow row has a non-empty
+    /// bundle, clone the stored `permissions` into the outgoing agent
+    /// so we never overwrite last-known-good toggles with an empty
+    /// projection.
+    ///
+    /// This is the second line of defence for the same class of bug
+    /// that [`Self::reconcile_permissions_with_shadow`] addresses on
+    /// the read side: aura-network PUT/GET responses that silently
+    /// drop the `permissions` column would otherwise corrupt the
+    /// shadow on the next save. Every read path already reconciles
+    /// before saving, but any new call site (or any forgotten call
+    /// site) that routes through [`Self::save_agent_shadow`] /
+    /// [`Self::save_agent_shadows_if_changed`] is now also covered.
+    ///
+    /// Scope is strictly the `permissions` column — every other
+    /// field on the incoming `Agent` is persisted as-is. A genuinely
+    /// intended "clear all capabilities" write would have universe
+    /// scope and an empty capability list, which matches
+    /// [`AgentPermissions::is_empty`]; callers that need to express
+    /// that must first write a non-empty bundle (or call the
+    /// capability-toggle flow which submits the explicit clear as a
+    /// non-empty request payload).
+    fn preserve_shadow_permissions_if_empty(&self, agent: &mut Agent) {
+        if !agent.permissions.is_empty() {
+            return;
+        }
+        let shadow = match self.get_agent_local(&agent.agent_id) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        if shadow.permissions.is_empty() {
+            return;
+        }
+        tracing::warn!(
+            agent_id = %agent.agent_id,
+            shadow_capabilities = shadow.permissions.capabilities.len(),
+            "save_agent_shadow: refusing to overwrite non-empty stored permissions with empty bundle; preserving shadow value"
+        );
+        agent.permissions = shadow.permissions;
+    }
+
     /// Persist an agent to the local shadow store.
     pub fn save_agent_shadow(&self, agent: &Agent) -> Result<(), AgentError> {
-        let payload = serde_json::to_vec(agent).map_err(|e| AgentError::Parse(e.to_string()))?;
+        let mut patched = agent.clone();
+        self.preserve_shadow_permissions_if_empty(&mut patched);
+        let payload =
+            serde_json::to_vec(&patched).map_err(|e| AgentError::Parse(e.to_string()))?;
         self.store
-            .put_setting(&Self::agent_key(&agent.agent_id), &payload)
+            .put_setting(&Self::agent_key(&patched.agent_id), &payload)
             .map_err(AgentError::Store)
     }
 
@@ -142,9 +201,14 @@ impl AgentService {
         }
         let mut ops = Vec::new();
         for agent in agents {
+            // Mirror the single-row `save_agent_shadow` guard — never
+            // let an empty-permissions projection clobber a non-empty
+            // shadow row, even on the hot batched GET-list path.
+            let mut patched = (*agent).clone();
+            self.preserve_shadow_permissions_if_empty(&mut patched);
             let payload =
-                serde_json::to_vec(*agent).map_err(|e| AgentError::Parse(e.to_string()))?;
-            let key = Self::agent_key(&agent.agent_id);
+                serde_json::to_vec(&patched).map_err(|e| AgentError::Parse(e.to_string()))?;
+            let key = Self::agent_key(&patched.agent_id);
             let unchanged = matches!(
                 self.store.get_setting(&key),
                 Ok(existing) if existing == payload
@@ -153,7 +217,9 @@ impl AgentService {
                 continue;
             }
             ops.push(BatchOp::Put {
-                cf: aura_os_store::ColumnFamilyName::Settings.as_str().to_string(),
+                cf: aura_os_store::ColumnFamilyName::Settings
+                    .as_str()
+                    .to_string(),
                 key,
                 value: payload,
             });
@@ -303,6 +369,34 @@ impl AgentService {
         Ok(agent)
     }
 
+    /// Record the org's canonical CEO `agent_id` for read-time repair.
+    ///
+    /// Called from `setup_ceo_agent` after every bootstrap so that
+    /// [`Self::reconcile_permissions_with_shadow`] can still recognise
+    /// this agent as the CEO even after the user renames it. Best-
+    /// effort — failures are swallowed because the shadow remains a
+    /// cache and the GET-side safety net
+    /// ([`AgentPermissions::normalized_for_identity`]) still catches
+    /// the common "name+role still CEO/CEO" case.
+    pub fn remember_ceo_agent_id(&self, agent_id: &AgentId) {
+        let value = agent_id.to_string().into_bytes();
+        if let Err(err) = self.store.put_setting(Self::CEO_AGENT_ID_KEY, &value) {
+            tracing::warn!(
+                agent_id = %agent_id,
+                error = %err,
+                "failed to persist bootstrapped CEO agent_id"
+            );
+        }
+    }
+
+    /// Read the org's canonical CEO `agent_id`, if one has been
+    /// persisted by a prior `setup_ceo_agent` run.
+    pub fn bootstrapped_ceo_agent_id(&self) -> Option<AgentId> {
+        let bytes = self.store.get_setting(Self::CEO_AGENT_ID_KEY).ok()?;
+        let s = std::str::from_utf8(&bytes).ok()?;
+        s.parse::<AgentId>().ok()
+    }
+
     /// Read-time counterpart to the PUT-side reconciliation in
     /// `handlers::agents::crud::update_agent`.
     ///
@@ -317,14 +411,23 @@ impl AgentService {
     /// local bundle. That's the "toggles survive the session but
     /// vanish after an app restart" regression.
     ///
-    /// This helper is the narrow fix: if the freshly-fetched bundle is
-    /// empty *and* the local shadow has a non-empty bundle, adopt the
-    /// shadow's bundle before persisting or returning. The PUT side
-    /// already applies the symmetric "trust what we just sent" rule
-    /// when the PUT response fails to echo the submitted bundle, so
-    /// both round-trips now treat the local shadow as the fallback
-    /// source of truth for `permissions` whenever aura-network drops
-    /// the column.
+    /// This helper repairs the common case: if the freshly-fetched
+    /// bundle is empty *and* the local shadow has a non-empty bundle,
+    /// adopt the shadow's bundle before persisting or returning. The
+    /// PUT side already applies the symmetric "trust what we just
+    /// sent" rule when the PUT response fails to echo the submitted
+    /// bundle, so both round-trips now treat the local shadow as the
+    /// fallback source of truth for `permissions` whenever
+    /// aura-network drops the column.
+    ///
+    /// There is also a last-resort repair for the CEO SuperAgent:
+    /// when both the network response *and* the local shadow are
+    /// empty (classic "already-corrupted by the pre-fix PUT flow"
+    /// scenario) but the agent matches the `agent_id` stamped by
+    /// `setup_ceo_agent` via [`Self::remember_ceo_agent_id`], restore
+    /// the canonical [`AgentPermissions::ceo_preset`]. This lets
+    /// users who renamed their CEO (e.g. to "Orion") recover the
+    /// preset without re-running bootstrap.
     ///
     /// Deliberately scoped to `permissions` — every other column on
     /// the network response is still authoritative.
@@ -332,19 +435,35 @@ impl AgentService {
         if !agent.permissions.is_empty() {
             return;
         }
-        let shadow = match self.get_agent_local(&agent.agent_id) {
-            Ok(s) => s,
-            Err(_) => return,
+        let shadow_permissions = match self.get_agent_local(&agent.agent_id) {
+            Ok(s) if !s.permissions.is_empty() => Some(s.permissions),
+            _ => None,
         };
-        if shadow.permissions.is_empty() {
+        if let Some(shadow) = shadow_permissions {
+            tracing::warn!(
+                agent_id = %agent.agent_id,
+                shadow_capabilities = shadow.capabilities.len(),
+                "aura-network response did not include a `permissions` bundle; using last-known shadow value"
+            );
+            agent.permissions = shadow;
             return;
         }
-        tracing::warn!(
-            agent_id = %agent.agent_id,
-            shadow_capabilities = shadow.permissions.capabilities.len(),
-            "aura-network response did not include a `permissions` bundle; using last-known shadow value"
-        );
-        agent.permissions = shadow.permissions;
+        // Both sides are empty. Last-resort: if this is the
+        // bootstrapped CEO for the org, restore the canonical preset.
+        // The `normalized_for_identity` helper on the incoming
+        // `NetworkAgent` already handles the "still named CEO"
+        // sub-case, so reaching here means the user renamed (common
+        // "Orion"-style tweak) *and* their shadow got wiped by the
+        // pre-fix PUT flow.
+        if let Some(ceo_id) = self.bootstrapped_ceo_agent_id() {
+            if ceo_id == agent.agent_id {
+                tracing::warn!(
+                    agent_id = %agent.agent_id,
+                    "restoring CEO preset from bootstrap-stamped agent_id (both network and shadow had empty permissions)"
+                );
+                agent.permissions = AgentPermissions::ceo_preset();
+            }
+        }
     }
 
     // -- network ---------------------------------------------------------------
@@ -1015,7 +1134,10 @@ mod tests {
         // `write_batch`, `persist_cf` would rewrite the file and bump
         // the mtime.
         let settings_path = dir.path().join("settings.json");
-        let mtime_before = std::fs::metadata(&settings_path).unwrap().modified().unwrap();
+        let mtime_before = std::fs::metadata(&settings_path)
+            .unwrap()
+            .modified()
+            .unwrap();
         std::thread::sleep(std::time::Duration::from_millis(20));
 
         let written = service
@@ -1023,7 +1145,10 @@ mod tests {
             .expect("second batched save");
         assert_eq!(written, 0, "unchanged inputs must not trigger writes");
 
-        let mtime_after = std::fs::metadata(&settings_path).unwrap().modified().unwrap();
+        let mtime_after = std::fs::metadata(&settings_path)
+            .unwrap()
+            .modified()
+            .unwrap();
         assert_eq!(
             mtime_before, mtime_after,
             "settings.json must not be rewritten when nothing changed"
@@ -1126,7 +1251,10 @@ mod tests {
         };
         service.reconcile_permissions_with_shadow(&mut seeded);
 
-        assert_eq!(seeded.permissions.capabilities, vec![Capability::PostToFeed]);
+        assert_eq!(
+            seeded.permissions.capabilities,
+            vec![Capability::PostToFeed]
+        );
     }
 
     #[test]
@@ -1149,5 +1277,137 @@ mod tests {
         let mut fresh = agent_with_permissions("Atlas", AgentPermissions::empty());
         service.reconcile_permissions_with_shadow(&mut fresh);
         assert!(fresh.permissions.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // save_agent_shadow empty-permissions guard. The single-row and
+    // batched writers must both refuse to overwrite a non-empty stored
+    // permissions bundle with an empty one, regardless of whether the
+    // caller remembered to `reconcile_permissions_with_shadow` first.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn save_agent_shadow_preserves_non_empty_permissions_when_input_is_empty() {
+        let (service, _dir) = open_service();
+        let seeded = agent_with_permissions(
+            "Atlas",
+            AgentPermissions {
+                scope: AgentScope::default(),
+                capabilities: vec![Capability::SpawnAgent, Capability::ReadAgent],
+            },
+        );
+        service.save_agent_shadow(&seeded).unwrap();
+
+        // Simulate a handler that forgot to reconcile and now writes
+        // an empty-permissions projection (the classic
+        // "aura-network PUT response dropped the column" scenario).
+        let mut clobbered = seeded.clone();
+        clobbered.name = "Atlas Prime".into();
+        clobbered.permissions = AgentPermissions::empty();
+        service.save_agent_shadow(&clobbered).unwrap();
+
+        let reloaded = service.get_agent_local(&seeded.agent_id).unwrap();
+        assert_eq!(
+            reloaded.name, "Atlas Prime",
+            "non-permissions fields still flow through"
+        );
+        assert!(
+            !reloaded.permissions.is_empty(),
+            "stored permissions must survive an empty-input write"
+        );
+        assert!(reloaded
+            .permissions
+            .capabilities
+            .contains(&Capability::SpawnAgent));
+    }
+
+    #[test]
+    fn save_agent_shadows_if_changed_preserves_non_empty_permissions_on_empty_input() {
+        let (service, _dir) = open_service();
+        let seeded = agent_with_permissions(
+            "Atlas",
+            AgentPermissions {
+                scope: AgentScope::default(),
+                capabilities: vec![Capability::SpawnAgent],
+            },
+        );
+        service.save_agent_shadow(&seeded).unwrap();
+
+        let mut clobbered = seeded.clone();
+        clobbered.name = "Atlas Prime".into();
+        clobbered.permissions = AgentPermissions::empty();
+        service
+            .save_agent_shadows_if_changed(&[&clobbered])
+            .expect("batched save with empty-input guard");
+
+        let reloaded = service.get_agent_local(&seeded.agent_id).unwrap();
+        assert_eq!(reloaded.name, "Atlas Prime");
+        assert!(!reloaded.permissions.is_empty());
+        assert!(reloaded
+            .permissions
+            .capabilities
+            .contains(&Capability::SpawnAgent));
+    }
+
+    #[test]
+    fn save_agent_shadow_allows_intentional_clear_when_shadow_also_empty() {
+        let (service, _dir) = open_service();
+        let seeded = agent_with_permissions("Atlas", AgentPermissions::empty());
+        service.save_agent_shadow(&seeded).unwrap();
+
+        let mut cleared = seeded.clone();
+        cleared.permissions = AgentPermissions::empty();
+        service.save_agent_shadow(&cleared).unwrap();
+
+        let reloaded = service.get_agent_local(&seeded.agent_id).unwrap();
+        assert!(reloaded.permissions.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // CEO agent_id repair. When both the network response AND the
+    // local shadow have empty permissions but the agent_id matches
+    // the one stamped by `setup_ceo_agent`, reconciliation restores
+    // the canonical CEO preset. This covers users who renamed the
+    // CEO (e.g. to "Orion") and whose shadow was already corrupted
+    // by the pre-fix PUT flow.
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn reconcile_restores_ceo_preset_by_agent_id_when_shadow_also_empty() {
+        let (service, _dir) = open_service();
+        let mut ceo = agent_with_permissions("Orion", AgentPermissions::empty());
+        ceo.role = "CEO".into();
+        service.remember_ceo_agent_id(&ceo.agent_id);
+
+        // No shadow, empty network response — only the agent_id
+        // stamp can rescue us.
+        service.reconcile_permissions_with_shadow(&mut ceo);
+        assert!(
+            ceo.permissions.is_ceo_preset(),
+            "bootstrapped CEO agent_id must restore the preset"
+        );
+    }
+
+    #[test]
+    fn reconcile_does_not_touch_other_agents_when_ceo_id_stamped() {
+        let (service, _dir) = open_service();
+        let ceo_id = AgentId::new();
+        service.remember_ceo_agent_id(&ceo_id);
+
+        // A different agent with empty permissions should remain
+        // empty — we only repair the exact bootstrapped agent_id.
+        let mut other = agent_with_permissions("Sidekick", AgentPermissions::empty());
+        service.reconcile_permissions_with_shadow(&mut other);
+        assert!(other.permissions.is_empty());
+    }
+
+    #[test]
+    fn bootstrapped_ceo_agent_id_round_trips() {
+        let (service, _dir) = open_service();
+        assert!(service.bootstrapped_ceo_agent_id().is_none());
+
+        let id = AgentId::new();
+        service.remember_ceo_agent_id(&id);
+        assert_eq!(service.bootstrapped_ceo_agent_id(), Some(id));
     }
 }

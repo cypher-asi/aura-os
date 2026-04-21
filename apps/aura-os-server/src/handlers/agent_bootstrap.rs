@@ -207,6 +207,11 @@ pub(crate) async fn setup_ceo_agent(
                 agent.icon = shadow.icon;
             }
         }
+        // Stamp the canonical CEO `agent_id` into settings so the
+        // read-time reconciler can still recognise this agent as the
+        // CEO after the user renames it — see
+        // `AgentService::reconcile_permissions_with_shadow`.
+        state.agent_service.remember_ceo_agent_id(&agent.agent_id);
         let _ = state.agent_service.save_agent_shadow(&agent);
         ensure_agent_home_project_and_binding(&state, &jwt, &agent).await;
         return Ok(Json(SetupResponse {
@@ -241,6 +246,11 @@ pub(crate) async fn setup_ceo_agent(
 
     let mut agent = agent_from_network(&net_agent);
     let _ = state.agent_service.apply_runtime_config(&mut agent);
+    // Stamp the freshly-created CEO `agent_id` into settings so the
+    // read-time reconciler can still recognise this agent as the CEO
+    // after the user renames it — see
+    // `AgentService::reconcile_permissions_with_shadow`.
+    state.agent_service.remember_ceo_agent_id(&agent.agent_id);
     let _ = state.agent_service.save_agent_shadow(&agent);
 
     let default_skills = [

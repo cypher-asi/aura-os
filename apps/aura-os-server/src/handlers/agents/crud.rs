@@ -415,10 +415,8 @@ pub(crate) async fn create_agent(
         "local".to_string()
     });
 
-    let marketplace = normalize_marketplace_fields(
-        body.listing_status.as_deref(),
-        body.expertise.as_deref(),
-    )?;
+    let marketplace =
+        normalize_marketplace_fields(body.listing_status.as_deref(), body.expertise.as_deref())?;
 
     let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
 
@@ -786,7 +784,12 @@ pub(crate) async fn list_agents(
         // so fleet-membership metadata (e.g. the other member's
         // user_id) isn't clobbered by the caller-scoped view of the
         // same record.
-        let net_agents = match query.org_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        let net_agents = match query
+            .org_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
             Some(org_id) => {
                 let org_scoped = client.list_agents_by_org(org_id, &jwt);
                 let user_scoped = client.list_agents(&jwt);
@@ -809,9 +812,8 @@ pub(crate) async fn list_agents(
 
                 let mut merged: Vec<NetworkAgent> =
                     Vec::with_capacity(org_agents.len() + user_agents.len());
-                let mut seen = std::collections::HashSet::with_capacity(
-                    org_agents.len() + user_agents.len(),
-                );
+                let mut seen =
+                    std::collections::HashSet::with_capacity(org_agents.len() + user_agents.len());
                 for na in org_agents.into_iter().chain(user_agents.into_iter()) {
                     if seen.insert(na.id.clone()) {
                         merged.push(na);
@@ -977,10 +979,8 @@ pub(crate) async fn update_agent(
     // partial PUTs. Marketplace fields (`listing_status`, `expertise`) are
     // sent as typed columns on the network request — see Phase 3 migration
     // for the schema change.
-    let marketplace = normalize_marketplace_fields(
-        body.listing_status.as_deref(),
-        body.expertise.as_deref(),
-    )?;
+    let marketplace =
+        normalize_marketplace_fields(body.listing_status.as_deref(), body.expertise.as_deref())?;
 
     let dual_write_tags = merge_marketplace_tags(body.tags, &marketplace);
 
@@ -1046,6 +1046,21 @@ pub(crate) async fn update_agent(
             agent.permissions = submitted.clone();
         }
     }
+    // Symmetric fallback for the common "edit form didn't submit
+    // `permissions`" case (e.g. the AgentEditorModal only edits name /
+    // system_prompt / personality today). When `submitted_permissions`
+    // is `None` and aura-network's PUT response omitted the column,
+    // `agent.permissions` is empty here — same regression that
+    // `reconcile_permissions_with_shadow` fixes on the GET / list read
+    // paths. Without this, renaming the CEO SuperAgent strips its
+    // preset bundle on save and the UI's `isSuperAgent` check fails
+    // (both the capability-based primary check and the CEO/CEO name
+    // fallback), so the CEO preset banner disappears and individual
+    // toggles appear. We reconcile before `save_agent_shadow` below so
+    // we never overwrite a good shadow with the empty projection.
+    state
+        .agent_service
+        .reconcile_permissions_with_shadow(&mut agent);
     state
         .agent_service
         .apply_runtime_config(&mut agent)
