@@ -24,6 +24,10 @@ members = [
     "apps/aura-os-server",
     "apps/aura-os-ide",
 ]
+# vendor/chromiumoxide is a pinned fork of chromiumoxide v0.9.1 carrying
+# aura-os-local patches (see [patch.crates-io] below). It declares its own
+# `[workspace]`, so we exclude it here to keep it out of our build graph.
+exclude = ["vendor/chromiumoxide"]
 resolver = "2"
 
 [workspace.package]
@@ -87,3 +91,18 @@ debug = 0
 
 [profile.test]
 debug = 0
+
+# Pin `chromiumoxide` and its subcrates to our local fork under
+# `vendor/chromiumoxide`. The fork starts from the upstream v0.9.1 tag and
+# adds:
+# - a diagnostic patch that includes the raw JSON payload in the
+#   `WS Invalid message` log line, so we can identify which CDP event or
+#   response is failing to deserialize against the generated schemas.
+# - (planned) targeted `#[serde(rename = "...")]` additions for specific
+#   CDP structs whose field names have diverged from what current Chrome
+#   sends on the wire.
+[patch.crates-io]
+chromiumoxide = { path = "vendor/chromiumoxide" }
+chromiumoxide_cdp = { path = "vendor/chromiumoxide/chromiumoxide_cdp" }
+chromiumoxide_pdl = { path = "vendor/chromiumoxide/chromiumoxide_pdl" }
+chromiumoxide_types = { path = "vendor/chromiumoxide/chromiumoxide_types" }
