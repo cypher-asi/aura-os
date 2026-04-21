@@ -225,7 +225,11 @@ export const ChatInputBar = memo(
       const el = textareaRef.current;
       if (!el) return;
       el.style.height = "auto";
-      el.style.height = el.scrollHeight + "px";
+      // Cap the inline height to match the CSS max-height so the textarea's
+      // own scrollbar engages for long messages (and native caret-follow on
+      // Arrow keys keeps working).
+      const cap = Math.min(window.innerHeight * 0.7, 800);
+      el.style.height = Math.min(el.scrollHeight, cap) + "px";
     }, []);
 
     useEffect(() => {
