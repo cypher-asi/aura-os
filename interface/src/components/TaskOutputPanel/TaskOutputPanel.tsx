@@ -9,19 +9,13 @@ import {
 } from "../../stores/task-output-panel-store";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useShallow } from "zustand/react/shallow";
-import { useEventStore } from "../../stores/event-store/index";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { OverlayScrollbar } from "../OverlayScrollbar";
-import { EventType } from "../../types/aura-events";
 import { TerminalPanelBody } from "../TerminalPanelBody";
 import { ActiveTaskStream } from "./ActiveTaskStream";
 import { CompletedTaskOutput } from "./CompletedTaskOutput";
 import styles from "./TaskOutputPanel.module.css";
-
-let activeTaskTrackingRefs = 0;
-let activeTaskTrackingProjectId: string | undefined;
-let activeTaskTrackingUnsubs: Array<() => void> | null = null;
 
 function isUserInteractingWithPane(el: HTMLElement): boolean {
   const activeElement = document.activeElement;
@@ -134,48 +128,15 @@ function useStickyBottomContent(resetKey?: unknown) {
   return { contentRef, bottomRef, handleContentScroll };
 }
 
-function createTaskTrackingSubscriptions(
-  subscribe: ReturnType<typeof useEventStore.getState>["subscribe"],
-  projectId: string | undefined,
-) {
-  const { addTask, completeTask, failTask, markAllCompleted } = useTaskOutputPanelStore.getState();
-  return [
-    subscribe(EventType.TaskStarted, (e) => {
-      const { task_id, task_title } = e.content;
-      const pid = e.project_id || projectId;
-      if (task_id && pid) addTask(task_id, pid, task_title, e.agent_id || undefined);
-    }),
-    subscribe(EventType.TaskCompleted, (e) => {
-      if (e.content.task_id) completeTask(e.content.task_id);
-    }),
-    subscribe(EventType.TaskFailed, (e) => {
-      if (e.content.task_id) failTask(e.content.task_id);
-    }),
-    subscribe(EventType.LoopStopped, () => markAllCompleted()),
-    subscribe(EventType.LoopFinished, () => markAllCompleted()),
-  ];
-}
-
-export function useActiveTaskTracking(projectId: string | undefined) {
-  const subscribe = useEventStore((s) => s.subscribe);
-
-  useEffect(() => {
-    activeTaskTrackingRefs += 1;
-
-    if (!activeTaskTrackingUnsubs || activeTaskTrackingProjectId !== projectId) {
-      activeTaskTrackingUnsubs?.forEach((unsubscribe) => unsubscribe());
-      activeTaskTrackingUnsubs = createTaskTrackingSubscriptions(subscribe, projectId);
-      activeTaskTrackingProjectId = projectId;
-    }
-
-    return () => {
-      activeTaskTrackingRefs -= 1;
-      if (activeTaskTrackingRefs > 0) return;
-      activeTaskTrackingUnsubs?.forEach((unsubscribe) => unsubscribe());
-      activeTaskTrackingUnsubs = null;
-      activeTaskTrackingProjectId = undefined;
-    };
-  }, [subscribe, projectId]);
+/**
+ * Back-compat no-op. Task status tracking is now installed app-wide by
+ * `bootstrapTaskStreamSubscriptions` at module load, so callers no
+ * longer need to opt in per-mount. Kept as an empty hook so existing
+ * call sites (Sidekick, TaskOutputPanel) don't need coordinated
+ * deletes in the same commit.
+ */
+export function useActiveTaskTracking(_projectId: string | undefined) {
+  // Intentionally empty - see module doc above.
 }
 
 function AutomationControls({ projectId }: { projectId: string }) {
@@ -444,7 +405,6 @@ export function TaskOutputPanel() {
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
   const projectTasks = useTasksForProject(projectId, agentInstanceId);
-  useActiveTaskTracking(projectId);
 
   const hasActiveTasks = projectTasks.some((t) => t.status === "active");
   const hasCompleted = projectTasks.some((t) => t.status !== "active");

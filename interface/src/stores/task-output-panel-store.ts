@@ -40,11 +40,16 @@ function loadPersistedTasks(): PanelTaskEntry[] {
     const raw = localStorage.getItem(TASKS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as PanelTaskEntry[];
-      return parsed
-        .filter((t) => t.taskId && t.projectId)
-        .map((t) =>
-          t.status === "active" ? { ...t, status: "interrupted" as const } : t,
-        );
+      // Keep previously-active rows marked "active" on boot. A project-
+      // layout-level reconciliation (`reconcileStatuses`) promotes them
+      // to the authoritative server status once `/tasks` has loaded.
+      // The old behaviour ("demote everything to interrupted") flashed
+      // stale "Interrupted" badges on rows that the server still
+      // considered in-progress, and left genuinely-done rows showing
+      // "Interrupted" forever when the server never reported a final
+      // status through the panel (e.g. because the task completed
+      // while the UI was closed).
+      return parsed.filter((t) => t.taskId && t.projectId);
     }
   } catch { /* ignore */ }
   return [];
@@ -85,6 +90,13 @@ interface TaskOutputPanelState {
   clearCompleted: () => void;
   markAllCompleted: () => void;
   restoreTasks: (entries: PanelTaskEntry[]) => void;
+  /**
+   * Apply authoritative per-task statuses (e.g. from `GET /projects/:pid/tasks`
+   * on project load). Used to resolve "active" rehydrated entries whose real
+   * status has moved on while the UI was closed. Entries not present in
+   * `updates` are left untouched so live in-progress runs continue to tick.
+   */
+  reconcileStatuses: (updates: Array<{ taskId: string; status: PanelTaskStatus }>) => void;
   handleMouseDown: (e: React.MouseEvent) => void;
 }
 
@@ -159,6 +171,21 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
       const existingIds = new Set(s.tasks.map((t) => t.taskId));
       const newEntries = entries.filter((e) => !existingIds.has(e.taskId));
       return { tasks: [...s.tasks, ...newEntries] };
+    });
+  },
+
+  reconcileStatuses: (updates) => {
+    if (updates.length === 0) return;
+    const updateMap = new Map(updates.map((u) => [u.taskId, u.status]));
+    set((s) => {
+      let changed = false;
+      const nextTasks = s.tasks.map((t) => {
+        const nextStatus = updateMap.get(t.taskId);
+        if (!nextStatus || nextStatus === t.status) return t;
+        changed = true;
+        return { ...t, status: nextStatus, updatedAt: Date.now() };
+      });
+      return changed ? { tasks: nextTasks } : s;
     });
   },
 

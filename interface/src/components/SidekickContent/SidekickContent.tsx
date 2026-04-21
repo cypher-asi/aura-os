@@ -19,7 +19,6 @@ import { FileExplorer } from "../FileExplorer";
 import {
   RunSidekickPane,
   TerminalSidekickPane,
-  useActiveTaskTracking,
 } from "../TaskOutputPanel";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
@@ -48,7 +47,6 @@ export function SidekickContent() {
   );
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
-  useActiveTaskTracking(projectId);
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();
   const { projectId: routeProjectId, agentInstanceId } = useParams<{

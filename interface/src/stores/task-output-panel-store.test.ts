@@ -221,7 +221,14 @@ describe("task-output-panel-store rehydration", () => {
     vi.resetModules();
   });
 
-  it("demotes active tasks to interrupted on load", async () => {
+  it("preserves persisted statuses verbatim on load", async () => {
+    // `useProjectLayoutData` now runs `reconcileStatuses` once the
+    // server task list is available — that is the authoritative source
+    // of truth for "active" rehydrated rows. The store itself no
+    // longer blindly demotes active → interrupted because that produced
+    // stale "Interrupted" badges for runs the server still considered
+    // in progress (and for runs that completed while the UI was
+    // closed).
     const persisted: PanelTaskEntry[] = [
       {
         taskId: "t1",
@@ -244,7 +251,38 @@ describe("task-output-panel-store rehydration", () => {
     const tasks = mod.useTaskOutputPanelStore.getState().tasks;
     const byId = Object.fromEntries(tasks.map((t) => [t.taskId, t]));
 
-    expect(byId.t1.status).toBe("interrupted");
+    expect(byId.t1.status).toBe("active");
     expect(byId.t2.status).toBe("completed");
+  });
+
+  it("reconcileStatuses patches the subset of provided entries", async () => {
+    const mod = await import("./task-output-panel-store");
+    mod.useTaskOutputPanelStore.setState({
+      tasks: [
+        {
+          taskId: "t1",
+          title: "Active when closed",
+          status: "active",
+          projectId: "p1",
+          updatedAt: 1,
+        },
+        {
+          taskId: "t2",
+          title: "Another",
+          status: "active",
+          projectId: "p1",
+          updatedAt: 1,
+        },
+      ],
+    });
+
+    mod.useTaskOutputPanelStore.getState().reconcileStatuses([
+      { taskId: "t1", status: "completed" },
+    ]);
+
+    const tasks = mod.useTaskOutputPanelStore.getState().tasks;
+    const byId = Object.fromEntries(tasks.map((t) => [t.taskId, t]));
+    expect(byId.t1.status).toBe("completed");
+    expect(byId.t2.status).toBe("active");
   });
 });

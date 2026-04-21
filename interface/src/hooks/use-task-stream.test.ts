@@ -1,235 +1,76 @@
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 
-type SubscribeCallback = (event: { content: Record<string, unknown>; project_id?: string }) => void;
-const subscribeMap = new Map<string, Set<SubscribeCallback>>();
-
-vi.mock("../stores/event-store/index", () => ({
-  useEventStore: Object.assign(
-    (selector: (s: { subscribe: unknown }) => unknown) =>
-      selector({
-        subscribe: (type: string, cb: SubscribeCallback) => {
-          if (!subscribeMap.has(type)) subscribeMap.set(type, new Set());
-          subscribeMap.get(type)!.add(cb);
-          return () => subscribeMap.get(type)!.delete(cb);
-        },
-      }),
-    {
-      getState: () => ({
-        seedTaskOutput: vi.fn(),
-      }),
-    },
-  ),
-  getTaskOutput: vi.fn(() => ({ text: "" })),
+vi.mock("../stores/task-stream-bootstrap", () => ({
+  taskStreamKey: (id: string) => `task:${id}`,
 }));
 
-const mockSetIsStreaming = vi.fn();
-const mockSetProgressText = vi.fn();
-
-vi.mock("./use-stream-core", () => ({
-  useStreamCore: vi.fn(() => ({
-    key: "task:test-task-1",
-    refs: {
-      streamBuffer: { current: "" },
-      thinkingBuffer: { current: "" },
-      toolCalls: { current: [] },
-      timeline: { current: [] },
+vi.mock("./stream/store", () => {
+  const ensureEntry = vi.fn();
+  let state: { entries: Record<string, { isStreaming: boolean }> } = { entries: {} };
+  const setState = vi.fn((updater: (s: typeof state) => typeof state) => {
+    state = updater(state);
+  });
+  return {
+    ensureEntry,
+    useStreamStore: {
+      setState,
+      getState: () => state,
+      _setInitial: (s: typeof state) => {
+        state = s;
+      },
+      _reset: () => {
+        state = { entries: {} };
+      },
     },
-    setters: {
-      setIsStreaming: mockSetIsStreaming,
-      setProgressText: mockSetProgressText,
-      setText: vi.fn(),
-      setThinking: vi.fn(),
-      setToolCalls: vi.fn(),
-      setTimeline: vi.fn(),
-      setEvents: vi.fn(),
-    },
-    abortRef: { current: null },
-  })),
-  handleTextDelta: vi.fn(),
-  handleThinkingDelta: vi.fn(),
-  handleToolCallStarted: vi.fn(),
-  handleToolCallSnapshot: vi.fn(),
-  handleToolResult: vi.fn(),
-  handleAssistantTurnBoundary: vi.fn(),
-  resetStreamBuffers: vi.fn(),
-  finalizeStream: vi.fn(),
-}));
-
-vi.mock("./stream/store", () => ({
-  getThinkingDurationMs: vi.fn(() => 0),
-  // Pass-through implementation: invoke `register` immediately and return
-  // an idempotent release that runs the disposers. Matches the real
-  // module's behaviour for the single-mount case that most tests exercise.
-  acquireSharedStreamSubscriptions: vi.fn(
-    (_key: string, register: () => Array<() => void>) => {
-      const disposers = register();
-      return () => {
-        for (const dispose of disposers) dispose();
-      };
-    },
-  ),
-}));
+  };
+});
 
 import { useTaskStream } from "./use-task-stream";
-import {
-  resetStreamBuffers,
-  finalizeStream,
-  handleTextDelta,
-  handleToolCallStarted,
-  handleToolCallSnapshot,
-  handleToolResult,
-} from "./use-stream-core";
+import { ensureEntry, useStreamStore } from "./stream/store";
+
+// Cast to the augmented test shape from the mock above.
+const storeMock = useStreamStore as typeof useStreamStore & {
+  _setInitial: (s: { entries: Record<string, { isStreaming: boolean }> }) => void;
+  _reset: () => void;
+};
+
+beforeEach(() => {
+  (ensureEntry as unknown as { mockClear: () => void }).mockClear();
+  (useStreamStore.setState as unknown as { mockClear: () => void }).mockClear();
+  storeMock._reset();
+});
 
 describe("useTaskStream", () => {
-  beforeEach(() => {
-    subscribeMap.clear();
-    vi.clearAllMocks();
+  it("returns the canonical streamKey for a task id", () => {
+    const { result } = renderHook(() => useTaskStream("abc"));
+    expect(result.current.streamKey).toBe("task:abc");
   });
 
-  it("returns a streamKey", () => {
-    const { result } = renderHook(() => useTaskStream("test-task-1"));
-
-    expect(result.current.streamKey).toBe("task:test-task-1");
+  it("returns a key even when taskId is undefined, without mutating the store", () => {
+    const { result } = renderHook(() => useTaskStream(undefined));
+    expect(result.current.streamKey).toBe("task:");
+    expect(ensureEntry).not.toHaveBeenCalled();
+    expect(useStreamStore.setState).not.toHaveBeenCalled();
   });
 
-  it("does not subscribe when taskId is undefined", () => {
-    renderHook(() => useTaskStream(undefined));
-
-    expect(subscribeMap.size).toBe(0);
+  it("does not touch the store when isActive is false (bootstrap owns subs)", () => {
+    renderHook(() => useTaskStream("abc", false));
+    expect(ensureEntry).not.toHaveBeenCalled();
+    expect(useStreamStore.setState).not.toHaveBeenCalled();
   });
 
-  it("subscribes to relevant event types when taskId is provided", () => {
-    renderHook(() => useTaskStream("test-task-1"));
-
-    expect(subscribeMap.has("task_started")).toBe(true);
-    expect(subscribeMap.has("text_delta")).toBe(true);
-    expect(subscribeMap.has("thinking_delta")).toBe(true);
-    expect(subscribeMap.has("tool_use_start")).toBe(true);
-    expect(subscribeMap.has("tool_call_snapshot")).toBe(true);
-    expect(subscribeMap.has("tool_result")).toBe(true);
-    expect(subscribeMap.has("task_completed")).toBe(true);
-    expect(subscribeMap.has("task_failed")).toBe(true);
+  it("eagerly primes the stream entry when isActive is true", () => {
+    storeMock._setInitial({ entries: { "task:abc": { isStreaming: false } } });
+    renderHook(() => useTaskStream("abc", true));
+    expect(ensureEntry).toHaveBeenCalledWith("task:abc");
+    expect(useStreamStore.setState).toHaveBeenCalled();
+    expect(storeMock.getState().entries["task:abc"].isStreaming).toBe(true);
   });
 
-  it("sets streaming on TaskStarted event", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("task_started")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1" } }),
-    );
-
-    expect(resetStreamBuffers).toHaveBeenCalled();
-    expect(mockSetIsStreaming).toHaveBeenCalledWith(true);
-  });
-
-  it("ignores TaskStarted for different taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("task_started")?.forEach((cb) =>
-      cb({ content: { task_id: "task-other" } }),
-    );
-
-    expect(resetStreamBuffers).not.toHaveBeenCalled();
-  });
-
-  it("handles TextDelta for matching taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("text_delta")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1", text: "hello" } }),
-    );
-
-    expect(handleTextDelta).toHaveBeenCalled();
-  });
-
-  it("ignores TextDelta for different taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("text_delta")?.forEach((cb) =>
-      cb({ content: { task_id: "task-other", text: "hello" } }),
-    );
-
-    expect(handleTextDelta).not.toHaveBeenCalled();
-  });
-
-  it("handles ToolUseStart for matching taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("tool_use_start")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1", id: "tool-1", name: "bash" } }),
-    );
-
-    expect(handleToolCallStarted).toHaveBeenCalled();
-  });
-
-  it("handles ToolCallSnapshot for matching taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("tool_call_snapshot")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1", id: "tool-1", name: "bash", input: { command: "pwd" } } }),
-    );
-
-    expect(handleToolCallSnapshot).toHaveBeenCalled();
-  });
-
-  it("handles ToolResult for matching taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("tool_result")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1", id: "tool-1", name: "bash", result: "ok", is_error: false } }),
-    );
-
-    expect(handleToolResult).toHaveBeenCalled();
-  });
-
-  it("calls finalizeStream on TaskCompleted", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("task_completed")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1" } }),
-    );
-
-    expect(finalizeStream).toHaveBeenCalled();
-    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({ reason: "completed" });
-  });
-
-  it("calls finalizeStream on TaskFailed", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("task_failed")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1", reason: "timeout" } }),
-    );
-
-    expect(finalizeStream).toHaveBeenCalled();
-    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({
-      reason: "failed",
-      message: "timeout",
-    });
-  });
-
-  it("sets streaming eagerly when isActive is true", () => {
-    renderHook(() => useTaskStream("task-1", true));
-
-    expect(mockSetIsStreaming).toHaveBeenCalledWith(true);
-  });
-
-  it("handles Progress event for matching taskId", () => {
-    renderHook(() => useTaskStream("task-1"));
-
-    subscribeMap.get("progress")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1", stage: "Compiling..." } }),
-    );
-
-    expect(mockSetProgressText).toHaveBeenCalledWith("Compiling...");
-  });
-
-  it("cleans up subscriptions on unmount", () => {
-    const { unmount } = renderHook(() => useTaskStream("task-1"));
-
-    const countBefore = subscribeMap.get("task_started")?.size ?? 0;
-    unmount();
-    const countAfter = subscribeMap.get("task_started")?.size ?? 0;
-
-    expect(countAfter).toBeLessThan(countBefore);
+  it("leaves an already-streaming entry alone", () => {
+    storeMock._setInitial({ entries: { "task:abc": { isStreaming: true } } });
+    renderHook(() => useTaskStream("abc", true));
+    expect(storeMock.getState().entries["task:abc"].isStreaming).toBe(true);
   });
 });

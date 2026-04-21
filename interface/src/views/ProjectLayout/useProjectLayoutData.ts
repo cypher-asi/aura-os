@@ -16,6 +16,10 @@ import {
 import { useProjectRegister } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
+import {
+  useTaskOutputPanelStore,
+  type PanelTaskStatus,
+} from "../../stores/task-output-panel-store";
 
 interface ProjectLayoutData {
   displayProject: Project | null;
@@ -171,6 +175,41 @@ export function useProjectLayoutData(): ProjectLayoutData {
     ];
     return () => unsubs.forEach((unsubscribe) => unsubscribe());
   }, [projectId, queryClient, subscribe]);
+
+  // Boot-time reconciliation: when `GET /projects/:pid/tasks` finishes we
+  // have the authoritative per-task status. Push it into the output
+  // panel store so rehydrated "active" rows whose runs finished while
+  // the UI was closed get the correct final badge instead of blindly
+  // being marked "interrupted" (or, worse, staying stuck on "active").
+  const reconcilePanelStatuses = useTaskOutputPanelStore((s) => s.reconcileStatuses);
+  useEffect(() => {
+    if (!projectId) return;
+    if (!initialTasks.length) return;
+    const updates: Array<{ taskId: string; status: PanelTaskStatus }> = [];
+    for (const task of initialTasks) {
+      if (!task.task_id) continue;
+      let next: PanelTaskStatus;
+      switch (task.status) {
+        case "in_progress":
+          next = "active";
+          break;
+        case "done":
+          next = "completed";
+          break;
+        case "failed":
+          next = "failed";
+          break;
+        default:
+          // backlog / to_do / pending / ready / blocked — the server does
+          // not consider this task "running", so a previously-active
+          // panel row represents a run that was cut off.
+          next = "interrupted";
+          break;
+      }
+      updates.push({ taskId: task.task_id, status: next });
+    }
+    reconcilePanelStatuses(updates);
+  }, [projectId, initialTasks, reconcilePanelStatuses]);
 
   const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);
   const prevStreamingIdRef = useRef<string | null>(null);

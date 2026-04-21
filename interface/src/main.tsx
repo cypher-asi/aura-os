@@ -19,6 +19,7 @@ import { syncQueryHostOriginToStorage } from "./lib/host-config";
 import { signalDesktopReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
 import { purgeLegacyChatHistoryFallback } from "./lib/browser-db";
+import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
 
 // Must run before any module that reads the host origin (e.g. host-store,
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
@@ -34,6 +35,13 @@ initWebVitalsLite();
 installDevPerfHelpers();
 
 registerServiceWorker();
+
+// Register the app-scoped task stream subscribers BEFORE the first
+// component render. Waiting until a component's useEffect runs lets the
+// first batch of WS events slip past (a mount race that presents as
+// "task row appears, but body never fills in"). Registering here
+// guarantees the handlers are in place before the events socket opens.
+bootstrapTaskStreamSubscriptions();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Missing #root element");

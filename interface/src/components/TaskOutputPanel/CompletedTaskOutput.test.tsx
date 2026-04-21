@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 
 const dismissTask = vi.fn();
 
@@ -32,6 +33,10 @@ vi.mock("../../stores/task-output-panel-store", () => ({
   ),
 }));
 
+vi.mock("../../stores/task-output-hydration-cache", () => ({
+  hydrateTaskOutputOnce: vi.fn().mockResolvedValue("empty"),
+}));
+
 vi.mock("../../hooks/stream/hooks", () => ({
   useStreamEvents: () => streamEventsState,
 }));
@@ -60,6 +65,13 @@ beforeEach(() => {
   streamEventsState = [];
 });
 
+// Rows are collapsed by default; expand by clicking the header so the
+// body actually renders in the DOM.
+function expandRow() {
+  const header = screen.getByRole("button", { expanded: false });
+  fireEvent.click(header);
+}
+
 describe("CompletedTaskOutput", () => {
   it("renders stream events when available", () => {
     streamEventsState = [{ id: "evt-1", content: "result text" }];
@@ -71,6 +83,7 @@ describe("CompletedTaskOutput", () => {
         status="completed"
       />,
     );
+    expandRow();
 
     expect(screen.getByTestId("message-bubble")).toHaveTextContent("result text");
   });
@@ -85,6 +98,7 @@ describe("CompletedTaskOutput", () => {
         status="completed"
       />,
     );
+    expandRow();
 
     expect(screen.getByTestId("llm-output")).toHaveTextContent("hydrated output");
   });
@@ -98,6 +112,7 @@ describe("CompletedTaskOutput", () => {
         status="completed"
       />,
     );
+    expandRow();
 
     expect(screen.getByText("No output captured for this run.")).toBeInTheDocument();
   });
@@ -111,6 +126,7 @@ describe("CompletedTaskOutput", () => {
         status="failed"
       />,
     );
+    expandRow();
 
     expect(screen.getByText("Task failed without producing output.")).toBeInTheDocument();
   });

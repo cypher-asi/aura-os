@@ -1,9 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import type { BuildStep, TestStep } from "../stores/event-store/index";
+import { hydrateTaskOutputOnce } from "../stores/task-output-hydration-cache";
 import type { Task } from "../types";
-
-const CATCHUP_DELAY_MS = 2000;
 
 function mapBuildSteps(steps: { kind?: string; command?: string; stderr?: string; stdout?: string; attempt?: number; type?: string; reason?: string }[]): BuildStep[] {
   const kindMap: Record<string, BuildStep["kind"]> = {
@@ -49,27 +48,16 @@ function mapTestSteps(steps: { kind?: string; command?: string; stderr?: string;
   });
 }
 
-function fetchAndSeed(
-  projectId: string,
-  taskId: string,
-  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[]) => void,
-): Promise<boolean> {
-  return api.getTaskOutput(projectId, taskId).then((res) => {
-    const loadedBuildSteps = res.build_steps ? mapBuildSteps(res.build_steps) : undefined;
-    const loadedTestSteps = res.test_steps ? mapTestSteps(res.test_steps) : undefined;
-    if (res.output || loadedBuildSteps?.length || loadedTestSteps?.length) {
-      seedTaskOutput(taskId, res.output, loadedBuildSteps, loadedTestSteps);
-      return true;
-    }
-    return false;
-  }).catch((err) => { console.warn("Failed to load task output:", err); return false; });
-}
-
 /**
  * Hydrates task output from persisted data (inline on the task) or by
- * fetching from the API when needed. For in-progress tasks, retries once
- * after a short delay if the first fetch returned empty (server cache may
- * still be filling).
+ * fetching from the API when needed.
+ *
+ * Hydration is deduplicated across all consumers of the same (projectId,
+ * taskId) via the shared hydration cache, so rendering this hook from
+ * many rows at once issues at most one HTTP request per task. Empty
+ * server responses are treated as terminal "no output" and never blindly
+ * retried; a subsequent `TaskStarted` event invalidates the cache so the
+ * next mount will refetch.
  */
 export function useTaskOutputHydration(
   projectId: string | undefined,
@@ -79,14 +67,9 @@ export function useTaskOutputHydration(
   streamBuf: string,
   seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[]) => void,
 ): void {
-  const hydratedRef = useRef<string | null>(null);
-
   useEffect(() => {
     if (!projectId) return;
-    if (streamBuf || hydratedRef.current === task.task_id) return;
-
-    let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    if (streamBuf) return;
 
     const persistedBuildSteps = task.build_steps?.length
       ? mapBuildSteps(task.build_steps)
@@ -95,27 +78,27 @@ export function useTaskOutputHydration(
       ? mapTestSteps(task.test_steps)
       : undefined;
 
-    if (isTerminal || isActive || task.status === "in_progress") {
-      if (task.live_output || persistedBuildSteps?.length || persistedTestSteps?.length) {
-        hydratedRef.current = task.task_id;
-        seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
-      } else {
-        hydratedRef.current = task.task_id;
-        fetchAndSeed(projectId, task.task_id, seedTaskOutput).then((seeded) => {
-          if (cancelled) return;
-          if (!seeded && isActive) {
-            retryTimer = setTimeout(() => {
-              if (cancelled) return;
-              fetchAndSeed(projectId, task.task_id, seedTaskOutput);
-            }, CATCHUP_DELAY_MS);
-          }
-        });
-      }
+    if (!(isTerminal || isActive || task.status === "in_progress")) return;
+
+    if (task.live_output || persistedBuildSteps?.length || persistedTestSteps?.length) {
+      seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
+      return;
     }
 
-    return () => {
-      cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
-    };
+    void hydrateTaskOutputOnce(projectId, task.task_id, async () => {
+      try {
+        const res = await api.getTaskOutput(projectId, task.task_id);
+        const loadedBuildSteps = res.build_steps ? mapBuildSteps(res.build_steps) : undefined;
+        const loadedTestSteps = res.test_steps ? mapTestSteps(res.test_steps) : undefined;
+        if (res.output || loadedBuildSteps?.length || loadedTestSteps?.length) {
+          seedTaskOutput(task.task_id, res.output, loadedBuildSteps, loadedTestSteps);
+          return "loaded";
+        }
+        return "empty";
+      } catch (err) {
+        console.warn("Failed to load task output:", err);
+        return "empty";
+      }
+    });
   }, [isActive, isTerminal, projectId, task.task_id, task.status, task.live_output, task.build_steps, task.test_steps, streamBuf, seedTaskOutput]);
 }

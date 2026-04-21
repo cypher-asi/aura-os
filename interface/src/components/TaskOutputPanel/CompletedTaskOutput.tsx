@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, X as XIcon, AlertTriangle, CircleDashed, ChevronRight } from "lucide-react";
 import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
+import { hydrateTaskOutputOnce } from "../../stores/task-output-hydration-cache";
 import { useStreamEvents } from "../../hooks/stream/hooks";
 import { MessageBubble } from "../MessageBubble";
 import { LLMOutput } from "../LLMOutput";
@@ -15,56 +16,48 @@ interface CompletedTaskOutputProps {
   status: PanelTaskStatus;
 }
 
-const RETRY_DELAY_MS = 2000;
-
+/**
+ * Hydrates task output for a completed row. Deduplicates across all
+ * rows and all re-mounts via the shared hydration cache, and respects
+ * the server's `unavailable` flag as a terminal "no output" signal so
+ * we never retry on empty. If the local cache has text, we seed it
+ * immediately for an instant render while the server call resolves.
+ */
 function useHydrateCompletedOutput(projectId: string, taskId: string) {
   const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
-  const hydratedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (hydratedRef.current === taskId) return;
-    hydratedRef.current = taskId;
-
     let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const runHydration = async (attempt: number) => {
-      const existing = useEventStore.getState().taskOutputs[taskId];
-      if (existing?.text || cancelled) return;
-
-      if (attempt === 0) {
-        const cached = getCachedTaskOutputText(taskId, projectId);
-        if (cached) {
-          seedTaskOutput(taskId, cached, undefined, undefined, projectId);
-        }
+    const existing = useEventStore.getState().taskOutputs[taskId];
+    if (!existing?.text) {
+      const cached = getCachedTaskOutputText(taskId, projectId);
+      if (cached) {
+        seedTaskOutput(taskId, cached, undefined, undefined, projectId);
       }
+    }
 
-      const latest = useEventStore.getState().taskOutputs[taskId];
-      if (latest?.text || cancelled) return;
-
+    void hydrateTaskOutputOnce(projectId, taskId, async () => {
+      const current = useEventStore.getState().taskOutputs[taskId];
+      if (current?.text) return "loaded";
       try {
         const res = await api.getTaskOutput(projectId, taskId);
-        if (cancelled) return;
+        if (cancelled) return "empty";
         if (res.output || res.build_steps?.length || res.test_steps?.length) {
           seedTaskOutput(taskId, res.output, undefined, undefined, projectId);
-          return;
+          return "loaded";
         }
+        // Server explicitly says there is no output for this task (e.g.
+        // session_id never got persisted). Cache this as "empty" so the
+        // row does not re-hit the endpoint on every mount.
+        return "empty";
       } catch {
-        // Ignore and retry once below.
+        return "empty";
       }
-
-      if (attempt === 0 && !cancelled) {
-        retryTimer = setTimeout(() => {
-          void runHydration(1);
-        }, RETRY_DELAY_MS);
-      }
-    };
-
-    void runHydration(0);
+    });
 
     return () => {
       cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [projectId, taskId, seedTaskOutput]);
 }

@@ -306,6 +306,12 @@ pub(crate) struct TaskOutputResponse {
     pub build_steps: Vec<serde_json::Value>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub test_steps: Vec<serde_json::Value>,
+    /// True when we could not locate any persisted output for this task
+    /// (e.g. the task's `session_id` never made it into storage and the
+    /// in-memory cache does not have it either). The frontend uses this
+    /// as a terminal "no output available" signal to stop retrying.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub unavailable: bool,
 }
 
 async fn fetch_task_output_from_storage(
@@ -379,6 +385,7 @@ async fn fetch_task_output_from_storage(
         output,
         build_steps,
         test_steps,
+        unavailable: false,
     })
 }
 
@@ -399,6 +406,7 @@ pub(crate) async fn get_task_output(
                     output: entry.live_output.clone(),
                     build_steps: entry.build_steps.clone(),
                     test_steps: entry.test_steps.clone(),
+                    unavailable: false,
                 }));
             }
             entry.session_id.clone()
@@ -419,10 +427,17 @@ pub(crate) async fn get_task_output(
         }
     }
 
+    // We exhausted every lookup path without finding any output for this
+    // task. Signal `unavailable` so the client can stop retrying this
+    // specific task until it's started again. This is the response that
+    // replaces the pre-fix behaviour of returning an empty 200 for every
+    // row forever (~20 GETs × infinite retries when the output panel
+    // mounted with stale rows).
     Ok(Json(TaskOutputResponse {
         output: String::new(),
         build_steps: Vec::new(),
         test_steps: Vec::new(),
+        unavailable: true,
     }))
 }
 

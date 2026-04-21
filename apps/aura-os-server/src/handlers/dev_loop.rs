@@ -872,13 +872,41 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 if let (Some(sc), Some(jwt)) =
                                     (storage_client.as_ref(), jwt.as_deref())
                                 {
+                                    // Persisting session_id is on the critical path for
+                                    // reconstructing task output after a reload - if this
+                                    // fails the frontend cannot look up historical events
+                                    // for the task. A single failed attempt previously
+                                    // produced `Task has no session_id in storage; cannot
+                                    // fetch persisted output` rows forever. Retry with a
+                                    // short backoff so transient storage hiccups (e.g.
+                                    // contention on the task document, a flap in the
+                                    // storage service) don't permanently orphan a run.
                                     let req = aura_os_storage::UpdateTaskRequest {
                                         session_id: Some(session_id.to_string()),
                                         assigned_project_agent_id: Some(aiid.clone()),
                                         ..Default::default()
                                     };
-                                    if let Err(e) = sc.update_task(tid, jwt, &req).await {
-                                        warn!(task_id = %tid, error = %e, "Failed to persist session_id on task start");
+                                    let mut attempt: u32 = 0;
+                                    let max_attempts: u32 = 5;
+                                    loop {
+                                        match sc.update_task(tid, jwt, &req).await {
+                                            Ok(_) => break,
+                                            Err(e) => {
+                                                attempt += 1;
+                                                if attempt >= max_attempts {
+                                                    warn!(task_id = %tid, error = %e, attempts = attempt, "Failed to persist session_id on task start after retries");
+                                                    break;
+                                                }
+                                                let backoff_ms: u64 =
+                                                    50u64.saturating_mul(1u64 << (attempt - 1));
+                                                tokio::time::sleep(
+                                                    std::time::Duration::from_millis(
+                                                        backoff_ms.min(1000),
+                                                    ),
+                                                )
+                                                .await;
+                                            }
+                                        }
                                     }
                                 }
                             }

@@ -64,5 +64,16 @@ export const tasksApi = {
     });
   },
   getTaskOutput: (projectId: ProjectId, taskId: TaskId) =>
-    apiFetch<{ output: string; build_steps?: BuildStepRecord[]; test_steps?: TestStepRecord[] }>(`/api/projects/${projectId}/tasks/${taskId}/output`),
+    apiFetch<{
+      output: string;
+      build_steps?: BuildStepRecord[];
+      test_steps?: TestStepRecord[];
+      /**
+       * When true, the server has no persisted output for this task
+       * (e.g. session_id is missing and the fallback scan found nothing).
+       * Callers should treat this as a terminal "no output" signal and
+       * avoid retrying until the task next starts.
+       */
+      unavailable?: boolean;
+    }>(`/api/projects/${projectId}/tasks/${taskId}/output`),
 };
