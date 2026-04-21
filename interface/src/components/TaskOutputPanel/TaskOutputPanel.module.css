@@ -317,6 +317,11 @@
   color: var(--color-danger, #ef4444);
 }
 
+.taskDotInterrupted {
+  composes: taskDotCompleted;
+  color: var(--color-text-muted, #888);
+}
+
 .taskStatusBadge {
   font-size: 9px;
   font-weight: 600;
@@ -332,6 +337,11 @@
 .taskStatusBadge[data-status="failed"] {
   background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
   color: var(--color-danger, #ef4444);
+}
+
+.taskStatusBadge[data-status="interrupted"] {
+  background: color-mix(in srgb, var(--color-text-muted, #888) 10%, transparent);
+  color: var(--color-text-muted, #888);
 }
 
 .dismissBtn {

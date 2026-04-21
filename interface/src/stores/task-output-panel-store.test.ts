@@ -1,4 +1,40 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// The repo's vitest setup passes `--localstorage-file` without a valid path,
+// which leaves jsdom's `localStorage` without `setItem` / `removeItem` /
+// `clear`. Install a Map-backed stub before loading the module under test,
+// matching the pattern in `src/lib/browser-db.test.ts`.
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+  const stub = {
+    getItem: vi.fn((key: string) => storage.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      storage.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      storage.delete(key);
+    }),
+    clear: vi.fn(() => {
+      storage.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(storage.keys())[index] ?? null),
+    get length() {
+      return storage.size;
+    },
+  };
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: stub,
+  });
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: stub,
+    });
+  }
+});
+
 import { useTaskOutputPanelStore, type PanelTaskEntry } from "./task-output-panel-store";
 
 const STORAGE_KEY = "aura-task-output-panel";
@@ -159,5 +195,56 @@ describe("task-output-panel-store", () => {
       useTaskOutputPanelStore.getState().restoreTasks(entries);
       expect(useTaskOutputPanelStore.getState().tasks).toHaveLength(2);
     });
+  });
+
+  describe("clearCompleted", () => {
+    it("removes interrupted entries", () => {
+      useTaskOutputPanelStore.setState({
+        tasks: [
+          makeTask({ taskId: "t1", status: "active" }),
+          makeTask({ taskId: "t2", status: "interrupted" }),
+          makeTask({ taskId: "t3", status: "completed" }),
+        ],
+      });
+      useTaskOutputPanelStore.getState().clearCompleted();
+      const tasks = useTaskOutputPanelStore.getState().tasks;
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].taskId).toBe("t1");
+    });
+  });
+});
+
+describe("task-output-panel-store rehydration", () => {
+  beforeEach(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TASKS_STORAGE_KEY);
+    vi.resetModules();
+  });
+
+  it("demotes active tasks to interrupted on load", async () => {
+    const persisted: PanelTaskEntry[] = [
+      {
+        taskId: "t1",
+        title: "Active when closed",
+        status: "active",
+        projectId: "p1",
+        updatedAt: Date.now(),
+      },
+      {
+        taskId: "t2",
+        title: "Completed before close",
+        status: "completed",
+        projectId: "p1",
+        updatedAt: Date.now(),
+      },
+    ];
+    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(persisted));
+
+    const mod = await import("./task-output-panel-store");
+    const tasks = mod.useTaskOutputPanelStore.getState().tasks;
+    const byId = Object.fromEntries(tasks.map((t) => [t.taskId, t]));
+
+    expect(byId.t1.status).toBe("interrupted");
+    expect(byId.t2.status).toBe("completed");
   });
 });

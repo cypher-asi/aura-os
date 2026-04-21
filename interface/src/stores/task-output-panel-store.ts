@@ -9,7 +9,7 @@ const MAX_HEIGHT = 500;
 const MAX_PERSISTED_TASKS = 20;
 const PERSIST_DEBOUNCE_MS = 150;
 
-export type PanelTaskStatus = "active" | "completed" | "failed";
+export type PanelTaskStatus = "active" | "completed" | "failed" | "interrupted";
 export type OutputPanelTab = "run" | "terminal";
 
 export interface PanelTaskEntry {
@@ -40,7 +40,11 @@ function loadPersistedTasks(): PanelTaskEntry[] {
     const raw = localStorage.getItem(TASKS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as PanelTaskEntry[];
-      return parsed.filter((t) => t.taskId && t.projectId);
+      return parsed
+        .filter((t) => t.taskId && t.projectId)
+        .map((t) =>
+          t.status === "active" ? { ...t, status: "interrupted" as const } : t,
+        );
     }
   } catch { /* ignore */ }
   return [];

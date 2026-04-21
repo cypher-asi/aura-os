@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, X as XIcon, AlertTriangle, ChevronRight } from "lucide-react";
+import { Check, X as XIcon, AlertTriangle, CircleDashed, ChevronRight } from "lucide-react";
 import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
@@ -78,12 +78,20 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
 
   const [collapsed, setCollapsed] = useState(true);
 
-  const statusIcon = status === "failed"
-    ? <AlertTriangle size={10} />
+  const statusIcon =
+    status === "failed" ? <AlertTriangle size={10} />
+    : status === "interrupted" ? <CircleDashed size={10} />
     : <Check size={10} />;
 
-  const dotClass = status === "failed" ? styles.taskDotFailed : styles.taskDotCompleted;
-  const statusLabel = status === "failed" ? "Failed" : "Done";
+  const dotClass =
+    status === "failed" ? styles.taskDotFailed
+    : status === "interrupted" ? styles.taskDotInterrupted
+    : styles.taskDotCompleted;
+
+  const statusLabel =
+    status === "failed" ? "Failed"
+    : status === "interrupted" ? "Interrupted"
+    : "Done";
 
   const hasStreamEvents = streamEvents.length > 0;
 
@@ -137,7 +145,9 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
           <div className={styles.taskBodyEmpty}>
             {status === "failed"
               ? "Task failed without producing output."
-              : "No output captured for this run."}
+              : status === "interrupted"
+                ? "Run was interrupted before completing."
+                : "No output captured for this run."}
           </div>
         )
       )}
