@@ -19,6 +19,22 @@ export const BROWSER_DB_STORES = {
 export type BrowserDbStoreName =
   (typeof BROWSER_DB_STORES)[keyof typeof BROWSER_DB_STORES];
 
+/**
+ * Stores that are allowed to mirror into `localStorage` as a legacy fallback.
+ * `chatHistory` is intentionally excluded: transcripts routinely exceed the
+ * ~5 MB localStorage quota and every failed `setItem` throws
+ * `QuotaExceededError` synchronously from inside IDB event callbacks, which
+ * left `browserDbSet` promises pending forever and spammed the console
+ * during long spec runs.
+ */
+const LOCAL_FALLBACK_STORES = new Set<BrowserDbStoreName>([
+  BROWSER_DB_STORES.auth,
+  BROWSER_DB_STORES.org,
+  BROWSER_DB_STORES.projects,
+  BROWSER_DB_STORES.agents,
+  BROWSER_DB_STORES.ui,
+]);
+
 function fallbackKey(store: BrowserDbStoreName, key: string): string {
   return `${LOCAL_FALLBACK_PREFIX}:${store}:${key}`;
 }
@@ -53,11 +69,12 @@ function readLocalFallback<T>(store: BrowserDbStoreName, key: string): T | null 
   if (typeof window === "undefined") {
     return null;
   }
-  const raw = window.localStorage.getItem(fallbackKey(store, key));
-  if (!raw) {
+  if (!LOCAL_FALLBACK_STORES.has(store)) {
     return null;
   }
   try {
+    const raw = window.localStorage.getItem(fallbackKey(store, key));
+    if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
     return null;
@@ -69,17 +86,25 @@ function writeLocalFallback<T>(
   key: string,
   value: T,
 ): void {
-  if (typeof window === "undefined") {
-    return;
+  if (typeof window === "undefined") return;
+  if (!LOCAL_FALLBACK_STORES.has(store)) return;
+  // Swallow quota / serialization failures: the IDB write is authoritative,
+  // and a broken localStorage mirror must never escape an IDB callback.
+  try {
+    window.localStorage.setItem(fallbackKey(store, key), JSON.stringify(value));
+  } catch {
+    // no-op
   }
-  window.localStorage.setItem(fallbackKey(store, key), JSON.stringify(value));
 }
 
 function deleteLocalFallback(store: BrowserDbStoreName, key: string): void {
-  if (typeof window === "undefined") {
-    return;
+  if (typeof window === "undefined") return;
+  if (!LOCAL_FALLBACK_STORES.has(store)) return;
+  try {
+    window.localStorage.removeItem(fallbackKey(store, key));
+  } catch {
+    // no-op
   }
-  window.localStorage.removeItem(fallbackKey(store, key));
 }
 
 export async function browserDbGet<T>(
@@ -116,19 +141,38 @@ export async function browserDbSet<T>(
   }
 
   await new Promise<void>((resolve) => {
-    const transaction = db.transaction(store, "readwrite");
-    const objectStore = transaction.objectStore(store);
-    objectStore.put(value, key);
-    transaction.oncomplete = () => {
-      db.close();
-      writeLocalFallback(store, key, value);
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      try {
+        db.close();
+      } catch {
+        // ignore
+      }
       resolve();
     };
-    transaction.onerror = () => {
-      db.close();
+
+    try {
+      const transaction = db.transaction(store, "readwrite");
+      const objectStore = transaction.objectStore(store);
+      objectStore.put(value, key);
+      transaction.oncomplete = () => {
+        writeLocalFallback(store, key, value);
+        settle();
+      };
+      transaction.onerror = () => {
+        writeLocalFallback(store, key, value);
+        settle();
+      };
+      transaction.onabort = () => {
+        writeLocalFallback(store, key, value);
+        settle();
+      };
+    } catch {
       writeLocalFallback(store, key, value);
-      resolve();
-    };
+      settle();
+    }
   });
 }
 
@@ -143,18 +187,69 @@ export async function browserDbDelete(
   }
 
   await new Promise<void>((resolve) => {
-    const transaction = db.transaction(store, "readwrite");
-    const objectStore = transaction.objectStore(store);
-    objectStore.delete(key);
-    transaction.oncomplete = () => {
-      db.close();
-      deleteLocalFallback(store, key);
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      try {
+        db.close();
+      } catch {
+        // ignore
+      }
       resolve();
     };
-    transaction.onerror = () => {
-      db.close();
+
+    try {
+      const transaction = db.transaction(store, "readwrite");
+      const objectStore = transaction.objectStore(store);
+      objectStore.delete(key);
+      transaction.oncomplete = () => {
+        deleteLocalFallback(store, key);
+        settle();
+      };
+      transaction.onerror = () => {
+        deleteLocalFallback(store, key);
+        settle();
+      };
+      transaction.onabort = () => {
+        deleteLocalFallback(store, key);
+        settle();
+      };
+    } catch {
       deleteLocalFallback(store, key);
-      resolve();
-    };
+      settle();
+    }
   });
+}
+
+/**
+ * Clears any legacy `aura-idb:chatHistory:*` entries that earlier builds
+ * mirrored into `localStorage`. Those mirrors are the root cause of the
+ * `QuotaExceededError` spam on long transcripts; wiping them frees up the
+ * ~5 MB budget for the remaining (small) fallback stores.
+ *
+ * Safe to call on every boot — it's idempotent and bounded by the number of
+ * localStorage keys.
+ */
+export function purgeLegacyChatHistoryFallback(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const prefix = `${LOCAL_FALLBACK_PREFIX}:${BROWSER_DB_STORES.chatHistory}:`;
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(prefix)) {
+        toRemove.push(k);
+      }
+    }
+    for (const k of toRemove) {
+      try {
+        window.localStorage.removeItem(k);
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // ignore
+  }
 }

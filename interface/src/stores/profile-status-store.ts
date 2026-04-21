@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api } from "../api/client";
+import { ApiClientError } from "../api/core";
 import { useEventStore } from "./event-store";
 import { useAuthStore } from "./auth-store";
 import { useSidekickStore } from "./sidekick-store";
@@ -65,12 +66,47 @@ function syncUserOnlineStatus() {
   setStatus(user.user_id, connected ? "online" : "offline");
 }
 
+/**
+ * Remove an agent from the polled set. Stops the shared poll interval when
+ * the set empties so a later `registerRemoteAgents` call can re-arm it.
+ */
+function unregisterRemoteAgent(agentId: string): void {
+  _remoteAgentIds.delete(agentId);
+  _polledAgentIds.delete(agentId);
+  useProfileStatusStore.setState((s) => {
+    if (!(agentId in s.statuses) && !(agentId in s.machineTypes)) return s;
+    const nextStatuses = { ...s.statuses };
+    const nextMachineTypes = { ...s.machineTypes };
+    delete nextStatuses[agentId];
+    delete nextMachineTypes[agentId];
+    return { statuses: nextStatuses, machineTypes: nextMachineTypes };
+  });
+  if (_remoteAgentIds.size === 0 && _pollInterval) {
+    clearInterval(_pollInterval);
+    _pollInterval = undefined;
+  }
+}
+
+/**
+ * HTTP statuses that indicate the agent is no longer (or never was) a
+ * pollable remote agent. On these we drop it from the poll set rather than
+ * spamming `/remote_agent/state` every 30 s forever.
+ */
+const TERMINAL_REMOTE_STATUSES = new Set<number>([400, 404, 410]);
+
 function pollRemoteAgents() {
   for (const agentId of _remoteAgentIds) {
     api.swarm
       .getRemoteAgentState(agentId)
       .then((vm) => setStatus(agentId, vm.state))
-      .catch(() => {
+      .catch((err: unknown) => {
+        if (
+          err instanceof ApiClientError &&
+          TERMINAL_REMOTE_STATUSES.has(err.status)
+        ) {
+          unregisterRemoteAgent(agentId);
+          return;
+        }
         setStatus(agentId, "error");
       });
   }

@@ -58,6 +58,7 @@ vi.mock("../api/client", () => ({
 }));
 
 import { useProfileStatusStore } from "./profile-status-store";
+import { ApiClientError } from "../api/core";
 
 beforeEach(() => {
   useProfileStatusStore.setState({ statuses: {}, machineTypes: {} });
@@ -122,6 +123,51 @@ describe("profile-status-store", () => {
       await vi.waitFor(() => {
         expect(useProfileStatusStore.getState().statuses["r-error-1"]).toBe("error");
       });
+    });
+
+    it("unregisters a remote agent on 404 and stops polling it", async () => {
+      const notFound = new ApiClientError(404, {
+        error: "remote agent not found on swarm gateway",
+        code: "not_found",
+        details: null,
+      });
+      // Only r-404 gets 404 — other agents lingering in the module-level
+      // poll set (from earlier tests) resolve so they don't accidentally
+      // get unregistered and mask the assertion below.
+      mockApi.swarm.getRemoteAgentState.mockImplementation((id: string) => {
+        if (id === "r-404") return Promise.reject(notFound);
+        return Promise.resolve({ state: "idle" });
+      });
+
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-404" },
+      ]);
+
+      await vi.waitFor(() => {
+        expect(mockApi.swarm.getRemoteAgentState).toHaveBeenCalledWith("r-404");
+      });
+
+      await vi.waitFor(() => {
+        expect(
+          useProfileStatusStore.getState().machineTypes["r-404"],
+        ).toBeUndefined();
+        expect(
+          useProfileStatusStore.getState().statuses["r-404"],
+        ).toBeUndefined();
+      });
+
+      mockApi.swarm.getRemoteAgentState.mockClear();
+      useProfileStatusStore.getState().registerRemoteAgents([
+        { agent_id: "r-other" },
+      ]);
+      await vi.waitFor(() => {
+        expect(mockApi.swarm.getRemoteAgentState).toHaveBeenCalledWith("r-other");
+      });
+      expect(
+        mockApi.swarm.getRemoteAgentState.mock.calls.some(
+          (args: unknown[]) => args[0] === "r-404",
+        ),
+      ).toBe(false);
     });
   });
 

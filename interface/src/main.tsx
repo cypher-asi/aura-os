@@ -18,11 +18,16 @@ import { installPreloadRecovery } from "./lib/preload-recovery";
 import { syncQueryHostOriginToStorage } from "./lib/host-config";
 import { signalDesktopReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
+import { purgeLegacyChatHistoryFallback } from "./lib/browser-db";
 
 // Must run before any module that reads the host origin (e.g. host-store,
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
 syncQueryHostOriginToStorage();
 installPreloadRecovery();
+// Earlier builds mirrored chat transcripts into localStorage as an IDB
+// fallback; on long runs that blew the ~5 MB quota and spammed the console
+// with `QuotaExceededError`. Clean the stale mirrors out on boot.
+purgeLegacyChatHistoryFallback();
 
 markAppEntry();
 initWebVitalsLite();
