@@ -12,18 +12,15 @@
   margin-top: 4px;
 }
 
-/* Grouped tool calls — flush stack so rows read as a dense checklist */
+/*
+ * Grouped tool calls — flush stack so rows read as a dense checklist.
+ * Border collapsing between adjacent rows is owned by Block.module.css
+ * (`.block + .block`), which overlaps siblings by -1px so the bottom of
+ * row N and the top of row N+1 render as a single 1px divider instead
+ * of a doubled line.
+ */
 .toolGroup {
   display: flex;
   flex-direction: column;
   gap: 0;
-}
-
-/*
- * Collapse adjacent Block borders so consecutive rows share a single 1px
- * divider instead of stacking two (top of row N + bottom of row N-1) into
- * a doubled line.
- */
-.toolGroup > div + div {
-  margin-top: -1px;
 }

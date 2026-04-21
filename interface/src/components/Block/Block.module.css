@@ -24,8 +24,13 @@
   font-size: 12px;
 }
 
+/*
+ * Collapse adjacent block borders: overlap by exactly 1px so the bottom
+ * border of the previous block and the top border of the next one render
+ * as a single 1px divider instead of a stacked "double border".
+ */
 .block + .block {
-  margin-top: 2px;
+  margin-top: -1px;
 }
 
 /* ── Status variants ── */

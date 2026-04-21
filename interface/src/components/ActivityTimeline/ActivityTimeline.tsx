@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import type { TimelineItem, ToolCallEntry } from "../../types/stream";
 import {
   stripEmojis,
@@ -127,7 +127,7 @@ export function ActivityTimeline({
       groups.push(
         <div key={`toolgroup-${toolItems[0].key}`} className={styles.toolGroup}>
           {toolItems.map((t) => (
-            <div key={t.key}>{t.node}</div>
+            <Fragment key={t.key}>{t.node}</Fragment>
           ))}
         </div>,
       );
