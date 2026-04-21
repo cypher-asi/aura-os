@@ -13,3 +13,4 @@ export const SIDEKICK_ACTIVE_TAB_KEY = "aura-sidekick-active-tab";
 export const AGENT_SIDEKICK_ACTIVE_TAB_KEY = "aura-agent-sidekick-active-tab";
 export const PROCESS_SIDEKICK_ACTIVE_TAB_KEY = "aura-process-sidekick-active-tab";
 export const PROCESS_LIVE_RUN_NODE_KEY = "aura-process-live-run-node";
+export const DEBUG_SIDEKICK_ACTIVE_TAB_KEY = "aura-debug-sidekick-active-tab";

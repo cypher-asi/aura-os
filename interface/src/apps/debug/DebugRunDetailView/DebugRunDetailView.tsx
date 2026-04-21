@@ -1,66 +1,68 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "react-router-dom";
-import type { DebugChannel } from "../../../api/debug";
-import { api } from "../../../api/client";
+import { useShallow } from "zustand/react/shallow";
+import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
 import type { ProjectId } from "../../../types";
 import { useDebugRunMetadata } from "../useDebugRunMetadata";
 import { useDebugRunLogs } from "../useDebugRunLogs";
-import { collectTypes } from "../format-entry";
-import { DebugRunToolbar } from "./DebugRunToolbar";
-import { DebugRunCounters } from "./DebugRunCounters";
+import {
+  channelForTab,
+  useDebugSidekickStore,
+} from "../stores/debug-sidekick-store";
 import { DebugLogList } from "./DebugLogList";
-import { DebugEntryInspector } from "./DebugEntryInspector";
 import styles from "./DebugRunDetailView.module.css";
 
+function statusLabel(status: DebugRunStatus | undefined): string {
+  if (!status) return "loading";
+  return status;
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
+}
+
+function runTitle(metadata: DebugRunMetadata | undefined): string {
+  if (!metadata) return "Run";
+  const started = metadata.started_at ? new Date(metadata.started_at) : null;
+  if (started && !Number.isNaN(started.getTime())) {
+    return `Run · ${started.toLocaleString()}`;
+  }
+  return `Run · ${metadata.run_id.slice(0, 8)}`;
+}
+
 /**
- * Trigger a browser download of `blob` with the given file name. Kept
- * local instead of extracted into a shared helper because this is the
- * only caller today (per `rules-react-components` "no premature
- * framework" guidance); promote if/when a second call site appears.
+ * Middle-panel view for a single debug run. All filter/channel/action
+ * controls live in the Sidekick; this surface focuses on showing the
+ * active event timeline and forwarding row selection to the sidekick
+ * store so the inspector can take over the right pane.
  */
-function downloadBlob(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
-
-async function copyToClipboard(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.style.position = "fixed";
-  ta.style.opacity = "0";
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand("copy");
-  } finally {
-    document.body.removeChild(ta);
-  }
-}
-
 export function DebugRunDetailView() {
   const { projectId, runId } = useParams<{
     projectId: ProjectId;
     runId: string;
   }>();
+  const { activeTab, typeFilter, textFilter, selectedEntry, selectEntry } =
+    useDebugSidekickStore(
+      useShallow((s) => ({
+        activeTab: s.activeTab,
+        typeFilter: s.typeFilter,
+        textFilter: s.textFilter,
+        selectedEntry: s.selectedEntry,
+        selectEntry: s.selectEntry,
+      })),
+    );
 
-  const [channel, setChannel] = useState<DebugChannel>("events");
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  const [textFilter, setTextFilter] = useState<string>("");
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  // Pull the channel from the active tab. Non-channel tabs (run/stats/
+  // tasks) default the middle panel to the primary "events" stream so
+  // the timeline is always useful even when the sidekick is not on an
+  // event-style tab.
+  const channel = channelForTab(activeTab) ?? "events";
 
   const { metadata, isRunning } = useDebugRunMetadata(projectId, runId);
-  const { entries, raw, isLoading } = useDebugRunLogs({
+  const { entries, isLoading } = useDebugRunLogs({
     projectId,
     runId,
     channel,
@@ -77,63 +79,46 @@ export function DebugRunDetailView() {
     });
   }, [entries, typeFilter, textFilter]);
 
-  const types = useMemo(() => collectTypes(entries), [entries]);
-
-  const selectedEntry = useMemo(() => {
-    if (selectedIndex === null) return null;
-    return (
-      filteredEntries.find((e) => e.index === selectedIndex) ??
-      entries.find((e) => e.index === selectedIndex) ??
-      null
-    );
-  }, [selectedIndex, filteredEntries, entries]);
-
-  const handleCopy = useCallback(() => {
-    if (!raw) return;
-    void copyToClipboard(raw);
-  }, [raw]);
-
-  const handleExport = useCallback(async () => {
-    if (!projectId || !runId) return;
-    try {
-      const blob = await api.debug.exportRunBlob(projectId, runId);
-      downloadBlob(blob, `debug-${projectId}-${runId}.zip`);
-    } catch (error) {
-      console.error("debug export failed", error);
-    }
-  }, [projectId, runId]);
-
   if (!projectId || !runId) {
     return <div className={styles.empty}>Run not found.</div>;
   }
 
   return (
     <div className={styles.root}>
-      <DebugRunToolbar
-        metadata={metadata}
-        channel={channel}
-        onChannelChange={(c) => {
-          setChannel(c);
-          setSelectedIndex(null);
-        }}
-        typeFilter={typeFilter}
-        onTypeFilterChange={setTypeFilter}
-        textFilter={textFilter}
-        onTextFilterChange={setTextFilter}
-        types={types}
-        onCopy={handleCopy}
-        onExport={() => {
-          void handleExport();
-        }}
-        copyDisabled={!raw}
-        exportDisabled={false}
-      />
-      <DebugRunCounters metadata={metadata} />
+      <header className={styles.header}>
+        <div className={styles.title}>
+          <span className={styles.titleMain}>{runTitle(metadata)}</span>
+          <span className={styles.titleSub}>
+            {statusLabel(metadata?.status)}
+            {metadata?.ended_at
+              ? ` · ended ${formatDate(metadata.ended_at)}`
+              : ""}
+          </span>
+        </div>
+        <div className={styles.channelLabel}>
+          {channelLabel(channel)}
+          {filteredEntries.length !== entries.length ? (
+            <span className={styles.channelSubLabel}>
+              {filteredEntries.length} of {entries.length}
+            </span>
+          ) : (
+            <span className={styles.channelSubLabel}>
+              {entries.length} event{entries.length === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
+      </header>
       <div className={styles.body}>
         <DebugLogList
           entries={filteredEntries}
-          selectedIndex={selectedIndex}
-          onSelect={setSelectedIndex}
+          selectedIndex={selectedEntry?.index ?? null}
+          onSelect={(index) => {
+            const hit =
+              filteredEntries.find((e) => e.index === index) ??
+              entries.find((e) => e.index === index) ??
+              null;
+            selectEntry(hit);
+          }}
           emptyMessage={
             isLoading
               ? "Loading events…"
@@ -142,13 +127,24 @@ export function DebugRunDetailView() {
                 : "No events match the current filters."
           }
         />
-        <DebugEntryInspector
-          entry={selectedEntry}
-          onCopy={(text) => {
-            void copyToClipboard(text);
-          }}
-        />
       </div>
     </div>
   );
+}
+
+function channelLabel(channel: string): string {
+  switch (channel) {
+    case "events":
+      return "All events";
+    case "llm_calls":
+      return "LLM calls";
+    case "iterations":
+      return "Iterations";
+    case "blockers":
+      return "Blockers";
+    case "retries":
+      return "Retries";
+    default:
+      return channel;
+  }
 }

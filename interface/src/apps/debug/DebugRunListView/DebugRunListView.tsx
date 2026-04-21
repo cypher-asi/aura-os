@@ -142,7 +142,7 @@ export function DebugRunListView() {
                 </div>
               </div>
               <span className={styles.cardMeta}>
-                <span>{run.run_id.slice(0, 8)}</span>
+                <span title={run.run_id}>{run.run_id.slice(0, 8)}…</span>
               </span>
             </button>
           ))}

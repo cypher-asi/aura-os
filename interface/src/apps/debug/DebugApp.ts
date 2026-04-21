@@ -1,6 +1,8 @@
 import { Bug } from "lucide-react";
 import { DebugNav } from "./DebugNav";
 import { DebugMainPanel } from "./DebugMainPanel";
+import { DebugSidekickContent } from "./components/DebugSidekickContent";
+import { DebugSidekickTaskbar } from "./components/DebugSidekickTaskbar";
 import type { AuraAppModule } from "../types";
 
 export const DebugApp: AuraAppModule = {
@@ -9,7 +11,10 @@ export const DebugApp: AuraAppModule = {
   icon: Bug,
   basePath: "/debug",
   LeftPanel: DebugNav,
+  DesktopLeftMenuPane: DebugNav,
   MainPanel: DebugMainPanel,
   ResponsiveControls: DebugNav,
-  searchPlaceholder: "Search runs",
+  SidekickPanel: DebugSidekickContent,
+  SidekickTaskbar: DebugSidekickTaskbar,
+  searchPlaceholder: "Search projects",
 };

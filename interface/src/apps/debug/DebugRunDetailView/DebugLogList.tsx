@@ -82,7 +82,9 @@ export function DebugLogList({
               <span className={styles.rowTime}>
                 {formatTime(entry.timestamp)}
               </span>
-              <span className={styles.rowType}>{entry.type}</span>
+              <span className={styles.rowType}>
+                {entry.type === "unknown" ? "event" : entry.type}
+              </span>
               <span className={styles.rowSummary}>{summarizeEntry(entry)}</span>
             </div>
           );

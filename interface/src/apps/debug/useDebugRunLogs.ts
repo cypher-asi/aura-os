@@ -20,6 +20,12 @@ interface Result {
   refetch: () => void;
 }
 
+/**
+ * Lines in a debug bundle are written by `loop_log::LoopLogWriter` as
+ * `{ "_ts": "<iso>", "event": { "type": "...", ... } }`. Older frames
+ * may omit the envelope, so we fall back to reading `type` / `ts` /
+ * `timestamp` off the outer object when the inner `event` is missing.
+ */
 function parseJsonl(raw: string, channel: DebugChannel): DebugLogEntry[] {
   if (!raw) return [];
   const lines = raw.split(/\r?\n/);
@@ -42,11 +48,16 @@ function parseJsonl(raw: string, channel: DebugChannel): DebugLogEntry[] {
       });
       continue;
     }
-    const record = (
+    const envelope = (
       parsed && typeof parsed === "object" ? parsed : {}
     ) as Record<string, unknown>;
-    const typeValue = record.type;
-    const timestampValue = record.timestamp;
+    const innerEvent =
+      envelope.event && typeof envelope.event === "object"
+        ? (envelope.event as Record<string, unknown>)
+        : envelope;
+    const typeValue = innerEvent.type ?? envelope.type;
+    const timestampValue =
+      envelope._ts ?? envelope.ts ?? envelope.timestamp ?? innerEvent.timestamp;
     out.push({
       index: out.length,
       timestamp:
@@ -54,7 +65,7 @@ function parseJsonl(raw: string, channel: DebugChannel): DebugLogEntry[] {
       type: typeof typeValue === "string" ? typeValue : "unknown",
       channel,
       raw: line,
-      event: parsed,
+      event: innerEvent,
     });
   }
   return out;
