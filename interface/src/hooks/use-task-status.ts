@@ -36,7 +36,19 @@ export function useTaskStatus(taskId: string, canonicalStatus?: string): TaskSta
       subscribe(EventType.TaskFailed, (e) => {
         if (e.content.task_id !== taskId) return;
         setLiveStatus("failed");
-        if (e.content.reason) setFailReason(e.content.reason);
+        // Prefer the canonical `reason` field, but fall back to `error`
+        // or `message` for synthetic or legacy failure payloads so the
+        // UI always has something useful to show. Without these
+        // fallbacks the failure banner was silently empty whenever the
+        // backend emitted a non-canonical shape (e.g. connect-failure
+        // events that historically used `error`).
+        const raw = e.content as unknown as Record<string, unknown>;
+        const reason =
+          (typeof raw.reason === "string" && raw.reason) ||
+          (typeof raw.error === "string" && raw.error) ||
+          (typeof raw.message === "string" && raw.message) ||
+          null;
+        if (reason) setFailReason(reason);
       }),
     ];
     return () => unsubs.forEach((u) => u());

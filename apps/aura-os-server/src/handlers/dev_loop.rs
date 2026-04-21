@@ -81,6 +81,24 @@ fn emit_domain_event(
     let _ = broadcast_tx.send(event);
 }
 
+/// Extract a user-facing failure reason from a harness event payload.
+///
+/// The harness conventionally emits `task_failed` events with a `reason`
+/// field, but older/synthetic events may only carry `error` or `message`.
+/// This helper normalises those so every code path can produce a non-empty
+/// reason string whenever possible.
+fn extract_failure_reason(event: &serde_json::Value) -> Option<String> {
+    for key in ["reason", "error", "message"] {
+        if let Some(value) = event.get(key).and_then(|v| v.as_str()) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+    None
+}
+
 fn is_work_event_type(event_type: &str) -> bool {
     matches!(
         event_type,
@@ -609,6 +627,33 @@ struct ForwardParams {
     usage_reporting: Option<UsageReportingContext>,
     router_url: String,
     http_client: reqwest::Client,
+    /// When set, the forward loop can restart the automaton once on an
+    /// infra-transient failure (stream closed without a terminal event, or
+    /// an `error` event with no accompanying `task_failed`). Consumed on use.
+    retry: Option<TransientRetryContext>,
+    /// Cleared (`store(false)`) when the forwarder terminates for any
+    /// reason. `start_loop` reads this on adoption to detect whether a
+    /// live forwarder is already attached to the active automaton and
+    /// can therefore be reused instead of spawning a duplicate.
+    alive: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+/// RAII guard that flips the shared `alive` flag to `false` when the
+/// forwarder task returns. Covers every exit path (normal end, stream
+/// close, `break`/`return`, or panic-induced drop) so callers never
+/// observe a stale "alive" marker for a dead forwarder.
+struct ForwarderAliveGuard(std::sync::Arc<std::sync::atomic::AtomicBool>);
+
+impl Drop for ForwarderAliveGuard {
+    fn drop(&mut self) {
+        self.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+#[derive(Clone)]
+struct TransientRetryContext {
+    automaton_client: std::sync::Arc<aura_os_link::AutomatonClient>,
+    start_params: AutomatonStartParams,
 }
 
 async fn resolve_active_task_id(
@@ -642,11 +687,81 @@ async fn resolve_active_task_id(
         .map(|t| t.task_id.to_string())
 }
 
+/// Emit a synthetic `task_failed` domain event and mirror the failure into
+/// storage so it survives a page reload.
+///
+/// Used when the automaton stream ends without a proper terminal event
+/// (e.g. broadcast closed mid-run, harness-level `error` event with no
+/// following `task_failed`, or HTTP connect failure). The UI hook
+/// `useTaskStatus` reads `content.reason`, which is guaranteed to be
+/// populated on this path.
+async fn synthesize_task_failed(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    storage_client: Option<&std::sync::Arc<aura_os_storage::StorageClient>>,
+    jwt: Option<&str>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    reason: &str,
+) {
+    persist_task_failure_reason(storage_client, jwt, task_id, reason).await;
+    emit_domain_event(
+        app_broadcast,
+        "task_failed",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({
+            "task_id": task_id.to_string(),
+            "reason": reason,
+        }),
+    );
+}
+
+/// Restart the automaton once after an infra-transient failure and
+/// re-subscribe to its event stream.
+///
+/// Emits a `task_retrying` domain event before the restart so the UI can
+/// surface the retry. Returns the new broadcast sender on success, or an
+/// error message the caller can surface as part of the failure reason.
+async fn try_restart_automaton(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    reason: &str,
+    ctx: &TransientRetryContext,
+) -> Result<tokio::sync::broadcast::Sender<serde_json::Value>, String> {
+    emit_domain_event(
+        app_broadcast,
+        "task_retrying",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({
+            "task_id": task_id.to_string(),
+            "reason": reason,
+        }),
+    );
+    let result = ctx
+        .automaton_client
+        .start(ctx.start_params.clone())
+        .await
+        .map_err(|e| format!("automaton start failed: {e}"))?;
+    let tx = connect_with_retries(
+        ctx.automaton_client.as_ref(),
+        &result.automaton_id,
+        &result.event_stream_url,
+        2,
+    )
+    .await
+    .map_err(|e| format!("event stream reconnect failed: {e}"))?;
+    Ok(tx)
+}
+
 /// Forward automaton events from the harness WebSocket to the app's global
 /// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
 /// Also accumulates task output in the in-memory cache and persists to storage
 /// on task completion.
-fn forward_automaton_events(params: ForwardParams) {
+fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
     let ForwardParams {
         automaton_events_tx,
         app_broadcast,
@@ -664,18 +779,37 @@ fn forward_automaton_events(params: ForwardParams) {
         usage_reporting,
         router_url,
         http_client,
+        retry,
+        alive,
     } = params;
 
-    let mut rx = automaton_events_tx.subscribe();
+    let rx = automaton_events_tx.subscribe();
     let pid = project_id.to_string();
     let aiid = agent_instance_id.to_string();
     let current_session_id = session_id;
     let current_session_id_string = current_session_id.map(|id| id.to_string());
+    alive.store(true, std::sync::atomic::Ordering::SeqCst);
 
-    tokio::spawn(async move {
+    let handle = tokio::spawn(async move {
+        // Clears the shared `alive` flag on every exit path (normal
+        // `break`, stream close, abort, or panic-induced drop) so
+        // `start_loop` never sees a stale "alive" marker for a dead
+        // forwarder.
+        let _alive_guard = ForwarderAliveGuard(alive);
+        // Re-bind as mutable inside the async block so we can both
+        // `rx.recv().await` (needs &mut self) and swap in a fresh
+        // subscription on retry.
+        let mut rx = rx;
         let mut first_work_seen = false;
         let mut current_task_id: Option<String> = task_id;
         let mut session_status = "completed";
+        // Tracks whether we've seen a terminal automaton event
+        // (`task_completed`, `task_failed`, or `done`). If the broadcast
+        // closes without one, we synthesise a `task_failed` with a real
+        // reason so the UI and DB never get left in a limbo state.
+        let mut terminal_seen = false;
+        // Retry context is consumed on the first infra-transient failure.
+        let mut retry = retry;
         let clear_active_automaton =
             |registry: AutomatonRegistry,
              project_id: ProjectId,
@@ -691,7 +825,7 @@ fn forward_automaton_events(params: ForwardParams) {
 
         loop {
             match rx.recv().await {
-                Ok(event) => {
+                Ok(mut event) => {
                     let event_type = event
                         .get("type")
                         .and_then(|t| t.as_str())
@@ -969,6 +1103,7 @@ fn forward_automaton_events(params: ForwardParams) {
 
                     let mapped_type = match event_type {
                         "task_completed" => {
+                            terminal_seen = true;
                             // Persist accumulated output to storage.
                             let event_tid = event
                                 .get("task_id")
@@ -1040,11 +1175,17 @@ fn forward_automaton_events(params: ForwardParams) {
                         }
                         "task_failed" => {
                             session_status = "failed";
+                            terminal_seen = true;
                             let event_tid = event
                                 .get("task_id")
                                 .and_then(|v| v.as_str())
                                 .map(str::to_owned);
                             let tid = current_task_id.clone().or(event_tid);
+                            // Extract a user-facing reason from the event so
+                            // we can both persist it to the task record (for
+                            // page reloads) and surface it on the live
+                            // `task_failed` broadcast below.
+                            let failure_reason = extract_failure_reason(&event);
                             if let Some(ref tid) = tid {
                                 let session_id = event
                                     .get("session_id")
@@ -1071,7 +1212,7 @@ fn forward_automaton_events(params: ForwardParams) {
                                         description: None,
                                         order_index: None,
                                         dependency_ids: None,
-                                        execution_notes: None,
+                                        execution_notes: failure_reason.clone(),
                                         files_changed: (!cached.files_changed.is_empty())
                                             .then_some(cached.files_changed.clone()),
                                         model: cached.model.clone(),
@@ -1106,9 +1247,56 @@ fn forward_automaton_events(params: ForwardParams) {
                                     }
                                 }
                             }
+                            // Normalize the broadcast payload: ensure
+                            // `reason` is always populated so the UI's
+                            // `useTaskStatus` hook can display it.
+                            if let (Some(reason), Some(obj)) =
+                                (failure_reason.as_ref(), event.as_object_mut())
+                            {
+                                if obj
+                                    .get("reason")
+                                    .and_then(|v| v.as_str())
+                                    .map(str::trim)
+                                    .map(str::is_empty)
+                                    .unwrap_or(true)
+                                {
+                                    obj.insert(
+                                        "reason".into(),
+                                        serde_json::Value::String(reason.clone()),
+                                    );
+                                }
+                            }
                             Some("task_failed")
                         }
                         "done" => {
+                            // If the stream emits `done` without a
+                            // preceding `task_completed`/`task_failed`
+                            // (e.g. the harness loop stopped for any
+                            // other reason mid-task), surface that to the
+                            // UI so the task is not left stuck in
+                            // `in_progress` with a live
+                            // "Putting it all together..." indicator.
+                            if !terminal_seen {
+                                if let Some(tid) = current_task_id.clone() {
+                                    synthesize_task_failed(
+                                        &app_broadcast,
+                                        storage_client.as_ref(),
+                                        jwt.as_deref(),
+                                        project_id,
+                                        agent_instance_id,
+                                        &tid,
+                                        "Automaton finished without emitting task_completed",
+                                    )
+                                    .await;
+                                    session_status = "failed";
+                                }
+                            }
+                            terminal_seen = true;
+                            // `terminal_seen` is not observed after this
+                            // `break`, but we leave the assignment for
+                            // future-proofing in case the post-break
+                            // cleanup ever reads it.
+                            let _ = terminal_seen;
                             clear_active_automaton(
                                 automaton_registry.clone(),
                                 project_id,
@@ -1150,6 +1338,77 @@ fn forward_automaton_events(params: ForwardParams) {
                                 serde_json::json!({}),
                             );
                             break;
+                        }
+                        "error" => {
+                            // Harness-level error event. If no `task_failed`
+                            // follows, this would otherwise vanish into the
+                            // UI without any explanation. Either retry once
+                            // (for run_single_task) or synthesise a
+                            // `task_failed` with the error text as the
+                            // reason.
+                            let reason = extract_failure_reason(&event).unwrap_or_else(|| {
+                                "Automaton reported an error".to_string()
+                            });
+                            session_status = "failed";
+                            if let Some(tid) = current_task_id.clone() {
+                                if let Some(ctx) = retry.take() {
+                                    match try_restart_automaton(
+                                        &app_broadcast,
+                                        project_id,
+                                        agent_instance_id,
+                                        &tid,
+                                        &reason,
+                                        &ctx,
+                                    )
+                                    .await
+                                    {
+                                        Ok(new_tx) => {
+                                            rx = new_tx.subscribe();
+                                            // Retry cleared the terminal
+                                            // state for the next attempt.
+                                            terminal_seen = false;
+                                            session_status = "completed";
+                                            continue;
+                                        }
+                                        Err(restart_err) => {
+                                            warn!(
+                                                task_id = %tid, %restart_err,
+                                                "Automaton restart after error failed; marking task failed"
+                                            );
+                                            let combined = format!(
+                                                "{reason} (retry failed: {restart_err})"
+                                            );
+                                            terminal_seen = true;
+                                            synthesize_task_failed(
+                                                &app_broadcast,
+                                                storage_client.as_ref(),
+                                                jwt.as_deref(),
+                                                project_id,
+                                                agent_instance_id,
+                                                &tid,
+                                                &combined,
+                                            )
+                                            .await;
+                                        }
+                                    }
+                                } else {
+                                    terminal_seen = true;
+                                    synthesize_task_failed(
+                                        &app_broadcast,
+                                        storage_client.as_ref(),
+                                        jwt.as_deref(),
+                                        project_id,
+                                        agent_instance_id,
+                                        &tid,
+                                        &reason,
+                                    )
+                                    .await;
+                                }
+                            }
+                            // Skip the default forwarding — we've already
+                            // broadcast a well-formed `task_failed` (or are
+                            // retrying silently).
+                            continue;
                         }
                         "paused" => {
                             let mut reg = automaton_registry.lock().await;
@@ -1227,6 +1486,64 @@ fn forward_automaton_events(params: ForwardParams) {
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    // The harness event stream disconnected. If we never
+                    // saw a terminal event for the active task, that leaves
+                    // the UI stuck on a live streaming indicator and the
+                    // task in `in_progress` forever. Either retry once or
+                    // synthesise a `task_failed` with a real reason.
+                    if !terminal_seen {
+                        if let Some(tid) = current_task_id.clone() {
+                            if let Some(ctx) = retry.take() {
+                                match try_restart_automaton(
+                                    &app_broadcast,
+                                    project_id,
+                                    agent_instance_id,
+                                    &tid,
+                                    "Automaton event stream closed before the task finished",
+                                    &ctx,
+                                )
+                                .await
+                                {
+                                    Ok(new_tx) => {
+                                        rx = new_tx.subscribe();
+                                        session_status = "completed";
+                                        continue;
+                                    }
+                                    Err(restart_err) => {
+                                        warn!(
+                                            task_id = %tid, %restart_err,
+                                            "Automaton restart after stream close failed; marking task failed"
+                                        );
+                                        let reason = format!(
+                                            "Automaton event stream closed before the task finished (retry failed: {restart_err})"
+                                        );
+                                        synthesize_task_failed(
+                                            &app_broadcast,
+                                            storage_client.as_ref(),
+                                            jwt.as_deref(),
+                                            project_id,
+                                            agent_instance_id,
+                                            &tid,
+                                            &reason,
+                                        )
+                                        .await;
+                                    }
+                                }
+                            } else {
+                                synthesize_task_failed(
+                                    &app_broadcast,
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    project_id,
+                                    agent_instance_id,
+                                    &tid,
+                                    "Automaton event stream closed before the task finished",
+                                )
+                                .await;
+                            }
+                            session_status = "failed";
+                        }
+                    }
                     clear_active_automaton(
                         automaton_registry.clone(),
                         project_id,
@@ -1273,6 +1590,8 @@ fn forward_automaton_events(params: ForwardParams) {
             }
         }
     });
+
+    handle.abort_handle()
 }
 
 pub(crate) async fn start_loop(
@@ -1362,11 +1681,7 @@ pub(crate) async fn start_loop(
     {
         Some((jwt, org_id)) => {
             let mut tools = installed_workspace_app_tools(&state, org_id, jwt).await;
-            dedupe_and_log_installed_tools(
-                "dev_loop_start",
-                &project_id.to_string(),
-                &mut tools,
-            );
+            dedupe_and_log_installed_tools("dev_loop_start", &project_id.to_string(), &mut tools);
             (!tools.is_empty()).then_some(tools)
         }
         None => None,
@@ -1528,6 +1843,73 @@ pub(crate) async fn start_loop(
         "Dev loop automaton ready"
     );
 
+    // Single-flight the forwarder per agent instance.
+    //
+    // The adopt path fires whenever the harness reports a `Conflict` on
+    // start — which happens on every legitimate idempotent re-click of the
+    // Run button while the automaton is still running. Without this guard
+    // each re-click spawns another `forward_automaton_events` task that
+    // subscribes to the same harness broadcast, so a single `tool_use_start`
+    // event ends up being forwarded N times to `state.event_broadcast` and
+    // fans out N duplicate tool cards on the client.
+    //
+    // Reuse the existing forwarder iff we adopted the same automaton id and
+    // its forwarder is still alive. Otherwise abort the stale handle below
+    // and let the fresh spawn replace it.
+    if adopted {
+        let reuse = {
+            let reg = state.automaton_registry.lock().await;
+            reg.get(&agent_instance_id)
+                .map(|entry| {
+                    entry.automaton_id == automaton_id
+                        && entry.alive.load(std::sync::atomic::Ordering::SeqCst)
+                })
+                .unwrap_or(false)
+        };
+        if reuse {
+            info!(
+                %project_id, %agent_instance_id, %automaton_id,
+                "Reusing existing forwarder for adopted automaton; skipping duplicate spawn"
+            );
+            emit_domain_event(
+                &state.event_broadcast,
+                "loop_started",
+                project_id,
+                agent_instance_id,
+                serde_json::json!({
+                    "automaton_id": &automaton_id,
+                    "adopted": true,
+                    "reused": true,
+                }),
+            );
+            let active_agent_instances = active_instances(&state, project_id).await;
+            return Ok((
+                StatusCode::OK,
+                Json(LoopStatusResponse {
+                    running: true,
+                    paused: false,
+                    project_id: Some(project_id),
+                    agent_instance_id: Some(agent_instance_id),
+                    active_agent_instances: Some(active_agent_instances),
+                }),
+            ));
+        }
+    }
+
+    // Replace any stale registry entry (e.g. forwarder terminated but
+    // registry cleanup lost a race, or the adopted automaton id changed).
+    // Aborting the old `AbortHandle` proactively is defensive: the `alive`
+    // flag should already be false in practice, but cancelling the task
+    // guarantees we can't leak a second subscriber against the broadcast.
+    {
+        let reg = state.automaton_registry.lock().await;
+        if let Some(stale) = reg.get(&agent_instance_id) {
+            if let Some(handle) = stale.forwarder.as_ref() {
+                handle.abort();
+            }
+        }
+    }
+
     let events_tx = match automaton_client
         .connect_event_stream(&automaton_id, event_stream_url.as_deref())
         .await
@@ -1609,7 +1991,15 @@ pub(crate) async fn start_loop(
         );
     }
 
-    forward_automaton_events(ForwardParams {
+    // Share one `Arc<AtomicBool>` between the forwarder task and the
+    // registry entry so the `ForwarderAliveGuard` drop in the task
+    // directly flips the flag that `start_loop`'s single-flight check
+    // reads. Also capture the `AbortHandle` so `stop_loop` / a stale-
+    // entry replacement in a later `start_loop` can proactively cancel
+    // the forwarder instead of waiting for the harness broadcast to
+    // close on its own.
+    let forwarder_alive = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let forwarder_handle = forward_automaton_events(ForwardParams {
         automaton_events_tx: events_tx,
         app_broadcast: state.event_broadcast.clone(),
         automaton_registry: state.automaton_registry.clone(),
@@ -1626,6 +2016,10 @@ pub(crate) async fn start_loop(
         usage_reporting,
         router_url: state.agent_runtime.router_url.clone(),
         http_client: state.agent_runtime.http_client.clone(),
+        // Dev loop already handles retries via its own task scheduler; the
+        // outer loop will pick the task up again if it was reset.
+        retry: None,
+        alive: forwarder_alive.clone(),
     });
 
     emit_domain_event(
@@ -1654,6 +2048,8 @@ pub(crate) async fn start_loop(
                 project_id,
                 harness_base_url: automaton_client.base_url().to_string(),
                 paused: false,
+                alive: forwarder_alive,
+                forwarder: Some(forwarder_handle),
             },
         );
     }
@@ -1789,7 +2185,14 @@ pub(crate) async fn stop_loop(
         }
         {
             let mut reg = state.automaton_registry.lock().await;
-            reg.remove(aiid);
+            // Abort the forwarder task before dropping the registry entry
+            // so we don't leak a subscriber against the harness broadcast
+            // after the automaton has been told to stop.
+            if let Some(entry) = reg.remove(aiid) {
+                if let Some(handle) = entry.forwarder {
+                    handle.abort();
+                }
+            }
         }
         emit_domain_event(
             &state.event_broadcast,
@@ -1984,11 +2387,7 @@ pub(crate) async fn run_single_task(
     {
         Some((jwt, org_id)) => {
             let mut tools = installed_workspace_app_tools(&state, org_id, jwt).await;
-            dedupe_and_log_installed_tools(
-                "dev_loop_task",
-                &task_id.to_string(),
-                &mut tools,
-            );
+            dedupe_and_log_installed_tools("dev_loop_task", &task_id.to_string(), &mut tools);
             (!tools.is_empty()).then_some(tools)
         }
         None => None,
@@ -2005,18 +2404,19 @@ pub(crate) async fn run_single_task(
         }
         None => None,
     };
+    let start_params = AutomatonStartParams {
+        project_id: project_id.to_string(),
+        auth_token: jwt,
+        model: selected_model.clone(),
+        workspace_root: Some(project_path),
+        task_id: Some(task_id.to_string()),
+        git_repo_url: resolve_git_repo_url(project.as_ref()),
+        git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
+        installed_tools,
+        installed_integrations,
+    };
     let result = automaton_client
-        .start(AutomatonStartParams {
-            project_id: project_id.to_string(),
-            auth_token: jwt,
-            model: selected_model.clone(),
-            workspace_root: Some(project_path),
-            task_id: Some(task_id.to_string()),
-            git_repo_url: resolve_git_repo_url(project.as_ref()),
-            git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
-            installed_tools,
-            installed_integrations,
-        })
+        .start(start_params.clone())
         .await
         .map_err(|e| match e {
             AutomatonStartError::Conflict(_) => {
@@ -2082,7 +2482,13 @@ pub(crate) async fn run_single_task(
     }
 
     if let Some(events_tx) = events_tx {
-        forward_automaton_events(ForwardParams {
+        // `run_single_task` does not insert into `state.automaton_registry`
+        // (single-task runs use unique agent instance ids and manage their
+        // own lifecycle). The returned `AbortHandle` is intentionally
+        // dropped — the forwarder self-terminates on `task_completed` /
+        // `task_failed` / stream close, and there is no corresponding
+        // stop-loop path that needs to cancel it externally.
+        let _ = forward_automaton_events(ForwardParams {
             automaton_events_tx: events_tx,
             app_broadcast: state.event_broadcast.clone(),
             automaton_registry: state.automaton_registry.clone(),
@@ -2099,6 +2505,16 @@ pub(crate) async fn run_single_task(
             usage_reporting,
             router_url: state.agent_runtime.router_url.clone(),
             http_client: state.agent_runtime.http_client.clone(),
+            // Allow one automatic restart of the automaton on infra-transient
+            // failures (stream closed without terminal event, or `error`
+            // event with no accompanying `task_failed`). We intentionally do
+            // not retry harness-reported `task_failed`, since the harness
+            // already runs its own build/test fix loop inside the task.
+            retry: Some(TransientRetryContext {
+                automaton_client: automaton_client.clone(),
+                start_params,
+            }),
+            alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         });
     } else {
         warn!(
@@ -2118,6 +2534,17 @@ pub(crate) async fn run_single_task(
             )
             .await;
         }
+        let reason = "Failed to connect to automaton event stream";
+        // Persist the reason so it survives a page reload. We intentionally
+        // persist before broadcasting so the UI sees consistent state if it
+        // refetches the task in response to the event.
+        persist_task_failure_reason(
+            state.storage_client.as_ref(),
+            jwt_for_persist.as_deref(),
+            &task_id.to_string(),
+            reason,
+        )
+        .await;
         emit_domain_event(
             &state.event_broadcast,
             "task_failed",
@@ -2125,12 +2552,47 @@ pub(crate) async fn run_single_task(
             agent_instance_id,
             serde_json::json!({
                 "task_id": task_id.to_string(),
-                "error": "Failed to connect to automaton event stream"
+                "reason": reason,
             }),
         );
     }
 
     Ok(StatusCode::ACCEPTED)
+}
+
+/// Persist a failure reason on the task so it survives page reloads.
+///
+/// Writes the reason into `execution_notes` and then transitions the task
+/// to `failed`. Both writes are best-effort: storage errors are logged but
+/// do not propagate, matching the behaviour of the event-loop handler.
+async fn persist_task_failure_reason(
+    storage_client: Option<&std::sync::Arc<aura_os_storage::StorageClient>>,
+    jwt: Option<&str>,
+    task_id: &str,
+    reason: &str,
+) {
+    let (Some(storage_client), Some(jwt)) = (storage_client, jwt) else {
+        return;
+    };
+    let update = aura_os_storage::UpdateTaskRequest {
+        execution_notes: Some(reason.to_string()),
+        ..Default::default()
+    };
+    if let Err(error) = storage_client.update_task(task_id, jwt, &update).await {
+        warn!(%task_id, %error, "Failed to persist task failure reason");
+    }
+    let transition = aura_os_storage::TransitionTaskRequest {
+        status: "failed".to_string(),
+    };
+    if let Err(error) = storage_client
+        .transition_task(task_id, jwt, &transition)
+        .await
+    {
+        warn!(
+            %task_id, %error,
+            "Failed to transition task to Failed after connect failure (may already be terminal)"
+        );
+    }
 }
 
 async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentInstanceId> {

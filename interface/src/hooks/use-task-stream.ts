@@ -12,7 +12,10 @@ import {
   resetStreamBuffers,
   finalizeStream,
 } from "./use-stream-core";
-import { getThinkingDurationMs } from "./stream/store";
+import {
+  acquireSharedStreamSubscriptions,
+  getThinkingDurationMs,
+} from "./stream/store";
 
 /**
  * Bridges global WebSocket task events into the shared stream store,
@@ -21,6 +24,17 @@ import { getThinkingDurationMs } from "./stream/store";
  * Pass `isActive` so the hook can eagerly set `isStreaming` when the task
  * is already in-progress on mount, avoiding the race where the
  * `TaskStarted` WS event fires before the subscription is registered.
+ *
+ * Subscription single-flighting: a single task (same `taskId`) is often
+ * rendered in multiple places concurrently (e.g. `TaskPreview` in the
+ * chat row AND `ActiveTaskStream` in the sidekick Run tab, or the two
+ * `ActiveTaskStream` branches inside `TaskOutputPanel`). Without a
+ * shared registry each mount independently subscribes to the same
+ * `EventType`s on the event store, and each callback writes into the
+ * same streamKey-scoped refs — so one backend `tool_use_start` produces
+ * N duplicate tool cards. We acquire/release a refcounted shared
+ * subscription set per streamKey so exactly one subscription per
+ * EventType is registered regardless of how many components mount.
  */
 export function useTaskStream(taskId: string | undefined, isActive?: boolean): { streamKey: string } {
   const { key, refs, setters, abortRef } = useStreamCore(["task", taskId]);
@@ -28,14 +42,35 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
   const isStreamingRef = useRef(false);
 
   useEffect(() => {
-    if (!taskId) return;
-
     if (isActive && !isStreamingRef.current) {
       setters.setIsStreaming(true);
       isStreamingRef.current = true;
     }
+  }, [isActive, setters]);
 
-    const unsubs = [
+  // Defensive finalize: if the task transitions out of an active state
+  // (typically because the canonical status became `done` or `failed`)
+  // while the streaming ref is still live, force-clear the streaming
+  // state. Without this, a server-side failure that fails to emit a
+  // `TaskFailed` WS event (e.g. stream closed, legacy synthetic
+  // payloads) leaves the UI stuck showing "Putting it all together..."
+  // indefinitely. The backend now also synthesizes proper `TaskFailed`
+  // events in those cases, but this guard stays as a belt-and-braces
+  // last line of defence against any remaining ways an indicator could
+  // get stuck.
+  useEffect(() => {
+    if (isActive) return;
+    if (!isStreamingRef.current) return;
+    finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
+      reason: "failed",
+    });
+    isStreamingRef.current = false;
+  }, [isActive, refs, setters, abortRef]);
+
+  useEffect(() => {
+    if (!taskId) return;
+
+    const release = acquireSharedStreamSubscriptions(key, () => [
       subscribe(EventType.TaskStarted, (e) => {
         if (e.content.task_id !== taskId) return;
         resetStreamBuffers(refs, setters);
@@ -197,10 +232,10 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
         });
         isStreamingRef.current = false;
       }),
-    ];
+    ]);
 
-    return () => unsubs.forEach((u) => u());
-  }, [taskId, isActive, key, refs, setters, abortRef, subscribe]);
+    return release;
+  }, [taskId, key, refs, setters, abortRef, subscribe]);
 
   return { streamKey: key };
 }
