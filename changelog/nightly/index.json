@@ -2,20 +2,20 @@
   {
     "date": "2026-04-20",
     "channel": "nightly",
-    "version": "0.1.0-nightly.319.1",
-    "title": "Agent permissions healed, sidekick gets sharper, tasks fail loudly",
-    "intro": "A dense nightly centered on making agent capabilities actually stick, tightening the sidekick's spec/task lifecycle, and hardening how long-running tasks report failure. Desktop gained a real in-app upgrade control, Notes picked up a dedicated table-of-contents panel, and release infrastructure got quieter on Android, Linux sidecar builds, and nightly reruns.",
+    "version": "0.1.0-nightly.320.1",
+    "title": "Agent capabilities stick, sidekick gets sharper, and desktop self-heals",
+    "intro": "A dense nightly: the agent permissions system was rebuilt end-to-end so capability toggles finally stay toggled, the sidekick gained inline rename and much tighter spec/task placeholder handling, Notes picked up a real Table of Contents and workspace-aware storage, and the desktop app learned to recover from stale loopback state. Release tooling also got a round of hardening across Android, Linux sidecar builds, and nightly re-runs.",
     "entryCount": 6,
     "highlights": [
-      "Capability toggles now autosave and survive restarts",
-      "Desktop Settings has a first-class upgrade control",
-      "Tasks surface real failure reasons and auto-retry transient infra blips",
-      "Sidekick specs/tasks support inline rename and no longer duplicate",
-      "Android, Linux sidecar, and nightly rerun pipelines fail loudly instead of silently"
+      "Capability toggles now persist across saves, restarts, and renames",
+      "Inline rename and robust placeholder dedupe in the sidekick",
+      "Notes gains a real TOC panel and follows the project workspace",
+      "Desktop self-heals stale loopback control-plane overrides",
+      "Nightly release pipeline hardened for Android, Linux sidecar, and reruns"
     ],
-    "rawCommitCount": 64,
-    "generatedAt": "2026-04-21T04:46:43.359Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.319.1",
+    "rawCommitCount": 65,
+    "generatedAt": "2026-04-21T05:07:35.174Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.320.1",
     "path": "history/2026-04-20.json"
   },
   {

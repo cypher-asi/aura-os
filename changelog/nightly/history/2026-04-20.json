@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-21T04:46:43.359Z",
+  "generatedAt": "2026-04-21T05:07:35.174Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.319.1",
+  "version": "0.1.0-nightly.320.1",
   "date": "2026-04-20",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.319.1",
-  "lastIncludedSha": "a02f6d6d5b33d7987136b727f2249f6fea977813",
-  "previousProcessedSha": "1b37b3c1e20aa77e9f0d92438473ac8d29cfb3e5",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.320.1",
+  "lastIncludedSha": "fd6b0c51d9c1ea4fe99a26c7615299238fe366ea",
+  "previousProcessedSha": "a02f6d6d5b33d7987136b727f2249f6fea977813",
   "commitShas": [
     "823c16d891fa4d5540662bddc2768408f45d76f5",
     "73b0ecb3ee9cd374e17896cf9541d518aeafe560",
@@ -74,10 +74,11 @@
     "b5877f18de843babcd36b6ef1ea3c14c062ca83b",
     "2150fbccf68444e9cf52150ba3e466bb50a848df",
     "0ae6c5cd52b2223140e23657652992eb99ad125b",
-    "a02f6d6d5b33d7987136b727f2249f6fea977813"
+    "a02f6d6d5b33d7987136b727f2249f6fea977813",
+    "fd6b0c51d9c1ea4fe99a26c7615299238fe366ea"
   ],
-  "rawCommitCount": 64,
-  "filteredCommitCount": 63,
+  "rawCommitCount": 65,
+  "filteredCommitCount": 64,
   "rawCommits": [
     {
       "sha": "823c16d891fa4d5540662bddc2768408f45d76f5",
@@ -2912,6 +2913,65 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "fd6b0c51d9c1ea4fe99a26c7615299238fe366ea",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-21T00:55:20-04:00",
+      "subject": "ci: clarify release workflow names and mobile distribution paths",
+      "body": "",
+      "parents": [
+        "a02f6d6d5b33d7987136b727f2249f6fea977813"
+      ],
+      "files": [
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/publish-release-changelog.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "README.md",
+        "docs/release-workflows.md"
+      ],
+      "stats": {
+        "fileCount": 10,
+        "insertions": 82,
+        "deletions": 47
+      },
+      "committedAtMs": 1776747320000,
+      "cleanSubject": "clarify release workflow names and mobile distribution paths",
+      "keywords": [
+        "clarify",
+        "release",
+        "workflow",
+        "names",
+        "mobile",
+        "distribution",
+        "paths"
+      ],
+      "fileGroups": [
+        ".github/workflows/android-mobile.yml",
+        ".github/workflows/aura-evals.yml",
+        ".github/workflows/desktop-validate.yml",
+        ".github/workflows/ios-mobile.yml",
+        ".github/workflows/publish-release-changelog.yml",
+        ".github/workflows/release-mobile-nightly.yml",
+        ".github/workflows/release-nightly.yml",
+        ".github/workflows/release-stable.yml",
+        "README.md",
+        "docs/release-workflows.md"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Docs",
+        "Other"
+      ]
     }
   ],
   "batchCount": 6,
@@ -2923,36 +2983,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 5136423
+          "sizeBytes": 5136387
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.319.1",
+      "version": "0.1.0-nightly.320.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 28367528
+          "sizeBytes": 28367412
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 95644152
+          "sizeBytes": 95652344
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -2962,29 +3022,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.319.1",
+      "version": "0.1.0-nightly.320.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.319.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.320.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 24710100
+          "sizeBytes": 24707972
         },
         {
-          "name": "Aura_0.1.0-nightly.319.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.320.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 24514256
+          "sizeBytes": 24512247
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2994,29 +3054,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.319.1",
+      "version": "0.1.0-nightly.320.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.319.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.320.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 26354934
+          "sizeBytes": 26354239
         },
         {
-          "name": "Aura_0.1.0-nightly.319.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.320.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 26200324
+          "sizeBytes": 26199878
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -3026,17 +3086,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.319.1",
+      "version": "0.1.0-nightly.320.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 17124127
+          "sizeBytes": 17120099
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.319.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.320.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -3045,66 +3105,36 @@
     }
   ],
   "rendered": {
-    "title": "Agent permissions healed, sidekick gets sharper, tasks fail loudly",
-    "intro": "A dense nightly centered on making agent capabilities actually stick, tightening the sidekick's spec/task lifecycle, and hardening how long-running tasks report failure. Desktop gained a real in-app upgrade control, Notes picked up a dedicated table-of-contents panel, and release infrastructure got quieter on Android, Linux sidecar builds, and nightly reruns.",
+    "title": "Agent capabilities stick, sidekick gets sharper, and desktop self-heals",
+    "intro": "A dense nightly: the agent permissions system was rebuilt end-to-end so capability toggles finally stay toggled, the sidekick gained inline rename and much tighter spec/task placeholder handling, Notes picked up a real Table of Contents and workspace-aware storage, and the desktop app learned to recover from stale loopback state. Release tooling also got a round of hardening across Android, Linux sidecar builds, and nightly re-runs.",
     "entries": [
       {
         "time_label": "9:29 PM",
         "started_at": "2026-04-20T04:29:16.000Z",
-        "ended_at": "2026-04-21T01:48:01.000Z",
-        "title": "Agent capabilities that finally stick across saves and restarts",
-        "summary": "A day-long thread of fixes unifies tool permissions behind a single capability-aware registry and ensures UI toggles actually take effect for CEO and regular agents alike.",
+        "ended_at": "2026-04-21T04:00:44.000Z",
+        "title": "Agent permissions, chat polish, and the in-app updater",
+        "summary": "A sweeping evening pass rebuilt how agents see their own capabilities, smoothed out the chat and sidekick experience, and added a first-class upgrade control inside Settings.",
         "items": [
           {
-            "text": "Collapsed the old tier-1/tier-2 + CEO short-circuit logic into one capability-aware tool registry, with every tool declaring a Surface and new ReadAllProjects/WriteAllProjects wildcards routing CEO and non-CEO sessions through the same filter — restoring list_agents, send_to_agent, and list_agent_instances in live CEO sessions.",
+            "text": "Rebuilt the agent tool system around a single capability-aware registry: every tool now declares a Surface, CEO and non-CEO agents flow through the same permission pipeline, and missing tools like list_agents, send_to_agent, and list_agent_instances are back in CEO sessions. Toggling capabilities now invalidates live sessions and the dispatcher cache so changes take effect on the next turn without a restart.",
             "commit_shas": [
-              "2a7ac33dd515f076b73cd42465a220e272cba3f1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Capability toggles now apply without a server restart: update_agent invalidates every session owned by the agent (direct and project-instance), reads fresh parent caps per chat turn, and guards against aura-network PUT/GET responses that drop the permissions column from wiping the user's saved toggles.",
-            "commit_shas": [
+              "2a7ac33dd515f076b73cd42465a220e272cba3f1",
               "76b34a666582d023b55a8345ed7a37a9dcd1f0a8",
-              "9f9784b3044509ad7e4c33e0af645c4b8b4078b9",
-              "5c5c5658ca43480ebdaa9720017658b58521af2c"
+              "9f9784b3044509ad7e4c33e0af645c4b8b4078b9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Replaced the Permissions tab's Save/Discard bar with autosave (~350ms debounce), an inline Saving/Saved/Save-failed pill with Retry, and a flush-on-unmount so pending edits can't be dropped when switching agents.",
+            "text": "Fixed the long-standing 'capabilities revert after save or restart' bug: the GET path now reconciles permissions against the local shadow when aura-network drops the column, shadow writes refuse to overwrite a non-empty bundle with an empty one, and renaming the CEO SuperAgent no longer strips its preset. The Permissions tab also switched to autosave with an inline status pill replacing the Save/Discard bar.",
             "commit_shas": [
-              "7f67bdf8d748ae0805dfec55f11f51861929df85"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Renaming the CEO SuperAgent or editing its system prompt no longer strips its preset: update_agent reconciles permissions with the local shadow, save_agent_shadow refuses to overwrite a non-empty bundle with an empty one, and the canonical CEO agent_id is stamped at setup for last-resort identity repair.",
-            "commit_shas": [
+              "5c5c5658ca43480ebdaa9720017658b58521af2c",
+              "7f67bdf8d748ae0805dfec55f11f51861929df85",
               "2dabef61a9b0cbbf0ba5c116230161b700ae8e56"
             ],
             "confidence": "high"
           },
           {
-            "text": "Deleting a user-authored skill is now blocked with a 409 and an inline blocker list in the confirm modal while any other local agent still has it installed, and the catalog proxy hides skills whose SKILL.md is gone so stale entries stop reappearing under Available.",
-            "commit_shas": [
-              "73b0ecb3ee9cd374e17896cf9541d518aeafe560"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Cold-boot chat feels noticeably snappier: chat history persists to IndexedDB for instant paint on reload, per-session event reads fan out in parallel bounded by the target window, project-agent discovery is cached with a 30s TTL, and the /agents route drops its lazy import and agent-list gate.",
-            "commit_shas": [
-              "588bdf34b8bd4b6310ab064aa865fa4315ec0f50",
-              "1e7986cdb96c66efd8bccf2eeac422bc32747d51",
-              "3cfc04de1ebd632afc4aabc1c87184ffa5fb8aaf",
-              "6f149de38b2e62c40c802479629eaffc37d9cd9b",
-              "2b051764ba9d734669790bd0ad6fa2468837a8c9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop Settings and Team Settings now carry a shared UpdateControl that shows whether you're on the latest version and lets users check for, download, and install updates, with a server-managed fallback on the web.",
+            "text": "Added an in-app update control beneath the Settings Version row and in Team Settings > General, letting desktop users check for, download, and install updates with clear progress and failure states; the web build shows a 'managed by the server' fallback.",
             "commit_shas": [
               "267eb963fd99798f7fdbba9c540ad7ddefd6e3be",
               "6b6910ca6569a49901f529cc1ebeec28e28994e3",
@@ -3115,7 +3145,25 @@
             "confidence": "high"
           },
           {
-            "text": "Notes gets a dedicated Table of Contents panel with scroll-to-heading, split Created at/by rows, Tab/Shift-Tab list indent, Enter-to-exit-codeblock, and server-side note storage that follows a project's Local workspace path with one-time migration of legacy slug folders.",
+            "text": "Reworked the Skills delete flow so a skill still installed on another agent is refused with a 409 and an inline blocker list, and stale catalog entries whose SKILL.md has been removed no longer reappear under Available.",
+            "commit_shas": [
+              "73b0ecb3ee9cd374e17896cf9541d518aeafe560"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Made chat cold-boot noticeably faster: history fetches now fan out per session with a bounded window, project-agent discovery is cached with a short TTL, the agents sidebar preview defers and deprioritizes on cold boot, the /agents route no longer double-waterfalls on a lazy chunk plus list fetch, and chat history hydrates instantly from IndexedDB on reload.",
+            "commit_shas": [
+              "1e7986cdb96c66efd8bccf2eeac422bc32747d51",
+              "3cfc04de1ebd632afc4aabc1c87184ffa5fb8aaf",
+              "2b051764ba9d734669790bd0ad6fa2468837a8c9",
+              "588bdf34b8bd4b6310ab064aa865fa4315ec0f50",
+              "6f149de38b2e62c40c802479629eaffc37d9cd9b"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Notes picked up a dedicated Table of Contents panel with click-to-scroll, split Created at / Created by rows, Tab/Shift-Tab list indent mid-word, Enter-out-of-codeblock behavior, and server-side storage that follows a project's local workspace path (with a one-time migration from the legacy slug folder).",
             "commit_shas": [
               "bf5bddc67dab521777416e30fbb6194797ff93a1",
               "e970128d0d94821eae86369f20b516d6963d5d65",
@@ -3126,106 +3174,83 @@
             "confidence": "high"
           },
           {
-            "text": "Chat input and sidekick polish: per-agent model memory survives restarts and cold-boot races, Kimi K2.6 is selectable, context usage updates live during streaming, duplicate thinking blocks collapse into one, trailing prose stays above tool cards, and the composer regains native caret-follow with overlay send/attach buttons.",
+            "text": "Chat streaming is cleaner and more trustworthy: context usage updates live during streaming, interleaved thinking deltas collapse into one block, trailing prose stays above tool cards while streaming, the model picker remembers the last model per agent (surviving cold-boot races), and Kimi K2.6 was added to the model list.",
             "commit_shas": [
-              "e4ce879e3ec58c21e8c8cf8326e0d92b50729d65",
-              "a4985979c9694d1af6ed3206926c258887c2dc47",
-              "1ddd779bb8322e84515c00e31d41b11355413a79",
               "8c7d948748f356d8a0311771ee5b25a1c8a7c072",
               "73f67d2496968bdcd93ca6984df892304454721f",
               "4489726e714fb99f2517c317fc75b0b3e6a3d97a",
-              "829bdc44342bfc6cc574e78e380ddd766989cf6f",
-              "5694c24cdaf4eb17d1a5d5f536ff8552338c4cca",
-              "2faa19e3d71cb8d78ce717398c38a6bc8201b5c0",
-              "3ed5676a5d02746e0e1f726de9b2bdd7391af70e"
+              "e4ce879e3ec58c21e8c8cf8326e0d92b50729d65",
+              "a4985979c9694d1af6ed3206926c258887c2dc47",
+              "1ddd779bb8322e84515c00e31d41b11355413a79"
             ],
             "confidence": "high"
           },
           {
-            "text": "Sidekick artifact pipeline is more honest: optimistic specs/tasks push at ToolUseStart with title-matched dedup so triplicate placeholders can't leak, deleted items drop out of the react-query layout cache so Kanban and mobile views update without a refresh, and file explorer shows a current-directory breadcrumb with gated auto-refresh.",
+            "text": "Hardened sidekick artifacts end-to-end: optimistic spec/task placeholders now fire at ToolUseStart, dedupe by title, clean up on stream abort/error/done, and deletes immediately remove items from every view by patching the project-layout cache. Run items are collapsible with auto-collapse on completion, and the Tasks icon spins during automation runs.",
             "commit_shas": [
               "47b2a6c29f1408b73b2d9995aafa4c39819a576a",
               "729e3200a7784cd155c30235f4dabc9f406656a0",
               "02db7b0ad5a9e75c5e480d6c8d12742c08bc4703",
-              "ce8e48bf608a59fdddfc0561fc06898c7bc9127c",
-              "f2756375aac5b5b2a1ef107c3091e1b87299e69f"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Long-running tasks now surface real failure reasons: the server normalizes reason/error/message, persists them to execution_notes, synthesizes task_failed on stream-closed or error events, and auto-restarts the automaton once on transient infra failures with a task_retrying event between attempts.",
-            "commit_shas": [
-              "64af31dc72c592516003a0fa92eb566ab808eb36"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Killed a silent QuotaExceededError storm from mirroring IDB writes into localStorage during long spec runs, and stopped polling dead remote agents forever by unregistering on 400/404/410.",
-            "commit_shas": [
-              "5a76ff112b2fc1e1a39adfc10f850b1d02601de9"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "CEO spec generation stops doubling output tokens: the prompt instructs the agent to pass full markdown only via markdown_contents and to emit one create_spec at a time, keeping multi-spec turns under the Anthropic proxy's per-minute output ceiling.",
-            "commit_shas": [
-              "4c16263f5e6fbe15452ff093a787c9e9b4ef65b4"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Release pipelines fail louder and recover better: Android ship/build jobs preflight every required fastlane secret in one pass, packaging retries transient failures, and nightly rerun versioning gets a stabilization pass with artifact-version validation.",
-            "commit_shas": [
-              "2cce56067f3e0d4b52536c8b548fe8ad61de201d",
-              "66ff7e7cd8bc010c71464d9e0c489cfe14b74f37",
-              "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "time_label": "6:52 PM",
-        "started_at": "2026-04-21T01:52:21.000Z",
-        "ended_at": "2026-04-21T04:00:44.000Z",
-        "title": "Duplicate stream events eliminated and desktop loopback self-heals",
-        "summary": "A tight cluster of reliability fixes for shared streams, desktop loopback overrides, and the updater sidecar staging path.",
-        "items": [
-          {
-            "text": "Shared task and process-node streams now register WebSocket handlers exactly once via a refcounted subscription registry, and the server-side dev-loop forwarder tracks liveness so 'adopt' can reuse a live forwarder instead of spawning duplicates — eliminating the N-copies-per-event fanout in chat and sidekick timelines.",
-            "commit_shas": [
-              "e2befbfff87f26df9b873f97d5d371a76a2bb1db"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop startup now strips stale AURA_SERVER_BASE_URL / VITE_API_URL overrides when the embedded server binds an ephemeral port, fixing the 'operation timed out' failures on send_to_agent loopback callbacks and adding a structured diagnostics line correlating bound port and resolved base URL.",
-            "commit_shas": [
-              "9b1a665cd4bd16e9f1c173f64c4cb14d7e139588"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Desktop updater now stages its sidecar outside the install tree so upgrades don't collide with the running binary layout.",
-            "commit_shas": [
-              "1b37b3c1e20aa77e9f0d92438473ac8d29cfb3e5"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Run-pane items are per-item collapsibles that auto-collapse when a task transitions from active to completed or failed, and the Tasks sidekick icon now spins during automation runs with Run reordered to sit immediately after Tasks.",
-            "commit_shas": [
+              "e2befbfff87f26df9b873f97d5d371a76a2bb1db",
               "d5d5710950102013780d87d1b6dcd5b5b41fce5c",
               "b1b00ab4e79026de02734398780a2cbd2daf3e7e"
             ],
             "confidence": "high"
           },
           {
-            "text": "Eval smoke CI gets hardened auth handling and retries so flaky runs stop masking real regressions.",
+            "text": "Task runs are more honest about failure: the server normalizes failure reasons into execution_notes, synthesizes a proper task_failed when the stream closes without a terminal event, and auto-retries once on infra-transient failures with a task_retrying event; the UI clears the streaming indicator defensively and surfaces the reason.",
             "commit_shas": [
+              "64af31dc72c592516003a0fa92eb566ab808eb36"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop now self-heals stale AURA_SERVER_BASE_URL / VITE_API_URL overrides on startup when the embedded server falls back to an ephemeral port, unblocking send_to_agent and other loopback calls that previously timed out on a closed port.",
+            "commit_shas": [
+              "9b1a665cd4bd16e9f1c173f64c4cb14d7e139588"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Stopped QuotaExceededError spam from long spec runs by making IndexedDB authoritative for chat history (no more localStorage write-through), and unregistered dead remote agents after 400/404/410 so the console no longer fills with repeating 404s.",
+            "commit_shas": [
+              "5a76ff112b2fc1e1a39adfc10f850b1d02601de9"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reduced spec-generation rate-limit failures by instructing CEO to pass full markdown only via markdown_contents (not duplicated as visible text) and to emit one create_spec call at a time for multi-spec turns.",
+            "commit_shas": [
+              "4c16263f5e6fbe15452ff093a787c9e9b4ef65b4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Small but visible polish: chat input scrolls internally at max height with floating attach/send buttons, sent doc/long-text widgets drop the bubble chrome, preview panels wrap code and tables instead of side-scrolling, the files sidekick shows a path breadcrumb with 3s visibility-gated refresh, and project drag-reorder is now shared across Tasks, Notes, and Process.",
+            "commit_shas": [
+              "829bdc44342bfc6cc574e78e380ddd766989cf6f",
+              "2faa19e3d71cb8d78ce717398c38a6bc8201b5c0",
+              "5694c24cdaf4eb17d1a5d5f536ff8552338c4cca",
+              "3ed5676a5d02746e0e1f726de9b2bdd7391af70e",
+              "09ad20dbc933803d61dbd6ad707edbd859d05b47",
+              "c3f97cc46b77fdc7e186561edd53201b413c6664",
+              "a17483deb9c159745d06503c46e7791127f65e07",
+              "ce8e48bf608a59fdddfc0561fc06898c7bc9127c",
+              "f2756375aac5b5b2a1ef107c3091e1b87299e69f",
+              "8f424c3ac6439f14d471b919211a995427cdaed2",
+              "40b94cbb42a64741774a08eadeb1222707a614ff"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Release pipeline got more resilient: Android ship jobs now preflight every required fastlane secret in one pass, transient packaging steps retry on both nightly and stable desktop builds, and nightly re-runs use stabilized artifact versioning. Eval smoke CI auth and retries were also hardened.",
+            "commit_shas": [
+              "2cce56067f3e0d4b52536c8b548fe8ad61de201d",
+              "66ff7e7cd8bc010c71464d9e0c489cfe14b74f37",
+              "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c",
               "e1ab35f9770729bb0f5bb9e4214eeebc68d9f884"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       },
@@ -3233,11 +3258,11 @@
         "time_label": "9:01 PM",
         "started_at": "2026-04-21T04:01:39.000Z",
         "ended_at": "2026-04-21T04:01:39.000Z",
-        "title": "Task completion notes and changed-files are actually persisted",
-        "summary": "A small but important correctness fix for the task service.",
+        "title": "Task execution notes and file changes now persist",
+        "summary": "A small but meaningful fix so task metadata actually survives session end.",
         "items": [
           {
-            "text": "complete_task and fail_task now write execution_notes and files_changed back through StorageClient after the status transition, so those fields survive session end instead of being silently dropped from the in-memory Task.",
+            "text": "complete_task and fail_task now PATCH execution_notes and files_changed through StorageClient after the status transition, so failure reasons and changed-file lists are no longer silently dropped when a session ends.",
             "commit_shas": [
               "6c8edae1b650aa430ab95a14f86a9306ca8989e1"
             ],
@@ -3249,11 +3274,11 @@
         "time_label": "9:04 PM",
         "started_at": "2026-04-21T04:04:37.000Z",
         "ended_at": "2026-04-21T04:27:35.000Z",
-        "title": "Right-click rename for specs and tasks, plus resilient run-panel state",
-        "summary": "Inline rename lands in the sidekick, and a set of follow-ups hardens the Explorer, preview headers, and persisted run state across restarts.",
+        "title": "Inline rename for specs and tasks, plus Run-panel recovery",
+        "summary": "Right-click rename landed across the sidekick, with a handful of related fixes that make the Run panel and task retries behave correctly after reloads.",
         "items": [
           {
-            "text": "Sidekick specs and tasks can now be renamed in place via right-click: the vendored zui Explorer gains editingNodeId with Enter/Escape/blur handling, SidekickItemContextMenu shows Rename + Delete by default, and useRenameSpec plus TaskList updates apply optimistic sidekick-store and layout-cache patches with rollback on API failure.",
+            "text": "Specs and tasks can now be renamed in place from the sidekick context menu: the vendored zui Explorer gained an editing mode with auto-selected input and Enter/Escape/blur semantics, and PUT helpers plus a useRenameSpec hook provide optimistic updates with rollback on failure.",
             "commit_shas": [
               "632d298cc2fd8ec37a255dfc035559ce5c5c5276",
               "a1d94f56c8001ec48cf29f60ea8985c548499a14"
@@ -3261,21 +3286,21 @@
             "confidence": "high"
           },
           {
-            "text": "Run-panel tasks persisted as 'active' on last shutdown are now demoted to a new 'interrupted' terminal status on restart, replacing the forever-spinning 'Waiting for output…' with a muted icon, label, and body fallback.",
+            "text": "The Run panel no longer gets stuck after a restart: persisted active tasks are demoted to a new 'interrupted' terminal status on load, with a matching muted icon and label so the 'Waiting for output…' indicator doesn't spin forever.",
             "commit_shas": [
               "b5877f18de843babcd36b6ef1ea3c14c062ca83b"
             ],
             "confidence": "high"
           },
           {
-            "text": "Retried tasks no longer revert to 'failed' when navigating back to the TaskList: authoritative task_started and task_became_ready transitions now override the layout cache's terminal status, and the cache subscribes to the became-ready events.",
+            "text": "Retried tasks correctly return to in_progress after navigating away and back: authoritative task_started / task_became_ready events now override terminal cached status, and the project layout subscribes to the ready transitions.",
             "commit_shas": [
               "2150fbccf68444e9cf52150ba3e466bb50a848df"
             ],
             "confidence": "high"
           },
           {
-            "text": "Sidekick and preview header bottom borders stay visible on button hover by painting them as ::after overlays across Feed, Feedback, and the preview panel.",
+            "text": "Kept sidekick and preview header bottom borders visible on button hover by painting them as absolutely positioned ::after overlays, and aligned the preview close X flush with the taskbar icon above.",
             "commit_shas": [
               "5d3cf14f916c7437a6d15b6313005a90ae124128",
               "46ebba70108c595d25fc9c5c68801d7a84a196a1"
@@ -3288,11 +3313,11 @@
         "time_label": "9:28 PM",
         "started_at": "2026-04-21T04:28:22.000Z",
         "ended_at": "2026-04-21T04:28:22.000Z",
-        "title": "Linux sidecar build unblocked with libdbus-1-dev",
-        "summary": "A small CI dependency fix unblocking the v0.3.9 desktop sidecar on Ubuntu runners.",
+        "title": "Linux sidecar build unblocked for v0.3.9",
+        "summary": "Release infrastructure fix to get the aura-node desktop sidecar building again on Linux runners.",
         "items": [
           {
-            "text": "Added libdbus-1-dev to every Linux apt-get step preceding a Rust build in release-nightly, release-stable, and desktop-validate, fixing the libdbus-sys build-script panic that was blocking the aura-node sidecar for v0.3.9.",
+            "text": "Added libdbus-1-dev to every Linux apt-get step that precedes a Rust build in release-nightly, release-stable, and desktop-validate workflows so the aura-node sidecar's keyring dependency can find dbus-1.pc, unblocking the v0.3.9 release.",
             "commit_shas": [
               "0ae6c5cd52b2223140e23657652992eb99ad125b"
             ],
@@ -3304,26 +3329,42 @@
         "time_label": "9:29 PM",
         "started_at": "2026-04-21T04:29:17.000Z",
         "ended_at": "2026-04-21T04:29:17.000Z",
-        "title": "Stacked Blocks read as a single dense checklist",
-        "summary": "A small activity-timeline polish that cleans up adjacent block borders.",
+        "title": "Single 1px divider between stacked Blocks",
+        "summary": "A small visual fix that makes stacks of sibling Blocks read as a single dense checklist.",
         "items": [
           {
-            "text": "Adjacent Block components now share a single 1px divider via a .block + .block selector, so stacks of sibling Blocks in the activity timeline read as a dense checklist instead of doubled borders.",
+            "text": "Moved the -1px overlap from the ActivityTimeline wrapper into the Block component itself via a .block + .block selector, so adjacent Blocks share one 1px divider instead of doubled borders.",
             "commit_shas": [
               "a02f6d6d5b33d7987136b727f2249f6fea977813"
             ],
             "confidence": "high"
           }
         ]
+      },
+      {
+        "time_label": "9:55 PM",
+        "started_at": "2026-04-21T04:55:20.000Z",
+        "ended_at": "2026-04-21T04:55:20.000Z",
+        "title": "Clearer release workflow names and mobile paths",
+        "summary": "Documentation and naming cleanup across release workflows.",
+        "items": [
+          {
+            "text": "Renamed release workflows for clarity and updated mobile distribution paths and docs across Android, iOS, nightly, stable, desktop-validate, eval, and changelog publish pipelines.",
+            "commit_shas": [
+              "fd6b0c51d9c1ea4fe99a26c7615299238fe366ea"
+            ],
+            "confidence": "medium"
+          }
+        ]
       }
     ],
     "highlights": [
-      "Capability toggles now autosave and survive restarts",
-      "Desktop Settings has a first-class upgrade control",
-      "Tasks surface real failure reasons and auto-retry transient infra blips",
-      "Sidekick specs/tasks support inline rename and no longer duplicate",
-      "Android, Linux sidecar, and nightly rerun pipelines fail loudly instead of silently"
+      "Capability toggles now persist across saves, restarts, and renames",
+      "Inline rename and robust placeholder dedupe in the sidekick",
+      "Notes gains a real TOC panel and follows the project workspace",
+      "Desktop self-heals stale loopback control-plane overrides",
+      "Nightly release pipeline hardened for Android, Linux sidecar, and reruns"
     ],
-    "raw_commit_count": 63
+    "raw_commit_count": 64
   }
 }
