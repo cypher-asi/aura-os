@@ -1,2 +1,6 @@
 [build]
 target-dir = "../.aura-shared-target"
+
+[term]
+color = "never"
+progress.when = "never"
