@@ -338,7 +338,8 @@ bundle exec fastlane ios release
 
 GitHub Actions release input:
 
-- Run `iOS Mobile`
+- Run `iOS Validation + TestFlight/App Store`
+- Pushes to `main` automatically upload the iOS beta build to TestFlight
 - Choose lane `preflight` to validate secrets/signing config, `beta` for TestFlight, or `release` for an App Store candidate
 - Set `submit_for_review=true` only when metadata, screenshots, and review notes are ready
 
@@ -384,7 +385,8 @@ bundle exec fastlane android release
 
 GitHub Actions release input:
 
-- Run `Android Mobile`
+- Run `Android Validation + Play/GitHub Release`
+- Pushes to `main` publish the signed Android APK through the separate `Mobile Nightly GitHub Release` workflow
 - Choose lane `preflight` to validate secrets/signing config, `beta` for Play Internal Testing, or `release` for a release candidate
 - Choose the Play track (`internal`, `closed`, or `production`)
 - Leave `release_status=draft` until you are ready for a real rollout

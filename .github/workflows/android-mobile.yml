@@ -1,4 +1,4 @@
-name: Android Mobile
+name: Android Validation + Play/GitHub Release
 
 on:
   push:
@@ -96,7 +96,7 @@ jobs:
             interface/android/app/build/outputs/apk/debug/*.apk
 
   ship-android:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -165,14 +165,6 @@ jobs:
         id: plan
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "lane=release" >> "$GITHUB_OUTPUT"
-            echo "track=production" >> "$GITHUB_OUTPUT"
-            echo "release_status=completed" >> "$GITHUB_OUTPUT"
-            echo "channel=stable" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           lane="${{ inputs.lane }}"
           channel="beta"
           case "$lane" in
@@ -181,6 +173,20 @@ jobs:
             preflight) channel="preflight" ;;
             github_release) channel="github" ;;
           esac
+
+          # Keep the old automatic main-push plan here for easy restoration if
+          # we ever want this workflow to publish outside manual dispatch again.
+          #
+          # lane="github_release"
+          # track="internal"
+          # release_status="draft"
+          # channel="github"
+          #
+          # Or, for automatic Play publishing:
+          # lane="release"
+          # track="production"
+          # release_status="completed"
+          # channel="stable"
 
           echo "lane=$lane" >> "$GITHUB_OUTPUT"
           echo "track=${{ inputs.track }}" >> "$GITHUB_OUTPUT"

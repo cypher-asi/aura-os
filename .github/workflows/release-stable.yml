@@ -1,4 +1,4 @@
-name: Release Stable
+name: Desktop Stable Release
 
 on:
   push:
@@ -698,7 +698,7 @@ jobs:
           mkdir -p release-metadata
           jq -n \
             --arg channel stable \
-            --arg workflow "Release Stable" \
+            --arg workflow "Desktop Stable Release" \
             --arg version "${{ steps.version.outputs.version }}" \
             --arg tag "${{ steps.version.outputs.tag }}" \
             --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}" \

@@ -18,7 +18,7 @@ That means:
 
 ## Desktop
 
-### `Desktop Validate`
+### `Desktop Validation`
 
 Workflow:
 [desktop-validate.yml](../.github/workflows/desktop-validate.yml)
@@ -39,7 +39,7 @@ It is intended to run on:
 - selected pushes, including ongoing work on the release-build branch
 - manual dispatch when needed
 
-### `Release Nightly`
+### `Desktop Nightly Release`
 
 Workflow:
 [release-nightly.yml](../.github/workflows/release-nightly.yml)
@@ -53,7 +53,7 @@ Purpose:
 
 This is the automatic desktop distribution path for `main`.
 
-### `Release Stable`
+### `Desktop Stable Release`
 
 Workflow:
 [release-stable.yml](../.github/workflows/release-stable.yml)
@@ -69,7 +69,21 @@ This is the canonical stable desktop shipping path.
 
 ## Mobile
 
-### `Android Mobile`
+### `Mobile Nightly GitHub Release`
+
+Workflow:
+[release-mobile-nightly.yml](../.github/workflows/release-mobile-nightly.yml)
+
+Purpose:
+
+- publish the rolling GitHub Release that carries mobile nightly artifacts
+- publish the signed Android APK automatically on pushes to `main`
+- optionally include the iOS IPA on manual dispatch when that platform is requested
+
+This is the GitHub-release distribution path for mobile artifacts. It is not the
+store-delivery workflow.
+
+### `Android Validation + Play/GitHub Release`
 
 Workflow:
 [android-mobile.yml](../.github/workflows/android-mobile.yml)
@@ -78,13 +92,17 @@ Purpose:
 
 - validate Android shell builds on code changes
 - ship Android builds through Fastlane on manual dispatch
+- keep Play Store promotion manual-only
+
+The separate `Mobile Nightly GitHub Release` workflow owns the automatic APK
+publication on pushes to `main`.
 
 Validation and shipping are intentionally separated:
 
 - automatic validation on relevant changes
-- manual promotion to Play tracks
+- manual promotion to Play tracks or manual GitHub-release packaging when needed
 
-### `iOS Mobile`
+### `iOS Validation + TestFlight/App Store`
 
 Workflow:
 [ios-mobile.yml](../.github/workflows/ios-mobile.yml)
@@ -92,12 +110,14 @@ Workflow:
 Purpose:
 
 - validate iOS shell builds on code changes
-- ship iOS builds through Fastlane on manual dispatch
+- upload the beta lane to TestFlight automatically on pushes to `main`
+- ship preflight, signing bootstrap, beta, and App Store release lanes on manual dispatch
 
 Validation and shipping are intentionally separated:
 
 - automatic validation on relevant changes
-- manual promotion to TestFlight / App Store
+- automatic TestFlight beta delivery on `main`
+- manual promotion to the App Store
 
 ### Mobile UI Sign-Off
 
@@ -120,7 +140,7 @@ The release system does not replace the functional eval system.
 
 Functional verification remains here:
 
-- [aura-evals.yml](../.github/workflows/aura-evals.yml)
+- [aura-evals.yml](../.github/workflows/aura-evals.yml) (`Aura Functional Evals`)
 - [local-stack README](../infra/evals/local-stack/README.md)
 
 That system answers:
@@ -139,12 +159,14 @@ The release system answers a different question:
 
 1. Pull request:
    - run functional evals where appropriate
-   - run `Desktop Validate` for desktop changes
+   - run `Desktop Validation` for desktop changes
    - run mobile validation workflows for mobile shell changes
    - run the mobile UI release-gate matrix for mobile UX, routing, shell, or shared-editor changes
 2. Push to `main`:
    - allow nightly desktop releases to build and publish
-   - keep mobile validation automatic, but do not auto-ship to stores
+   - publish the Android APK through `Mobile Nightly GitHub Release`
+   - upload the iOS beta build to TestFlight
+   - keep Play Store and App Store promotion manual-only
 3. Stable release:
    - cut a version tag or manual stable run
    - publish desktop stable artifacts
@@ -190,7 +212,7 @@ Desktop nightly and stable publish jobs also validate generated updater
 manifests before pushing them to `gh-pages`, so broken channel metadata is less
 likely to slip through unnoticed.
 
-`Release Nightly` now supports manual validation runs through
+`Desktop Nightly Release` now supports manual validation runs through
 `workflow_dispatch`. Those runs build and package the nightly artifacts and
 generate preview manifests by default, but they only publish the GitHub release
 and `gh-pages` manifests if `publish_live` is explicitly enabled.

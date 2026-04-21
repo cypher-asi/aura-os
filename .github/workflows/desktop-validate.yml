@@ -1,4 +1,4 @@
-name: Desktop Validate
+name: Desktop Validation
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Skip duplicate push validation
-        run: echo "Desktop Validate is PR-only. Release Nightly covers push-to-main desktop validation."
+        run: echo "Desktop Validation is PR-only. Desktop Nightly Release covers push-to-main desktop validation."
 
   desktop-smoke:
     if: github.event_name != 'push'

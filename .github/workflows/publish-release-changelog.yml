@@ -1,10 +1,10 @@
-name: Publish Release Changelog
+name: Publish Desktop Release Changelog
 
 on:
   workflow_run:
     workflows:
-      - Release Nightly
-      - Release Stable
+      - Desktop Nightly Release
+      - Desktop Stable Release
     types:
       - completed
 
@@ -84,10 +84,10 @@ jobs:
         shell: bash
         run: |
           case "${{ github.event.workflow_run.name }}" in
-            "Release Nightly")
+            "Desktop Nightly Release")
               expected_channel="nightly"
               ;;
-            "Release Stable")
+            "Desktop Stable Release")
               expected_channel="stable"
               ;;
             *)

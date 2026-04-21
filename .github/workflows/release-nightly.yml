@@ -1,4 +1,4 @@
-name: Release Nightly
+name: Desktop Nightly Release
 
 on:
   push:
@@ -801,7 +801,7 @@ jobs:
           mkdir -p release-metadata
           jq -n \
             --arg channel nightly \
-            --arg workflow "Release Nightly" \
+            --arg workflow "Desktop Nightly Release" \
             --arg version "${{ needs.resolve-version.outputs.version }}" \
             --arg tag "${{ needs.resolve-version.outputs.tag }}" \
             --arg release_url "https://github.com/${{ github.repository }}/releases/tag/${{ needs.resolve-version.outputs.tag }}" \

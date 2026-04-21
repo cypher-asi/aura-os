@@ -1,4 +1,4 @@
-name: iOS Mobile
+name: iOS Validation + TestFlight/App Store
 
 on:
   push:
@@ -158,18 +158,22 @@ jobs:
 
           if [ "${{ github.event_name }}" = "push" ]; then
             beta_build_number=$(( ${{ github.run_number }} * 10 + 1 ))
-            release_build_number=$(( ${{ github.run_number }} * 10 + 2 ))
 
             APP_VERSION="beta.${SHORT_SHA}" \
             APP_CHANNEL="beta" \
             IOS_BUILD_NUMBER="$beta_build_number" \
             bundle exec fastlane ios beta
 
-            APP_VERSION="stable.${SHORT_SHA}" \
-            APP_CHANNEL="stable" \
-            IOS_BUILD_NUMBER="$release_build_number" \
-            IOS_SUBMIT_FOR_REVIEW="1" \
-            bundle exec fastlane ios release
+            # Keep App Store submission manual-only for now.
+            # Re-enable this block if we decide main pushes should also drive the
+            # release lane automatically again.
+            #
+            # release_build_number=$(( ${{ github.run_number }} * 10 + 2 ))
+            # APP_VERSION="stable.${SHORT_SHA}" \
+            # APP_CHANNEL="stable" \
+            # IOS_BUILD_NUMBER="$release_build_number" \
+            # IOS_SUBMIT_FOR_REVIEW="1" \
+            # bundle exec fastlane ios release
 
             exit 0
           fi
