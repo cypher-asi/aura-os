@@ -2,7 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useStreamStore } from "../../hooks/stream/store";
+import { useEventStore } from "../../stores/event-store/index";
+import { EventType } from "../../types/aura-events";
 import type { ProjectStatsData } from "../../api/projects";
+
+const REALTIME_REFETCH_DEBOUNCE_MS = 300;
+
+function clampNonNegative(n: number): number {
+  return n > 0 ? n : 0;
+}
 
 interface StatsDashboardData {
   stats: ProjectStatsData | null;
@@ -120,6 +128,62 @@ export function useStatsDashboardData(): StatsDashboardData {
     }
     wasStreamingRef.current = isAnyStreaming;
   }, [isAnyStreaming, fetchStats]);
+
+  // Real-time task lifecycle tracking. The automation loop fires
+  // TaskStarted/TaskCompleted/TaskFailed events long before the owning
+  // chat stream ends, so without this the Active count appears stuck at
+  // the value the server reported when the dashboard mounted. We nudge
+  // the visible count optimistically so it feels instant, then schedule
+  // a debounced refetch to reconcile against authoritative server
+  // counts (which also covers tokens/cost/completion percentage).
+  const subscribe = useEventStore((s) => s.subscribe);
+  useEffect(() => {
+    if (!projectId) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = () => {
+      if (debounceTimer != null) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        fetchStats();
+      }, REALTIME_REFETCH_DEBOUNCE_MS);
+    };
+
+    const adjust = (patch: (s: ProjectStatsData) => ProjectStatsData) => {
+      setStats((prev) => (prev ? patch(prev) : prev));
+    };
+
+    const unsubs = [
+      subscribe(EventType.TaskStarted, (e) => {
+        if (e.project_id !== projectId) return;
+        adjust((s) => ({ ...s, in_progress_tasks: s.in_progress_tasks + 1 }));
+        scheduleRefetch();
+      }),
+      subscribe(EventType.TaskCompleted, (e) => {
+        if (e.project_id !== projectId) return;
+        adjust((s) => ({
+          ...s,
+          in_progress_tasks: clampNonNegative(s.in_progress_tasks - 1),
+          done_tasks: s.done_tasks + 1,
+        }));
+        scheduleRefetch();
+      }),
+      subscribe(EventType.TaskFailed, (e) => {
+        if (e.project_id !== projectId) return;
+        adjust((s) => ({
+          ...s,
+          in_progress_tasks: clampNonNegative(s.in_progress_tasks - 1),
+          failed_tasks: s.failed_tasks + 1,
+        }));
+        scheduleRefetch();
+      }),
+    ];
+
+    return () => {
+      if (debounceTimer != null) clearTimeout(debounceTimer);
+      unsubs.forEach((u) => u());
+    };
+  }, [projectId, subscribe, fetchStats]);
 
   return { stats, loading };
 }

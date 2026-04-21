@@ -37,7 +37,7 @@ export function StatsDashboard({ variant = "sidekick" }: StatsDashboardProps) {
         <StatCard value={stats.total_tasks} label="Total" variant={variant} />
         <StatCard value={stats.pending_tasks} label="Pending" variant={variant} />
         <StatCard value={stats.ready_tasks} label="Ready" variant={variant} />
-        <StatCard value={stats.in_progress_tasks} label="Active" variant={variant} />
+        <StatCard value={stats.in_progress_tasks} label="Active" variant={variant} accent="success" />
         <StatCard value={stats.blocked_tasks} label="Blocked" variant={variant} />
         <StatCard value={stats.done_tasks} label="Done" variant={variant} />
         <StatCard value={stats.failed_tasks} label="Failed" variant={variant} />

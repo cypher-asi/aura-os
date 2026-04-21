@@ -31,23 +31,27 @@ export function StatCard({
   fmt,
   fmtFn,
   variant = "sidekick",
+  accent,
 }: {
   value: number | undefined;
   label: string;
   fmt?: boolean;
   fmtFn?: (n: number) => string;
   variant?: StatVariant;
+  accent?: "success";
 }) {
   const isMobile = variant === "mobile";
   const safeValue = typeof value === "number" && Number.isFinite(value) ? value : 0;
   const display = fmtFn ? fmtFn(safeValue) : fmt ? formatCompact(safeValue) : safeValue;
   const title = fmtFn || fmt ? safeValue.toLocaleString() : undefined;
+  const valueColorClass =
+    accent === "success" ? styles.statCardValueSuccess : styles.statCardValueColor;
   return (
     <div className={cx(styles.statCard, isMobile && mobileStyles.mobileStatCard)}>
       <div
         className={cx(
           styles.statValue,
-          styles.statCardValueColor,
+          valueColorClass,
           isMobile && mobileStyles.mobileStatValue,
         )}
         title={title}
