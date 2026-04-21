@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useChatUIStore } from "./chat-ui-store";
 
+const mockLoadPersistedModel = vi.fn(
+  (_adapterType?: string, _defaultModel?: string | null, _agentId?: string) =>
+    "claude-opus-4-6",
+);
+const mockHasAgentScopedModel = vi.fn((_agentId: string) => false);
+
 vi.mock("../constants/models", () => ({
   availableModelsForAdapter: (adapterType?: string) =>
     adapterType === "codex"
@@ -11,8 +17,13 @@ vi.mock("../constants/models", () => ({
         ],
   defaultModelForAdapter: (adapterType?: string) =>
     adapterType === "codex" ? "codex" : "claude-opus-4-6",
-  loadPersistedModel: (_adapterType?: string, _defaultModel?: string | null) => "claude-opus-4-6",
+  loadPersistedModel: (
+    adapterType?: string,
+    defaultModel?: string | null,
+    agentId?: string,
+  ) => mockLoadPersistedModel(adapterType, defaultModel, agentId),
   persistModel: vi.fn(),
+  hasAgentScopedModel: (agentId: string) => mockHasAgentScopedModel(agentId),
 }));
 
 function resetStore() {
@@ -22,6 +33,11 @@ function resetStore() {
 describe("chat-ui-store", () => {
   beforeEach(() => {
     resetStore();
+    mockLoadPersistedModel.mockImplementation(
+      (_adapterType?: string, _defaultModel?: string | null, _agentId?: string) =>
+        "claude-opus-4-6",
+    );
+    mockHasAgentScopedModel.mockImplementation(() => false);
   });
 
   it("init populates selectedModel from persisted value", () => {
@@ -92,5 +108,56 @@ describe("chat-ui-store", () => {
     useChatUIStore.getState().setSelectedModel("stream-a", "claude-sonnet-4-6");
     expect(useChatUIStore.getState().streams["stream-a"]?.selectedModel).toBe("claude-sonnet-4-6");
     expect(useChatUIStore.getState().streams["stream-b"]?.selectedModel).toBe("claude-opus-4-6");
+  });
+
+  it("init re-reads the per-agent value on a later pass after agent metadata resolves", () => {
+    // Pass 1: adapter metadata not yet available, so the persisted lookup
+    // returns the adapter default.
+    mockLoadPersistedModel.mockImplementation(() => "claude-opus-4-6");
+    useChatUIStore.getState().init("stream-1", undefined, null, "agent-xyz");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "claude-opus-4-6",
+    );
+
+    // Pass 2: the agent's real per-agent value is now discoverable. init
+    // must replace the earlier adapter-default install.
+    mockHasAgentScopedModel.mockImplementation(() => true);
+    mockLoadPersistedModel.mockImplementation(() => "claude-sonnet-4-6");
+    useChatUIStore.getState().init("stream-1", "default", null, "agent-xyz");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "claude-sonnet-4-6",
+    );
+  });
+
+  it("init leaves an existing selection alone when the agent has no per-agent key", () => {
+    useChatUIStore.getState().init("stream-1", "default", null, "agent-xyz");
+    useChatUIStore
+      .getState()
+      .setSelectedModel("stream-1", "claude-sonnet-4-6", "default", "agent-xyz");
+    // No agent-scoped key recorded; a later init pass must not overwrite
+    // the user's current in-memory pick with some stale persisted value.
+    mockHasAgentScopedModel.mockImplementation(() => false);
+    mockLoadPersistedModel.mockImplementation(() => "claude-opus-4-6");
+    useChatUIStore.getState().init("stream-1", "default", null, "agent-xyz");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "claude-sonnet-4-6",
+    );
+  });
+
+  it("syncAvailableModels upgrades to the per-agent value when it differs from current", () => {
+    // Current selection is valid for the adapter but is the adapter
+    // default that init installed before metadata resolved. The agent
+    // actually has its own remembered value; sync should upgrade to it.
+    mockLoadPersistedModel.mockImplementation(() => "claude-opus-4-6");
+    useChatUIStore.getState().init("stream-1", undefined, null, "agent-xyz");
+
+    mockHasAgentScopedModel.mockImplementation(() => true);
+    mockLoadPersistedModel.mockImplementation(() => "claude-sonnet-4-6");
+    useChatUIStore
+      .getState()
+      .syncAvailableModels("stream-1", "default", null, "agent-xyz");
+    expect(useChatUIStore.getState().streams["stream-1"]?.selectedModel).toBe(
+      "claude-sonnet-4-6",
+    );
   });
 });

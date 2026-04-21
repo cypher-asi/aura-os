@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadPersistedModel, persistModel } from "./models";
+import {
+  hasAgentScopedModel,
+  loadPersistedModel,
+  persistModel,
+} from "./models";
 
 describe("model persistence", () => {
   let store: Record<string, string>;
@@ -44,11 +48,26 @@ describe("model persistence", () => {
     expect(loadPersistedModel("default", null, "agent-a")).toBe("aura-gpt-5-4");
   });
 
-  it("loadPersistedModel falls back to the adapter-scoped key when no agent value is stored", () => {
-    persistModel("aura-claude-opus-4-6", "default");
-    expect(loadPersistedModel("default", null, "new-agent")).toBe(
-      "aura-claude-opus-4-6",
+  it("loadPersistedModel does not leak another agent's choice to an untouched agent", () => {
+    // Another agent wrote the adapter-scoped key as a side effect of
+    // `persistModel`. A fresh agent with no per-agent key should NOT
+    // inherit that value; it should fall to the adapter default.
+    persistModel("aura-gpt-5-4", "default", "agent-a");
+    expect(loadPersistedModel("default", null, "new-agent")).not.toBe(
+      "aura-gpt-5-4",
     );
+  });
+
+  it("loadPersistedModel uses the adapter-scoped key when no agentId is supplied", () => {
+    persistModel("aura-claude-opus-4-6", "default");
+    expect(loadPersistedModel("default", null)).toBe("aura-claude-opus-4-6");
+  });
+
+  it("hasAgentScopedModel detects whether an agent has a remembered model", () => {
+    expect(hasAgentScopedModel("agent-a")).toBe(false);
+    persistModel("aura-claude-sonnet-4-6", "default", "agent-a");
+    expect(hasAgentScopedModel("agent-a")).toBe(true);
+    expect(hasAgentScopedModel("agent-b")).toBe(false);
   });
 
   it("different agents keep independent remembered models", () => {

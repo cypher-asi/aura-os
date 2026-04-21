@@ -229,6 +229,14 @@ export function defaultModelForAdapter(
   return models[0]?.id ?? DEFAULT_MODEL.id;
 }
 
+export function hasAgentScopedModel(agentId: string): boolean {
+  try {
+    return localStorage.getItem(agentStorageKey(agentId)) != null;
+  } catch {
+    return false;
+  }
+}
+
 export function loadPersistedModel(
   adapterType?: string,
   explicitDefault?: string | null,
@@ -248,9 +256,16 @@ export function loadPersistedModel(
       if (agentStored && models.some((m) => m.id === agentStored)) {
         return agentStored;
       }
+      // When the caller has an agentId but this agent has never been
+      // touched, don't leak another agent's choice via the adapter-scoped
+      // key. Fall straight through to the adapter default.
+      if (localStorage.getItem(agentStorageKey(agentId)) == null) {
+        return defaultModelForAdapter(adapterType, explicitDefault);
+      }
     }
-    // Fall back to the legacy adapter-scoped key so existing users keep
-    // their last selection on first read after upgrade.
+    // Legacy adapter-scoped fallback for callers without an agentId (or
+    // when an explicitly-stored agent value has become invalid for the
+    // current adapter).
     const stored = normalizeManagedModelId(
       localStorage.getItem(storageKey(adapterType)),
     );
