@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-04-21",
+    "channel": "nightly",
+    "version": "0.1.0-nightly.322.1",
+    "title": "Debug app debuts, run state survives reloads",
+    "intro": "Today's nightly centers on making in-flight and past runs legible. A new Debug app and companion CLI turn every dev-loop run into an inspectable bundle, while a wave of rehydration work keeps the Run panel, sidekick tabs, and live indicators consistent across refreshes and WebSocket reconnects. A browser backend vendor fork also lands to start untangling a long-running CDP log flood.",
+    "entryCount": 4,
+    "highlights": [
+      "New Debug app and aura-run-analyze CLI for inspecting dev-loop runs",
+      "Task and process run output now survives page reloads",
+      "Sidekick remembers your last tab per app",
+      "chromiumoxide vendored to diagnose CDP WebSocket warnings"
+    ],
+    "rawCommitCount": 12,
+    "generatedAt": "2026-04-21T08:42:06.236Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.322.1",
+    "path": "history/2026-04-21.json"
+  },
+  {
     "date": "2026-04-20",
     "channel": "nightly",
     "version": "0.1.0-nightly.321.1",
