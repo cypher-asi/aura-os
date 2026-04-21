@@ -167,11 +167,18 @@ export function removeTaskFromProjectLayout(
   return { ...current, tasks: nextTasks };
 }
 
-// Apply an authoritative status transition (from `task_completed` /
-// `task_failed` / `task_started` WS events) to the layout cache without
-// waiting for a follow-up `task_saved` snapshot. Matches the patch shape
-// used by `useTaskListData.updateTaskStatus` so the Sidekick TaskList shows
-// the right state on its next mount.
+// Apply an authoritative status transition (from `task_started` /
+// `task_completed` / `task_failed` / `task_became_ready` WS events) to the
+// layout cache without waiting for a follow-up `task_saved` snapshot. Matches
+// the patch shape used by `useTaskListData.updateTaskStatus` so the Sidekick
+// TaskList shows the right state on its next mount.
+//
+// No terminal-preservation guard here: these events are the source of truth
+// for status transitions, including legitimate retries that resurrect a
+// previously-failed task (backend retry flow is `failed -> ready ->
+// in_progress`, see `retry_task` in `crates/aura-os-tasks/src/task_service.rs`).
+// Snapshot merges via `mergeTaskIntoProjectLayout` still apply the guard to
+// resist stale `task_saved` broadcasts.
 export function patchTaskStatusInProjectLayout(
   current: ProjectLayoutBundle | undefined,
   taskId: string,
@@ -181,13 +188,6 @@ export function patchTaskStatusInProjectLayout(
   const index = current.tasks.findIndex((t) => t.task_id === taskId);
   if (index === -1) return current;
   const existing = current.tasks[index];
-  if (
-    isTerminalTaskStatus(existing.status) &&
-    patch.status !== undefined &&
-    !isTerminalTaskStatus(patch.status)
-  ) {
-    return current;
-  }
   const nextTasks = [...current.tasks];
   nextTasks[index] = { ...existing, ...patch };
   return { ...current, tasks: sortTasks(nextTasks) };

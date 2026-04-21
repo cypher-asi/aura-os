@@ -147,6 +147,27 @@ export function useProjectLayoutData(): ProjectLayoutData {
           (current) => patchTaskStatusInProjectLayout(current, taskId, { status: "failed" }),
         );
       }),
+      subscribe(EventType.TaskBecameReady, (e) => {
+        if (e.project_id !== projectId || !e.content.task_id) return;
+        const taskId = e.content.task_id;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => patchTaskStatusInProjectLayout(current, taskId, { status: "ready" }),
+        );
+      }),
+      subscribe(EventType.TasksBecameReady, (e) => {
+        if (e.project_id !== projectId || !e.content.task_ids?.length) return;
+        const taskIds = e.content.task_ids;
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) =>
+            taskIds.reduce<ProjectLayoutBundle | undefined>(
+              (acc, taskId) =>
+                patchTaskStatusInProjectLayout(acc, taskId, { status: "ready" }),
+              current,
+            ),
+        );
+      }),
     ];
     return () => unsubs.forEach((unsubscribe) => unsubscribe());
   }, [projectId, queryClient, subscribe]);

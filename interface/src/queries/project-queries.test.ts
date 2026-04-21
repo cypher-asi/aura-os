@@ -255,7 +255,35 @@ describe("patchTaskStatusInProjectLayout", () => {
     });
   });
 
-  it("refuses to downgrade a task that is already terminal", () => {
+  it("resurrects a failed task to in_progress when automation retries it", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", status: "failed" })],
+    });
+
+    const patched = patchTaskStatusInProjectLayout(current, "task-1", {
+      status: "in_progress",
+      session_id: "sess-1",
+    });
+
+    expect(patched?.tasks[0]).toMatchObject({
+      status: "in_progress",
+      session_id: "sess-1",
+    });
+  });
+
+  it("transitions a failed task back to ready on retry", () => {
+    const current = makeLayoutBundle({
+      tasks: [makeTask({ task_id: "task-1", status: "failed" })],
+    });
+
+    const patched = patchTaskStatusInProjectLayout(current, "task-1", {
+      status: "ready",
+    });
+
+    expect(patched?.tasks[0].status).toBe("ready");
+  });
+
+  it("allows a done task to be re-run as in_progress", () => {
     const current = makeLayoutBundle({
       tasks: [makeTask({ task_id: "task-1", status: "done" })],
     });
@@ -264,7 +292,7 @@ describe("patchTaskStatusInProjectLayout", () => {
       status: "in_progress",
     });
 
-    expect(patched?.tasks[0].status).toBe("done");
+    expect(patched?.tasks[0].status).toBe("in_progress");
   });
 
   it("is a no-op when the task is missing from the cache", () => {
