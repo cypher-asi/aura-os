@@ -199,10 +199,9 @@
   padding: 6px 6px;
   height: auto;
   min-height: var(--control-height-sm, 32px);
-  max-height: min(70vh, 800px);
   outline: none;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   border-radius: 0;
 }
 
