@@ -2,20 +2,20 @@
   {
     "date": "2026-04-20",
     "channel": "nightly",
-    "version": "0.1.0-nightly.315.1",
-    "title": "Agent permissions overhaul, in-app upgrades, and nightly pipeline hardening",
-    "intro": "A dense nightly that reworks how agent capabilities flow from UI toggles to live tool sessions, adds a proper in-app update control for desktop users, and shores up the nightly release pipeline across Android, macOS packaging, version numbering, and the updater sidecar. Chat opens also get noticeably faster on cold boot and reload.",
+    "version": "0.1.0-nightly.319.1",
+    "title": "Agent permissions healed, sidekick gets sharper, tasks fail loudly",
+    "intro": "A dense nightly centered on making agent capabilities actually stick, tightening the sidekick's spec/task lifecycle, and hardening how long-running tasks report failure. Desktop gained a real in-app upgrade control, Notes picked up a dedicated table-of-contents panel, and release infrastructure got quieter on Android, Linux sidecar builds, and nightly reruns.",
     "entryCount": 6,
     "highlights": [
-      "Unified, autosaving agent permissions that take effect without a restart",
-      "In-app upgrade control in Settings and Team Settings",
-      "Faster cold chat opens with IDB-cached history and cached project discovery",
-      "Kimi K2.6 available in the chat model picker",
-      "More resilient nightly packaging, versioning, and desktop updater staging"
+      "Capability toggles now autosave and survive restarts",
+      "Desktop Settings has a first-class upgrade control",
+      "Tasks surface real failure reasons and auto-retry transient infra blips",
+      "Sidekick specs/tasks support inline rename and no longer duplicate",
+      "Android, Linux sidecar, and nightly rerun pipelines fail loudly instead of silently"
     ],
-    "rawCommitCount": 21,
-    "generatedAt": "2026-04-21T02:49:06.386Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.315.1",
+    "rawCommitCount": 64,
+    "generatedAt": "2026-04-21T04:46:43.359Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.319.1",
     "path": "history/2026-04-20.json"
   },
   {
