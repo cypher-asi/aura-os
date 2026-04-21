@@ -28,73 +28,21 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use aura_os_core::{AgentInstanceId, ProjectId, TaskId};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use aura_os_core::{AgentInstanceId, ProjectId, SpecId, TaskId};
+use chrono::Utc;
+use serde::Serialize;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-/// Debug-event kinds surfaced by the harness on the existing `/stream`
-/// websocket. Any frame whose `type` matches one of these is routed to
-/// the matching `.jsonl` file in addition to the main `events.jsonl`.
-///
-/// Keep this list in sync with `aura-agent::events::DebugEvent` in the
-/// harness repo. Unknown kinds fall through to `events.jsonl` only.
-pub const DEBUG_EVENT_LLM_CALL: &str = "debug.llm_call";
-pub const DEBUG_EVENT_ITERATION: &str = "debug.iteration";
-pub const DEBUG_EVENT_BLOCKER: &str = "debug.blocker";
-pub const DEBUG_EVENT_RETRY: &str = "debug.retry";
-
-/// Bundle metadata written atomically after every `on_loop_started` /
-/// terminal event so the HTTP layer can surface run information
-/// without replaying `events.jsonl`.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RunMetadata {
-    pub run_id: String,
-    pub project_id: ProjectId,
-    pub agent_instance_id: AgentInstanceId,
-    pub started_at: DateTime<Utc>,
-    pub ended_at: Option<DateTime<Utc>>,
-    pub status: RunStatus,
-    /// Tasks observed in this run (populated from `task_started` / `task_completed`).
-    pub tasks: Vec<RunTaskSummary>,
-    /// Counters kept in memory while the run is live so summary reads
-    /// don't have to scan the full event file.
-    pub counters: RunCounters,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RunStatus {
-    Running,
-    Completed,
-    Failed,
-    Interrupted,
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct RunCounters {
-    pub events_total: u64,
-    pub llm_calls: u64,
-    pub iterations: u64,
-    pub blockers: u64,
-    pub retries: u64,
-    pub tool_calls: u64,
-    pub task_completed: u64,
-    pub task_failed: u64,
-    pub input_tokens: u64,
-    pub output_tokens: u64,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RunTaskSummary {
-    pub task_id: String,
-    pub started_at: Option<DateTime<Utc>>,
-    pub ended_at: Option<DateTime<Utc>>,
-    pub status: Option<String>,
-}
+// The on-disk schema lives in a small shared crate so the CLI
+// (`aura-run-analyze`) and future consumers can read bundles without
+// taking a dependency on this server binary.
+pub use aura_loop_log_schema::{
+    classify_debug_file, RunCounters, RunMetadata, RunStatus, RunTaskSummary, DEBUG_EVENT_BLOCKER,
+    DEBUG_EVENT_ITERATION, DEBUG_EVENT_LLM_CALL, DEBUG_EVENT_RETRY,
+};
 
 /// Per-run state kept in memory so appends are O(1) without scanning
 /// the filesystem. Dropped when the loop ends (or the server shuts
@@ -161,6 +109,7 @@ impl LoopLogWriter {
             ended_at: None,
             status: RunStatus::Running,
             tasks: Vec::new(),
+            spec_ids: Vec::new(),
             counters: RunCounters::default(),
         };
         if let Err(error) = write_metadata(&run_dir, &metadata).await {
@@ -179,12 +128,17 @@ impl LoopLogWriter {
     }
 
     /// Record the `task_id → run` mapping so `on_task_end` can write
-    /// accumulated task output into the correct bundle.
+    /// accumulated task output into the correct bundle. When
+    /// `spec_id` is provided (resolved by the caller from the task
+    /// DB), it is stamped on the `RunTaskSummary` and unioned into
+    /// `RunMetadata::spec_ids` so the Debug UI can group runs by
+    /// spec without re-walking the filesystem.
     pub async fn on_task_started(
         &self,
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,
         task_id: TaskId,
+        spec_id: Option<SpecId>,
     ) {
         {
             let mut map = self.task_to_run.lock().await;
@@ -196,10 +150,14 @@ impl LoopLogWriter {
             if !run.metadata.tasks.iter().any(|t| t.task_id == tid) {
                 run.metadata.tasks.push(RunTaskSummary {
                     task_id: tid,
+                    spec_id,
                     started_at: Some(Utc::now()),
                     ended_at: None,
                     status: None,
                 });
+                if let Some(sid) = spec_id {
+                    merge_spec_id(&mut run.metadata.spec_ids, sid);
+                }
                 let _ = write_metadata(&run.run_dir, &run.metadata).await;
             }
         }
@@ -402,13 +360,15 @@ impl LoopLogWriter {
     }
 }
 
-fn classify_debug_file(event_type: &str) -> Option<&'static str> {
-    match event_type {
-        DEBUG_EVENT_LLM_CALL => Some("llm_calls.jsonl"),
-        DEBUG_EVENT_ITERATION => Some("iterations.jsonl"),
-        DEBUG_EVENT_BLOCKER => Some("blockers.jsonl"),
-        DEBUG_EVENT_RETRY => Some("retries.jsonl"),
-        _ => None,
+/// Insert `spec_id` into `spec_ids` if not already present, keeping
+/// the list sorted (stringwise) so the serialised JSON is stable
+/// across runs regardless of insertion order. Using a `HashSet`
+/// locally would be faster but would lose ordering on serialise.
+fn merge_spec_id(spec_ids: &mut Vec<SpecId>, spec_id: SpecId) {
+    let key = spec_id.to_string();
+    match spec_ids.binary_search_by(|existing| existing.to_string().cmp(&key)) {
+        Ok(_) => {}
+        Err(idx) => spec_ids.insert(idx, spec_id),
     }
 }
 

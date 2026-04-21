@@ -116,3 +116,40 @@
   font-size: 13px;
   text-align: center;
 }
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.filterChipLabel {
+  white-space: nowrap;
+}
+
+.filterChipClear {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 4px;
+}
+
+.filterChipClear:hover {
+  color: var(--color-text-primary);
+}

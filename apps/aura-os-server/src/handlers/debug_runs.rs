@@ -15,7 +15,7 @@ use axum::response::Response;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
-use aura_os_core::ProjectId;
+use aura_os_core::{ProjectId, SpecId};
 
 use crate::error::{ApiError, ApiResult};
 use crate::loop_log::RunMetadata;
@@ -68,11 +68,23 @@ pub(crate) struct DebugRunsResponse {
     pub runs: Vec<RunMetadata>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct ListRunsQuery {
+    /// When present, only runs whose `metadata.spec_ids` contains this
+    /// id are returned. Lets the Debug UI pre-filter by spec without
+    /// grouping in the browser.
+    pub spec_id: Option<SpecId>,
+}
+
 pub(crate) async fn list_runs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
+    Query(query): Query<ListRunsQuery>,
 ) -> ApiResult<Json<DebugRunsResponse>> {
-    let runs = state.loop_log.list_runs(project_id).await;
+    let mut runs = state.loop_log.list_runs(project_id).await;
+    if let Some(spec_id) = query.spec_id {
+        runs.retain(|run| run.spec_ids.iter().any(|id| *id == spec_id));
+    }
     Ok(Json(DebugRunsResponse { runs }))
 }
 

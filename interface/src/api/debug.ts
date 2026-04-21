@@ -32,6 +32,12 @@ export interface DebugRunCounters {
 
 export interface DebugRunTask {
   task_id: string;
+  /**
+   * Spec the task belongs to. Present when the server could resolve
+   * it from the task DB at `task_started` time; `null`/missing on
+   * older bundles or when the lookup failed.
+   */
+  spec_id?: string | null;
   started_at: string | null;
   ended_at: string | null;
   status: string | null;
@@ -45,6 +51,12 @@ export interface DebugRunMetadata {
   ended_at: string | null;
   status: DebugRunStatus;
   tasks: DebugRunTask[];
+  /**
+   * Distinct specs any task in the run touched, stable-sorted by id.
+   * Optional because older bundles persisted before this field
+   * existed omit the key entirely.
+   */
+  spec_ids?: string[];
   counters: DebugRunCounters;
 }
 
@@ -70,8 +82,17 @@ export interface DebugRunSummaryResponse {
 export const debugApi = {
   listProjects: () =>
     apiFetch<DebugProjectsResponse>("/api/debug/projects"),
-  listRuns: (projectId: ProjectId) =>
-    apiFetch<DebugRunsResponse>(`/api/debug/projects/${projectId}/runs`),
+  listRuns: (
+    projectId: ProjectId,
+    options?: { specId?: string },
+  ) => {
+    const params = new URLSearchParams();
+    if (options?.specId) params.set("spec_id", options.specId);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return apiFetch<DebugRunsResponse>(
+      `/api/debug/projects/${projectId}/runs${query}`,
+    );
+  },
   getRunMetadata: (projectId: ProjectId, runId: string) =>
     apiFetch<DebugRunMetadata>(
       `/api/debug/projects/${projectId}/runs/${runId}`,

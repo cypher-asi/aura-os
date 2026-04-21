@@ -20,9 +20,12 @@ members = [
     "crates/aura-os-terminal",
     "crates/aura-os-process",
     "crates/aura-protocol",
+    "crates/aura-loop-log-schema",
+    "crates/aura-run-heuristics",
     "apps/aura-os-desktop",
     "apps/aura-os-server",
     "apps/aura-os-ide",
+    "apps/aura-run-analyze",
 ]
 # vendor/chromiumoxide is a pinned fork of chromiumoxide v0.9.1 carrying
 # aura-os-local patches (see [patch.crates-io] below). It declares its own

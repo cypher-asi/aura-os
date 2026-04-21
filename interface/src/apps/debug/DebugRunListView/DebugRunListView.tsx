@@ -1,4 +1,9 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useMemo } from "react";
+import {
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
 import type { ProjectId } from "../../../types";
 import { useDebugRuns } from "../useDebugRuns";
@@ -44,10 +49,30 @@ function formatDuration(run: DebugRunMetadata): string {
   return `${h}h ${rm}m`;
 }
 
+function shortSpec(specId: string): string {
+  return specId.length > 12 ? `${specId.slice(0, 12)}…` : specId;
+}
+
 export function DebugRunListView() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: ProjectId }>();
-  const { runs, isLoading, error } = useDebugRuns(projectId);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const specFilter = searchParams.get("spec") ?? undefined;
+  const { runs, isLoading, error } = useDebugRuns(projectId, specFilter);
+
+  // Defensive client-side filter: the server already filters when
+  // `specFilter` is set, but if a stale cache was populated without
+  // a filter we still guarantee only matching runs render.
+  const visibleRuns = useMemo(() => {
+    if (!specFilter) return runs;
+    return runs.filter((run) => run.spec_ids?.includes(specFilter));
+  }, [runs, specFilter]);
+
+  const clearSpecFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("spec");
+    setSearchParams(next, { replace: true });
+  };
 
   if (!projectId) {
     return <div className={styles.empty}>No project selected.</div>;
@@ -59,21 +84,42 @@ export function DebugRunListView() {
         <div>
           <h2 className={styles.title}>{projectId}</h2>
           <div className={styles.subtitle}>
-            {runs.length} run{runs.length === 1 ? "" : "s"}
+            {visibleRuns.length} run{visibleRuns.length === 1 ? "" : "s"}
           </div>
         </div>
       </div>
-      {isLoading && runs.length === 0 ? (
+      {specFilter ? (
+        <div className={styles.filterBar}>
+          <span className={styles.filterChip}>
+            <span className={styles.filterChipLabel}>
+              Filtered by spec: {shortSpec(specFilter)}
+            </span>
+            <button
+              type="button"
+              className={styles.filterChipClear}
+              onClick={clearSpecFilter}
+              aria-label="Clear spec filter"
+            >
+              × clear
+            </button>
+          </span>
+        </div>
+      ) : null}
+      {isLoading && visibleRuns.length === 0 ? (
         <div className={styles.empty}>Loading runs…</div>
       ) : error ? (
         <div className={styles.empty}>
           Failed to load runs: {String((error as Error).message ?? error)}
         </div>
-      ) : runs.length === 0 ? (
-        <div className={styles.empty}>No runs recorded for this project.</div>
+      ) : visibleRuns.length === 0 ? (
+        <div className={styles.empty}>
+          {specFilter
+            ? "No runs match this spec."
+            : "No runs recorded for this project."}
+        </div>
       ) : (
         <div className={styles.grid}>
-          {runs.map((run) => (
+          {visibleRuns.map((run) => (
             <button
               key={run.run_id}
               type="button"

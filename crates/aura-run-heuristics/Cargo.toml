@@ -1,0 +1,20 @@
+[package]
+name = "aura-run-heuristics"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+aura-loop-log-schema = { path = "../aura-loop-log-schema" }
+aura-os-core = { path = "../aura-os-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+chrono = { workspace = true }
+
+[lints]
+workspace = true

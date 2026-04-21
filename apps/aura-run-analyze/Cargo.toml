@@ -1,0 +1,27 @@
+[package]
+name = "aura-run-analyze"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+aura-run-heuristics = { path = "../../crates/aura-run-heuristics" }
+aura-loop-log-schema = { path = "../../crates/aura-loop-log-schema" }
+aura-os-core = { path = "../../crates/aura-os-core" }
+clap = { version = "4", features = ["derive"] }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+
+[lints]
+workspace = true

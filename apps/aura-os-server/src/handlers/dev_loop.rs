@@ -6,7 +6,9 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tracing::{info, warn};
 
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, TaskStatus};
+use aura_os_core::{
+    AgentInstanceId, HarnessMode, ProjectId, SessionId, SpecId, TaskId, TaskStatus,
+};
 use aura_os_link::{connect_with_retries, AutomatonStartError, AutomatonStartParams};
 use aura_os_network::{NetworkClient, ReportUsageRequest};
 use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
@@ -689,6 +691,25 @@ async fn resolve_active_task_id(
         .ok()
         .flatten()
         .map(|t| t.task_id.to_string())
+}
+
+/// Resolve the `spec_id` for a task so `LoopLogWriter::on_task_started`
+/// can stamp it on the run bundle metadata.
+///
+/// Returns `None` — never errors — if the storage client is not
+/// configured, the JWT is missing, or the task lookup fails. The run
+/// bundle writer tolerates missing spec ids, so a best-effort lookup
+/// is the right trade-off here: logging a run is more important than
+/// knowing which spec it came from.
+async fn resolve_task_spec_id(
+    storage_client: Option<&std::sync::Arc<aura_os_storage::StorageClient>>,
+    jwt: Option<&str>,
+    task_id: &TaskId,
+) -> Option<SpecId> {
+    let storage = storage_client?;
+    let jwt = jwt?;
+    let storage_task = storage.get_task(&task_id.to_string(), jwt).await.ok()?;
+    storage_task.spec_id?.parse::<SpecId>().ok()
 }
 
 /// Emit a synthetic `task_failed` domain event and mirror the failure into
@@ -1594,8 +1615,19 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             .and_then(|v| v.as_str())
                             .and_then(|s| s.parse::<TaskId>().ok())
                         {
+                            let spec_id = resolve_task_spec_id(
+                                storage_client.as_ref(),
+                                jwt.as_deref(),
+                                &tid_uuid,
+                            )
+                            .await;
                             loop_log
-                                .on_task_started(project_id, agent_instance_id, tid_uuid)
+                                .on_task_started(
+                                    project_id,
+                                    agent_instance_id,
+                                    tid_uuid,
+                                    spec_id,
+                                )
                                 .await;
                         }
                     }
@@ -2158,9 +2190,15 @@ pub(crate) async fn start_loop(
         .await;
     if let Some(ref tid) = first_task_id {
         if let Ok(tid_uuid) = tid.parse::<TaskId>() {
+            let spec_id = resolve_task_spec_id(
+                state.storage_client.as_ref(),
+                jwt_for_persist.as_deref(),
+                &tid_uuid,
+            )
+            .await;
             state
                 .loop_log
-                .on_task_started(project_id, agent_instance_id, tid_uuid)
+                .on_task_started(project_id, agent_instance_id, tid_uuid, spec_id)
                 .await;
         }
     }
@@ -2677,9 +2715,15 @@ pub(crate) async fn run_single_task(
             .loop_log
             .on_loop_started(project_id, agent_instance_id)
             .await;
+        let spec_id = resolve_task_spec_id(
+            state.storage_client.as_ref(),
+            jwt_for_persist.as_deref(),
+            &task_id,
+        )
+        .await;
         state
             .loop_log
-            .on_task_started(project_id, agent_instance_id, task_id)
+            .on_task_started(project_id, agent_instance_id, task_id, spec_id)
             .await;
         // `run_single_task` does not insert into `state.automaton_registry`
         // (single-task runs use unique agent instance ids and manage their

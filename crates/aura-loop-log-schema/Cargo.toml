@@ -1,0 +1,15 @@
+[package]
+name = "aura-loop-log-schema"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+aura-os-core = { path = "../aura-os-core" }
+serde = { workspace = true }
+chrono = { workspace = true }
+
+[lints]
+workspace = true

@@ -45,6 +45,27 @@
   border-radius: 6px;
 }
 
+.rowNested {
+  padding-left: 50px;
+}
+
+.specFilterButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.specFilterButton:hover {
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-primary);
+}
+
 .row:hover {
   background: var(--color-overlay-subtle);
   color: var(--color-text-primary);
