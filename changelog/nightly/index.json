@@ -2,19 +2,20 @@
   {
     "date": "2026-04-20",
     "channel": "nightly",
-    "version": "0.1.0-nightly.312.1",
-    "title": "Agent permissions get trustworthy, and desktop learns to update itself",
-    "intro": "A heavy day centered on making agent capabilities actually stick — a unified tool registry, end-to-end permission reconciliation, and autosaving toggles — alongside a new in-app updater control for desktop, faster chat loads, and tougher CI for Android and packaging.",
-    "entryCount": 5,
+    "version": "0.1.0-nightly.314.1",
+    "title": "Agent permissions overhaul, in-app upgrades, and nightly release hardening",
+    "intro": "A dense nightly that reshapes how agent capabilities and tools flow through sessions, lands a first-class in-app upgrade control on desktop, speeds up the chat cold-boot path, and tightens the nightly release pipeline against flaky packaging and version drift.",
+    "entryCount": 6,
     "highlights": [
-      "Capability toggles now take effect immediately and survive restarts",
-      "New in-app update control in Settings and Team Settings",
-      "Chat opens faster via IndexedDB cache and parallel history reads",
-      "CI fails fast on missing Android secrets and retries transient packaging failures"
+      "Unified capability-aware tool registry fixes stale agent permissions",
+      "In-app update control lands in Settings and Team Settings",
+      "Chat cold boot gets IndexedDB cache and parallel history reads",
+      "Nightly desktop packaging retries transient failures and stabilizes versioning",
+      "Kimi K2.6 joins the chat model picker"
     ],
-    "rawCommitCount": 18,
-    "generatedAt": "2026-04-20T18:12:26.230Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.312.1",
+    "rawCommitCount": 20,
+    "generatedAt": "2026-04-21T02:01:19.568Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.314.1",
     "path": "history/2026-04-20.json"
   },
   {
