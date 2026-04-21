@@ -6,13 +6,27 @@
   padding: 0 var(--space-2) 0 var(--space-3);
   height: var(--control-height-sm, 32px);
   min-height: var(--control-height-sm, 32px);
-  border-bottom: 1px solid var(--color-border);
   background: var(--color-bg);
   box-sizing: border-box;
   font-size: var(--font-size-sm, 13px);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
+  position: relative;
+}
+
+/* Render the bottom border as an overlay so it stays visible above button
+   hover backgrounds, which would otherwise cover a regular border-bottom. */
+.header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-border);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .meta {
