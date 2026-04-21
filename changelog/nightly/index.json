@@ -2,20 +2,20 @@
   {
     "date": "2026-04-20",
     "channel": "nightly",
-    "version": "0.1.0-nightly.320.1",
-    "title": "Agent capabilities stick, sidekick gets sharper, and desktop self-heals",
-    "intro": "A dense nightly: the agent permissions system was rebuilt end-to-end so capability toggles finally stay toggled, the sidekick gained inline rename and much tighter spec/task placeholder handling, Notes picked up a real Table of Contents and workspace-aware storage, and the desktop app learned to recover from stale loopback state. Release tooling also got a round of hardening across Android, Linux sidecar builds, and nightly re-runs.",
+    "version": "0.1.0-nightly.321.1",
+    "title": "Agent permissions hardening, in-app updates, and run-panel reliability",
+    "intro": "A dense nightly that tightens agent capability handling end-to-end, ships an in-app upgrade control, and works through a long thread of sidekick, chat, and task-output reliability bugs. Release plumbing also got meaningful attention across Android, Linux, and desktop updater staging.",
     "entryCount": 6,
     "highlights": [
-      "Capability toggles now persist across saves, restarts, and renames",
-      "Inline rename and robust placeholder dedupe in the sidekick",
-      "Notes gains a real TOC panel and follows the project workspace",
-      "Desktop self-heals stale loopback control-plane overrides",
-      "Nightly release pipeline hardened for Android, Linux sidecar, and reruns"
+      "Capability toggles now take effect immediately and survive restarts",
+      "New in-app update control in Settings and Team Settings",
+      "Run panel and task streams stop dropping live output and stale rows",
+      "Notes, chat input, and sidekick UI got a round of polish",
+      "CI hardened for Android secrets, Linux dbus deps, and nightly reruns"
     ],
-    "rawCommitCount": 65,
-    "generatedAt": "2026-04-21T05:07:35.174Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.320.1",
+    "rawCommitCount": 67,
+    "generatedAt": "2026-04-21T05:48:53.564Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.321.1",
     "path": "history/2026-04-20.json"
   },
   {
