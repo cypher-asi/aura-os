@@ -16,6 +16,7 @@ interface MockAuthenticatedAppOptions {
   processes?: Record<string, unknown>[];
   processRuns?: Record<string, Record<string, unknown>[]>;
   orgsUnavailable?: boolean;
+  lastAppId?: string | null;
 }
 
 const mockProfile = {
@@ -104,6 +105,36 @@ const mockLeaderboardEntries = [
 export async function mockAuthenticatedApp(page: Page, options: MockAuthenticatedAppOptions = {}) {
   await page.unroute("**/api/auth/session");
   await page.unroute("**/api/auth/validate");
+  const session = {
+    user_id: "user-1",
+    network_user_id: "user-1",
+    profile_id: "profile-1",
+    display_name: "Test User",
+    profile_image: "",
+    primary_zid: "0://test-user",
+    zero_wallet: "0x123",
+    wallets: ["0x123"],
+    is_zero_pro: true,
+    created_at: "2026-03-17T01:00:00.000Z",
+    validated_at: "2026-03-17T01:00:00.000Z",
+    access_token: "test-jwt-token",
+  };
+  const lastAppId = options.lastAppId ?? "projects";
+
+  await page.addInitScript(({ seedSession, seedLastAppId }) => {
+    try {
+      window.localStorage.setItem("aura-jwt", seedSession.access_token);
+      window.localStorage.setItem("aura-session", JSON.stringify(seedSession));
+      if (seedLastAppId) {
+        window.localStorage.setItem("aura-last-app", seedLastAppId);
+      } else {
+        window.localStorage.removeItem("aura-last-app");
+      }
+    } catch {
+      /* no-op: localStorage may be unavailable in restricted contexts */
+    }
+  }, { seedSession: session, seedLastAppId: lastAppId });
+
   const profileComments = new Map(
     Object.entries(initialProfileComments).map(([eventId, comments]) => [eventId, [...comments]]),
   );
@@ -136,20 +167,6 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (pathname !== "/api" && !pathname.startsWith("/api/")) {
       return route.fallback();
     }
-
-    const session = {
-      user_id: "user-1",
-      network_user_id: "user-1",
-      profile_id: "profile-1",
-      display_name: "Test User",
-      profile_image: "",
-      primary_zid: "0://test-user",
-      zero_wallet: "0x123",
-      wallets: ["0x123"],
-      is_zero_pro: true,
-      created_at: "2026-03-17T01:00:00.000Z",
-      validated_at: "2026-03-17T01:00:00.000Z",
-    };
 
     const project = {
       project_id: "proj-1",
