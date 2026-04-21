@@ -21,6 +21,21 @@ export const tasksApi = {
     apiFetch<Task[]>(`/api/projects/${projectId}/specs/${specId}/tasks`),
   deleteTask: (projectId: ProjectId, taskId: TaskId) =>
     apiFetch<void>(`/api/projects/${projectId}/tasks/${taskId}`, { method: "DELETE" }),
+  updateTask: (
+    projectId: ProjectId,
+    taskId: TaskId,
+    body: {
+      title?: string;
+      description?: string;
+      order_index?: number;
+      dependency_ids?: string[];
+      assigned_agent_instance_id?: string;
+    },
+  ) =>
+    apiFetch<Task>(`/api/projects/${projectId}/tasks/${taskId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   transitionTask: (
     projectId: ProjectId,
     taskId: TaskId,

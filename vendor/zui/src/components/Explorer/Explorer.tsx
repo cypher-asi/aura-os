@@ -59,11 +59,15 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
     focusedId,
     compact,
     chevronPosition,
+    editingNodeId,
+    onRenameCommit,
+    onRenameCancel,
   } = useExplorerContext();
 
   const isMatch = matchingIds.has(node.id);
   const isFocused = focusedId === node.id;
   const isActiveDropTarget = dropTargetId === node.id;
+  const isEditing = editingNodeId === node.id;
 
   const itemRef = useRef<HTMLButtonElement>(null);
 
@@ -80,7 +84,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
     isDragging,
   } = useDraggable({
     id: node.id,
-    disabled: !enableDragDrop || isDisabled,
+    disabled: !enableDragDrop || isDisabled || isEditing,
     data: { node, path },
   });
 
@@ -103,7 +107,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
   // Handle click for selection
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      if (isDisabled) return;
+      if (isDisabled || isEditing) return;
       e.stopPropagation();
 
       const hasModifier = e.ctrlKey || e.metaKey || e.shiftKey;
@@ -124,7 +128,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
         toggleExpanded(node.id);
       }
     },
-    [isDisabled, enableMultiSelect, lastSelectedId, node.id, selectNode, toggleSelection, selectRange, expandOnSelect, hasChildren, toggleExpanded]
+    [isDisabled, isEditing, enableMultiSelect, lastSelectedId, node.id, selectNode, toggleSelection, selectRange, expandOnSelect, hasChildren, toggleExpanded]
   );
 
   // Handle chevron click
@@ -141,7 +145,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (isDisabled) return;
+      if (isDisabled || isEditing) return;
 
       switch (e.key) {
         case 'Enter':
@@ -166,7 +170,7 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
           break;
       }
     },
-    [isDisabled, hasChildren, isExpanded, node.id, selectNode, toggleExpanded, expandOnSelect]
+    [isDisabled, isEditing, hasChildren, isExpanded, node.id, selectNode, toggleExpanded, expandOnSelect]
   );
 
   const indent = compact
@@ -187,8 +191,52 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
     [handleClick, listeners]
   );
 
-  // Highlight matching text in label
-  const renderLabel = () => {
+  const handleRenameInputMount = useCallback((input: HTMLInputElement | null) => {
+    if (input) {
+      // Defer focus/select so the input is visible and stable before selection.
+      requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+      });
+    }
+  }, []);
+
+  const handleRenameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const value = e.currentTarget.value.trim();
+        if (!value || value === node.label) {
+          onRenameCancel?.(node.id);
+          return;
+        }
+        onRenameCommit?.(node.id, value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onRenameCancel?.(node.id);
+      }
+    },
+    [node.id, node.label, onRenameCommit, onRenameCancel]
+  );
+
+  const handleRenameBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      const value = e.currentTarget.value.trim();
+      if (!value || value === node.label) {
+        onRenameCancel?.(node.id);
+        return;
+      }
+      onRenameCommit?.(node.id, value);
+    },
+    [node.id, node.label, onRenameCommit, onRenameCancel]
+  );
+
+  const stopPropagation = useCallback((e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const renderLabelContent = () => {
     if (!searchQuery.trim() || !isMatch) {
       return node.label;
     }
@@ -210,6 +258,27 @@ function ExplorerItem({ node, level, path, dropTargetId, activeDropPosition }: E
         {after}
       </>
     );
+  };
+
+  const renderLabel = () => {
+    if (isEditing) {
+      return (
+        <input
+          ref={handleRenameInputMount}
+          className={styles.labelInput}
+          defaultValue={node.label}
+          onKeyDown={handleRenameKeyDown}
+          onBlur={handleRenameBlur}
+          onClick={stopPropagation}
+          onMouseDown={stopPropagation}
+          onPointerDown={stopPropagation}
+          onDoubleClick={stopPropagation}
+          spellCheck={false}
+          aria-label="Rename"
+        />
+      );
+    }
+    return renderLabelContent();
   };
 
   const chevronElement = hasChildren ? (
@@ -487,6 +556,9 @@ export function Explorer({
   onSearch,
   compact = true,
   chevronPosition = 'left',
+  editingNodeId = null,
+  onRenameCommit,
+  onRenameCancel,
 }: ExplorerProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -519,6 +591,9 @@ export function Explorer({
         onDrop={onDrop}
         compact={compact}
         chevronPosition={chevronPosition}
+        editingNodeId={editingNodeId}
+        onRenameCommit={onRenameCommit}
+        onRenameCancel={onRenameCancel}
       >
         {searchable && (
           <ExplorerSearch

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Spec, Task } from "../../types";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
@@ -11,6 +11,7 @@ import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectActions } from "../../stores/project-action-store";
 import { api } from "../../api/client";
 import {
+  mergeTaskIntoProjectLayout,
   projectQueryKeys,
   removeTaskFromProjectLayout,
   type ProjectLayoutBundle,
@@ -25,6 +26,7 @@ import {
 } from "../../components/SidekickItemContextMenu";
 import { DeleteSpecModal } from "../../components/DeleteSpecModal";
 import { useDeleteSpec } from "../../hooks/use-delete-spec";
+import { useRenameSpec } from "../../hooks/use-rename-spec";
 
 type TaskMenuTarget =
   | { kind: "task"; task: Task }
@@ -40,6 +42,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const queryClient = useQueryClient();
+  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const specMap = useMemo(() => new Map(specs.map((s) => [s.spec_id, s])), [specs]);
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.task_id, t])), [tasks]);
@@ -155,12 +158,18 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     handleDelete: handleSpecDelete,
     closeDeleteModal: closeSpecDeleteModal,
   } = useDeleteSpec(projectId);
+  const { renameSpec } = useRenameSpec(projectId);
 
   const handleMenuAction = useCallback(
     (actionId: string) => {
       const target = menu?.item;
       closeMenu();
-      if (!target || actionId !== "delete" || !projectId) return;
+      if (!target || !projectId) return;
+      if (actionId === "rename") {
+        setRenamingId(target.kind === "task" ? target.task.task_id : target.spec.spec_id);
+        return;
+      }
+      if (actionId !== "delete") return;
       if (target.kind === "task") {
         const { task } = target;
         removeTask(task.task_id);
@@ -181,6 +190,54 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     [menu, closeMenu, projectId, queryClient, removeTask, pushTask, setSpecDeleteTarget],
   );
 
+  const handleRenameCommit = useCallback(
+    (nodeId: string, rawLabel: string) => {
+      setRenamingId(null);
+      if (!projectId) return;
+      const newTitle = rawLabel.trim();
+      if (!newTitle) return;
+
+      const task = taskMap.get(nodeId);
+      if (task) {
+        if (newTitle === task.title) return;
+        const optimistic: Task = { ...task, title: newTitle };
+        pushTask(optimistic);
+        queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+          projectQueryKeys.layout(projectId),
+          (current) => mergeTaskIntoProjectLayout(current, optimistic),
+        );
+        api
+          .updateTask(projectId, task.task_id, { title: newTitle })
+          .then((updated) => {
+            pushTask(updated);
+            queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+              projectQueryKeys.layout(projectId),
+              (current) => mergeTaskIntoProjectLayout(current, updated),
+            );
+          })
+          .catch((err) => {
+            console.error("Failed to rename task", err);
+            pushTask(task);
+            queryClient.setQueryData<ProjectLayoutBundle | undefined>(
+              projectQueryKeys.layout(projectId),
+              (current) => mergeTaskIntoProjectLayout(current, task),
+            );
+          });
+        return;
+      }
+
+      const spec = specMap.get(nodeId);
+      if (spec) {
+        renameSpec(spec, newTitle).catch(() => {});
+      }
+    },
+    [projectId, taskMap, specMap, pushTask, queryClient, renameSpec],
+  );
+
+  const handleRenameCancel = useCallback(() => {
+    setRenamingId(null);
+  }, []);
+
   const isEmpty = tasks.length === 0;
   const showEmpty = useDelayedEmpty(isEmpty, loading, streamingAgentInstanceId ? 800 : 0);
 
@@ -200,6 +257,9 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
           enableMultiSelect={false}
           defaultExpandedIds={defaultExpandedIds}
           defaultSelectedIds={defaultSelectedIds}
+          editingNodeId={renamingId}
+          onRenameCommit={handleRenameCommit}
+          onRenameCancel={handleRenameCancel}
           onSelect={(ids) => {
             const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
             if (!id) return;

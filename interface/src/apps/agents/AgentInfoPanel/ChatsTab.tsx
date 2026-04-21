@@ -228,6 +228,7 @@ export function ChatsTab({
           y={menu.y}
           menuRef={menuRef}
           onAction={handleMenuAction}
+          actions={["delete"]}
         />
       )}
     </>

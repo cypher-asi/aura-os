@@ -151,6 +151,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
           y={menu.y}
           menuRef={menuRef}
           onAction={handleMenuAction}
+          actions={["delete"]}
         />
       )}
     </>

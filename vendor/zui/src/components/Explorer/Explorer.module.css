@@ -154,6 +154,29 @@
   line-height: 1.3;
 }
 
+/* Inline rename input rendered in place of the label */
+.labelInput {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 1px 4px;
+  font: inherit;
+  font-size: var(--text-sm, 13px);
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  background: var(--color-surface, #1e1e1e);
+  border: 1px solid var(--color-accent, #5e9eff);
+  border-radius: 2px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.itemMenuHeight .labelInput {
+  font-size: var(--text-base, 14px);
+  line-height: 1.4;
+}
+
 /* Suffix (e.g. status icons after the label) */
 .suffix {
   display: inline-flex;

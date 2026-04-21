@@ -19,6 +19,7 @@ import {
 } from "../../components/SidekickItemContextMenu";
 import { DeleteSpecModal } from "../../components/DeleteSpecModal";
 import { useDeleteSpec } from "../../hooks/use-delete-spec";
+import { useRenameSpec } from "../../hooks/use-rename-spec";
 
 export function SpecList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectActions();
@@ -26,6 +27,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const subscribe = useEventStore((s) => s.subscribe);
   const { specs, deletedSpecIds, streamingAgentInstanceId } = useSidekickStore(
     useShallow((s) => ({
@@ -174,16 +176,44 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     handleDelete,
     closeDeleteModal,
   } = useDeleteSpec(projectId);
+  const { renameSpec } = useRenameSpec(projectId);
 
   const handleMenuAction = useCallback(
     (actionId: string) => {
       const target = menu?.item;
       closeMenu();
-      if (!target || actionId !== "delete" || !projectId) return;
-      setDeleteTarget(target);
+      if (!target || !projectId) return;
+      if (actionId === "rename") {
+        setRenamingId(target.spec_id);
+        return;
+      }
+      if (actionId === "delete") {
+        setDeleteTarget(target);
+      }
     },
     [menu, closeMenu, projectId, setDeleteTarget],
   );
+
+  const handleRenameCommit = useCallback(
+    (nodeId: string, newLabel: string) => {
+      setRenamingId(null);
+      const spec = specById.get(nodeId);
+      if (!spec) return;
+      setLocalSpecs((prev) =>
+        prev.map((s) => (s.spec_id === nodeId ? { ...s, title: newLabel.trim() } : s)),
+      );
+      renameSpec(spec, newLabel).catch(() => {
+        setLocalSpecs((prev) =>
+          prev.map((s) => (s.spec_id === nodeId ? { ...s, title: spec.title } : s)),
+        );
+      });
+    },
+    [renameSpec, specById],
+  );
+
+  const handleRenameCancel = useCallback(() => {
+    setRenamingId(null);
+  }, []);
 
   const isEmpty = mergedSpecs.length === 0;
   const showEmpty = useDelayedEmpty(isEmpty, loading, streamingAgentInstanceId ? 800 : 0);
@@ -204,6 +234,9 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
           defaultExpandedIds={defaultExpandedIds}
           defaultSelectedIds={defaultSelectedIds}
           onSelect={handleSelect}
+          editingNodeId={renamingId}
+          onRenameCommit={handleRenameCommit}
+          onRenameCancel={handleRenameCancel}
         />
       </div>
       {menu && (

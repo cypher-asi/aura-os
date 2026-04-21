@@ -27,6 +27,9 @@ interface ExplorerProviderProps {
   onDrop?: (draggedId: string, targetId: string, position: DropPosition) => void;
   compact?: boolean;
   chevronPosition?: 'left' | 'right';
+  editingNodeId?: string | null;
+  onRenameCommit?: (nodeId: string, newLabel: string) => void;
+  onRenameCancel?: (nodeId: string) => void;
 }
 
 /**
@@ -128,6 +131,9 @@ export function ExplorerProvider({
   onDrop,
   compact = true,
   chevronPosition = 'left',
+  editingNodeId = null,
+  onRenameCommit,
+  onRenameCancel,
 }: ExplorerProviderProps) {
   const [uncontrolledExpandedIds, setUncontrolledExpandedIds] = useState<Set<string>>(new Set(defaultExpandedIds));
   const [uncontrolledSelectedIds, setUncontrolledSelectedIds] = useState<Set<string>>(new Set(defaultSelectedIds));
@@ -140,12 +146,16 @@ export function ExplorerProvider({
   const onSelectRef = useRef(onSelect);
   const onExpandRef = useRef(onExpand);
   const onDropRef = useRef(onDrop);
+  const onRenameCommitRef = useRef(onRenameCommit);
+  const onRenameCancelRef = useRef(onRenameCancel);
 
   // Update refs when callbacks change
   useEffect(() => {
     onSelectRef.current = onSelect;
     onExpandRef.current = onExpand;
     onDropRef.current = onDrop;
+    onRenameCommitRef.current = onRenameCommit;
+    onRenameCancelRef.current = onRenameCancel;
   });
 
   // Flatten tree for easier operations
@@ -355,6 +365,9 @@ export function ExplorerProvider({
       flatNodes,
       compact,
       chevronPosition,
+      editingNodeId,
+      onRenameCommit: onRenameCommitRef.current,
+      onRenameCancel: onRenameCancelRef.current,
     }),
     [
       expandedIds,
@@ -378,6 +391,7 @@ export function ExplorerProvider({
       flatNodes,
       compact,
       chevronPosition,
+      editingNodeId,
     ]
   );
 

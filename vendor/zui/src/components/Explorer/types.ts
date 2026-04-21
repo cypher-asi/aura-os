@@ -54,6 +54,12 @@ export interface ExplorerProps {
   compact?: boolean;
   /** Position of the expand/collapse chevron (default: 'left') */
   chevronPosition?: 'left' | 'right';
+  /** ID of the node currently in inline-edit (rename) mode. */
+  editingNodeId?: string | null;
+  /** Called when the user commits an inline rename (Enter or blur with a non-empty change). */
+  onRenameCommit?: (nodeId: string, newLabel: string) => void;
+  /** Called when the user cancels an inline rename (Escape, empty value, or unchanged value). */
+  onRenameCancel?: (nodeId: string) => void;
 }
 
 /**
@@ -127,6 +133,12 @@ export interface ExplorerContextValue {
   compact: boolean;
   /** Position of the expand/collapse chevron */
   chevronPosition: 'left' | 'right';
+  /** ID of the node currently in inline-edit (rename) mode. */
+  editingNodeId: string | null;
+  /** Commit an inline rename. */
+  onRenameCommit?: (nodeId: string, newLabel: string) => void;
+  /** Cancel an inline rename. */
+  onRenameCancel?: (nodeId: string) => void;
 }
 
 /**

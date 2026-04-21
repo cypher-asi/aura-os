@@ -100,6 +100,18 @@ describe("tasksApi", () => {
     );
   });
 
+  it("updateTask sends PUT with title in the body", async () => {
+    const fetchMock = mockFetch(200, { task_id: "t1", title: "Renamed" });
+    globalThis.fetch = fetchMock;
+    await tasksApi.updateTask("p1" as string, "t1" as string, {
+      title: "Renamed",
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/projects/p1/tasks/t1");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ title: "Renamed" });
+  });
+
   it("runTask includes explicit model override when provided", async () => {
     const fetchMock = mockFetch(204, null);
     globalThis.fetch = fetchMock;

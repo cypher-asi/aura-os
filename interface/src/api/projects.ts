@@ -68,6 +68,12 @@ export interface CreateImportedProjectRequest {
   local_workspace_path?: string | null;
 }
 
+export interface UpdateSpecRequest {
+  title?: string;
+  order_index?: number;
+  markdown_contents?: string;
+}
+
 export interface ProjectStatsData {
   total_tasks: number;
   pending_tasks: number;
@@ -122,6 +128,11 @@ export const projectsApi = {
     apiFetch<Spec>(`/api/projects/${projectId}/specs/${specId}`),
   deleteSpec: (projectId: ProjectId, specId: SpecId) =>
     apiFetch<void>(`/api/projects/${projectId}/specs/${specId}`, { method: "DELETE" }),
+  updateSpec: (projectId: ProjectId, specId: SpecId, body: UpdateSpecRequest) =>
+    apiFetch<Spec>(`/api/projects/${projectId}/specs/${specId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   generateSpecs: (projectId: ProjectId, agentInstanceId?: string | null) => {
     const params = agentInstanceId ? `?agent_instance_id=${encodeURIComponent(agentInstanceId)}` : "";
     return apiFetch<Spec[]>(`/api/projects/${projectId}/specs/generate${params}`, {

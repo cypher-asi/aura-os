@@ -156,6 +156,18 @@ describe("projectsApi", () => {
     );
   });
 
+  it("updateSpec sends PUT with title in the body", async () => {
+    const fetchMock = mockFetch(200, { spec_id: "s1", title: "Renamed" });
+    globalThis.fetch = fetchMock;
+    await projectsApi.updateSpec("p1" as string, "s1" as string, {
+      title: "Renamed",
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/projects/p1/specs/s1");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ title: "Renamed" });
+  });
+
   it("generateSpecs sends POST", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;
