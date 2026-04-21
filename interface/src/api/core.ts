@@ -29,6 +29,22 @@ export function isInsufficientCreditsError(err: unknown): boolean {
   return false;
 }
 
+/**
+ * True when the chat request was rejected because the upstream agent
+ * is already running a turn (typically because an automation loop is
+ * running on the same agent id). Returned from
+ * `POST /api/projects/:pid/agents/:aid/events/stream` as a typed
+ * `409 agent_busy` — frontends branch on this to render a dedicated
+ * "stop the automation to chat" affordance instead of surfacing the
+ * raw harness text.
+ */
+export function isAgentBusyError(err: unknown): boolean {
+  if (err instanceof ApiClientError) {
+    return err.body.code === "agent_busy";
+  }
+  return false;
+}
+
 export function dispatchInsufficientCredits(): void {
   window.dispatchEvent(new CustomEvent(INSUFFICIENT_CREDITS_EVENT));
 }

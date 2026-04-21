@@ -30,6 +30,7 @@ import {
   standaloneAgentHandoffTarget,
 } from "../../utils/chat-handoff";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useAgentBusy } from "../../hooks/use-agent-busy";
 
 const AGENT_PROJECT_KEY_PREFIX = "aura-agent-project:";
 const EMPTY_PROJECTS: Project[] = [];
@@ -430,6 +431,25 @@ function ProjectAgentChatPanel({
     maybeRenameFromFirstPrompt(args[0] ?? "");
     return wrappedSendBase(...args);
   }, [maybeRenameFromFirstPrompt, wrappedSendBase]);
+
+  // Combine our own chat-SSE streaming state with automation-loop
+  // activity against the same upstream agent so the chat input shows
+  // the stop icon (and blocks Send) whenever the harness would reject
+  // a new turn. The harness enforces one in-flight turn per agent id
+  // upstream — see `/v1/agents/{id}/sessions` vs
+  // `/v1/agents/{id}/automaton/start` in the server.
+  const busy = useAgentBusy({ projectId, agentInstanceId, streamKey });
+  const loopOnlyBusy = busy.isBusy && busy.reason === "loop";
+  const handleCombinedStop = useCallback(() => {
+    if (loopOnlyBusy) {
+      void api.stopLoop(projectId, agentInstanceId).catch((err) => {
+        console.error("Failed to stop automation loop from chat", err);
+      });
+      return;
+    }
+    stopStreaming();
+  }, [loopOnlyBusy, projectId, agentInstanceId, stopStreaming]);
+
   const deferredLoading = useDelayedLoading(isLoading);
   const panelKey = isSessionView ? `${agentInstanceId}:${sessionId}` : agentInstanceId;
   const shouldUseCreateHandoff = initialCreateHandoff && !isSessionView;
@@ -493,7 +513,13 @@ function ProjectAgentChatPanel({
       <ChatPanel
         streamKey={streamKey}
         onSend={isSessionView ? noopSend : wrappedSend}
-        onStop={stopStreaming}
+        onStop={handleCombinedStop}
+        isExternallyBusy={loopOnlyBusy}
+        externalBusyMessage={
+          loopOnlyBusy
+            ? "This agent is running an automation task. Stop it to chat."
+            : undefined
+        }
         agentName={agentName}
         machineType={machineType}
         templateAgentId={templateAgentId}

@@ -2681,6 +2681,39 @@ pub(crate) async fn send_event_stream(
     require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
+    // Reject new chat turns when this agent is already running an
+    // automation loop upstream. The harness enforces one in-flight
+    // turn per `agent_id` (shared by `/v1/agents/{id}/sessions` and
+    // `/v1/agents/{id}/automaton/start`), so a `UserMessage` posted
+    // while the loop is active surfaces as the raw upstream error
+    // "A turn is currently in progress; send cancel first" with no
+    // way for the UI to cancel it. Catching the conflict here lets
+    // the frontend render a targeted "stop automation to chat"
+    // affordance instead. Paused automatons are *not* holding a turn
+    // so we allow chat through; any race between this check and
+    // `commands_tx.send(UserMessage)` still bubbles up the raw
+    // harness error as a fallback.
+    {
+        let reg = state.automaton_registry.lock().await;
+        if let Some(entry) = reg.get(&agent_instance_id) {
+            let live = entry.alive.load(std::sync::atomic::Ordering::Acquire);
+            if live && !entry.paused {
+                let automaton_id = entry.automaton_id.clone();
+                drop(reg);
+                warn!(
+                    %project_id,
+                    %agent_instance_id,
+                    %automaton_id,
+                    "Rejecting chat turn: agent is running an automation loop",
+                );
+                return Err(ApiError::agent_busy(
+                    "Agent is currently running an automation task. Stop the loop to chat.",
+                    Some(automaton_id),
+                ));
+            }
+        }
+    }
+
     let session_key = format!("instance:{agent_instance_id}");
     let force_new = body.new_session.unwrap_or(false);
     let persist_ctx =

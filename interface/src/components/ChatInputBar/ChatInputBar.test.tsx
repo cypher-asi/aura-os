@@ -133,6 +133,34 @@ describe("ChatInputBar", () => {
     expect(onStop).toHaveBeenCalledOnce();
   });
 
+  it("shows stop button when externally busy even if chat is idle", () => {
+    mockIsStreaming = false;
+    render(<ChatInputBar {...makeProps({ isExternallyBusy: true })} />);
+    const stop = screen.getByRole("button", { name: "Stop automation" });
+    expect(stop).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
+  });
+
+  it("calls onStop when externally busy stop button is clicked", async () => {
+    const user = userEvent.setup();
+    mockIsStreaming = false;
+    const onStop = vi.fn();
+    render(
+      <ChatInputBar
+        {...makeProps({
+          isExternallyBusy: true,
+          externalBusyMessage: "Agent is running automation",
+          onStop,
+        })}
+      />,
+    );
+
+    const stop = screen.getByRole("button", { name: "Stop automation" });
+    expect(stop).toHaveAttribute("title", "Agent is running automation");
+    await user.click(stop);
+    expect(onStop).toHaveBeenCalledOnce();
+  });
+
   it("shows default model label when selectedModel set in store", () => {
     mockSelectedModel = "aura-claude-opus-4-6";
     render(<ChatInputBar {...makeProps()} />);

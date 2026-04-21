@@ -1,5 +1,9 @@
 import type { MutableRefObject } from "react";
-import { isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
+import {
+  isInsufficientCreditsError,
+  isAgentBusyError,
+  dispatchInsufficientCredits,
+} from "../../api/client";
 import type {
   ToolCallStartedInfo,
   ToolCallSnapshotInfo,
@@ -73,12 +77,20 @@ function getStreamErrorMessage(error: unknown): string {
 
 function normalizeStreamError(error: unknown): {
   message: string;
-  displayVariant?: "insufficientCreditsError";
+  displayVariant?: "insufficientCreditsError" | "agentBusyError";
 } {
   if (isInsufficientCreditsError(error)) {
     return {
       message: "You have no credits remaining. Buy more credits to continue.",
       displayVariant: "insufficientCreditsError",
+    };
+  }
+
+  if (isAgentBusyError(error)) {
+    return {
+      message:
+        "This agent is currently running an automation task. Stop the automation to chat.",
+      displayVariant: "agentBusyError",
     };
   }
 

@@ -1,6 +1,7 @@
 export {
   ApiClientError,
   isInsufficientCreditsError,
+  isAgentBusyError,
   dispatchInsufficientCredits,
   INSUFFICIENT_CREDITS_EVENT,
 } from "./core";

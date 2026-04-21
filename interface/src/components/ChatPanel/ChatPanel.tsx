@@ -29,6 +29,14 @@ export interface ChatPanelProps {
     generationMode?: GenerationMode,
   ) => void;
   onStop: () => void;
+  /**
+   * Treat the chat as streaming even when our own SSE is idle. Used
+   * when another subsystem (e.g. the automation loop) is holding a
+   * turn on the same upstream agent. ChatPanel then renders the stop
+   * icon so the caller's `onStop` can cancel that external work.
+   */
+  isExternallyBusy?: boolean;
+  externalBusyMessage?: string;
   agentName?: string;
   machineType?: "local" | "remote";
   adapterType?: string;
@@ -60,6 +68,8 @@ export function ChatPanel({
   streamKey,
   onSend,
   onStop,
+  isExternallyBusy = false,
+  externalBusyMessage,
   agentName,
   machineType,
   adapterType,
@@ -381,6 +391,8 @@ export function ChatPanel({
           onSend={handleSend}
           onStop={onStop}
           streamKey={streamKey}
+          isExternallyBusy={isExternallyBusy}
+          externalBusyMessage={externalBusyMessage}
           adapterType={adapterType}
           defaultModel={defaultModel}
           agentName={agentName}

@@ -120,6 +120,35 @@ impl ApiError {
         )
     }
 
+    /// The upstream harness would reject a new `UserMessage` because
+    /// the target agent is already running a turn (typically because
+    /// the dev loop / automation started a task on the same agent id
+    /// upstream). Returns HTTP 409 with a machine-readable `code`
+    /// (`agent_busy`) and a structured `data` payload that frontends
+    /// use to render a dedicated "stop automation to chat" affordance
+    /// instead of echoing the raw harness string
+    /// "A turn is currently in progress; send cancel first".
+    pub(crate) fn agent_busy(
+        reason: impl Into<String>,
+        automaton_id: Option<String>,
+    ) -> (StatusCode, Json<Self>) {
+        let reason = reason.into();
+        let data = serde_json::json!({
+            "code": "agent_busy",
+            "reason": reason.clone(),
+            "automaton_id": automaton_id,
+        });
+        (
+            StatusCode::CONFLICT,
+            Json(Self {
+                error: reason.clone(),
+                code: "agent_busy".to_string(),
+                details: Some(reason),
+                data: Some(data),
+            }),
+        )
+    }
+
     pub(crate) fn service_unavailable(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::SERVICE_UNAVAILABLE,
@@ -459,6 +488,31 @@ mod tests {
         assert_eq!(data["session_id"], "sess-1");
         assert_eq!(data["project_id"], "proj-1");
         assert_eq!(data["project_agent_id"], "pa-1");
+    }
+
+    #[test]
+    fn agent_busy_returns_409_with_structured_data() {
+        let (status, Json(api_err)) = ApiError::agent_busy(
+            "Agent is currently running an automation task.",
+            Some("automaton-xyz".into()),
+        );
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(api_err.code, "agent_busy");
+        let data = api_err.data.expect("data must be populated");
+        assert_eq!(data["code"], "agent_busy");
+        assert_eq!(data["automaton_id"], "automaton-xyz");
+        assert!(data["reason"]
+            .as_str()
+            .unwrap()
+            .contains("automation task"));
+    }
+
+    #[test]
+    fn agent_busy_accepts_missing_automaton_id() {
+        let (_, Json(api_err)) = ApiError::agent_busy("busy", None);
+        assert_eq!(api_err.code, "agent_busy");
+        let data = api_err.data.expect("data populated");
+        assert!(data["automaton_id"].is_null());
     }
 
     #[test]

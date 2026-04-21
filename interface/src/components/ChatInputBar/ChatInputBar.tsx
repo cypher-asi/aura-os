@@ -65,6 +65,21 @@ interface Props {
   ) => void;
   onStop: () => void;
   streamKey: string;
+  /**
+   * Treat the input as busy even when the chat SSE is idle. Set when
+   * an external source (e.g. an automation run against the same
+   * upstream agent) is holding a turn and would cause the harness to
+   * reject any new `UserMessage` with
+   * "A turn is currently in progress; send cancel first". Shows the
+   * stop icon so the user can cancel from the same affordance.
+   */
+  isExternallyBusy?: boolean;
+  /**
+   * Tooltip / disabled-reason explaining why the input is blocked.
+   * Used only when `isExternallyBusy` is true, to surface "agent is
+   * running an automation task" instead of the raw upstream string.
+   */
+  externalBusyMessage?: string;
   adapterType?: string;
   defaultModel?: string | null;
   agentName?: string;
@@ -125,6 +140,8 @@ export const ChatInputBar = memo(
       onSend,
       onStop,
       streamKey,
+      isExternallyBusy = false,
+      externalBusyMessage,
       adapterType,
       defaultModel,
       machineType,
@@ -145,7 +162,8 @@ export const ChatInputBar = memo(
     },
     ref,
   ) {
-    const isStreaming = useIsStreaming(streamKey);
+    const isChatStreaming = useIsStreaming(streamKey);
+    const isStreaming = isChatStreaming || isExternallyBusy;
     const chatUI = useChatUI(streamKey);
     const selectedModel = chatUI.selectedModel;
     const onModelChange = useCallback(
@@ -499,7 +517,16 @@ export const ChatInputBar = memo(
                 type="button"
                 className={`${styles.sendButton} ${styles.stopButton}`}
                 onClick={onStop}
-                aria-label="Stop"
+                aria-label={
+                  isExternallyBusy && !isChatStreaming
+                    ? "Stop automation"
+                    : "Stop"
+                }
+                title={
+                  isExternallyBusy && !isChatStreaming
+                    ? externalBusyMessage ?? "Stop the running automation"
+                    : undefined
+                }
               >
                 <span className={styles.stopIcon} />
               </button>
