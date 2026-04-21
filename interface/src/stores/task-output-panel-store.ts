@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { invalidateTaskTurns } from "./task-turn-cache";
+import { removePersistedTaskOutputText } from "./event-store/task-output-cache";
 
 const STORAGE_KEY = "aura-task-output-panel";
 const TASKS_STORAGE_KEY = "aura-task-output-panel-tasks";
@@ -152,10 +154,20 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
 
   dismissTask: (taskId) => {
     set((s) => ({ tasks: s.tasks.filter((t) => t.taskId !== taskId) }));
+    // Dropping a row from the panel is an explicit "I don't want to
+    // see this again" signal, so we also purge the structured turn
+    // cache and any orphaned text snapshot for that task.
+    invalidateTaskTurns(taskId);
+    removePersistedTaskOutputText(taskId);
   },
 
   clearCompleted: () => {
+    const removed = get().tasks.filter((t) => t.status !== "active");
     set((s) => ({ tasks: s.tasks.filter((t) => t.status === "active") }));
+    for (const t of removed) {
+      invalidateTaskTurns(t.taskId);
+      removePersistedTaskOutputText(t.taskId);
+    }
   },
 
   markAllCompleted: () => {

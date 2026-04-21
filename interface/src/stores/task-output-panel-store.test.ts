@@ -36,6 +36,11 @@ vi.hoisted(() => {
 });
 
 import { useTaskOutputPanelStore, type PanelTaskEntry } from "./task-output-panel-store";
+import {
+  persistTaskTurns,
+  readTaskTurns,
+  resetTaskTurnCache,
+} from "./task-turn-cache";
 
 const STORAGE_KEY = "aura-task-output-panel";
 const TASKS_STORAGE_KEY = "aura-task-output-panel-tasks";
@@ -54,6 +59,7 @@ function makeTask(overrides: Partial<PanelTaskEntry> = {}): PanelTaskEntry {
 beforeEach(() => {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(TASKS_STORAGE_KEY);
+  resetTaskTurnCache();
   useTaskOutputPanelStore.setState({
     panelHeight: 200,
     collapsed: false,
@@ -159,6 +165,18 @@ describe("task-output-panel-store", () => {
       useTaskOutputPanelStore.getState().dismissTask("t1");
       expect(useTaskOutputPanelStore.getState().tasks).toHaveLength(0);
     });
+
+    it("invalidates the persisted turn cache", () => {
+      persistTaskTurns("t1", [
+        { id: "e1", role: "assistant", content: "done" },
+      ], "p1");
+      expect(readTaskTurns("t1", "p1")).toHaveLength(1);
+
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore.getState().dismissTask("t1");
+
+      expect(readTaskTurns("t1", "p1")).toEqual([]);
+    });
   });
 
   describe("clearCompleted", () => {
@@ -172,6 +190,23 @@ describe("task-output-panel-store", () => {
       const tasks = useTaskOutputPanelStore.getState().tasks;
       expect(tasks).toHaveLength(1);
       expect(tasks[0].taskId).toBe("t2");
+    });
+
+    it("invalidates persisted turn caches for every removed row", () => {
+      persistTaskTurns("t1", [{ id: "e1", role: "assistant", content: "a" }], "p1");
+      persistTaskTurns("t2", [{ id: "e2", role: "assistant", content: "b" }], "p1");
+      persistTaskTurns("t3", [{ id: "e3", role: "assistant", content: "c" }], "p1");
+
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "A");
+      useTaskOutputPanelStore.getState().addTask("t2", "p1", "B");
+      useTaskOutputPanelStore.getState().addTask("t3", "p1", "C");
+      useTaskOutputPanelStore.getState().completeTask("t1");
+      useTaskOutputPanelStore.getState().failTask("t3");
+      useTaskOutputPanelStore.getState().clearCompleted();
+
+      expect(readTaskTurns("t1", "p1")).toEqual([]);
+      expect(readTaskTurns("t3", "p1")).toEqual([]);
+      expect(readTaskTurns("t2", "p1")).toHaveLength(1);
     });
   });
 

@@ -4,9 +4,11 @@ import { useEventStore, getTaskOutput } from "./event-store/index";
 import {
   ensureEntry,
   createSetters,
+  getStreamEntry,
   getThinkingDurationMs,
   streamMetaMap,
 } from "../hooks/stream/store";
+import { persistTaskTurns } from "./task-turn-cache";
 import {
   resetStreamBuffers,
   handleTextDelta,
@@ -241,6 +243,18 @@ function mergeBufferedOutput(taskId: string, streamBuffer: string, projectId?: s
   }
 }
 
+/**
+ * Snapshot the finalized events for `taskId` into the persistent turn
+ * cache so the Run panel and sidekick overlay can rehydrate a rich
+ * post-completion view after the in-memory stream entry is pruned or
+ * the page reloads. No-ops when no events have been captured yet.
+ */
+function snapshotTaskTurns(taskId: string, projectId?: string): void {
+  const entry = getStreamEntry(taskStreamKey(taskId));
+  if (!entry || entry.events.length === 0) return;
+  persistTaskTurns(taskId, entry.events, projectId);
+}
+
 function handleTaskCompleted(e: AuraEventOfType<EventType.TaskCompleted>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
@@ -251,6 +265,7 @@ function handleTaskCompleted(e: AuraEventOfType<EventType.TaskCompleted>): void 
   });
   isStreamingByTask.delete(taskId);
   useTaskOutputPanelStore.getState().completeTask(taskId);
+  snapshotTaskTurns(taskId, e.project_id);
 }
 
 function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
@@ -264,10 +279,19 @@ function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
   });
   isStreamingByTask.delete(taskId);
   useTaskOutputPanelStore.getState().failTask(taskId);
+  snapshotTaskTurns(taskId, e.project_id);
 }
 
 function handleLoopEnd(): void {
-  useTaskOutputPanelStore.getState().markAllCompleted();
+  // Snapshot any task rows we flip to "completed" so reopening the
+  // Run panel after a LoopFinished/LoopStopped event still renders
+  // their structured turn history from cache.
+  const panel = useTaskOutputPanelStore.getState();
+  const activeTasks = panel.tasks.filter((t) => t.status === "active");
+  panel.markAllCompleted();
+  for (const task of activeTasks) {
+    snapshotTaskTurns(task.taskId, task.projectId);
+  }
   isStreamingByTask.clear();
 }
 

@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check, X as XIcon, AlertTriangle, CircleDashed, ChevronRight } from "lucide-react";
-import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
-import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
-import { hydrateTaskOutputOnce } from "../../stores/task-output-hydration-cache";
-import { useStreamEvents } from "../../hooks/stream/hooks";
+import { useTaskOutputView } from "../../hooks/use-task-output-view";
 import { MessageBubble } from "../MessageBubble";
 import { LLMOutput } from "../LLMOutput";
 import styles from "./TaskOutputPanel.module.css";
@@ -16,59 +13,15 @@ interface CompletedTaskOutputProps {
   status: PanelTaskStatus;
 }
 
-/**
- * Hydrates task output for a completed row. Deduplicates across all
- * rows and all re-mounts via the shared hydration cache, and respects
- * the server's `unavailable` flag as a terminal "no output" signal so
- * we never retry on empty. If the local cache has text, we seed it
- * immediately for an instant render while the server call resolves.
- */
-function useHydrateCompletedOutput(projectId: string, taskId: string) {
-  const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const existing = useEventStore.getState().taskOutputs[taskId];
-    if (!existing?.text) {
-      const cached = getCachedTaskOutputText(taskId, projectId);
-      if (cached) {
-        seedTaskOutput(taskId, cached, undefined, undefined, projectId);
-      }
-    }
-
-    void hydrateTaskOutputOnce(projectId, taskId, async () => {
-      const current = useEventStore.getState().taskOutputs[taskId];
-      if (current?.text) return "loaded";
-      try {
-        const res = await api.getTaskOutput(projectId, taskId);
-        if (cancelled) return "empty";
-        if (res.output || res.build_steps?.length || res.test_steps?.length) {
-          seedTaskOutput(taskId, res.output, undefined, undefined, projectId);
-          return "loaded";
-        }
-        // Server explicitly says there is no output for this task (e.g.
-        // session_id never got persisted). Cache this as "empty" so the
-        // row does not re-hit the endpoint on every mount.
-        return "empty";
-      } catch {
-        return "empty";
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, taskId, seedTaskOutput]);
-}
-
 export function CompletedTaskOutput({ taskId, projectId, title, status }: CompletedTaskOutputProps) {
-  const taskOutput = useTaskOutput(taskId);
   const dismissTask = useTaskOutputPanelStore((s) => s.dismissTask);
-  const streamEvents = useStreamEvents(`task:${taskId}`);
+  // `CompletedTaskOutput` only renders for non-active rows, so every
+  // mount is a terminal view from the hook's perspective.
+  const { events, fallbackText, hasStructuredContent, hasAnyContent } =
+    useTaskOutputView(taskId, projectId, true);
 
-  useHydrateCompletedOutput(projectId, taskId);
-
+  // Default collapsed, but remember once the user expands so re-renders
+  // (e.g. driven by hydration finishing) do not yank the body closed.
   const [collapsed, setCollapsed] = useState(true);
 
   const statusIcon =
@@ -85,8 +38,6 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
     status === "failed" ? "Failed"
     : status === "interrupted" ? "Interrupted"
     : "Done";
-
-  const hasStreamEvents = streamEvents.length > 0;
 
   return (
     <div className={styles.taskSection}>
@@ -124,15 +75,15 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
         </span>
       </button>
       {!collapsed && (
-        hasStreamEvents ? (
+        hasStructuredContent ? (
           <div className={styles.taskBody}>
-            {streamEvents.map((evt) => (
+            {events.map((evt) => (
               <MessageBubble key={evt.id} message={evt} />
             ))}
           </div>
-        ) : taskOutput.text ? (
+        ) : fallbackText ? (
           <div className={styles.taskBody}>
-            <LLMOutput content={taskOutput.text} />
+            <LLMOutput content={fallbackText} />
           </div>
         ) : (
           <div className={styles.taskBodyEmpty}>
@@ -140,7 +91,9 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
               ? "Task failed without producing output."
               : status === "interrupted"
                 ? "Run was interrupted before completing."
-                : "No output captured for this run."}
+                : hasAnyContent
+                  ? "No text output captured for this run."
+                  : "No output captured for this run."}
           </div>
         )
       )}

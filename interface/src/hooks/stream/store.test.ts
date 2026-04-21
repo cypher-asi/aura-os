@@ -1,3 +1,4 @@
+import type { DisplaySessionEvent } from "../../types/stream";
 import {
   useStreamStore,
   streamMetaMap,
@@ -9,9 +10,14 @@ import {
   getThinkingDurationMs,
   createSetters,
   resolve,
+  seedStreamEventsFromCache,
   acquireSharedStreamSubscriptions,
   peekSharedSubscriptionRefCount,
 } from "./store";
+
+function makeEvent(id: string, content: string): DisplaySessionEvent {
+  return { id, role: "assistant", content };
+}
 
 describe("stream/store", () => {
   beforeEach(() => {
@@ -221,6 +227,79 @@ describe("stream/store", () => {
       pruneStreamStore();
 
       expect(streamMetaMap.has("k1")).toBe(true);
+    });
+
+    it("protects finalized entries with events from idle eviction", () => {
+      ensureEntry("task:finalized");
+      useStreamStore.setState((s) => ({
+        entries: {
+          ...s.entries,
+          "task:finalized": {
+            ...s.entries["task:finalized"],
+            events: [makeEvent("e1", "done")],
+          },
+        },
+      }));
+      const meta = streamMetaMap.get("task:finalized");
+      if (meta) meta.lastAccessedAt = Date.now() - 10 * 60 * 1000;
+
+      pruneStreamStore();
+
+      expect(getStreamEntry("task:finalized")).toBeDefined();
+    });
+
+    it("still evicts idle entries that never captured any events", () => {
+      ensureEntry("task:empty");
+      const meta = streamMetaMap.get("task:empty");
+      if (meta) meta.lastAccessedAt = Date.now() - 10 * 60 * 1000;
+
+      pruneStreamStore();
+
+      expect(getStreamEntry("task:empty")).toBeUndefined();
+    });
+  });
+
+  describe("seedStreamEventsFromCache", () => {
+    it("populates an empty entry with the cached events", () => {
+      seedStreamEventsFromCache("task:1", [makeEvent("e1", "hi")]);
+      const entry = getStreamEntry("task:1");
+      expect(entry?.events).toHaveLength(1);
+      expect(entry?.events[0].content).toBe("hi");
+    });
+
+    it("does not clobber an entry that already has events", () => {
+      ensureEntry("task:1");
+      useStreamStore.setState((s) => ({
+        entries: {
+          ...s.entries,
+          "task:1": {
+            ...s.entries["task:1"],
+            events: [makeEvent("live-1", "live")],
+          },
+        },
+      }));
+      seedStreamEventsFromCache("task:1", [makeEvent("cached-1", "cached")]);
+      const entry = getStreamEntry("task:1");
+      expect(entry?.events).toHaveLength(1);
+      expect(entry?.events[0].id).toBe("live-1");
+    });
+
+    it("ignores seeding while the entry is actively streaming", () => {
+      ensureEntry("task:1");
+      useStreamStore.setState((s) => ({
+        entries: {
+          ...s.entries,
+          "task:1": { ...s.entries["task:1"], isStreaming: true },
+        },
+      }));
+      seedStreamEventsFromCache("task:1", [makeEvent("cached-1", "cached")]);
+      const entry = getStreamEntry("task:1");
+      expect(entry?.events).toHaveLength(0);
+    });
+
+    it("no-ops for empty event arrays", () => {
+      seedStreamEventsFromCache("task:1", []);
+      expect(getStreamEntry("task:1")).toBeUndefined();
     });
   });
 

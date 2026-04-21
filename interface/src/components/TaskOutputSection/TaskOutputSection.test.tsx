@@ -32,7 +32,25 @@ vi.mock("../../hooks/stream/hooks", () => ({
 }));
 
 vi.mock("../../stores/event-store/index", () => ({
-  useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [] }),
+  useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [], gitSteps: [] }),
+  useEventStore: (selector: (s: { seedTaskOutput: () => void }) => unknown) =>
+    selector({ seedTaskOutput: () => {} }),
+  getCachedTaskOutputText: () => undefined,
+}));
+
+vi.mock("../../hooks/use-task-output-view", () => ({
+  useTaskOutputView: () => ({
+    streamKey: "task:1",
+    events: [],
+    taskOutput: { text: "", fileOps: [], buildSteps: [], testSteps: [], gitSteps: [] },
+    fallbackText: "",
+    hasStructuredContent: false,
+    hasAnyContent: false,
+  }),
+}));
+
+vi.mock("../../stores/project-action-store", () => ({
+  useProjectActions: () => null,
 }));
 
 vi.mock("../MessageBubble", () => ({

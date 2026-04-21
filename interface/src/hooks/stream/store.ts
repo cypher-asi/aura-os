@@ -56,6 +56,11 @@ export const useStreamStore = create<StreamStore>()(() => ({
 export const streamMetaMap = new Map<string, StreamMeta>();
 const STREAM_STORE_MAX_ENTRIES = 40;
 const STREAM_STORE_IDLE_TTL_MS = 5 * 60 * 1000;
+// Entries that hold a finalized turn (events non-empty, not actively
+// streaming) are protected from eviction for this window so that
+// in-session collapse/expand and navigation away/back keep the rich
+// post-completion view without re-hitting the persisted turn cache.
+const STREAM_STORE_FINALIZED_PROTECT_MS = 30 * 60 * 1000;
 
 /* ------------------------------------------------------------------ */
 /*  Shared event-bus subscriptions, refcounted per streamKey.          */
@@ -160,6 +165,19 @@ function touchEntry(key: string): void {
   if (meta) meta.lastAccessedAt = Date.now();
 }
 
+function isFinalizedProtected(
+  key: string,
+  entries: Record<string, StreamEntryState>,
+  meta: StreamMeta,
+  now: number,
+): boolean {
+  const entry = entries[key];
+  if (!entry) return false;
+  if (entry.isStreaming) return true;
+  if (entry.events.length === 0) return false;
+  return now - meta.lastAccessedAt <= STREAM_STORE_FINALIZED_PROTECT_MS;
+}
+
 export function pruneStreamStore(preserveKey?: string): void {
   const now = Date.now();
   const entries = useStreamStore.getState().entries;
@@ -168,6 +186,7 @@ export function pruneStreamStore(preserveKey?: string): void {
   for (const [key, meta] of streamMetaMap) {
     if (key === preserveKey) continue;
     if (entries[key]?.isStreaming) continue;
+    if (isFinalizedProtected(key, entries, meta, now)) continue;
     if (now - meta.lastAccessedAt > STREAM_STORE_IDLE_TTL_MS) {
       toDelete.push(key);
     }
@@ -175,7 +194,12 @@ export function pruneStreamStore(preserveKey?: string): void {
 
   if (streamMetaMap.size - toDelete.length > STREAM_STORE_MAX_ENTRIES) {
     const removable = [...streamMetaMap.entries()]
-      .filter(([key]) => key !== preserveKey && !entries[key]?.isStreaming && !toDelete.includes(key))
+      .filter(([key, meta]) =>
+        key !== preserveKey &&
+        !entries[key]?.isStreaming &&
+        !toDelete.includes(key) &&
+        !isFinalizedProtected(key, entries, meta, now),
+      )
       .sort((a, b) => a[1].lastAccessedAt - b[1].lastAccessedAt);
     for (const [key] of removable) {
       if (streamMetaMap.size - toDelete.length <= STREAM_STORE_MAX_ENTRIES) break;
@@ -209,6 +233,34 @@ function updateStreamEntry(key: string, patch: Partial<StreamEntryState>): void 
 
 export function getStreamEntry(key: string): StreamEntryState | undefined {
   return useStreamStore.getState().entries[key];
+}
+
+/**
+ * Seed a stream entry's `events` array from a persisted cache when
+ * the live entry is empty. Used by `useTaskOutputView` so reopening a
+ * finalized task after the in-memory entry has been pruned still
+ * renders the full structured turn history without a server round
+ * trip. No-ops when the entry already has events or is streaming so
+ * we never clobber live data.
+ */
+export function seedStreamEventsFromCache(
+  key: string,
+  events: DisplaySessionEvent[],
+): void {
+  if (!key || !events || events.length === 0) return;
+  ensureEntry(key);
+  useStreamStore.setState((s) => {
+    const existing = s.entries[key];
+    if (!existing) return s;
+    if (existing.isStreaming) return s;
+    if (existing.events.length > 0) return s;
+    return {
+      entries: {
+        ...s.entries,
+        [key]: { ...existing, events },
+      },
+    };
+  });
 }
 
 export function getIsStreaming(key: string): boolean {

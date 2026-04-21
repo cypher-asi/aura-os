@@ -15,6 +15,8 @@ import {
 } from "../../hooks/stream/hooks";
 import type { TaskOutputEntry } from "../../stores/event-store/index";
 import { useTaskOutput } from "../../stores/event-store/index";
+import { useTaskOutputView } from "../../hooks/use-task-output-view";
+import { useProjectActions } from "../../stores/project-action-store";
 import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
 import type { Task } from "../../types";
 import styles from "../Preview/Preview.module.css";
@@ -165,6 +167,14 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
   const timeline = useTimeline(streamKey);
   const progressText = useProgressText(streamKey);
   const [copied, setCopied] = useState(false);
+
+  // Seed structured turns from the persistent cache for terminal
+  // rows where the live stream-store entry was pruned. The hook's
+  // seeding writes into the stream store, so `useStreamEvents`
+  // above picks up the rehydrated events reactively on the next
+  // render without any additional wiring here.
+  const ctx = useProjectActions();
+  useTaskOutputView(taskId, ctx?.project.project_id, !isActive);
 
   const hydratedOutput = useTaskOutput(taskId);
   const fallbackText = hydratedOutput.text;

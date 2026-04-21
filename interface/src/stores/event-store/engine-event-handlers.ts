@@ -2,6 +2,7 @@ import type { AuraEvent, AuraEventContent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
 import { useSidekickStore } from "../sidekick-store";
 import { invalidateTaskOutputHydration } from "../task-output-hydration-cache";
+import { invalidateTaskTurns } from "../task-turn-cache";
 import type { BuildStep, TestStep, GitStep, TaskOutputEntry } from "./event-store";
 import { useEventStore, EMPTY_OUTPUT, subscribers, notifyTaskOutputListeners } from "./event-store";
 import { persistTaskOutputText, removePersistedTaskOutputText } from "./task-output-cache";
@@ -23,6 +24,10 @@ function handleTaskStarted(event: AuraEvent, u: OutputUpdate): void {
     notifyTaskOutputListeners(task_id);
   }
   removePersistedTaskOutputText(task_id);
+  // A fresh run also invalidates the structured turn cache so the new
+  // attempt does not render stale events from the prior run while it
+  // ramps up.
+  invalidateTaskTurns(task_id);
   // A fresh run invalidates any cached "empty" hydration result from a
   // previous attempt so the next completed row refetches from the server.
   if (event.project_id) {
