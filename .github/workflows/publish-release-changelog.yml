@@ -1,10 +1,10 @@
-name: Publish Desktop Release Changelog
+name: Publish Release Changelog
 
 on:
   workflow_run:
     workflows:
-      - Desktop Nightly Release
-      - Desktop Stable Release
+      - Release Nightly
+      - Release Stable
     types:
       - completed
 
@@ -84,10 +84,10 @@ jobs:
         shell: bash
         run: |
           case "${{ github.event.workflow_run.name }}" in
-            "Desktop Nightly Release")
+            "Release Nightly")
               expected_channel="nightly"
               ;;
-            "Desktop Stable Release")
+            "Release Stable")
               expected_channel="stable"
               ;;
             *)
@@ -214,6 +214,41 @@ jobs:
         shell: bash
         run: |
           cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write changelog publish metadata
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          channel="${{ steps.metadata.outputs.channel }}"
+          version="${{ steps.metadata.outputs.version }}"
+          date="$(jq -er '.date' "pages/changelog/${channel}/latest.json")"
+          mkdir -p changelog-publish-metadata
+          jq -n \
+            --arg channel "$channel" \
+            --arg version "$version" \
+            --arg date "$date" \
+            --arg latest_json "changelog/${channel}/latest.json" \
+            --arg latest_md "changelog/${channel}/latest.md" \
+            --arg history_json "changelog/${channel}/history/${date}.json" \
+            --arg history_md "changelog/${channel}/history/${date}.md" \
+            '{
+              channel: $channel,
+              version: $version,
+              date: $date,
+              files: {
+                latestJson: $latest_json,
+                latestMd: $latest_md,
+                historyJson: $history_json,
+                historyMd: $history_md
+              }
+            }' > changelog-publish-metadata/changelog-publish-metadata.json
+
+      - name: Upload changelog publish metadata
+        if: steps.release-check.outputs.released == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-publish-metadata
+          path: changelog-publish-metadata/changelog-publish-metadata.json
 
       - name: Commit and push changelog
         if: steps.release-check.outputs.released == 'true'

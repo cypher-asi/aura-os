@@ -97,7 +97,7 @@ export function TaskbarIconButton({
   );
 }
 
-type AppNavItem = Pick<AuraApp, "id" | "label" | "basePath" | "icon" | "onPrefetch">;
+type AppNavItem = Pick<AuraApp, "id" | "label" | "agentDescription" | "agentKeywords" | "basePath" | "icon" | "onPrefetch">;
 type TaskbarButtonRect = {
   id: string;
   left: number;
@@ -204,6 +204,12 @@ function SortableTaskbarAppButton({
       className={styles.taskbarBtn}
       data-selected={selected}
       data-taskbar-app-id={app.id}
+      data-agent-role="app-launcher"
+      data-agent-app-id={app.id}
+      data-agent-app-label={app.label}
+      data-agent-route={app.basePath}
+      data-agent-description={app.agentDescription || app.label}
+      data-agent-keywords={(app.agentKeywords ?? []).join(",")}
       title={app.label}
       aria-label={app.label}
       style={style}
@@ -456,6 +462,12 @@ export function AppNavRail({
                   selected={activeApp.id === app.id}
                   title={app.label}
                   aria-label={app.label}
+                  data-agent-role="app-launcher"
+                  data-agent-app-id={app.id}
+                  data-agent-app-label={app.label}
+                  data-agent-route={app.basePath}
+                  data-agent-description={app.agentDescription || app.label}
+                  data-agent-keywords={(app.agentKeywords ?? []).join(",")}
                   onClick={() => handleAppClick(app)}
                   onMouseEnter={app.onPrefetch}
                   onFocus={app.onPrefetch}
@@ -475,6 +487,12 @@ export function AppNavRail({
               selected={activeApp.id === app.id}
               title={app.label}
               aria-label={app.label}
+              data-agent-role="app-launcher"
+              data-agent-app-id={app.id}
+              data-agent-app-label={app.label}
+              data-agent-route={app.basePath}
+              data-agent-description={app.agentDescription || app.label}
+              data-agent-keywords={(app.agentKeywords ?? []).join(",")}
               className={styles.navBarBtn}
               onClick={() => handleAppClick(app)}
               onMouseEnter={app.onPrefetch}
@@ -507,6 +525,12 @@ export function AppNavRail({
               selected={activeApp.id === app.id}
               title={app.label}
               aria-label={app.label}
+              data-agent-role="app-launcher"
+              data-agent-app-id={app.id}
+              data-agent-app-label={app.label}
+              data-agent-route={app.basePath}
+              data-agent-description={app.agentDescription || app.label}
+              data-agent-keywords={(app.agentKeywords ?? []).join(",")}
               onClick={() => handleTaskbarAppClick(app)}
               onMouseEnter={app.onPrefetch}
               onFocus={app.onPrefetch}

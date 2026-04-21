@@ -287,7 +287,13 @@ export function AgentInfoPanel({ variant = "default", agent: agentOverride }: Ag
   const effectiveTab = isMobileStandalone ? "profile" : activeTab;
 
   return (
-    <div className={styles.wrapper}>
+    <div
+      className={styles.wrapper}
+      data-agent-surface="agent-detail-panel"
+      data-agent-agent-id={a.agent_id}
+      data-agent-agent-name={a.name}
+      data-agent-active-tab={effectiveTab}
+    >
       <div className={styles.scrollArea}>
         {effectiveTab === "profile" && (
           <ProfileTab

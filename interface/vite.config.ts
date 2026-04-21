@@ -44,6 +44,10 @@ export default defineConfig(({ mode, command }) => {
   const serverPort = env.AURA_SERVER_PORT || "3100";
   const apiTarget = `http://localhost:${serverPort}`;
   const wsTarget = `ws://localhost:${serverPort}`;
+  const allowedHosts = (env.AURA_DEV_ALLOWED_HOSTS || ".trycloudflare.com,localhost,127.0.0.1")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean);
   const vendoredZuiEntry = path.resolve(__dirname, "node_modules/@cypher-asi/zui/src/index.ts");
   const vendoredZuiStyles = path.resolve(__dirname, "node_modules/@cypher-asi/zui/src/styles/index.css");
   const analyzeBundle = mode === "analyze" || process.env.ANALYZE === "1";
@@ -120,6 +124,7 @@ export default defineConfig(({ mode, command }) => {
     },
     server: {
       port: 5173,
+      allowedHosts,
       hmr: {
         protocol: "ws",
         host: "127.0.0.1",

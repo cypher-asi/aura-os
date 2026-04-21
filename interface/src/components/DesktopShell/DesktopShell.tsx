@@ -154,6 +154,8 @@ function PersistentSidekickLane({
           <div
             ref={onHeaderTargetChange}
             className={styles.sidekickHeaderSlot}
+            data-agent-surface="sidekick-header"
+            aria-label="Sidekick header"
           />
         ) : undefined
       }
@@ -162,6 +164,8 @@ function PersistentSidekickLane({
         <div
           ref={onPanelTargetChange}
           className={styles.sidekickPanelSlot}
+          data-agent-surface="sidekick-panel"
+          aria-label="Sidekick panel"
         />
       </div>
     </Lane>
@@ -406,7 +410,13 @@ export function DesktopShell() {
                     visitedAppIds={visitedAppIds}
                   />
                 ) : (
-                  <div className={styles.panelActive}>
+                  <div
+                    className={styles.panelActive}
+                    data-agent-surface="left-panel"
+                    data-agent-active-app-id={activeApp.id}
+                    data-agent-active-app-label={activeApp.label}
+                    aria-label={`${activeApp.label} navigation panel`}
+                  >
                     <activeApp.LeftPanel />
                   </div>
                 )}
@@ -415,7 +425,14 @@ export function DesktopShell() {
           </div>
 
           <ActiveProvider>
-            <div ref={handleMainPanelRef} className={styles.mainPanelHost}>
+            <div
+              ref={handleMainPanelRef}
+              className={styles.mainPanelHost}
+              data-agent-surface="main-panel"
+              data-agent-active-app-id={activeApp.id}
+              data-agent-active-app-label={activeApp.label}
+              aria-label={`${activeApp.label} main panel`}
+            >
               <ErrorBoundary name="main">
                 <MainPanel>{routeContent}</MainPanel>
               </ErrorBoundary>

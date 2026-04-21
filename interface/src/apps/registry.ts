@@ -61,7 +61,7 @@ function wrapLazyAppComponent<Props>(
 }
 
 function createAppDefinition(
-  metadata: Pick<AuraApp, "id" | "label" | "icon" | "basePath" | "searchPlaceholder"> & {
+  metadata: Pick<AuraApp, "id" | "label" | "agentDescription" | "agentKeywords" | "icon" | "basePath" | "searchPlaceholder"> & {
     routes: RouteObject[];
   },
   loadApp: AppModuleLoader,
@@ -183,6 +183,8 @@ export const apps: AuraApp[] = [
     {
       id: "agents",
       label: "Agents",
+      agentDescription: "Standalone agent library and chat surfaces.",
+      agentKeywords: ["agent", "agents", "chat", "model", "assistant", "conversation"],
       icon: Brain,
       basePath: "/agents",
       searchPlaceholder: "Search",
@@ -200,6 +202,8 @@ export const apps: AuraApp[] = [
     {
       id: "marketplace",
       label: "Marketplace",
+      agentDescription: "Marketplace for discovering talent and reusable capabilities.",
+      agentKeywords: ["marketplace", "talent", "skills", "templates", "browse"],
       icon: Store,
       basePath: "/marketplace",
       searchPlaceholder: "Search talent",
@@ -217,6 +221,8 @@ export const apps: AuraApp[] = [
     {
       id: "projects",
       label: "Projects",
+      agentDescription: "Project workspace, specs, tasks, and agent entry points.",
+      agentKeywords: ["project", "projects", "workspace", "spec", "task", "planning"],
       icon: FolderOpen,
       basePath: "/projects",
       searchPlaceholder: "Search",
@@ -236,6 +242,8 @@ export const apps: AuraApp[] = [
     {
       id: "tasks",
       label: "Tasks",
+      agentDescription: "Task execution, automation, and run management.",
+      agentKeywords: ["task", "tasks", "automation", "run", "execution", "queue"],
       icon: Check,
       basePath: "/tasks",
       searchPlaceholder: "Search",
@@ -256,6 +264,8 @@ export const apps: AuraApp[] = [
     {
       id: "process",
       label: "Processes",
+      agentDescription: "Process builder and node-based automation workflows.",
+      agentKeywords: ["process", "processes", "workflow", "nodes", "automation", "graph"],
       icon: Cpu,
       basePath: "/process",
       searchPlaceholder: "Search",
@@ -274,6 +284,8 @@ export const apps: AuraApp[] = [
     {
       id: "feed",
       label: "Feed",
+      agentDescription: "Organization activity feed and updates timeline.",
+      agentKeywords: ["feed", "activity", "timeline", "updates", "posts"],
       icon: GitCommitVertical,
       basePath: "/feed",
       routes: feedRoutes,
@@ -289,6 +301,8 @@ export const apps: AuraApp[] = [
     {
       id: "notes",
       label: "Notes",
+      agentDescription: "Project notes with a tree, editor, and sidekick panels.",
+      agentKeywords: ["notes", "documents", "editor", "toc", "table of contents", "writing"],
       icon: FileText,
       basePath: "/notes",
       searchPlaceholder: "Search notes",
@@ -305,6 +319,8 @@ export const apps: AuraApp[] = [
     {
       id: "feedback",
       label: "Feedback",
+      agentDescription: "Feedback board with ideas, votes, comments, and review status.",
+      agentKeywords: ["feedback", "ideas", "votes", "comments", "approval", "board", "thread"],
       icon: Cross,
       basePath: "/feedback",
       searchPlaceholder: "Search feedback",
@@ -321,6 +337,8 @@ export const apps: AuraApp[] = [
     {
       id: "integrations",
       label: "Integrations",
+      agentDescription: "Configured third-party integrations and model providers.",
+      agentKeywords: ["integrations", "providers", "api", "models", "secrets", "connections"],
       icon: Plug,
       basePath: "/integrations",
       searchPlaceholder: "Search integrations",
@@ -335,6 +353,8 @@ export const apps: AuraApp[] = [
     {
       id: "debug",
       label: "Debug",
+      agentDescription: "Internal debugging panels and run inspection tools.",
+      agentKeywords: ["debug", "trace", "runs", "diagnostics"],
       icon: Bug,
       basePath: "/debug",
       searchPlaceholder: "Search runs",
@@ -349,6 +369,8 @@ export const apps: AuraApp[] = [
     {
       id: "profile",
       label: "Profile",
+      agentDescription: "User profile and account summary.",
+      agentKeywords: ["profile", "account", "summary", "stats"],
       icon: CircleUserRound,
       basePath: "/profile",
       searchPlaceholder: "Search",
@@ -364,6 +386,8 @@ export const apps: AuraApp[] = [
     {
       id: "desktop",
       label: "Desktop",
+      agentDescription: "Shell overview and desktop surface for launching apps.",
+      agentKeywords: ["desktop", "shell", "home", "workspace", "launcher"],
       icon: Circle,
       basePath: "/desktop",
       routes: desktopRoutes,

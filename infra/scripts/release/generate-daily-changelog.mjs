@@ -145,6 +145,14 @@ function toTitleCase(value) {
     .join(" ");
 }
 
+function slugify(value, maxLength = 64) {
+  return sanitizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, maxLength);
+}
+
 function extractKeywords(value) {
   return unique(
     cleanSubject(value)
@@ -157,6 +165,119 @@ function extractKeywords(value) {
 function fileGroup(file) {
   const parts = file.split("/");
   return parts.slice(0, Math.min(parts.length, 3)).join("/");
+}
+
+function isUiFacingFile(file) {
+  return (
+    file.startsWith("interface/src/") ||
+    file.startsWith("interface/tests/") ||
+    file.startsWith("apps/aura-os-desktop/src/")
+  );
+}
+
+function isInfraOnlyFile(file) {
+  return (
+    file.startsWith(".github/workflows/") ||
+    file.startsWith("infra/scripts/release/") ||
+    file.startsWith("scripts/ci/") ||
+    file.startsWith("crates/") ||
+    file.startsWith("apps/aura-os-server/")
+  );
+}
+
+function collectEntryCommitFiles(entry, commitLookup) {
+  return unique(
+    (Array.isArray(entry?.items) ? entry.items : [])
+      .flatMap((item) => Array.isArray(item?.commit_shas) ? item.commit_shas : [])
+      .flatMap((sha) => commitLookup.get(sha)?.files || []),
+  );
+}
+
+function inferEntryMedia(entry, commitLookup) {
+  const files = collectEntryCommitFiles(entry, commitLookup);
+  const textHaystack = [
+    entry?.title,
+    entry?.summary,
+    ...(Array.isArray(entry?.items) ? entry.items.map((item) => item?.text) : []),
+  ].join(" ").toLowerCase();
+  const hasUiFacingFile = files.some(isUiFacingFile);
+  const onlyInfraFiles = files.length > 0 && files.every(isInfraOnlyFile);
+  const hasUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|desktop|app|tab|screen|window|skill|model)/.test(textHaystack);
+
+  let score = 0;
+  const reasons = [];
+
+  if (files.some((file) => file.startsWith("interface/src/"))) {
+    score += 4;
+    reasons.push("entry touches interface source files");
+  }
+  if (files.some((file) => file.startsWith("apps/aura-os-desktop/src/"))) {
+    score += 2;
+    reasons.push("entry touches desktop shell code");
+  }
+  if (onlyInfraFiles) {
+    score -= 5;
+    reasons.push("entry only touches release or infrastructure files");
+  }
+  if (hasUiSurfaceKeyword) {
+    score += 2;
+    reasons.push("entry language points to a visible product surface");
+  }
+  if (/(release|workflow|artifact|packaging|notariz|build|ci|linux|android|ios submit|code sign)/.test(textHaystack)) {
+    score -= 2;
+    reasons.push("entry language points to release plumbing rather than a product screen");
+  }
+
+  const requested = !onlyInfraFiles && ((score >= 3 && (files.length === 0 || hasUiFacingFile)) || (hasUiFacingFile && hasUiSurfaceKeyword));
+  const slug = slugify(entry?.title || entry?.batch_id || "entry");
+  const slotId = `${sanitizeText(entry?.batch_id || "entry")}-${slug || "media"}`;
+  const alt = `${sanitizeText(entry?.title || "Changelog entry")} screenshot`;
+
+  return {
+    requested,
+    status: requested ? "pending" : "skipped",
+    score,
+    reason: requested
+      ? "Entry looks like a user-visible product change and should receive changelog media."
+      : "Entry does not look like a reliable screenshot target, so no media slot was requested.",
+    reasons,
+    slotId,
+    slug,
+    alt,
+    files: files.slice(0, 24),
+  };
+}
+
+function annotateRenderedEntriesWithMedia(rendered, rawCommits) {
+  const commitLookup = new Map((Array.isArray(rawCommits) ? rawCommits : []).map((commit) => [commit.sha, commit]));
+  return {
+    ...rendered,
+    entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry) => ({
+      ...entry,
+      media: inferEntryMedia(entry, commitLookup),
+    })),
+  };
+}
+
+function buildMediaPlaceholderBlock(entry) {
+  const media = entry?.media;
+  if (!media?.requested) {
+    return [];
+  }
+
+  const metadata = {
+    slotId: media.slotId,
+    batchId: entry.batch_id,
+    slug: media.slug,
+    alt: media.alt,
+  };
+
+  return [
+    `<!-- AURA_CHANGELOG_MEDIA:BEGIN ${JSON.stringify(metadata)} -->`,
+    "<!-- AURA_CHANGELOG_MEDIA:PENDING -->",
+    `<!-- AURA_CHANGELOG_MEDIA:END ${media.slotId} -->`,
+    "",
+  ];
 }
 
 function collectCommit(sha) {
@@ -838,6 +959,7 @@ function renderMarkdown(doc) {
   for (const entry of doc.rendered.entries) {
     lines.push(`## ${entry.time_label} — ${entry.title}`, "");
     lines.push(entry.summary, "");
+    lines.push(...buildMediaPlaceholderBlock(entry));
     for (const item of entry.items) {
       const suffix = item.commit_shas.length ? ` (${item.commit_shas.map((sha) => `\`${sha.slice(0, 7)}\``).join(", ")})` : "";
       lines.push(`- ${item.text}${suffix}`);
@@ -1021,7 +1143,7 @@ async function main() {
     rawCommits: allCommits,
     batchCount: timeBatches.length,
     artifactSummaries,
-    rendered,
+    rendered: annotateRenderedEntriesWithMedia(rendered, allCommits),
   };
 
   writeJson(todayJsonPath, doc);
@@ -1076,7 +1198,9 @@ async function main() {
 
 export {
   assertStrictToolModelSupport,
+  annotateRenderedEntriesWithMedia,
   batchCommits,
+  buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
   validateRenderedEntry,
 };

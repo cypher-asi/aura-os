@@ -448,7 +448,11 @@ export function AgentList({ mode = "default" }: AgentListProps) {
   return (
     <>
       {isDesktopSidebar ? (
-        <div className={styles.sidebarRoot}>
+        <div
+          className={styles.sidebarRoot}
+          data-agent-surface="agent-list"
+          data-agent-mode={mode}
+        >
           <div
             ref={scrollRef}
             className={styles.sidebarScrollArea}
@@ -465,7 +469,12 @@ export function AgentList({ mode = "default" }: AgentListProps) {
           </div>
         </div>
       ) : (
-        <div className={styles.list} onContextMenu={handleContextMenu}>
+        <div
+          className={styles.list}
+          onContextMenu={handleContextMenu}
+          data-agent-surface="agent-list"
+          data-agent-mode={mode}
+        >
           {entries}
         </div>
       )}

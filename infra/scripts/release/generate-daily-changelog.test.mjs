@@ -3,8 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
+  annotateRenderedEntriesWithMedia,
   assertStrictToolModelSupport,
   batchCommits,
+  buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
@@ -131,4 +133,92 @@ test("buildAnthropicRequestBody includes retry guidance when requested", () => {
 
 test("assertStrictToolModelSupport accepts Claude Opus 4.7", () => {
   assert.equal(assertStrictToolModelSupport("claude-opus-4-7"), true);
+});
+
+test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entries", () => {
+  const rendered = {
+    title: "Demo day",
+    intro: "Intro",
+    highlights: [],
+    entries: [
+      {
+        batch_id: "entry-1",
+        time_label: "9:10 AM",
+        title: "Feedback board and comments stay visible",
+        summary: "The feedback board now keeps discussion visible while triaging ideas.",
+        items: [
+          {
+            text: "Comments remain visible next to the feedback board.",
+            commit_shas: ["abc1234"],
+          },
+        ],
+      },
+      {
+        batch_id: "entry-2",
+        time_label: "11:30 AM",
+        title: "Release packaging reliability improvements",
+        summary: "The release workflow handles packaging retries more safely.",
+        items: [
+          {
+            text: "Packaging retries no longer fail on stale artifacts.",
+            commit_shas: ["def5678"],
+          },
+        ],
+      },
+      {
+        batch_id: "entry-3",
+        time_label: "2:15 PM",
+        title: "Desktop chat shows more useful failures",
+        summary: "The desktop chat screen now makes failure states easier to understand.",
+        items: [
+          {
+            text: "Visible error handling is clearer in the desktop chat window.",
+            commit_shas: ["9876abc"],
+          },
+        ],
+      },
+    ],
+  };
+
+  const rawCommits = [
+    { sha: "abc1234", files: ["interface/src/apps/feedback/FeedbackMainPanel.tsx"] },
+    { sha: "def5678", files: [".github/workflows/release-nightly.yml"] },
+    { sha: "9876abc", files: ["apps/aura-os-desktop/src/chat/errors.ts"] },
+  ];
+
+  const annotated = annotateRenderedEntriesWithMedia(rendered, rawCommits);
+
+  assert.equal(annotated.entries[0].media.requested, true);
+  assert.equal(annotated.entries[0].media.status, "pending");
+  assert.equal(annotated.entries[1].media.requested, false);
+  assert.equal(annotated.entries[1].media.status, "skipped");
+  assert.equal(annotated.entries[2].media.requested, true);
+  assert.equal(annotated.entries[2].media.status, "pending");
+});
+
+test("buildMediaPlaceholderBlock emits hidden markers only for requested slots", () => {
+  const placeholderLines = buildMediaPlaceholderBlock({
+    batch_id: "entry-1",
+    title: "Feedback board and comments stay visible",
+    media: {
+      requested: true,
+      slotId: "entry-1-feedback-board-and-comments-stay-visible",
+      slug: "feedback-board-and-comments-stay-visible",
+      alt: "Feedback board screenshot",
+    },
+  });
+
+  assert.equal(placeholderLines.length > 0, true);
+  assert.match(placeholderLines[0], /AURA_CHANGELOG_MEDIA:BEGIN/);
+  assert.match(placeholderLines[1], /AURA_CHANGELOG_MEDIA:PENDING/);
+  assert.match(placeholderLines[2], /AURA_CHANGELOG_MEDIA:END/);
+
+  assert.deepEqual(
+    buildMediaPlaceholderBlock({
+      batch_id: "entry-2",
+      title: "Release packaging reliability improvements",
+      media: { requested: false },
+    }),
+    [],
+  );
 });

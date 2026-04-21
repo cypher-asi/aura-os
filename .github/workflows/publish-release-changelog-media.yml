@@ -1,0 +1,179 @@
+name: Publish Release Changelog Media
+
+on:
+  workflow_run:
+    workflows:
+      - Publish Release Changelog
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: "Public preview URL for Browserbase to open"
+        required: false
+        default: ""
+        type: string
+      channel:
+        description: "Changelog channel to publish media for"
+        required: true
+        default: nightly
+        type: string
+      provider:
+        description: "Browser automation provider"
+        required: true
+        default: browserbase
+        type: string
+      profile:
+        description: "Optional screenshot profile override"
+        required: false
+        default: ""
+        type: string
+      deploy_wait_minutes:
+        description: "Minutes to wait before capture so the deployed frontend can settle"
+        required: false
+        default: "5"
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-release-changelog-media-${{ github.event_name }}-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  publish-media:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download changelog publish metadata from triggering run
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-publish-metadata
+          path: changelog-publish-metadata
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Resolve changelog target
+        id: target
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
+            if [[ ! -f "$metadata_file" ]]; then
+              echo "Expected changelog publish metadata artifact at $metadata_file" >&2
+              exit 1
+            fi
+            echo "channel=$(jq -r '.channel' "$metadata_file")" >> "$GITHUB_OUTPUT"
+            echo "version=$(jq -r '.version' "$metadata_file")" >> "$GITHUB_OUTPUT"
+            echo "date=$(jq -r '.date' "$metadata_file")" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "date=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          path: repo
+
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+          cache: npm
+          cache-dependency-path: repo/interface/package-lock.json
+
+      - name: Install interface dependencies
+        working-directory: repo/interface
+        run: npm ci
+
+      - name: Wait for deployed frontend to settle
+        env:
+          DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
+        shell: bash
+        run: |
+          wait_minutes="${{ inputs.deploy_wait_minutes }}"
+          if [[ -z "$wait_minutes" ]]; then
+            wait_minutes="$DEFAULT_DEPLOY_WAIT_MINUTES"
+          fi
+          if [[ -z "$wait_minutes" ]]; then
+            wait_minutes="5"
+          fi
+
+          if ! [[ "$wait_minutes" =~ ^[0-9]+$ ]]; then
+            echo "deploy_wait_minutes must be an integer number of minutes, got: $wait_minutes" >&2
+            exit 1
+          fi
+
+          if [[ "$wait_minutes" -le 0 ]]; then
+            echo "Skipping deploy settle wait."
+            exit 0
+          fi
+
+          wait_seconds=$((wait_minutes * 60))
+          echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media capture so the deployed frontend can settle."
+          sleep "$wait_seconds"
+
+      - name: Publish changelog screenshots into gh-pages
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          DEFAULT_PREVIEW_URL: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
+        shell: bash
+        run: |
+          preview_url="${{ inputs.preview_url }}"
+          if [[ -z "$preview_url" ]]; then
+            preview_url="$DEFAULT_PREVIEW_URL"
+          fi
+
+          provider="${{ inputs.provider }}"
+          if [[ -z "$provider" ]]; then
+            provider="browserbase"
+          fi
+
+          ARGS=(
+            --repo-dir repo
+            --pages-dir pages
+            --channel "${{ steps.target.outputs.channel }}"
+            --preview-url "$preview_url"
+            --provider "$provider"
+          )
+
+          if [[ -n "${{ steps.target.outputs.version }}" ]]; then
+            ARGS+=(--version "${{ steps.target.outputs.version }}")
+          fi
+          if [[ -n "${{ steps.target.outputs.date }}" ]]; then
+            ARGS+=(--date "${{ steps.target.outputs.date }}")
+          fi
+          if [[ -n "${{ inputs.profile }}" ]]; then
+            ARGS+=(--profile "${{ inputs.profile }}")
+          fi
+
+          node repo/infra/scripts/release/publish-changelog-media.mjs "${ARGS[@]}"
+
+      - name: Commit and push changelog media
+        shell: bash
+        run: |
+          cd pages
+          label="${{ steps.target.outputs.version }}"
+          if [[ -z "$label" ]]; then
+            label="${{ steps.target.outputs.date }}"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "changelog/${{ steps.target.outputs.channel }}"
+          git add "assets/changelog/${{ steps.target.outputs.channel }}" 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Publish ${{ steps.target.outputs.channel }} changelog media for ${label}"
+          git push

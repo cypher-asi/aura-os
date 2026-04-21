@@ -97,7 +97,7 @@ export function AgentEditorForm({
   handleAvatarRemove,
 }: AgentEditorFormProps) {
   return (
-    <div className={styles.form}>
+    <div className={styles.form} data-agent-surface="agent-editor-form">
       <div className={styles.avatarRow}>
         <button
           type="button"
@@ -134,7 +134,7 @@ export function AgentEditorForm({
         />
       </div>
 
-      <div className={styles.fieldGroup}>
+      <div className={styles.fieldGroup} data-agent-field="agent-name">
         <label className={styles.label}>Name *</label>
         <Input
           aria-label="Name"
@@ -149,7 +149,7 @@ export function AgentEditorForm({
         />
       </div>
 
-      <div className={styles.fieldGroup}>
+      <div className={styles.fieldGroup} data-agent-field="agent-role">
         <label className={styles.label}>Role</label>
         <Input
           aria-label="Role"
@@ -214,7 +214,7 @@ export function AgentEditorForm({
         </>
       )}
 
-      <div className={styles.fieldGroup}>
+      <div className={styles.fieldGroup} data-agent-field="agent-personality">
         <label className={styles.label}>Personality</label>
         <Textarea
           aria-label="Personality"
@@ -225,7 +225,7 @@ export function AgentEditorForm({
         />
       </div>
 
-      <div className={styles.fieldGroup}>
+      <div className={styles.fieldGroup} data-agent-field="agent-system-prompt">
         <label className={styles.label}>System Prompt</label>
         <Textarea
           aria-label="System Prompt"

@@ -298,4 +298,46 @@ describe("useFeedbackStore", () => {
     await useFeedbackStore.getState().loadItems();
     expect(useFeedbackStore.getState().loadError).toContain("network down");
   });
+
+  it("installs a screenshot bridge that can select items and add comments", () => {
+    useFeedbackStore.setState({
+      items: [seedItem("fb-1", { commentCount: 2 })],
+      comments: [],
+      selectedId: null,
+    });
+    feedbackApiMock.addComment.mockResolvedValueOnce({
+      id: "fb-comment-bridge",
+      activityEventId: "fb-1",
+      profileId: "profile-1",
+      content: "Bridge comment for screenshot capture.",
+      createdAt: new Date().toISOString(),
+      authorName: "Test User",
+      authorAvatar: null,
+    });
+
+    window.__AURA_SCREENSHOT_BRIDGE__?.selectFeedbackItem("fb-1");
+    expect(useFeedbackStore.getState().selectedId).toBe("fb-1");
+
+    window.__AURA_SCREENSHOT_BRIDGE__?.addFeedbackComment(
+      "fb-1",
+      "Bridge comment for screenshot capture.",
+    );
+
+    const state = useFeedbackStore.getState();
+    expect(state.comments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          itemId: "fb-1",
+          text: "Bridge comment for screenshot capture.",
+        }),
+      ]),
+    );
+    expect(window.__AURA_SCREENSHOT_BRIDGE__?.getFeedbackState()).toEqual({
+      selectedId: "fb-1",
+      itemIds: ["fb-1"],
+      commentCountByItem: { "fb-1": 3 },
+      composerOpen: false,
+      titlesByItem: { "fb-1": "x" },
+    });
+  });
 });

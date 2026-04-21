@@ -56,33 +56,45 @@ export function FeedbackSidekickPanel() {
   };
 
   return (
-    <div className={styles.panel}>
+    <div
+      className={styles.panel}
+      data-demo-shot="feedback-sidekick-panel"
+      data-agent-surface="feedback-thread"
+      data-agent-item-id={item.id}
+      data-agent-item-title={item.title}
+      aria-label={`Feedback thread for ${item.title}`}
+    >
       <div className={styles.commentListShell}>
         <div ref={commentListRef} className={styles.commentList}>
-          {comments.length === 0 ? (
-            <EmptyState>No comments yet</EmptyState>
-          ) : (
-            comments.map((comment) => (
-              <div key={comment.id} className={styles.commentItem}>
-                <Avatar
-                  avatarUrl={comment.author.avatarUrl}
-                  name={comment.author.name}
-                  type={comment.author.type}
-                  size={28}
-                  className={styles.commentAvatar}
-                />
-                <div className={styles.commentContent}>
-                  <div className={styles.commentHeader}>
-                    <span className={styles.commentAuthor}>{comment.author.name}</span>
-                    <span className={styles.commentTime}>
-                      {timeAgo(comment.createdAt)}
-                    </span>
+          <div
+            data-demo-shot="feedback-thread-comments"
+            data-agent-list="feedback-comments"
+          >
+            {comments.length === 0 ? (
+              <EmptyState>No comments yet</EmptyState>
+            ) : (
+              comments.map((comment) => (
+                <div key={comment.id} className={styles.commentItem}>
+                  <Avatar
+                    avatarUrl={comment.author.avatarUrl}
+                    name={comment.author.name}
+                    type={comment.author.type}
+                    size={28}
+                    className={styles.commentAvatar}
+                  />
+                  <div className={styles.commentContent}>
+                    <div className={styles.commentHeader}>
+                      <span className={styles.commentAuthor}>{comment.author.name}</span>
+                      <span className={styles.commentTime}>
+                        {timeAgo(comment.createdAt)}
+                      </span>
+                    </div>
+                    <span className={styles.commentText}>{comment.text}</span>
                   </div>
-                  <span className={styles.commentText}>{comment.text}</span>
                 </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
         <OverlayScrollbar scrollRef={commentListRef} />
       </div>
@@ -93,6 +105,7 @@ export function FeedbackSidekickPanel() {
           className={styles.inputField}
           placeholder="Add a comment..."
           aria-label="Add a comment"
+          data-agent-action="draft-feedback-comment"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
@@ -102,6 +115,7 @@ export function FeedbackSidekickPanel() {
           type="button"
           className={styles.sendButton}
           aria-label="Send comment"
+          data-agent-action="submit-feedback-comment"
           onClick={handleSubmit}
           disabled={!draft.trim()}
         >
