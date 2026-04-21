@@ -3,13 +3,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use axum::Json;
 use axum::async_trait;
 use axum::extract::FromRequestParts;
-use axum::http::StatusCode;
 use axum::http::request::Parts;
+use axum::http::StatusCode;
+use axum::Json;
 use dashmap::DashMap;
-use tokio::sync::{Mutex, broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, Mutex};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
@@ -248,6 +248,20 @@ pub struct ActiveAutomaton {
     pub project_id: ProjectId,
     pub harness_base_url: String,
     pub paused: bool,
+    /// Set to `true` while the `forward_automaton_events` task for this
+    /// automaton is still draining the harness event stream. Cleared when
+    /// the forwarder terminates (normal end, stream close, or manual
+    /// abort). `start_loop` reads this flag to decide whether an adopted
+    /// automaton already has a live forwarder attached — without the
+    /// check, adoption always spawned a second forwarder that fanned
+    /// every harness event out to the client twice (duplicated "READ" /
+    /// "WRITE" timeline entries in the sidekick Run tab).
+    pub alive: Arc<std::sync::atomic::AtomicBool>,
+    /// Handle to the `forward_automaton_events` tokio task so callers
+    /// (e.g. `stop_loop`, or `start_loop` when replacing a stale entry)
+    /// can proactively terminate the forwarder instead of waiting for
+    /// the harness broadcast to close on its own.
+    pub forwarder: Option<tokio::task::AbortHandle>,
 }
 pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveAutomaton>>>;
 

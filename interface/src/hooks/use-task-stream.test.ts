@@ -57,6 +57,17 @@ vi.mock("./use-stream-core", () => ({
 
 vi.mock("./stream/store", () => ({
   getThinkingDurationMs: vi.fn(() => 0),
+  // Pass-through implementation: invoke `register` immediately and return
+  // an idempotent release that runs the disposers. Matches the real
+  // module's behaviour for the single-mount case that most tests exercise.
+  acquireSharedStreamSubscriptions: vi.fn(
+    (_key: string, register: () => Array<() => void>) => {
+      const disposers = register();
+      return () => {
+        for (const dispose of disposers) dispose();
+      };
+    },
+  ),
 }));
 
 import { useTaskStream } from "./use-task-stream";

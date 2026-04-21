@@ -9,6 +9,8 @@ import {
   getThinkingDurationMs,
   createSetters,
   resolve,
+  acquireSharedStreamSubscriptions,
+  peekSharedSubscriptionRefCount,
 } from "./store";
 
 describe("stream/store", () => {
@@ -219,6 +221,102 @@ describe("stream/store", () => {
       pruneStreamStore();
 
       expect(streamMetaMap.has("k1")).toBe(true);
+    });
+  });
+
+  describe("acquireSharedStreamSubscriptions", () => {
+    it("registers the subscription set exactly once for concurrent acquires", () => {
+      const register = vi.fn(() => [vi.fn(), vi.fn()]);
+
+      const release1 = acquireSharedStreamSubscriptions("task:t1", register);
+      const release2 = acquireSharedStreamSubscriptions("task:t1", register);
+      const release3 = acquireSharedStreamSubscriptions("task:t1", register);
+
+      expect(register).toHaveBeenCalledTimes(1);
+      expect(peekSharedSubscriptionRefCount("task:t1")).toBe(3);
+
+      release1();
+      release2();
+      expect(peekSharedSubscriptionRefCount("task:t1")).toBe(1);
+
+      release3();
+      expect(peekSharedSubscriptionRefCount("task:t1")).toBe(0);
+    });
+
+    it("runs all disposers only when the last consumer releases", () => {
+      const dispose1 = vi.fn();
+      const dispose2 = vi.fn();
+      const register = vi.fn(() => [dispose1, dispose2]);
+
+      const releaseA = acquireSharedStreamSubscriptions("task:t1", register);
+      const releaseB = acquireSharedStreamSubscriptions("task:t1", register);
+
+      releaseA();
+      expect(dispose1).not.toHaveBeenCalled();
+      expect(dispose2).not.toHaveBeenCalled();
+
+      releaseB();
+      expect(dispose1).toHaveBeenCalledTimes(1);
+      expect(dispose2).toHaveBeenCalledTimes(1);
+    });
+
+    it("re-runs register after the refcount drops to zero", () => {
+      const register = vi.fn(() => [vi.fn()]);
+
+      const release1 = acquireSharedStreamSubscriptions("task:t1", register);
+      release1();
+      expect(register).toHaveBeenCalledTimes(1);
+
+      const release2 = acquireSharedStreamSubscriptions("task:t1", register);
+      expect(register).toHaveBeenCalledTimes(2);
+      release2();
+    });
+
+    it("makes release idempotent so double-calls do not underflow the refcount", () => {
+      const register = vi.fn(() => [vi.fn()]);
+
+      const release = acquireSharedStreamSubscriptions("task:t1", register);
+      const extra = acquireSharedStreamSubscriptions("task:t1", register);
+      expect(peekSharedSubscriptionRefCount("task:t1")).toBe(2);
+
+      release();
+      release();
+      expect(peekSharedSubscriptionRefCount("task:t1")).toBe(1);
+
+      extra();
+      expect(peekSharedSubscriptionRefCount("task:t1")).toBe(0);
+    });
+
+    it("keys subscriptions independently so unrelated streams do not interfere", () => {
+      const registerA = vi.fn(() => [vi.fn()]);
+      const registerB = vi.fn(() => [vi.fn()]);
+
+      const releaseA = acquireSharedStreamSubscriptions("task:a", registerA);
+      const releaseB = acquireSharedStreamSubscriptions("task:b", registerB);
+      expect(registerA).toHaveBeenCalledTimes(1);
+      expect(registerB).toHaveBeenCalledTimes(1);
+
+      releaseA();
+      expect(peekSharedSubscriptionRefCount("task:a")).toBe(0);
+      expect(peekSharedSubscriptionRefCount("task:b")).toBe(1);
+
+      releaseB();
+    });
+
+    it("swallows disposer errors so later disposers still run", () => {
+      const dispose1 = vi.fn(() => {
+        throw new Error("boom");
+      });
+      const dispose2 = vi.fn();
+
+      const release = acquireSharedStreamSubscriptions("task:t1", () => [
+        dispose1,
+        dispose2,
+      ]);
+
+      expect(() => release()).not.toThrow();
+      expect(dispose1).toHaveBeenCalledTimes(1);
+      expect(dispose2).toHaveBeenCalledTimes(1);
     });
   });
 });

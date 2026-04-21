@@ -57,6 +57,70 @@ export const streamMetaMap = new Map<string, StreamMeta>();
 const STREAM_STORE_MAX_ENTRIES = 40;
 const STREAM_STORE_IDLE_TTL_MS = 5 * 60 * 1000;
 
+/* ------------------------------------------------------------------ */
+/*  Shared event-bus subscriptions, refcounted per streamKey.          */
+/*                                                                     */
+/*  Multiple components frequently mount the same useTaskStream /      */
+/*  useProcessNodeStream for a given key (e.g. a task rendered both    */
+/*  as a TaskPreview in the chat row and as ActiveTaskStream in the    */
+/*  sidekick Run tab). Without this registry each mount independently  */
+/*  subscribes to the shared event-store EventTypes, and every         */
+/*  callback writes into the same streamKey-scoped refs — so a single  */
+/*  WS event fans out to N duplicate tool cards / timeline rows. The   */
+/*  refcounted registrar guarantees one subscription set per key no    */
+/*  matter how many consumers mount.                                    */
+/* ------------------------------------------------------------------ */
+
+interface SharedSubscriptionEntry {
+  refCount: number;
+  disposers: Array<() => void>;
+}
+
+const sharedSubscriptions = new Map<string, SharedSubscriptionEntry>();
+
+/**
+ * Acquire the shared set of event-bus subscriptions for `key`. If this
+ * is the first acquire the `register` callback runs and its returned
+ * disposers are stored. Subsequent acquires just bump the refcount. The
+ * returned release function is idempotent; when the last consumer
+ * releases, the stored disposers run and the entry is dropped.
+ */
+export function acquireSharedStreamSubscriptions(
+  key: string,
+  register: () => Array<() => void>,
+): () => void {
+  let entry = sharedSubscriptions.get(key);
+  if (!entry) {
+    entry = { refCount: 0, disposers: register() };
+    sharedSubscriptions.set(key, entry);
+  }
+  entry.refCount += 1;
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const current = sharedSubscriptions.get(key);
+    if (!current) return;
+    current.refCount -= 1;
+    if (current.refCount <= 0) {
+      for (const dispose of current.disposers) {
+        try {
+          dispose();
+        } catch {
+          // Disposer failures should not block further cleanup.
+        }
+      }
+      sharedSubscriptions.delete(key);
+    }
+  };
+}
+
+/** Test-only: returns the current refcount for a shared subscription. */
+export function peekSharedSubscriptionRefCount(key: string): number {
+  return sharedSubscriptions.get(key)?.refCount ?? 0;
+}
+
 export function storeKey(deps: unknown[]): string {
   return deps.filter(Boolean).join(":");
 }

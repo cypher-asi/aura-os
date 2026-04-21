@@ -11,7 +11,10 @@ import {
   resetStreamBuffers,
   finalizeStream,
 } from "./use-stream-core";
-import { getThinkingDurationMs } from "./stream/store";
+import {
+  acquireSharedStreamSubscriptions,
+  getThinkingDurationMs,
+} from "./stream/store";
 
 /**
  * Bridges native harness events (text_delta, thinking_delta, tool_use_start,
@@ -20,6 +23,11 @@ import { getThinkingDurationMs } from "./stream/store";
  *
  * Events are the same types emitted by agent chat and tasks -- just filtered
  * by `run_id` + `node_id` context fields instead of `session_id` or `task_id`.
+ *
+ * Subscription single-flighting: see `useTaskStream` for the motivation. We
+ * acquire a refcounted shared subscription set per streamKey so concurrent
+ * mounts of the same run/node pair register exactly one subscription per
+ * EventType on the event store.
  */
 export function useProcessNodeStream(
   runId: string | undefined,
@@ -31,17 +39,19 @@ export function useProcessNodeStream(
   const isStreamingRef = useRef(false);
 
   useEffect(() => {
-    if (!runId || !nodeId) return;
-
     if (isActive && !isStreamingRef.current) {
       setters.setIsStreaming(true);
       isStreamingRef.current = true;
     }
+  }, [isActive, setters]);
+
+  useEffect(() => {
+    if (!runId || !nodeId) return;
 
     const matchesCtx = (c: Record<string, unknown>) =>
       c.run_id === runId && c.node_id === nodeId;
 
-    const unsubs = [
+    const release = acquireSharedStreamSubscriptions(key, () => [
       subscribe(EventType.ProcessNodeExecuted, (e) => {
         const c = e.content as unknown as Record<string, unknown>;
         if (c.run_id !== runId || c.node_id !== nodeId) return;
@@ -120,10 +130,10 @@ export function useProcessNodeStream(
         });
         isStreamingRef.current = false;
       }),
-    ];
+    ]);
 
-    return () => unsubs.forEach((u) => u());
-  }, [runId, nodeId, isActive, key, refs, setters, abortRef, subscribe]);
+    return release;
+  }, [runId, nodeId, key, refs, setters, abortRef, subscribe]);
 
   return { streamKey: key };
 }

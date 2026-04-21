@@ -47,6 +47,14 @@ vi.mock("./use-stream-core", () => ({
 
 vi.mock("./stream/store", () => ({
   getThinkingDurationMs: vi.fn(() => 0),
+  acquireSharedStreamSubscriptions: vi.fn(
+    (_key: string, register: () => Array<() => void>) => {
+      const disposers = register();
+      return () => {
+        for (const dispose of disposers) dispose();
+      };
+    },
+  ),
 }));
 
 import { useProcessNodeStream } from "./use-process-node-stream";

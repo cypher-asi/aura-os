@@ -451,6 +451,23 @@ export function handleToolCallStarted(
   setters: StreamSetters,
   info: ToolCallStartedInfo,
 ): void {
+  // Idempotent on `info.id`: duplicate deliveries (e.g. from concurrent
+  // subscribers on the same streamKey that slip past the shared-registry
+  // single-flight, or history replay overlapping with a live stream)
+  // must not produce a second tool card or timeline row. Match the
+  // existing find-by-id guard in `handleToolCall`/`handleToolCallSnapshot`.
+  const existingIdx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
+  if (existingIdx !== -1) {
+    const existing = refs.toolCalls.current[existingIdx];
+    if (!existing.started) {
+      refs.toolCalls.current = refs.toolCalls.current.map((tc, i) =>
+        i === existingIdx ? { ...tc, started: true, pending: tc.pending ?? true } : tc,
+      );
+      setters.setActiveToolCalls([...refs.toolCalls.current]);
+    }
+    return;
+  }
+
   const isSpecTool = info.name === "create_spec" || info.name === "update_spec";
   if (isSpecTool && refs.streamBuffer.current) {
     flushStreamingText(refs, setters);
@@ -476,8 +493,13 @@ export function handleToolCallStarted(
   refs.toolCalls.current = [...refs.toolCalls.current, entry];
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
-  refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
-  syncDisplayedTimeline(refs, setters);
+  const alreadyInTimeline = refs.timeline.current.some(
+    (item) => item.kind === "tool" && item.toolCallId === info.id,
+  );
+  if (!alreadyInTimeline) {
+    refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
+    syncDisplayedTimeline(refs, setters);
+  }
 }
 
 export function handleToolCallSnapshot(
@@ -497,8 +519,13 @@ export function handleToolCallSnapshot(
         started: true,
       },
     ];
-    refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
-    syncDisplayedTimeline(refs, setters);
+    const alreadyInTimeline = refs.timeline.current.some(
+      (item) => item.kind === "tool" && item.toolCallId === info.id,
+    );
+    if (!alreadyInTimeline) {
+      refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
+      syncDisplayedTimeline(refs, setters);
+    }
     setters.setActiveToolCalls([...refs.toolCalls.current]);
     return;
   }
@@ -555,8 +582,13 @@ export function handleToolCall(
     };
     refs.toolCalls.current = [...refs.toolCalls.current, entry];
 
-    refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
-    syncDisplayedTimeline(refs, setters);
+    const alreadyInTimeline = refs.timeline.current.some(
+      (item) => item.kind === "tool" && item.toolCallId === info.id,
+    );
+    if (!alreadyInTimeline) {
+      refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
+      syncDisplayedTimeline(refs, setters);
+    }
   }
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 }

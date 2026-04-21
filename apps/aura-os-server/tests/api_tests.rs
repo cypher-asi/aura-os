@@ -1771,6 +1771,8 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
                 project_id: pid,
                 harness_base_url: unreachable_harness,
                 paused: false,
+                alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+                forwarder: None,
             },
         );
     }

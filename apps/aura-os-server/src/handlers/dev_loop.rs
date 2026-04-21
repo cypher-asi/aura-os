@@ -2608,7 +2608,8 @@ mod tests {
     use super::{
         classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
         extract_run_command, extract_turn_usage, is_work_event_type, map_passthrough_event_type,
-        preferred_automaton_model, requested_automaton_model, VerificationStepKind,
+        preferred_automaton_model, requested_automaton_model, ForwarderAliveGuard,
+        VerificationStepKind,
     };
     use aura_os_core::{AgentInstance, AgentPermissions, AgentStatus};
     use chrono::Utc;
@@ -2843,5 +2844,46 @@ mod tests {
             requested_automaton_model(Some("aura-claude-sonnet-4-6"), &instance).as_deref(),
             Some("aura-claude-sonnet-4-6")
         );
+    }
+
+    #[test]
+    fn forwarder_alive_guard_clears_flag_on_drop() {
+        // `start_loop`'s single-flight check depends on the `alive` flag
+        // flipping to `false` as soon as the forwarder task exits, so we
+        // guard it with `ForwarderAliveGuard`. Regressing the guard would
+        // leave the flag `true` after the task ends and cause the next
+        // start to short-circuit even though no forwarder is actually
+        // running — the exact condition the registry entry is meant to
+        // detect.
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let alive = Arc::new(AtomicBool::new(true));
+        {
+            let _guard = ForwarderAliveGuard(alive.clone());
+            assert!(alive.load(Ordering::SeqCst));
+        }
+        assert!(!alive.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn forwarder_alive_guard_clears_flag_on_panic_unwind() {
+        // A panic inside the forwarder task must still clear the flag;
+        // otherwise a panicked forwarder would stay "alive" forever and
+        // block future start-loop calls. RAII drop covers the unwind
+        // path, but exercise it explicitly so future refactors can't
+        // silently regress to a manual `store(false)` at the end.
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let alive = Arc::new(AtomicBool::new(true));
+        let alive_inner = alive.clone();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            let _guard = ForwarderAliveGuard(alive_inner);
+            panic!("simulated forwarder panic");
+        }));
+
+        assert!(result.is_err());
+        assert!(!alive.load(Ordering::SeqCst));
     }
 }

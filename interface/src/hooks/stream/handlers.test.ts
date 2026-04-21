@@ -465,6 +465,50 @@ describe("stream/handlers", () => {
 
       expect(refs.toolCalls.current[0].input).toEqual({});
     });
+
+    it("is idempotent on info.id when delivered twice", () => {
+      // Duplicate deliveries happen in practice when (a) a task/run is
+      // rendered in two places and both mounts subscribe to the same WS
+      // EventType, or (b) chat history replay overlaps with a live stream.
+      // Either path used to push a second pending tool card and timeline
+      // row into the shared streamKey refs.
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "run" });
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "run" });
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "run" });
+
+      expect(refs.toolCalls.current).toHaveLength(1);
+      expect(
+        refs.timeline.current.filter(
+          (item) => item.kind === "tool" && item.toolCallId === "tc1",
+        ),
+      ).toHaveLength(1);
+    });
+
+    it("re-flags an existing entry as started if it was first seen via a snapshot", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "write_file",
+        input: { path: "a.ts" },
+      });
+      expect(refs.toolCalls.current).toHaveLength(1);
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "write_file" });
+
+      expect(refs.toolCalls.current).toHaveLength(1);
+      expect(refs.toolCalls.current[0].started).toBe(true);
+      expect(refs.toolCalls.current[0].input).toEqual({ path: "a.ts" });
+      expect(
+        refs.timeline.current.filter(
+          (item) => item.kind === "tool" && item.toolCallId === "tc1",
+        ),
+      ).toHaveLength(1);
+    });
   });
 
   describe("handleToolCall", () => {
