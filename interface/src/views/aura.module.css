@@ -16,9 +16,10 @@
 }
 
 .statValue {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   text-align: center;
+  white-space: nowrap;
 }
 
 .progressBarContainer {
