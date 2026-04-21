@@ -9,6 +9,12 @@ use crate::route_state::RouteState;
 use crate::updater::{UpdateChannel, UpdateState};
 use crate::UserEvent;
 
+#[derive(Clone)]
+pub(crate) struct UpdateInstallRouteState {
+    pub(crate) proxy: Arc<EventLoopProxy<UserEvent>>,
+    pub(crate) update_state: UpdateState,
+}
+
 // ---------------------------------------------------------------------------
 // File pickers
 // ---------------------------------------------------------------------------
@@ -161,13 +167,15 @@ pub(crate) async fn post_last_route(
 }
 
 pub(crate) async fn post_update_install(
-    AxumState(state): AxumState<UpdateState>,
+    AxumState(state): AxumState<UpdateInstallRouteState>,
 ) -> Json<serde_json::Value> {
-    match crate::updater::start_install(state) {
+    match state.proxy.send_event(UserEvent::InstallUpdate {
+        state: state.update_state.clone(),
+    }) {
         Ok(()) => Json(serde_json::json!({ "ok": true })),
-        Err(e) => {
-            warn!(error = %e, "start_install failed");
-            Json(serde_json::json!({ "ok": false, "error": e }))
+        Err(error) => {
+            warn!(error = %error, "failed to dispatch install update request");
+            Json(serde_json::json!({ "ok": false, "error": error.to_string() }))
         }
     }
 }
