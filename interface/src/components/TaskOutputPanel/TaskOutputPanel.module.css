@@ -261,6 +261,33 @@
   height: var(--control-height-sm, 32px);
   min-height: var(--control-height-sm, 32px);
   box-sizing: border-box;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.taskHeader:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.taskChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #888);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.taskChevronExpanded {
+  composes: taskChevron;
+  transform: rotate(90deg);
 }
 
 .taskDot {

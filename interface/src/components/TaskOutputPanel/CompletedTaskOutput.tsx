@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Check, X as XIcon, AlertTriangle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, X as XIcon, AlertTriangle, ChevronRight } from "lucide-react";
 import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
@@ -76,6 +76,8 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
 
   useHydrateCompletedOutput(projectId, taskId);
 
+  const [collapsed, setCollapsed] = useState(true);
+
   const statusIcon = status === "failed"
     ? <AlertTriangle size={10} />
     : <Check size={10} />;
@@ -87,36 +89,57 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
 
   return (
     <div className={styles.taskSection}>
-      <div className={styles.taskHeader}>
+      <button
+        type="button"
+        className={styles.taskHeader}
+        onClick={() => setCollapsed((c) => !c)}
+        aria-expanded={!collapsed}
+      >
+        <span className={collapsed ? styles.taskChevron : styles.taskChevronExpanded}>
+          <ChevronRight size={10} />
+        </span>
         <span className={dotClass}>{statusIcon}</span>
         <span className={styles.taskTitle}>{title || taskId}</span>
         <span className={styles.taskStatusBadge} data-status={status}>{statusLabel}</span>
-        <button
-          type="button"
+        <span
+          role="button"
+          tabIndex={0}
           className={styles.dismissBtn}
-          onClick={() => dismissTask(taskId)}
+          onClick={(e) => {
+            e.stopPropagation();
+            dismissTask(taskId);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              dismissTask(taskId);
+            }
+          }}
           title="Dismiss"
           aria-label="Dismiss task output"
         >
           <XIcon size={10} />
-        </button>
-      </div>
-      {hasStreamEvents ? (
-        <div className={styles.taskBody}>
-          {streamEvents.map((evt) => (
-            <MessageBubble key={evt.id} message={evt} />
-          ))}
-        </div>
-      ) : taskOutput.text ? (
-        <div className={styles.taskBody}>
-          <LLMOutput content={taskOutput.text} />
-        </div>
-      ) : (
-        <div className={styles.taskBodyEmpty}>
-          {status === "failed"
-            ? "Task failed without producing output."
-            : "No output captured for this run."}
-        </div>
+        </span>
+      </button>
+      {!collapsed && (
+        hasStreamEvents ? (
+          <div className={styles.taskBody}>
+            {streamEvents.map((evt) => (
+              <MessageBubble key={evt.id} message={evt} />
+            ))}
+          </div>
+        ) : taskOutput.text ? (
+          <div className={styles.taskBody}>
+            <LLMOutput content={taskOutput.text} />
+          </div>
+        ) : (
+          <div className={styles.taskBodyEmpty}>
+            {status === "failed"
+              ? "Task failed without producing output."
+              : "No output captured for this run."}
+          </div>
+        )
       )}
     </div>
   );

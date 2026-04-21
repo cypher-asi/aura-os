@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useTaskStream } from "../../hooks/use-task-stream";
 import {
   useIsStreaming,
@@ -27,29 +29,41 @@ export function ActiveTaskStream({ taskId, title }: ActiveTaskStreamProps) {
   const timeline = useTimeline(streamKey);
   const progressText = useProgressText(streamKey);
 
+  const [collapsed, setCollapsed] = useState(false);
+
   const hasContent = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
 
   return (
     <div className={styles.taskSection}>
-      <div className={styles.taskHeader}>
+      <button
+        type="button"
+        className={styles.taskHeader}
+        onClick={() => setCollapsed((c) => !c)}
+        aria-expanded={!collapsed}
+      >
+        <span className={collapsed ? styles.taskChevron : styles.taskChevronExpanded}>
+          <ChevronRight size={10} />
+        </span>
         <span className={styles.taskDot} />
         <span className={styles.taskTitle}>{title || taskId}</span>
-      </div>
-      <div className={styles.taskBody}>
-        {hasContent ? (
-          <LLMStreamOutput
-            isStreaming={isStreaming}
-            text={streamingText}
-            toolCalls={activeToolCalls}
-            thinkingText={thinkingText}
-            thinkingDurationMs={thinkingDurationMs}
-            timeline={timeline}
-            progressText={progressText}
-          />
-        ) : (
-          <CookingIndicator label="Waiting for output…" />
-        )}
-      </div>
+      </button>
+      {!collapsed && (
+        <div className={styles.taskBody}>
+          {hasContent ? (
+            <LLMStreamOutput
+              isStreaming={isStreaming}
+              text={streamingText}
+              toolCalls={activeToolCalls}
+              thinkingText={thinkingText}
+              thinkingDurationMs={thinkingDurationMs}
+              timeline={timeline}
+              progressText={progressText}
+            />
+          ) : (
+            <CookingIndicator label="Waiting for output…" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
