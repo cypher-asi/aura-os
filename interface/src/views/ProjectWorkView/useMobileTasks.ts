@@ -4,6 +4,10 @@ import type { Task } from "../../types";
 import { EventType } from "../../types/aura-events";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
+import {
+  useLiveTaskIdsForProject,
+  useLiveTaskIdsStore,
+} from "../../stores/live-task-ids-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
 
 function sortByOrder<T extends { order_index: number }>(items: T[]): T[] {
@@ -22,7 +26,7 @@ export function useMobileTasks(projectId: string): MobileTasksData {
   const subscribe = useEventStore((s) => s.subscribe);
   const loopActive = useLoopActive(projectId);
   const [tasks, setTasks] = useState<Task[]>(() => sortByOrder(ctx?.initialTasks ?? []));
-  const [liveTaskIds, setLiveTaskIds] = useState<Set<string>>(() => new Set());
+  const liveTaskIds = useLiveTaskIdsForProject(projectId);
 
   const tasksBySpec = useMemo(() => {
     const grouped = new Map<string, Task[]>();
@@ -63,26 +67,30 @@ export function useMobileTasks(projectId: string): MobileTasksData {
       subscribe(EventType.TaskStarted, (e) => {
         const { task_id } = e.content;
         if (task_id) {
-          setLiveTaskIds((prev) => new Set(prev).add(task_id));
+          if (projectId) useLiveTaskIdsStore.getState().addLive(projectId, task_id);
           setStatus(task_id, "in_progress");
         }
       }),
       subscribe(EventType.TaskCompleted, (e) => {
         const { task_id } = e.content;
         if (task_id) {
-          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(task_id); return next; });
+          if (projectId) useLiveTaskIdsStore.getState().removeLive(projectId, task_id);
           setStatus(task_id, "done");
         }
       }),
       subscribe(EventType.TaskFailed, (e) => {
         const { task_id } = e.content;
         if (task_id) {
-          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(task_id); return next; });
+          if (projectId) useLiveTaskIdsStore.getState().removeLive(projectId, task_id);
           setStatus(task_id, "failed");
         }
       }),
-      subscribe(EventType.LoopStopped, () => setLiveTaskIds(new Set())),
-      subscribe(EventType.LoopFinished, () => setLiveTaskIds(new Set())),
+      subscribe(EventType.LoopStopped, () => {
+        if (projectId) useLiveTaskIdsStore.getState().clearProject(projectId);
+      }),
+      subscribe(EventType.LoopFinished, () => {
+        if (projectId) useLiveTaskIdsStore.getState().clearProject(projectId);
+      }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [projectId, subscribe]);

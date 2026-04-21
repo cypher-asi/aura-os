@@ -5,6 +5,10 @@ import { EventType } from "../../types/aura-events";
 import { useProjectActions } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
+import {
+  useLiveTaskIdsForProject,
+  useLiveTaskIdsStore,
+} from "../../stores/live-task-ids-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
 import { mergeById, compareSpecs } from "../../utils/collections";
 
@@ -76,7 +80,7 @@ export function useTaskListData(): TaskListData {
   const deletedSpecIds = useSidekickStore((s) => s.deletedSpecIds);
   const deletedTaskIds = useSidekickStore((s) => s.deletedTaskIds);
   const loopActive = useLoopActive(projectId);
-  const [liveTaskIds, setLiveTaskIds] = useState<Set<string>>(() => new Set());
+  const liveTaskIds = useLiveTaskIdsForProject(projectId);
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
   const [loading] = useState(false);
@@ -116,29 +120,17 @@ export function useTaskListData(): TaskListData {
   const prevStreamIdRef = useRef<string | null>(null);
   const prevConnectedRef = useRef(connected);
 
-  // Rehydrate `liveTaskIds` from the server's in-memory automaton
-  // registry on mount + reconnect. `task_started` WS events are not
-  // replayed, so without this the "live" flag on the Tasks list goes
-  // dark after a page refresh even when the automation is still
+  // Rehydrate the shared live-task-ids store from the server's in-memory
+  // automaton registry on mount + reconnect. `task_started` WS events
+  // are not replayed, so without this the "live" flag on the Tasks list
+  // goes dark after a page refresh even when the automation is still
   // executing a task.
   const hydrateLiveTaskIds = useCallback(async () => {
     const pid = projectIdRef.current;
     if (!pid) return;
     try {
       const res = await api.getLoopStatus(pid);
-      const ids = res.active_tasks?.map((t) => t.task_id).filter(Boolean) ?? [];
-      if (ids.length === 0) return;
-      setLiveTaskIds((prev) => {
-        let changed = false;
-        const next = new Set(prev);
-        for (const id of ids) {
-          if (!next.has(id)) {
-            next.add(id);
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
+      useLiveTaskIdsStore.getState().hydrateFromLoopStatus(res, pid);
     } catch {
       // `/loop/status` failures should not block normal task rendering;
       // the live flag will simply stay dark until the next event.
@@ -179,7 +171,8 @@ export function useTaskListData(): TaskListData {
       subscribe(EventType.TaskStarted, (e) => {
         const { task_id } = e.content;
         if (task_id) {
-          setLiveTaskIds((prev) => new Set(prev).add(task_id));
+          const pid = projectIdRef.current;
+          if (pid) useLiveTaskIdsStore.getState().addLive(pid, task_id);
           updateTaskStatus(task_id, "in_progress", {
             ...(e.session_id ? { session_id: e.session_id } : {}),
           });
@@ -188,7 +181,8 @@ export function useTaskListData(): TaskListData {
       subscribe(EventType.TaskCompleted, (e) => {
         const { task_id, execution_notes, files } = e.content;
         if (task_id) {
-          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(task_id); return next; });
+          const pid = projectIdRef.current;
+          if (pid) useLiveTaskIdsStore.getState().removeLive(pid, task_id);
           updateTaskStatus(task_id, "done", {
             execution_notes,
             ...(files ? { files_changed: files } : {}),
@@ -198,7 +192,8 @@ export function useTaskListData(): TaskListData {
       subscribe(EventType.TaskFailed, (e) => {
         const { task_id } = e.content;
         if (task_id) {
-          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(task_id); return next; });
+          const pid = projectIdRef.current;
+          if (pid) useLiveTaskIdsStore.getState().removeLive(pid, task_id);
           updateTaskStatus(task_id, "failed");
         }
       }),
@@ -225,9 +220,21 @@ export function useTaskListData(): TaskListData {
         });
       }),
       subscribe(EventType.FollowUpTaskCreated, refetchTasks),
-      subscribe(EventType.LoopStopped, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
-      subscribe(EventType.LoopPaused, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
-      subscribe(EventType.LoopFinished, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
+      subscribe(EventType.LoopStopped, () => {
+        const pid = projectIdRef.current;
+        if (pid) useLiveTaskIdsStore.getState().clearProject(pid);
+        refetchTasks();
+      }),
+      subscribe(EventType.LoopPaused, () => {
+        const pid = projectIdRef.current;
+        if (pid) useLiveTaskIdsStore.getState().clearProject(pid);
+        refetchTasks();
+      }),
+      subscribe(EventType.LoopFinished, () => {
+        const pid = projectIdRef.current;
+        if (pid) useLiveTaskIdsStore.getState().clearProject(pid);
+        refetchTasks();
+      }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [projectId, subscribe, updateTaskStatus, refetchTasks]);

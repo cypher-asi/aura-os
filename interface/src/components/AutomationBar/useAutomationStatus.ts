@@ -6,6 +6,7 @@ import { useEventStore } from "../../stores/event-store/index";
 import { useChatUI } from "../../stores/chat-ui-store";
 import { projectChatHistoryKey } from "../../stores/chat-history-store";
 import { useTaskOutputPanelStore } from "../../stores/task-output-panel-store";
+import { useLiveTaskIdsStore } from "../../stores/live-task-ids-store";
 import type { ProjectId } from "../../types";
 import { EventType } from "../../types/aura-events";
 
@@ -27,6 +28,23 @@ function hydrateActiveTasksFromLoopStatus(
     if (!entry.task_id) continue;
     panel.hydrateActiveTask(entry.task_id, projectId, entry.agent_instance_id);
   }
+}
+
+/**
+ * Seed every piece of "we're running" UI from the response body of
+ * `/loop/start` (or `/loop/resume`) so the Run panel row and the Tasks
+ * list "live" dot appear immediately — without waiting for the
+ * corresponding `task_started` WebSocket event. The backend already
+ * resolves the first or interrupted task id before responding, so this
+ * closes the dead window that would otherwise leave the sidekick looking
+ * idle on the very first task of a new run.
+ */
+function hydrateUiFromLoopStartResponse(
+  res: LoopStatusResponse,
+  projectId: ProjectId,
+): void {
+  hydrateActiveTasksFromLoopStatus(res, projectId);
+  useLiveTaskIdsStore.getState().hydrateFromLoopStatus(res, projectId);
 }
 
 type AutomationStatus = "idle" | "starting" | "preparing" | "active" | "paused" | "stopped";
@@ -88,7 +106,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         // so the "No tasks" emptiness after refresh doesn't stay out
         // of sync with the spinning nav icon. Any missed
         // `task_started` events are effectively replayed here.
-        hydrateActiveTasksFromLoopStatus(res, projectId);
+        hydrateUiFromLoopStartResponse(res, projectId);
       })
       .catch(() => {});
   }, [projectId]);
@@ -147,16 +165,31 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         const res = await api.resumeLoop(projectId, agentInstanceId);
         if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
         setPaused(false);
+        hydrateUiFromLoopStartResponse(res, projectId);
       } catch (err) {
         console.error("Failed to resume loop", err);
       }
       return;
     }
+    // Flip both `starting` and `preparing` up-front so the Run button
+    // spinner and the sidekick Run/Tasks tab loaders engage immediately
+    // on click, and stay engaged without flicker across three phases:
+    //   1. request in flight           -> starting=true,  preparing=true
+    //   2. server accepted the start   -> starting=false, preparing=true
+    //   3. first task_started arrives  -> preparing=false (via WS sub)
+    // Without this the spinner would flash off between the HTTP
+    // response and the `loop_started` WS event, making the ramp-up look
+    // stalled on the first (or interrupted) task of a fresh run.
+    setStarting(true);
+    setPreparing(true);
     try {
-      setStarting(true);
       const res = await api.startLoop(projectId, agentInstanceId, selectedModel);
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
-      setPaused(false); setStarting(false);
+      setPaused(false);
+      setStarting(false);
+      // Seed the Run panel row + Tasks list "live" dot from the response
+      // so the user sees activity without waiting for task_started.
+      hydrateUiFromLoopStartResponse(res, projectId);
     } catch (err) {
       setStarting(false); setPreparing(false);
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
