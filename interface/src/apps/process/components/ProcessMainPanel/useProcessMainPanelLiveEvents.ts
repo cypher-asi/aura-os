@@ -35,9 +35,9 @@ export function useProcessMainPanelLiveEvents(processId: string | undefined) {
         if (mapped) {
           setNodeStatus(c.node_id, mapped);
           if (mapped === "running") {
-            setLiveRunNodeId(c.node_id);
+            setLiveRunNodeId(c.node_id, c.run_id);
           } else {
-            setLiveRunNodeId(null);
+            setLiveRunNodeId(null, c.run_id);
           }
         }
       }
@@ -59,7 +59,9 @@ export function useProcessMainPanelLiveEvents(processId: string | undefined) {
 
     const handleRunFinished = (event: { content: { process_id: string; run_id: string } }) => {
       if (event.content.process_id === processId) {
-        setLiveRunNodeId(null);
+        // Clear both node and run association — run is terminal, so
+        // the persisted live-node pointer should no longer resurrect.
+        setLiveRunNodeId(null, null);
         fetchRuns(processId);
         fetchEvents(processId, event.content.run_id);
       }

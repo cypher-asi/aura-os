@@ -13,8 +13,14 @@ import {
 } from "./use-stream-core";
 import {
   acquireSharedStreamSubscriptions,
+  getStreamEntry,
   getThinkingDurationMs,
+  seedStreamEventsFromCache,
 } from "./stream/store";
+import {
+  persistProcessNodeTurns,
+  readProcessNodeTurns,
+} from "../stores/process-node-turn-cache";
 
 /**
  * Bridges native harness events (text_delta, thinking_delta, tool_use_start,
@@ -44,6 +50,36 @@ export function useProcessNodeStream(
       isStreamingRef.current = true;
     }
   }, [isActive, setters]);
+
+  // Rehydrate the stream-store entry from the persisted turn cache so a
+  // mid-run reload keeps the "Live Output" panel populated until fresh
+  // WS events arrive. No-ops once the entry already has events or is
+  // streaming (see `seedStreamEventsFromCache`), so this is safe to run
+  // on every mount.
+  useEffect(() => {
+    if (!runId || !nodeId) return;
+    const existing = getStreamEntry(key);
+    if (existing?.isStreaming) return;
+    if (existing && existing.events.length > 0) return;
+    const cached = readProcessNodeTurns(runId, nodeId);
+    if (cached.length > 0) {
+      seedStreamEventsFromCache(key, cached);
+    }
+  }, [runId, nodeId, key]);
+
+  // Late-growth safety net: if the stream entry gains events outside of
+  // a terminal transition (e.g. a delayed finalize race), mirror them
+  // into the persistent cache. The central snapshot in
+  // `process-stream-bootstrap` handles the happy path; this effect
+  // exists to match the equivalent guard in `useTaskOutputView` so we
+  // never lose a finalized turn to a missed broadcast.
+  useEffect(() => {
+    if (!runId || !nodeId) return;
+    if (isActive) return;
+    const entry = getStreamEntry(key);
+    if (!entry || entry.events.length === 0) return;
+    persistProcessNodeTurns(runId, nodeId, entry.events);
+  }, [runId, nodeId, key, isActive]);
 
   useEffect(() => {
     if (!runId || !nodeId) return;

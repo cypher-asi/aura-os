@@ -45,6 +45,9 @@ vi.mock("./use-stream-core", () => ({
   finalizeStream: vi.fn(),
 }));
 
+const mockGetStreamEntry = vi.fn(() => undefined as { isStreaming: boolean; events: unknown[] } | undefined);
+const mockSeedStreamEventsFromCache = vi.fn();
+
 vi.mock("./stream/store", () => ({
   getThinkingDurationMs: vi.fn(() => 0),
   acquireSharedStreamSubscriptions: vi.fn(
@@ -55,6 +58,19 @@ vi.mock("./stream/store", () => ({
       };
     },
   ),
+  getStreamEntry: (...args: unknown[]) => mockGetStreamEntry(...(args as [])),
+  seedStreamEventsFromCache: (...args: unknown[]) =>
+    mockSeedStreamEventsFromCache(...(args as [string, unknown[]])),
+}));
+
+const mockReadProcessNodeTurns = vi.fn(() => [] as unknown[]);
+const mockPersistProcessNodeTurns = vi.fn();
+
+vi.mock("../stores/process-node-turn-cache", () => ({
+  readProcessNodeTurns: (...args: unknown[]) =>
+    mockReadProcessNodeTurns(...(args as [string, string])),
+  persistProcessNodeTurns: (...args: unknown[]) =>
+    mockPersistProcessNodeTurns(...(args as [string, string, unknown[]])),
 }));
 
 import { useProcessNodeStream } from "./use-process-node-stream";
@@ -72,6 +88,8 @@ describe("useProcessNodeStream", () => {
   beforeEach(() => {
     subscribeMap.clear();
     vi.clearAllMocks();
+    mockGetStreamEntry.mockReturnValue(undefined);
+    mockReadProcessNodeTurns.mockReturnValue([]);
   });
 
   it("returns a streamKey", () => {
@@ -236,6 +254,43 @@ describe("useProcessNodeStream", () => {
     renderHook(() => useProcessNodeStream("run-1", "node-1", true));
 
     expect(mockSetIsStreaming).toHaveBeenCalledWith(true);
+  });
+
+  it("seeds the stream store from the persisted turn cache on mount", () => {
+    const cached = [
+      { id: "e1", role: "assistant", content: "hello" },
+    ];
+    mockReadProcessNodeTurns.mockReturnValue(cached);
+    mockGetStreamEntry.mockReturnValue(undefined);
+
+    renderHook(() => useProcessNodeStream("run-1", "node-1"));
+
+    expect(mockReadProcessNodeTurns).toHaveBeenCalledWith("run-1", "node-1");
+    expect(mockSeedStreamEventsFromCache).toHaveBeenCalledWith(
+      "process-node:run-1:node-1",
+      cached,
+    );
+  });
+
+  it("does not seed when the stream entry is already streaming", () => {
+    mockReadProcessNodeTurns.mockReturnValue([{ id: "e1", role: "assistant", content: "x" }]);
+    mockGetStreamEntry.mockReturnValue({ isStreaming: true, events: [] });
+
+    renderHook(() => useProcessNodeStream("run-1", "node-1"));
+
+    expect(mockSeedStreamEventsFromCache).not.toHaveBeenCalled();
+  });
+
+  it("does not seed when the stream entry already has events", () => {
+    mockReadProcessNodeTurns.mockReturnValue([{ id: "e1", role: "assistant", content: "x" }]);
+    mockGetStreamEntry.mockReturnValue({
+      isStreaming: false,
+      events: [{ id: "existing" }],
+    });
+
+    renderHook(() => useProcessNodeStream("run-1", "node-1"));
+
+    expect(mockSeedStreamEventsFromCache).not.toHaveBeenCalled();
   });
 
   it("cleans up subscriptions on unmount", () => {

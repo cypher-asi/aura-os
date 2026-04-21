@@ -20,6 +20,7 @@ import { signalDesktopReady } from "./lib/desktop-ready";
 import { awaitInitialShellAppReady } from "./lib/boot-shell";
 import { purgeLegacyChatHistoryFallback } from "./lib/browser-db";
 import { bootstrapTaskStreamSubscriptions } from "./stores/task-stream-bootstrap";
+import { bootstrapProcessStreamSubscriptions } from "./stores/process-stream-bootstrap";
 
 // Must run before any module that reads the host origin (e.g. host-store,
 // API clients) so a `?host=` bootstrap param wins over stale localStorage.
@@ -42,6 +43,10 @@ registerServiceWorker();
 // "task row appears, but body never fills in"). Registering here
 // guarantees the handlers are in place before the events socket opens.
 bootstrapTaskStreamSubscriptions();
+// Same pattern for process runs: snapshots the per-node live-output
+// stream into localStorage on terminal transitions so a mid-run reload
+// can rehydrate the "Live Output" panel without waiting for WS.
+bootstrapProcessStreamSubscriptions();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Missing #root element");

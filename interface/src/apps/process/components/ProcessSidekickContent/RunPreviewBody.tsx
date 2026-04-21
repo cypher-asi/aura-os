@@ -312,7 +312,13 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     return { input, output, total: input + output };
   }, [events]);
 
-  const liveRunNodeId = useProcessSidekickStore((s) => s.liveRunNodeId);
+  const storeLiveRunNodeId = useProcessSidekickStore((s) => s.liveRunNodeId);
+  const storeLiveRunId = useProcessSidekickStore((s) => s.liveRunId);
+  // Only adopt the persisted live-node pointer when it belongs to the
+  // run this preview is rendering — prevents a stale pointer from a
+  // previous run from leaking onto a subsequent one.
+  const liveRunNodeId =
+    storeLiveRunId && storeLiveRunId !== run.run_id ? null : storeLiveRunNodeId;
   const liveNodeLabel = liveRunNodeId
     ? nodes.find((n) => n.node_id === liveRunNodeId)?.label ?? "Node"
     : null;
@@ -337,6 +343,21 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
         timeline: liveTimeline,
       }
     : null;
+
+  // Render the live-output section when either the run is actively
+  // streaming for a known node, or when the persisted turn cache
+  // (seeded into the stream store by `useProcessNodeStream`) has a
+  // prior turn for this node. The cache path keeps the panel populated
+  // across reloads and WS reconnects during an in-flight run.
+  const hasCachedLiveEvents =
+    !!liveRunNodeId &&
+    (liveStreamEvents.length > 0 ||
+      !!liveStreamingText ||
+      !!liveThinkingText ||
+      liveActiveToolCalls.length > 0 ||
+      liveTimeline.length > 0);
+  const showLiveOutput = !!liveRunNodeId && (isActive || hasCachedLiveEvents);
+  const liveOutputTitle = isActive ? "Live Output" : "Recent Live Output";
 
   return (
     <div style={{ fontSize: 13 }}>
@@ -371,9 +392,9 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
             </div>
           </div>
         )}
-        {isActive && liveRunNodeId && (
+        {showLiveOutput && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Live Output &mdash; {liveNodeLabel}</div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{liveOutputTitle} &mdash; {liveNodeLabel}</div>
             <ProcessNodeLiveOutput
               events={liveStreamEvents}
               isStreaming={liveIsStreaming}
