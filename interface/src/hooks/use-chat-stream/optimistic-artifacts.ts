@@ -14,6 +14,17 @@ export function pushPendingSpec(
   const now = new Date().toISOString();
   const input = content.input ?? {};
   const title = (input.title as string) || "Generating spec…";
+  // If the streamed title already matches a real (backend-persisted) spec
+  // AND we haven't started tracking this tool-call's placeholder yet, skip
+  // the push entirely. Avoids a flashing duplicate row when the agent
+  // re-issues `create_spec` for a title that already exists.
+  const alreadyTrackingThisToolCall = pendingSpecIdsRef.current.includes(pendingId);
+  if (!alreadyTrackingThisToolCall) {
+    const realMatchExists = (sidekick.specs ?? []).some(
+      (s) => !s.spec_id.startsWith("pending-") && s.title === title,
+    );
+    if (realMatchExists) return;
+  }
   sidekick.pushSpec({
     spec_id: pendingId,
     project_id: projectId,
@@ -38,6 +49,13 @@ export function pushPendingTask(
   const now = new Date().toISOString();
   const input = content.input ?? {};
   const title = (input.title as string) || "Creating task…";
+  const alreadyTrackingThisToolCall = pendingTaskIdsRef.current.includes(pendingId);
+  if (!alreadyTrackingThisToolCall) {
+    const realMatchExists = (sidekick.tasks ?? []).some(
+      (t) => !t.task_id.startsWith("pending-") && t.title === title,
+    );
+    if (realMatchExists) return;
+  }
   sidekick.pushTask({
     task_id: pendingId,
     project_id: projectId,
@@ -75,6 +93,46 @@ export function removePendingArtifact(
     pendingIdsRef.current.splice(idx, 1);
     removeFn(pendingId);
   }
+}
+
+/**
+ * Evict every `pending-*` placeholder currently tracked by `pendingIdsRef`
+ * from the sidekick (via `removeFn`) and clear the ref. Called when the
+ * chat stream ends / aborts so we don't leak placeholders across turns.
+ */
+export function clearAllPendingArtifacts(
+  pendingIdsRef: { current: string[] },
+  removeFn: (id: string) => void,
+) {
+  if (pendingIdsRef.current.length === 0) return;
+  const ids = pendingIdsRef.current.slice();
+  pendingIdsRef.current = [];
+  for (const id of ids) removeFn(id);
+}
+
+/**
+ * Drop any pending placeholders from `pendingIdsRef` whose matching
+ * sidekick entry shares the given title, and remove them from the
+ * sidekick via `removeFn`. Used by the SpecSaved / TaskSaved handlers so
+ * the optimistic entry is replaced by the real entry regardless of the
+ * order events arrive in and whether tool-call ids line up.
+ */
+export function dropPendingByTitle(
+  pendingIdsRef: { current: string[] },
+  title: string,
+  findTitle: (id: string) => string | undefined,
+  removeFn: (id: string) => void,
+) {
+  if (pendingIdsRef.current.length === 0) return;
+  const keep: string[] = [];
+  for (const id of pendingIdsRef.current) {
+    if (findTitle(id) === title) {
+      removeFn(id);
+    } else {
+      keep.push(id);
+    }
+  }
+  pendingIdsRef.current = keep;
 }
 
 export function promotePendingSpec(

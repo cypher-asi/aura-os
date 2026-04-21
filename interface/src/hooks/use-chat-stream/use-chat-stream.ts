@@ -106,6 +106,17 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
           controller.abort();
           abortRef.current = null;
         }
+        // Whatever path we took out (success, error, abort), drop any
+        // placeholders that were never promoted. Safe because successful
+        // promotions have already removed themselves from these refs.
+        for (const id of pendingSpecIdsRef.current) {
+          sidekickRef.current.removeSpec(id);
+        }
+        pendingSpecIdsRef.current = [];
+        for (const id of pendingTaskIdsRef.current) {
+          sidekickRef.current.removeTask(id);
+        }
+        pendingTaskIdsRef.current = [];
       }
     },
     [projectId, agentInstanceId, core.key, refs, setters, abortRef, core.setEvents, core.setIsStreaming, core.setProgressText],

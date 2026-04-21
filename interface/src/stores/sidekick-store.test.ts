@@ -198,6 +198,59 @@ describe("sidekick-store", () => {
       useSidekickStore.getState().clearDeletedSpecs();
       expect(useSidekickStore.getState().deletedSpecIds).toEqual([]);
     });
+
+    it("pushSpec with a real id evicts pending placeholders sharing its title", () => {
+      const pending = { ...makeSpec("pending-tc1", 1), title: "01: Core Types" };
+      useSidekickStore.getState().pushSpec(pending);
+      const real = { ...makeSpec("real-1", 1), title: "01: Core Types" };
+      useSidekickStore.getState().pushSpec(real);
+
+      const { specs } = useSidekickStore.getState();
+      expect(specs).toHaveLength(1);
+      expect(specs[0].spec_id).toBe("real-1");
+    });
+
+    it("pushSpec keeps unrelated pending placeholders", () => {
+      const pA = { ...makeSpec("pending-tcA", 1), title: "01: Core Types" };
+      const pB = { ...makeSpec("pending-tcB", 2), title: "02: Identity" };
+      useSidekickStore.getState().pushSpec(pA);
+      useSidekickStore.getState().pushSpec(pB);
+      const real = { ...makeSpec("real-1", 1), title: "01: Core Types" };
+      useSidekickStore.getState().pushSpec(real);
+
+      const ids = useSidekickStore.getState().specs.map((s) => s.spec_id);
+      expect(ids).toEqual(expect.arrayContaining(["real-1", "pending-tcB"]));
+      expect(ids).not.toContain("pending-tcA");
+      expect(ids).toHaveLength(2);
+    });
+
+    it("pushSpec with a pending id does not evict anything", () => {
+      const existing = { ...makeSpec("pending-tc1", 1), title: "01: Core Types" };
+      useSidekickStore.getState().pushSpec(existing);
+      const another = { ...makeSpec("pending-tc2", 1), title: "01: Core Types" };
+      useSidekickStore.getState().pushSpec(another);
+
+      expect(useSidekickStore.getState().specs).toHaveLength(2);
+    });
+
+    it("pushSpec promotes the preview from pending placeholder to real spec of the same title", () => {
+      const pending = { ...makeSpec("pending-tc1", 1), title: "01: Core Types" };
+      useSidekickStore.getState().pushSpec(pending);
+      useSidekickStore.getState().viewSpec(pending);
+      const real = {
+        ...makeSpec("real-1", 1),
+        title: "01: Core Types",
+        markdown_contents: "# Real body",
+      };
+      useSidekickStore.getState().pushSpec(real);
+
+      const preview = useSidekickStore.getState().previewItem;
+      expect(preview?.kind).toBe("spec");
+      if (preview?.kind === "spec") {
+        expect(preview.spec.spec_id).toBe("real-1");
+        expect(preview.spec.markdown_contents).toBe("# Real body");
+      }
+    });
   });
 
   describe("pushTask / removeTask / patchTask", () => {
@@ -243,6 +296,17 @@ describe("sidekick-store", () => {
     it("patchTask is noop for unknown task", () => {
       useSidekickStore.getState().patchTask("nonexistent", { status: "completed" });
       expect(useSidekickStore.getState().tasks).toHaveLength(0);
+    });
+
+    it("pushTask with a real id evicts pending placeholders sharing its title", () => {
+      const pending = { ...makeTask("pending-tc1", 1), title: "Implement feature" };
+      useSidekickStore.getState().pushTask(pending);
+      const real = { ...makeTask("real-1", 1), title: "Implement feature" };
+      useSidekickStore.getState().pushTask(real);
+
+      const tasks = useSidekickStore.getState().tasks;
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].task_id).toBe("real-1");
     });
   });
 

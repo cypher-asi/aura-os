@@ -158,12 +158,34 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
 
   pushSpec: (spec) => {
     const { specs, deletedSpecIds, previewItem, previewHistory } = get();
-    const exists = specs.some((s) => s.spec_id === spec.spec_id);
+    // When a *real* spec arrives (backend-issued id, not a pending
+    // placeholder), evict any left-over `pending-*` placeholders whose
+    // title matches. Covers the case where an optimistic placeholder was
+    // pushed at ToolUseStart/Snapshot but never cleaned up by
+    // promotePendingSpec (e.g. stream aborted, unparseable tool result,
+    // or SpecSaved landed before the tool result).
+    const isReal = !spec.spec_id.startsWith("pending-");
+    const base = isReal
+      ? specs.filter(
+          (s) => !(s.spec_id.startsWith("pending-") && s.title === spec.title),
+        )
+      : specs;
+    const exists = base.some((s) => s.spec_id === spec.spec_id);
     const next = exists
-      ? specs.map((s) => (s.spec_id === spec.spec_id ? spec : s))
-      : [...specs, spec];
+      ? base.map((s) => (s.spec_id === spec.spec_id ? spec : s))
+      : [...base, spec];
     let newPreview = previewItem;
     if (previewItem?.kind === "spec" && previewItem.spec.spec_id === spec.spec_id) {
+      newPreview = { kind: "spec", spec };
+    }
+    // If the previewed spec was a now-evicted pending placeholder, move
+    // the preview over to the real spec that replaced it.
+    if (
+      isReal &&
+      previewItem?.kind === "spec" &&
+      previewItem.spec.spec_id.startsWith("pending-") &&
+      previewItem.spec.title === spec.title
+    ) {
       newPreview = { kind: "spec", spec };
     }
     const newHistory = patchSpecInHistory(previewHistory, spec.spec_id, spec);
@@ -179,12 +201,19 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 
   removeSpec: (specId) => {
-    const { specs, deletedSpecIds } = get();
+    const { specs, deletedSpecIds, previewItem, previewHistory } = get();
+    const isPreviewedSpec = previewItem?.kind === "spec" && previewItem.spec.spec_id === specId;
+    const nextHistory = previewHistory.filter(
+      (item) => !(item.kind === "spec" && item.spec.spec_id === specId),
+    );
     set({
       specs: specs.filter((s) => s.spec_id !== specId),
       deletedSpecIds: deletedSpecIds.includes(specId)
         ? deletedSpecIds
         : [...deletedSpecIds, specId],
+      previewItem: isPreviewedSpec ? null : previewItem,
+      previewHistory: nextHistory.length === previewHistory.length ? previewHistory : nextHistory,
+      canGoBack: isPreviewedSpec ? false : get().canGoBack && nextHistory.length > 0,
     });
   },
 
@@ -196,13 +225,29 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
 
   pushTask: (task) => {
     const { tasks, deletedTaskIds, previewItem, previewHistory } = get();
-    const existing = tasks.find((t) => t.task_id === task.task_id);
+    // Same guard as pushSpec: a real task (non-pending id) evicts any
+    // left-over `pending-*` placeholders that share its title.
+    const isReal = !task.task_id.startsWith("pending-");
+    const baseTasks = isReal
+      ? tasks.filter(
+          (t) => !(t.task_id.startsWith("pending-") && t.title === task.title),
+        )
+      : tasks;
+    const existing = baseTasks.find((t) => t.task_id === task.task_id);
     const effective = preserveTerminalStatus(existing, task);
     const next = existing
-      ? tasks.map((t) => (t.task_id === task.task_id ? effective : t))
-      : [...tasks, effective];
+      ? baseTasks.map((t) => (t.task_id === task.task_id ? effective : t))
+      : [...baseTasks, effective];
     let newPreview = previewItem;
     if (previewItem?.kind === "task" && previewItem.task.task_id === task.task_id) {
+      newPreview = { kind: "task", task: effective };
+    }
+    if (
+      isReal &&
+      previewItem?.kind === "task" &&
+      previewItem.task.task_id.startsWith("pending-") &&
+      previewItem.task.title === task.title
+    ) {
       newPreview = { kind: "task", task: effective };
     }
     const newHistory = patchTaskInHistory(previewHistory, task.task_id, effective);
@@ -218,12 +263,19 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 
   removeTask: (taskId) => {
-    const { tasks, deletedTaskIds } = get();
+    const { tasks, deletedTaskIds, previewItem, previewHistory } = get();
+    const isPreviewedTask = previewItem?.kind === "task" && previewItem.task.task_id === taskId;
+    const nextHistory = previewHistory.filter(
+      (item) => !(item.kind === "task" && item.task.task_id === taskId),
+    );
     set({
       tasks: tasks.filter((t) => t.task_id !== taskId),
       deletedTaskIds: deletedTaskIds.includes(taskId)
         ? deletedTaskIds
         : [...deletedTaskIds, taskId],
+      previewItem: isPreviewedTask ? null : previewItem,
+      previewHistory: nextHistory.length === previewHistory.length ? previewHistory : nextHistory,
+      canGoBack: isPreviewedTask ? false : get().canGoBack && nextHistory.length > 0,
     });
   },
 

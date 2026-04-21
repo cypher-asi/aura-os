@@ -20,6 +20,8 @@ const mockNotifyAgentInstanceUpdate = vi.fn();
 
 const mockSidekickState = {
   previewItem: null,
+  specs: [],
+  tasks: [],
   setStreamingAgentInstanceId: mockSetStreamingAgentInstanceId,
   clearGeneratedArtifacts: mockClearGeneratedArtifacts,
   setActiveTab: mockSetActiveTab,

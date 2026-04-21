@@ -30,6 +30,8 @@ import {
   promotePendingTask,
   backfillToolCallInput,
   isTaskBackfillTool,
+  clearAllPendingArtifacts,
+  dropPendingByTitle,
 } from "./optimistic-artifacts";
 import {
   useContextUsageStore,
@@ -187,9 +189,18 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       }
       case EventType.SpecSaved: {
-        const pendingId = pendingSpecIdsRef.current.shift();
-        if (pendingId) sidekickRef.current.removeSpec(pendingId);
-        sidekickRef.current.pushSpec(event.content.spec);
+        const spec = event.content.spec;
+        // Match by title rather than FIFO-shifting so concurrent specs
+        // in flight (or engine-channel SpecSaveds arriving out of order)
+        // don't evict an unrelated placeholder.
+        dropPendingByTitle(
+          pendingSpecIdsRef,
+          spec.title,
+          (id) =>
+            (sidekickRef.current.specs ?? []).find((s) => s.spec_id === id)?.title,
+          (id) => sidekickRef.current.removeSpec(id),
+        );
+        sidekickRef.current.pushSpec(spec);
         break;
       }
       case EventType.SpecsTitle: {
@@ -203,9 +214,15 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       }
       case EventType.TaskSaved: {
-        const pendingId = pendingTaskIdsRef.current.shift();
-        if (pendingId) sidekickRef.current.removeTask(pendingId);
-        sidekickRef.current.pushTask(event.content.task);
+        const task = event.content.task;
+        dropPendingByTitle(
+          pendingTaskIdsRef,
+          task.title,
+          (id) =>
+            (sidekickRef.current.tasks ?? []).find((t) => t.task_id === id)?.title,
+          (id) => sidekickRef.current.removeTask(id),
+        );
+        sidekickRef.current.pushTask(task);
         break;
       }
       case EventType.MessageEnd:
@@ -270,16 +287,36 @@ export function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.Done:
         finalizeStream(refs, setters, abortRef, false);
         sidekickRef.current.setStreamingAgentInstanceId(null);
+        clearAllPendingArtifacts(pendingSpecIdsRef, (id) =>
+          sidekickRef.current.removeSpec(id),
+        );
+        clearAllPendingArtifacts(pendingTaskIdsRef, (id) =>
+          sidekickRef.current.removeTask(id),
+        );
         break;
     }
   };
 
   return {
     onEvent,
-    onError: (error) => handleStreamError(refs, setters, error),
+    onError: (error) => {
+      handleStreamError(refs, setters, error);
+      clearAllPendingArtifacts(pendingSpecIdsRef, (id) =>
+        sidekickRef.current.removeSpec(id),
+      );
+      clearAllPendingArtifacts(pendingTaskIdsRef, (id) =>
+        sidekickRef.current.removeTask(id),
+      );
+    },
     onDone: () => {
       finalizeStream(refs, setters, abortRef, false);
       sidekickRef.current.setStreamingAgentInstanceId(null);
+      clearAllPendingArtifacts(pendingSpecIdsRef, (id) =>
+        sidekickRef.current.removeSpec(id),
+      );
+      clearAllPendingArtifacts(pendingTaskIdsRef, (id) =>
+        sidekickRef.current.removeTask(id),
+      );
     },
   };
 }
