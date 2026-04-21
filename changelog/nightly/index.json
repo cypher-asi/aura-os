@@ -2,20 +2,20 @@
   {
     "date": "2026-04-20",
     "channel": "nightly",
-    "version": "0.1.0-nightly.314.1",
-    "title": "Agent permissions overhaul, in-app upgrades, and nightly release hardening",
-    "intro": "A dense nightly that reshapes how agent capabilities and tools flow through sessions, lands a first-class in-app upgrade control on desktop, speeds up the chat cold-boot path, and tightens the nightly release pipeline against flaky packaging and version drift.",
+    "version": "0.1.0-nightly.315.1",
+    "title": "Agent permissions overhaul, in-app upgrades, and nightly pipeline hardening",
+    "intro": "A dense nightly that reworks how agent capabilities flow from UI toggles to live tool sessions, adds a proper in-app update control for desktop users, and shores up the nightly release pipeline across Android, macOS packaging, version numbering, and the updater sidecar. Chat opens also get noticeably faster on cold boot and reload.",
     "entryCount": 6,
     "highlights": [
-      "Unified capability-aware tool registry fixes stale agent permissions",
-      "In-app update control lands in Settings and Team Settings",
-      "Chat cold boot gets IndexedDB cache and parallel history reads",
-      "Nightly desktop packaging retries transient failures and stabilizes versioning",
-      "Kimi K2.6 joins the chat model picker"
+      "Unified, autosaving agent permissions that take effect without a restart",
+      "In-app upgrade control in Settings and Team Settings",
+      "Faster cold chat opens with IDB-cached history and cached project discovery",
+      "Kimi K2.6 available in the chat model picker",
+      "More resilient nightly packaging, versioning, and desktop updater staging"
     ],
-    "rawCommitCount": 20,
-    "generatedAt": "2026-04-21T02:01:19.568Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.314.1",
+    "rawCommitCount": 21,
+    "generatedAt": "2026-04-21T02:49:06.386Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.315.1",
     "path": "history/2026-04-20.json"
   },
   {

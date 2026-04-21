@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-21T02:01:19.568Z",
+  "generatedAt": "2026-04-21T02:49:06.386Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.314.1",
+  "version": "0.1.0-nightly.315.1",
   "date": "2026-04-20",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.314.1",
-  "lastIncludedSha": "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c",
-  "previousProcessedSha": "66ff7e7cd8bc010c71464d9e0c489cfe14b74f37",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.315.1",
+  "lastIncludedSha": "1b37b3c1e20aa77e9f0d92438473ac8d29cfb3e5",
+  "previousProcessedSha": "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c",
   "commitShas": [
     "823c16d891fa4d5540662bddc2768408f45d76f5",
     "73b0ecb3ee9cd374e17896cf9541d518aeafe560",
@@ -31,10 +31,11 @@
     "2cce56067f3e0d4b52536c8b548fe8ad61de201d",
     "66ff7e7cd8bc010c71464d9e0c489cfe14b74f37",
     "1ddd779bb8322e84515c00e31d41b11355413a79",
-    "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c"
+    "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c",
+    "1b37b3c1e20aa77e9f0d92438473ac8d29cfb3e5"
   ],
-  "rawCommitCount": 20,
-  "filteredCommitCount": 20,
+  "rawCommitCount": 21,
+  "filteredCommitCount": 21,
   "rawCommits": [
     {
       "sha": "823c16d891fa4d5540662bddc2768408f45d76f5",
@@ -921,6 +922,47 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "1b37b3c1e20aa77e9f0d92438473ac8d29cfb3e5",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-20T22:34:59-04:00",
+      "subject": "desktop: stage updater sidecar outside install tree",
+      "body": "",
+      "parents": [
+        "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/handlers.rs",
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-desktop/src/updater.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 243,
+        "deletions": 40
+      },
+      "committedAtMs": 1776738899000,
+      "cleanSubject": "desktop: stage updater sidecar outside install tree",
+      "keywords": [
+        "desktop",
+        "stage",
+        "updater",
+        "sidecar",
+        "outside",
+        "install",
+        "tree"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop"
+      ]
     }
   ],
   "batchCount": 6,
@@ -932,36 +974,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 5131937
+          "sizeBytes": 5131961
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.314.1",
+      "version": "0.1.0-nightly.315.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 28166964
+          "sizeBytes": 28178986
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 95463928
+          "sizeBytes": 95472120
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -971,29 +1013,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.314.1",
+      "version": "0.1.0-nightly.315.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.314.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.315.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 24532731
+          "sizeBytes": 24534381
         },
         {
-          "name": "Aura_0.1.0-nightly.314.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.315.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 24348254
+          "sizeBytes": 24354754
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1003,29 +1045,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.314.1",
+      "version": "0.1.0-nightly.315.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.314.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.315.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 26170086
+          "sizeBytes": 26166762
         },
         {
-          "name": "Aura_0.1.0-nightly.314.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.315.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 26016102
+          "sizeBytes": 26025318
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1035,17 +1077,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.314.1",
+      "version": "0.1.0-nightly.315.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 16976295
+          "sizeBytes": 16985044
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.314.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.315.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1054,34 +1096,49 @@
     }
   ],
   "rendered": {
-    "title": "Agent permissions overhaul, in-app upgrades, and nightly release hardening",
-    "intro": "A dense nightly that reshapes how agent capabilities and tools flow through sessions, lands a first-class in-app upgrade control on desktop, speeds up the chat cold-boot path, and tightens the nightly release pipeline against flaky packaging and version drift.",
+    "title": "Agent permissions overhaul, in-app upgrades, and nightly pipeline hardening",
+    "intro": "A dense nightly that reworks how agent capabilities flow from UI toggles to live tool sessions, adds a proper in-app update control for desktop users, and shores up the nightly release pipeline across Android, macOS packaging, version numbering, and the updater sidecar. Chat opens also get noticeably faster on cold boot and reload.",
     "entries": [
       {
         "time_label": "9:29 PM",
         "started_at": "2026-04-20T04:29:16.000Z",
-        "ended_at": "2026-04-20T05:47:09.000Z",
-        "title": "Agent tool registry unified and in-app upgrade control lands",
-        "summary": "A major agent-permissions rework pairs with the first iteration of a desktop update control in Settings, plus a safer skill-delete flow and faster chat history loads.",
+        "ended_at": "2026-04-20T06:15:22.000Z",
+        "title": "Agent capabilities, skills, and chat startup get a major rework",
+        "summary": "A broad late-night push unified the agent tool registry, fixed long-standing permission toggle bugs, added an in-app upgrade control, and cut cold-boot latency for chat.",
         "items": [
           {
-            "text": "Replaced the tier-1/tier-2 + CEO short-circuit model with a single capability-aware tool registry: every tool now declares a Surface, CEO gets ReadAllProjects/WriteAllProjects wildcards, and toggling capabilities invalidates live sessions so list_agents, send_to_agent, and list_agent_instances actually show up without a server restart.",
+            "text": "Rebuilt the agent tool registry around a single capability-aware pipeline: every tool now declares an Always/OnDemand surface, CEO and non-CEO bundles flow through the same permission filter, and saving a capability change invalidates live chat sessions (direct and project-instance) plus the dispatcher permissions cache so toggles take effect on the next turn without a server restart. Also restored missing CEO tools like list_agents, send_to_agent, and list_agent_instances.",
             "commit_shas": [
               "2a7ac33dd515f076b73cd42465a220e272cba3f1",
-              "76b34a666582d023b55a8345ed7a37a9dcd1f0a8",
-              "9f9784b3044509ad7e4c33e0af645c4b8b4078b9"
+              "76b34a666582d023b55a8345ed7a37a9dcd1f0a8"
             ],
             "confidence": "high"
           },
           {
-            "text": "Delete Skill now refuses with a 409 and an inline blocker list when the skill is still installed on other agents, and the catalog hides stale entries whose SKILL.md is gone so deleted skills stop reappearing under Available.",
+            "text": "Closed three separate paths where permission edits silently reverted: project-instance chats now read fresh parent capabilities at cold-start instead of a stale snapshot, update_agent trusts the submitted bundle when aura-network omits permissions in its PUT echo, and GET /agents no longer clobbers the local shadow when the network response drops the permissions column.",
+            "commit_shas": [
+              "9f9784b3044509ad7e4c33e0af645c4b8b4078b9",
+              "5c5c5658ca43480ebdaa9720017658b58521af2c"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Replaced the Save/Discard bar in the Permissions sidekick with debounced autosave and an inline status pill (Saving… / Saved / Save failed + Retry), and restyled the capability toggles with a high-contrast track so on/off state reads clearly against the dark panel.",
+            "commit_shas": [
+              "7f67bdf8d748ae0805dfec55f11f51861929df85",
+              "76b34a666582d023b55a8345ed7a37a9dcd1f0a8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Hardened the Delete skill flow: the server now refuses with 409 when a user-authored skill is still installed on any agent and returns the blocking {agent_id, name} list for inline display in the confirm modal, and the catalog proxy hides entries whose SKILL.md no longer exists on disk so deleted skills stop reappearing under Available.",
             "commit_shas": [
               "73b0ecb3ee9cd374e17896cf9541d518aeafe560"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added an update status block in Settings so desktop users can see their version, check for updates, install available ones, and track download/install/failure states, with a graceful 'managed by the server' fallback on web — then promoted the control into a shared component used by both Settings and Team Settings > General.",
+            "text": "Shipped an in-app upgrade control on desktop: a new block under Settings > Version (and mirrored into Team Settings > General > About) surfaces latest-version state, check-for-updates, install, and download/install/failure states, with a 'managed by the server' fallback on the web.",
             "commit_shas": [
               "267eb963fd99798f7fdbba9c540ad7ddefd6e3be",
               "6b6910ca6569a49901f529cc1ebeec28e28994e3",
@@ -1092,48 +1149,19 @@
             "confidence": "high"
           },
           {
-            "text": "Opening chats with long histories no longer pays O(lifetime events) of storage reads: session events now fan out in parallel batches of four and stop as soon as the requested window is filled.",
+            "text": "Cut cold-boot latency for chat: history now hydrates instantly from an IndexedDB cache while the network revalidates, the /agents index skips a lazy chunk fetch and agent-list gate by redirecting off the cached last agent id, and the sidebar preview prefetch yields to the foreground chat via requestIdleCallback with lower concurrency.",
             "commit_shas": [
-              "1e7986cdb96c66efd8bccf2eeac422bc32747d51"
-            ],
-            "confidence": "high"
-          }
-        ]
-      },
-      {
-        "time_label": "10:54 PM",
-        "started_at": "2026-04-20T05:54:31.000Z",
-        "ended_at": "2026-04-20T06:15:22.000Z",
-        "title": "Autosaving permissions and a faster chat cold boot",
-        "summary": "Permissions toggles now persist automatically, chat history survives reloads via IndexedDB, and the /agents route stops blocking first paint on network round-trips.",
-        "items": [
-          {
-            "text": "The Permissions tab drops the Save/Discard bar in favor of debounced autosave with an inline status pill (Saving…/Saved/Save failed + Retry), flushing pending edits on unmount so nothing is lost when switching agents.",
-            "commit_shas": [
-              "7f67bdf8d748ae0805dfec55f11f51861929df85"
+              "588bdf34b8bd4b6310ab064aa865fa4315ec0f50",
+              "6f149de38b2e62c40c802479629eaffc37d9cd9b",
+              "2b051764ba9d734669790bd0ad6fa2468837a8c9"
             ],
             "confidence": "high"
           },
           {
-            "text": "Closed the last regressions where capability toggles silently reverted: the server now reads fresh parent caps per instance chat turn, guards against empty permissions echoes on PUT, and preserves the local shadow bundle when aura-network drops the permissions column on GET.",
+            "text": "Reduced server-side chat open cost: per-session event reads now fan out in parallel batches and stop as soon as the limit+offset window is filled, and the orgs→projects→project_agents discovery behind every chat turn is cached for 30s per (jwt, agent_id) with targeted invalidation on auto-bind.",
             "commit_shas": [
-              "5c5c5658ca43480ebdaa9720017658b58521af2c"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Chat history is now cached to IndexedDB so reloads paint instantly from the last successful fetch while revalidation runs in the background, with a graceful localStorage fallback in private browsing.",
-            "commit_shas": [
-              "588bdf34b8bd4b6310ab064aa865fa4315ec0f50"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Trimmed cold-boot waterfalls on /agents: project-agent discovery gets a 30s TTL cache, sidebar preview prefetch is deprioritized behind the active chat and scheduled via requestIdleCallback, and the AgentChatView lazy import and agents-list gate are gone.",
-            "commit_shas": [
-              "3cfc04de1ebd632afc4aabc1c87184ffa5fb8aaf",
-              "2b051764ba9d734669790bd0ad6fa2468837a8c9",
-              "6f149de38b2e62c40c802479629eaffc37d9cd9b"
+              "1e7986cdb96c66efd8bccf2eeac422bc32747d51",
+              "3cfc04de1ebd632afc4aabc1c87184ffa5fb8aaf"
             ],
             "confidence": "high"
           }
@@ -1143,11 +1171,11 @@
         "time_label": "11:23 PM",
         "started_at": "2026-04-20T06:23:49.000Z",
         "ended_at": "2026-04-20T06:23:49.000Z",
-        "title": "Android release jobs fail fast on missing secrets",
-        "summary": "The ship-android and nightly Android jobs now preflight every required fastlane secret for the selected lane in one pass.",
+        "title": "Android release jobs preflight their signing secrets",
+        "summary": "The ship-android and nightly mobile jobs now fail fast with an actionable error when Play Store or signing secrets are missing, instead of dying deep inside fastlane.",
         "items": [
           {
-            "text": "Added a preflight check to android-mobile.yml and release-mobile-nightly.yml that surfaces every missing Android release secret up front with an actionable error, instead of dying deep inside fastlane one variable at a time.",
+            "text": "Added a preflight that checks every required secret for the selected lane in one pass and wired it into both android-mobile.yml and release-mobile-nightly.yml, so signed-build and Play Store paths surface all missing variables up front rather than one-at-a-time fastlane errors.",
             "commit_shas": [
               "2cce56067f3e0d4b52536c8b548fe8ad61de201d"
             ],
@@ -1159,11 +1187,11 @@
         "time_label": "10:57 AM",
         "started_at": "2026-04-20T17:57:19.000Z",
         "ended_at": "2026-04-20T17:57:19.000Z",
-        "title": "Desktop packaging auto-retries transient failures",
-        "summary": "Nightly, stable, and desktop-validate workflows now retry flaky macOS and Linux packaging errors instead of failing the whole run.",
+        "title": "Transient macOS and Linux packaging failures now auto-retry",
+        "summary": "Desktop packaging across nightly, stable, and validate workflows retries known transient failures up to three times, with stale DMG mounts cleaned up between attempts.",
         "items": [
           {
-            "text": "Packaging now retries up to three times on known-transient failures — hdiutil 'Resource busy' on macOS and 429/5xx AppRun download errors on Linux — and the stale-DMG cleanup logic moved into a shared script reused between validate, nightly, and stable release workflows.",
+            "text": "Replaced the single-shot retry with a three-attempt loop across desktop-validate, release-nightly, and release-stable that matches hdiutil 'Resource busy' on macOS and 429/5xx AppRun download errors on Linux, and extracted the stale-DMG cleanup into a shared script that runs between retries.",
             "commit_shas": [
               "66ff7e7cd8bc010c71464d9e0c489cfe14b74f37"
             ],
@@ -1175,11 +1203,11 @@
         "time_label": "3:18 PM",
         "started_at": "2026-04-20T22:18:06.000Z",
         "ended_at": "2026-04-20T22:18:06.000Z",
-        "title": "Kimi K2.6 added to the chat model picker",
-        "summary": "The chat input bar gains a new model option and the model id namespace is cleaned up.",
+        "title": "Kimi K2.6 joins the chat model picker",
+        "summary": "The chat input bar's model list now includes Kimi K2.6 alongside the existing Claude, GPT, and Codex options.",
         "items": [
           {
-            "text": "Kimi K2.6 is now selectable from the chat model dropdown, and built-in model ids were normalized under the 'aura-' prefix in the models catalog.",
+            "text": "Added Kimi K2.6 to the default model constants and updated ChatInputBar so it shows up in the quick picker; the bundled model ids were also normalized to the aura-* prefix used throughout the app.",
             "commit_shas": [
               "1ddd779bb8322e84515c00e31d41b11355413a79"
             ],
@@ -1191,33 +1219,42 @@
         "time_label": "6:48 PM",
         "started_at": "2026-04-21T01:48:01.000Z",
         "ended_at": "2026-04-21T01:48:01.000Z",
-        "title": "Nightly version resolution hardened for reruns",
-        "summary": "Nightly artifact versioning no longer drifts across jobs or between first runs and reruns.",
+        "title": "Nightly version numbers stay stable across rerun attempts",
+        "summary": "Nightly build, package, and Android jobs now share a single resolved version so rerunning a failed attempt no longer produces mismatched artifact versions.",
         "items": [
           {
-            "text": "A new resolve-version job computes the nightly version once and feeds it to build-app, package, and the Android APK job, replacing the per-job version computation that mixed run_number with run_attempt and could produce mismatched artifacts on reruns.",
+            "text": "Hoisted nightly version resolution into a dedicated resolve-version job consumed by build-app, package, and package-android-apk, dropping the per-job run_attempt suffix that caused reruns to mint new versions, and added a validate-release-artifact-versions script to catch drift between produced artifacts.",
             "commit_shas": [
               "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c"
             ],
             "confidence": "high"
-          },
+          }
+        ]
+      },
+      {
+        "time_label": "7:34 PM",
+        "started_at": "2026-04-21T02:34:59.000Z",
+        "ended_at": "2026-04-21T02:34:59.000Z",
+        "title": "Desktop updater stages its sidecar outside the install tree",
+        "summary": "The desktop app now copies the bundled harness binary into a versioned staging directory under the user data folder before launching it, and routes install-update requests through the main event loop.",
+        "items": [
           {
-            "text": "Added a validate-release-artifact-versions script so mismatched versions across the packaged artifact set fail the release explicitly instead of shipping silently.",
+            "text": "Bundled harness binaries are staged into <data_dir>/runtime/sidecar under a content-addressed name derived from size, mtime, and package version, so the updater can replace the install tree without the running sidecar holding files open. The /update/install HTTP route now dispatches a UserEvent::InstallUpdate through the event loop proxy instead of calling into the updater inline.",
             "commit_shas": [
-              "6b038cb1dffae9fe40ec4b13a632f3ff739cc79c"
+              "1b37b3c1e20aa77e9f0d92438473ac8d29cfb3e5"
             ],
-            "confidence": "medium"
+            "confidence": "high"
           }
         ]
       }
     ],
     "highlights": [
-      "Unified capability-aware tool registry fixes stale agent permissions",
-      "In-app update control lands in Settings and Team Settings",
-      "Chat cold boot gets IndexedDB cache and parallel history reads",
-      "Nightly desktop packaging retries transient failures and stabilizes versioning",
-      "Kimi K2.6 joins the chat model picker"
+      "Unified, autosaving agent permissions that take effect without a restart",
+      "In-app upgrade control in Settings and Team Settings",
+      "Faster cold chat opens with IDB-cached history and cached project discovery",
+      "Kimi K2.6 available in the chat model picker",
+      "More resilient nightly packaging, versioning, and desktop updater staging"
     ],
-    "raw_commit_count": 20
+    "raw_commit_count": 21
   }
 }
