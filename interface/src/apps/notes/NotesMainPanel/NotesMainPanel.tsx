@@ -129,6 +129,7 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
   const selectNote = useNotesStore((s) => s.selectNote);
   const updateContent = useNotesStore((s) => s.updateContent);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const markdownRef = useRef<HTMLTextAreaElement | null>(null);
   const [mode, setMode] = useState<EditMode>("wysiwyg");
   const lastSyncedKey = useRef<string | null>(null);
 
@@ -280,6 +281,16 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
     editor.commands.setContent(body, { emitUpdate: false });
   }, [editor, note, activeKey, body]);
 
+  // Auto-grow the raw-markdown textarea so the shared outer scroll container
+  // (.scrollArea + OverlayScrollbar) handles scrolling for both Rich and
+  // Markdown modes, rather than the textarea's native scrollbar.
+  useLayoutEffect(() => {
+    const el = markdownRef.current;
+    if (!el || mode !== "markdown") return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [body, mode]);
+
   const handleMarkdownEdit = useCallback(
     (text: string) => {
       if (!activeKey) return;
@@ -368,12 +379,7 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
           </div>
         </div>
         <div ref={scrollRef} className={styles.scrollArea}>
-          <div
-            ref={setCenterColumnRef}
-            className={`${styles.centerColumn} ${
-              mode === "markdown" ? styles.centerColumnMarkdown : ""
-            }`}
-          >
+          <div ref={setCenterColumnRef} className={styles.centerColumn}>
             {!note ? null : mode === "wysiwyg" && editor ? (
               <div data-notes-editor-root>
                 <BubbleMenu
@@ -387,6 +393,7 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
               </div>
             ) : (
               <textarea
+                ref={markdownRef}
                 className={styles.markdownArea}
                 value={body}
                 onChange={(e) => handleMarkdownEdit(e.target.value)}
