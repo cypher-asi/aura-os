@@ -14,7 +14,7 @@ use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_tasks::TaskService;
 
 use super::projects_helpers::resolve_agent_instance_workspace_path;
-use crate::dto::LoopStatusResponse;
+use crate::dto::{ActiveLoopTask, LoopStatusResponse};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
 use crate::handlers::agents::workspace_tools::{
@@ -802,6 +802,10 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         let mut rx = rx;
         let mut first_work_seen = false;
         let mut current_task_id: Option<String> = task_id;
+        // Last `current_task_id` mirrored into the registry. When the
+        // forwarder-local value changes we push the update through
+        // `sync_registry_task_id` so `GET /loop/status` stays in sync.
+        let mut last_synced_task_id: Option<String> = current_task_id.clone();
         let mut session_status = "completed";
         // Tracks whether we've seen a terminal automaton event
         // (`task_completed`, `task_failed`, or `done`). If the broadcast
@@ -822,6 +826,20 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     reg.remove(&agent_instance_id);
                 }
             };
+        // Mirror the forwarder-local `current_task_id` into the registry
+        // entry so `GET /loop/status` can report "which task is this
+        // automaton working on right now". Without this the client has
+        // no HTTP path to rediscover the live task after a page refresh
+        // (`task_started` WS events are not replayed). Scoped to this
+        // automaton's agent so we never overwrite a sibling entry.
+        let sync_registry_task_id = |registry: AutomatonRegistry,
+                                     agent_instance_id: AgentInstanceId,
+                                     task_id: Option<String>| async move {
+            let mut reg = registry.lock().await;
+            if let Some(entry) = reg.get_mut(&agent_instance_id) {
+                entry.current_task_id = task_id;
+            }
+        };
 
         loop {
             match rx.recv().await {
@@ -847,6 +865,21 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             )
                             .await;
                         }
+                    }
+                    // Mirror task_id discovery into the registry so
+                    // `GET /loop/status` immediately surfaces the
+                    // active task, even when `task_started` was
+                    // emitted before our WS subscription.
+                    if current_task_id != last_synced_task_id
+                        && !matches!(event_type, "task_completed" | "task_failed")
+                    {
+                        sync_registry_task_id(
+                            automaton_registry.clone(),
+                            agent_instance_id,
+                            current_task_id.clone(),
+                        )
+                        .await;
+                        last_synced_task_id = current_task_id.clone();
                     }
                     // If we see any work event before a task_started, emit a
                     // synthetic task_started so the UI exits "Preparing" state.
@@ -1132,6 +1165,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     let mapped_type = match event_type {
                         "task_completed" => {
                             terminal_seen = true;
+                            // Clear the registry's active task pointer so
+                            // `GET /loop/status` stops reporting the task
+                            // as "live" immediately after completion.
+                            sync_registry_task_id(
+                                automaton_registry.clone(),
+                                agent_instance_id,
+                                None,
+                            )
+                            .await;
+                            last_synced_task_id = None;
                             // Persist accumulated output to storage.
                             let event_tid = event
                                 .get("task_id")
@@ -1204,6 +1247,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                         "task_failed" => {
                             session_status = "failed";
                             terminal_seen = true;
+                            // Clear the registry's active task pointer so
+                            // `GET /loop/status` stops reporting the task
+                            // as "live" immediately after failure.
+                            sync_registry_task_id(
+                                automaton_registry.clone(),
+                                agent_instance_id,
+                                None,
+                            )
+                            .await;
+                            last_synced_task_id = None;
                             let event_tid = event
                                 .get("task_id")
                                 .and_then(|v| v.as_str())
@@ -1911,6 +1964,7 @@ pub(crate) async fn start_loop(
                 }),
             );
             let active_agent_instances = active_instances(&state, project_id).await;
+            let active_tasks = active_tasks(&state, project_id).await;
             return Ok((
                 StatusCode::OK,
                 Json(LoopStatusResponse {
@@ -1919,6 +1973,7 @@ pub(crate) async fn start_loop(
                     project_id: Some(project_id),
                     agent_instance_id: Some(agent_instance_id),
                     active_agent_instances: Some(active_agent_instances),
+                    active_tasks: Some(active_tasks),
                 }),
             ));
         }
@@ -2033,7 +2088,7 @@ pub(crate) async fn start_loop(
         automaton_registry: state.automaton_registry.clone(),
         project_id,
         agent_instance_id,
-        task_id: first_task_id,
+        task_id: first_task_id.clone(),
         task_service: state.task_service.clone(),
         task_output_cache: state.task_output_cache.clone(),
         storage_client: state.storage_client.clone(),
@@ -2078,11 +2133,13 @@ pub(crate) async fn start_loop(
                 paused: false,
                 alive: forwarder_alive,
                 forwarder: Some(forwarder_handle),
+                current_task_id: first_task_id.clone(),
             },
         );
     }
 
     let active_agent_instances = active_instances(&state, project_id).await;
+    let active_tasks = active_tasks(&state, project_id).await;
 
     Ok((
         StatusCode::CREATED,
@@ -2092,6 +2149,7 @@ pub(crate) async fn start_loop(
             project_id: Some(project_id),
             agent_instance_id: Some(agent_instance_id),
             active_agent_instances: Some(active_agent_instances),
+            active_tasks: Some(active_tasks),
         }),
     ))
 }
@@ -2158,6 +2216,7 @@ pub(crate) async fn pause_loop(
     }
 
     let active_agent_instances = active_instances(&state, project_id).await;
+    let active_tasks = active_tasks(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
         running: true,
@@ -2165,6 +2224,7 @@ pub(crate) async fn pause_loop(
         project_id: Some(project_id),
         agent_instance_id: params.agent_instance_id,
         active_agent_instances: Some(active_agent_instances),
+        active_tasks: Some(active_tasks),
     }))
 }
 
@@ -2189,12 +2249,14 @@ pub(crate) async fn stop_loop(
     // harness self-terminated or a previous stop already cleared the entry.
     if targets.is_empty() {
         let remaining = active_instances(&state, project_id).await;
+        let remaining_tasks = active_tasks(&state, project_id).await;
         return Ok(Json(LoopStatusResponse {
             running: !remaining.is_empty(),
             paused: false,
             project_id: Some(project_id),
             agent_instance_id: params.agent_instance_id,
             active_agent_instances: Some(remaining),
+            active_tasks: Some(remaining_tasks),
         }));
     }
 
@@ -2241,6 +2303,7 @@ pub(crate) async fn stop_loop(
     }
 
     let remaining = active_instances(&state, project_id).await;
+    let remaining_tasks = active_tasks(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
         running: !remaining.is_empty(),
@@ -2248,6 +2311,7 @@ pub(crate) async fn stop_loop(
         project_id: Some(project_id),
         agent_instance_id: params.agent_instance_id,
         active_agent_instances: Some(remaining),
+        active_tasks: Some(remaining_tasks),
     }))
 }
 
@@ -2307,6 +2371,7 @@ pub(crate) async fn resume_loop(
     }
 
     let active_agent_instances = active_instances(&state, project_id).await;
+    let active_tasks = active_tasks(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
         running: true,
@@ -2314,6 +2379,7 @@ pub(crate) async fn resume_loop(
         project_id: Some(project_id),
         agent_instance_id: params.agent_instance_id,
         active_agent_instances: Some(active_agent_instances),
+        active_tasks: Some(active_tasks),
     }))
 }
 
@@ -2330,6 +2396,16 @@ pub(crate) async fn get_loop_status(
     let any_paused = reg
         .iter()
         .any(|(_, a)| a.project_id == project_id && a.paused);
+    let active_tasks: Vec<ActiveLoopTask> = reg
+        .iter()
+        .filter(|(_, a)| a.project_id == project_id)
+        .filter_map(|(aiid, a)| {
+            a.current_task_id.as_ref().map(|tid| ActiveLoopTask {
+                task_id: tid.clone(),
+                agent_instance_id: *aiid,
+            })
+        })
+        .collect();
     drop(reg);
 
     Ok(Json(LoopStatusResponse {
@@ -2338,6 +2414,7 @@ pub(crate) async fn get_loop_status(
         project_id: Some(project_id),
         agent_instance_id: None,
         active_agent_instances: Some(active),
+        active_tasks: Some(active_tasks),
     }))
 }
 
@@ -2628,6 +2705,23 @@ async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentI
     reg.iter()
         .filter(|(_, a)| a.project_id == project_id)
         .map(|(aiid, _)| *aiid)
+        .collect()
+}
+
+/// Snapshot per-agent "currently streaming" task ids for a project from
+/// the in-memory automaton registry. Used by the loop status endpoints
+/// to let the UI rehydrate the Run panel / per-task "live" indicators
+/// after a page refresh (WS `task_started` events are not replayed).
+async fn active_tasks(state: &AppState, project_id: ProjectId) -> Vec<ActiveLoopTask> {
+    let reg = state.automaton_registry.lock().await;
+    reg.iter()
+        .filter(|(_, a)| a.project_id == project_id)
+        .filter_map(|(aiid, a)| {
+            a.current_task_id.as_ref().map(|tid| ActiveLoopTask {
+                task_id: tid.clone(),
+                agent_instance_id: *aiid,
+            })
+        })
         .collect()
 }
 

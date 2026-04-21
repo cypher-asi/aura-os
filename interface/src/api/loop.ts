@@ -1,12 +1,25 @@
 import type { ProjectId } from "../types";
 import { apiFetch } from "./core";
 
+export interface ActiveLoopTask {
+  task_id: string;
+  agent_instance_id: string;
+}
+
 export interface LoopStatusResponse {
   running: boolean;
   paused: boolean;
   project_id: ProjectId | null;
   agent_instance_id?: string | null;
   active_agent_instances?: string[];
+  /**
+   * Per-agent tasks currently streaming output, populated by the
+   * server from the in-memory automaton registry. Used to rehydrate
+   * the Run panel rows and the TaskList "live" indicator after a page
+   * refresh (`task_started` WS events are not replayed, so this is
+   * the only HTTP path that reveals what task is running right now).
+   */
+  active_tasks?: ActiveLoopTask[];
 }
 
 function loopQuery(agentInstanceId?: string, model?: string | null): string {

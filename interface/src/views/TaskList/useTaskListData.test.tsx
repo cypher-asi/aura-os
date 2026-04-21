@@ -58,6 +58,13 @@ vi.mock("../../hooks/use-loop-active", () => ({
 vi.mock("../../api/client", () => ({
   api: {
     listTasks: vi.fn().mockResolvedValue([]),
+    getLoopStatus: vi.fn().mockResolvedValue({
+      running: false,
+      paused: false,
+      project_id: null,
+      active_agent_instances: [],
+      active_tasks: [],
+    }),
   },
 }));
 

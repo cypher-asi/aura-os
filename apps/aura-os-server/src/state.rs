@@ -262,6 +262,14 @@ pub struct ActiveAutomaton {
     /// can proactively terminate the forwarder instead of waiting for
     /// the harness broadcast to close on its own.
     pub forwarder: Option<tokio::task::AbortHandle>,
+    /// Task id the forwarder is currently streaming output for. Updated
+    /// on `task_started` and cleared on `task_completed` / `task_failed`
+    /// so `GET /loop/status` can report "which task is this automaton
+    /// working on right now", letting the UI rehydrate the Run panel
+    /// and the per-task "live" indicators after a page refresh. Mutated
+    /// via `registry.lock().await.get_mut(&aiid)` from the forwarder
+    /// task — same pattern as `paused`.
+    pub current_task_id: Option<String>,
 }
 pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveAutomaton>>>;
 

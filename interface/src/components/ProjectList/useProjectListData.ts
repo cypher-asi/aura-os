@@ -35,7 +35,10 @@ export function useProjectListData(appIdOverride?: string) {
 
   const searchQuery = useAppUIStore((s) => s.sidebarQueries[appId] ?? "");
   const { isMobileLayout } = useAuraCapabilities();
-  const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(agentInstanceId);
+  const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(
+    agentInstanceId,
+    projectId,
+  );
   const actions = useProjectListActions();
   const pendingCreateAgentHandoff = useChatHandoffStore((state) => state.pendingCreateAgentHandoff);
 

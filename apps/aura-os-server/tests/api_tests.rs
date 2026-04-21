@@ -1773,6 +1773,7 @@ async fn loop_stop_clears_registry_even_when_harness_unreachable() {
                 paused: false,
                 alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
                 forwarder: None,
+                current_task_id: None,
             },
         );
     }

@@ -116,6 +116,35 @@ export function useTaskListData(): TaskListData {
   const prevStreamIdRef = useRef<string | null>(null);
   const prevConnectedRef = useRef(connected);
 
+  // Rehydrate `liveTaskIds` from the server's in-memory automaton
+  // registry on mount + reconnect. `task_started` WS events are not
+  // replayed, so without this the "live" flag on the Tasks list goes
+  // dark after a page refresh even when the automation is still
+  // executing a task.
+  const hydrateLiveTaskIds = useCallback(async () => {
+    const pid = projectIdRef.current;
+    if (!pid) return;
+    try {
+      const res = await api.getLoopStatus(pid);
+      const ids = res.active_tasks?.map((t) => t.task_id).filter(Boolean) ?? [];
+      if (ids.length === 0) return;
+      setLiveTaskIds((prev) => {
+        let changed = false;
+        const next = new Set(prev);
+        for (const id of ids) {
+          if (!next.has(id)) {
+            next.add(id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    } catch {
+      // `/loop/status` failures should not block normal task rendering;
+      // the live flag will simply stay dark until the next event.
+    }
+  }, []);
+
   useEffect(() => {
     const wasStreaming = prevStreamIdRef.current != null;
     prevStreamIdRef.current = streamingId;
@@ -127,9 +156,15 @@ export function useTaskListData(): TaskListData {
   useEffect(() => {
     if (connected && !prevConnectedRef.current) {
       refetchTasks();
+      void hydrateLiveTaskIds();
     }
     prevConnectedRef.current = connected;
-  }, [connected, refetchTasks]);
+  }, [connected, refetchTasks, hydrateLiveTaskIds]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    void hydrateLiveTaskIds();
+  }, [projectId, hydrateLiveTaskIds]);
 
   useEffect(() => {
     const unsubs = [

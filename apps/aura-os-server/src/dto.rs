@@ -68,6 +68,12 @@ pub(crate) struct TransitionTaskRequest {
 }
 
 #[derive(Debug, Serialize)]
+pub(crate) struct ActiveLoopTask {
+    pub task_id: String,
+    pub agent_instance_id: AgentInstanceId,
+}
+
+#[derive(Debug, Serialize)]
 pub(crate) struct LoopStatusResponse {
     pub running: bool,
     pub paused: bool,
@@ -76,6 +82,14 @@ pub(crate) struct LoopStatusResponse {
     pub agent_instance_id: Option<AgentInstanceId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_agent_instances: Option<Vec<AgentInstanceId>>,
+    /// Per-agent tasks currently streaming output. Set from the
+    /// automaton registry's `current_task_id` so clients can rehydrate
+    /// the Run panel and per-task "live" indicators after a page
+    /// refresh (WS `task_started` events are not replayed, so this is
+    /// the only HTTP path that exposes "what task is running right
+    /// now"). Empty / absent when no automatons are working a task.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_tasks: Option<Vec<ActiveLoopTask>>,
 }
 
 // -- Agent DTOs (user-level) --

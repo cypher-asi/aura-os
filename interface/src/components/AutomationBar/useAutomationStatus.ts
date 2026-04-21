@@ -1,11 +1,33 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
+import type { LoopStatusResponse } from "../../api/loop";
 import { useEventStore } from "../../stores/event-store/index";
 import { useChatUI } from "../../stores/chat-ui-store";
 import { projectChatHistoryKey } from "../../stores/chat-history-store";
+import { useTaskOutputPanelStore } from "../../stores/task-output-panel-store";
 import type { ProjectId } from "../../types";
 import { EventType } from "../../types/aura-events";
+
+/**
+ * Seed the Run panel store with "active" rows for any tasks the
+ * server reports as currently streaming. Runs on boot + WS reconnect
+ * so the panel doesn't silently drop rows whose `task_started` event
+ * fired before the current session connected. Scoped to the project
+ * we just fetched status for so we don't touch rows from other projects.
+ */
+function hydrateActiveTasksFromLoopStatus(
+  res: LoopStatusResponse,
+  projectId: ProjectId,
+): void {
+  const active = res.active_tasks;
+  if (!active || active.length === 0) return;
+  const panel = useTaskOutputPanelStore.getState();
+  for (const entry of active) {
+    if (!entry.task_id) continue;
+    panel.hydrateActiveTask(entry.task_id, projectId, entry.agent_instance_id);
+  }
+}
 
 type AutomationStatus = "idle" | "starting" | "preparing" | "active" | "paused" | "stopped";
 
@@ -62,6 +84,11 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         } else {
           setActiveAgents([]); setPaused(false); setStarting(false); setPreparing(false);
         }
+        // Rehydrate Run panel rows from authoritative server state
+        // so the "No tasks" emptiness after refresh doesn't stay out
+        // of sync with the spinning nav icon. Any missed
+        // `task_started` events are effectively replayed here.
+        hydrateActiveTasksFromLoopStatus(res, projectId);
       })
       .catch(() => {});
   }, [projectId]);

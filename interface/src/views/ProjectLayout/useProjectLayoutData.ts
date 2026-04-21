@@ -185,7 +185,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
   useEffect(() => {
     if (!projectId) return;
     if (!initialTasks.length) return;
-    const updates: Array<{ taskId: string; status: PanelTaskStatus }> = [];
+    const updates: Array<{ taskId: string; status: PanelTaskStatus; title?: string }> = [];
     for (const task of initialTasks) {
       if (!task.task_id) continue;
       let next: PanelTaskStatus;
@@ -206,7 +206,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
           next = "interrupted";
           break;
       }
-      updates.push({ taskId: task.task_id, status: next });
+      updates.push({ taskId: task.task_id, status: next, title: task.title });
     }
     reconcilePanelStatuses(updates);
   }, [projectId, initialTasks, reconcilePanelStatuses]);
