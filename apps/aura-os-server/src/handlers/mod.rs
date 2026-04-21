@@ -4,6 +4,7 @@ pub(crate) mod agents;
 pub(crate) mod auth;
 pub(crate) mod billing;
 pub(crate) mod browser;
+pub(crate) mod debug_runs;
 pub(crate) mod dev_loop;
 pub(crate) mod feed;
 pub(crate) mod feedback;

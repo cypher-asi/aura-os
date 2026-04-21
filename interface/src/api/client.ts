@@ -39,6 +39,7 @@ import { memoryApi } from "./memory";
 import { harnessSkillsApi } from "./harness-skills";
 import { notesApi } from "./notes";
 import { marketplaceApi } from "./marketplace";
+import { debugApi } from "./debug";
 
 export const api = {
   auth: authApi,
@@ -67,4 +68,5 @@ export const api = {
   harnessSkills: harnessSkillsApi,
   notes: notesApi,
   marketplace: marketplaceApi,
+  debug: debugApi,
 };

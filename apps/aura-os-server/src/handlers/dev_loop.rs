@@ -636,6 +636,10 @@ struct ForwardParams {
     /// live forwarder is already attached to the active automaton and
     /// can therefore be reused instead of spawning a duplicate.
     alive: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// Filesystem logger that persists every forwarded event into a run
+    /// bundle (see `crate::loop_log`). Always wired so the Debug app
+    /// and the `aura-run-analyze` CLI can replay any run.
+    loop_log: std::sync::Arc<crate::loop_log::LoopLogWriter>,
 }
 
 /// RAII guard that flips the shared `alive` flag to `false` when the
@@ -781,6 +785,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         http_client,
         retry,
         alive,
+        loop_log,
     } = params;
 
     let rx = automaton_events_tx.subscribe();
@@ -1555,15 +1560,65 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                         let sc = storage_client.clone();
                         let j = jwt.clone();
                         let p = pid.clone();
+                        let forwarded_clone = forwarded.clone();
                         tokio::spawn(async move {
                             persistence::persist_log_event(
                                 sc.as_ref(),
                                 j.as_deref(),
                                 &p,
-                                &forwarded,
+                                &forwarded_clone,
                             )
                             .await;
                         });
+                    }
+
+                    // Debug-bundle persistence (always-on). The writer
+                    // routes recognised `debug.*` frames into their
+                    // dedicated JSONL channels and copies everything
+                    // into the run-scoped `events.jsonl`. We re-read
+                    // the event type from `forwarded` rather than the
+                    // outer `event_type` binding because `event` was
+                    // mutably borrowed above and the forwarder may
+                    // have rewritten `type` via `mapped_type`.
+                    let forwarded_type = forwarded
+                        .get("type")
+                        .and_then(|t| t.as_str())
+                        .unwrap_or("")
+                        .to_owned();
+                    loop_log
+                        .on_json_event(project_id, agent_instance_id, &forwarded)
+                        .await;
+                    if forwarded_type == "task_started" {
+                        if let Some(tid_uuid) = forwarded
+                            .get("task_id")
+                            .and_then(|v| v.as_str())
+                            .and_then(|s| s.parse::<TaskId>().ok())
+                        {
+                            loop_log
+                                .on_task_started(project_id, agent_instance_id, tid_uuid)
+                                .await;
+                        }
+                    }
+                    if matches!(
+                        forwarded_type.as_str(),
+                        "task_completed" | "task_failed"
+                    ) {
+                        if let Some(tid_str) = current_task_id.clone().or_else(|| {
+                            forwarded
+                                .get("task_id")
+                                .and_then(|v| v.as_str())
+                                .map(str::to_owned)
+                        }) {
+                            if let Ok(tid_uuid) = tid_str.parse::<TaskId>() {
+                                let cached_output = task_output_cache
+                                    .lock()
+                                    .await
+                                    .get(&tid_str)
+                                    .map(|entry| entry.live_output.clone())
+                                    .unwrap_or_default();
+                                loop_log.on_task_end(tid_uuid, &cached_output).await;
+                            }
+                        }
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => {
@@ -1670,6 +1725,17 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
             }
         }
+
+        // Persist the final bundle metadata + summary. Status is
+        // inferred from the last-seen session_status so the Debug UI
+        // can filter "failed vs completed" without replaying events.
+        let final_status = match session_status {
+            "failed" => crate::loop_log::RunStatus::Failed,
+            _ => crate::loop_log::RunStatus::Completed,
+        };
+        loop_log
+            .on_loop_ended(project_id, agent_instance_id, final_status)
+            .await;
     });
 
     handle.abort_handle()
@@ -2082,6 +2148,23 @@ pub(crate) async fn start_loop(
     // the forwarder instead of waiting for the harness broadcast to
     // close on its own.
     let forwarder_alive = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+
+    // Always-on debug bundle: create the run directory before the
+    // forwarder starts so the very first event lands in the right
+    // place. See `crate::loop_log` for the on-disk schema.
+    state
+        .loop_log
+        .on_loop_started(project_id, agent_instance_id)
+        .await;
+    if let Some(ref tid) = first_task_id {
+        if let Ok(tid_uuid) = tid.parse::<TaskId>() {
+            state
+                .loop_log
+                .on_task_started(project_id, agent_instance_id, tid_uuid)
+                .await;
+        }
+    }
+
     let forwarder_handle = forward_automaton_events(ForwardParams {
         automaton_events_tx: events_tx,
         app_broadcast: state.event_broadcast.clone(),
@@ -2103,6 +2186,7 @@ pub(crate) async fn start_loop(
         // outer loop will pick the task up again if it was reset.
         retry: None,
         alive: forwarder_alive.clone(),
+        loop_log: state.loop_log.clone(),
     });
 
     emit_domain_event(
@@ -2587,6 +2671,16 @@ pub(crate) async fn run_single_task(
     }
 
     if let Some(events_tx) = events_tx {
+        // Start a debug bundle for single-task runs too so the Debug
+        // UI can replay them alongside dev-loop runs.
+        state
+            .loop_log
+            .on_loop_started(project_id, agent_instance_id)
+            .await;
+        state
+            .loop_log
+            .on_task_started(project_id, agent_instance_id, task_id)
+            .await;
         // `run_single_task` does not insert into `state.automaton_registry`
         // (single-task runs use unique agent instance ids and manage their
         // own lifecycle). The returned `AbortHandle` is intentionally
@@ -2620,6 +2714,7 @@ pub(crate) async fn run_single_task(
                 start_params,
             }),
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            loop_log: state.loop_log.clone(),
         });
     } else {
         warn!(

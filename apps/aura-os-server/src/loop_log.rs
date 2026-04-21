@@ -1,39 +1,129 @@
-//! Filesystem-based logging for the dev loop: flat files per project/run/task
-//! for evaluating effectiveness, token usage, and reasoning.
+//! Filesystem-based logging for the dev automation loop. Every active
+//! automaton produces a "run bundle" directory on disk that captures the
+//! full event stream, task outputs, per-category debug channels, and a
+//! run-level metadata document. The bundle is the source of truth for
+//! the Debug UI app and the `aura-run-analyze` CLI.
+//!
+//! Layout:
+//!
+//! ```text
+//! {base_dir}/
+//!   {project_id}/
+//!     {run_id}/                     # e.g. 20260420_143022_{agent_instance_id}
+//!       metadata.json               # see [`RunMetadata`]
+//!       events.jsonl                # every forwarder event, 1/line
+//!       llm_calls.jsonl             # harness `DebugEvent::Reasoning`
+//!       iterations.jsonl            # harness iteration start/end snapshots
+//!       blockers.jsonl              # `[BLOCKED]` write attempts
+//!       retries.jsonl               # provider 429/529 retries
+//!       task_{task_id}.output.txt   # accumulated text output per task
+//!       summary.md                  # generated on loop end
+//! ```
+//!
+//! All file writes are append-only so a crashed run leaves a usable
+//! bundle on disk. Debug events the harness doesn't yet emit simply
+//! leave their JSONL files empty — every downstream consumer tolerates
+//! missing appenders.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use aura_os_core::{AgentInstanceId, ProjectId, TaskId};
-use aura_engine::EngineEvent;
-use chrono::Utc;
-use serde::Serialize;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tracing::debug;
 
-/// Run state for one (project_id, agent_instance_id).
-struct RunState {
-    _run_id: String,
-    run_dir: PathBuf,
+/// Debug-event kinds surfaced by the harness on the existing `/stream`
+/// websocket. Any frame whose `type` matches one of these is routed to
+/// the matching `.jsonl` file in addition to the main `events.jsonl`.
+///
+/// Keep this list in sync with `aura-agent::events::DebugEvent` in the
+/// harness repo. Unknown kinds fall through to `events.jsonl` only.
+pub const DEBUG_EVENT_LLM_CALL: &str = "debug.llm_call";
+pub const DEBUG_EVENT_ITERATION: &str = "debug.iteration";
+pub const DEBUG_EVENT_BLOCKER: &str = "debug.blocker";
+pub const DEBUG_EVENT_RETRY: &str = "debug.retry";
+
+/// Bundle metadata written atomically after every `on_loop_started` /
+/// terminal event so the HTTP layer can surface run information
+/// without replaying `events.jsonl`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RunMetadata {
+    pub run_id: String,
+    pub project_id: ProjectId,
+    pub agent_instance_id: AgentInstanceId,
+    pub started_at: DateTime<Utc>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub status: RunStatus,
+    /// Tasks observed in this run (populated from `task_started` / `task_completed`).
+    pub tasks: Vec<RunTaskSummary>,
+    /// Counters kept in memory while the run is live so summary reads
+    /// don't have to scan the full event file.
+    pub counters: RunCounters,
 }
 
-/// Writes all engine events and task output to flat files under a base directory.
-pub(crate) struct LoopLogWriter {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStatus {
+    Running,
+    Completed,
+    Failed,
+    Interrupted,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct RunCounters {
+    pub events_total: u64,
+    pub llm_calls: u64,
+    pub iterations: u64,
+    pub blockers: u64,
+    pub retries: u64,
+    pub tool_calls: u64,
+    pub task_completed: u64,
+    pub task_failed: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RunTaskSummary {
+    pub task_id: String,
+    pub started_at: Option<DateTime<Utc>>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub status: Option<String>,
+}
+
+/// Per-run state kept in memory so appends are O(1) without scanning
+/// the filesystem. Dropped when the loop ends (or the server shuts
+/// down, at which point the on-disk bundle is still intact).
+struct RunState {
+    run_id: String,
+    run_dir: PathBuf,
+    metadata: RunMetadata,
+}
+
+/// Writes every dev-loop event and debug frame to an on-disk run
+/// bundle. See module docs for the directory layout.
+pub struct LoopLogWriter {
     base_dir: PathBuf,
     run_state: Mutex<HashMap<(ProjectId, AgentInstanceId), RunState>>,
     task_to_run: Mutex<HashMap<TaskId, (ProjectId, AgentInstanceId)>>,
 }
 
-/// Timestamped event line: `{"_ts":"ISO8601","event":{...}}`
+/// Wrapper used for each `events.jsonl` line. Gives consumers a stable
+/// receipt timestamp even when harness events omit their own.
 #[derive(Serialize)]
 struct TimestampedEvent<'a> {
-    _ts: String,
-    event: &'a EngineEvent,
+    #[serde(rename = "_ts")]
+    ts: String,
+    event: &'a serde_json::Value,
 }
 
 impl LoopLogWriter {
-    pub(crate) fn new(base_dir: PathBuf) -> Self {
+    pub fn new(base_dir: PathBuf) -> Self {
         Self {
             base_dir,
             run_state: Mutex::new(HashMap::new()),
@@ -41,81 +131,152 @@ impl LoopLogWriter {
         }
     }
 
-    /// Call on LoopStarted: create run dir and register run.
-    pub(crate) async fn on_loop_started(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
-        let run_id = format!(
-            "{}_{}",
-            Utc::now().format("%Y%m%d_%H%M%S"),
-            agent_instance_id
-        );
+    pub fn base_dir(&self) -> &Path {
+        &self.base_dir
+    }
+
+    /// Create a fresh run bundle and register it so subsequent event
+    /// appends write to the right directory. Safe to call multiple
+    /// times — a second call for the same `(project, instance)` pair
+    /// replaces the in-memory pointer but leaves the previous bundle
+    /// intact on disk.
+    pub async fn on_loop_started(
+        &self,
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+    ) {
+        let now = Utc::now();
+        let run_id = format!("{}_{}", now.format("%Y%m%d_%H%M%S"), agent_instance_id);
         let run_dir = self.base_dir.join(project_id.to_string()).join(&run_id);
-        if let Err(e) = fs::create_dir_all(&run_dir).await {
-            debug!(path = %run_dir.display(), error = %e, "loop_log: failed to create run dir");
+        if let Err(error) = fs::create_dir_all(&run_dir).await {
+            debug!(path = %run_dir.display(), %error, "loop_log: failed to create run dir");
             return;
         }
+
+        let metadata = RunMetadata {
+            run_id: run_id.clone(),
+            project_id,
+            agent_instance_id,
+            started_at: now,
+            ended_at: None,
+            status: RunStatus::Running,
+            tasks: Vec::new(),
+            counters: RunCounters::default(),
+        };
+        if let Err(error) = write_metadata(&run_dir, &metadata).await {
+            debug!(path = %run_dir.display(), %error, "loop_log: failed to write initial metadata");
+        }
+
         let mut state = self.run_state.lock().await;
         state.insert(
             (project_id, agent_instance_id),
             RunState {
-                _run_id: run_id,
+                run_id,
                 run_dir,
+                metadata,
             },
         );
     }
 
-    /// Call on TaskStarted: record task -> (project, agent) for writing output later.
-    pub(crate) async fn on_task_started(
+    /// Record the `task_id → run` mapping so `on_task_end` can write
+    /// accumulated task output into the correct bundle.
+    pub async fn on_task_started(
         &self,
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,
         task_id: TaskId,
     ) {
-        let mut map = self.task_to_run.lock().await;
-        map.insert(task_id, (project_id, agent_instance_id));
+        {
+            let mut map = self.task_to_run.lock().await;
+            map.insert(task_id, (project_id, agent_instance_id));
+        }
+        let mut state = self.run_state.lock().await;
+        if let Some(run) = state.get_mut(&(project_id, agent_instance_id)) {
+            let tid = task_id.to_string();
+            if !run.metadata.tasks.iter().any(|t| t.task_id == tid) {
+                run.metadata.tasks.push(RunTaskSummary {
+                    task_id: tid,
+                    started_at: Some(Utc::now()),
+                    ended_at: None,
+                    status: None,
+                });
+                let _ = write_metadata(&run.run_dir, &run.metadata).await;
+            }
+        }
     }
 
-    /// Append one timestamped event to the appropriate file (run, project, or global).
-    pub(crate) async fn on_event(&self, event: &EngineEvent) {
+    /// Append an event to the run bundle (or fall back to a
+    /// project-scoped / global file when the run isn't registered
+    /// yet, typically for very-early startup frames).
+    pub async fn on_json_event(
+        &self,
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+        event: &serde_json::Value,
+    ) {
+        let event_type = event
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_owned();
+
         let line = match serde_json::to_string(&TimestampedEvent {
-            _ts: Utc::now().to_rfc3339(),
+            ts: Utc::now().to_rfc3339(),
             event,
         }) {
             Ok(s) => s + "\n",
-            Err(e) => {
-                debug!(error = %e, "loop_log: failed to serialize event");
+            Err(error) => {
+                debug!(%error, "loop_log: failed to serialize event");
                 return;
             }
         };
 
-        if let Some((project_id, agent_instance_id)) = event.run_scope() {
-            let state = self.run_state.lock().await;
-            if let Some(run) = state.get(&(project_id, agent_instance_id)) {
-                let path = run.run_dir.join("events.jsonl");
-                drop(state);
-                if let Err(e) = append_line(&path, &line).await {
-                    debug!(error = %e, "loop_log: failed to append run event");
+        let run_dir = {
+            let mut state = self.run_state.lock().await;
+            if let Some(run) = state.get_mut(&(project_id, agent_instance_id)) {
+                run.metadata.counters.events_total += 1;
+                update_counters(&mut run.metadata.counters, &event_type, event);
+                if matches!(event_type.as_str(), "task_completed" | "task_failed") {
+                    if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
+                        if let Some(entry) = run.metadata.tasks.iter_mut().find(|t| t.task_id == tid)
+                        {
+                            entry.ended_at = Some(Utc::now());
+                            entry.status = Some(event_type.clone());
+                        }
+                    }
+                }
+                let _ = write_metadata(&run.run_dir, &run.metadata).await;
+                Some(run.run_dir.clone())
+            } else {
+                None
+            }
+        };
+
+        let run_dir = match run_dir {
+            Some(dir) => dir,
+            None => {
+                let project_dir = self.base_dir.join(project_id.to_string());
+                let path = project_dir.join("project_events.jsonl");
+                if let Err(error) = create_dir_and_append(&project_dir, &path, &line).await {
+                    debug!(%error, "loop_log: failed to append pre-run project event");
                 }
                 return;
             }
+        };
+
+        if let Err(error) = append_line(&run_dir.join("events.jsonl"), &line).await {
+            debug!(%error, "loop_log: failed to append run event");
         }
 
-        if let Some(project_id) = event.project_id() {
-            let project_dir = self.base_dir.join(project_id.to_string());
-            let path = project_dir.join("project_events.jsonl");
-            if let Err(e) = create_dir_and_append(&project_dir, &path, &line).await {
-                debug!(error = %e, "loop_log: failed to append project event");
+        if let Some(file_name) = classify_debug_file(&event_type) {
+            if let Err(error) = append_line(&run_dir.join(file_name), &line).await {
+                debug!(%error, file = file_name, "loop_log: failed to append debug frame");
             }
-            return;
-        }
-
-        let path = self.base_dir.join("global_events.jsonl");
-        if let Err(e) = append_line(&path, &line).await {
-            debug!(error = %e, "loop_log: failed to append global event");
         }
     }
 
-    /// Call on TaskCompleted/TaskFailed: look up run from task_id, write task output to run dir, unregister task.
-    pub(crate) async fn on_task_end(&self, task_id: TaskId, output: &str) {
+    /// Persist accumulated task text and mark the task as ended.
+    pub async fn on_task_end(&self, task_id: TaskId, output: &str) {
         let key = self.task_to_run.lock().await.get(&task_id).copied();
         let run_dir = if let Some((project_id, agent_instance_id)) = key {
             let state = self.run_state.lock().await;
@@ -126,32 +287,220 @@ impl LoopLogWriter {
             None
         };
         if let Some(run_dir) = run_dir {
-            let path = run_dir.join(format!("task_{}.output.txt", task_id));
-            if let Err(e) = fs::write(&path, output).await {
-                debug!(path = %path.display(), error = %e, "loop_log: failed to write task output");
+            let path = run_dir.join(format!("task_{task_id}.output.txt"));
+            if let Err(error) = fs::write(&path, output).await {
+                debug!(path = %path.display(), %error, "loop_log: failed to write task output");
             }
         }
         let mut map = self.task_to_run.lock().await;
         map.remove(&task_id);
     }
 
-    /// Call on LoopFinished/LoopStopped: remove run state.
-    pub(crate) async fn on_loop_ended(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
+    /// Mark the run as finished and write the summary document.
+    pub async fn on_loop_ended(
+        &self,
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+        status: RunStatus,
+    ) {
         let mut state = self.run_state.lock().await;
-        state.remove(&(project_id, agent_instance_id));
+        if let Some(run) = state.remove(&(project_id, agent_instance_id)) {
+            let mut metadata = run.metadata;
+            metadata.ended_at = Some(Utc::now());
+            metadata.status = status;
+            if let Err(error) = write_metadata(&run.run_dir, &metadata).await {
+                debug!(path = %run.run_dir.display(), %error, "loop_log: failed to write final metadata");
+            }
+            let summary = render_summary(&metadata);
+            if let Err(error) = fs::write(run.run_dir.join("summary.md"), summary).await {
+                debug!(path = %run.run_dir.display(), %error, "loop_log: failed to write summary");
+            }
+            let _ = run.run_id;
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Read APIs used by the HTTP surface / CLI
+    // ---------------------------------------------------------------
+
+    /// List every run bundle for a single project, newest first.
+    pub async fn list_runs(&self, project_id: ProjectId) -> Vec<RunMetadata> {
+        let project_dir = self.base_dir.join(project_id.to_string());
+        let mut entries = match fs::read_dir(&project_dir).await {
+            Ok(entries) => entries,
+            Err(_) => return Vec::new(),
+        };
+        let mut runs: Vec<RunMetadata> = Vec::new();
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            if let Some(meta) = read_metadata(&path).await {
+                runs.push(meta);
+            }
+        }
+        runs.sort_by(|a, b| b.started_at.cmp(&a.started_at));
+        runs
+    }
+
+    /// List every project id that has at least one run bundle on disk.
+    pub async fn list_projects(&self) -> Vec<ProjectId> {
+        let mut entries = match fs::read_dir(&self.base_dir).await {
+            Ok(entries) => entries,
+            Err(_) => return Vec::new(),
+        };
+        let mut seen: HashSet<ProjectId> = HashSet::new();
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            if !entry.path().is_dir() {
+                continue;
+            }
+            if let Some(name) = entry.file_name().to_str() {
+                if let Ok(id) = name.parse::<ProjectId>() {
+                    seen.insert(id);
+                }
+            }
+        }
+        seen.into_iter().collect()
+    }
+
+    pub async fn read_metadata(
+        &self,
+        project_id: ProjectId,
+        run_id: &str,
+    ) -> Option<RunMetadata> {
+        let dir = self.bundle_dir(project_id, run_id);
+        read_metadata(&dir).await
+    }
+
+    pub async fn read_jsonl(
+        &self,
+        project_id: ProjectId,
+        run_id: &str,
+        file_name: &str,
+    ) -> Option<String> {
+        let path = self.bundle_dir(project_id, run_id).join(file_name);
+        fs::read_to_string(&path).await.ok()
+    }
+
+    pub async fn read_summary(&self, project_id: ProjectId, run_id: &str) -> Option<String> {
+        let path = self
+            .bundle_dir(project_id, run_id)
+            .join("summary.md");
+        match fs::read_to_string(&path).await {
+            Ok(content) => Some(content),
+            Err(_) => {
+                let metadata = self.read_metadata(project_id, run_id).await?;
+                Some(render_summary(&metadata))
+            }
+        }
+    }
+
+    /// Absolute path to a run bundle directory. Used by exporters.
+    pub fn bundle_dir(&self, project_id: ProjectId, run_id: &str) -> PathBuf {
+        self.base_dir.join(project_id.to_string()).join(run_id)
     }
 }
 
+fn classify_debug_file(event_type: &str) -> Option<&'static str> {
+    match event_type {
+        DEBUG_EVENT_LLM_CALL => Some("llm_calls.jsonl"),
+        DEBUG_EVENT_ITERATION => Some("iterations.jsonl"),
+        DEBUG_EVENT_BLOCKER => Some("blockers.jsonl"),
+        DEBUG_EVENT_RETRY => Some("retries.jsonl"),
+        _ => None,
+    }
+}
+
+fn update_counters(counters: &mut RunCounters, event_type: &str, event: &serde_json::Value) {
+    match event_type {
+        DEBUG_EVENT_LLM_CALL => counters.llm_calls += 1,
+        DEBUG_EVENT_ITERATION => counters.iterations += 1,
+        DEBUG_EVENT_BLOCKER => counters.blockers += 1,
+        DEBUG_EVENT_RETRY => counters.retries += 1,
+        "tool_call_snapshot" | "tool_call_completed" | "tool_use_start" => {
+            counters.tool_calls += 1;
+        }
+        "task_completed" => counters.task_completed += 1,
+        "task_failed" => counters.task_failed += 1,
+        "assistant_message_end" | "token_usage" => {
+            let usage = event.get("usage").unwrap_or(event);
+            if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                counters.input_tokens = counters.input_tokens.saturating_add(inp);
+            }
+            if let Some(out) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                counters.output_tokens = counters.output_tokens.saturating_add(out);
+            }
+        }
+        _ => {}
+    }
+}
+
+async fn write_metadata(run_dir: &Path, metadata: &RunMetadata) -> std::io::Result<()> {
+    let path = run_dir.join("metadata.json");
+    let body = match serde_json::to_vec_pretty(metadata) {
+        Ok(body) => body,
+        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, e)),
+    };
+    fs::write(path, body).await
+}
+
+async fn read_metadata(run_dir: &Path) -> Option<RunMetadata> {
+    let raw = fs::read(run_dir.join("metadata.json")).await.ok()?;
+    serde_json::from_slice(&raw).ok()
+}
+
+fn render_summary(metadata: &RunMetadata) -> String {
+    use std::fmt::Write;
+    let mut out = String::new();
+    let _ = writeln!(out, "# Run {}", metadata.run_id);
+    let _ = writeln!(out);
+    let _ = writeln!(out, "- project_id: `{}`", metadata.project_id);
+    let _ = writeln!(
+        out,
+        "- agent_instance_id: `{}`",
+        metadata.agent_instance_id
+    );
+    let _ = writeln!(out, "- started_at: {}", metadata.started_at.to_rfc3339());
+    if let Some(ended) = metadata.ended_at {
+        let duration = ended.signed_duration_since(metadata.started_at);
+        let _ = writeln!(out, "- ended_at: {}", ended.to_rfc3339());
+        let _ = writeln!(out, "- duration: {}s", duration.num_seconds().max(0));
+    }
+    let _ = writeln!(out, "- status: {:?}", metadata.status);
+    let _ = writeln!(out);
+    let _ = writeln!(out, "## Counters");
+    let c = &metadata.counters;
+    let _ = writeln!(out, "- events_total: {}", c.events_total);
+    let _ = writeln!(out, "- llm_calls: {}", c.llm_calls);
+    let _ = writeln!(out, "- iterations: {}", c.iterations);
+    let _ = writeln!(out, "- blockers: {}", c.blockers);
+    let _ = writeln!(out, "- retries: {}", c.retries);
+    let _ = writeln!(out, "- tool_calls: {}", c.tool_calls);
+    let _ = writeln!(out, "- task_completed: {}", c.task_completed);
+    let _ = writeln!(out, "- task_failed: {}", c.task_failed);
+    let _ = writeln!(out, "- input_tokens: {}", c.input_tokens);
+    let _ = writeln!(out, "- output_tokens: {}", c.output_tokens);
+    let _ = writeln!(out);
+    if !metadata.tasks.is_empty() {
+        let _ = writeln!(out, "## Tasks");
+        for task in &metadata.tasks {
+            let status = task.status.as_deref().unwrap_or("in_progress");
+            let _ = writeln!(out, "- `{}` — {}", task.task_id, status);
+        }
+    }
+    out
+}
+
 async fn append_line(path: &Path, line: &str) -> std::io::Result<()> {
-    let parent = path.parent().unwrap_or(path);
-    fs::create_dir_all(parent).await?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).await?;
+    }
     let mut f = fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .write(true)
         .open(path)
         .await?;
-    use tokio::io::AsyncWriteExt;
     f.write_all(line.as_bytes()).await?;
     f.flush().await
 }
@@ -159,4 +508,58 @@ async fn append_line(path: &Path, line: &str) -> std::io::Result<()> {
 async fn create_dir_and_append(dir: &Path, path: &Path, line: &str) -> std::io::Result<()> {
     fs::create_dir_all(dir).await?;
     append_line(path, line).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn writes_events_to_run_bundle() {
+        let tmp = TempDir::new().unwrap();
+        let writer = LoopLogWriter::new(tmp.path().to_path_buf());
+        let pid = ProjectId::new();
+        let aiid = AgentInstanceId::new();
+        writer.on_loop_started(pid, aiid).await;
+
+        let ev = serde_json::json!({"type": "text_delta", "text": "hi"});
+        writer.on_json_event(pid, aiid, &ev).await;
+        writer
+            .on_loop_ended(pid, aiid, RunStatus::Completed)
+            .await;
+
+        let runs = writer.list_runs(pid).await;
+        assert_eq!(runs.len(), 1);
+        let events = writer
+            .read_jsonl(pid, &runs[0].run_id, "events.jsonl")
+            .await
+            .unwrap();
+        assert!(events.contains("text_delta"));
+        let summary = writer.read_summary(pid, &runs[0].run_id).await.unwrap();
+        assert!(summary.contains("Run"));
+        assert_eq!(runs[0].counters.events_total, 1);
+    }
+
+    #[tokio::test]
+    async fn debug_events_split_into_channel_files() {
+        let tmp = TempDir::new().unwrap();
+        let writer = LoopLogWriter::new(tmp.path().to_path_buf());
+        let pid = ProjectId::new();
+        let aiid = AgentInstanceId::new();
+        writer.on_loop_started(pid, aiid).await;
+        let ev = serde_json::json!({"type": DEBUG_EVENT_BLOCKER, "reason": "duplicate"});
+        writer.on_json_event(pid, aiid, &ev).await;
+        writer
+            .on_loop_ended(pid, aiid, RunStatus::Completed)
+            .await;
+
+        let runs = writer.list_runs(pid).await;
+        let blockers = writer
+            .read_jsonl(pid, &runs[0].run_id, "blockers.jsonl")
+            .await
+            .unwrap();
+        assert!(blockers.contains("duplicate"));
+        assert_eq!(runs[0].counters.blockers, 1);
+    }
 }

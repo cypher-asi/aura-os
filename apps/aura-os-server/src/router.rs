@@ -11,10 +11,10 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agent_bootstrap, agent_tools, agents, auth, billing, browser, dev_loop, feed, feedback, files,
-    follows, generation, harness_proxy, leaderboard, log, marketplace, notes, org_tools, orgs,
-    process, project_stats, projects, remote_files, remote_terminal, specs, swarm, system, tasks,
-    terminal, users, ws,
+    agent_bootstrap, agent_tools, agents, auth, billing, browser, debug_runs, dev_loop, feed,
+    feedback, files, follows, generation, harness_proxy, leaderboard, log, marketplace, notes,
+    org_tools, orgs, process, project_stats, projects, remote_files, remote_terminal, specs,
+    swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -90,6 +90,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(harness_proxy_routes())
         .merge(notes_routes())
         .merge(marketplace_routes())
+        .merge(debug_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -814,5 +815,30 @@ fn system_routes() -> Router<AppState> {
         .route(
             "/api/system/workspace_defaults",
             get(system::get_workspace_defaults),
+        )
+}
+
+fn debug_routes() -> Router<AppState> {
+    Router::new()
+        .route("/api/debug/projects", get(debug_runs::list_projects))
+        .route(
+            "/api/debug/projects/:project_id/runs",
+            get(debug_runs::list_runs),
+        )
+        .route(
+            "/api/debug/projects/:project_id/runs/:run_id",
+            get(debug_runs::get_run_metadata),
+        )
+        .route(
+            "/api/debug/projects/:project_id/runs/:run_id/summary",
+            get(debug_runs::get_run_summary),
+        )
+        .route(
+            "/api/debug/projects/:project_id/runs/:run_id/logs",
+            get(debug_runs::get_run_logs),
+        )
+        .route(
+            "/api/debug/projects/:project_id/runs/:run_id/export",
+            get(debug_runs::export_run),
         )
 }

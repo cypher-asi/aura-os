@@ -1,0 +1,118 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  color: var(--color-text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--color-text-primary);
+  background: var(--color-overlay-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.badgeRunning {
+  background: color-mix(in oklab, var(--color-accent-500, #3b82f6) 20%, transparent);
+}
+
+.badgeCompleted {
+  background: color-mix(in oklab, var(--color-success-500, #22c55e) 20%, transparent);
+}
+
+.badgeFailed {
+  background: color-mix(in oklab, var(--color-danger-500, #ef4444) 25%, transparent);
+}
+
+.badgeInterrupted {
+  background: color-mix(in oklab, var(--color-warning-500, #f59e0b) 25%, transparent);
+}
+
+.cardBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardMeta {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: 12px;
+}
+
+.cardMeta span {
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 32px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}

@@ -19,6 +19,7 @@ use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 
 use crate::harness_gateway::HarnessHttpGateway;
+use crate::loop_log::LoopLogWriter;
 use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_browser::BrowserManager;
 use aura_os_network::NetworkClient;
@@ -415,6 +416,11 @@ pub struct AppState {
     /// [`CachedAgentDiscovery`] for details.
     pub agent_discovery_cache: AgentDiscoveryCache,
     pub agent_runtime: Arc<AgentRuntimeService>,
+    /// Filesystem logger for the dev automation loop. Every active
+    /// automaton gets a run bundle on disk containing the full event
+    /// stream, per-category debug channels, and task outputs; the Debug
+    /// UI app and `aura-run-analyze` read from the same directory.
+    pub loop_log: Arc<LoopLogWriter>,
     /// Session-open permissions cache consulted by the cross-agent tool
     /// dispatcher. Populated in `chat.rs` when a harness session is
     /// opened for an agent / agent-instance so the dispatcher can answer

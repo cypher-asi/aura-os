@@ -326,6 +326,9 @@ pub fn build_test_app_from_store(
         local_harness.clone(),
     ));
 
+    let loop_log = Arc::new(aura_os_server::loop_log::LoopLogWriter::new(
+        data_dir.join("loop_logs"),
+    ));
     let state = AppState {
         store,
         data_dir,
@@ -361,6 +364,7 @@ pub fn build_test_app_from_store(
         validation_cache,
         agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
         agent_runtime,
+        loop_log,
         permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     };
 

@@ -351,6 +351,9 @@ mod tests {
                 validation_cache: Arc::new(dashmap::DashMap::new()),
                 agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
                 agent_runtime,
+                loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
+                    store_dir.path().join("loop_logs"),
+                )),
                 permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
             },
             store_dir,

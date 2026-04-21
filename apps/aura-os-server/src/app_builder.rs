@@ -12,6 +12,7 @@ use aura_os_integrations::IntegrationsClient;
 use aura_os_link::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 
 use crate::harness_gateway::HarnessHttpGateway;
+use crate::loop_log::LoopLogWriter;
 use aura_os_agent_runtime::AgentRuntimeService;
 use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
@@ -371,6 +372,18 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     let automaton_client = Arc::new(aura_os_link::AutomatonClient::new(&harness_base));
     let harness_http = Arc::new(HarnessHttpGateway::new(harness_base));
 
+    // Dev-loop debug bundles are always captured so the Debug app and
+    // `aura-run-analyze` CLI can inspect any past run without an
+    // opt-in toggle. Override the base dir with `AURA_LOOP_LOGS_DIR`
+    // for tooling that wants to point elsewhere.
+    let loop_log_base = env_opt("AURA_LOOP_LOGS_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| data_dir.join("loop_logs"));
+    if let Err(error) = std::fs::create_dir_all(&loop_log_base) {
+        warn!(path = %loop_log_base.display(), %error, "failed to create loop_logs dir (will be created lazily)");
+    }
+    let loop_log = Arc::new(LoopLogWriter::new(loop_log_base));
+
     let router_url = std::env::var("AURA_ROUTER_URL")
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
     let local_server_base_url = resolve_local_server_base_url();
@@ -479,6 +492,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         validation_cache,
         agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
         agent_runtime,
+        loop_log,
         permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
     })
 }

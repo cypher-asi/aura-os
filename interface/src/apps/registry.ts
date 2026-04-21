@@ -8,6 +8,7 @@ import {
 import type { RouteObject } from "react-router-dom";
 import {
   Brain,
+  Bug,
   Check,
   Circle,
   CircleUserRound,
@@ -29,6 +30,7 @@ import { feedRoutes } from "./feed/routes";
 import { notesRoutes } from "./notes/routes";
 import { feedbackRoutes } from "./feedback/routes";
 import { integrationsRoutes } from "./integrations/routes";
+import { debugRoutes } from "./debug/routes";
 import { profileRoutes } from "./profile/routes";
 import { desktopRoutes } from "./desktop/routes";
 
@@ -167,6 +169,8 @@ const loadFeedbackApp = () =>
   import("./feedback/FeedbackApp").then((module) => module.FeedbackApp);
 const loadIntegrationsApp = () =>
   import("./integrations/IntegrationsApp").then((module) => module.IntegrationsApp);
+const loadDebugApp = () =>
+  import("./debug/DebugApp").then((module) => module.DebugApp);
 const loadNotesApp = () =>
   import("./notes/NotesApp").then((module) => module.NotesApp);
 const loadProfileApp = () =>
@@ -323,6 +327,20 @@ export const apps: AuraApp[] = [
       routes: integrationsRoutes,
     },
     loadIntegrationsApp,
+    {
+      hasResponsiveControls: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "debug",
+      label: "Debug",
+      icon: Bug,
+      basePath: "/debug",
+      searchPlaceholder: "Search runs",
+      routes: debugRoutes,
+    },
+    loadDebugApp,
     {
       hasResponsiveControls: true,
     },

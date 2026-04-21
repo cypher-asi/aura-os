@@ -493,6 +493,9 @@ mod tests {
             validation_cache: cache,
             agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
             agent_runtime,
+            loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
+                std::env::temp_dir().join(format!("aura-test-loop-{}-{id}", std::process::id())),
+            )),
             permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
         }
     }

@@ -10,6 +10,8 @@ pub mod harness_client;
 pub(crate) mod harness_gateway;
 mod network_bridge;
 
+pub mod loop_log;
+
 pub(crate) mod persistence;
 pub(crate) mod router;
 pub(crate) mod state;
