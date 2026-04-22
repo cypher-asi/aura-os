@@ -2,19 +2,19 @@
   {
     "date": "2026-04-21",
     "channel": "nightly",
-    "version": "0.1.0-nightly.324.1",
-    "title": "Run state that survives refresh, plus a new Debug app for dev-loop runs",
-    "intro": "Today's nightly is heavy on durability: task and process-run output now rehydrate cleanly across reloads and WebSocket reconnects, the sidekick remembers where you were, and every dev-loop run is archived to disk behind a new Debug app and CLI. A vendored chromiumoxide fork unlocks deeper browser-backend debugging, and the release pipeline grew an automated screenshot media step.",
+    "version": "0.1.0-nightly.326.1",
+    "title": "Debug app, durable run output, and automated changelog media",
+    "intro": "Today's nightly centers on making dev-loop runs inspectable end-to-end: task and process output now survives reloads, a new Debug app and run-analyze CLI expose every run on disk, and the release pipeline gains an automated screenshot media job with a manual reconcile path. A handful of sidekick polish fixes and a vendored chromiumoxide fork round out the day.",
     "entryCount": 5,
     "highlights": [
-      "Task output and sidekick stats survive reloads",
-      "New Debug app + aura-run-analyze CLI for dev-loop runs",
-      "Run spinners stay accurate through refresh and re-runs",
-      "Release changelog now auto-captures screenshot media"
+      "Completed tasks keep their timeline, tool cards, and thinking across reloads",
+      "New Debug app plus aura-run-analyze CLI for every dev-loop run",
+      "Sidekick tabs and live run state now rehydrate after refresh",
+      "Release changelog media capture and manual reconcile workflows shipped"
     ],
-    "rawCommitCount": 14,
-    "generatedAt": "2026-04-22T00:29:33.679Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.324.1",
+    "rawCommitCount": 16,
+    "generatedAt": "2026-04-22T02:49:44.994Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.326.1",
     "path": "history/2026-04-21.json"
   },
   {

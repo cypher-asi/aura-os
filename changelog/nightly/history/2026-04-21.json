@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-22T00:29:33.679Z",
+  "generatedAt": "2026-04-22T02:49:44.994Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.324.1",
+  "version": "0.1.0-nightly.326.1",
   "date": "2026-04-21",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.324.1",
-  "lastIncludedSha": "9159a1941261d94351d3d440c51cd3d49b07986e",
-  "previousProcessedSha": "927031002cdd116b21e760a4624548918965a15a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.326.1",
+  "lastIncludedSha": "839f6575933bcb3a92339dc1bb5ba7112b882654",
+  "previousProcessedSha": "9159a1941261d94351d3d440c51cd3d49b07986e",
   "commitShas": [
     "b2f49076832997ff6cbd80bc25e7a2a3d92a8c43",
     "657ef486456b423a2a4343eecc940c57fc4ba27a",
@@ -25,10 +25,12 @@
     "ccea501427063792376d7d84f666c042b3d09bd7",
     "927031002cdd116b21e760a4624548918965a15a",
     "3b93c76a19f28a2a9e9192ddf6dd1dbaa625ab87",
-    "9159a1941261d94351d3d440c51cd3d49b07986e"
+    "9159a1941261d94351d3d440c51cd3d49b07986e",
+    "93dad6973e7828e60fbaa12609c5f49a48f50670",
+    "839f6575933bcb3a92339dc1bb5ba7112b882654"
   ],
-  "rawCommitCount": 14,
-  "filteredCommitCount": 14,
+  "rawCommitCount": 16,
+  "filteredCommitCount": 16,
   "rawCommits": [
     {
       "sha": "b2f49076832997ff6cbd80bc25e7a2a3d92a8c43",
@@ -960,6 +962,88 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "93dad6973e7828e60fbaa12609c5f49a48f50670",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-21T21:43:33-04:00",
+      "subject": "fix(changelog): harden media preview handling",
+      "body": "",
+      "parents": [
+        "9159a1941261d94351d3d440c51cd3d49b07986e"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "infra/scripts/release/publish-changelog-media.mjs",
+        "infra/scripts/release/publish-changelog-media.test.mjs",
+        "interface/scripts/capture-demo-screenshots.mjs",
+        "interface/scripts/produce-agent-demo-screenshots.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 55,
+        "deletions": 17
+      },
+      "committedAtMs": 1776822213000,
+      "cleanSubject": "harden media preview handling",
+      "keywords": [
+        "harden",
+        "media",
+        "preview",
+        "handling"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        "infra/scripts/release",
+        "interface/scripts/capture-demo-screenshots.mjs",
+        "interface/scripts/produce-agent-demo-screenshots.mjs"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Other"
+      ]
+    },
+    {
+      "sha": "839f6575933bcb3a92339dc1bb5ba7112b882654",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-21T22:18:13-04:00",
+      "subject": "feat(changelog): add manual reconcile rerun",
+      "body": "",
+      "parents": [
+        "93dad6973e7828e60fbaa12609c5f49a48f50670"
+      ],
+      "files": [
+        ".github/workflows/reconcile-release-changelog.yml",
+        "infra/scripts/release/publish-changelog-media.mjs",
+        "infra/scripts/release/publish-changelog-media.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 595,
+        "deletions": 29
+      },
+      "committedAtMs": 1776824293000,
+      "cleanSubject": "add manual reconcile rerun",
+      "keywords": [
+        "manual",
+        "reconcile",
+        "rerun"
+      ],
+      "fileGroups": [
+        ".github/workflows/reconcile-release-changelog.yml",
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 5,
@@ -971,36 +1055,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 5159148
+          "sizeBytes": 5159168
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.324.1",
+      "version": "0.1.0-nightly.326.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 28490404
+          "sizeBytes": 28488604
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 95775224
+          "sizeBytes": 95771128
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1010,29 +1094,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.324.1",
+      "version": "0.1.0-nightly.326.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.324.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.326.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 24874001
+          "sizeBytes": 24873061
         },
         {
-          "name": "Aura_0.1.0-nightly.324.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.326.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 24680839
+          "sizeBytes": 24679786
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1042,29 +1126,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.324.1",
+      "version": "0.1.0-nightly.326.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.324.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.326.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 26453218
+          "sizeBytes": 26451287
         },
         {
-          "name": "Aura_0.1.0-nightly.324.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.326.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 26301549
+          "sizeBytes": 26302387
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1074,17 +1158,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.324.1",
+      "version": "0.1.0-nightly.326.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 17194501
+          "sizeBytes": 17196094
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.324.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.326.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1093,25 +1177,25 @@
     }
   ],
   "rendered": {
-    "title": "Run state that survives refresh, plus a new Debug app for dev-loop runs",
-    "intro": "Today's nightly is heavy on durability: task and process-run output now rehydrate cleanly across reloads and WebSocket reconnects, the sidekick remembers where you were, and every dev-loop run is archived to disk behind a new Debug app and CLI. A vendored chromiumoxide fork unlocks deeper browser-backend debugging, and the release pipeline grew an automated screenshot media step.",
+    "title": "Debug app, durable run output, and automated changelog media",
+    "intro": "Today's nightly centers on making dev-loop runs inspectable end-to-end: task and process output now survives reloads, a new Debug app and run-analyze CLI expose every run on disk, and the release pipeline gains an automated screenshot media job with a manual reconcile path. A handful of sidekick polish fixes and a vendored chromiumoxide fork round out the day.",
     "entries": [
       {
         "time_label": "10:52 PM",
         "started_at": "2026-04-21T05:52:33.000Z",
         "ended_at": "2026-04-21T06:17:34.000Z",
-        "title": "Task output survives reloads and stream pruning",
-        "summary": "The Run panel's completed task rows no longer flash empty after a refresh or idle timeout, and a small sidekick layout fix keeps compound timers on one line.",
+        "title": "Run panel output survives reloads and TTL pruning",
+        "summary": "Completed task rows no longer render empty after the in-memory stream is pruned or the page is reloaded, and a narrow sidekick stat gets a layout fix.",
         "items": [
           {
-            "text": "Completed task rows now rehydrate their full timeline, tool cards, and thinking steps from a new localStorage turn cache, with a unified useTaskOutputView hook that walks live stream → turn cache → event store → server hydration so expanding a row after a reload or 5-minute idle never shows a blank body.",
+            "text": "Structured task output — timeline, tool cards, and thinking steps — is now persisted to a localStorage turn-cache on TaskCompleted/TaskFailed and loop-end, with a unified useTaskOutputView hook that walks live stream, cache, event store, and server hydration in order so expanding a completed task always shows its body.",
             "commit_shas": [
               "657ef486456b423a2a4343eecc940c57fc4ba27a"
             ],
             "confidence": "high"
           },
           {
-            "text": "Shrunk the sidekick StatCard value to 15px with nowrap so compound times like \"13m 53s\" stop wrapping in the narrow column, while the mobile variant keeps its larger size.",
+            "text": "Sidekick StatCard values shrink from 18px to 15px with nowrap so compound readouts like \"13m 53s\" stay on a single line in the narrow column, while the mobile variant keeps its larger size.",
             "commit_shas": [
               "b2f49076832997ff6cbd80bc25e7a2a3d92a8c43"
             ],
@@ -1127,9 +1211,9 @@
             "entry touches interface source files",
             "entry language points to a visible product surface"
           ],
-          "slotId": "entry-task-output-survives-reloads-and-stream-pruning",
-          "slug": "task-output-survives-reloads-and-stream-pruning",
-          "alt": "Task output survives reloads and stream pruning screenshot",
+          "slotId": "entry-run-panel-output-survives-reloads-and-ttl-pruning",
+          "slug": "run-panel-output-survives-reloads-and-ttl-pruning",
+          "alt": "Run panel output survives reloads and TTL pruning screenshot",
           "files": [
             "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
             "interface/src/components/TaskOutputSection/TaskOutputSection.test.tsx",
@@ -1151,11 +1235,11 @@
         "time_label": "11:18 PM",
         "started_at": "2026-04-21T06:18:16.000Z",
         "ended_at": "2026-04-21T06:18:16.000Z",
-        "title": "Vendored chromiumoxide fork to trace CDP schema drift",
-        "summary": "The browser backend's noisy \"WS Invalid message\" warnings can finally be diagnosed: chromiumoxide 0.9.1 is now vendored in-tree with a local patch that logs the offending CDP payload.",
+        "title": "Vendored chromiumoxide fork to diagnose CDP WS warnings",
+        "summary": "The browser backend's constant \"WS Invalid message\" warning stream now carries the raw payload so schema drift can actually be tracked down.",
         "items": [
           {
-            "text": "Forked chromiumoxide 0.9.1 under vendor/chromiumoxide and pinned the workspace at it via [patch.crates-io], with a single local edit to the handler that attaches the raw JSON payload to the InvalidMessage warning — so each failing CDP method name is now visible and can be patched with targeted serde renames upstream.",
+            "text": "Forked chromiumoxide 0.9.1 under vendor/chromiumoxide and pinned it via [patch.crates-io], with a single local edit that attaches the offending JSON payload to the WARN log so each failing CDP method can be identified and patched upstream. No application code changes; aura-os-browser builds unchanged.",
             "commit_shas": [
               "81728bf09b5acda3cc8a4717d87fc1ed0d0b0e03"
             ],
@@ -1167,10 +1251,13 @@
           "status": "skipped",
           "score": 0,
           "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
-          "reasons": [],
-          "slotId": "entry-vendored-chromiumoxide-fork-to-trace-cdp-schema-drift",
-          "slug": "vendored-chromiumoxide-fork-to-trace-cdp-schema-drift",
-          "alt": "Vendored chromiumoxide fork to trace CDP schema drift screenshot",
+          "reasons": [
+            "entry language points to a visible product surface",
+            "entry language points to release plumbing rather than a product screen"
+          ],
+          "slotId": "entry-vendored-chromiumoxide-fork-to-diagnose-cdp-ws-warnings",
+          "slug": "vendored-chromiumoxide-fork-to-diagnose-cdp-ws-warnings",
+          "alt": "Vendored chromiumoxide fork to diagnose CDP WS warnings screenshot",
           "files": [
             "Cargo.lock",
             "Cargo.toml",
@@ -1203,32 +1290,32 @@
         "time_label": "11:42 PM",
         "started_at": "2026-04-21T06:42:33.000Z",
         "ended_at": "2026-04-21T07:16:24.000Z",
-        "title": "Live run state rehydrates across refresh",
-        "summary": "Several fixes close the gap where refreshing during an active run left spinners, badges, and panels out of sync with the automaton loop, plus a live-updating Active stat and a persisted sidekick tab.",
+        "title": "Live run state rehydrates after refresh",
+        "summary": "Spinners, live badges, and sidekick tabs now reflect the real loop state after a reload instead of depending on one-shot WebSocket events.",
         "items": [
           {
-            "text": "Refreshing during an active run now correctly lights up the Run panel, the TaskList live dot, and the left-nav agent spinner: /loop/status, /loop/start, /loop/pause, /loop/stop, and /loop/resume all surface the currently streaming task id, and the UI seeds its stores from it on mount and reconnect instead of waiting for one-shot task_started WebSocket events.",
+            "text": "/loop/status, /loop/start, /loop/pause, /loop/stop, and /loop/resume now expose active_tasks with task and agent ids, and the UI seeds the Run panel, Tasks-tree \"live\" dots, and sidebar agent indicator from that response — so a refresh no longer leaves the top spinner spinning over a dark Run panel.",
             "commit_shas": [
               "c16c726b697f58499ff70f60791681c829dc5fdc"
             ],
             "confidence": "high"
           },
           {
-            "text": "The sidekick Active stat card is now tinted with the standard success green and updates live via TaskStarted/TaskCompleted/TaskFailed subscriptions, so in-progress/done/failed counts track the automation loop in real time instead of waiting for a chat stream to end.",
-            "commit_shas": [
-              "9408bf227b09aae9e09ec7b79cdcb441b8e026c1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Each sidekick (main, agents, process) now remembers its last-active tab in localStorage, so the app no longer snaps back to terminal/profile/process after a refresh.",
+            "text": "Sidekick tab selection (main, agents, process) is persisted per-surface to localStorage so the app stops snapping back to terminal/profile/process after reload.",
             "commit_shas": [
               "8ec8861b435f49c567c2c251a5c56d3f0a2767c3"
             ],
             "confidence": "high"
           },
           {
-            "text": "Retired the old bottom TaskOutputPanel surface that had been superseded by the Sidekick drawer, removing its resize handle, collapse state, tab switcher, and stale aura-task-output-panel localStorage key (with a one-shot cleanup for existing clients).",
+            "text": "The Active stat card adopts the app's standard success green and now updates live from TaskStarted/TaskCompleted/TaskFailed with optimistic adjustments and a debounced refetch, tracking the automation loop instead of waiting for a chat stream to end.",
+            "commit_shas": [
+              "9408bf227b09aae9e09ec7b79cdcb441b8e026c1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Retired the obsolete bottom TaskOutputPanel surface along with its resize/collapse/tab state and the aura-task-output-panel localStorage key, now fully superseded by the sidekick's Run and Terminal panes.",
             "commit_shas": [
               "c351ca8e4c7325d8ca2f8f8abdb1bd73000815f3"
             ],
@@ -1244,9 +1331,9 @@
             "entry touches interface source files",
             "entry language points to a visible product surface"
           ],
-          "slotId": "entry-live-run-state-rehydrates-across-refresh",
-          "slug": "live-run-state-rehydrates-across-refresh",
-          "alt": "Live run state rehydrates across refresh screenshot",
+          "slotId": "entry-live-run-state-rehydrates-after-refresh",
+          "slug": "live-run-state-rehydrates-after-refresh",
+          "alt": "Live run state rehydrates after refresh screenshot",
           "files": [
             "apps/aura-os-server/src/dto.rs",
             "apps/aura-os-server/src/handlers/dev_loop.rs",
@@ -1259,16 +1346,16 @@
             "interface/src/views/ProjectLayout/useProjectLayoutData.ts",
             "interface/src/views/TaskList/useTaskListData.test.tsx",
             "interface/src/views/TaskList/useTaskListData.ts",
-            "interface/src/components/StatCard/StatCard.tsx",
-            "interface/src/views/StatsDashboard/StatsDashboard.tsx",
-            "interface/src/views/StatsDashboard/useStatsDashboardData.ts",
-            "interface/src/views/aura.module.css",
             "interface/src/apps/agents/stores/agent-sidekick-store.ts",
             "interface/src/apps/process/stores/process-sidekick-store.ts",
             "interface/src/constants.ts",
             "interface/src/stores/shared/sidekick-slice.test.ts",
             "interface/src/stores/shared/sidekick-slice.ts",
             "interface/src/stores/sidekick-store.ts",
+            "interface/src/components/StatCard/StatCard.tsx",
+            "interface/src/views/StatsDashboard/StatsDashboard.tsx",
+            "interface/src/views/StatsDashboard/useStatsDashboardData.ts",
+            "interface/src/views/aura.module.css",
             "interface/src/components/Sidekick/Sidekick.test.tsx",
             "interface/src/components/TaskOutputPanel/TaskOutputPanel.module.css",
             "interface/src/components/TaskOutputPanel/TaskOutputPanel.tsx"
@@ -1279,40 +1366,42 @@
         "time_label": "12:28 AM",
         "started_at": "2026-04-21T07:28:42.000Z",
         "ended_at": "2026-04-21T08:26:01.000Z",
-        "title": "Debug app, run-analyze CLI, and persistent process Live Output",
-        "summary": "Every dev-loop run is now archived to disk and inspectable through a new in-app Debug surface and a Rust CLI with built-in heuristics; process runs gain the same reload-survives-refresh treatment as tasks.",
+        "title": "Debug app, on-disk run bundles, and aura-run-analyze CLI",
+        "summary": "Every dev-loop run is now captured to disk and browsable from a new Debug app, with a Rust CLI and seven heuristic rules for post-hoc analysis.",
         "items": [
           {
-            "text": "Every dev-loop run is written to a structured on-disk bundle (metadata, events, LLM calls, iterations, blockers, retries, summary) via a new LoopLogWriter, exposed through /api/debug/* with project/run listings, per-channel logs, and a .zip export, and surfaced by a new Debug app featuring a virtualized run timeline, channel/type/text filters, a JSON inspector, and export.",
+            "text": "LoopLogWriter persists every dev-loop run as a structured bundle (metadata.json, events/llm_calls/iterations/blockers/retries jsonl, summary.md) and a new /api/debug/* surface serves projects, runs, metadata, per-channel logs, and a zip export — capture is always on, with AURA_LOOP_LOGS_DIR to redirect the path.",
             "commit_shas": [
               "c18bc88e9ae4f6401bd9867ed115608ff624ac8d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Runs are now grouped by the specs their tasks touched (Project → Spec → Runs in the Debug nav, with a ?spec_id= filter), and a new aura-run-analyze CLI with seven heuristics — repeated blockers, high retry density, slow iteration, token-hog LLM calls, unbalanced I/O, never-completed tasks, zero-tool-call turns — emits markdown or JSON and exits non-zero so CI can gate on warnings or errors. Shared types live in a new aura-loop-log-schema crate.",
+            "text": "A new Debug app (Bug icon, after Integrations) ships a project/spec/run nav, run list view, and a run detail view with a virtualized timeline, channel/type/text filters, JSON inspector, copy, and zip export for inspecting LLM retries, blockers, and iteration cost.",
+            "commit_shas": [
+              "c18bc88e9ae4f6401bd9867ed115608ff624ac8d",
+              "ccea501427063792376d7d84f666c042b3d09bd7"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "New aura-run-analyze CLI (--latest / --run / --list, markdown or json) plus an aura-run-heuristics crate implementing seven rules — repeated_blocker_path, high_retry_density, slow_iteration, token_hog_llm_call, unbalanced_io, task_never_completed, zero_tool_calls_in_turn — with exit codes 1/2 for warnings/errors so CI can gate on them. Runs are also tagged with the specs their tasks touched, filterable via ?spec_id=.",
             "commit_shas": [
               "ccea501427063792376d7d84f666c042b3d09bd7"
             ],
             "confidence": "high"
           },
           {
-            "text": "The process Run preview's Live Output panel now persists across reloads and WS reconnects via a new process-node-turn-cache and process-stream-bootstrap, with the focused node rehydrating to the correct run and the section retitled \"Recent Live Output\" when the run is no longer actively streaming.",
+            "text": "Process runs now get the same cache-then-stream treatment as tasks: a per-app process-node-turn-cache and bootstrap keep the \"Live Output\" panel populated across reloads and WS reconnects, with the panel retitled \"Recent Live Output\" once a run is no longer streaming.",
             "commit_shas": [
               "3156ede624070be0df564b73f8ef9fc4fa747b7d"
             ],
             "confidence": "high"
           },
           {
-            "text": "Clicking Run now keeps the button and sidekick Run/Tasks spinners engaged continuously from click through the first task_started event — including re-runs — by optimistically flipping preparing=true and seeding a shared live-task-ids store from the active_tasks returned by /loop/start and /loop/resume.",
+            "text": "Run button and sidekick Run/Tasks spinners now stay engaged from click through the first task_started event, with a shared live-task-ids store hydrated from /loop/start and /loop/resume so the first (or interrupted) task of a re-run no longer looks idle during the HTTP→WS handoff. Cargo is also configured to emit plain, line-buffered output workspace-wide so agent/CI transports get legible compiler diagnostics.",
             "commit_shas": [
-              "927031002cdd116b21e760a4624548918965a15a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Disabled cargo color and progress output workspace-wide so agent/CI transports that Base64-wrap streams stop producing unreadable blobs of ANSI escapes and carriage-return progress updates in automated runs.",
-            "commit_shas": [
+              "927031002cdd116b21e760a4624548918965a15a",
               "de6669310846135001af99074f7771da57cbe703"
             ],
             "confidence": "high"
@@ -1328,9 +1417,9 @@
             "entry language points to a visible product surface",
             "entry language points to release plumbing rather than a product screen"
           ],
-          "slotId": "entry-debug-app-run-analyze-cli-and-persistent-process-live-output",
-          "slug": "debug-app-run-analyze-cli-and-persistent-process-live-output",
-          "alt": "Debug app, run-analyze CLI, and persistent process Live Output screenshot",
+          "slotId": "entry-debug-app-on-disk-run-bundles-and-aura-run-analyze-cli",
+          "slug": "debug-app-on-disk-run-bundles-and-aura-run-analyze-cli",
+          "alt": "Debug app, on-disk run bundles, and aura-run-analyze CLI screenshot",
           "files": [
             "apps/aura-os-server/src/app_builder.rs",
             "apps/aura-os-server/src/auth_guard.rs",
@@ -1362,21 +1451,29 @@
       {
         "time_label": "4:31 PM",
         "started_at": "2026-04-21T23:31:37.000Z",
-        "ended_at": "2026-04-22T00:16:07.000Z",
-        "title": "Automated screenshot media for the release changelog",
-        "summary": "The release pipeline now captures demo screenshots as part of publishing the changelog, with a dedicated follow-up workflow and matching trigger wiring.",
+        "ended_at": "2026-04-22T02:18:13.000Z",
+        "title": "Automated release screenshot media and manual reconcile",
+        "summary": "The release changelog pipeline gains a dedicated media-publishing workflow, a Browserbase-backed screenshot capture path, and an on-demand reconcile job to backfill or refresh published media.",
         "items": [
           {
-            "text": "Added a Publish Release Changelog Media workflow plus a screenshot-first capture pipeline — Browserbase- or Playwright-backed — with a demo seed planner, agent brief and app catalog, screenshot quality checks, and an in-app capture bridge, all documented in docs/demo-screenshot-pipeline.md.",
+            "text": "New Publish Release Changelog Media workflow runs after the changelog publish, driving a demo screenshot pipeline (Browserbase by default, Playwright fallback) with a capture-bridge and seeded demo sessions, producing per-release media alongside the generated changelog.",
             "commit_shas": [
               "3b93c76a19f28a2a9e9192ddf6dd1dbaa625ab87"
             ],
             "confidence": "high"
           },
           {
-            "text": "Realigned the publish-release-changelog workflow's triggers so the new media job runs on the right events without racing the changelog publish step.",
+            "text": "A new Reconcile Release Changelog workflow lets operators rerun media capture for a specific release run id or channel, optionally refreshing already-published media instead of only backfilling missing or failed slots.",
             "commit_shas": [
-              "9159a1941261d94351d3d440c51cd3d49b07986e"
+              "839f6575933bcb3a92339dc1bb5ba7112b882654"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Follow-up fixes realigned the changelog workflow triggers and hardened media preview handling across the publish scripts and capture entrypoints to stabilize the new pipeline.",
+            "commit_shas": [
+              "9159a1941261d94351d3d440c51cd3d49b07986e",
+              "93dad6973e7828e60fbaa12609c5f49a48f50670"
             ],
             "confidence": "medium"
           }
@@ -1391,9 +1488,9 @@
             "entry language points to a visible product surface",
             "entry language points to release plumbing rather than a product screen"
           ],
-          "slotId": "entry-automated-screenshot-media-for-the-release-changelog",
-          "slug": "automated-screenshot-media-for-the-release-changelog",
-          "alt": "Automated screenshot media for the release changelog screenshot",
+          "slotId": "entry-automated-release-screenshot-media-and-manual-reconcile",
+          "slug": "automated-release-screenshot-media-and-manual-reconcile",
+          "alt": "Automated release screenshot media and manual reconcile screenshot",
           "files": [
             ".env.example",
             ".github/workflows/publish-release-changelog-media.yml",
@@ -1424,11 +1521,11 @@
       }
     ],
     "highlights": [
-      "Task output and sidekick stats survive reloads",
-      "New Debug app + aura-run-analyze CLI for dev-loop runs",
-      "Run spinners stay accurate through refresh and re-runs",
-      "Release changelog now auto-captures screenshot media"
+      "Completed tasks keep their timeline, tool cards, and thinking across reloads",
+      "New Debug app plus aura-run-analyze CLI for every dev-loop run",
+      "Sidekick tabs and live run state now rehydrate after refresh",
+      "Release changelog media capture and manual reconcile workflows shipped"
     ],
-    "raw_commit_count": 14
+    "raw_commit_count": 16
   }
 }
