@@ -121,6 +121,15 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::is_truncation_failure_for_tests(reason)
     }
 
+    /// True when `reason` looks like a provider rate-limit or overload
+    /// (HTTP 429 / 529 / `overloaded_error`). The orchestrator routes
+    /// these through the infra-retry path rather than Phase 3's
+    /// truncation remediation so a provider cooldown isn't wasted on
+    /// heuristic follow-up tasks.
+    pub fn is_rate_limited_failure(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_rate_limited_failure_for_tests(reason)
+    }
+
     /// Run Phase 5's preflight decomposition detector against a
     /// prospective task's `(title, description)`. Returns
     /// `Some((reason_label, target_path))` when the heuristic would

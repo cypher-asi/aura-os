@@ -3,7 +3,9 @@ use axum::http::StatusCode;
 use axum::Json;
 use chrono::Utc;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tracing::{info, warn};
 
 use aura_os_core::{
@@ -131,6 +133,14 @@ enum FailureClass {
     Other,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum InfraFailureClass {
+    ProviderRateLimited,
+    ProviderOverloaded,
+    TransportTimeout,
+    GitTimeout,
+}
+
 /// Classify a `task_failed` reason string into a [`FailureClass`].
 ///
 /// Case-insensitive substring match — the Phase 2b error formats the
@@ -180,6 +190,146 @@ fn classify_failure(reason: &str) -> FailureClass {
 /// private `FailureClass` enum.
 pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
     classify_failure(reason) == FailureClass::Truncation
+}
+
+fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
+    let lower = reason.to_ascii_lowercase();
+    if (lower.contains("git ") || lower.contains("git_") || lower.contains("git-"))
+        && (lower.contains("timed out") || lower.contains("timeout"))
+    {
+        return Some(InfraFailureClass::GitTimeout);
+    }
+    if lower.contains("429")
+        || lower.contains("too many requests")
+        || lower.contains("rate limit")
+        || lower.contains("rate limited")
+    {
+        return Some(InfraFailureClass::ProviderRateLimited);
+    }
+    if lower.contains("529")
+        || lower.contains("overloaded")
+        || lower.contains("capacity")
+        || lower.contains("temporarily unavailable")
+        || lower.contains("server busy")
+    {
+        return Some(InfraFailureClass::ProviderOverloaded);
+    }
+    if lower.contains("timed out") || lower.contains("timeout") {
+        return Some(InfraFailureClass::TransportTimeout);
+    }
+    None
+}
+
+fn infra_cooldown_for(class: InfraFailureClass) -> Duration {
+    match class {
+        InfraFailureClass::ProviderRateLimited => Duration::from_secs(60),
+        InfraFailureClass::ProviderOverloaded => Duration::from_secs(30),
+        InfraFailureClass::TransportTimeout => Duration::from_secs(20),
+        InfraFailureClass::GitTimeout => Duration::from_secs(15),
+    }
+}
+
+fn infra_failure_label(class: InfraFailureClass) -> &'static str {
+    match class {
+        InfraFailureClass::ProviderRateLimited => "provider_rate_limited",
+        InfraFailureClass::ProviderOverloaded => "provider_overloaded",
+        InfraFailureClass::TransportTimeout => "transport_timeout",
+        InfraFailureClass::GitTimeout => "git_timeout",
+    }
+}
+
+#[derive(Clone, Debug)]
+struct ProjectCooldown {
+    until: Instant,
+    class: InfraFailureClass,
+    reason: String,
+}
+
+fn project_cooldowns() -> &'static std::sync::Mutex<HashMap<String, ProjectCooldown>> {
+    static COOLDOWNS: std::sync::OnceLock<std::sync::Mutex<HashMap<String, ProjectCooldown>>> =
+        std::sync::OnceLock::new();
+    COOLDOWNS.get_or_init(|| std::sync::Mutex::new(HashMap::new()))
+}
+
+#[cfg(test)]
+fn register_project_cooldown(
+    project_id: ProjectId,
+    class: InfraFailureClass,
+    reason: &str,
+) -> Duration {
+    register_project_cooldown_with_hint(project_id, class, reason, None)
+}
+
+/// Like [`register_project_cooldown`] but lets the caller supply a
+/// provider-supplied `Retry-After` hint (e.g. extracted from a 429
+/// response). The effective cooldown is the larger of the class's
+/// default (`infra_cooldown_for`) and the hint, clamped to
+/// [`PROVIDER_BACKOFF_MAX_SECS`]. Using `max` rather than `hint or
+/// default` means a provider that sends `Retry-After: 0` (which some
+/// proxies do on cache misses) still gets a real backoff, and a hint
+/// larger than our default is respected rather than ignored.
+fn register_project_cooldown_with_hint(
+    project_id: ProjectId,
+    class: InfraFailureClass,
+    reason: &str,
+    hint: Option<Duration>,
+) -> Duration {
+    let key = project_id.to_string();
+    let default = infra_cooldown_for(class);
+    let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
+    let requested = hint
+        .map(|h| h.min(cap).max(default))
+        .unwrap_or(default);
+    let mut guard = match project_cooldowns().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if let Some(existing) = guard.get_mut(&key) {
+        let remaining = existing.until.saturating_duration_since(Instant::now());
+        if remaining >= requested {
+            existing.reason = reason.to_string();
+            existing.class = class;
+            return remaining;
+        }
+    }
+    guard.insert(
+        key,
+        ProjectCooldown {
+            until: Instant::now() + requested,
+            class,
+            reason: reason.to_string(),
+        },
+    );
+    requested
+}
+
+#[cfg(test)]
+fn active_project_cooldown(project_id: ProjectId) -> Option<(Duration, InfraFailureClass, String)> {
+    let key = project_id.to_string();
+    let guard = match project_cooldowns().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let cooldown = guard.get(&key)?;
+    let remaining = cooldown.until.saturating_duration_since(Instant::now());
+    if remaining.is_zero() {
+        return None;
+    }
+    Some((remaining, cooldown.class, cooldown.reason.clone()))
+}
+
+fn clear_project_cooldown(project_id: ProjectId) {
+    let key = project_id.to_string();
+    let mut guard = match project_cooldowns().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if guard
+        .get(&key)
+        .is_some_and(|cooldown| cooldown.until <= Instant::now())
+    {
+        guard.remove(&key);
+    }
 }
 
 /// Returns true if the `AURA_AUTO_DECOMPOSE_DISABLED` env var is set to
@@ -233,6 +383,98 @@ fn current_remediation_count(task_id: &str) -> u32 {
         Err(poisoned) => poisoned.into_inner(),
     };
     *guard.get(task_id).unwrap_or(&0)
+}
+
+/// Hard ceiling on any single provider-backoff duration. Provider
+/// `Retry-After` hints longer than this are clamped so a pathological
+/// response can't park the loop for an hour.
+const PROVIDER_BACKOFF_MAX_SECS: u64 = 120;
+
+/// Extract a suggested retry delay from a `task_failed` / `error`
+/// event payload, returning `None` if nothing usable is present.
+///
+/// Preference order:
+///   1. Structured `retry_after_ms` on the event root.
+///   2. Structured `retry_after` (seconds, u64 or f64) on the event
+///      root.
+///   3. Nested `headers.retry-after` / `headers.Retry-After` header
+///      value (seconds).
+///   4. Free-form scan over the reason / error / message text for the
+///      phrases the Anthropic SDK conventionally emits: `retry after
+///      N`, `retry in N seconds`, `try again in N seconds`.
+///
+/// Result is clamped to [`PROVIDER_BACKOFF_MAX_SECS`].
+fn extract_retry_after(event: &serde_json::Value) -> Option<Duration> {
+    let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
+
+    if let Some(ms) = event.get("retry_after_ms").and_then(|v| v.as_u64()) {
+        return Some(Duration::from_millis(ms).min(cap));
+    }
+    if let Some(secs) = event.get("retry_after").and_then(|v| v.as_u64()) {
+        return Some(Duration::from_secs(secs).min(cap));
+    }
+    if let Some(secs) = event.get("retry_after").and_then(|v| v.as_f64()) {
+        if secs.is_finite() && secs > 0.0 {
+            return Some(Duration::from_secs_f64(secs).min(cap));
+        }
+    }
+    if let Some(headers) = event.get("headers").and_then(|v| v.as_object()) {
+        for key in ["retry-after", "Retry-After", "retry_after"] {
+            if let Some(value) = headers.get(key) {
+                if let Some(secs) = value.as_u64() {
+                    return Some(Duration::from_secs(secs).min(cap));
+                }
+                if let Some(text) = value.as_str() {
+                    if let Ok(secs) = text.trim().parse::<u64>() {
+                        return Some(Duration::from_secs(secs).min(cap));
+                    }
+                }
+            }
+        }
+    }
+
+    let text = ["reason", "error", "message"]
+        .into_iter()
+        .filter_map(|k| event.get(k).and_then(|v| v.as_str()))
+        .collect::<Vec<_>>()
+        .join(" ");
+    parse_retry_after_seconds(&text).map(|secs| Duration::from_secs(secs).min(cap))
+}
+
+/// Parse a rate-limit retry hint out of free-form text. Matches
+/// `retry after 30`, `retry in 30s`, `try again in 30 seconds`, etc.
+/// Case-insensitive, stops at the first numeric match.
+fn parse_retry_after_seconds(text: &str) -> Option<u64> {
+    let lower = text.to_ascii_lowercase();
+    let cues = [
+        "retry after ",
+        "retry in ",
+        "try again in ",
+        "please try again in ",
+        "please retry in ",
+        "please retry after ",
+    ];
+    for cue in cues {
+        if let Some(idx) = lower.find(cue) {
+            let tail = &lower[idx + cue.len()..];
+            let digits: String = tail
+                .chars()
+                .skip_while(|c| c.is_whitespace())
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+            if let Ok(secs) = digits.parse::<u64>() {
+                if secs > 0 {
+                    return Some(secs);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Test-only predicate over [`classify_failure`].
+pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
+    classify_failure(reason) == FailureClass::RateLimited
 }
 
 /// Locate the newest run bundle directory for a given
@@ -1020,6 +1262,144 @@ impl Drop for ForwarderAliveGuard {
 struct TransientRetryContext {
     automaton_client: std::sync::Arc<aura_os_link::AutomatonClient>,
     start_params: AutomatonStartParams,
+    /// `None` means "retry indefinitely with backoff". `Some(n)` counts
+    /// down each time the caller consumes a restart attempt.
+    restart_budget: Option<u32>,
+}
+
+fn take_retry_context(retry: &mut Option<TransientRetryContext>) -> Option<TransientRetryContext> {
+    let ctx = retry.as_mut()?;
+    match ctx.restart_budget.as_mut() {
+        Some(remaining) if *remaining == 0 => None,
+        Some(remaining) => {
+            *remaining -= 1;
+            Some(ctx.clone())
+        }
+        None => Some(ctx.clone()),
+    }
+}
+
+async fn reset_task_for_infra_retry(
+    task_service: &TaskService,
+    project_id: ProjectId,
+    task_id: &str,
+) -> Result<(), String> {
+    let task = find_task_by_id(task_service, project_id, task_id)
+        .await
+        .ok_or_else(|| format!("unable to resolve failed task {task_id} for retry"))?;
+    task_service
+        .reset_task_to_ready(&project_id, &task.spec_id, &task.task_id)
+        .await
+        .map(|_| ())
+        .map_err(|error| format!("failed to reset task {task_id} to ready: {error}"))
+}
+
+async fn pause_for_project_cooldown(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    automaton_registry: &AutomatonRegistry,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: Option<&str>,
+    reason: &str,
+    failure: InfraFailureClass,
+    retry_after_hint: Option<Duration>,
+) {
+    let cooldown =
+        register_project_cooldown_with_hint(project_id, failure, reason, retry_after_hint);
+    {
+        let mut reg = automaton_registry.lock().await;
+        if let Some(entry) = reg.get_mut(&agent_instance_id) {
+            entry.paused = true;
+            entry.current_task_id = None;
+        }
+    }
+    emit_domain_event(
+        app_broadcast,
+        "loop_paused",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({
+            "task_id": task_id.map(str::to_owned),
+            "reason": reason,
+            "retry_kind": infra_failure_label(failure),
+            "cooldown_ms": cooldown.as_millis() as u64,
+        }),
+    );
+    tokio::time::sleep(cooldown).await;
+    clear_project_cooldown(project_id);
+    {
+        let mut reg = automaton_registry.lock().await;
+        if let Some(entry) = reg.get_mut(&agent_instance_id) {
+            entry.paused = false;
+        }
+    }
+    emit_domain_event(
+        app_broadcast,
+        "loop_resumed",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({
+            "task_id": task_id.map(str::to_owned),
+            "reason": reason,
+            "retry_kind": infra_failure_label(failure),
+        }),
+    );
+}
+
+async fn restart_with_infra_backoff(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    automaton_registry: &AutomatonRegistry,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    reason: &str,
+    initial_failure: Option<InfraFailureClass>,
+    initial_retry_after: Option<Duration>,
+    ctx: &TransientRetryContext,
+) -> Result<tokio::sync::broadcast::Sender<serde_json::Value>, String> {
+    let mut retry_reason = reason.to_string();
+    let mut pending_pause = initial_failure.map(|failure| (failure, retry_reason.clone()));
+    let mut pending_hint = initial_retry_after;
+    loop {
+        if let Some((failure, pause_reason)) = pending_pause.take() {
+            pause_for_project_cooldown(
+                app_broadcast,
+                automaton_registry,
+                project_id,
+                agent_instance_id,
+                Some(task_id),
+                &pause_reason,
+                failure,
+                pending_hint.take(),
+            )
+            .await;
+            retry_reason = pause_reason;
+        }
+        match try_restart_automaton(
+            app_broadcast,
+            project_id,
+            agent_instance_id,
+            task_id,
+            &retry_reason,
+            ctx,
+        )
+        .await
+        {
+            Ok(tx) => return Ok(tx),
+            Err(error) => {
+                if let Some(failure) = classify_infra_failure(&error) {
+                    retry_reason = error.clone();
+                    // Restart errors don't carry a structured event, so
+                    // scan the error text for a hint instead. Falls
+                    // back to the class's default cooldown on no match.
+                    pending_hint = parse_retry_after_seconds(&error).map(Duration::from_secs);
+                    pending_pause = Some((failure, error));
+                    continue;
+                }
+                return Err(error);
+            }
+        }
+    }
 }
 
 async fn resolve_active_task_id(
@@ -1198,7 +1578,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         // closes without one, we synthesise a `task_failed` with a real
         // reason so the UI and DB never get left in a limbo state.
         let mut terminal_seen = false;
-        // Retry context is consumed on the first infra-transient failure.
+        // Retry context is consumed according to its local restart budget.
         let mut retry = retry;
         // Phase 6 — Closed-loop heuristics. Lazily bound on the first
         // forwarded event so we can stamp the actual `run_id` into
@@ -1638,6 +2018,102 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             Some("task_completed")
                         }
                         "task_failed" => {
+                            let event_tid = event
+                                .get("task_id")
+                                .and_then(|v| v.as_str())
+                                .map(str::to_owned);
+                            let tid = current_task_id.clone().or(event_tid);
+                            // Extract a user-facing reason from the event so
+                            // we can both persist it to the task record (for
+                            // page reloads) and surface it on the live
+                            // `task_failed` broadcast below.
+                            let failure_reason = extract_failure_reason(&event);
+                            if let (Some(tid), Some(reason), Some(infra_failure)) = (
+                                tid.as_ref(),
+                                failure_reason.as_ref(),
+                                failure_reason
+                                    .as_deref()
+                                    .and_then(classify_infra_failure),
+                            ) {
+                                if let Some(ctx) = take_retry_context(&mut retry) {
+                                    // Provider-supplied Retry-After hint,
+                                    // when present, takes precedence over
+                                    // the class-default cooldown (clamped
+                                    // to `PROVIDER_BACKOFF_MAX_SECS`).
+                                    // Also record the retry in
+                                    // `retries.jsonl` so the run bundle
+                                    // surfaces the backoff.
+                                    let retry_after_hint = extract_retry_after(&event);
+                                    let hint_ms = retry_after_hint
+                                        .map(|d| d.as_millis() as u64);
+                                    loop_log
+                                        .on_json_event(
+                                            project_id,
+                                            agent_instance_id,
+                                            &serde_json::json!({
+                                                "type": "debug.retry",
+                                                "task_id": tid,
+                                                "reason": reason,
+                                                "class": infra_failure_label(infra_failure),
+                                                "retry_after_ms": hint_ms,
+                                            }),
+                                        )
+                                        .await;
+                                    match reset_task_for_infra_retry(
+                                        task_service.as_ref(),
+                                        project_id,
+                                        tid,
+                                    )
+                                    .await
+                                    {
+                                        Ok(()) => {
+                                            current_task_id = None;
+                                            sync_registry_task_id(
+                                                automaton_registry.clone(),
+                                                agent_instance_id,
+                                                None,
+                                            )
+                                            .await;
+                                            last_synced_task_id = None;
+                                            session_status = "paused";
+                                            match restart_with_infra_backoff(
+                                                &app_broadcast,
+                                                &automaton_registry,
+                                                project_id,
+                                                agent_instance_id,
+                                                tid,
+                                                reason,
+                                                Some(infra_failure),
+                                                retry_after_hint,
+                                                &ctx,
+                                            )
+                                            .await
+                                            {
+                                                Ok(new_tx) => {
+                                                    rx = new_tx.subscribe();
+                                                    terminal_seen = false;
+                                                    session_status = "completed";
+                                                    continue;
+                                                }
+                                                Err(restart_err) => {
+                                                    warn!(
+                                                        task_id = %tid,
+                                                        %restart_err,
+                                                        "Infra retry after task_failed could not restart automaton"
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(reset_err) => {
+                                            warn!(
+                                                task_id = %tid,
+                                                %reset_err,
+                                                "Infra retry classification matched, but task reset failed"
+                                            );
+                                        }
+                                    }
+                                }
+                            }
                             session_status = "failed";
                             terminal_seen = true;
                             // Clear the registry's active task pointer so
@@ -1650,16 +2126,6 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             )
                             .await;
                             last_synced_task_id = None;
-                            let event_tid = event
-                                .get("task_id")
-                                .and_then(|v| v.as_str())
-                                .map(str::to_owned);
-                            let tid = current_task_id.clone().or(event_tid);
-                            // Extract a user-facing reason from the event so
-                            // we can both persist it to the task record (for
-                            // page reloads) and surface it on the live
-                            // `task_failed` broadcast below.
-                            let failure_reason = extract_failure_reason(&event);
                             if let Some(ref tid) = tid {
                                 let session_id = event
                                     .get("session_id")
@@ -1872,15 +2338,19 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // reason.
                             let reason = extract_failure_reason(&event)
                                 .unwrap_or_else(|| "Automaton reported an error".to_string());
+                            let retry_after_hint = extract_retry_after(&event);
                             session_status = "failed";
                             if let Some(tid) = current_task_id.clone() {
-                                if let Some(ctx) = retry.take() {
-                                    match try_restart_automaton(
+                                if let Some(ctx) = take_retry_context(&mut retry) {
+                                    match restart_with_infra_backoff(
                                         &app_broadcast,
+                                        &automaton_registry,
                                         project_id,
                                         agent_instance_id,
                                         &tid,
                                         &reason,
+                                        classify_infra_failure(&reason),
+                                        retry_after_hint,
                                         &ctx,
                                     )
                                     .await
@@ -2111,13 +2581,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     // synthesise a `task_failed` with a real reason.
                     if !terminal_seen {
                         if let Some(tid) = current_task_id.clone() {
-                            if let Some(ctx) = retry.take() {
-                                match try_restart_automaton(
+                            if let Some(ctx) = take_retry_context(&mut retry) {
+                                match restart_with_infra_backoff(
                                     &app_broadcast,
+                                    &automaton_registry,
                                     project_id,
                                     agent_instance_id,
                                     &tid,
                                     "Automaton event stream closed before the task finished",
+                                    None,
+                                    None,
                                     &ctx,
                                 )
                                 .await
@@ -2213,6 +2686,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         // can filter "failed vs completed" without replaying events.
         let final_status = match session_status {
             "failed" => crate::loop_log::RunStatus::Failed,
+            "paused" => crate::loop_log::RunStatus::Interrupted,
             _ => crate::loop_log::RunStatus::Completed,
         };
         loop_log
@@ -2376,7 +2850,7 @@ pub(crate) async fn start_loop(
                             "Failed to stop stale conflicting automaton before retry"
                         );
                     }
-                    match automaton_client.start(start_params).await {
+                    match automaton_client.start(start_params.clone()).await {
                         Ok(r) => {
                             let esurl = r.event_stream_url.clone();
                             (r.automaton_id, false, Some(esurl))
@@ -2686,7 +3160,11 @@ pub(crate) async fn start_loop(
         http_client: state.agent_runtime.http_client.clone(),
         // Dev loop already handles retries via its own task scheduler; the
         // outer loop will pick the task up again if it was reset.
-        retry: None,
+        retry: Some(TransientRetryContext {
+            automaton_client: automaton_client.clone(),
+            start_params: start_params.clone(),
+            restart_budget: None,
+        }),
         alive: forwarder_alive.clone(),
         loop_log: state.loop_log.clone(),
     });
@@ -3265,6 +3743,7 @@ pub(crate) async fn run_single_task(
             retry: Some(TransientRetryContext {
                 automaton_client: automaton_client.clone(),
                 start_params,
+                restart_budget: Some(1),
             }),
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             loop_log: state.loop_log.clone(),
@@ -3375,12 +3854,7 @@ async fn active_tasks(state: &AppState, project_id: ProjectId) -> Vec<ActiveLoop
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        classify_failure, classify_run_command_steps, estimate_usage_cost_usd,
-        extract_files_changed, extract_run_command, extract_turn_usage, is_work_event_type,
-        map_passthrough_event_type, preferred_automaton_model, requested_automaton_model,
-        FailureClass, ForwarderAliveGuard, VerificationStepKind,
-    };
+    use super::*;
     use aura_os_core::{AgentInstance, AgentPermissions, AgentStatus};
     use chrono::Utc;
 
@@ -3683,13 +4157,27 @@ mod tests {
             );
         }
 
-        let non_truncation_reasons = [
+        let rate_limited_reasons = [
             "rate limit exceeded (429)",
             "upstream provider returned 529",
+            "Anthropic returned overloaded_error",
+            "HTTP 429 Too Many Requests",
+            "RateLimit reached",
+        ];
+        for reason in rate_limited_reasons {
+            assert_eq!(
+                classify_failure(reason),
+                FailureClass::RateLimited,
+                "expected RateLimited class for: {reason}"
+            );
+        }
+
+        let other_reasons = [
             "authentication required: missing jwt",
             "agent exited unexpectedly",
+            "unknown tool error",
         ];
-        for reason in non_truncation_reasons {
+        for reason in other_reasons {
             assert_eq!(
                 classify_failure(reason),
                 FailureClass::Other,
@@ -3705,6 +4193,182 @@ mod tests {
             classify_failure("No File Operations"),
             FailureClass::Truncation
         );
+        assert_eq!(
+            classify_failure("HTTP 429 TOO MANY REQUESTS"),
+            FailureClass::RateLimited
+        );
+        assert_eq!(
+            classify_failure("Provider OVERLOADED"),
+            FailureClass::RateLimited
+        );
+    }
+
+    #[test]
+    fn rate_limit_takes_precedence_over_truncation() {
+        // A 429 response body that happens to include the word
+        // "truncated" should still route to the rate-limit backoff
+        // path — retrying the truncation heuristic in the middle of a
+        // provider rate-limit window is wasted budget.
+        let reason = "Response was truncated: received HTTP 429 from upstream";
+        assert_eq!(classify_failure(reason), FailureClass::RateLimited);
+    }
+
+    #[test]
+    fn parse_retry_after_seconds_recognises_common_phrasings() {
+        assert_eq!(parse_retry_after_seconds("retry after 30 seconds"), Some(30));
+        assert_eq!(parse_retry_after_seconds("retry in 45s"), Some(45));
+        assert_eq!(parse_retry_after_seconds("try again in 12 seconds please"), Some(12));
+        assert_eq!(
+            parse_retry_after_seconds("Please try again in 5 seconds"),
+            Some(5)
+        );
+        assert_eq!(parse_retry_after_seconds("no hint here"), None);
+        assert_eq!(parse_retry_after_seconds("retry after 0"), None);
+    }
+
+    #[test]
+    fn extract_retry_after_prefers_structured_fields() {
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "retry_after_ms": 2500u64,
+            "reason": "429 Too Many Requests (retry after 30 seconds)",
+        });
+        assert_eq!(
+            extract_retry_after(&event),
+            Some(Duration::from_millis(2500))
+        );
+
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "retry_after": 42u64,
+            "reason": "retry after 5 seconds",
+        });
+        assert_eq!(extract_retry_after(&event), Some(Duration::from_secs(42)));
+
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "headers": { "Retry-After": "17" },
+            "reason": "HTTP 429",
+        });
+        assert_eq!(extract_retry_after(&event), Some(Duration::from_secs(17)));
+
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "reason": "rate limit exceeded, retry in 9 seconds",
+        });
+        assert_eq!(extract_retry_after(&event), Some(Duration::from_secs(9)));
+
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "reason": "just a generic 429",
+        });
+        assert_eq!(extract_retry_after(&event), None);
+    }
+
+    #[test]
+    fn extract_retry_after_clamps_to_ceiling() {
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "retry_after": 10_000u64,
+            "reason": "HTTP 429",
+        });
+        assert_eq!(
+            extract_retry_after(&event),
+            Some(Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS))
+        );
+    }
+
+    #[test]
+    fn project_cooldown_hint_raises_but_never_lowers_default() {
+        let project_id = ProjectId::new();
+        // Hint shorter than the class default is floored to the default.
+        let short = register_project_cooldown_with_hint(
+            project_id,
+            InfraFailureClass::ProviderRateLimited,
+            "short hint",
+            Some(Duration::from_secs(1)),
+        );
+        assert!(short >= infra_cooldown_for(InfraFailureClass::ProviderRateLimited));
+        clear_project_cooldown(project_id);
+
+        // Hint longer than the class default wins, up to the cap.
+        let long = register_project_cooldown_with_hint(
+            project_id,
+            InfraFailureClass::ProviderRateLimited,
+            "long hint",
+            Some(Duration::from_secs(90)),
+        );
+        assert_eq!(long, Duration::from_secs(90));
+        clear_project_cooldown(project_id);
+
+        // Hint above the ceiling is clamped.
+        let capped = register_project_cooldown_with_hint(
+            project_id,
+            InfraFailureClass::ProviderRateLimited,
+            "huge hint",
+            Some(Duration::from_secs(10_000)),
+        );
+        assert_eq!(capped, Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS));
+        clear_project_cooldown(project_id);
+    }
+
+    #[test]
+    fn classify_infra_failure_detects_provider_and_git_issues() {
+        assert_eq!(
+            classify_infra_failure("Anthropic 429 Too Many Requests"),
+            Some(InfraFailureClass::ProviderRateLimited)
+        );
+        assert_eq!(
+            classify_infra_failure("upstream provider returned 529 overloaded"),
+            Some(InfraFailureClass::ProviderOverloaded)
+        );
+        assert_eq!(
+            classify_infra_failure("git add -A timed out after 30s"),
+            Some(InfraFailureClass::GitTimeout)
+        );
+        assert_eq!(
+            classify_infra_failure("event stream connect timeout"),
+            Some(InfraFailureClass::TransportTimeout)
+        );
+        assert_eq!(classify_infra_failure("syntax error in generated code"), None);
+    }
+
+    #[test]
+    fn retry_context_budget_counts_down() {
+        let start_params = AutomatonStartParams {
+            project_id: ProjectId::new().to_string(),
+            auth_token: None,
+            model: None,
+            workspace_root: None,
+            task_id: None,
+            git_repo_url: None,
+            git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
+        };
+        let client = std::sync::Arc::new(aura_os_link::AutomatonClient::new("http://127.0.0.1:1"));
+        let mut retry = Some(TransientRetryContext {
+            automaton_client: client,
+            start_params,
+            restart_budget: Some(2),
+        });
+        assert!(take_retry_context(&mut retry).is_some());
+        assert!(take_retry_context(&mut retry).is_some());
+        assert!(take_retry_context(&mut retry).is_none());
+    }
+
+    #[test]
+    fn project_cooldown_prefers_longer_existing_window() {
+        let project_id = ProjectId::new();
+        let first = register_project_cooldown(
+            project_id,
+            InfraFailureClass::ProviderRateLimited,
+            "429",
+        );
+        let second = register_project_cooldown(project_id, InfraFailureClass::GitTimeout, "git");
+        assert!(second >= first.saturating_sub(Duration::from_secs(1)));
+        let active = active_project_cooldown(project_id).expect("cooldown should be active");
+        assert_eq!(active.1, InfraFailureClass::GitTimeout);
     }
 
     #[test]
