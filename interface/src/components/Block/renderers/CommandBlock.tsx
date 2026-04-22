@@ -1,27 +1,8 @@
 import { Terminal } from "lucide-react";
 import type { ToolCallEntry } from "../../../types/stream";
+import { decodeCapturedOutput } from "../../../utils/format";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
-
-function parseCommandResult(result: string | undefined): {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-} {
-  if (!result) return { stdout: "", stderr: "", exitCode: null };
-  try {
-    const parsed = JSON.parse(result);
-    if (typeof parsed === "object" && parsed !== null) {
-      const stdout = typeof parsed.stdout === "string" ? parsed.stdout : "";
-      const stderr = typeof parsed.stderr === "string" ? parsed.stderr : "";
-      const exitCode = typeof parsed.exit_code === "number" ? parsed.exit_code : null;
-      return { stdout, stderr, exitCode };
-    }
-  } catch {
-    /* Not JSON — treat whole result as stdout. */
-  }
-  return { stdout: result, stderr: "", exitCode: null };
-}
 
 interface CommandBlockProps {
   entry: ToolCallEntry;
@@ -30,7 +11,7 @@ interface CommandBlockProps {
 
 export function CommandBlock({ entry, defaultExpanded }: CommandBlockProps) {
   const command = (entry.input.command as string) || "";
-  const { stdout, stderr, exitCode } = parseCommandResult(entry.result);
+  const { stdout, stderr, exitCode } = decodeCapturedOutput(entry.result);
   const hasOutput = !!stdout || !!stderr;
 
   const isError = entry.isError || (exitCode !== null && exitCode !== 0);

@@ -4,6 +4,7 @@ import type { ToolCallEntry } from "../../../types/stream";
 import { langFromPath } from "../../../ide/lang";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
 import { TOOL_PHASE_LABELS } from "../../../constants/tools";
+import { decodeCapturedOutput } from "../../../utils/format";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";
 import styles from "./renderers.module.css";
@@ -150,7 +151,20 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
   } else if (isWrite && hasWriteContent) {
     body = <CodeView content={writeContent} language={lang} streaming={entry.pending} />;
   } else if (isRead && hasReadContent) {
-    body = <CodeView content={entry.result as string} language={lang} />;
+    // `read_file` results arrive as a JSON envelope
+    // `{ ok, stdout: <base64 file contents>, stderr, metadata }`. Decode it
+    // so the viewer shows the actual file content (syntax-highlighted by
+    // path) rather than a one-line JSON blob with raw base64 inside.
+    const decoded = decodeCapturedOutput(entry.result as string);
+    if (decoded.ok === false) {
+      body = (
+        <div className={styles.inlineError}>
+          {decoded.stderr || decoded.stdout || "Read failed."}
+        </div>
+      );
+    } else {
+      body = <CodeView content={decoded.stdout} language={lang} />;
+    }
   }
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";

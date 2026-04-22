@@ -9,6 +9,7 @@ import {
   formatDuration,
   summarizeInput,
   formatResult,
+  decodeCapturedOutput,
   summarizeError,
   formatRelativeTime,
   formatChatTime,
@@ -318,6 +319,67 @@ describe("formatResult", () => {
     const payload = JSON.stringify({ stdout: "ThisIsNotBase64" });
     const out = formatResult(payload);
     expect(out).toContain('"stdout": "ThisIsNotBase64"');
+  });
+});
+
+describe("decodeCapturedOutput", () => {
+  it("decodes base64 stdout/stderr and returns exit_code", () => {
+    const payload = JSON.stringify({
+      tool: "run_command",
+      ok: true,
+      stdout: btoa("Hello, World!\n"),
+      stderr: btoa(""),
+      exit_code: 0,
+    });
+    const out = decodeCapturedOutput(payload);
+    expect(out.stdout).toBe("Hello, World!\n");
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBe(0);
+    expect(out.ok).toBe(true);
+  });
+
+  it("strips ANSI escapes from decoded output", () => {
+    const colored = "\x1B[31merror\x1B[0m: boom\n";
+    const payload = JSON.stringify({ ok: false, stderr: btoa(colored) });
+    const out = decodeCapturedOutput(payload);
+    expect(out.stderr).toBe("error: boom\n");
+    expect(out.ok).toBe(false);
+  });
+
+  it("returns metadata when present", () => {
+    const payload = JSON.stringify({
+      tool: "read_file",
+      ok: true,
+      stdout: btoa("fn main() {}\n"),
+      stderr: "",
+      metadata: { size: 13 },
+    });
+    const out = decodeCapturedOutput(payload);
+    expect(out.stdout).toBe("fn main() {}\n");
+    expect(out.metadata).toEqual({ size: 13 });
+  });
+
+  it("treats non-JSON input as a single captured-output string", () => {
+    const out = decodeCapturedOutput(btoa("plain text\n"));
+    expect(out.stdout).toBe("plain text\n");
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBeNull();
+    expect(out.ok).toBeNull();
+  });
+
+  it("returns empty fields for undefined input", () => {
+    const out = decodeCapturedOutput(undefined);
+    expect(out.stdout).toBe("");
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBeNull();
+    expect(out.ok).toBeNull();
+    expect(out.metadata).toBeNull();
+  });
+
+  it("passes non-base64 strings through untouched", () => {
+    const payload = JSON.stringify({ stdout: "ThisIsNotBase64", stderr: "" });
+    const out = decodeCapturedOutput(payload);
+    expect(out.stdout).toBe("ThisIsNotBase64");
   });
 });
 

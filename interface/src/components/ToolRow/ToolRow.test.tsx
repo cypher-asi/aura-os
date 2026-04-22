@@ -140,6 +140,111 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(screen.getByText("stale.txt")).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
     });
+
+    it("decodes base64 stdout for read_file and never renders the raw envelope", () => {
+      const source = "fn main() {}\n";
+      const envelope = JSON.stringify({
+        tool: "read_file",
+        ok: true,
+        stdout: btoa(source),
+        stderr: "",
+        metadata: { size: source.length },
+      });
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "read_file",
+            pending: false,
+            started: false,
+            input: { path: "src/main.rs" },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(container.textContent ?? "").toContain("fn main() {}");
+      expect(container.textContent ?? "").not.toContain("\"stdout\"");
+      expect(container.textContent ?? "").not.toContain(btoa(source));
+    });
+
+    it("shows an inline error when read_file envelope reports ok=false", () => {
+      const envelope = JSON.stringify({
+        tool: "read_file",
+        ok: false,
+        stdout: "",
+        stderr: btoa("ENOENT: missing.rs\n"),
+      });
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "read_file",
+            pending: false,
+            started: false,
+            isError: true,
+            input: { path: "missing.rs" },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(container.textContent ?? "").toContain("ENOENT: missing.rs");
+    });
+  });
+
+  describe("command block", () => {
+    it("decodes base64 stdout/stderr into legible text", () => {
+      const envelope = JSON.stringify({
+        tool: "run_command",
+        ok: true,
+        stdout: btoa("Hello, World!\n"),
+        stderr: btoa(""),
+        exit_code: 0,
+      });
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "run_command",
+            pending: false,
+            started: false,
+            input: { command: "cargo run" },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(container.textContent ?? "").toContain("Hello, World!");
+      expect(container.textContent ?? "").toContain("EXIT 0");
+      expect(container.textContent ?? "").not.toContain(btoa("Hello, World!\n"));
+    });
+
+    it("strips ANSI escapes from decoded cargo-style output", () => {
+      const colored = "\x1B[31merror[E0433]\x1B[0m: cannot find crate `foo`\n";
+      const envelope = JSON.stringify({
+        tool: "run_command",
+        ok: false,
+        stdout: "",
+        stderr: btoa(colored),
+        exit_code: 101,
+      });
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "run_command",
+            pending: false,
+            started: false,
+            isError: true,
+            input: { command: "cargo check --workspace" },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      const text = container.textContent ?? "";
+      expect(text).toContain("error[E0433]: cannot find crate `foo`");
+      // eslint-disable-next-line no-control-regex
+      expect(text).not.toMatch(/\x1B\[/);
+      expect(text).toContain("EXIT 101");
+    });
   });
 
   describe("task blocks", () => {

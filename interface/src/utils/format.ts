@@ -176,7 +176,7 @@ const ANSI_RE =
 // eslint-disable-next-line no-control-regex
 const FORBIDDEN_CTRL_RE = /[\u0000-\u0008\u000E-\u001A\u001C-\u001F]/;
 
-function tryDecodeBase64(value: string): string {
+export function tryDecodeBase64(value: string): string {
   if (!value || value.length < 4 || value.length % 4 !== 0 || !BASE64_RE.test(value)) {
     return value;
   }
@@ -187,6 +187,43 @@ function tryDecodeBase64(value: string): string {
   } catch {
     return value;
   }
+}
+
+/**
+ * Parses the standard tool-result envelope
+ * `{ ok, stdout, stderr, exit_code?, metadata? }` and decodes captured output
+ * fields that the backend base64-encodes for binary-safe JSON transport.
+ *
+ * Non-JSON input is treated as a single captured-output string. Missing fields
+ * return empty strings / nulls so callers can branch on presence without
+ * re-parsing.
+ */
+export function decodeCapturedOutput(result: string | undefined): {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  ok: boolean | null;
+  metadata: unknown;
+} {
+  if (!result) {
+    return { stdout: "", stderr: "", exitCode: null, ok: null, metadata: null };
+  }
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed && typeof parsed === "object") {
+      const p = parsed as Record<string, unknown>;
+      return {
+        stdout: typeof p.stdout === "string" ? tryDecodeBase64(p.stdout) : "",
+        stderr: typeof p.stderr === "string" ? tryDecodeBase64(p.stderr) : "",
+        exitCode: typeof p.exit_code === "number" ? p.exit_code : null,
+        ok: typeof p.ok === "boolean" ? p.ok : null,
+        metadata: p.metadata ?? null,
+      };
+    }
+  } catch {
+    /* not JSON — fall through */
+  }
+  return { stdout: tryDecodeBase64(result), stderr: "", exitCode: null, ok: null, metadata: null };
 }
 
 // Keys whose string values are known to carry captured process output that
