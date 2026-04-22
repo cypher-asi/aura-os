@@ -303,7 +303,6 @@ fn register_project_cooldown_with_hint(
     requested
 }
 
-#[cfg(test)]
 fn active_project_cooldown(project_id: ProjectId) -> Option<(Duration, InfraFailureClass, String)> {
     let key = project_id.to_string();
     let guard = match project_cooldowns().lock() {
@@ -316,6 +315,40 @@ fn active_project_cooldown(project_id: ProjectId) -> Option<(Duration, InfraFail
         return None;
     }
     Some((remaining, cooldown.class, cooldown.reason.clone()))
+}
+
+fn loop_status_details(
+    project_id: ProjectId,
+    running: bool,
+    paused: bool,
+) -> (String, Option<u64>, Option<String>, Option<String>) {
+    if let Some((remaining, class, reason)) = active_project_cooldown(project_id) {
+        return (
+            "cooldown".to_string(),
+            Some(remaining.as_millis() as u64),
+            Some(reason),
+            Some(infra_failure_label(class).to_string()),
+        );
+    }
+    let state = if paused {
+        "paused"
+    } else if running {
+        "running"
+    } else {
+        "finished"
+    };
+    (state.to_string(), None, None, None)
+}
+
+fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
+    let has_output = !cached.live_output.trim().is_empty();
+    let has_file_changes = !cached.files_changed.is_empty();
+    let has_verification = !cached.build_steps.is_empty() || !cached.test_steps.is_empty();
+    if has_output || has_file_changes || has_verification {
+        None
+    } else {
+        Some("Automaton reported task_completed without output, file changes, or verification evidence")
+    }
 }
 
 fn clear_project_cooldown(project_id: ProjectId) {
@@ -1954,6 +1987,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 .and_then(|v| v.as_str())
                                 .map(str::to_owned);
                             let tid = current_task_id.clone().or(event_tid);
+                            let mut completion_mapped = Some("task_completed");
                             if let Some(ref tid) = tid {
                                 let session_id = event
                                     .get("session_id")
@@ -2002,7 +2036,53 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     &cached,
                                 )
                                 .await;
-                                if let (Some(storage_client), Some(jwt)) =
+                                if let Some(reason) = completion_validation_failure_reason(&cached)
+                                {
+                                    session_status = "failed";
+                                    if let (Some(storage_client), Some(jwt)) =
+                                        (storage_client.as_ref(), jwt.as_deref())
+                                    {
+                                        let update = aura_os_storage::UpdateTaskRequest {
+                                            execution_notes: Some(reason.to_string()),
+                                            files_changed: (!cached.files_changed.is_empty())
+                                                .then_some(cached.files_changed.clone()),
+                                            model: cached.model.clone(),
+                                            total_input_tokens: Some(cached.total_input_tokens),
+                                            total_output_tokens: Some(cached.total_output_tokens),
+                                            session_id: cached.session_id.clone(),
+                                            assigned_project_agent_id: Some(aiid.clone()),
+                                            ..Default::default()
+                                        };
+                                        if let Err(error) =
+                                            storage_client.update_task(tid, jwt, &update).await
+                                        {
+                                            warn!(
+                                                task_id = %tid,
+                                                %error,
+                                                "Failed to persist completion-validation failure metadata"
+                                            );
+                                        }
+                                        let req = aura_os_storage::TransitionTaskRequest {
+                                            status: "failed".to_string(),
+                                        };
+                                        if let Err(error) =
+                                            storage_client.transition_task(tid, jwt, &req).await
+                                        {
+                                            warn!(task_id = %tid, %error, "Failed to transition invalid completion to Failed (may already be terminal)");
+                                        }
+                                    }
+                                    if let Some(obj) = event.as_object_mut() {
+                                        obj.insert(
+                                            "type".into(),
+                                            serde_json::Value::String("task_failed".into()),
+                                        );
+                                        obj.insert(
+                                            "reason".into(),
+                                            serde_json::Value::String(reason.to_string()),
+                                        );
+                                    }
+                                    completion_mapped = Some("task_failed");
+                                } else if let (Some(storage_client), Some(jwt)) =
                                     (storage_client.as_ref(), jwt.as_deref())
                                 {
                                     let req = aura_os_storage::TransitionTaskRequest {
@@ -2015,7 +2095,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     }
                                 }
                             }
-                            Some("task_completed")
+                            completion_mapped
                         }
                         "task_failed" => {
                             let event_tid = event
@@ -2075,7 +2155,6 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             )
                                             .await;
                                             last_synced_task_id = None;
-                                            session_status = "paused";
                                             match restart_with_infra_backoff(
                                                 &app_broadcast,
                                                 &automaton_registry,
@@ -2992,9 +3071,13 @@ pub(crate) async fn start_loop(
                 Json(LoopStatusResponse {
                     running: true,
                     paused: false,
+                    loop_state: Some("running".to_string()),
                     project_id: Some(project_id),
                     agent_instance_id: Some(agent_instance_id),
                     active_agent_instances: Some(active_agent_instances),
+                    cooldown_remaining_ms: None,
+                    cooldown_reason: None,
+                    cooldown_kind: None,
                     active_tasks: Some(active_tasks),
                 }),
             ));
@@ -3204,15 +3287,21 @@ pub(crate) async fn start_loop(
 
     let active_agent_instances = active_instances(&state, project_id).await;
     let active_tasks = active_tasks(&state, project_id).await;
+    let (loop_state, cooldown_remaining_ms, cooldown_reason, cooldown_kind) =
+        loop_status_details(project_id, true, false);
 
     Ok((
         StatusCode::CREATED,
         Json(LoopStatusResponse {
             running: true,
             paused: false,
+            loop_state: Some(loop_state),
             project_id: Some(project_id),
             agent_instance_id: Some(agent_instance_id),
             active_agent_instances: Some(active_agent_instances),
+            cooldown_remaining_ms,
+            cooldown_reason,
+            cooldown_kind,
             active_tasks: Some(active_tasks),
         }),
     ))
@@ -3281,13 +3370,19 @@ pub(crate) async fn pause_loop(
 
     let active_agent_instances = active_instances(&state, project_id).await;
     let active_tasks = active_tasks(&state, project_id).await;
+    let (loop_state, cooldown_remaining_ms, cooldown_reason, cooldown_kind) =
+        loop_status_details(project_id, true, true);
 
     Ok(Json(LoopStatusResponse {
         running: true,
         paused: true,
+        loop_state: Some(loop_state),
         project_id: Some(project_id),
         agent_instance_id: params.agent_instance_id,
         active_agent_instances: Some(active_agent_instances),
+        cooldown_remaining_ms,
+        cooldown_reason,
+        cooldown_kind,
         active_tasks: Some(active_tasks),
     }))
 }
@@ -3314,12 +3409,18 @@ pub(crate) async fn stop_loop(
     if targets.is_empty() {
         let remaining = active_instances(&state, project_id).await;
         let remaining_tasks = active_tasks(&state, project_id).await;
+        let (loop_state, cooldown_remaining_ms, cooldown_reason, cooldown_kind) =
+            loop_status_details(project_id, !remaining.is_empty(), false);
         return Ok(Json(LoopStatusResponse {
             running: !remaining.is_empty(),
             paused: false,
+            loop_state: Some(loop_state),
             project_id: Some(project_id),
             agent_instance_id: params.agent_instance_id,
             active_agent_instances: Some(remaining),
+            cooldown_remaining_ms,
+            cooldown_reason,
+            cooldown_kind,
             active_tasks: Some(remaining_tasks),
         }));
     }
@@ -3381,13 +3482,19 @@ pub(crate) async fn stop_loop(
 
     let remaining = active_instances(&state, project_id).await;
     let remaining_tasks = active_tasks(&state, project_id).await;
+    let (loop_state, cooldown_remaining_ms, cooldown_reason, cooldown_kind) =
+        loop_status_details(project_id, !remaining.is_empty(), false);
 
     Ok(Json(LoopStatusResponse {
         running: !remaining.is_empty(),
         paused: false,
+        loop_state: Some(loop_state),
         project_id: Some(project_id),
         agent_instance_id: params.agent_instance_id,
         active_agent_instances: Some(remaining),
+        cooldown_remaining_ms,
+        cooldown_reason,
+        cooldown_kind,
         active_tasks: Some(remaining_tasks),
     }))
 }
@@ -3449,13 +3556,19 @@ pub(crate) async fn resume_loop(
 
     let active_agent_instances = active_instances(&state, project_id).await;
     let active_tasks = active_tasks(&state, project_id).await;
+    let (loop_state, cooldown_remaining_ms, cooldown_reason, cooldown_kind) =
+        loop_status_details(project_id, true, false);
 
     Ok(Json(LoopStatusResponse {
         running: true,
         paused: false,
+        loop_state: Some(loop_state),
         project_id: Some(project_id),
         agent_instance_id: params.agent_instance_id,
         active_agent_instances: Some(active_agent_instances),
+        cooldown_remaining_ms,
+        cooldown_reason,
+        cooldown_kind,
         active_tasks: Some(active_tasks),
     }))
 }
@@ -3484,13 +3597,20 @@ pub(crate) async fn get_loop_status(
         })
         .collect();
     drop(reg);
+    let running = !active.is_empty();
+    let (loop_state, cooldown_remaining_ms, cooldown_reason, cooldown_kind) =
+        loop_status_details(project_id, running, any_paused);
 
     Ok(Json(LoopStatusResponse {
-        running: !active.is_empty(),
+        running,
         paused: any_paused,
+        loop_state: Some(loop_state),
         project_id: Some(project_id),
         agent_instance_id: None,
         active_agent_instances: Some(active),
+        cooldown_remaining_ms,
+        cooldown_reason,
+        cooldown_kind,
         active_tasks: Some(active_tasks),
     }))
 }
@@ -4369,6 +4489,24 @@ mod tests {
         assert!(second >= first.saturating_sub(Duration::from_secs(1)));
         let active = active_project_cooldown(project_id).expect("cooldown should be active");
         assert_eq!(active.1, InfraFailureClass::GitTimeout);
+        clear_project_cooldown(project_id);
+    }
+
+    #[test]
+    fn completion_validation_requires_some_execution_evidence() {
+        let empty = CachedTaskOutput::default();
+        assert_eq!(
+            completion_validation_failure_reason(&empty),
+            Some(
+                "Automaton reported task_completed without output, file changes, or verification evidence"
+            )
+        );
+
+        let with_output = CachedTaskOutput {
+            live_output: "done".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(completion_validation_failure_reason(&with_output), None);
     }
 
     #[test]

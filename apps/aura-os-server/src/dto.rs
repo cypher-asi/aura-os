@@ -77,11 +77,19 @@ pub(crate) struct ActiveLoopTask {
 pub(crate) struct LoopStatusResponse {
     pub running: bool,
     pub paused: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loop_state: Option<String>,
     pub project_id: Option<ProjectId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_instance_id: Option<AgentInstanceId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_agent_instances: Option<Vec<AgentInstanceId>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cooldown_remaining_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cooldown_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cooldown_kind: Option<String>,
     /// Per-agent tasks currently streaming output. Set from the
     /// automaton registry's `current_task_id` so clients can rehydrate
     /// the Run panel and per-task "live" indicators after a page
