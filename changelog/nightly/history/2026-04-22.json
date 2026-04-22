@@ -1706,7 +1706,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -1741,7 +1741,9 @@
             "crates/aura-os-storage/src/conversions.rs",
             "crates/aura-os-tasks/tests/state_machine.rs",
             "apps/aura-os-server/src/handlers/live_heuristics.rs"
-          ]
+          ],
+          "updatedAt": "2026-04-22T18:25:04.545Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-autonomous-recovery-pipeline-for-truncated-dev-loop-runs"
         }
       },
       {
@@ -1826,7 +1828,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -1861,7 +1863,11 @@
             "interface/src/utils/format.test.ts",
             "interface/src/utils/format.ts",
             "interface/src/components/Block/renderers/ListBlock.tsx"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.335.1/entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T18:26:09.232Z",
+          "storyTitle": "Linear LLM Streaming, Decoded Tool Blocks & Safer Logout"
         }
       },
       {
@@ -1881,7 +1887,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 4,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -1893,7 +1899,9 @@
           "alt": "External harness flag surfaced in desktop runtime config screenshot",
           "files": [
             "apps/aura-os-desktop/src/handlers.rs"
-          ]
+          ],
+          "updatedAt": "2026-04-22T18:30:56.353Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-external-harness-flag-surfaced-in-desktop-runtime-config"
         }
       },
       {
@@ -1921,7 +1929,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 4,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -1954,7 +1962,11 @@
             "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
             "interface/src/hooks/use-stream-safe-content.ts",
             "interface/src/stores/auth-store.ts"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.335.1/entry-post-landing-cleanup-to-unblock-the-build.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T18:32:53.127Z",
+          "storyTitle": "Post-landing cleanup: dead fields trimmed, unused TS declarations removed, build un…"
         }
       },
       {

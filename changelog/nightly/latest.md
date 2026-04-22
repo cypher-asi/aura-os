@@ -36,8 +36,8 @@ The in-progress AURA_NODE_AUTH_TOKEN plumbing between aura-os and the harness is
 
 A second wave of interface fixes untangles live streaming, makes tool-result blocks readable, and rescues logout from a redirect loop — plus a billing identity correctness fix.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout","slug":"linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout","alt":"Linear LLM streaming, decoded tool blocks, and a safer logout screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout","slug":"linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout","alt":"Linear LLM streaming, decoded tool blocks, and a safer logout screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.335.1/entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout.png","screenshotSource":"capture-proof","updatedAt":"2026-04-22T18:26:09.232Z","storyTitle":"Linear LLM Streaming, Decoded Tool Blocks & Safer Logout"} -->
+![Linear LLM streaming, decoded tool blocks, and a safer logout screenshot](../../assets/changelog/nightly/0.1.0-nightly.335.1/entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout -->
 
 - Live LLM streaming is now strictly linear: text deltas append only to the timeline tail instead of folding back into earlier items, a new markdown-safety pass hides dangling * / _ markers under the cursor, and a writing-aware phase label hides the 'Cooking' indicator only while words are actively revealing. (`aabd229`)
@@ -61,8 +61,8 @@ The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI c
 
 Small follow-ups after the big dev-loop and streaming landings: dead fields trimmed, formatting applied, and unused TS declarations removed so tsc and vite build cleanly.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-post-landing-cleanup-to-unblock-the-build","slug":"post-landing-cleanup-to-unblock-the-build","alt":"Post-landing cleanup to unblock the build screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-post-landing-cleanup-to-unblock-the-build","slug":"post-landing-cleanup-to-unblock-the-build","alt":"Post-landing cleanup to unblock the build screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.335.1/entry-post-landing-cleanup-to-unblock-the-build.png","screenshotSource":"capture-proof","updatedAt":"2026-04-22T18:32:53.127Z","storyTitle":"Post-landing cleanup: dead fields trimmed, unused TS declarations removed, build un…"} -->
+![Post-landing cleanup to unblock the build screenshot](../../assets/changelog/nightly/0.1.0-nightly.335.1/entry-post-landing-cleanup-to-unblock-the-build.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-post-landing-cleanup-to-unblock-the-build -->
 
 - LiveAnalyzer shed its unused run_id field (callers pass run_id directly into the emitted payload), and cargo fmt was applied across the server handlers, aura-run-analyze, and aura-run-heuristics rules. (`2a78b8e`, `d8d4ab9`)
