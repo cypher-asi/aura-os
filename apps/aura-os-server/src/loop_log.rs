@@ -88,11 +88,7 @@ impl LoopLogWriter {
     /// times — a second call for the same `(project, instance)` pair
     /// replaces the in-memory pointer but leaves the previous bundle
     /// intact on disk.
-    pub async fn on_loop_started(
-        &self,
-        project_id: ProjectId,
-        agent_instance_id: AgentInstanceId,
-    ) {
+    pub async fn on_loop_started(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
         let now = Utc::now();
         let run_id = format!("{}_{}", now.format("%Y%m%d_%H%M%S"), agent_instance_id);
         let run_dir = self.base_dir.join(project_id.to_string()).join(&run_id);
@@ -196,7 +192,8 @@ impl LoopLogWriter {
                 update_counters(&mut run.metadata.counters, &event_type, event);
                 if matches!(event_type.as_str(), "task_completed" | "task_failed") {
                     if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
-                        if let Some(entry) = run.metadata.tasks.iter_mut().find(|t| t.task_id == tid)
+                        if let Some(entry) =
+                            run.metadata.tasks.iter_mut().find(|t| t.task_id == tid)
                         {
                             entry.ended_at = Some(Utc::now());
                             entry.status = Some(event_type.clone());
@@ -322,11 +319,7 @@ impl LoopLogWriter {
         seen.into_iter().collect()
     }
 
-    pub async fn read_metadata(
-        &self,
-        project_id: ProjectId,
-        run_id: &str,
-    ) -> Option<RunMetadata> {
+    pub async fn read_metadata(&self, project_id: ProjectId, run_id: &str) -> Option<RunMetadata> {
         let dir = self.bundle_dir(project_id, run_id);
         read_metadata(&dir).await
     }
@@ -342,9 +335,7 @@ impl LoopLogWriter {
     }
 
     pub async fn read_summary(&self, project_id: ProjectId, run_id: &str) -> Option<String> {
-        let path = self
-            .bundle_dir(project_id, run_id)
-            .join("summary.md");
+        let path = self.bundle_dir(project_id, run_id).join("summary.md");
         match fs::read_to_string(&path).await {
             Ok(content) => Some(content),
             Err(_) => {
@@ -381,10 +372,29 @@ fn update_counters(counters: &mut RunCounters, event_type: &str, event: &serde_j
         "tool_call_snapshot" | "tool_call_completed" | "tool_use_start" => {
             counters.tool_calls += 1;
         }
+        "text_delta" => counters.narration_deltas += 1,
         "task_completed" => counters.task_completed += 1,
         "task_failed" => counters.task_failed += 1,
         "assistant_message_end" | "token_usage" => {
+            // Anthropic emits `token_usage` frames throughout a turn with
+            // cumulative-ish counts; summing every frame double-counts.
+            // Only fold usage into the run totals when the event is a
+            // terminal `assistant_message_end`, or when the frame
+            // explicitly marks itself as final (either at the top level
+            // or under `usage`).
             let usage = event.get("usage").unwrap_or(event);
+            let is_final = event_type == "assistant_message_end"
+                || event
+                    .get("final")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                || usage
+                    .get("final")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+            if !is_final {
+                return;
+            }
             if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
                 counters.input_tokens = counters.input_tokens.saturating_add(inp);
             }
@@ -416,11 +426,7 @@ fn render_summary(metadata: &RunMetadata) -> String {
     let _ = writeln!(out, "# Run {}", metadata.run_id);
     let _ = writeln!(out);
     let _ = writeln!(out, "- project_id: `{}`", metadata.project_id);
-    let _ = writeln!(
-        out,
-        "- agent_instance_id: `{}`",
-        metadata.agent_instance_id
-    );
+    let _ = writeln!(out, "- agent_instance_id: `{}`", metadata.agent_instance_id);
     let _ = writeln!(out, "- started_at: {}", metadata.started_at.to_rfc3339());
     if let Some(ended) = metadata.ended_at {
         let duration = ended.signed_duration_since(metadata.started_at);
@@ -437,6 +443,7 @@ fn render_summary(metadata: &RunMetadata) -> String {
     let _ = writeln!(out, "- blockers: {}", c.blockers);
     let _ = writeln!(out, "- retries: {}", c.retries);
     let _ = writeln!(out, "- tool_calls: {}", c.tool_calls);
+    let _ = writeln!(out, "- narration_deltas: {}", c.narration_deltas);
     let _ = writeln!(out, "- task_completed: {}", c.task_completed);
     let _ = writeln!(out, "- task_failed: {}", c.task_failed);
     let _ = writeln!(out, "- input_tokens: {}", c.input_tokens);
@@ -485,9 +492,7 @@ mod tests {
 
         let ev = serde_json::json!({"type": "text_delta", "text": "hi"});
         writer.on_json_event(pid, aiid, &ev).await;
-        writer
-            .on_loop_ended(pid, aiid, RunStatus::Completed)
-            .await;
+        writer.on_loop_ended(pid, aiid, RunStatus::Completed).await;
 
         let runs = writer.list_runs(pid).await;
         assert_eq!(runs.len(), 1);
@@ -499,6 +504,55 @@ mod tests {
         let summary = writer.read_summary(pid, &runs[0].run_id).await.unwrap();
         assert!(summary.contains("Run"));
         assert_eq!(runs[0].counters.events_total, 1);
+        assert_eq!(runs[0].counters.narration_deltas, 1);
+    }
+
+    #[tokio::test]
+    async fn token_usage_only_accumulates_on_final_frames() {
+        let tmp = TempDir::new().unwrap();
+        let writer = LoopLogWriter::new(tmp.path().to_path_buf());
+        let pid = ProjectId::new();
+        let aiid = AgentInstanceId::new();
+        writer.on_loop_started(pid, aiid).await;
+
+        // Mid-stream `token_usage` frames must NOT be folded into the
+        // run totals — Anthropic streams these throughout a turn.
+        for _ in 0..3 {
+            let ev = serde_json::json!({
+                "type": "token_usage",
+                "usage": {"input_tokens": 100, "output_tokens": 50},
+            });
+            writer.on_json_event(pid, aiid, &ev).await;
+        }
+
+        {
+            let state = writer.run_state.lock().await;
+            let run = state.get(&(pid, aiid)).unwrap();
+            assert_eq!(run.metadata.counters.input_tokens, 0);
+            assert_eq!(run.metadata.counters.output_tokens, 0);
+        }
+
+        // A `token_usage` frame explicitly marked `final: true` under
+        // `usage` should fold in once.
+        let final_usage = serde_json::json!({
+            "type": "token_usage",
+            "usage": {"input_tokens": 100, "output_tokens": 50, "final": true},
+        });
+        writer.on_json_event(pid, aiid, &final_usage).await;
+
+        // And `assistant_message_end` always counts.
+        let end = serde_json::json!({
+            "type": "assistant_message_end",
+            "usage": {"input_tokens": 10, "output_tokens": 5},
+        });
+        writer.on_json_event(pid, aiid, &end).await;
+
+        writer.on_loop_ended(pid, aiid, RunStatus::Completed).await;
+
+        let runs = writer.list_runs(pid).await;
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].counters.input_tokens, 110);
+        assert_eq!(runs[0].counters.output_tokens, 55);
     }
 
     #[tokio::test]
@@ -510,9 +564,7 @@ mod tests {
         writer.on_loop_started(pid, aiid).await;
         let ev = serde_json::json!({"type": DEBUG_EVENT_BLOCKER, "reason": "duplicate"});
         writer.on_json_event(pid, aiid, &ev).await;
-        writer
-            .on_loop_ended(pid, aiid, RunStatus::Completed)
-            .await;
+        writer.on_loop_ended(pid, aiid, RunStatus::Completed).await;
 
         let runs = writer.list_runs(pid).await;
         let blockers = writer
