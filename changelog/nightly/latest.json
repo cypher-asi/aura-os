@@ -2077,7 +2077,7 @@
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
           ],
-          "updatedAt": "2026-04-22T19:18:32.438Z",
+          "updatedAt": "2026-04-22T19:33:02.785Z",
           "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-rebuilt-around-a-sidekick-inspector"
         }
       },
