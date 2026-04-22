@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
@@ -116,9 +116,37 @@ export function DebugRunDetailView() {
     return filteredEntries.map((e) => e.raw).join("\n");
   }, [hasFilter, raw, filteredEntries]);
 
-  const handleCopyAll = useCallback(() => {
+  // Transient "Copied" confirmation on the header button. We mirror the
+  // pattern used in `RunPreviewBody`: flip the label for ~2s, then
+  // revert. The timer ref lets us clear a pending reset if the user
+  // clicks again quickly, and the cleanup effect avoids a state update
+  // after unmount.
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimer.current !== null) {
+        window.clearTimeout(copiedTimer.current);
+      }
+    };
+  }, []);
+
+  const handleCopyAll = useCallback(async () => {
     if (!copyPayload) return;
-    void copyToClipboard(copyPayload);
+    try {
+      await copyToClipboard(copyPayload);
+      setCopied(true);
+      if (copiedTimer.current !== null) {
+        window.clearTimeout(copiedTimer.current);
+      }
+      copiedTimer.current = window.setTimeout(() => {
+        setCopied(false);
+        copiedTimer.current = null;
+      }, 2000);
+    } catch (err) {
+      console.warn("debug copy failed", err);
+    }
   }, [copyPayload]);
 
   const handleExport = useCallback(async () => {
@@ -145,7 +173,9 @@ export function DebugRunDetailView() {
           <button
             type="button"
             className={styles.actionButton}
-            onClick={handleCopyAll}
+            onClick={() => {
+              void handleCopyAll();
+            }}
             disabled={!copyPayload}
             title={
               hasFilter
@@ -153,7 +183,7 @@ export function DebugRunDetailView() {
                 : "Copy the full event timeline as JSONL"
             }
           >
-            {hasFilter ? "Copy filtered" : "Copy all"}
+            {copied ? "Copied" : hasFilter ? "Copy Filtered" : "Copy All"}
           </button>
           <button
             type="button"
