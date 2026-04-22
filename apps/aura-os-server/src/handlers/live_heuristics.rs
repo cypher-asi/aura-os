@@ -61,7 +61,6 @@ pub(crate) fn live_heuristics_disabled() -> bool {
 /// Not `Clone`: we need the emitted-id set to be shared with exactly
 /// one forwarder so dedup works.
 pub(crate) struct LiveAnalyzer {
-    run_id: String,
     events_since_last_run: u64,
     last_run_at: Instant,
     emitted_finding_ids: HashSet<String>,
@@ -72,24 +71,17 @@ pub(crate) struct LiveAnalyzer {
 
 impl LiveAnalyzer {
     /// Create an analyzer with the default thresholds (50 events,
-    /// 30 s). The `run_id` is carried through into emitted event
-    /// payloads so Debug UI clients can correlate findings with the
-    /// bundle that produced them.
-    pub(crate) fn new(run_id: String) -> Self {
-        Self::with_thresholds(run_id, DEFAULT_EVENT_THRESHOLD, DEFAULT_TIME_THRESHOLD)
+    /// 30 s).
+    pub(crate) fn new() -> Self {
+        Self::with_thresholds(DEFAULT_EVENT_THRESHOLD, DEFAULT_TIME_THRESHOLD)
     }
 
     /// Variant used by tests: lets the caller override the thresholds
     /// so wall-clock triggers fire in milliseconds rather than the
     /// production 30 s. Also usable from hypothetical future ops
     /// tuning without having to re-plumb env vars.
-    pub(crate) fn with_thresholds(
-        run_id: String,
-        event_threshold: u64,
-        time_threshold: Duration,
-    ) -> Self {
+    pub(crate) fn with_thresholds(event_threshold: u64, time_threshold: Duration) -> Self {
         Self {
-            run_id,
             events_since_last_run: 0,
             last_run_at: Instant::now(),
             emitted_finding_ids: HashSet::new(),
@@ -97,12 +89,6 @@ impl LiveAnalyzer {
             time_threshold,
             force_next: false,
         }
-    }
-
-    /// The run id this analyzer was bound to. Exposed for the event
-    /// payload the wiring layer builds.
-    pub(crate) fn run_id(&self) -> &str {
-        &self.run_id
     }
 
     /// Record that a new event has been appended to the bundle. Must
@@ -183,10 +169,7 @@ fn finding_dedupe_key(f: &Finding) -> String {
 /// `heuristic_finding` domain event. The payload mirrors the shape
 /// described in Phase 6's plan: `finding_id`, `severity`, `message`,
 /// and a structured `remediation` hint when available.
-pub(crate) fn build_finding_payload(
-    finding: &Finding,
-    run_id: &str,
-) -> serde_json::Value {
+pub(crate) fn build_finding_payload(finding: &Finding, run_id: &str) -> serde_json::Value {
     serde_json::json!({
         "kind": "heuristic_finding",
         "run_id": run_id,
@@ -301,7 +284,6 @@ mod tests {
         let _env = env_lock();
         let tmp = synthetic_bundle_warn_only();
         let mut a = LiveAnalyzer::with_thresholds(
-            "run-x".into(),
             50,
             // Large enough that the wall-clock path cannot fire during
             // the loop below, isolating the count-based trigger.
@@ -336,11 +318,7 @@ mod tests {
         // only the time path can produce the trigger we observe.
         let _env = env_lock();
         let tmp = synthetic_bundle_warn_only();
-        let mut a = LiveAnalyzer::with_thresholds(
-            "run-x".into(),
-            10_000,
-            Duration::from_millis(50),
-        );
+        let mut a = LiveAnalyzer::with_thresholds(10_000, Duration::from_millis(50));
 
         a.note_event("text_delta");
         assert!(
@@ -361,7 +339,6 @@ mod tests {
         let _env = env_lock();
         let tmp = synthetic_bundle_warn_only();
         let mut a = LiveAnalyzer::with_thresholds(
-            "run-x".into(),
             // Thresholds deliberately unreachable so only the
             // `task_failed` force path can produce a trigger.
             10_000,
@@ -382,11 +359,7 @@ mod tests {
     fn dedupe_emits_each_finding_once() {
         let _env = env_lock();
         let tmp = synthetic_bundle_warn_only();
-        let mut a = LiveAnalyzer::with_thresholds(
-            "run-x".into(),
-            1,
-            Duration::from_secs(3600),
-        );
+        let mut a = LiveAnalyzer::with_thresholds(1, Duration::from_secs(3600));
 
         a.note_event("text_delta");
         let first = a.maybe_analyze(tmp.path()).expect("first trigger");
@@ -429,11 +402,7 @@ mod tests {
         // see `Some(vec![])` rather than `None`. `None` is the only
         // answer compatible with "did not touch disk".
         let missing = Path::new("definitely-not-a-real-path-for-tests-6a83");
-        let mut a = LiveAnalyzer::with_thresholds(
-            "run-x".into(),
-            1,
-            Duration::from_secs(3600),
-        );
+        let mut a = LiveAnalyzer::with_thresholds(1, Duration::from_secs(3600));
         a.note_event("task_failed");
         assert!(
             a.maybe_analyze(missing).is_none(),
@@ -496,11 +465,7 @@ mod tests {
         unsafe {
             std::env::remove_var(LIVE_HEURISTICS_DISABLED_ENV);
         }
-        let mut a = LiveAnalyzer::with_thresholds(
-            "run-x".into(),
-            1,
-            Duration::from_secs(3600),
-        );
+        let mut a = LiveAnalyzer::with_thresholds(1, Duration::from_secs(3600));
         a.note_event("text_delta");
         let out = a.maybe_analyze(Path::new("definitely-not-a-real-path-7d21"));
         assert_eq!(out.as_deref(), Some(&[][..]));

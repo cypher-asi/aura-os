@@ -1985,9 +1985,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     // bundle dir is resolved only when a trigger is
                     // imminent, so the hot path never pays the
                     // `list_runs` filesystem cost.
-                    let analyzer = live_analyzer.get_or_insert_with(|| {
-                        super::live_heuristics::LiveAnalyzer::new(String::new())
-                    });
+                    let analyzer =
+                        live_analyzer.get_or_insert_with(super::live_heuristics::LiveAnalyzer::new);
                     analyzer.note_event(&forwarded_type);
                     if analyzer.should_run() {
                         if live_bundle_dir.is_none() {
@@ -3061,7 +3060,11 @@ pub(crate) async fn run_single_task(
                     %agent_instance_id,
                     "harness /automaton/start returned non-success status"
                 ),
-                AutomatonStartError::Request { message, is_connect, is_timeout } => warn!(
+                AutomatonStartError::Request {
+                    message,
+                    is_connect,
+                    is_timeout,
+                } => warn!(
                     harness_base_url = %automaton_client.base_url(),
                     is_connect,
                     is_timeout,
