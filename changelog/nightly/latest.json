@@ -2125,7 +2125,7 @@
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
           ],
-          "updatedAt": "2026-04-22T20:33:14.611Z",
+          "updatedAt": "2026-04-22T20:48:44.464Z",
           "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-redesign-and-agent-busy-chat-signal"
         }
       },
@@ -2237,7 +2237,7 @@
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
           ],
-          "updatedAt": "2026-04-22T20:37:26.408Z",
+          "updatedAt": "2026-04-22T20:53:07.342Z",
           "error": "Error: Screenshot capture did not produce a passing summary for entry-darker-outline-on-run-timeline-and-task-output-blocks"
         }
       },
