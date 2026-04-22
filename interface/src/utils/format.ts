@@ -163,16 +163,43 @@ export function summarizeInput(name: string, input: Record<string, unknown>): st
 
 const BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
 
+// ANSI escape sequences emitted by colored CLIs (cargo, rustc, npm, ...).
+// Covers CSI (`ESC [ ... final`) and OSC (`ESC ] ... BEL/ST`) forms, plus
+// bare two-byte escapes like `ESC =`.
+const ANSI_RE =
+  // eslint-disable-next-line no-control-regex
+  /\x1B(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1B]*(?:\x07|\x1B\\)|[@-_])/g;
+
+// Control characters that should never appear in decoded text output.
+// Intentionally EXCLUDES `\u001B` (ESC, 0x1B) so ANSI-colored tool output
+// is still recognized as text; we strip the escapes below.
+// eslint-disable-next-line no-control-regex
+const FORBIDDEN_CTRL_RE = /[\u0000-\u0008\u000E-\u001A\u001C-\u001F]/;
+
 function tryDecodeBase64(value: string): string {
-  if (!value || value.length < 4 || !BASE64_RE.test(value)) return value;
+  if (!value || value.length < 4 || value.length % 4 !== 0 || !BASE64_RE.test(value)) {
+    return value;
+  }
   try {
     const decoded = atob(value);
-    if (/[\u0000-\u0008\u000E-\u001F]/.test(decoded)) return value;
-    return decoded;
+    if (FORBIDDEN_CTRL_RE.test(decoded)) return value;
+    return decoded.replace(ANSI_RE, "");
   } catch {
     return value;
   }
 }
+
+// Keys whose string values are known to carry captured process output that
+// the backend base64-encodes to keep the JSON transport binary-safe.
+const OUTPUT_FIELD_KEYS = new Set([
+  "stdout",
+  "stderr",
+  "data",
+  "output",
+  "text",
+  "content",
+  "log",
+]);
 
 function decodeBase64Fields(obj: unknown): unknown {
   if (typeof obj === "string") return tryDecodeBase64(obj);
@@ -180,9 +207,11 @@ function decodeBase64Fields(obj: unknown): unknown {
   if (obj && typeof obj === "object") {
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      result[k] = (k === "stdout" || k === "stderr" || k === "data")
-        ? (typeof v === "string" ? tryDecodeBase64(v) : v)
-        : v;
+      if (OUTPUT_FIELD_KEYS.has(k) && typeof v === "string") {
+        result[k] = tryDecodeBase64(v);
+      } else {
+        result[k] = decodeBase64Fields(v);
+      }
     }
     return result;
   }

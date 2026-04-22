@@ -9,6 +9,7 @@ import {
   formatDuration,
   summarizeInput,
   formatResult,
+  summarizeError,
   formatRelativeTime,
   formatChatTime,
   slugifyTitle,
@@ -275,6 +276,61 @@ describe("formatResult", () => {
 
   it("handles empty string", () => {
     expect(formatResult("")).toBe("");
+  });
+
+  it("decodes base64 stdout/stderr emitted by the server", () => {
+    const payload = JSON.stringify({
+      tool: "run_command",
+      ok: true,
+      stdout: btoa("hello world\n"),
+      stderr: btoa(""),
+    });
+    const out = formatResult(payload);
+    expect(out).toContain('"stdout": "hello world\\n"');
+  });
+
+  it("decodes base64 output that contains ANSI color escapes (cargo, rustc, ...)", () => {
+    // Simulate a colored `cargo check` error line: ESC[31m...ESC[0m
+    const colored = "\x1B[31merror[E0433]\x1B[0m: cannot find crate `foo`\n";
+    const payload = JSON.stringify({
+      tool: "run_command",
+      ok: false,
+      stderr: btoa(colored),
+    });
+    const out = formatResult(payload);
+    expect(out).toContain("error[E0433]");
+    expect(out).toContain("cannot find crate `foo`");
+    expect(out).not.toMatch(/\x1B\[/);
+    expect(out).not.toContain(btoa(colored));
+  });
+
+  it("decodes base64 values under non-stdout output keys (output/text/content/log)", () => {
+    const payload = JSON.stringify({
+      output: btoa("compiled OK\n"),
+      log: btoa("line 1\nline 2\n"),
+    });
+    const out = formatResult(payload);
+    expect(out).toContain('"output": "compiled OK\\n"');
+    expect(out).toContain('"log": "line 1\\nline 2\\n"');
+  });
+
+  it("does not mangle non-base64 strings that happen to match the charset", () => {
+    const payload = JSON.stringify({ stdout: "ThisIsNotBase64" });
+    const out = formatResult(payload);
+    expect(out).toContain('"stdout": "ThisIsNotBase64"');
+  });
+});
+
+describe("summarizeError", () => {
+  it("strips ANSI escapes from a base64-encoded stderr first line", () => {
+    const colored = "\x1B[31merror\x1B[0m: something broke\nmore detail\n";
+    const payload = JSON.stringify({
+      tool: "run_command",
+      ok: false,
+      stderr: btoa(colored),
+    });
+    const summary = summarizeError(payload);
+    expect(summary).toBe("error: something broke");
   });
 });
 
