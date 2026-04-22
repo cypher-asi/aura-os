@@ -1719,13 +1719,21 @@ async fn create_task_is_idempotent_on_title_within_spec() {
         )
     };
 
-    let resp = app.clone().oneshot(make_task_req("Seed Task")).await.unwrap();
+    let resp = app
+        .clone()
+        .oneshot(make_task_req("Seed Task"))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let first = response_json(resp).await;
     let first_id = first["task_id"].as_str().unwrap().to_string();
 
     // Exact-title re-invocation must return the same task_id.
-    let resp = app.clone().oneshot(make_task_req("Seed Task")).await.unwrap();
+    let resp = app
+        .clone()
+        .oneshot(make_task_req("Seed Task"))
+        .await
+        .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let second = response_json(resp).await;
     assert_eq!(

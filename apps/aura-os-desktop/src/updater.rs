@@ -1,10 +1,10 @@
 use base64::Engine;
+#[cfg(not(target_os = "windows"))]
+use cargo_packager_updater::Update;
 use cargo_packager_updater::{
     semver::Version as SemverVersion, Config as PackagerUpdaterConfig, UpdaterBuilder,
     WindowsConfig, WindowsUpdateInstallMode,
 };
-#[cfg(not(target_os = "windows"))]
-use cargo_packager_updater::Update;
 #[cfg(any(
     target_os = "linux",
     target_os = "dragonfly",
@@ -368,7 +368,13 @@ const INSTALLER_STAGE_SUBDIR: &str = "runtime/updater";
 fn sanitize_version_for_filename(version: &str) -> String {
     version
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_') { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_') {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
