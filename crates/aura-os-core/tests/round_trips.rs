@@ -164,6 +164,7 @@ fn sample_task(project_id: ProjectId, spec_id: SpecId) -> Task {
         order_index: 1,
         dependency_ids: vec![],
         parent_task_id: None,
+        skip_auto_decompose: false,
         assigned_agent_instance_id: None,
         completed_by_agent_instance_id: None,
         session_id: None,

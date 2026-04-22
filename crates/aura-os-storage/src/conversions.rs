@@ -102,6 +102,7 @@ impl TryFrom<StorageTask> for Task {
             order_index: val.order_index.unwrap_or(0) as u32,
             dependency_ids: parse_dependency_ids(val.dependency_ids),
             parent_task_id: None,
+            skip_auto_decompose: false,
             assigned_agent_instance_id: assigned_id,
             completed_by_agent_instance_id: completed_id,
             session_id: val.session_id.and_then(|id| id.parse().ok()),

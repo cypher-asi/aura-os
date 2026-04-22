@@ -90,6 +90,7 @@ fn cycle_detection_catches_circular_deps() {
         order_index: 0,
         dependency_ids: deps,
         parent_task_id: None,
+        skip_auto_decompose: false,
         assigned_agent_instance_id: None,
         completed_by_agent_instance_id: None,
         session_id: None,

@@ -10,7 +10,12 @@ use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 use aura_os_storage::StorageTask;
 use aura_os_tasks::TaskService;
 
+use super::dev_loop::auto_decompose_disabled;
 use super::projects_helpers::project_tool_session_config;
+use super::task_decompose::{
+    detect_preflight_decomposition, spawn_skeleton_and_fill_children, DecompositionContext,
+    DecompositionSignal,
+};
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
@@ -450,6 +455,15 @@ pub(crate) struct CreateTaskBody {
     pub order_index: Option<i32>,
     pub dependency_ids: Option<Vec<String>>,
     pub assigned_agent_instance_id: Option<String>,
+    /// Phase 5 opt-out: when true, the preflight decomposition path is
+    /// skipped for this task even if the heuristic would otherwise
+    /// match. Round-trips through the DTO only — not persisted in
+    /// aura-storage (no schema column today), so a task reloaded after
+    /// a server restart is treated as `skip_auto_decompose = false`
+    /// again. The preflight path only runs at creation time, so the
+    /// flag's sole purpose is already covered.
+    #[serde(default)]
+    pub skip_auto_decompose: bool,
 }
 
 pub(crate) async fn create_task(
@@ -459,6 +473,10 @@ pub(crate) async fn create_task(
     Json(req): Json<CreateTaskBody>,
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
+
+    let skip_auto_decompose = req.skip_auto_decompose;
+    let detection_title = req.title.clone();
+    let detection_description = req.description.clone().unwrap_or_default();
 
     let storage_req = aura_os_storage::CreateTaskRequest {
         spec_id: req.spec_id,
@@ -475,14 +493,181 @@ pub(crate) async fn create_task(
         .create_task(&project_id.to_string(), &jwt, &storage_req)
         .await
         .map_err(|e| ApiError::internal(format!("creating task: {e}")))?;
-    let task = storage_task_to_task(created).map_err(ApiError::internal)?;
+    let mut task = storage_task_to_task(created).map_err(ApiError::internal)?;
+    // Mirror the client's opt-out onto the in-memory DTO so downstream
+    // callers (debug endpoints, metrics) can see the flag. Storage
+    // drops it on reload, which is fine — see `CreateTaskBody` above.
+    task.skip_auto_decompose = skip_auto_decompose;
+
     let _ = state.event_broadcast.send(serde_json::json!({
         "type": "task_saved",
         "project_id": project_id.to_string(),
         "task": task,
         "task_id": task.task_id.to_string(),
     }));
+
+    // Phase 5: try to preemptively decompose oversized-looking tasks
+    // into a skeleton + fill pair BEFORE the loop picks the parent up.
+    // Any failure here (detection mismatch, storage errors, transition
+    // rejection) is logged and falls through — the parent still
+    // survives in its original state and the Phase 3 post-failure path
+    // can still rescue it once it actually runs and fails.
+    if let Err(error) = try_preflight_decompose_task(
+        &state,
+        &jwt,
+        &project_id,
+        &task,
+        &detection_title,
+        &detection_description,
+        skip_auto_decompose,
+    )
+    .await
+    {
+        tracing::warn!(
+            task_id = %task.task_id,
+            %error,
+            "Phase 5 preflight decomposition failed; parent task left intact"
+        );
+    }
+
     Ok(Json(task))
+}
+
+/// Evaluate the Phase 5 preflight heuristic against `task` and, on a
+/// match, materialise the skeleton + fill children, mark the parent
+/// non-runnable, and emit a `task_preflight_decomposed` event.
+///
+/// The parent-status strategy: the `TaskStatus` enum has no
+/// `Decomposed`/`Superseded`/`Cancelled` variant, and none of the
+/// legal Phase-3 transitions starting from `Ready` land in a terminal
+/// bucket without first going through `InProgress`. So we
+/// unconditionally shove the parent back to `Backlog` via the storage
+/// HTTP API (which is permissive about transitions), because:
+///
+/// * `Backlog` is **not** picked up by `select_next_task_from` — it
+///   doesn't show up in the Ready filter, the pipeline-active check,
+///   or the ToDo auto-promotion fallback.
+/// * Leaving it in `Backlog` surfaces cleanly in the task list UI as
+///   "parked" rather than lying about the run state (unlike `Done` or
+///   `Failed`).
+///
+/// If the `transition_task` call errors out (the backend rejects the
+/// transition, for instance), we surface the error — the caller
+/// degrades gracefully by logging and leaving the parent alone.
+/// Pure guard combining the global env-flag kill switch with the
+/// per-task opt-out. Split out so the tests can cover both short-circuit
+/// paths without needing a live `AppState` / `TaskService`.
+///
+/// Returns `true` when the preflight decomposition path should continue
+/// past the short-circuit checks and actually run the detection.
+fn preflight_should_run(skip_auto_decompose: bool) -> bool {
+    !auto_decompose_disabled() && !skip_auto_decompose
+}
+
+async fn try_preflight_decompose_task(
+    state: &AppState,
+    jwt: &str,
+    project_id: &ProjectId,
+    parent: &Task,
+    title: &str,
+    description: &str,
+    skip_auto_decompose: bool,
+) -> Result<(), String> {
+    if !preflight_should_run(skip_auto_decompose) {
+        return Ok(());
+    }
+    let Some(signal) = detect_preflight_decomposition(title, description) else {
+        return Ok(());
+    };
+    let DecompositionSignal {
+        target_path,
+        estimated_chunk_bytes,
+        reason,
+    } = signal;
+
+    let children = spawn_skeleton_and_fill_children(
+        state.task_service.as_ref(),
+        parent,
+        target_path.as_deref(),
+        estimated_chunk_bytes,
+        DecompositionContext::Preflight {
+            reason: reason.clone(),
+        },
+    )
+    .await
+    .map_err(|e| format!("spawning skeleton+fill children: {e}"))?;
+
+    // Park the parent in `backlog` so the scheduler ignores it. See
+    // the doc comment above for why this is our chosen non-runnable
+    // state. We also roll the decomposition reason into
+    // `execution_notes` so the task list UI can render a short
+    // explanation.
+    let storage = state
+        .storage_client
+        .as_ref()
+        .ok_or_else(|| "storage client not configured".to_string())?;
+
+    let task_id_str = parent.task_id.to_string();
+    if let Err(error) = storage
+        .transition_task(
+            &task_id_str,
+            jwt,
+            &aura_os_storage::TransitionTaskRequest {
+                status: "backlog".to_string(),
+            },
+        )
+        .await
+    {
+        // Non-fatal: children are already persisted. Log and move on.
+        tracing::warn!(
+            task_id = %task_id_str,
+            %error,
+            "Phase 5: failed to park parent task in backlog; scheduler may still pick it up"
+        );
+    }
+
+    let note = format!(
+        "Preflight auto-decomposed ({reason}). Children: {}",
+        children
+            .iter()
+            .map(|c| c.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    if let Err(error) = storage
+        .update_task(
+            &task_id_str,
+            jwt,
+            &aura_os_storage::UpdateTaskRequest {
+                execution_notes: Some(note),
+                ..Default::default()
+            },
+        )
+        .await
+    {
+        tracing::warn!(
+            task_id = %task_id_str,
+            %error,
+            "Phase 5: failed to write execution_notes on decomposed parent"
+        );
+    }
+
+    let child_id_strings: Vec<String> = children.iter().map(|c| c.to_string()).collect();
+    tracing::info!(
+        task_id = %task_id_str,
+        reason = %reason,
+        children = ?child_id_strings,
+        "Phase 5 preflight-decomposed an oversized task"
+    );
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "task_preflight_decomposed",
+        "project_id": project_id.to_string(),
+        "parent_task_id": task_id_str,
+        "child_task_ids": child_id_strings,
+        "reason": reason,
+    }));
+
+    Ok(())
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -650,5 +835,47 @@ mod tests {
         st.id = "not-a-uuid".to_string();
         let result = storage_task_to_task(st);
         assert!(result.is_err());
+    }
+
+    // ----------------------------------------------------------------
+    // Phase 5 — preflight decomposition guard
+    // ----------------------------------------------------------------
+
+    /// Serialise env-var mutation across Phase 5 + Phase 3 tests that
+    /// touch `AURA_AUTO_DECOMPOSE_DISABLED`. `std::env` is process-wide
+    /// so two tests in parallel would clobber each other.
+    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+        use std::sync::Mutex;
+        static LOCK: Mutex<()> = Mutex::new(());
+        LOCK.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
+    #[test]
+    fn preflight_decomposition_skipped_when_env_flag_set() {
+        let _guard = env_lock();
+        std::env::set_var("AURA_AUTO_DECOMPOSE_DISABLED", "1");
+        assert!(
+            !preflight_should_run(false),
+            "env flag alone must short-circuit the preflight path"
+        );
+        std::env::remove_var("AURA_AUTO_DECOMPOSE_DISABLED");
+        assert!(
+            preflight_should_run(false),
+            "clearing the env flag must re-enable the preflight path"
+        );
+    }
+
+    #[test]
+    fn preflight_decomposition_skipped_when_task_opts_out() {
+        let _guard = env_lock();
+        std::env::remove_var("AURA_AUTO_DECOMPOSE_DISABLED");
+        assert!(
+            !preflight_should_run(true),
+            "skip_auto_decompose on the task must short-circuit the preflight path"
+        );
+        assert!(
+            preflight_should_run(false),
+            "with neither flag set, the preflight path should run"
+        );
     }
 }

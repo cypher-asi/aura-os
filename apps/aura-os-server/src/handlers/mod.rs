@@ -30,6 +30,7 @@ pub(crate) mod specs;
 pub(crate) mod sse;
 pub(crate) mod swarm;
 pub(crate) mod system;
+pub(crate) mod task_decompose;
 pub(crate) mod tasks;
 pub(crate) mod terminal;
 pub(crate) mod trusted_mcp;

@@ -116,6 +116,16 @@ pub struct Task {
     /// Ephemeral: not persisted in aura-storage.
     #[serde(default)]
     pub parent_task_id: Option<TaskId>,
+    /// Per-task opt-out for the Phase 5 preflight decomposition path.
+    ///
+    /// Ephemeral: carried through `create_task` so callers (e.g. task
+    /// extractors that already emit well-sized specs) can disable the
+    /// auto-split without touching the global `AURA_AUTO_DECOMPOSE_DISABLED`
+    /// flag. Not persisted in aura-storage — a task reloaded after a
+    /// restart always defaults to `false`, which is intentional because
+    /// the preflight path only runs at creation time anyway.
+    #[serde(default)]
+    pub skip_auto_decompose: bool,
     pub assigned_agent_instance_id: Option<AgentInstanceId>,
     #[serde(default)]
     pub completed_by_agent_instance_id: Option<AgentInstanceId>,

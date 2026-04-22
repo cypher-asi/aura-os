@@ -41,6 +41,7 @@ pub fn make_task(title: &str, desc: &str) -> Task {
         order_index: 0,
         dependency_ids: vec![],
         parent_task_id: None,
+        skip_auto_decompose: false,
         assigned_agent_instance_id: None,
         completed_by_agent_instance_id: None,
         session_id: None,

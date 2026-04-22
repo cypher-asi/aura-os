@@ -149,9 +149,15 @@ fn classify_failure(reason: &str) -> FailureClass {
 }
 
 /// Returns true if the `AURA_AUTO_DECOMPOSE_DISABLED` env var is set to
-/// `1` / `true` (case-insensitive). When set, Phase 3 remediation is a
-/// no-op and the existing retry path handles every failure.
-fn auto_decompose_disabled() -> bool {
+/// `1` / `true` (case-insensitive). When set, Phase 3 remediation and
+/// Phase 5 preflight decomposition are both no-ops and every failure
+/// falls through to the existing retry path.
+///
+/// Shared across Phase 3 (post-failure remediation, this file) and
+/// Phase 5 (preflight task decomposition,
+/// [`super::task_decompose`]), both of which honour the same kill
+/// switch.
+pub(crate) fn auto_decompose_disabled() -> bool {
     std::env::var("AURA_AUTO_DECOMPOSE_DISABLED")
         .ok()
         .map(|v| {
@@ -231,44 +237,28 @@ async fn find_task_by_id(
 /// write that was too big for a single turn. Returns the child task ids
 /// on success.
 ///
-/// The skeleton task depends on nothing, the fill task depends on the
-/// skeleton, so the existing scheduler picks them up in the correct
-/// order without any extra wiring.
+/// Thin wrapper around
+/// [`super::task_decompose::spawn_skeleton_and_fill_children`] that
+/// supplies the Phase 3 post-failure [`DecompositionContext`] so the
+/// child-task prompt header reads `"AUTO-DECOMPOSED from a truncated
+/// run."` (the exact wording Phase 3 has always used). Phase 5 uses the
+/// same helper with a `Preflight` context for a different header.
 async fn decompose_truncated_task(
     task_service: &TaskService,
     parent: &aura_os_core::Task,
     path: &str,
     chunk_bytes: usize,
 ) -> Result<Vec<TaskId>, aura_os_tasks::TaskError> {
-    let original_title = parent.title.clone();
-    let original_description = parent.description.clone();
-
-    let skeleton_title = format!("{original_title} [skeleton]");
-    let skeleton_description = format!(
-        "AUTO-DECOMPOSED from a truncated run.\n\n\
-         Create ONLY the module doc + imports + one public stub in `{path}`.\n\
-         Call `write_file` exactly once, then `task_done`.\n\n\
-         Original task description:\n\
-         {original_description}"
-    );
-    let skeleton = task_service
-        .create_follow_up_task(parent, skeleton_title, skeleton_description, Vec::new())
-        .await?;
-
-    let fill_title = format!("{original_title} [fill]");
-    let fill_description = format!(
-        "AUTO-DECOMPOSED from a truncated run. Depends on the skeleton task above.\n\n\
-         The file `{path}` already exists as a skeleton. Use `edit_file`\n\
-         exclusively to add the remaining logic in chunks of <= {chunk_bytes} bytes\n\
-         per call, and aim for <= 3 edits total.\n\n\
-         Original task description:\n\
-         {original_description}"
-    );
-    let fill = task_service
-        .create_follow_up_task(parent, fill_title, fill_description, vec![skeleton.task_id])
-        .await?;
-
-    Ok(vec![skeleton.task_id, fill.task_id])
+    super::task_decompose::spawn_skeleton_and_fill_children(
+        task_service,
+        parent,
+        Some(path),
+        chunk_bytes,
+        super::task_decompose::DecompositionContext::PostFailure {
+            reason: "truncated_run".to_string(),
+        },
+    )
+    .await
 }
 
 /// Create a single follow-up task whose prompt discourages the
