@@ -19,6 +19,14 @@ function createResponse(route, body, status = 200) {
   });
 }
 
+function createTextResponse(route, body, status = 200, contentType = "text/plain; charset=utf-8") {
+  return route.fulfill({
+    status,
+    contentType,
+    body: String(body ?? ""),
+  });
+}
+
 function createFeedbackItem({
   id,
   title,
@@ -907,6 +915,91 @@ function buildProcessState(profile) {
   };
 }
 
+function buildDebugState(profile, projects) {
+  const runsByProject = new Map(
+    Object.entries(profile.seed.debugRuns ?? {}).map(([projectId, runs]) => [projectId, cloneEntries(runs)]),
+  );
+  const logsByRun = new Map(
+    Object.entries(profile.seed.debugRunLogs ?? {}).map(([runId, logs]) => [runId, structuredClone(logs)]),
+  );
+  const summariesByRun = new Map(
+    Object.entries(profile.seed.debugRunSummaries ?? {}).map(([runId, summary]) => [runId, structuredClone(summary)]),
+  );
+  const projectsById = new Map(
+    (Array.isArray(projects) ? projects : []).map((project) => [project.project_id, structuredClone(project)]),
+  );
+
+  const findRun = (projectId, runId) =>
+    (runsByProject.get(projectId) ?? []).find((run) => run.run_id === runId) ?? null;
+
+  return {
+    listProjects() {
+      const entries = [];
+      for (const [projectId, runs] of runsByProject.entries()) {
+        const sortedRuns = [...runs].sort((left, right) =>
+          String(right.started_at || "").localeCompare(String(left.started_at || ""))
+        );
+        const latestRun = sortedRuns[0] ?? null;
+        const project = projectsById.get(projectId) ?? null;
+        entries.push({
+          project_id: projectId,
+          project_name: project?.name || projectId,
+          run_count: sortedRuns.length,
+          latest_run: structuredClone(latestRun),
+        });
+      }
+
+      return {
+        projects: entries.sort((left, right) =>
+          String(left.project_name || left.project_id).localeCompare(String(right.project_name || right.project_id))
+        ),
+      };
+    },
+    listRuns(projectId, specId = "") {
+      const normalizedSpecId = String(specId || "").trim();
+      const runs = cloneEntries(runsByProject.get(projectId) ?? []);
+      const filtered = normalizedSpecId
+        ? runs.filter((run) => Array.isArray(run.spec_ids) && run.spec_ids.includes(normalizedSpecId))
+        : runs;
+      return {
+        runs: filtered.sort((left, right) =>
+          String(right.started_at || "").localeCompare(String(left.started_at || ""))
+        ),
+      };
+    },
+    getRun(projectId, runId) {
+      return structuredClone(findRun(projectId, runId));
+    },
+    getSummary(projectId, runId) {
+      const run = findRun(projectId, runId);
+      if (!run) {
+        return null;
+      }
+      return structuredClone(
+        summariesByRun.get(runId) ?? {
+          run_id: runId,
+          markdown: `# ${runId}\n\nSeeded debug summary is available for this demo run.`,
+        },
+      );
+    },
+    getLogs(projectId, runId, channel = "events") {
+      const run = findRun(projectId, runId);
+      if (!run) {
+        return null;
+      }
+      const runLogs = logsByRun.get(runId) ?? {};
+      return String(runLogs[channel] ?? "");
+    },
+    exportRun(projectId, runId) {
+      const run = findRun(projectId, runId);
+      if (!run) {
+        return null;
+      }
+      return `Seeded debug export for ${runId}\n`;
+    },
+  };
+}
+
 export async function installBootAuth(page, session) {
   await page.addInitScript((seedSession) => {
     try {
@@ -934,6 +1027,7 @@ export async function installSeedRoutes(page, profile) {
   const projectState = buildProjectState(profile, agentsState, profile.session);
   const feedState = buildFeedState(profile);
   const processState = buildProcessState(profile);
+  const debugState = buildDebugState(profile, profile.seed.projects ?? []);
   const orgs = cloneEntries(profile.seed.orgs);
   const projects = cloneEntries(profile.seed.projects);
   const session = structuredClone(profile.session);
@@ -971,6 +1065,45 @@ export async function installSeedRoutes(page, profile) {
     }
     if (pathname === "/api/projects") {
       return createResponse(route, projects);
+    }
+
+    if (pathname === "/api/debug/projects" && method === "GET") {
+      return createResponse(route, debugState.listProjects());
+    }
+
+    const debugRunsMatch = pathname.match(/^\/api\/debug\/projects\/([^/]+)\/runs$/);
+    if (debugRunsMatch && method === "GET") {
+      const [, projectId] = debugRunsMatch;
+      return createResponse(route, debugState.listRuns(projectId, url.searchParams.get("spec_id") || ""));
+    }
+
+    const debugRunSummaryMatch = pathname.match(/^\/api\/debug\/projects\/([^/]+)\/runs\/([^/]+)\/summary$/);
+    if (debugRunSummaryMatch && method === "GET") {
+      const [, projectId, runId] = debugRunSummaryMatch;
+      const summary = debugState.getSummary(projectId, runId);
+      return createResponse(route, summary ?? { error: "Run not found" }, summary ? 200 : 404);
+    }
+
+    const debugRunLogsMatch = pathname.match(/^\/api\/debug\/projects\/([^/]+)\/runs\/([^/]+)\/logs$/);
+    if (debugRunLogsMatch && method === "GET") {
+      const [, projectId, runId] = debugRunLogsMatch;
+      const channel = String(url.searchParams.get("channel") || "events");
+      const logs = debugState.getLogs(projectId, runId, channel);
+      return createTextResponse(route, logs ?? "", logs !== null ? 200 : 404);
+    }
+
+    const debugRunExportMatch = pathname.match(/^\/api\/debug\/projects\/([^/]+)\/runs\/([^/]+)\/export$/);
+    if (debugRunExportMatch && method === "GET") {
+      const [, projectId, runId] = debugRunExportMatch;
+      const exportBody = debugState.exportRun(projectId, runId);
+      return createTextResponse(route, exportBody ?? "", exportBody !== null ? 200 : 404, "application/zip");
+    }
+
+    const debugRunMatch = pathname.match(/^\/api\/debug\/projects\/([^/]+)\/runs\/([^/]+)$/);
+    if (debugRunMatch && method === "GET") {
+      const [, projectId, runId] = debugRunMatch;
+      const run = debugState.getRun(projectId, runId);
+      return createResponse(route, run ?? { error: "Run not found" }, run ? 200 : 404);
     }
 
     const projectMatch = pathname.match(/^\/api\/projects\/([^/]+)$/);

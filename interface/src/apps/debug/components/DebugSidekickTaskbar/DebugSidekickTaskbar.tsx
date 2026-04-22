@@ -33,11 +33,13 @@ export function DebugSidekickTaskbar() {
   const setActiveTab = useDebugSidekickStore((s) => s.setActiveTab);
 
   return (
-    <SidekickTabBar
-      tabs={TABS}
-      activeTab={activeTab}
-      onTabChange={(id) => setActiveTab(id as DebugSidekickTab)}
-      alwaysShowMore
-    />
+    <div data-agent-surface="sidekick-header">
+      <SidekickTabBar
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={(id) => setActiveTab(id as DebugSidekickTab)}
+        alwaysShowMore
+      />
+    </div>
   );
 }
