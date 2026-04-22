@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import type { AuthSession, ZeroUser } from "../types";
 import {
   clearStoredAuth,
+  endLocalSession,
   getStoredSession,
   hydrateStoredAuth,
   isLoggedInSync,
@@ -131,7 +132,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
       scheduleDeferredEventSocketConnect();
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
-        await clearStoredAuth();
+        // A 401 on the boot-time validate means this session is genuinely
+        // dead. Arm the sentinel in addition to clearing state so a manual
+        // reload (which re-runs the desktop init script with stale baked
+        // auth literals) cannot resurrect the same expired session.
+        await endLocalSession();
         disconnectEventSocket();
         set({ user: null, zeroProRefreshError: null });
       } else if (hadCachedSession) {
@@ -157,7 +162,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return validated;
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
-        await clearStoredAuth();
+        await endLocalSession();
         set({ user: null, zeroProRefreshError: null });
         throw err;
       }
@@ -195,11 +200,34 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   logout: async () => {
-    await authApi.logout();
-    await clearStoredAuth();
+    // Local cleanup MUST run even when the server call fails, otherwise a
+    // transient network error or an already-expired JWT leaves localStorage,
+    // IndexedDB, the event socket, and the zustand user pointing at a stale
+    // session. That stale state is exactly what produces the post-logout
+    // black screen: on the next reload the desktop initialization script
+    // re-injects the baked startup auth literals, the app hydrates a
+    // user-looking session, and `RequireAuth`/`/login` fight an infinite
+    // redirect loop. Swallow server errors here; the server also clears its
+    // on-disk cache before its upstream call, so the persisted state is
+    // already wiped by the time we return from `authApi.logout()` even when
+    // the upstream zOS call errors out.
+    try {
+      await authApi.logout();
+    } catch (err) {
+      if (typeof console !== "undefined") {
+        console.warn("authApi.logout() failed; clearing local session anyway", err);
+      }
+    }
+    await endLocalSession();
     disconnectEventSocket();
+    // Setting `hasResolvedInitialSession: true` flips the App.tsx gate so
+    // `showShell` immediately follows the live (`user === null`) state
+    // instead of the sticky `initiallyLoggedIn` boot snapshot. React Router
+    // then renders `LoginView` in-place — no `window.location.href` reload
+    // is needed, and avoiding the reload also avoids re-running the
+    // desktop initialization script (which carries startup-time auth
+    // literals that would otherwise clobber the just-cleared localStorage).
     set({ user: null, hasResolvedInitialSession: true, zeroProRefreshError: null });
-    window.location.href = "/login";
   },
 }));
 

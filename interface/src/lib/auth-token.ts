@@ -6,6 +6,22 @@ const SESSION_STORAGE_KEY = "aura-session";
 const AUTH_RECORD_KEY = "session";
 const AUTH_BROWSER_DB_FALLBACK_KEY = "aura-idb:auth:session";
 const BOOT_AUTH_GLOBAL_KEY = "__AURA_BOOT_AUTH__";
+/**
+ * Sticky "the user has logged out since this webview process started"
+ * sentinel. Set by `endLocalSession()` on logout, cleared by `setStoredAuth()`
+ * when a fresh session is persisted (login / register / successful restore).
+ *
+ * The desktop layer bakes auth literals into its initialization script at
+ * app startup and re-runs that script on every navigation (including
+ * reloads). After logout the literals are stale: without this sentinel a
+ * reload would write the old `aura-session` / `aura-jwt` back into
+ * localStorage and inject `__AURA_BOOT_AUTH__ = { isLoggedIn: true }`,
+ * reviving the just-killed session and producing the classic black-screen
+ * redirect loop. This flag lives in the same localStorage the init script
+ * writes to, so it survives webview reloads and takes precedence over both
+ * the injected boot global and the localStorage mirror.
+ */
+const FORCE_LOGGED_OUT_KEY = "aura-force-logged-out";
 
 interface BootInjectedAuth {
   isLoggedIn: boolean;
@@ -58,6 +74,23 @@ function getLocalStorage(): Storage | null {
     typeof storage.removeItem === "function"
     ? storage
     : null;
+}
+
+function isForceLoggedOut(storage: Storage | null): boolean {
+  return storage?.getItem(FORCE_LOGGED_OUT_KEY) === "1";
+}
+
+/**
+ * Wipe every mirror an authenticated session can leave behind in localStorage,
+ * INCLUDING the key the desktop initialization script writes before React JS
+ * loads. Called both at logout time and from the boot-time seed when the
+ * force-logged-out sentinel is set, so a reload with stale baked-in init-script
+ * literals never resurrects the dead session.
+ */
+function clearAllLocalStorageSessionMirrors(storage: Storage): void {
+  storage.removeItem(JWT_STORAGE_KEY);
+  storage.removeItem(SESSION_STORAGE_KEY);
+  storage.removeItem(AUTH_BROWSER_DB_FALLBACK_KEY);
 }
 
 function parseStoredSession(raw: string | null, jwt: string | null): AuthSession | null {
@@ -118,6 +151,19 @@ function writeSyncStoredSession(session: AuthSession | null): void {
  * webview localStorage being populated before React's module code runs.
  */
 function seedCachedSessionFromBoot(): AuthSession | null {
+  const storage = getLocalStorage();
+  // Sentinel takes precedence over every other source: the desktop init
+  // script may have just re-written stale session mirrors into localStorage
+  // and defined a stale `__AURA_BOOT_AUTH__` (it bakes its literals at app
+  // startup, not per-reload), and we must not let those ghosts resurrect a
+  // deliberately-ended session. Clear the mirrors — the sentinel itself is
+  // cleared by `setStoredAuth` the next time a real session is persisted.
+  if (isForceLoggedOut(storage)) {
+    bootAuthSource = "none";
+    if (storage) clearAllLocalStorageSessionMirrors(storage);
+    return null;
+  }
+
   const injected = readBootInjectedAuth();
   if (injected) {
     bootAuthSource = "injected";
@@ -175,6 +221,18 @@ export async function hydrateStoredAuth(): Promise<AuthSession | null> {
   }
 
   hydratePromise = (async () => {
+    const storage = getLocalStorage();
+    // Honour the force-logged-out sentinel here too: the IDB record and the
+    // localStorage mirror may disagree with the seed (e.g. if the desktop
+    // init script has re-written a stale `aura-session` after the user
+    // logged out). Fall straight through to the cleared state.
+    if (isForceLoggedOut(storage)) {
+      cachedSession = null;
+      if (storage) clearAllLocalStorageSessionMirrors(storage);
+      await browserDbDelete(BROWSER_DB_STORES.auth, AUTH_RECORD_KEY);
+      return null;
+    }
+
     const stored = normalizeSession(
       await browserDbGet<AuthSession>(BROWSER_DB_STORES.auth, AUTH_RECORD_KEY),
     );
@@ -209,6 +267,9 @@ export async function setStoredAuth(session: AuthSession | null): Promise<void> 
   cachedSession = normalized;
   writeSyncStoredSession(normalized);
   if (normalized) {
+    // A real session is going on disk — whatever put the force-logged-out
+    // sentinel there (a previous logout) is no longer the current truth.
+    getLocalStorage()?.removeItem(FORCE_LOGGED_OUT_KEY);
     await browserDbSet(BROWSER_DB_STORES.auth, AUTH_RECORD_KEY, normalized);
   } else {
     await browserDbDelete(BROWSER_DB_STORES.auth, AUTH_RECORD_KEY);
@@ -217,8 +278,31 @@ export async function setStoredAuth(session: AuthSession | null): Promise<void> 
 
 export async function clearStoredAuth(): Promise<void> {
   cachedSession = null;
-  writeSyncStoredSession(null);
+  const storage = getLocalStorage();
+  if (storage) {
+    clearAllLocalStorageSessionMirrors(storage);
+  }
   await browserDbDelete(BROWSER_DB_STORES.auth, AUTH_RECORD_KEY);
+}
+
+/**
+ * Explicitly end the local session AND arm the force-logged-out sentinel.
+ *
+ * This is the variant to call from a user-initiated logout. The sentinel is
+ * what lets a subsequent reload survive the desktop initialization script
+ * (whose auth literals are baked at app startup and would otherwise re-write
+ * a stale `aura-session` / `aura-jwt` into localStorage and redefine
+ * `__AURA_BOOT_AUTH__` as logged-in). `setStoredAuth()` clears the sentinel
+ * the next time a real session is persisted.
+ *
+ * Kept as a distinct entry point (rather than bundled into
+ * `clearStoredAuth()`) so tests and internal housekeeping callers that use
+ * `clearStoredAuth()` purely to tidy up do not inadvertently lock the app
+ * into a logged-out state.
+ */
+export async function endLocalSession(): Promise<void> {
+  await clearStoredAuth();
+  getLocalStorage()?.setItem(FORCE_LOGGED_OUT_KEY, "1");
 }
 
 export function authHeaders(): Record<string, string> {

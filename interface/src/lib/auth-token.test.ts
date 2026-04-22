@@ -33,6 +33,7 @@ vi.hoisted(() => {
 import {
   authHeaders,
   clearStoredAuth,
+  endLocalSession,
   getStoredJwt,
   getStoredSession,
   hydrateStoredAuth,
@@ -44,6 +45,7 @@ beforeEach(async () => {
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
   window.localStorage.removeItem("aura-idb:auth:session");
+  window.localStorage.removeItem("aura-force-logged-out");
   await clearStoredAuth();
 });
 
@@ -154,6 +156,47 @@ describe("auth-token", () => {
       expect(isLoggedInSync()).toBe(true);
     });
   });
+
+  describe("force-logged-out sentinel", () => {
+    it("endLocalSession arms the sentinel; plain clearStoredAuth does not", async () => {
+      await setStoredAuth(mockSession);
+
+      await clearStoredAuth();
+      expect(window.localStorage.getItem("aura-force-logged-out")).toBeNull();
+
+      await setStoredAuth(mockSession);
+      await endLocalSession();
+      expect(window.localStorage.getItem("aura-force-logged-out")).toBe("1");
+    });
+
+    it("endLocalSession wipes the browser-db localStorage fallback mirror too", async () => {
+      window.localStorage.setItem(
+        "aura-idb:auth:session",
+        JSON.stringify(mockSession),
+      );
+      await endLocalSession();
+      expect(window.localStorage.getItem("aura-idb:auth:session")).toBeNull();
+    });
+
+    it("setStoredAuth clears the sentinel when a real session is persisted", async () => {
+      window.localStorage.setItem("aura-force-logged-out", "1");
+      await setStoredAuth(mockSession);
+      expect(window.localStorage.getItem("aura-force-logged-out")).toBeNull();
+    });
+
+    it("hydrateStoredAuth honours the sentinel and wipes stale local mirrors", async () => {
+      window.localStorage.setItem("aura-force-logged-out", "1");
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+      window.localStorage.setItem("aura-jwt", mockSession.access_token);
+
+      const result = await hydrateStoredAuth();
+
+      expect(result).toBeNull();
+      expect(getStoredSession()).toBeNull();
+      expect(window.localStorage.getItem("aura-session")).toBeNull();
+      expect(window.localStorage.getItem("aura-jwt")).toBeNull();
+    });
+  });
 });
 
 describe("auth-token boot-injected global", () => {
@@ -177,6 +220,7 @@ describe("auth-token boot-injected global", () => {
     window.localStorage.removeItem("aura-jwt");
     window.localStorage.removeItem("aura-session");
     window.localStorage.removeItem("aura-idb:auth:session");
+    window.localStorage.removeItem("aura-force-logged-out");
     vi.resetModules();
   });
 
@@ -239,5 +283,27 @@ describe("auth-token boot-injected global", () => {
     const mod = await import("./auth-token");
     expect(mod.getBootAuthSource()).toBe("none");
     expect(mod.isLoggedInSync()).toBe(false);
+  });
+
+  it("force-logged-out sentinel overrides a logged-in injected global and purges stale mirrors", async () => {
+    // Simulate a post-logout reload: the desktop init script has re-written
+    // its startup-baked auth literals into localStorage AND re-defined the
+    // boot-auth global as logged-in, but the frontend previously armed the
+    // sentinel. The seed must ignore both sources and come up logged out.
+    window.localStorage.setItem("aura-force-logged-out", "1");
+    window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+    window.localStorage.setItem("aura-jwt", mockSession.access_token);
+    setBootGlobal({
+      isLoggedIn: true,
+      session: { ...mockSession },
+      jwt: mockSession.access_token,
+    });
+
+    const mod = await import("./auth-token");
+    expect(mod.isLoggedInSync()).toBe(false);
+    expect(mod.getStoredSession()).toBeNull();
+    expect(mod.getBootAuthSource()).toBe("none");
+    expect(window.localStorage.getItem("aura-session")).toBeNull();
+    expect(window.localStorage.getItem("aura-jwt")).toBeNull();
   });
 });

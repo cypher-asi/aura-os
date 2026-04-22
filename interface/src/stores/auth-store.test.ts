@@ -111,6 +111,7 @@ beforeEach(async () => {
   });
   window.localStorage.removeItem("aura-jwt");
   window.localStorage.removeItem("aura-session");
+  window.localStorage.removeItem("aura-force-logged-out");
   await clearStoredAuth();
   vi.clearAllMocks();
 });
@@ -294,6 +295,31 @@ describe("auth-store", () => {
 
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
+    });
+
+    it("clears local session state even when the server call fails", async () => {
+      useAuthStore.setState({ user: expectedUser(mockSession) });
+      window.localStorage.setItem("aura-jwt", "stale-token");
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+      mockApi.logout.mockRejectedValue(new Error("network down"));
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await useAuthStore.getState().logout();
+
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().hasResolvedInitialSession).toBe(true);
+      expect(window.localStorage.getItem("aura-jwt")).toBeNull();
+      expect(window.localStorage.getItem("aura-session")).toBeNull();
+      warn.mockRestore();
+    });
+
+    it("arms the force-logged-out sentinel so stale boot literals cannot revive the session", async () => {
+      useAuthStore.setState({ user: expectedUser(mockSession) });
+      mockApi.logout.mockResolvedValue(undefined);
+
+      await useAuthStore.getState().logout();
+
+      expect(window.localStorage.getItem("aura-force-logged-out")).toBe("1");
     });
   });
 });

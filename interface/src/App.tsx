@@ -90,16 +90,20 @@ function renderRoutes(routes: typeof shellAppRoutes): React.ReactNode {
 }
 
 export default function App() {
-  // Live-subscribed auth flag — diverges from `initiallyLoggedIn` only AFTER
-  // first paint (on login, logout, or a background 401). The shell branch is
-  // entered if either is true so that:
-  //   - returning users land on the shell instantly (initiallyLoggedIn)
-  //   - a fresh sign-in from the login branch flips the tree to the shell
-  //     without requiring a reload (isAuthenticated)
-  // There is no boot-time window where an authenticated user renders LoginView
-  // because `initiallyLoggedIn` is decided before `App()` first runs.
+  // `initiallyLoggedIn` is the synchronous boot-time decision — a frozen
+  // snapshot from module load. It exists ONLY to keep returning users on the
+  // shell during the very first render (no login flash). Once the auth store
+  // has resolved its initial session (login succeeded, logout fired, 401
+  // cleared the cache, or `restoreSession` returned), live state is the only
+  // truth. If we kept OR-ing `initiallyLoggedIn` forever, a logout would
+  // leave `showShell === true` with `user === null` — `RequireAuth`
+  // redirects to `/login`, the `/login` route sees `showShell === true` and
+  // `<Navigate to="/" replace />`s back to `/`, producing a black-screen
+  // redirect loop until the user manually purges the on-disk SettingsStore.
   const isAuthenticated = useAuthStore((s) => s.user !== null);
-  const showShell = initiallyLoggedIn || isAuthenticated;
+  const hasResolvedInitialSession = useAuthStore((s) => s.hasResolvedInitialSession);
+  const showShell =
+    isAuthenticated || (initiallyLoggedIn && !hasResolvedInitialSession);
 
   const restoreSession = useAuthStore((s) => s.restoreSession);
 
