@@ -383,6 +383,11 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         warn!(path = %loop_log_base.display(), %error, "failed to create loop_logs dir (will be created lazily)");
     }
     let loop_log = Arc::new(LoopLogWriter::new(loop_log_base));
+    // Flip any bundles still stuck at `status: Running` from a
+    // previously-crashed server process to `Interrupted`. Must run
+    // before `loop_log` is cloned into AppState so no live run can
+    // race with the sweep.
+    loop_log.reconcile_orphan_runs();
 
     let router_url = std::env::var("AURA_ROUTER_URL")
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
