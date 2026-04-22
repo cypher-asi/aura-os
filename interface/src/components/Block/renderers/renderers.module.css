@@ -113,11 +113,12 @@
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   color: var(--color-text, #ddd);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  flex: 1;
+  /*
+   * Truncation is owned by the outer `.blockTitleText` span in Block.module.css
+   * (which is a flex item with overflow:hidden / text-overflow:ellipsis).
+   * This inner span is inline-formatted, so flex / overflow rules here do
+   * nothing and were misleading. Keep only the text styling.
+   */
 }
 
 .cmdOutput {

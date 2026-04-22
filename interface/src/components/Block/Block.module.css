@@ -111,6 +111,14 @@
   gap: 6px;
   min-width: 0;
   flex: 1;
+  /*
+   * Reserve breathing room between the ellipsized title and whatever
+   * trailing labels (EXIT N, summaries, badges) render on the right.
+   * Without this, a long command title truncates right up against the
+   * red EXIT badge and reads as visual overlap even though the 8px
+   * flex gap is technically present.
+   */
+  padding-right: 8px;
 }
 
 .blockTitleText {
