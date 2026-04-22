@@ -54,23 +54,23 @@ export function GenericToolBlock({ entry, defaultExpanded }: GenericToolBlockPro
     >
       <div className={styles.genericSection}>
         <div className={styles.genericLabel}>Input</div>
-        <pre className={styles.genericJson}>
+        <div className={styles.genericJson}>
           {JSON.stringify(buildInputDisplay(entry), null, 2)}
-        </pre>
+        </div>
       </div>
       {entry.pending ? (
         <div className={styles.genericSection}>
           <div className={styles.genericLabel}>Status</div>
-          <pre className={styles.genericJson}>Waiting for the tool result.</pre>
+          <div className={styles.genericJson}>Waiting for the tool result.</div>
         </div>
       ) : entry.result != null ? (
         <div className={styles.genericSection}>
           <div className={styles.genericLabel}>{entry.isError ? "Error" : "Result"}</div>
-          <pre
+          <div
             className={`${styles.genericJson} ${entry.isError ? styles.genericError : ""}`}
           >
             {formatResult(entry.result)}
-          </pre>
+          </div>
         </div>
       ) : null}
     </Block>

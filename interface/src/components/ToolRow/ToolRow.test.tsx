@@ -411,6 +411,33 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(screen.getByText(/"foo": "bar"/)).toBeInTheDocument();
       expect(screen.getByText("Waiting for the tool result.")).toBeInTheDocument();
     });
+
+    it("renders result containers as <div>s so Block's <pre> reset cannot strip their padding", () => {
+      // Regression: the Block body's `pre` reset (padding/margin: 0) intentionally
+      // nukes ancestor-injected markdown-pre styles, but it used to also win
+      // against `.genericJson`, leaving the JSON result flush with the block's
+      // left edge and borderless. Switching to <div> sidesteps the reset.
+      const { container } = render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "task_done",
+            pending: false,
+            started: false,
+            input: { task_id: "t-42" },
+            result: JSON.stringify({
+              summary: "task is complete",
+              reasoning: ["verification run passed"],
+            }),
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(container.querySelectorAll("pre").length).toBe(0);
+      const jsonBoxes = container.querySelectorAll<HTMLElement>(".genericJson");
+      expect(jsonBoxes.length).toBeGreaterThanOrEqual(2); // Input + Result
+      jsonBoxes.forEach((el) => expect(el.tagName).toBe("DIV"));
+      expect(container.textContent ?? "").toContain("task is complete");
+    });
   });
 
   describe("expand toggle", () => {
