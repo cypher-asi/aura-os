@@ -159,6 +159,22 @@ pub(crate) fn detect_preflight_decomposition(
     None
 }
 
+/// Test-only wrapper around [`detect_preflight_decomposition`] that
+/// collapses the private [`DecompositionSignal`] into its public
+/// facets (reason label + extracted target path) so Phase 7
+/// integration tests can assert on both without the signal type
+/// leaking out of the crate.
+///
+/// Returns `None` when the inputs don't trigger the preflight
+/// heuristic.
+pub(crate) fn preflight_decomposition_reason_for_tests(
+    title: &str,
+    description: &str,
+) -> Option<(String, Option<String>)> {
+    let sig = detect_preflight_decomposition(title, description)?;
+    Some((sig.reason, sig.target_path))
+}
+
 /// Known code-file extensions the path extractor looks for. Kept
 /// narrow on purpose — extension noise (`.lock`, `.toml`, `.txt`, …)
 /// mostly yields paths that the agent shouldn't be regenerating as a

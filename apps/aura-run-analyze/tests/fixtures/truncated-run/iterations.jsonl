@@ -1,0 +1,4 @@
+{"_ts":"2024-01-01T00:00:10Z","event":{"type":"debug.iteration","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","duration_ms":500,"tool_calls":0}}
+{"_ts":"2024-01-01T00:00:40Z","event":{"type":"debug.iteration","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","duration_ms":500,"tool_calls":0}}
+{"_ts":"2024-01-01T00:01:10Z","event":{"type":"debug.iteration","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","duration_ms":500,"tool_calls":0}}
+{"_ts":"2024-01-01T00:01:40Z","event":{"type":"debug.iteration","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","duration_ms":500,"tool_calls":0}}

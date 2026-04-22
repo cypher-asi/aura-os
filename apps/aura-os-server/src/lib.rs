@@ -107,6 +107,35 @@ pub fn ensure_user_bins_on_path() {
     }
 }
 
+/// Thin re-exports of internal helpers that Phase 7 integration tests
+/// exercise directly. Kept in its own module so the production call
+/// sites don't have to widen visibility of the underlying private
+/// functions or types. Not a stable public API — hidden from docs to
+/// make it clear this is test plumbing, not a contract.
+#[doc(hidden)]
+pub mod phase7_test_support {
+    /// True when `reason` is classified as a truncation-style failure
+    /// by Phase 3's `classify_failure`. Anything else — auth errors,
+    /// crashes, rate limits — returns `false`.
+    pub fn is_truncation_failure(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_truncation_failure_for_tests(reason)
+    }
+
+    /// Run Phase 5's preflight decomposition detector against a
+    /// prospective task's `(title, description)`. Returns
+    /// `Some((reason_label, target_path))` when the heuristic would
+    /// trigger a skeleton+fill split, `None` otherwise.
+    pub fn preflight_decomposition_reason(
+        title: &str,
+        description: &str,
+    ) -> Option<(String, Option<String>)> {
+        crate::handlers::task_decompose::preflight_decomposition_reason_for_tests(
+            title,
+            description,
+        )
+    }
+}
+
 pub mod handlers_test_support {
     use aura_os_core::{AgentId, AgentInstanceId, SessionEvent};
     use aura_os_link::ConversationMessage;

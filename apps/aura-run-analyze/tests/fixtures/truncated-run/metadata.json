@@ -1,0 +1,31 @@
+{
+  "run_id": "20240101_000000_truncated",
+  "project_id": "11111111-1111-4111-8111-111111111111",
+  "agent_instance_id": "22222222-2222-4222-8222-222222222222",
+  "started_at": "2024-01-01T00:00:00+00:00",
+  "ended_at": "2024-01-01T00:03:30+00:00",
+  "status": "failed",
+  "tasks": [
+    {
+      "task_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "spec_id": null,
+      "started_at": "2024-01-01T00:00:00+00:00",
+      "ended_at": null,
+      "status": null
+    }
+  ],
+  "spec_ids": [],
+  "counters": {
+    "events_total": 14,
+    "llm_calls": 0,
+    "iterations": 4,
+    "blockers": 0,
+    "retries": 0,
+    "tool_calls": 0,
+    "task_completed": 0,
+    "task_failed": 1,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "narration_deltas": 6
+  }
+}

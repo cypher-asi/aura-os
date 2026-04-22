@@ -1,0 +1,8 @@
+{"_ts":"2024-01-01T00:00:00Z","event":{"type":"task_started","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}}
+{"_ts":"2024-01-01T00:00:05Z","event":{"type":"text_delta","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","delta":"Planning implementation..."}}
+{"_ts":"2024-01-01T00:00:15Z","event":{"type":"text_delta","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","delta":"Considering edge cases..."}}
+{"_ts":"2024-01-01T00:00:30Z","event":{"type":"text_delta","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","delta":"Outlining functions..."}}
+{"_ts":"2024-01-01T00:00:45Z","event":{"type":"text_delta","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","delta":"Refining the API..."}}
+{"_ts":"2024-01-01T00:01:00Z","event":{"type":"text_delta","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","delta":"Drafting error handling..."}}
+{"_ts":"2024-01-01T00:01:30Z","event":{"type":"text_delta","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","delta":"Final review..."}}
+{"_ts":"2024-01-01T00:03:30Z","event":{"type":"task_failed","task_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","reason":"truncated response — no file operations (needs decomposition)"}}

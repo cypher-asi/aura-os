@@ -148,6 +148,14 @@ fn classify_failure(reason: &str) -> FailureClass {
     }
 }
 
+/// Test-only thin predicate over [`classify_failure`]. Exposed via
+/// [`crate::phase7_test_support`] so Phase 7 integration tests can
+/// exercise the classification without widening the visibility of the
+/// private `FailureClass` enum.
+pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
+    classify_failure(reason) == FailureClass::Truncation
+}
+
 /// Returns true if the `AURA_AUTO_DECOMPOSE_DISABLED` env var is set to
 /// `1` / `true` (case-insensitive). When set, Phase 3 remediation and
 /// Phase 5 preflight decomposition are both no-ops and every failure
