@@ -38,9 +38,7 @@ pub fn high_retry_density(bundle: &BundleView) -> Vec<Finding> {
                 out.push(Finding {
                     id: "high_retry_density",
                     severity: Severity::Error,
-                    title: format!(
-                        "sustained retries for reason '{reason}' ({count} repeats)"
-                    ),
+                    title: format!("sustained retries for reason '{reason}' ({count} repeats)"),
                     detail: format!(
                         "task saw {count} retries for the same reason; distribution: {reason_dist}"
                     ),
@@ -85,8 +83,7 @@ fn format_reasons(reasons: &BTreeMap<String, u64>) -> String {
     if reasons.is_empty() {
         return "<none>".to_owned();
     }
-    let mut parts: Vec<(String, u64)> =
-        reasons.iter().map(|(k, v)| (k.clone(), *v)).collect();
+    let mut parts: Vec<(String, u64)> = reasons.iter().map(|(k, v)| (k.clone(), *v)).collect();
     parts.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
     parts
         .into_iter()

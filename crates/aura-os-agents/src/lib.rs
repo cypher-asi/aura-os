@@ -172,8 +172,7 @@ impl AgentService {
     pub fn save_agent_shadow(&self, agent: &Agent) -> Result<(), AgentError> {
         let mut patched = agent.clone();
         self.preserve_shadow_permissions_if_empty(&mut patched);
-        let payload =
-            serde_json::to_vec(&patched).map_err(|e| AgentError::Parse(e.to_string()))?;
+        let payload = serde_json::to_vec(&patched).map_err(|e| AgentError::Parse(e.to_string()))?;
         self.store
             .put_setting(&Self::agent_key(&patched.agent_id), &payload)
             .map_err(AgentError::Store)

@@ -182,11 +182,7 @@ pub(crate) async fn get_run_logs(
         })?;
 
     let body = match query.limit {
-        Some(limit) => contents
-            .lines()
-            .take(limit)
-            .collect::<Vec<_>>()
-            .join("\n"),
+        Some(limit) => contents.lines().take(limit).collect::<Vec<_>>().join("\n"),
         None => contents,
     };
 

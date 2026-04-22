@@ -372,7 +372,8 @@ mod tests {
     fn detect_matches_long_spec_with_write_hint() {
         // Build a long description that does NOT include any of the
         // phrase-list triggers, so the long-spec branch is what fires.
-        let body = "Details: ".to_string() + &"we need to handle various edge cases here. ".repeat(120);
+        let body =
+            "Details: ".to_string() + &"we need to handle various edge cases here. ".repeat(120);
         let description = format!(
             "{body}\nYou MUST call write_file once for `apps/server/src/main.rs` with the whole thing."
         );
@@ -383,10 +384,7 @@ mod tests {
         let sig = detect_preflight_decomposition("Task", &description)
             .expect("expected a match on the long-spec path");
         assert_eq!(sig.reason, "long_spec_with_write_hint");
-        assert_eq!(
-            sig.target_path.as_deref(),
-            Some("apps/server/src/main.rs")
-        );
+        assert_eq!(sig.target_path.as_deref(), Some("apps/server/src/main.rs"));
     }
 
     #[test]
@@ -418,10 +416,7 @@ mod tests {
              following the existing conventions.",
         )
         .expect("phrase 'generate a complete' should match");
-        assert_eq!(
-            sig.target_path.as_deref(),
-            Some("crates/utils/src/time.rs")
-        );
+        assert_eq!(sig.target_path.as_deref(), Some("crates/utils/src/time.rs"));
     }
 
     #[test]

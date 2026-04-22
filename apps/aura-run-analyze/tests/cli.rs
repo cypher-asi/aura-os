@@ -168,10 +168,7 @@ fn json_output_shape() {
     assert!(parsed.get("summary").is_some());
     let findings = parsed["findings"].as_array().expect("findings array");
     assert!(!findings.is_empty());
-    let ids: Vec<&str> = findings
-        .iter()
-        .filter_map(|f| f["id"].as_str())
-        .collect();
+    let ids: Vec<&str> = findings.iter().filter_map(|f| f["id"].as_str()).collect();
     assert!(ids.contains(&"repeated_blocker_path"));
     assert!(ids.contains(&"token_hog_llm_call"));
     let summary = &parsed["summary"];

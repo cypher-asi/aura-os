@@ -28,9 +28,7 @@ pub fn token_hog_llm_call(bundle: &BundleView) -> Vec<Finding> {
             id: "token_hog_llm_call",
             severity,
             title: format!("llm_call #{idx} on '{model}' used {total} tokens"),
-            detail: format!(
-                "input={input} tokens, output={output} tokens, total={total} tokens"
-            ),
+            detail: format!("input={input} tokens, output={output} tokens, total={total} tokens"),
             task_id: event_task_id(event),
             remediation: Some(RemediationHint::RetryWithSmallerScope {
                 reason: format!("single LLM call used {total} tokens"),

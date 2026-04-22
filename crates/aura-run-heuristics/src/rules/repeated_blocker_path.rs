@@ -167,8 +167,10 @@ mod tests {
     #[test]
     fn different_paths_do_not_merge() {
         let bundle = bundle_with(|b| {
-            b.blockers.push(json!({"type": "debug.blocker", "path": "src/a.rs"}));
-            b.blockers.push(json!({"type": "debug.blocker", "path": "src/b.rs"}));
+            b.blockers
+                .push(json!({"type": "debug.blocker", "path": "src/a.rs"}));
+            b.blockers
+                .push(json!({"type": "debug.blocker", "path": "src/b.rs"}));
         });
         assert!(repeated_blocker_path(&bundle).is_empty());
     }

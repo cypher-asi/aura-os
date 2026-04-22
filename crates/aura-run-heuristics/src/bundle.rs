@@ -27,8 +27,8 @@ pub struct BundleView {
 /// produce empty vectors).
 pub fn load_bundle(dir: &Path) -> io::Result<BundleView> {
     let raw = fs::read(dir.join("metadata.json"))?;
-    let metadata: RunMetadata = serde_json::from_slice(&raw)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let metadata: RunMetadata =
+        serde_json::from_slice(&raw).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
     Ok(BundleView {
         metadata,

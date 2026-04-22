@@ -501,10 +501,7 @@ mod tests {
         let data = api_err.data.expect("data must be populated");
         assert_eq!(data["code"], "agent_busy");
         assert_eq!(data["automaton_id"], "automaton-xyz");
-        assert!(data["reason"]
-            .as_str()
-            .unwrap()
-            .contains("automation task"));
+        assert!(data["reason"].as_str().unwrap().contains("automation task"));
     }
 
     #[test]

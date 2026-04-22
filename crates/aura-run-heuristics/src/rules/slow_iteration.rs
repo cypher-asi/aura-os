@@ -50,9 +50,7 @@ pub fn slow_iteration(bundle: &BundleView) -> Vec<Finding> {
                     id: "slow_iteration",
                     severity: Severity::Warn,
                     title: format!("iteration #{idx} took {dur} ms"),
-                    detail: format!(
-                        "single iteration over {SINGLE_ITER_WARN_MS} ms limit"
-                    ),
+                    detail: format!("single iteration over {SINGLE_ITER_WARN_MS} ms limit"),
                     task_id: event_task_id(event),
                     remediation: Some(RemediationHint::NoAutoFix),
                 });

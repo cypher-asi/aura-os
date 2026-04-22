@@ -80,23 +80,21 @@ async fn start_mock_network_permissions_stripped(initial_name: String) -> String
     });
 
     let name_for_put = name_state.clone();
-    let put_handler = put(
-        move |Path(_id): Path<String>, Json(body): Json<Value>| {
-            let state = name_for_put.clone();
-            async move {
-                if let Some(new_name) = body.get("name").and_then(|v| v.as_str()) {
-                    *state.lock().await = new_name.to_string();
-                }
-                let role = body
-                    .get("role")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("CEO")
-                    .to_string();
-                let name = state.lock().await.clone();
-                Json(network_ceo_json_without_permissions(&name, &role))
+    let put_handler = put(move |Path(_id): Path<String>, Json(body): Json<Value>| {
+        let state = name_for_put.clone();
+        async move {
+            if let Some(new_name) = body.get("name").and_then(|v| v.as_str()) {
+                *state.lock().await = new_name.to_string();
             }
-        },
-    );
+            let role = body
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("CEO")
+                .to_string();
+            let name = state.lock().await.clone();
+            Json(network_ceo_json_without_permissions(&name, &role))
+        }
+    });
 
     let app = Router::new().route("/api/agents/:agent_id", get_handler.merge(put_handler));
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

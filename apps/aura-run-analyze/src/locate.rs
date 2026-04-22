@@ -41,10 +41,7 @@ pub fn resolve_bundle_dir(cli: &Cli) -> Result<PathBuf> {
     let base = loop_logs_dir(cli.loop_logs_dir.as_deref());
     let project_dir = base.join(project);
     if !project_dir.is_dir() {
-        bail!(
-            "no such project directory: {}",
-            project_dir.display()
-        );
+        bail!("no such project directory: {}", project_dir.display());
     }
 
     if let Some(run_id) = cli.run.as_deref() {

@@ -13,8 +13,8 @@ use tower_http::trace::TraceLayer;
 use crate::handlers::{
     agent_bootstrap, agent_tools, agents, auth, billing, browser, debug_runs, dev_loop, feed,
     feedback, files, follows, generation, harness_proxy, leaderboard, log, marketplace, notes,
-    org_tools, orgs, process, project_stats, projects, remote_files, remote_terminal, specs,
-    swarm, system, tasks, terminal, users, ws,
+    org_tools, orgs, process, project_stats, projects, remote_files, remote_terminal, specs, swarm,
+    system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 

@@ -108,11 +108,7 @@ fn render_header(out: &mut String, metadata: &RunMetadata, bundle_dir: &Path) {
     let _ = writeln!(out);
     let _ = writeln!(out, "- path: `{}`", bundle_dir.display());
     let _ = writeln!(out, "- project_id: `{}`", metadata.project_id);
-    let _ = writeln!(
-        out,
-        "- agent_instance_id: `{}`",
-        metadata.agent_instance_id
-    );
+    let _ = writeln!(out, "- agent_instance_id: `{}`", metadata.agent_instance_id);
     let _ = writeln!(out, "- started_at: {}", metadata.started_at.to_rfc3339());
     if let Some(ended) = metadata.ended_at {
         let duration = ended.signed_duration_since(metadata.started_at);
@@ -152,12 +148,7 @@ fn render_findings(out: &mut String, findings: &[Finding]) {
         if group.is_empty() {
             continue;
         }
-        let _ = writeln!(
-            out,
-            "### {} ({})",
-            severity_heading(severity),
-            group.len()
-        );
+        let _ = writeln!(out, "### {} ({})", severity_heading(severity), group.len());
         let _ = writeln!(out);
         for f in group {
             let _ = writeln!(out, "- **{}** _({})_", f.title, f.id);

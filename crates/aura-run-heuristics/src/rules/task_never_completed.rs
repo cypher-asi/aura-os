@@ -22,10 +22,11 @@ pub fn task_never_completed(bundle: &BundleView) -> Vec<Finding> {
         // The rule only sees task metadata, not the originating write
         // event, so we can't know which path blew up. The orchestrator
         // is expected to enrich this from events before acting on it.
-        let remediation = run_failed.then_some(RemediationHint::SplitWriteIntoSkeletonPlusAppends {
-            path: "<unknown>".into(),
-            suggested_chunk_bytes: 6000,
-        });
+        let remediation =
+            run_failed.then_some(RemediationHint::SplitWriteIntoSkeletonPlusAppends {
+                path: "<unknown>".into(),
+                suggested_chunk_bytes: 6000,
+            });
         findings.push(Finding {
             id: "task_never_completed",
             severity: Severity::Error,

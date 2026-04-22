@@ -82,8 +82,7 @@ fn truncated_run_golden_output_matches() {
     // The existing-but-different expected file is simply overwritten;
     // review the resulting diff before committing.
     if std::env::var("UPDATE_GOLDEN").is_ok() {
-        fs::write(&expected_path, normalized.as_bytes())
-            .expect("write regenerated golden");
+        fs::write(&expected_path, normalized.as_bytes()).expect("write regenerated golden");
         eprintln!(
             "UPDATE_GOLDEN=1: wrote {} bytes to {}",
             normalized.len(),
