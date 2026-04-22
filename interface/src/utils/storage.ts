@@ -1,7 +1,10 @@
 import {
   COLLAPSED_PROJECTS_KEY,
+  DEBUG_COLLAPSED_PROJECTS_KEY,
   LAST_AGENT_KEY,
   LAST_APP_KEY,
+  LAST_DEBUG_PROJECT_KEY,
+  LAST_DEBUG_RUN_KEY,
   LAST_PROJECT_KEY,
   PROJECT_ORDER_KEY,
   TASKBAR_APP_ORDER_KEY,
@@ -147,6 +150,118 @@ export function clearLastNote(): void {
   } catch {
     // ignore storage failures
   }
+}
+
+export function getCollapsedDebugProjects(): string[] {
+  try {
+    const raw = localStorage.getItem(DEBUG_COLLAPSED_PROJECTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === "string");
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return [];
+}
+
+export function setCollapsedDebugProjects(ids: string[]): void {
+  try {
+    if (ids.length === 0) {
+      localStorage.removeItem(DEBUG_COLLAPSED_PROJECTS_KEY);
+      return;
+    }
+    localStorage.setItem(DEBUG_COLLAPSED_PROJECTS_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function getLastDebugProject(): string | null {
+  try {
+    return localStorage.getItem(LAST_DEBUG_PROJECT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastDebugProject(projectId: string): void {
+  try {
+    localStorage.setItem(LAST_DEBUG_PROJECT_KEY, projectId);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function clearLastDebugProject(): void {
+  try {
+    localStorage.removeItem(LAST_DEBUG_PROJECT_KEY);
+  } catch {
+    // ignore storage failures
+  }
+}
+
+type LastDebugRunMap = Record<string, string>;
+
+function getLastDebugRunMap(): LastDebugRunMap {
+  try {
+    const raw = localStorage.getItem(LAST_DEBUG_RUN_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as LastDebugRunMap;
+    }
+  } catch {
+    // ignore malformed data
+  }
+  return {};
+}
+
+function writeLastDebugRunMap(map: LastDebugRunMap): void {
+  try {
+    if (Object.keys(map).length === 0) {
+      localStorage.removeItem(LAST_DEBUG_RUN_KEY);
+      return;
+    }
+    localStorage.setItem(LAST_DEBUG_RUN_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+export function getLastDebugRun(projectId: string): string | null {
+  return getLastDebugRunMap()[projectId] ?? null;
+}
+
+export function setLastDebugRun(projectId: string, runId: string): void {
+  const map = getLastDebugRunMap();
+  map[projectId] = runId;
+  writeLastDebugRunMap(map);
+}
+
+export function clearLastDebugRunIf(match: {
+  projectId?: string;
+  runId?: string;
+}): void {
+  const map = getLastDebugRunMap();
+  let changed = false;
+
+  if (match.projectId && map[match.projectId] !== undefined) {
+    if (!match.runId || map[match.projectId] === match.runId) {
+      delete map[match.projectId];
+      changed = true;
+    }
+  } else if (match.runId) {
+    for (const [pid, rid] of Object.entries(map)) {
+      if (rid === match.runId) {
+        delete map[pid];
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) writeLastDebugRunMap(map);
 }
 
 export function getCollapsedProjects(): string[] {

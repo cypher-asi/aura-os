@@ -14,3 +14,6 @@ export const AGENT_SIDEKICK_ACTIVE_TAB_KEY = "aura-agent-sidekick-active-tab";
 export const PROCESS_SIDEKICK_ACTIVE_TAB_KEY = "aura-process-sidekick-active-tab";
 export const PROCESS_LIVE_RUN_NODE_KEY = "aura-process-live-run-node";
 export const DEBUG_SIDEKICK_ACTIVE_TAB_KEY = "aura-debug-sidekick-active-tab";
+export const DEBUG_COLLAPSED_PROJECTS_KEY = "aura-debug-collapsed-projects";
+export const LAST_DEBUG_PROJECT_KEY = "aura-debug-last-project";
+export const LAST_DEBUG_RUN_KEY = "aura-debug-last-run";

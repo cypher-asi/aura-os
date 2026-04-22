@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   useNavigate,
   useParams,
@@ -6,6 +6,12 @@ import {
 } from "react-router-dom";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
 import type { ProjectId } from "../../../types";
+import {
+  clearLastDebugRunIf,
+  getLastDebugRun,
+  setLastDebugProject,
+  setLastDebugRun,
+} from "../../../utils/storage";
 import { useDebugRuns } from "../useDebugRuns";
 import styles from "./DebugRunListView.module.css";
 
@@ -68,6 +74,26 @@ export function DebugRunListView() {
     return runs.filter((run) => run.spec_ids?.includes(specFilter));
   }, [runs, specFilter]);
 
+  useEffect(() => {
+    if (projectId) setLastDebugProject(projectId);
+  }, [projectId]);
+
+  // Drop any remembered "last run" for this project once the run list
+  // has loaded and the stored run is no longer present (e.g. deleted
+  // on disk). This keeps the Debug index redirect from repeatedly
+  // landing on a 404 run detail.
+  useEffect(() => {
+    if (!projectId) return;
+    if (isLoading) return;
+    if (runs.length === 0) return;
+    const remembered = getLastDebugRun(projectId);
+    if (!remembered) return;
+    const knownRunIds = new Set(runs.map((run) => run.run_id));
+    if (!knownRunIds.has(remembered)) {
+      clearLastDebugRunIf({ projectId, runId: remembered });
+    }
+  }, [projectId, runs, isLoading]);
+
   const clearSpecFilter = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("spec");
@@ -124,9 +150,10 @@ export function DebugRunListView() {
               key={run.run_id}
               type="button"
               className={styles.card}
-              onClick={() =>
-                navigate(`/debug/${projectId}/runs/${run.run_id}`)
-              }
+              onClick={() => {
+                setLastDebugRun(projectId, run.run_id);
+                navigate(`/debug/${projectId}/runs/${run.run_id}`);
+              }}
             >
               <span className={badgeClass(run.status)}>{run.status}</span>
               <div className={styles.cardBody}>

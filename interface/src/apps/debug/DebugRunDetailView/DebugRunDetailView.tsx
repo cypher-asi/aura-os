@@ -1,9 +1,14 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
 import { api } from "../../../api/client";
 import type { ProjectId } from "../../../types";
+import {
+  clearLastDebugRunIf,
+  setLastDebugProject,
+  setLastDebugRun,
+} from "../../../utils/storage";
 import { useDebugRunMetadata } from "../useDebugRunMetadata";
 import { useDebugRunLogs } from "../useDebugRunLogs";
 import { useDebugSidekickStore } from "../stores/debug-sidekick-store";
@@ -65,7 +70,26 @@ export function DebugRunDetailView() {
   // tab-specific channel when summarizing.
   const channel = "events" as const;
 
-  const { metadata, isRunning } = useDebugRunMetadata(projectId, runId);
+  const { metadata, isRunning, error: metadataError } = useDebugRunMetadata(
+    projectId,
+    runId,
+  );
+
+  useEffect(() => {
+    if (!projectId || !runId) return;
+    setLastDebugProject(projectId);
+    setLastDebugRun(projectId, runId);
+  }, [projectId, runId]);
+
+  // If the run we just routed to 404s (e.g. the bundle was deleted on
+  // disk), forget it so the next visit to `/debug` doesn't keep
+  // redirecting here.
+  useEffect(() => {
+    if (!projectId || !runId) return;
+    if (!metadataError) return;
+    clearLastDebugRunIf({ projectId, runId });
+  }, [projectId, runId, metadataError]);
+
   const { entries, raw, isLoading } = useDebugRunLogs({
     projectId,
     runId,

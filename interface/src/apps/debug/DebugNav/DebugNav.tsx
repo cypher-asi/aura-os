@@ -12,11 +12,20 @@ import {
 } from "../../../features/left-menu";
 import treeStyles from "../../../features/left-menu/LeftMenuTree/LeftMenuTree.module.css";
 import {
+  getCollapsedDebugProjects,
+  setCollapsedDebugProjects,
+} from "../../../utils/storage";
+import {
   buildDebugExplorerData,
   buildRunningNowSection,
   RUNNING_NOW_GROUP_ID,
 } from "./debug-nav-explorer-node";
 import { useDebugRunsByProject } from "../useDebugRunsByProject";
+
+const debugNavPersistence = {
+  load: getCollapsedDebugProjects,
+  save: setCollapsedDebugProjects,
+};
 
 function matchesSearch(text: string, needle: string): boolean {
   if (!needle) return true;
@@ -101,6 +110,7 @@ export function DebugNav() {
   }, [projectId, projectsWithRunningIds]);
   const { expandedIds, toggleGroup } = useLeftMenuExpandedGroups(
     defaultExpandedIds,
+    { persistence: debugNavPersistence },
   );
 
   const explorerData = useMemo(

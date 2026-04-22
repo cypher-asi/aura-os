@@ -2,8 +2,10 @@
 import { lazy } from "react";
 import type { RouteObject } from "react-router-dom";
 
-const DebugEmptyView = lazy(() =>
-  import("./DebugMainPanel").then((m) => ({ default: m.DebugEmptyView })),
+const DebugIndexRedirect = lazy(() =>
+  import("./DebugIndexRedirect").then((m) => ({
+    default: m.DebugIndexRedirect,
+  })),
 );
 const DebugRunListView = lazy(() =>
   import("./DebugRunListView").then((m) => ({ default: m.DebugRunListView })),
@@ -15,7 +17,7 @@ const DebugRunDetailView = lazy(() =>
 );
 
 export const debugRoutes: RouteObject[] = [
-  { path: "debug", element: <DebugEmptyView /> },
+  { path: "debug", element: <DebugIndexRedirect /> },
   { path: "debug/:projectId", element: <DebugRunListView /> },
   {
     path: "debug/:projectId/runs/:runId",
