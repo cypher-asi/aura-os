@@ -2087,7 +2087,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2124,7 +2124,9 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ]
+          ],
+          "updatedAt": "2026-04-22T20:33:14.611Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-redesign-and-agent-busy-chat-signal"
         }
       },
       {
@@ -2218,7 +2220,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2234,7 +2236,9 @@
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
-          ]
+          ],
+          "updatedAt": "2026-04-22T20:37:26.408Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-darker-outline-on-run-timeline-and-task-output-blocks"
         }
       },
       {
@@ -2254,7 +2258,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2269,7 +2273,11 @@
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.338.1/entry-chat-border-token-propagated-to-sidekick-and-preview-overlays.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T20:39:38.453Z",
+          "storyTitle": "Chat border token propagated to Sidekick and PreviewOverlay"
         }
       },
       {
@@ -2356,7 +2364,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 5,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2395,7 +2403,11 @@
             "interface/src/components/LLMOutput/LLMStreamOutput.tsx",
             "interface/src/components/StreamingBubble/StreamingBubble.tsx",
             "interface/src/components/TaskOutputPanel/ActiveTaskStream.tsx"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.338.1/entry-preflight-decomposition-live-heuristics-and-a-reshaped-login-flo.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T20:41:51.583Z",
+          "storyTitle": "Preflight Decomposition, Live Heuristics & Rebuilt Chat Streaming"
         }
       }
     ],
