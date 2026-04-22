@@ -177,6 +177,77 @@ function updateEntryMedia(doc, slotId, updater) {
   };
 }
 
+function isSameReleaseDoc(a, b) {
+  return sanitizeText(a?.date) === sanitizeText(b?.date)
+    && sanitizeText(a?.version) === sanitizeText(b?.version)
+    && sanitizeText(a?.channel) === sanitizeText(b?.channel);
+}
+
+function findHistoryJsonPathByVersion(historyDir, version) {
+  if (!version || !fs.existsSync(historyDir)) {
+    return null;
+  }
+
+  for (const entry of fs.readdirSync(historyDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) {
+      continue;
+    }
+    const candidatePath = path.join(historyDir, entry.name);
+    const candidate = readJson(candidatePath);
+    if (sanitizeText(candidate?.version) === version) {
+      return candidatePath;
+    }
+  }
+
+  return null;
+}
+
+function resolveTargetChangelogDocs(channelDir, requestedDate, requestedVersion) {
+  const latestJsonPath = path.join(channelDir, "latest.json");
+  const latestMarkdownPath = path.join(channelDir, "latest.md");
+  const latestDoc = readJson(latestJsonPath);
+  const historyDir = path.join(channelDir, "history");
+  const normalizedDate = sanitizeText(requestedDate);
+  const normalizedVersion = sanitizeText(requestedVersion);
+
+  let targetJsonPath = latestJsonPath;
+  if (normalizedDate) {
+    targetJsonPath = path.join(historyDir, `${normalizedDate}.json`);
+  } else if (normalizedVersion && sanitizeText(latestDoc?.version) !== normalizedVersion) {
+    targetJsonPath = findHistoryJsonPathByVersion(historyDir, normalizedVersion);
+    if (!targetJsonPath) {
+      throw new Error(`Could not find changelog history entry for version ${normalizedVersion}`);
+    }
+  }
+
+  if (!fs.existsSync(targetJsonPath)) {
+    throw new Error(`Could not find changelog document at ${targetJsonPath}`);
+  }
+
+  const targetDoc = targetJsonPath === latestJsonPath ? latestDoc : readJson(targetJsonPath);
+  const targetDate = sanitizeText(targetDoc?.date);
+  const targetVersion = sanitizeText(targetDoc?.version);
+  const targetMarkdownPath = targetJsonPath === latestJsonPath
+    ? latestMarkdownPath
+    : path.join(historyDir, `${targetDate}.md`);
+
+  return {
+    latest: {
+      doc: latestDoc,
+      jsonPath: latestJsonPath,
+      markdownPath: latestMarkdownPath,
+    },
+    target: {
+      doc: targetDoc,
+      jsonPath: targetJsonPath,
+      markdownPath: targetMarkdownPath,
+      date: targetDate,
+      version: targetVersion,
+      isLatest: isSameReleaseDoc(latestDoc, targetDoc),
+    },
+  };
+}
+
 function resolveAssetPath({ channel, version, date, slotId, sourcePath }) {
   const extension = path.extname(sourcePath) || ".png";
   return path.posix.join("assets", "changelog", channel, version || date || "latest", `${slotId}${extension}`);
@@ -189,6 +260,50 @@ function toPosixPath(value) {
 function relativeAssetReference(markdownPath, pagesDir, assetPath) {
   const absoluteAssetPath = path.join(pagesDir, assetPath);
   return toPosixPath(path.relative(path.dirname(markdownPath), absoluteAssetPath));
+}
+
+function shouldPublishEntryMedia(entry, pagesDir, { refreshExisting = false } = {}) {
+  if (!entry?.media?.requested) {
+    return {
+      publish: false,
+      reason: "entry does not request changelog media",
+    };
+  }
+
+  if (refreshExisting) {
+    return {
+      publish: true,
+      reason: "refresh_existing requested",
+    };
+  }
+
+  const status = sanitizeText(entry.media.status || "pending");
+  const assetPath = sanitizeText(entry.media.assetPath);
+  if (status !== "published") {
+    return {
+      publish: true,
+      reason: `media status is ${status || "pending"}`,
+    };
+  }
+
+  if (!assetPath) {
+    return {
+      publish: true,
+      reason: "published media is missing assetPath",
+    };
+  }
+
+  if (!fs.existsSync(path.join(pagesDir, assetPath))) {
+    return {
+      publish: true,
+      reason: `asset file ${assetPath} is missing`,
+    };
+  }
+
+  return {
+    publish: false,
+    reason: "published media asset already exists",
+  };
 }
 
 function findProductionSummary(outputRoot) {
@@ -358,6 +473,7 @@ function buildRunSummary(results) {
     attempted: results.length,
     published: results.filter((result) => result.status === "published").length,
     failed: results.filter((result) => result.status === "failed").length,
+    skipped: results.filter((result) => result.status === "skipped").length,
     results,
   };
 }
@@ -372,48 +488,58 @@ async function main() {
   const profile = sanitizeText(args.profile || "");
   const date = sanitizeText(args.date || "");
   const version = sanitizeText(args.version || "");
+  const refreshExisting = args["refresh-existing"] === true;
 
   if (!previewUrl) {
     throw new Error("A preview URL is required. Pass --preview-url or set AURA_DEMO_SCREENSHOT_BASE_URL.");
   }
 
   const channelDir = path.join(pagesDir, "changelog", channel);
-  const latestJsonPath = path.join(channelDir, "latest.json");
-  const latestMarkdownPath = path.join(channelDir, "latest.md");
-  const doc = readJson(latestJsonPath);
-  const effectiveDate = date || sanitizeText(doc.date);
-  const effectiveVersion = version || sanitizeText(doc.version);
-  const historyJsonPath = path.join(channelDir, "history", `${effectiveDate}.json`);
-  const historyMarkdownPath = path.join(channelDir, "history", `${effectiveDate}.md`);
-
-  let latestDoc = doc;
-  let historyDoc = readJson(historyJsonPath);
-  const candidateEntries = (Array.isArray(doc?.rendered?.entries) ? doc.rendered.entries : [])
-    .filter((entry) => entry?.media?.requested);
+  const changelogDocs = resolveTargetChangelogDocs(channelDir, date, version);
+  const effectiveDate = changelogDocs.target.date;
+  const effectiveVersion = changelogDocs.target.version;
+  let targetDoc = changelogDocs.target.doc;
+  let latestDoc = changelogDocs.latest.doc;
+  const candidateEntries = Array.isArray(targetDoc?.rendered?.entries) ? targetDoc.rendered.entries : [];
 
   const results = [];
   for (const entry of candidateEntries) {
+    const decision = shouldPublishEntryMedia(entry, pagesDir, { refreshExisting });
+    if (!decision.publish) {
+      results.push({
+        slotId: entry?.media?.slotId || entry?.batch_id || entry?.title || "entry",
+        title: entry?.title || "Untitled entry",
+        status: "skipped",
+        reason: decision.reason,
+      });
+      continue;
+    }
+
     try {
       const published = publishEntryMedia({
         repoDir,
         pagesDir,
-        doc: latestDoc,
-        latestMarkdownPath,
-        historyMarkdownPath,
+        doc: targetDoc,
+        latestMarkdownPath: changelogDocs.target.isLatest ? changelogDocs.latest.markdownPath : changelogDocs.target.markdownPath,
+        historyMarkdownPath: changelogDocs.target.markdownPath,
         entry,
         previewUrl,
         provider,
         profile,
       });
 
-      latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) => ({
+      targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
         ...media,
         ...published.metadata,
       }));
-      historyDoc = updateEntryMedia(historyDoc, entry.media.slotId, (media) => ({
-        ...media,
-        ...published.metadata,
-      }));
+      if (changelogDocs.target.isLatest) {
+        latestDoc = targetDoc;
+      } else if (isSameReleaseDoc(latestDoc, targetDoc)) {
+        latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) => ({
+          ...media,
+          ...published.metadata,
+        }));
+      }
 
       results.push({
         slotId: entry.media.slotId,
@@ -423,18 +549,22 @@ async function main() {
         screenshotSource: published.selectedScreenshot.source,
       });
     } catch (error) {
-      latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) => ({
+      targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
         ...media,
         status: "failed",
         updatedAt: new Date().toISOString(),
         error: String(error),
       }));
-      historyDoc = updateEntryMedia(historyDoc, entry.media.slotId, (media) => ({
-        ...media,
-        status: "failed",
-        updatedAt: new Date().toISOString(),
-        error: String(error),
-      }));
+      if (changelogDocs.target.isLatest) {
+        latestDoc = targetDoc;
+      } else if (isSameReleaseDoc(latestDoc, targetDoc)) {
+        latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) => ({
+          ...media,
+          status: "failed",
+          updatedAt: new Date().toISOString(),
+          error: String(error),
+        }));
+      }
       results.push({
         slotId: entry.media.slotId,
         title: entry.title,
@@ -444,8 +574,12 @@ async function main() {
     }
   }
 
-  writeJson(latestJsonPath, latestDoc);
-  writeJson(historyJsonPath, historyDoc);
+  writeJson(changelogDocs.target.jsonPath, targetDoc);
+  if (changelogDocs.target.isLatest) {
+    writeJson(changelogDocs.latest.jsonPath, targetDoc);
+  } else if (isSameReleaseDoc(latestDoc, targetDoc)) {
+    writeJson(changelogDocs.latest.jsonPath, latestDoc);
+  }
 
   const summary = buildRunSummary(results);
   console.log(JSON.stringify({
@@ -465,9 +599,11 @@ export {
   buildMediaBlock,
   buildRunSummary,
   parseArgs,
+  resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
   resolveAssetPath,
   selectBestScreenshot,
+  shouldPublishEntryMedia,
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

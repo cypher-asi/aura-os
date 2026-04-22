@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import {
   buildEntryPrompt,
   parseArgs,
+  resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
   resolveAssetPath,
   selectBestScreenshot,
+  shouldPublishEntryMedia,
 } from "./publish-changelog-media.mjs";
 
 test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
@@ -121,4 +126,77 @@ test("parseArgs preserves explicit empty-string values instead of coercing them 
       channel: "nightly",
     },
   );
+});
+
+test("shouldPublishEntryMedia skips healthy published assets by default", () => {
+  const pagesDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-pages-"));
+  const assetPath = "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png";
+  const absoluteAssetPath = path.join(pagesDir, assetPath);
+  fs.mkdirSync(path.dirname(absoluteAssetPath), { recursive: true });
+  fs.writeFileSync(absoluteAssetPath, "ok");
+
+  assert.deepEqual(
+    shouldPublishEntryMedia(
+      {
+        media: {
+          requested: true,
+          status: "published",
+          assetPath,
+        },
+      },
+      pagesDir,
+      {},
+    ),
+    {
+      publish: false,
+      reason: "published media asset already exists",
+    },
+  );
+
+  assert.deepEqual(
+    shouldPublishEntryMedia(
+      {
+        media: {
+          requested: true,
+          status: "failed",
+          assetPath,
+        },
+      },
+      pagesDir,
+      {},
+    ),
+    {
+      publish: true,
+      reason: "media status is failed",
+    },
+  );
+});
+
+test("resolveTargetChangelogDocs can target a historical changelog by version", () => {
+  const pagesDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-pages-"));
+  const channelDir = path.join(pagesDir, "changelog", "nightly");
+  const historyDir = path.join(channelDir, "history");
+  fs.mkdirSync(historyDir, { recursive: true });
+
+  const latestDoc = {
+    channel: "nightly",
+    date: "2026-04-22",
+    version: "0.1.0-nightly.325.1",
+  };
+  const historyDoc = {
+    channel: "nightly",
+    date: "2026-04-21",
+    version: "0.1.0-nightly.324.1",
+  };
+
+  fs.writeFileSync(path.join(channelDir, "latest.json"), `${JSON.stringify(latestDoc, null, 2)}\n`);
+  fs.writeFileSync(path.join(channelDir, "latest.md"), "# latest\n");
+  fs.writeFileSync(path.join(historyDir, "2026-04-21.json"), `${JSON.stringify(historyDoc, null, 2)}\n`);
+  fs.writeFileSync(path.join(historyDir, "2026-04-21.md"), "# history\n");
+
+  const resolved = resolveTargetChangelogDocs(channelDir, "", "0.1.0-nightly.324.1");
+  assert.equal(resolved.target.version, "0.1.0-nightly.324.1");
+  assert.equal(resolved.target.date, "2026-04-21");
+  assert.equal(resolved.target.isLatest, false);
+  assert.match(resolved.target.jsonPath, /2026-04-21\.json$/);
 });
