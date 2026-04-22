@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 use crate::rules::helpers::{event_str, event_task_id_str, event_u64};
 
 const RETRY_COUNT_WARN: u64 = 3;
@@ -45,6 +45,7 @@ pub fn high_retry_density(bundle: &BundleView) -> Vec<Finding> {
                         "task saw {count} retries for the same reason; distribution: {reason_dist}"
                     ),
                     task_id,
+                    remediation: Some(RemediationHint::NoAutoFix),
                 });
                 continue;
             }
@@ -60,6 +61,7 @@ pub fn high_retry_density(bundle: &BundleView) -> Vec<Finding> {
                 ),
                 detail: format!("reasons: {reason_dist}"),
                 task_id,
+                remediation: Some(RemediationHint::NoAutoFix),
             });
         }
     }
@@ -127,6 +129,10 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].severity, Severity::Warn);
         assert!(findings[0].detail.contains("429=1"));
+        assert!(matches!(
+            findings[0].remediation,
+            Some(RemediationHint::NoAutoFix)
+        ));
     }
 
     #[test]

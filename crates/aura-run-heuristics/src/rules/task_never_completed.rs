@@ -6,18 +6,26 @@
 use aura_loop_log_schema::RunStatus;
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 
 pub fn task_never_completed(bundle: &BundleView) -> Vec<Finding> {
     if matches!(bundle.metadata.status, RunStatus::Running) {
         return Vec::new();
     }
+    let run_failed = matches!(bundle.metadata.status, RunStatus::Failed);
     let mut findings = Vec::new();
     for task in &bundle.metadata.tasks {
         if task.ended_at.is_some() {
             continue;
         }
         let task_id = task.task_id.parse::<aura_os_core::TaskId>().ok();
+        // The rule only sees task metadata, not the originating write
+        // event, so we can't know which path blew up. The orchestrator
+        // is expected to enrich this from events before acting on it.
+        let remediation = run_failed.then_some(RemediationHint::SplitWriteIntoSkeletonPlusAppends {
+            path: "<unknown>".into(),
+            suggested_chunk_bytes: 6000,
+        });
         findings.push(Finding {
             id: "task_never_completed",
             severity: Severity::Error,
@@ -28,6 +36,7 @@ pub fn task_never_completed(bundle: &BundleView) -> Vec<Finding> {
                 bundle.metadata.status
             ),
             task_id,
+            remediation,
         });
     }
     findings
@@ -86,5 +95,9 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].severity, Severity::Error);
         assert!(findings[0].task_id.is_some());
+        assert!(matches!(
+            findings[0].remediation,
+            Some(RemediationHint::SplitWriteIntoSkeletonPlusAppends { .. })
+        ));
     }
 }

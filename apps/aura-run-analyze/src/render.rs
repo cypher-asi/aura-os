@@ -12,7 +12,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 use aura_loop_log_schema::{RunCounters, RunMetadata};
-use aura_run_heuristics::{BundleView, Finding, Severity};
+use aura_run_heuristics::{BundleView, Finding, RemediationHint, Severity};
 use serde::Serialize;
 
 pub fn markdown(bundle: &BundleView, findings: &[Finding], bundle_dir: &Path) -> Result<()> {
@@ -165,8 +165,33 @@ fn render_findings(out: &mut String, findings: &[Finding]) {
             if let Some(tid) = f.task_id {
                 let _ = writeln!(out, "  task: `{tid}`");
             }
+            if let Some(line) = format_remediation(f.remediation.as_ref()) {
+                let _ = writeln!(out, "    {line}");
+            }
         }
         let _ = writeln!(out);
+    }
+}
+
+/// Render a remediation hint as a compact one-liner, or `None` when
+/// the hint is `NoAutoFix` / absent. Downstream dev loops read this
+/// to inherit actionable next steps without re-parsing the finding.
+fn format_remediation(hint: Option<&RemediationHint>) -> Option<String> {
+    match hint? {
+        RemediationHint::SplitWriteIntoSkeletonPlusAppends {
+            path,
+            suggested_chunk_bytes,
+        } => Some(format!(
+            "fix: split-write path={path} chunk={suggested_chunk_bytes}"
+        )),
+        RemediationHint::ReshapeSearchQuery { reason, .. } => {
+            Some(format!("fix: reshape-search ({reason})"))
+        }
+        RemediationHint::ForceToolCallNextTurn => Some("fix: force-tool-call".to_owned()),
+        RemediationHint::RetryWithSmallerScope { reason } => {
+            Some(format!("fix: retry-smaller-scope ({reason})"))
+        }
+        RemediationHint::NoAutoFix => None,
     }
 }
 

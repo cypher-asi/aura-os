@@ -15,7 +15,7 @@ mod rules;
 mod test_support;
 
 pub use bundle::{load_bundle, BundleView};
-pub use finding::{Finding, Severity};
+pub use finding::{Finding, RemediationHint, Severity};
 pub use rules::analyze;
 
 // Re-export the rule functions individually so callers (tests,

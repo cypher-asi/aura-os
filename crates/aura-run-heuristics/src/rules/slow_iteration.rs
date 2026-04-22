@@ -4,7 +4,7 @@
 //! individually exceeds 30_000 ms.
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 use crate::rules::helpers::{event_task_id, event_u64};
 
 const SINGLE_ITER_WARN_MS: u64 = 30_000;
@@ -39,6 +39,7 @@ pub fn slow_iteration(bundle: &BundleView) -> Vec<Finding> {
                 p95
             ),
             task_id: None,
+            remediation: Some(RemediationHint::NoAutoFix),
         });
     }
 
@@ -53,6 +54,7 @@ pub fn slow_iteration(bundle: &BundleView) -> Vec<Finding> {
                         "single iteration over {SINGLE_ITER_WARN_MS} ms limit"
                     ),
                     task_id: event_task_id(event),
+                    remediation: Some(RemediationHint::NoAutoFix),
                 });
             }
         }
@@ -113,6 +115,10 @@ mod tests {
         let findings = slow_iteration(&bundle);
         assert_eq!(findings.len(), 1);
         assert!(findings[0].title.contains("p95"));
+        assert!(matches!(
+            findings[0].remediation,
+            Some(RemediationHint::NoAutoFix)
+        ));
     }
 
     #[test]

@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 use crate::rules::helpers::{event_task_id_str, event_u64};
 
 const RATIO_WARN: f64 = 100.0;
@@ -38,6 +38,11 @@ pub fn unbalanced_io(bundle: &BundleView) -> Vec<Finding> {
                 ),
                 detail: "likely thrashing on context without making progress".to_owned(),
                 task_id: task_key.as_deref().and_then(|s| s.parse().ok()),
+                remediation: Some(RemediationHint::RetryWithSmallerScope {
+                    reason: format!(
+                        "input/output token ratio {ratio:.1}x indicates context thrash"
+                    ),
+                }),
             });
         }
     }
@@ -90,6 +95,11 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].severity, Severity::Warn);
         assert!(findings[0].title.contains("500"));
+        assert!(matches!(
+            &findings[0].remediation,
+            Some(RemediationHint::RetryWithSmallerScope { reason })
+                if reason.contains("context thrash")
+        ));
     }
 
     #[test]

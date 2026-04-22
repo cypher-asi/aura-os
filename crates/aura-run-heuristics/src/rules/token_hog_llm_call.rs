@@ -3,7 +3,7 @@
 //! Error. Model name is included so users can correlate with pricing.
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 use crate::rules::helpers::{event_str, event_task_id, event_u64};
 
 const WARN_TOTAL_TOKENS: u64 = 60_000;
@@ -32,6 +32,9 @@ pub fn token_hog_llm_call(bundle: &BundleView) -> Vec<Finding> {
                 "input={input} tokens, output={output} tokens, total={total} tokens"
             ),
             task_id: event_task_id(event),
+            remediation: Some(RemediationHint::RetryWithSmallerScope {
+                reason: format!("single LLM call used {total} tokens"),
+            }),
         });
     }
     findings
@@ -85,6 +88,11 @@ mod tests {
         assert_eq!(findings[0].severity, Severity::Warn);
         assert!(findings[0].title.contains("claude-4.6-sonnet"));
         assert!(findings[0].title.contains("65000"));
+        assert!(matches!(
+            &findings[0].remediation,
+            Some(RemediationHint::RetryWithSmallerScope { reason })
+                if reason.contains("65000")
+        ));
     }
 
     #[test]

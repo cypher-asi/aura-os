@@ -7,7 +7,7 @@
 use aura_os_core::TaskId;
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 use crate::rules::helpers::{event_task_id, event_u64};
 
 const MIN_CONSECUTIVE: u64 = 3;
@@ -54,6 +54,7 @@ fn build_finding(task_id: Option<TaskId>, start_idx: usize, count: u64) -> Findi
                  reshaping the prompt"
             .to_owned(),
         task_id,
+        remediation: Some(RemediationHint::ForceToolCallNextTurn),
     }
 }
 
@@ -81,6 +82,10 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].severity, Severity::Warn);
         assert!(findings[0].task_id.is_some());
+        assert!(matches!(
+            findings[0].remediation,
+            Some(RemediationHint::ForceToolCallNextTurn)
+        ));
     }
 
     #[test]

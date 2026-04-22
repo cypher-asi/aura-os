@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 use crate::bundle::BundleView;
-use crate::finding::{Finding, Severity};
+use crate::finding::{Finding, RemediationHint, Severity};
 use crate::rules::helpers::{event_str, event_task_id_str};
 
 pub fn repeated_blocker_path(bundle: &BundleView) -> Vec<Finding> {
@@ -30,26 +30,36 @@ pub fn repeated_blocker_path(bundle: &BundleView) -> Vec<Finding> {
     buckets
         .into_iter()
         .filter(|(_, b)| b.count >= 2)
-        .map(|((kind, key), bucket)| Finding {
-            id: "repeated_blocker_path",
-            severity: Severity::Warn,
-            title: format!(
-                "repeated blocker on {} '{}' ({} times)",
-                kind.label(),
-                truncate(&key, 80),
-                bucket.count
-            ),
-            detail: format!(
-                "{} blocker events shared the same {}; task_ids: {}",
-                bucket.count,
-                kind.label(),
-                if bucket.task_ids.is_empty() {
-                    "<unknown>".to_owned()
-                } else {
-                    bucket.task_ids.join(", ")
-                }
-            ),
-            task_id: None,
+        .map(|((kind, key), bucket)| {
+            let remediation_path = match kind {
+                BlockerKeyKind::Path => key.clone(),
+                BlockerKeyKind::Message => "<unknown>".to_owned(),
+            };
+            Finding {
+                id: "repeated_blocker_path",
+                severity: Severity::Warn,
+                title: format!(
+                    "repeated blocker on {} '{}' ({} times)",
+                    kind.label(),
+                    truncate(&key, 80),
+                    bucket.count
+                ),
+                detail: format!(
+                    "{} blocker events shared the same {}; task_ids: {}",
+                    bucket.count,
+                    kind.label(),
+                    if bucket.task_ids.is_empty() {
+                        "<unknown>".to_owned()
+                    } else {
+                        bucket.task_ids.join(", ")
+                    }
+                ),
+                task_id: None,
+                remediation: Some(RemediationHint::SplitWriteIntoSkeletonPlusAppends {
+                    path: remediation_path,
+                    suggested_chunk_bytes: 6000,
+                }),
+            }
         })
         .collect()
 }
@@ -114,6 +124,11 @@ mod tests {
         assert!(findings[0].title.contains("src/foo.rs"));
         assert!(findings[0].detail.contains("aaaaaaaa"));
         assert!(findings[0].detail.contains("bbbbbbbb"));
+        assert!(matches!(
+            &findings[0].remediation,
+            Some(RemediationHint::SplitWriteIntoSkeletonPlusAppends { path, suggested_chunk_bytes: 6000 })
+                if path == "src/foo.rs"
+        ));
     }
 
     #[test]
@@ -131,6 +146,11 @@ mod tests {
         let findings = repeated_blocker_path(&bundle);
         assert_eq!(findings.len(), 1);
         assert!(findings[0].title.contains("duplicate write attempt"));
+        assert!(matches!(
+            &findings[0].remediation,
+            Some(RemediationHint::SplitWriteIntoSkeletonPlusAppends { path, .. })
+                if path == "<unknown>"
+        ));
     }
 
     #[test]
