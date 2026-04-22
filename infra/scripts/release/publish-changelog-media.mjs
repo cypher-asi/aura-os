@@ -31,6 +31,14 @@ function sanitizeText(value) {
   return String(value || "").replace(/\r\n/g, "\n").trim();
 }
 
+function isEnabled(value, defaultValue = false) {
+  const normalized = sanitizeText(value).toLowerCase();
+  if (!normalized) {
+    return defaultValue;
+  }
+  return !["0", "false", "no", "off", "disabled"].includes(normalized);
+}
+
 function slugify(value, maxLength = 80) {
   return sanitizeText(value)
     .toLowerCase()
@@ -262,6 +270,29 @@ function relativeAssetReference(markdownPath, pagesDir, assetPath) {
   return toPosixPath(path.relative(path.dirname(markdownPath), absoluteAssetPath));
 }
 
+function isBrowserbaseConcurrencyError(output) {
+  return /max concurrent sessions limit|RateLimitError|status:\s*429/i.test(String(output || ""));
+}
+
+function isBrowserbaseQuotaError(output) {
+  return /status:\s*402|payment required|browser minutes limit reached|upgrade your account/i.test(String(output || ""));
+}
+
+function allowLocalFallbackOnBrowserbaseQuota() {
+  return isEnabled(process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK, true);
+}
+
+function buildAbortRemainingError(message, options = {}) {
+  const error = new Error(message);
+  error.abortRemaining = true;
+  error.skipReason = options.skipReason || message;
+  error.code = options.code || "CAPTURE_ABORT_REMAINING";
+  if (options.cause) {
+    error.cause = options.cause;
+  }
+  return error;
+}
+
 function shouldPublishEntryMedia(entry, pagesDir, { refreshExisting = false } = {}) {
   if (!entry?.media?.requested) {
     return {
@@ -336,65 +367,108 @@ function runScreenshotCapture({
   slotId,
 }) {
   const interfaceDir = path.join(repoDir, "interface");
-  const runRoot = path.join(interfaceDir, "output", "demo-screenshots", "publish-changelog-media", `${slotId}-${Date.now()}`);
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-changelog-media-"));
-  const changedFilesPath = path.join(tempDir, "changed-files.json");
-  writeJson(changedFilesPath, changedFiles);
-  ensureDir(runRoot);
+  const baseRunRoot = path.join(interfaceDir, "output", "demo-screenshots", "publish-changelog-media");
+  const runStamp = `${slotId}-${Date.now()}`;
 
-  const commandArgs = [
-    "./scripts/produce-agent-demo-screenshots.mjs",
-    "--prompt",
-    prompt,
-    "--channel",
-    channel,
-    "--base-url",
-    previewUrl,
-    "--provider",
-    provider,
-    "--output-dir",
-    runRoot,
-    "--changed-files-file",
-    changedFilesPath,
-  ];
+  const runCaptureAttempt = (captureProvider) => {
+    const runRoot = path.join(baseRunRoot, `${runStamp}-${captureProvider}`);
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-changelog-media-"));
+    const changedFilesPath = path.join(tempDir, "changed-files.json");
+    writeJson(changedFilesPath, changedFiles);
+    ensureDir(runRoot);
 
-  if (profile) {
-    commandArgs.push("--profile", profile);
-  }
+    const commandArgs = [
+      "./scripts/produce-agent-demo-screenshots.mjs",
+      "--prompt",
+      prompt,
+      "--channel",
+      channel,
+      "--base-url",
+      previewUrl,
+      "--provider",
+      captureProvider,
+      "--output-dir",
+      runRoot,
+      "--changed-files-file",
+      changedFilesPath,
+    ];
+
+    if (profile) {
+      commandArgs.push("--profile", profile);
+    }
+
+    try {
+      const maxAttempts = captureProvider === "browserbase" ? 3 : 1;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          execFileSync("node", commandArgs, {
+            cwd: interfaceDir,
+            stdio: "pipe",
+            encoding: "utf8",
+            env: process.env,
+            maxBuffer: 10 * 1024 * 1024,
+          });
+          const summaryPath = findProductionSummary(runRoot);
+          if (!summaryPath) {
+            throw new Error(`Could not find production-summary.json under ${runRoot}`);
+          }
+          return readJson(summaryPath);
+        } catch (error) {
+          const output = [error?.stdout, error?.stderr, error?.message].filter(Boolean).join("\n");
+          const shouldRetryConcurrency = captureProvider === "browserbase"
+            && isBrowserbaseConcurrencyError(output)
+            && attempt < maxAttempts;
+          if (!shouldRetryConcurrency) {
+            error.captureProvider = captureProvider;
+            error.captureOutput = output;
+            throw error;
+          }
+          const backoffMs = attempt * 30_000;
+          console.warn(`Browserbase session capacity is full. Retrying screenshot capture in ${Math.round(backoffMs / 1000)}s (attempt ${attempt + 1}/${maxAttempts}).`);
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, backoffMs);
+        }
+      }
+      throw new Error(`Screenshot capture attempt unexpectedly completed without producing a summary for ${captureProvider}.`);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  };
 
   try {
-    const maxAttempts = provider === "browserbase" ? 3 : 1;
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      try {
-        execFileSync("node", commandArgs, {
-          cwd: interfaceDir,
-          stdio: "pipe",
-          encoding: "utf8",
-          env: process.env,
-          maxBuffer: 10 * 1024 * 1024,
-        });
-        break;
-      } catch (error) {
-        const output = [error?.stdout, error?.stderr, error?.message].filter(Boolean).join("\n");
-        const isBrowserbaseConcurrencyError = provider === "browserbase"
-          && /max concurrent sessions limit|RateLimitError|status:\s*429/i.test(output);
-        if (!isBrowserbaseConcurrencyError || attempt === maxAttempts) {
-          throw error;
-        }
-        const backoffMs = attempt * 30_000;
-        console.warn(`Browserbase session capacity is full. Retrying screenshot capture in ${Math.round(backoffMs / 1000)}s (attempt ${attempt + 1}/${maxAttempts}).`);
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, backoffMs);
-      }
+    return runCaptureAttempt(provider);
+  } catch (error) {
+    const output = error?.captureOutput || [error?.stdout, error?.stderr, error?.message].filter(Boolean).join("\n");
+    const isQuotaFailure = provider === "browserbase" && isBrowserbaseQuotaError(output);
+    if (!isQuotaFailure) {
+      throw error;
     }
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
 
-  const summaryPath = findProductionSummary(runRoot);
-  if (!summaryPath) {
-    throw new Error(`Could not find production-summary.json under ${runRoot}`);
+    if (!allowLocalFallbackOnBrowserbaseQuota()) {
+      throw buildAbortRemainingError(
+        "Browserbase browser minutes are exhausted and local fallback is disabled.",
+        {
+          code: "BROWSERBASE_QUOTA_EXHAUSTED",
+          skipReason: "Skipping remaining media captures because Browserbase browser minutes are exhausted.",
+          cause: error,
+        },
+      );
+    }
+
+    console.warn("Browserbase browser minutes are exhausted. Falling back to the local capture provider.");
+
+    try {
+      return runCaptureAttempt("local");
+    } catch (fallbackError) {
+      throw buildAbortRemainingError(
+        "Browserbase browser minutes are exhausted and the local capture fallback failed.",
+        {
+          code: "BROWSERBASE_QUOTA_EXHAUSTED",
+          skipReason: "Skipping remaining media captures because Browserbase browser minutes are exhausted and the local fallback could not recover.",
+          cause: fallbackError,
+        },
+      );
+    }
   }
-  return readJson(summaryPath);
 }
 
 function publishEntryMedia({
@@ -503,7 +577,18 @@ async function main() {
   const candidateEntries = Array.isArray(targetDoc?.rendered?.entries) ? targetDoc.rendered.entries : [];
 
   const results = [];
+  let abortRemainingReason = null;
   for (const entry of candidateEntries) {
+    if (abortRemainingReason) {
+      results.push({
+        slotId: entry?.media?.slotId || entry?.batch_id || entry?.title || "entry",
+        title: entry?.title || "Untitled entry",
+        status: "skipped",
+        reason: abortRemainingReason,
+      });
+      continue;
+    }
+
     const decision = shouldPublishEntryMedia(entry, pagesDir, { refreshExisting });
     if (!decision.publish) {
       results.push({
@@ -571,6 +656,10 @@ async function main() {
         status: "failed",
         error: String(error),
       });
+
+      if (error?.abortRemaining) {
+        abortRemainingReason = error.skipReason || "Skipping remaining media captures after an unrecoverable provider failure.";
+      }
     }
   }
 
@@ -595,9 +684,14 @@ async function main() {
 }
 
 export {
+  allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  buildAbortRemainingError,
   buildMediaBlock,
   buildRunSummary,
+  isBrowserbaseConcurrencyError,
+  isBrowserbaseQuotaError,
+  isEnabled,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,

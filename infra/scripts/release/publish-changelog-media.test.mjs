@@ -5,7 +5,10 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  isBrowserbaseConcurrencyError,
+  isBrowserbaseQuotaError,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
@@ -126,6 +129,40 @@ test("parseArgs preserves explicit empty-string values instead of coercing them 
       channel: "nightly",
     },
   );
+});
+
+test("Browserbase error classifiers distinguish concurrency from quota exhaustion", () => {
+  assert.equal(
+    isBrowserbaseConcurrencyError("RateLimitError: max concurrent sessions limit reached (status: 429)"),
+    true,
+  );
+  assert.equal(
+    isBrowserbaseQuotaError("APIError: 402 Free plan browser minutes limit reached. Please upgrade your account"),
+    true,
+  );
+  assert.equal(
+    isBrowserbaseQuotaError("APIError: status: 429 max concurrent sessions limit reached"),
+    false,
+  );
+});
+
+test("Browserbase local fallback is enabled by default and can be disabled explicitly", () => {
+  const previous = process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK;
+
+  delete process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK;
+  assert.equal(allowLocalFallbackOnBrowserbaseQuota(), true);
+
+  process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK = "false";
+  assert.equal(allowLocalFallbackOnBrowserbaseQuota(), false);
+
+  process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK = "1";
+  assert.equal(allowLocalFallbackOnBrowserbaseQuota(), true);
+
+  if (previous === undefined) {
+    delete process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK;
+  } else {
+    process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK = previous;
+  }
 });
 
 test("shouldPublishEntryMedia skips healthy published assets by default", () => {
