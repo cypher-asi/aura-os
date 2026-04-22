@@ -127,6 +127,30 @@ test("agent skills story reuses a seeded agent instead of requiring a custom fea
   assert.ok(plan.instructionPatch.successChecklist.some((entry) => /Skills/i.test(entry)));
 });
 
+test("debug story reuses a seeded debug run and requires run-detail proof", async () => {
+  const brief = {
+    title: "Debug sidekick inspector",
+    story: "Debug app rebuilt around a sidekick inspector with a tighter run toolbar and tabbed detail view.",
+    targetAppId: "debug",
+    startPath: "/debug",
+  };
+
+  const plan = await buildDemoSeedPlan({
+    brief,
+    changedFiles: [
+      "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx",
+      "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx",
+    ],
+  });
+
+  assert.equal(plan.capabilityId, "debug.reuse-seeded-run");
+  assert.equal(plan.status, "runtime-ready");
+  assert.match(plan.startPath, /^\/debug\/proj-1\/runs\/debug-run-demo-1$/);
+  assert.ok(plan.seededEntities.some((entry) => entry.type === "debug-run"));
+  assert.ok(plan.instructionPatch.proofRequirements.some((entry) => entry.anyOf.includes("Copy all")));
+  assert.ok(plan.instructionPatch.requiredUiSignals.includes("sidekickVisible"));
+});
+
 test("task output story reuses seeded project task data instead of needing a feature registry entry", async () => {
   const brief = {
     title: "Task output survives reloads",
@@ -195,10 +219,43 @@ test("applyDemoSeedPatch merges preseeded entities into the base profile", () =>
           updated_at: "2026-03-17T01:00:00.000Z",
         },
       ],
+      debugRuns: {
+        "proj-1": [
+          {
+            run_id: "debug-seeded-1",
+            project_id: "proj-1",
+            agent_instance_id: "proj-agent-1",
+            started_at: "2026-03-17T01:00:00.000Z",
+            ended_at: "2026-03-17T01:01:00.000Z",
+            status: "completed",
+            tasks: [],
+            spec_ids: [],
+            counters: {
+              events_total: 1,
+              llm_calls: 0,
+              iterations: 0,
+              blockers: 0,
+              retries: 0,
+              tool_calls: 0,
+              task_completed: 0,
+              task_failed: 0,
+              input_tokens: 0,
+              output_tokens: 0,
+            },
+          },
+        ],
+      },
+      debugRunLogs: {
+        "debug-seeded-1": {
+          events: "{\"_ts\":\"2026-03-17T01:00:00.000Z\",\"event\":{\"type\":\"task_started\"}}",
+        },
+      },
     },
   });
 
   assert.equal(patched.entryPath, "/desktop");
   assert.ok(patched.seed.feedEvents.some((event) => event.id === "feed-demo-1"));
   assert.ok(patched.seed.processes.some((process) => process.process_id === "process-seeded"));
+  assert.ok(patched.seed.debugRuns["proj-1"].some((run) => run.run_id === "debug-seeded-1"));
+  assert.equal(patched.seed.debugRunLogs["debug-seeded-1"].events.includes("task_started"), true);
 });

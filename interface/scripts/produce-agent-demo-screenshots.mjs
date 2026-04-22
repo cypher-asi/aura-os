@@ -633,12 +633,15 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
       minWidth: 560,
       minHeight: 315,
     });
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
-    return {
-      kind: "body-focus",
-      targets: [],
-      clip,
-    };
+    const coverage = clipCoverageForViewport(viewport, clip);
+    if (coverage === null || coverage >= 0.16) {
+      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+      return {
+        kind: "body-focus",
+        targets: [],
+        clip,
+      };
+    }
   }
 
   const textFocusedBox = await findTextFocusedSurfaceBox(page, focusPhrases);
@@ -1733,6 +1736,9 @@ function shouldStopAgentEarlyForProof({ phase, assessment, stepCount }) {
     return false;
   }
   if ((assessment.stagehand?.forbiddenToolCalls ?? []).length > 0) {
+    return false;
+  }
+  if (assessment.uiSignals?.emptyStateVisible || assessment.uiSignals?.placeholderVisible) {
     return false;
   }
   const minimumScore = phase.id === "setup-state" ? 90 : 94;

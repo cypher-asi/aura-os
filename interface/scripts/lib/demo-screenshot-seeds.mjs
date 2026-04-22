@@ -123,6 +123,65 @@ function createAgentEvent({
   };
 }
 
+function createDebugTask({
+  taskId,
+  specId = "spec-1",
+  startedAt,
+  endedAt,
+  status = "completed",
+}) {
+  return {
+    task_id: taskId,
+    spec_id: specId,
+    started_at: startedAt,
+    ended_at: endedAt,
+    status,
+  };
+}
+
+function createDebugRunMetadata({
+  runId,
+  projectId = "proj-1",
+  agentInstanceId = "proj-agent-1",
+  startedAt,
+  endedAt,
+  status = "completed",
+  tasks = [],
+  specIds = [],
+  counters = {},
+}) {
+  return {
+    run_id: runId,
+    project_id: projectId,
+    agent_instance_id: agentInstanceId,
+    started_at: startedAt,
+    ended_at: endedAt,
+    status,
+    tasks,
+    spec_ids: specIds,
+    counters: {
+      events_total: 0,
+      llm_calls: 0,
+      iterations: 0,
+      blockers: 0,
+      retries: 0,
+      tool_calls: 0,
+      task_completed: 0,
+      task_failed: 0,
+      input_tokens: 0,
+      output_tokens: 0,
+      ...counters,
+    },
+  };
+}
+
+function createDebugLogLine(timestamp, event) {
+  return JSON.stringify({
+    _ts: timestamp,
+    event,
+  });
+}
+
 function createSession() {
   return {
     user_id: "user-1",
@@ -143,6 +202,152 @@ function createSession() {
 
 function createCommonSeed() {
   const notesRoot = "/Users/demo/workspaces/Demo Project";
+  const debugRunId = "debug-run-demo-1";
+  const debugTaskStart = "2026-03-17T01:20:05.000Z";
+  const debugTaskEnd = "2026-03-17T01:23:48.000Z";
+  const debugRunTasks = [
+    createDebugTask({
+      taskId: "task-1",
+      specId: "spec-1",
+      startedAt: debugTaskStart,
+      endedAt: debugTaskEnd,
+      status: "completed",
+    }),
+  ];
+  const debugRunMetadata = createDebugRunMetadata({
+    runId: debugRunId,
+    startedAt: "2026-03-17T01:20:00.000Z",
+    endedAt: "2026-03-17T01:24:30.000Z",
+    tasks: debugRunTasks,
+    specIds: ["spec-1"],
+    counters: {
+      events_total: 7,
+      llm_calls: 2,
+      iterations: 1,
+      blockers: 1,
+      retries: 1,
+      tool_calls: 3,
+      task_completed: 1,
+      task_failed: 0,
+      input_tokens: 1280,
+      output_tokens: 412,
+    },
+  });
+  const debugRunLogs = {
+    events: [
+      createDebugLogLine("2026-03-17T01:20:05.000Z", {
+        type: "task_started",
+        task_id: "task-1",
+        payload: {
+          task_id: "task-1",
+          spec_id: "spec-1",
+          title: "Test task",
+          summary: "Verify that completed task output survives remounts and reloads.",
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:20:22.000Z", {
+        type: "tool_call",
+        payload: {
+          name: "exec_command",
+          arguments: {
+            cmd: "npm test -- CompletedTaskOutput",
+          },
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:20:41.000Z", {
+        type: "debug.iteration",
+        payload: {
+          index: 1,
+          tool_calls: 2,
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:21:04.000Z", {
+        type: "debug.llm_call",
+        payload: {
+          provider: "anthropic",
+          model: "claude-sonnet-4.6",
+          input_tokens: 640,
+          output_tokens: 212,
+          duration_ms: 1840,
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:21:37.000Z", {
+        type: "debug.blocker",
+        payload: {
+          kind: "selection_prompt",
+          path: "CompletedTaskOutput.tsx",
+          message: "Reload path needed a persisted task-output bootstrap before the empty pane could recover.",
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:22:08.000Z", {
+        type: "debug.retry",
+        payload: {
+          attempt: 2,
+          wait_ms: 1200,
+          reason: "Replayed the seeded reload sequence after wiring the bootstrap guard.",
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:23:48.000Z", {
+        type: "task_completed",
+        task_id: "task-1",
+        payload: {
+          task_id: "task-1",
+          summary: "Completed output stayed visible after reload and remount.",
+        },
+      }),
+    ].join("\n"),
+    llm_calls: [
+      createDebugLogLine("2026-03-17T01:21:04.000Z", {
+        type: "debug.llm_call",
+        payload: {
+          provider: "anthropic",
+          model: "claude-sonnet-4.6",
+          input_tokens: 640,
+          output_tokens: 212,
+          duration_ms: 1840,
+        },
+      }),
+      createDebugLogLine("2026-03-17T01:22:44.000Z", {
+        type: "debug.llm_call",
+        payload: {
+          provider: "anthropic",
+          model: "claude-sonnet-4.6",
+          input_tokens: 640,
+          output_tokens: 200,
+          duration_ms: 1690,
+        },
+      }),
+    ].join("\n"),
+    iterations: [
+      createDebugLogLine("2026-03-17T01:20:41.000Z", {
+        type: "debug.iteration",
+        payload: {
+          index: 1,
+          tool_calls: 2,
+        },
+      }),
+    ].join("\n"),
+    blockers: [
+      createDebugLogLine("2026-03-17T01:21:37.000Z", {
+        type: "debug.blocker",
+        payload: {
+          kind: "selection_prompt",
+          path: "CompletedTaskOutput.tsx",
+          message: "Reload path needed a persisted task-output bootstrap before the empty pane could recover.",
+        },
+      }),
+    ].join("\n"),
+    retries: [
+      createDebugLogLine("2026-03-17T01:22:08.000Z", {
+        type: "debug.retry",
+        payload: {
+          attempt: 2,
+          wait_ms: 1200,
+          reason: "Replayed the seeded reload sequence after wiring the bootstrap guard.",
+        },
+      }),
+    ].join("\n"),
+  };
   const ceoPermissions = {
     scope: {
       orgs: ["org-1"],
@@ -533,6 +738,24 @@ function createCommonSeed() {
     processConnections: {},
     processRuns: {},
     processRunEvents: {},
+    debugRuns: {
+      "proj-1": [debugRunMetadata],
+    },
+    debugRunLogs: {
+      [debugRunId]: debugRunLogs,
+    },
+    debugRunSummaries: {
+      [debugRunId]: {
+        run_id: debugRunId,
+        markdown: [
+          "# Debug run summary",
+          "",
+          "- Project-first Debug navigation is active.",
+          "- Run detail toolbar exposes Copy all, Copy filtered, and Export.",
+          "- Sidekick tabs stay mounted for Run, All events, LLM calls, Iterations, Blockers, Retries, Stats, and Tasks.",
+        ].join("\n"),
+      },
+    },
   };
 }
 
@@ -753,6 +976,9 @@ export function applyDemoSeedPatch(profile, patch = {}) {
   next.seed.processConnections = mergeRecordEntries(next.seed.processConnections, seedPatch.processConnections);
   next.seed.processRuns = mergeRecordEntries(next.seed.processRuns, seedPatch.processRuns);
   next.seed.processRunEvents = mergeRecordEntries(next.seed.processRunEvents, seedPatch.processRunEvents);
+  next.seed.debugRuns = mergeRecordEntries(next.seed.debugRuns, seedPatch.debugRuns);
+  next.seed.debugRunLogs = mergeRecordEntries(next.seed.debugRunLogs, seedPatch.debugRunLogs);
+  next.seed.debugRunSummaries = mergeRecordEntries(next.seed.debugRunSummaries, seedPatch.debugRunSummaries);
 
   if (typeof patch.startPath === "string" && patch.startPath.trim()) {
     next.entryPath = patch.startPath.trim();
