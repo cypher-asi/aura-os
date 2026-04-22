@@ -2039,7 +2039,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2076,7 +2076,9 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ]
+          ],
+          "updatedAt": "2026-04-22T19:18:32.438Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-rebuilt-around-a-sidekick-inspector"
         }
       },
       {
@@ -2170,7 +2172,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2186,7 +2188,11 @@
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.337.1/entry-matching-block-borders-on-run-and-task-output.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T19:20:47.939Z",
+          "storyTitle": "Matching block borders on run and task output – Event Timeline rows with unified bo…"
         }
       },
       {
@@ -2206,7 +2212,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2221,7 +2227,11 @@
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.337.1/entry-sidekick-and-preview-inherit-chat-s-border-token.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T19:23:09.714Z",
+          "storyTitle": "Sidekick and Preview Overlay inherit chat border token"
         }
       },
       {
@@ -2331,7 +2341,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 5,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2370,7 +2380,11 @@
             "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx",
             "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
             "interface/src/components/UpdateControl/UpdateControl.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.337.1/entry-closed-loop-autonomous-recovery-windows-updater-and-new-login.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T19:26:10.945Z",
+          "storyTitle": "Closed-loop autonomous recovery: live agent chat with tool output rendering"
         }
       }
     ],
