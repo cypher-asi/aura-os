@@ -196,6 +196,24 @@ describe("networkEventToFeedEvent", () => {
     expect(result.repo).toBe("");
     expect(result.commits).toEqual([]);
   });
+
+  it("uses commitIds when metadata.commits is absent", () => {
+    const dto: FeedEventDto = {
+      id: "evt-3",
+      profile_id: "p1",
+      event_type: "push",
+      post_type: "push",
+      metadata: { repo: "my-repo", branch: "develop" },
+      commit_ids: ["sha1", "sha2"],
+      created_at: "2025-06-01T12:00:00Z",
+    };
+    const result = networkEventToFeedEvent(dto);
+    expect(result.postType).toBe("push");
+    expect(result.repo).toBe("my-repo");
+    expect(result.branch).toBe("develop");
+    expect(result.commits).toEqual([]);
+    expect(result.commitIds).toEqual(["sha1", "sha2"]);
+  });
 });
 
 describe("networkCommentToFeedComment", () => {
