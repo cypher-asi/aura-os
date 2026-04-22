@@ -1821,18 +1821,38 @@ mod tests {
     }
 }
 
-fn set_black_background(_window: &tao::window::Window) {
+/// Disables the default Win32 background erase on the main window's class so
+/// that growing the window (right / bottom drag-resize) does not paint a
+/// black bar at the newly-exposed edge before the WebView2 swap chain has
+/// caught up with the new size.
+///
+/// Previously this installed `BLACK_BRUSH`, which was intended to keep the
+/// pre-webview frame black during startup. But during live resize the OS
+/// uses that class brush in `WM_ERASEBKGND` to fill newly-exposed client
+/// area *before* the WebView2 child HWND finishes repainting, producing the
+/// visible "black edge chasing the cursor" effect users reported.
+///
+/// `NULL_BRUSH` / hollow brush tells Windows "do not erase"; the WebView2
+/// child HWND (built with `with_background_color((0, 0, 0, 255))` in
+/// `create_main_webview`) already covers the whole client area and handles
+/// its own background, so the previous frame stays on screen while the
+/// webview resizes instead of flashing black.
+///
+/// Startup behavior is preserved: the main window is created with
+/// `with_visible(false)` and stays hidden until the frontend posts `ready`,
+/// so users never see the un-erased initial frame.
+fn disable_window_background_erase(_window: &tao::window::Window) {
     #[cfg(target_os = "windows")]
     {
         use tao::platform::windows::WindowExtWindows;
         use windows::Win32::Foundation::HWND;
-        use windows::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH};
+        use windows::Win32::Graphics::Gdi::{GetStockObject, NULL_BRUSH};
         use windows::Win32::UI::WindowsAndMessaging::{SetClassLongPtrW, GCL_HBRBACKGROUND};
 
         let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
         unsafe {
-            let black = GetStockObject(BLACK_BRUSH);
-            SetClassLongPtrW(hwnd, GCL_HBRBACKGROUND, black.0 as isize);
+            let hollow = GetStockObject(NULL_BRUSH);
+            SetClassLongPtrW(hwnd, GCL_HBRBACKGROUND, hollow.0 as isize);
         }
     }
 }
@@ -1851,7 +1871,7 @@ fn create_main_window(
         .expect("failed to build window");
 
     set_square_corners(&window);
-    set_black_background(&window);
+    disable_window_background_erase(&window);
 
     let id = window.id();
     info!("window created");
