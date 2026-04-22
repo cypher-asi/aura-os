@@ -1,72 +1,79 @@
-# Debug app, durable run output, and automated changelog media
+# Run history that survives reloads, plus a new Debug app
 
 - Date: `2026-04-21`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.326.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.326.1
+- Version: `0.1.0-nightly.328.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.328.1
 
-Today's nightly centers on making dev-loop runs inspectable end-to-end: task and process output now survives reloads, a new Debug app and run-analyze CLI expose every run on disk, and the release pipeline gains an automated screenshot media job with a manual reconcile path. A handful of sidekick polish fixes and a vendored chromiumoxide fork round out the day.
+Today's nightly focuses on making live automation state durable across reloads and reconnects, and introduces a full Debug app (and companion CLI) for inspecting dev-loop runs. The release pipeline also gained an automated screenshot-media workflow with manual reconciliation, and the browser backend was patched to finally surface the source of a long-running CDP log flood.
 
-## 10:52 PM — Run panel output survives reloads and TTL pruning
+## 10:52 PM — Completed task output survives remounts and reloads
 
-Completed task rows no longer render empty after the in-memory stream is pruned or the page is reloaded, and a narrow sidekick stat gets a layout fix.
+The Run panel's completed-task bodies now rehydrate from a structured on-disk cache instead of flashing empty after a reload or TTL eviction.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-run-panel-output-survives-reloads-and-ttl-pruning","slug":"run-panel-output-survives-reloads-and-ttl-pruning","alt":"Run panel output survives reloads and TTL pruning screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-completed-task-output-survives-remounts-and-reloads","slug":"completed-task-output-survives-remounts-and-reloads","alt":"Completed task output survives remounts and reloads screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-run-panel-output-survives-reloads-and-ttl-pruning -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-completed-task-output-survives-remounts-and-reloads -->
 
-- Structured task output — timeline, tool cards, and thinking steps — is now persisted to a localStorage turn-cache on TaskCompleted/TaskFailed and loop-end, with a unified useTaskOutputView hook that walks live stream, cache, event store, and server hydration in order so expanding a completed task always shows its body. (`657ef48`)
-- Sidekick StatCard values shrink from 18px to 15px with nowrap so compound readouts like "13m 53s" stay on a single line in the narrow column, while the mobile variant keeps its larger size. (`b2f4907`)
+- Added a localStorage task-turn-cache that snapshots the full DisplaySessionEvent timeline, tool cards, and thinking steps on task completion, with a unified useTaskOutputView hook that falls back through live stream, cache, event store, and server hydration so expanding a completed row always renders real content. (`657ef48`)
+- Tightened the Sidekick StatCard so compound values like "13m 53s" no longer wrap in the narrow column, while keeping the larger mobile variant intact. (`b2f4907`)
 
-## 11:18 PM — Vendored chromiumoxide fork to diagnose CDP WS warnings
+## 11:18 PM — Vendored chromiumoxide fork to unmask CDP message drift
 
-The browser backend's constant "WS Invalid message" warning stream now carries the raw payload so schema drift can actually be tracked down.
+The browser backend now runs against an in-tree chromiumoxide 0.9.1 fork so the constant "WS Invalid message" warnings finally carry the raw payload needed to identify which CDP schema drifted.
 
-- Forked chromiumoxide 0.9.1 under vendor/chromiumoxide and pinned it via [patch.crates-io], with a single local edit that attaches the offending JSON payload to the WARN log so each failing CDP method can be identified and patched upstream. No application code changes; aura-os-browser builds unchanged. (`81728bf`)
+- Pinned chromiumoxide + subcrates under vendor/chromiumoxide via [patch.crates-io] and patched the handler to include the offending JSON payload on the WARN log, giving the next CDP session a concrete method name to target with serde rename fixes. (`81728bf`)
 
-## 11:42 PM — Live run state rehydrates after refresh
+## 11:42 PM — Live automation state rehydrates cleanly after refresh
 
-Spinners, live badges, and sidekick tabs now reflect the real loop state after a reload instead of depending on one-shot WebSocket events.
+Sidekick spinners, active-task badges, and the stats grid now track the automation loop accurately across reloads and WS reconnects, with a cleanup of the long-dead bottom Task Output panel.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-live-run-state-rehydrates-after-refresh","slug":"live-run-state-rehydrates-after-refresh","alt":"Live run state rehydrates after refresh screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-live-automation-state-rehydrates-cleanly-after-refresh","slug":"live-automation-state-rehydrates-cleanly-after-refresh","alt":"Live automation state rehydrates cleanly after refresh screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-live-run-state-rehydrates-after-refresh -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-live-automation-state-rehydrates-cleanly-after-refresh -->
 
-- /loop/status, /loop/start, /loop/pause, /loop/stop, and /loop/resume now expose active_tasks with task and agent ids, and the UI seeds the Run panel, Tasks-tree "live" dots, and sidebar agent indicator from that response — so a refresh no longer leaves the top spinner spinning over a dark Run panel. (`c16c726`)
-- Sidekick tab selection (main, agents, process) is persisted per-surface to localStorage so the app stops snapping back to terminal/profile/process after reload. (`8ec8861`)
-- The Active stat card adopts the app's standard success green and now updates live from TaskStarted/TaskCompleted/TaskFailed with optimistic adjustments and a debounced refetch, tracking the automation loop instead of waiting for a chat stream to end. (`9408bf2`)
-- Retired the obsolete bottom TaskOutputPanel surface along with its resize/collapse/tab state and the aura-task-output-panel localStorage key, now fully superseded by the sidekick's Run and Terminal panes. (`c351ca8`)
+- Exposed the per-agent "currently streaming" task id via /loop/status, /loop/start, /loop/pause, /loop/stop, and /loop/resume, and taught the Run panel, Tasks list live dots, sidebar agent indicator, and mobile task views to seed themselves from it — so a page refresh no longer leaves spinners spinning against a dark UI. (`c16c726`)
+- The Active stats card now uses the app-wide success green and updates optimistically from TaskStarted/Completed/Failed events scoped to the current project, so the dashboard tracks in-flight work in real time instead of waiting for a chat stream to end. (`9408bf2`)
+- Each sidekick (main, agents, process) now remembers its last-active tab in localStorage, so the app no longer snaps back to terminal/profile/process after a refresh. (`8ec8861`)
+- Removed the obsolete bottom TaskOutputPanel surface and its resize/collapse/tab persistence, including a one-shot cleanup of the stale aura-task-output-panel localStorage key. (`c351ca8`)
 
-## 12:28 AM — Debug app, on-disk run bundles, and aura-run-analyze CLI
+## 12:28 AM — Debug app, persisted dev-loop bundles, and aura-run-analyze CLI
 
-Every dev-loop run is now captured to disk and browsable from a new Debug app, with a Rust CLI and seven heuristic rules for post-hoc analysis.
+Every dev-loop run is now captured to a structured on-disk bundle that powers a new Debug app, a heuristics engine, and a CI-gatable CLI.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-debug-app-on-disk-run-bundles-and-aura-run-analyze-cli","slug":"debug-app-on-disk-run-bundles-and-aura-run-analyze-cli","alt":"Debug app, on-disk run bundles, and aura-run-analyze CLI screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-debug-app-persisted-dev-loop-bundles-and-aura-run-analyze-cli","slug":"debug-app-persisted-dev-loop-bundles-and-aura-run-analyze-cli","alt":"Debug app, persisted dev-loop bundles, and aura-run-analyze CLI screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-debug-app-on-disk-run-bundles-and-aura-run-analyze-cli -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-debug-app-persisted-dev-loop-bundles-and-aura-run-analyze-cli -->
 
-- LoopLogWriter persists every dev-loop run as a structured bundle (metadata.json, events/llm_calls/iterations/blockers/retries jsonl, summary.md) and a new /api/debug/* surface serves projects, runs, metadata, per-channel logs, and a zip export — capture is always on, with AURA_LOOP_LOGS_DIR to redirect the path. (`c18bc88`)
-- A new Debug app (Bug icon, after Integrations) ships a project/spec/run nav, run list view, and a run detail view with a virtualized timeline, channel/type/text filters, JSON inspector, copy, and zip export for inspecting LLM retries, blockers, and iteration cost. (`c18bc88`, `ccea501`)
-- New aura-run-analyze CLI (--latest / --run / --list, markdown or json) plus an aura-run-heuristics crate implementing seven rules — repeated_blocker_path, high_retry_density, slow_iteration, token_hog_llm_call, unbalanced_io, task_never_completed, zero_tool_calls_in_turn — with exit codes 1/2 for warnings/errors so CI can gate on them. Runs are also tagged with the specs their tasks touched, filterable via ?spec_id=. (`ccea501`)
-- Process runs now get the same cache-then-stream treatment as tasks: a per-app process-node-turn-cache and bootstrap keep the "Live Output" panel populated across reloads and WS reconnects, with the panel retitled "Recent Live Output" once a run is no longer streaming. (`3156ede`)
-- Run button and sidekick Run/Tasks spinners now stay engaged from click through the first task_started event, with a shared live-task-ids store hydrated from /loop/start and /loop/resume so the first (or interrupted) task of a re-run no longer looks idle during the HTTP→WS handoff. Cargo is also configured to emit plain, line-buffered output workspace-wide so agent/CI transports get legible compiler diagnostics. (`9270310`, `de66693`)
+- LoopLogWriter persists every run as metadata.json plus jsonl channels for events, LLM calls, iterations, blockers, and retries, exposed over a new /api/debug/* surface with per-channel logs and a zip export. (`c18bc88`)
+- Added a Debug app (Bug icon, after Integrations) with a project/run nav, run list, and run detail view featuring a virtualized timeline, channel/type/text filters, JSON inspector, copy, and zip export for analyzing retries, blockers, and iteration cost. (`c18bc88`)
+- Runs are now associated with the specs their tasks touched, surfaced as Project → Spec → Runs grouping in the Debug nav and a ?spec_id= filter on the runs API; a new aura-loop-log-schema crate plus aura-run-heuristics (seven rules) and an aura-run-analyze CLI (--latest/--run/--list, markdown or JSON, non-zero exit on findings) make run analysis scriptable from CI. (`ccea501`)
+- Process runs now mirror the task turn-cache flow: a process-node-turn-cache seeds the Run preview's Live Output across reloads and WS reconnects, with a per-run liveRunNodeId so a stale pointer can't leak onto a subsequent run. The Run button and sidekick tab spinners also stay engaged through the HTTP→WS handoff by seeding live-task ids directly from /loop/start and /loop/resume. (`3156ede`, `9270310`)
+- Disabled cargo color and progress output workspace-wide so agent/CI transports that base64-wrap streams return legible compiler diagnostics instead of ANSI blobs. (`de66693`)
 
-## 4:31 PM — Automated release screenshot media and manual reconcile
+## 4:31 PM — Automated changelog screenshot media pipeline
 
-The release changelog pipeline gains a dedicated media-publishing workflow, a Browserbase-backed screenshot capture path, and an on-demand reconcile job to backfill or refresh published media.
+Release changelogs now publish their own screenshot media automatically, with a manual reconciliation workflow for backfills.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-automated-release-screenshot-media-and-manual-reconcile","slug":"automated-release-screenshot-media-and-manual-reconcile","alt":"Automated release screenshot media and manual reconcile screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-automated-changelog-screenshot-media-pipeline","slug":"automated-changelog-screenshot-media-pipeline","alt":"Automated changelog screenshot media pipeline screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-automated-release-screenshot-media-and-manual-reconcile -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-automated-changelog-screenshot-media-pipeline -->
 
-- New Publish Release Changelog Media workflow runs after the changelog publish, driving a demo screenshot pipeline (Browserbase by default, Playwright fallback) with a capture-bridge and seeded demo sessions, producing per-release media alongside the generated changelog. (`3b93c76`)
-- A new Reconcile Release Changelog workflow lets operators rerun media capture for a specific release run id or channel, optionally refreshing already-published media instead of only backfilling missing or failed slots. (`839f657`)
-- Follow-up fixes realigned the changelog workflow triggers and hardened media preview handling across the publish scripts and capture entrypoints to stabilize the new pipeline. (`9159a19`, `93dad69`)
+- Introduced a publish-release-changelog-media workflow plus demo screenshot capture scripts (Browserbase with local Playwright fallback, Anthropic-planned seeds, quality checks) that run after each successful changelog publish to attach media to the release. (`3b93c76`)
+- Added a manual reconcile-release-changelog workflow that finds the latest successful release run for a channel, skips when no release was actually published, and supports refresh_existing to regenerate previously published media. (`839f657`)
+- Hardened the media workflow's preview handling and realigned the changelog publish triggers so downstream media jobs fire off the correct events. (`9159a19`, `93dad69`)
+
+## 7:56 PM — Changelog pipeline preflights and secret-sourced preview URL
+
+Follow-up reliability fixes to the new changelog media pipeline.
+
+- The media and reconcile workflows can now pull the preview URL from a repo secret when the dispatch input is empty, removing the need to paste it on every manual run. (`9e52bb8`)
+- Tightened preflight checks across the publish, media, and reconcile workflows so misconfigured runs fail fast instead of part-way through capture. (`dc19892`)
 
 ## Highlights
 
-- Completed tasks keep their timeline, tool cards, and thinking across reloads
-- New Debug app plus aura-run-analyze CLI for every dev-loop run
-- Sidekick tabs and live run state now rehydrate after refresh
-- Release changelog media capture and manual reconcile workflows shipped
+- Structured task & process output now rehydrates after refresh
+- New Debug app with on-disk run bundles and aura-run-analyze CLI
+- Automated release changelog screenshot media pipeline
+- Sidekick spinners and live badges stay in sync through reconnects
 
