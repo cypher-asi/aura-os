@@ -61,15 +61,6 @@ export function LoginView() {
           </div>
         )}
         <Panel variant="solid" border="solid" borderRadius="lg" className={`${styles.card} ${f.isMobileLayout ? styles.cardMobile : ""}`}>
-          {!f.isMobileLayout && (
-            <div className={styles.header}>
-              <Heading level={2}><span className={styles.brand}>AURA</span></Heading>
-              <Text variant="muted" size="sm" align="center" className={styles.subtitle}>
-                Login with ZERO
-              </Text>
-            </div>
-          )}
-
           {f.isMobileLayout && (
             <div className={styles.mobileSectionHeader}>
               <div className={styles.mobileSectionHeaderRow}>
