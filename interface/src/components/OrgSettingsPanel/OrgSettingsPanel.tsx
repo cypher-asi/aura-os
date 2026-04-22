@@ -39,7 +39,7 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
         <OrgSettingsInvites invites={data.invites} isAdminOrOwner={data.isAdminOrOwner} onCreateInvite={data.handleCreateInvite} onRevokeInvite={data.handleRevokeInvite} />
       )}
       {data.section === "billing" && (
-        <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} onBillingEmailChange={data.setBillingEmail} isAdminOrOwner={data.isAdminOrOwner} saving={data.saving} onSave={data.handleSaveBilling} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} />
+        <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} isAdminOrOwner={data.isAdminOrOwner} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} />
       )}
     </>
   );

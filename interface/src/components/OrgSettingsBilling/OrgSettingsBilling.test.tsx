@@ -30,10 +30,7 @@ import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 const defaultProps = {
   billing: { billing_email: "test@example.com", plan: "free" },
   billingEmail: "test@example.com",
-  onBillingEmailChange: vi.fn(),
   isAdminOrOwner: true,
-  saving: false,
-  onSave: vi.fn(),
   balance: { balance_cents: 500, plan: "free", balance_formatted: "$5.00" },
   balanceLoading: false,
   balanceError: null,
@@ -126,6 +123,25 @@ describe("OrgSettingsBilling", () => {
   it("shows plan badge", () => {
     renderBilling();
     expect(screen.getByText("free")).toBeInTheDocument();
+  });
+
+  it("renders the billing email as read-only text (no input, no save button)", () => {
+    renderBilling();
+    expect(screen.getByText("Billing Email")).toBeInTheDocument();
+    expect(screen.getByText(/Tied to your ZERO account/i)).toBeInTheDocument();
+    expect(screen.getByText("test@example.com")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("billing@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("Save")).not.toBeInTheDocument();
+  });
+
+  it("hides the billing email row for non-admin users", () => {
+    renderBilling({ isAdminOrOwner: false });
+    expect(screen.queryByText("Billing Email")).not.toBeInTheDocument();
+  });
+
+  it("shows an em-dash fallback when billing email is missing", () => {
+    renderBilling({ billingEmail: "" });
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 
   it("shows a web-only message in native apps", () => {

@@ -123,15 +123,15 @@ describe("orgsApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/orgs/o1/billing", expect.any(Object));
   });
 
-  it("setBilling sends PUT", async () => {
+  it("setBilling sends PUT with plan only (billing email is read-only)", async () => {
     const fetchMock = mockFetch(200, { id: "o1" });
     globalThis.fetch = fetchMock;
-    await orgsApi.setBilling("o1", "billing@co.com", "enterprise");
+    await orgsApi.setBilling("o1", "enterprise");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/orgs/o1/billing",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ billing_email: "billing@co.com", plan: "enterprise" }),
+        body: JSON.stringify({ plan: "enterprise" }),
       }),
     );
   });

@@ -35,7 +35,6 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [billing, setBilling] = useState<OrgBilling | null>(null);
   const [billingEmail, setBillingEmail] = useState("");
-  const [saving, setSaving] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [integrationBusyId, setIntegrationBusyId] = useState<string | null>(null);
 
@@ -96,7 +95,6 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const handleRevokeInvite = async (inviteId: string) => { if (orgId) { try { await api.orgs.revokeInvite(orgId, inviteId); loadInvites(); } catch (err) { console.error("Failed to revoke invite", err); } } };
   const handleRemoveMember = async (userId: string) => { if (orgId) { try { await api.orgs.removeMember(orgId, userId); refreshMembers(); } catch (err) { console.error("Failed to remove member", err); } } };
   const handleRoleChange = async (userId: string, role: OrgRole) => { if (orgId) { try { await api.orgs.updateMemberRole(orgId, userId, role); refreshMembers(); refreshOrgs(); } catch (err) { console.error("Failed to change role", err); } } };
-  const handleSaveBilling = async () => { if (orgId) { setSaving(true); try { await api.orgs.setBilling(orgId, billingEmail || null, billing?.plan ?? "free"); loadBilling(); } catch (err) { console.error("Failed to save billing", err); } finally { setSaving(false); } } };
   const createIntegration = useCallback(async (data: {
     name: string;
     provider: string;
@@ -195,7 +193,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     integrations, integrationBusyId, createIntegration, updateIntegration, deleteIntegration,
     invites, handleCreateInvite, handleRevokeInvite,
     handleRemoveMember, handleRoleChange,
-    billing, billingEmail, setBillingEmail, saving, handleSaveBilling,
+    billing, billingEmail,
     balance, balanceLoading, balanceError,
     checkoutError, pollingStatus, handlePurchase,
     loadCreditBalance, handleRetryOrg,

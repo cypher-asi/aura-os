@@ -742,8 +742,15 @@ pub(crate) async fn set_billing(
     Path(org_id): Path<OrgId>,
     Json(req): Json<SetBillingRequest>,
 ) -> ApiResult<Json<OrgBilling>> {
+    // The billing email is tied to the ZERO account and is read-only from the
+    // client. Preserve whatever the org service already has on file and only
+    // mutate the plan.
+    let existing = state
+        .org_service
+        .get_billing(&org_id)
+        .map_err(map_org_err)?;
     let billing = OrgBilling {
-        billing_email: req.billing_email,
+        billing_email: existing.and_then(|b| b.billing_email),
         plan: req.plan,
     };
     let billing = state

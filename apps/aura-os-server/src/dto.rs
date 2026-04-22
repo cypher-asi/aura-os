@@ -408,7 +408,10 @@ pub(crate) struct UpdateMemberRoleRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SetBillingRequest {
-    pub billing_email: Option<String>,
+    // billing_email is intentionally not accepted here: it's provisioned from
+    // the ZERO auth identity and must stay in sync with that account. Stale
+    // clients may still send it; serde's default behavior ignores unknown
+    // fields, so their payload is silently dropped.
     pub plan: String,
 }
 
