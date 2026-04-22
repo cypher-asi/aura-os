@@ -7,6 +7,8 @@ import test from "node:test";
 import {
   allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  buildRunSummary,
+  buildRunSummaryMarkdown,
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
   parseArgs,
@@ -163,6 +165,43 @@ test("Browserbase local fallback is enabled by default and can be disabled expli
   } else {
     process.env.AURA_CHANGELOG_MEDIA_ALLOW_LOCAL_FALLBACK = previous;
   }
+});
+
+test("buildRunSummary and markdown include operator-facing diagnostics", () => {
+  const summary = buildRunSummary([
+    {
+      slotId: "entry-1-feedback",
+      title: "Feedback board",
+      status: "published",
+      assetPath: "assets/changelog/nightly/demo/entry-1-feedback.png",
+      inspectorUrl: "https://browserbase.example/session/123",
+    },
+    {
+      slotId: "entry-2-agents",
+      title: "Permissions tab",
+      status: "failed",
+      error: "Screenshot capture did not produce a passing summary for entry-2-agents",
+      sessionId: "bb-session-1",
+    },
+  ], {
+    channel: "nightly",
+    version: "0.1.0-nightly.999.1",
+    date: "2026-04-22",
+    provider: "browserbase",
+    profile: "agent-shell-explorer",
+    previewUrl: "https://aura-app-72ms.onrender.com/",
+    abortRemainingReason: "Skipping remaining media captures after provider exhaustion.",
+  });
+
+  assert.equal(summary.previewHost, "aura-app-72ms.onrender.com");
+  assert.equal(summary.published, 1);
+  assert.equal(summary.failed, 1);
+
+  const markdown = buildRunSummaryMarkdown(summary);
+  assert.match(markdown, /Changelog Media Diagnostics/);
+  assert.match(markdown, /Preview host: aura-app-72ms\.onrender\.com/);
+  assert.match(markdown, /entry-2-agents/);
+  assert.match(markdown, /Skipping remaining media captures after provider exhaustion/);
 });
 
 test("shouldPublishEntryMedia skips healthy published assets by default", () => {

@@ -410,11 +410,156 @@ function buildAgentState(profile) {
     listProjectBindings(agentId) {
       return structuredClone(this.projectBindings.get(agentId) ?? []);
     },
+    addProjectBinding(agentId, binding) {
+      const current = this.projectBindings.get(agentId) ?? [];
+      if (current.some((entry) => entry.project_agent_id === binding.project_agent_id)) {
+        return structuredClone(binding);
+      }
+      this.projectBindings.set(agentId, [...current, structuredClone(binding)]);
+      return structuredClone(binding);
+    },
     removeProjectBinding(agentId, bindingId) {
       const current = this.projectBindings.get(agentId) ?? [];
       const next = current.filter((binding) => binding.project_agent_id !== bindingId);
       this.projectBindings.set(agentId, next);
       return current.length !== next.length;
+    },
+  };
+}
+
+function buildProjectAgentInstance(agent, binding) {
+  const timestamp = new Date().toISOString();
+  return {
+    agent_instance_id: String(binding.project_agent_id || `${binding.project_id}-${agent.agent_id}`),
+    project_id: binding.project_id,
+    agent_id: agent.agent_id,
+    org_id: agent.org_id ?? "org-1",
+    name: agent.name,
+    role: agent.role,
+    personality: agent.personality,
+    system_prompt: agent.system_prompt,
+    skills: cloneEntries(agent.skills ?? []),
+    icon: agent.icon ?? null,
+    machine_type: agent.machine_type || "local",
+    adapter_type: agent.adapter_type || "aura_harness",
+    environment: agent.environment || "local_host",
+    auth_source: agent.auth_source || "aura_managed",
+    integration_id: agent.integration_id ?? null,
+    default_model: agent.default_model ?? null,
+    workspace_path: `/Users/demo/workspaces/${binding.project_name || "Demo Project"}`,
+    status: "idle",
+    current_task_id: null,
+    current_session_id: null,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    permissions: structuredClone(agent.permissions ?? {
+      scope: { orgs: [], projects: [], agent_ids: [] },
+      capabilities: [],
+    }),
+    intent_classifier: agent.intent_classifier ?? null,
+    created_at: agent.created_at || timestamp,
+    updated_at: agent.updated_at || timestamp,
+  };
+}
+
+function buildProjectState(profile, agentsState, session) {
+  const projects = cloneEntries(profile.seed.projects ?? []);
+  const specs = cloneEntries(profile.seed.specs ?? []);
+  const tasks = cloneEntries(profile.seed.tasks ?? []);
+  const taskOutputs = new Map(
+    Object.entries(profile.seed.taskOutputs ?? {}).map(([taskId, value]) => [taskId, structuredClone(value)]),
+  );
+  let projectAgentCounter = 20;
+
+  const getProject = (projectId) =>
+    structuredClone(projects.find((project) => project.project_id === projectId) ?? null);
+
+  const listProjectAgents = (projectId) => {
+    const instances = [];
+    for (const agent of agentsState.agents) {
+      const bindings = agentsState.listProjectBindings(agent.agent_id);
+      for (const binding of bindings) {
+        if (binding.project_id === projectId) {
+          instances.push(buildProjectAgentInstance(agent, binding));
+        }
+      }
+    }
+    return instances;
+  };
+
+  const getProjectAgent = (projectId, agentInstanceId) =>
+    structuredClone(
+      listProjectAgents(projectId).find((agent) => agent.agent_instance_id === agentInstanceId) ?? null,
+    );
+
+  return {
+    getProject,
+    listSpecs(projectId) {
+      return structuredClone(specs.filter((spec) => spec.project_id === projectId));
+    },
+    getSpec(projectId, specId) {
+      return structuredClone(
+        specs.find((spec) => spec.project_id === projectId && spec.spec_id === specId) ?? null,
+      );
+    },
+    listTasks(projectId) {
+      return structuredClone(tasks.filter((task) => task.project_id === projectId));
+    },
+    listTasksBySpec(projectId, specId) {
+      return structuredClone(
+        tasks.filter((task) => task.project_id === projectId && task.spec_id === specId),
+      );
+    },
+    getTaskOutput(projectId, taskId) {
+      const task = tasks.find((entry) => entry.project_id === projectId && entry.task_id === taskId);
+      if (!task) {
+        return { output: "", unavailable: true };
+      }
+      return structuredClone(taskOutputs.get(taskId) ?? {
+        output: task.live_output || "",
+        build_steps: task.build_steps ?? [],
+        test_steps: task.test_steps ?? [],
+        unavailable: !(task.live_output || task.build_steps?.length || task.test_steps?.length),
+      });
+    },
+    listProjectAgents(projectId) {
+      return structuredClone(listProjectAgents(projectId));
+    },
+    getProjectAgent,
+    listProjectAgentEvents(projectId, agentInstanceId) {
+      const instance = getProjectAgent(projectId, agentInstanceId);
+      if (!instance) {
+        return [];
+      }
+      return agentsState.listEvents(instance.agent_id).map((event) => ({
+        ...event,
+        agent_instance_id: agentInstanceId,
+        project_id: projectId,
+      }));
+    },
+    createProjectAgent(projectId, body) {
+      const project = getProject(projectId);
+      if (!project) {
+        return null;
+      }
+
+      const requestedAgentId = String(body.agent_id || "").trim();
+      let agent = requestedAgentId ? agentsState.get(requestedAgentId) : null;
+      if (!agent) {
+        agent = agentsState.ensureCeo(session).agent;
+      }
+      if (!agent) {
+        return null;
+      }
+
+      projectAgentCounter += 1;
+      const binding = {
+        project_agent_id: `proj-agent-generated-${projectAgentCounter}`,
+        project_id: projectId,
+        project_name: project.name,
+      };
+      agentsState.addProjectBinding(agent.agent_id, binding);
+      return buildProjectAgentInstance(agent, binding);
     },
   };
 }
@@ -786,6 +931,7 @@ export async function installSeedRoutes(page, profile) {
   const state = buildFeedbackState(profile);
   const notesState = buildNotesState(profile);
   const agentsState = buildAgentState(profile);
+  const projectState = buildProjectState(profile, agentsState, profile.session);
   const feedState = buildFeedState(profile);
   const processState = buildProcessState(profile);
   const orgs = cloneEntries(profile.seed.orgs);
@@ -826,6 +972,75 @@ export async function installSeedRoutes(page, profile) {
     if (pathname === "/api/projects") {
       return createResponse(route, projects);
     }
+
+    const projectMatch = pathname.match(/^\/api\/projects\/([^/]+)$/);
+    if (projectMatch && method === "GET") {
+      const [, projectId] = projectMatch;
+      const project = projectState.getProject(projectId);
+      return createResponse(route, project ?? { error: "Project not found" }, project ? 200 : 404);
+    }
+
+    const projectAgentsMatch = pathname.match(/^\/api\/projects\/([^/]+)\/agents$/);
+    if (projectAgentsMatch && method === "GET") {
+      const [, projectId] = projectAgentsMatch;
+      return createResponse(route, projectState.listProjectAgents(projectId));
+    }
+    if (projectAgentsMatch && method === "POST") {
+      const [, projectId] = projectAgentsMatch;
+      const body = parseJsonBody(request.postData());
+      const created = projectState.createProjectAgent(projectId, body);
+      return createResponse(route, created ?? { error: "Project not found" }, created ? 201 : 404);
+    }
+
+    const projectAgentMatch = pathname.match(/^\/api\/projects\/([^/]+)\/agents\/([^/]+)$/);
+    if (projectAgentMatch && method === "GET") {
+      const [, projectId, agentInstanceId] = projectAgentMatch;
+      const instance = projectState.getProjectAgent(projectId, agentInstanceId);
+      return createResponse(route, instance ?? { error: "Project agent not found" }, instance ? 200 : 404);
+    }
+
+    const projectAgentEventsMatch = pathname.match(/^\/api\/projects\/([^/]+)\/agents\/([^/]+)\/events$/);
+    if (projectAgentEventsMatch && method === "GET") {
+      const [, projectId, agentInstanceId] = projectAgentEventsMatch;
+      return createResponse(route, projectState.listProjectAgentEvents(projectId, agentInstanceId));
+    }
+
+    const projectAgentResetMatch = pathname.match(/^\/api\/projects\/([^/]+)\/agents\/([^/]+)\/reset-session$/);
+    if (projectAgentResetMatch && method === "POST") {
+      return createResponse(route, { ok: true });
+    }
+
+    const projectSpecsMatch = pathname.match(/^\/api\/projects\/([^/]+)\/specs$/);
+    if (projectSpecsMatch && method === "GET") {
+      const [, projectId] = projectSpecsMatch;
+      return createResponse(route, projectState.listSpecs(projectId));
+    }
+
+    const projectSpecMatch = pathname.match(/^\/api\/projects\/([^/]+)\/specs\/([^/]+)$/);
+    if (projectSpecMatch && method === "GET") {
+      const [, projectId, specId] = projectSpecMatch;
+      const spec = projectState.getSpec(projectId, specId);
+      return createResponse(route, spec ?? { error: "Spec not found" }, spec ? 200 : 404);
+    }
+
+    const projectSpecTasksMatch = pathname.match(/^\/api\/projects\/([^/]+)\/specs\/([^/]+)\/tasks$/);
+    if (projectSpecTasksMatch && method === "GET") {
+      const [, projectId, specId] = projectSpecTasksMatch;
+      return createResponse(route, projectState.listTasksBySpec(projectId, specId));
+    }
+
+    const projectTasksMatch = pathname.match(/^\/api\/projects\/([^/]+)\/tasks$/);
+    if (projectTasksMatch && method === "GET") {
+      const [, projectId] = projectTasksMatch;
+      return createResponse(route, projectState.listTasks(projectId));
+    }
+
+    const projectTaskOutputMatch = pathname.match(/^\/api\/projects\/([^/]+)\/tasks\/([^/]+)\/output$/);
+    if (projectTaskOutputMatch && method === "GET") {
+      const [, projectId, taskId] = projectTaskOutputMatch;
+      return createResponse(route, projectState.getTaskOutput(projectId, taskId));
+    }
+
     if (pathname === "/api/feed" || pathname === "/api/log-entries") {
       return createResponse(route, feedState.list());
     }

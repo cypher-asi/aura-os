@@ -255,9 +255,128 @@ function extractBaselineWorld(profile) {
     feedbackComments: seed.feedbackComments ?? {},
     agents: Array.isArray(seed.agents) ? seed.agents : [],
     agentEvents: seed.agentEvents ?? {},
+    agentProjectBindings: seed.agentProjectBindings ?? {},
     notesDocuments: seed.notesDocuments ?? {},
+    specs: Array.isArray(seed.specs) ? seed.specs : [],
+    tasks: Array.isArray(seed.tasks) ? seed.tasks : [],
+    taskOutputs: seed.taskOutputs ?? {},
     processes: Array.isArray(seed.processes) ? seed.processes : [],
+    processNodes: seed.processNodes ?? {},
     feedEvents: Array.isArray(seed.feedEvents) ? seed.feedEvents : [],
+  };
+}
+
+function buildBaselineTaskMatches(context) {
+  const specsById = new Map(context.baseline.specs.map((spec) => [spec.spec_id, spec]));
+
+  return context.baseline.tasks
+    .map((task) => {
+      const spec = specsById.get(task.spec_id) ?? null;
+      const output = context.baseline.taskOutputs[task.task_id] ?? null;
+      const buildSummaries = Array.isArray(task.build_steps)
+        ? task.build_steps.map((step) => `${step.command || ""} ${step.stdout || ""}`.trim())
+        : [];
+      const testSummaries = Array.isArray(task.test_steps)
+        ? task.test_steps.flatMap((step) => [
+          `${step.command || ""} ${step.stdout || ""}`.trim(),
+          `${step.summary || ""}`.trim(),
+          ...(Array.isArray(step.tests) ? step.tests.map((entry) => `${entry.name || ""} ${entry.status || ""}`.trim()) : []),
+        ])
+        : [];
+      const scored = scoreTextValues([
+        task.title,
+        task.description,
+        task.execution_notes,
+        task.status,
+        spec?.title,
+        spec?.markdown_contents,
+        output?.output,
+        ...buildSummaries,
+        ...testSummaries,
+      ], context.storyTerms);
+
+      if ((/\b(output|reload|remount|rehydrat|run pane|completed)\b/i.test(context.story)) && output?.output) {
+        scored.score += 10;
+      }
+      if (spec?.title) {
+        scored.score += 2;
+      }
+
+      return {
+        task,
+        spec,
+        output,
+        score: scored.score,
+        matchedKeywords: scored.matchedKeywords,
+      };
+    })
+    .sort((left, right) => right.score - left.score || left.task.title.localeCompare(right.task.title));
+}
+
+function buildTaskExistingPlan(context, taskMatch) {
+  const { task, spec, output } = taskMatch;
+  const projectBindingEntry = Object.values(context.baseline.agentProjectBindings)
+    .flatMap((bindings) => Array.isArray(bindings) ? bindings : [])
+    .find((binding) => binding.project_agent_id === task.assigned_agent_instance_id || binding.project_id === task.project_id) ?? null;
+  const isOutputStory = /\b(output|reload|remount|rehydrat|run pane|completed)\b/i.test(context.story);
+  const startPath = isOutputStory && task.assigned_agent_instance_id
+    ? `/projects/${task.project_id}/agents/${task.assigned_agent_instance_id}`
+    : context.targetApp?.id === "projects"
+      ? `/projects/${task.project_id}`
+      : `/tasks/${task.project_id}`;
+  const projectLabel = projectBindingEntry?.project_name || "Demo Project";
+  const validationSignals = normalizeArray([
+    projectLabel,
+    spec?.title,
+    task.title,
+    isOutputStory ? "Completed Task Output" : null,
+    isOutputStory ? "Test task" : null,
+    context.targetApp?.label || "Tasks",
+  ], 8);
+  const checklist = normalizeArray([
+    `${context.targetApp?.label || "Tasks"} app is open and stable`,
+    `${projectLabel} is visible in the current workspace`,
+    spec?.title ? `The spec "${spec.title}" is visible or selected` : null,
+    `The task "${task.title}" is visible`,
+    isOutputStory ? "Completed task output is visibly open" : null,
+  ], 5);
+
+  return {
+    status: "runtime-ready",
+    strategy: "runtime",
+    startPath,
+    capabilityId: isOutputStory ? "tasks.reuse-seeded-output" : "tasks.reuse-seeded-task",
+    supportLevel: "full",
+    rationale: `The baseline seeded workspace already contains ${spec ? `spec "${spec.title}" and ` : ""}task "${task.title}", so the agent can show a truthful task surface without depending on a hand-authored feature script.`,
+    coverageGaps: [],
+    seed: {},
+    seededEntities: normalizeArray([
+      JSON.stringify({ type: "project", projectId: task.project_id, name: projectLabel, source: "baseline" }),
+      spec ? JSON.stringify({ type: "spec", specId: spec.spec_id, title: spec.title, source: "baseline" }) : null,
+      JSON.stringify({ type: "task", taskId: task.task_id, title: task.title, source: "baseline" }),
+      output ? JSON.stringify({ type: "task-output", taskId: task.task_id, source: "baseline" }) : null,
+    ]).map((entry) => JSON.parse(entry)),
+    instructionPatch: {
+      systemPromptAppend: `A seeded project workspace already contains task "${task.title}"${spec ? ` under spec "${spec.title}"` : ""}. Open that same workspace state instead of inventing a new task flow.`,
+      proofInstruction: isOutputStory
+        ? `Story to demonstrate: ${context.story} Open the seeded project workspace for "${projectLabel}", reveal task "${task.title}", and stop on the clearest view of the completed task output.`
+        : `Story to demonstrate: ${context.story} Open the seeded workspace for "${projectLabel}", select task "${task.title}", and leave the clearest related task screen visible.`,
+      interactionInstruction: isOutputStory
+        ? `Story to demonstrate: ${context.story} Keep the seeded task "${task.title}" selected. If the task output is hidden behind a selected project or task row, select those visible items first and then stop once the completed output is legible.`
+        : `Story to demonstrate: ${context.story} Keep the seeded task "${task.title}" selected and prefer a stable selected-task view over opening create dialogs.`,
+      successChecklist: checklist,
+      validationSignals,
+      setupPlan: normalizeArray([
+        `Open or keep the ${context.targetApp?.label || "Tasks"} app visible.`,
+        `Select the project "${projectLabel}" if the UI asks for a project first.`,
+        spec?.title ? `Keep the spec "${spec.title}" visible if it appears.` : null,
+        `Keep the task "${task.title}" visible.`,
+        isOutputStory ? "Stop on the completed task output once it is visible." : null,
+      ], 6),
+    },
+    score: isOutputStory ? 52 : 44,
+    matchedKeywords: taskMatch.matchedKeywords,
+    fileSignals: context.changedFiles.filter((file) => /\/(tasks|projects)\//i.test(file)),
   };
 }
 
@@ -460,8 +579,8 @@ function buildFeedPreseedPlan(context) {
 }
 
 function pickAgentTab(context) {
-  if (context.storyIntent.wantsPermissions) return "Permissions";
   if (context.storyIntent.wantsSkills) return "Skills";
+  if (context.storyIntent.wantsPermissions) return "Permissions";
   if (context.storyIntent.wantsMemory) return "Memory";
   if (context.storyIntent.wantsProfile) return "Profile";
   if (context.storyIntent.wantsChat) return "Chats";
@@ -475,6 +594,12 @@ function buildAgentExistingPlan(context, agentMatch) {
     ? `Open the ${tab} tab for "${agent.name}" using visible controls only.`
     : `Keep "${agent.name}" selected and centered in the agent detail view.`;
   const tabSignal = tab ? [tab] : [];
+  const tabSpecificSignals =
+    tab === "Skills"
+      ? ["Installed", "Available"]
+      : tab === "Permissions"
+        ? ["Capabilities", "Scope"]
+        : [];
 
   return {
     status: "runtime-ready",
@@ -496,7 +621,7 @@ function buildAgentExistingPlan(context, agentMatch) {
         tab ? `The ${tab} tab is visibly active` : "The agent detail or chat surface is clearly visible",
         context.storyIntent.wantsChat ? "A chat transcript or response is visible" : null,
       ], 5),
-      validationSignals: normalizeArray([agent.name, ...tabSignal, "Agents"], 6),
+      validationSignals: normalizeArray([agent.name, ...tabSignal, ...tabSpecificSignals, "Agents"], 8),
       setupPlan: normalizeArray([
         "Open or keep the Agents app visible.",
         `Select the seeded agent "${agent.name}".`,
@@ -713,6 +838,11 @@ function buildSeedCandidates(context) {
     if (context.storyIntent.wantsCreate || context.storyIntent.wantsNamedEntity || !bestNote) {
       candidates.push(buildNotesPreseedPlan(context));
     }
+  } else if (appId === "tasks" || appId === "projects") {
+    const bestTask = buildBaselineTaskMatches(context)[0] ?? null;
+    if (bestTask) {
+      candidates.push(buildTaskExistingPlan(context, bestTask));
+    }
   } else if (appId === "process") {
     candidates.push(buildProcessPreseedPlan(context));
   } else if (appId === "feed") {
@@ -835,8 +965,8 @@ export function applyDemoSeedPlanToBrief(brief, seedPlan) {
       ...(Array.isArray(seedPlan.instructionPatch?.setupPlan) ? seedPlan.instructionPatch.setupPlan : []),
     ], 8),
     validationSignals: normalizeArray([
-      ...(Array.isArray(brief.validationSignals) ? brief.validationSignals : []),
       ...(Array.isArray(seedPlan.instructionPatch?.validationSignals) ? seedPlan.instructionPatch.validationSignals : []),
+      ...(Array.isArray(brief.validationSignals) ? brief.validationSignals : []),
     ], 8),
     systemPrompt: [
       brief.systemPrompt,

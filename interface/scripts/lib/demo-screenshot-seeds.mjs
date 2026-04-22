@@ -419,6 +419,112 @@ function createCommonSeed() {
         },
       ],
     },
+    specs: [
+      {
+        spec_id: "spec-1",
+        project_id: "proj-1",
+        title: "Stabilize completed task output",
+        order_index: 1,
+        markdown_contents: [
+          "# Stabilize completed task output",
+          "",
+          "Keep completed run output visible after reloads and remounts.",
+          "",
+          "- Rehydrate structured task output from cache",
+          "- Keep the final run text visible while the stream catches up",
+        ].join("\n"),
+        created_at: "2026-03-17T01:17:00.000Z",
+        updated_at: "2026-03-17T01:17:00.000Z",
+      },
+    ],
+    tasks: [
+      {
+        task_id: "task-1",
+        project_id: "proj-1",
+        spec_id: "spec-1",
+        title: "Test task",
+        description: "Verify that completed task output survives remounts and reloads.",
+        status: "done",
+        order_index: 1,
+        dependency_ids: [],
+        parent_task_id: null,
+        assigned_agent_instance_id: "proj-agent-1",
+        completed_by_agent_instance_id: "proj-agent-1",
+        session_id: null,
+        execution_notes: "Completed task output remained visible after the seeded reload sequence.",
+        files_changed: [
+          {
+            op: "update",
+            path: "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
+            lines_added: 18,
+            lines_removed: 4,
+          },
+        ],
+        live_output: "",
+        build_steps: [
+          {
+            kind: "build",
+            command: "npm run build",
+            stdout: "Build completed successfully.",
+            attempt: 1,
+          },
+        ],
+        test_steps: [
+          {
+            kind: "test",
+            command: "npm test -- CompletedTaskOutput",
+            stdout: "PASS CompletedTaskOutput",
+            attempt: 1,
+            tests: [
+              {
+                name: "rehydrates cached completed output",
+                status: "passed",
+              },
+            ],
+            summary: "1 passed",
+          },
+        ],
+        total_input_tokens: 1280,
+        total_output_tokens: 412,
+        created_at: "2026-03-17T01:18:00.000Z",
+        updated_at: "2026-03-17T01:19:00.000Z",
+      },
+    ],
+    taskOutputs: {
+      "task-1": {
+        output: [
+          "Completed Task Output",
+          "",
+          "Test task",
+          "",
+          "Completed output stays visible after reload and remount.",
+          "Cached session timeline restored from local storage successfully.",
+        ].join("\n"),
+        build_steps: [
+          {
+            kind: "build",
+            command: "npm run build",
+            stdout: "Build completed successfully.",
+            attempt: 1,
+          },
+        ],
+        test_steps: [
+          {
+            kind: "test",
+            command: "npm test -- CompletedTaskOutput",
+            stdout: "PASS CompletedTaskOutput",
+            attempt: 1,
+            tests: [
+              {
+                name: "rehydrates cached completed output",
+                status: "passed",
+              },
+            ],
+            summary: "1 passed",
+          },
+        ],
+      },
+    },
     feedEvents: [],
     feedComments: {},
     processes: [],
@@ -636,6 +742,9 @@ export function applyDemoSeedPatch(profile, patch = {}) {
   next.seed.agents = mergeArrayEntries(next.seed.agents, seedPatch.agents);
   next.seed.agentEvents = mergeRecordEntries(next.seed.agentEvents, seedPatch.agentEvents);
   next.seed.agentProjectBindings = mergeRecordEntries(next.seed.agentProjectBindings, seedPatch.agentProjectBindings);
+  next.seed.specs = mergeArrayEntries(next.seed.specs, seedPatch.specs);
+  next.seed.tasks = mergeArrayEntries(next.seed.tasks, seedPatch.tasks);
+  next.seed.taskOutputs = mergeRecordEntries(next.seed.taskOutputs, seedPatch.taskOutputs);
   next.seed.feedEvents = mergeArrayEntries(next.seed.feedEvents, seedPatch.feedEvents);
   next.seed.feedComments = mergeRecordEntries(next.seed.feedComments, seedPatch.feedComments);
   next.seed.processes = mergeArrayEntries(next.seed.processes, seedPatch.processes);

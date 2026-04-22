@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-import { buildDemoAgentBrief } from "./demo-agent-brief.mjs";
+import { buildDemoAgentBrief, sanitizeVisibleProofPhrases } from "./demo-agent-brief.mjs";
+
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(MODULE_DIR, "../../..");
 
 test("buildDemoAgentBrief chooses feedback from a feedback story without Anthropic", async () => {
   const previous = process.env.ANTHROPIC_API_KEY;
@@ -58,9 +63,11 @@ test("buildDemoAgentBrief uses changed file evidence to infer an agent skills su
   assert.equal(brief.generator, "fallback");
   assert.equal(brief.targetAppId, "agents");
   assert.match(brief.proofInstruction, /Skills/i);
-  assert.match(brief.proofInstruction, /Skill Shop|Installed|Available/i);
   assert.ok(brief.setupPlan.some((entry) => /Skills|tab/i.test(entry)));
   assert.ok(brief.validationSignals.some((entry) => /Skills|Skill Shop|Installed|Available/i.test(entry)));
+  assert.ok(brief.proofRequirements.some((entry) =>
+    entry.anyOf.some((signal) => /Skill Shop|Installed|Available/i.test(signal))
+  ));
 
   if (previous) {
     process.env.ANTHROPIC_API_KEY = previous;
@@ -131,5 +138,81 @@ test("buildDemoAgentBrief adds modal-specific proof rules for deleting a skill",
 
   if (previous) {
     process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
+test("sanitizeVisibleProofPhrases drops implementation-only proof hints", () => {
+  const sanitized = sanitizeVisibleProofPhrases([
+    "Tasks",
+    "Completed Task Output",
+    "use task output view",
+    "task output panel store",
+    "task stream bootstrap",
+    "AtlasDemoAgent",
+    "is ready",
+    "interface/src/stores/task-turn-cache.ts",
+    "Tasks app main panel is visible and stable",
+  ], 12);
+
+  assert.deepEqual(sanitized, [
+    "Tasks",
+    "Completed Task Output",
+    "AtlasDemoAgent",
+    "is ready",
+  ]);
+});
+
+test("buildDemoAgentBrief filters implementation-only validation hints from changelog-style task stories", async () => {
+  const previous = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+
+  const brief = await buildDemoAgentBrief({
+    prompt: "Completed task output survives remounts and reloads.",
+    changedFiles: [
+      "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
+      "interface/src/hooks/use-task-output-view.ts",
+      "interface/src/stores/task-output-panel-store.ts",
+      "interface/src/stores/task-stream-bootstrap.ts",
+      "interface/src/stores/task-turn-cache.ts",
+    ],
+  });
+
+  assert.equal(brief.targetAppId, "projects");
+  assert.ok(brief.validationSignals.includes("Projects"));
+  assert.ok(brief.validationSignals.some((entry) => /Completed Task Output|Task Output Section/i.test(entry)));
+  assert.ok(!brief.validationSignals.some((entry) => /use task output view/i.test(entry)));
+  assert.ok(!brief.validationSignals.some((entry) => /task output panel store/i.test(entry)));
+  assert.ok(!brief.validationSignals.some((entry) => /task stream bootstrap/i.test(entry)));
+  assert.ok(!brief.validationSignals.some((entry) => /task turn cache/i.test(entry)));
+  assert.match(brief.validationInstruction, /empty state or selection prompt does not count as proof/i);
+
+  if (previous) {
+    process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
+test("buildDemoAgentBrief keeps changed-file inference working from the interface cwd", async () => {
+  const previous = process.env.ANTHROPIC_API_KEY;
+  const originalCwd = process.cwd();
+  delete process.env.ANTHROPIC_API_KEY;
+
+  try {
+    process.chdir(path.join(REPO_ROOT, "interface"));
+    const brief = await buildDemoAgentBrief({
+      prompt: "Capability toggles autosave immediately in the Permissions tab and the saved state is clearly visible.",
+      changedFiles: [
+        "interface/src/apps/agents/AgentInfoPanel/PermissionsTab.tsx",
+        "interface/src/types/permissions.ts",
+      ],
+    });
+
+    assert.equal(brief.generator, "fallback");
+    assert.equal(brief.targetAppId, "agents");
+    assert.match(brief.proofInstruction, /Permissions/i);
+  } finally {
+    process.chdir(originalCwd);
+    if (previous) {
+      process.env.ANTHROPIC_API_KEY = previous;
+    }
   }
 });

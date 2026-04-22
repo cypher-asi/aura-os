@@ -1,6 +1,8 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
+import { DEMO_REPO_ROOT, resolveDemoRepoPath, toRepoRelativePath } from "./demo-repo-paths.mjs";
+
 const FALLBACK_APPS = [
   {
     id: "desktop",
@@ -74,7 +76,7 @@ const FALLBACK_APPS = [
   },
 ];
 
-const APPS_ROOT = path.join(process.cwd(), "interface", "src", "apps");
+const APPS_ROOT = resolveDemoRepoPath("interface", "src", "apps");
 let cachedAppsPromise = null;
 
 function parseStringLiteral(block, fieldName) {
@@ -209,8 +211,8 @@ async function inspectAppSource(app) {
   ], 12);
 
   return {
-    appDir: path.relative(process.cwd(), appDir).replace(/\\/g, "/"),
-    routePath: path.relative(process.cwd(), routePath).replace(/\\/g, "/"),
+    appDir: toRepoRelativePath(appDir),
+    routePath: toRepoRelativePath(routePath),
     ...analyzeRoutes(app, routeSource),
     surfaces,
     actions,
@@ -240,7 +242,7 @@ function cloneApps(apps) {
 
 export async function listDemoAgentApps() {
   cachedAppsPromise ??= (async () => {
-    const registryPath = path.join(process.cwd(), "interface", "src", "apps", "registry.ts");
+    const registryPath = resolveDemoRepoPath("interface", "src", "apps", "registry.ts");
 
     try {
       const source = await fs.readFile(registryPath, "utf8");
@@ -261,8 +263,8 @@ export async function listDemoAgentApps() {
     return cloneApps(FALLBACK_APPS.map((app) => ({
       ...app,
       sourceContext: {
-        appDir: `interface/src/apps/${app.id}`,
-        routePath: `interface/src/apps/${app.id}/routes.tsx`,
+        appDir: toRepoRelativePath(path.join(DEMO_REPO_ROOT, "interface", "src", "apps", app.id)),
+        routePath: toRepoRelativePath(path.join(DEMO_REPO_ROOT, "interface", "src", "apps", app.id, "routes.tsx")),
         routeHints: [app.entryPath],
         baseRouteKind: "unknown",
         detailRouteKind: "unknown",

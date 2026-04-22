@@ -2,6 +2,7 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 
 import { listDemoAgentApps } from "./demo-agent-app-catalog.mjs";
+import { resolveDemoChangedFilePath } from "./demo-repo-paths.mjs";
 
 function clipText(value, maxLength) {
   const text = String(value || "").trim();
@@ -37,6 +38,49 @@ function humanizeIdentifier(value) {
     .replace(/[-_]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function looksLikeInternalProofPhrase(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return true;
+  }
+
+  if (/[\\/]/.test(text) || /\.[cm]?[jt]sx?$/i.test(text) || /^data-agent-/i.test(text)) {
+    return true;
+  }
+
+  if (/^(?:use|build|collect|resolve|normalize|apply)\b/i.test(text)) {
+    return true;
+  }
+
+  if (
+    /(?:store|cache|bootstrap|hydration|handler|handlers|hook|hooks|selector|selectors|state|query|queries|util|utils|runner|stream|event|events|fixture|fixtures|test|tests|spec|specs|module)$/i.test(text)
+  ) {
+    return true;
+  }
+
+  if (/^[a-z]+(?:[A-Z][a-z0-9]+){1,}$/.test(text)) {
+    return true;
+  }
+
+  if (
+    /\b(?:changed files|likely proof surface|relevant app surface|main panel is visible|visible and stable|changed-file evidence|desktop-only)\b/i.test(text)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function sanitizeVisibleProofPhrases(values, limit = 10) {
+  return normalizeArray(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim())
+      .filter((value) => value.length >= 2 && value.length <= 60)
+      .filter((value) => !looksLikeInternalProofPhrase(value)),
+    limit,
+  );
 }
 
 function parseJsonCandidate(text) {
@@ -89,8 +133,6 @@ function extractUiStrings(source) {
     ...extractStringMatches(source, /placeholder\s*=\s*"([^"]+)"/g, 8),
     ...extractStringMatches(source, /\blabel:\s*"([^"]+)"/g, 8),
     ...extractStringMatches(source, /\btitle:\s*"([^"]+)"/g, 8),
-    ...extractStringMatches(source, /data-agent-surface\s*=\s*"([^"]+)"/g, 8),
-    ...extractStringMatches(source, /data-agent-field\s*=\s*"([^"]+)"/g, 8),
   ], 12);
 }
 
@@ -209,6 +251,7 @@ function buildSystemPrompt() {
     "If an interaction fails twice, stop and keep the clearest currently visible proof screen instead of exploring deeper.",
     "If you create a new agent, use a simple valid name such as AtlasDemoAgent. Agent names only support letters, numbers, hyphens, and underscores.",
     "Do not worry about real authentication or production-valid data.",
+    "A generic empty state or selection prompt does not count as proof. If the UI asks you to select a project, row, item, or tab first, do that before stopping.",
     "If a flow is blocked, stop on the clearest visible screen that still proves the intended surface.",
   ].join(" ");
 }
@@ -232,6 +275,7 @@ function buildPhaseInstructions({ story, targetApp, successChecklist, surfaceHin
       surfaceInstruction,
       "Use app labels, routes, and data-agent metadata when helpful.",
       "Use visible controls only. Do not type URLs or rely on hidden navigation.",
+      "A generic empty state or selection prompt is not proof. If the app asks you to select a project, row, item, or tab first, do that before stopping.",
       "Stop when the main panel for the relevant app is visible and stable.",
     ].filter(Boolean).join(" "),
     proofInstruction: [
@@ -246,6 +290,7 @@ function buildPhaseInstructions({ story, targetApp, successChecklist, surfaceHin
         : null,
       "From the current screen, navigate to the clearest visible proof of that story.",
       "Prefer a screen with meaningful content over blank states.",
+      "If the app asks you to select a project, record, task, or tab first, make one visible selection before stopping.",
       `Success checklist: ${successChecklist.join("; ")}.`,
       "Stop once the proof screen is visible and centered.",
     ].filter(Boolean).join(" "),
@@ -260,6 +305,7 @@ function buildPhaseInstructions({ story, targetApp, successChecklist, surfaceHin
       "Examples include opening a detail view, opening the most relevant tab, selecting a provider row, posting a comment, or switching to a relevant panel.",
       "Do not guess hidden routes or type manual URLs. Stay on visible, user-reachable surfaces only.",
       "Do not rely on direct URL navigation. Reach the proof state through the UI that a real desktop user can see.",
+      "Generic empty states and selection prompts are not enough. If the app asks you to pick a project, item, or row first, do that before stopping.",
       "If two attempts to deepen the proof fail, stop and keep the best currently visible proof screen.",
       "If no safe interaction is available, keep the best proof screen visible.",
     ].filter(Boolean).join(" "),
@@ -304,6 +350,8 @@ function buildSetupPlan({ story, targetApp, surfaceHints = [] }) {
     setup.push("If the proof depends on a new item existing, create exactly one demo item and keep it selected.");
   }
 
+  setup.push("If the app shows a selection or empty-state prompt, make one visible selection before stopping.");
+
   return normalizeArray(setup, 6);
 }
 
@@ -332,7 +380,7 @@ function buildValidationSignals({ story, targetApp, surfaceHints = [], successCh
     storySignals.push("is ready");
   }
 
-  return normalizeArray([
+  return sanitizeVisibleProofPhrases([
     targetApp?.label,
     ...storySignals,
     ...surfaceHints,
@@ -347,7 +395,7 @@ function normalizeProofRequirements(requirements, limit = 6) {
   return (Array.isArray(requirements) ? requirements : [])
     .map((entry) => {
       if (Array.isArray(entry)) {
-        const anyOf = normalizeArray(entry, 4);
+        const anyOf = sanitizeVisibleProofPhrases(entry, 4);
         if (anyOf.length === 0) return null;
         return {
           label: clipText(anyOf.join(" / "), 80),
@@ -357,12 +405,15 @@ function normalizeProofRequirements(requirements, limit = 6) {
       if (!entry || typeof entry !== "object") {
         return null;
       }
-      const anyOf = normalizeArray(entry.anyOf ?? entry.signals ?? [], 4);
+      const anyOf = sanitizeVisibleProofPhrases(entry.anyOf ?? entry.signals ?? [], 4);
       if (anyOf.length === 0) {
         return null;
       }
       return {
-        label: clipText(entry.label || anyOf.join(" / "), 80),
+        label: clipText(
+          sanitizeVisibleProofPhrases([entry.label], 1)[0] || anyOf.join(" / "),
+          80,
+        ),
         anyOf,
       };
     })
@@ -436,6 +487,7 @@ function buildValidationInstruction({ story, targetApp, surfaceHints = [], valid
     surfaceHints.length > 0 ? `Focus on these likely surfaces: ${surfaceHints.join("; ")}.` : null,
     validationSignals.length > 0 ? `Visible proof signals to look for: ${validationSignals.join("; ")}.` : null,
     "Make the proof state visible, then verify it against those signals.",
+    "A generic empty state or selection prompt does not count as proof. If the UI asks you to select a project, item, or row first, do that before stopping.",
     "If the proof is still missing, make at most one constrained correction using visible UI only.",
     "Do not switch into mobile mode, do not type hidden URLs, do not use direct URL jumps, and do not wander after the proof becomes visible.",
   ];
@@ -448,7 +500,7 @@ async function analyzeChangedFile(filePath, apps) {
     return null;
   }
 
-  const absolutePath = path.resolve(process.cwd(), normalizedPath);
+  const absolutePath = resolveDemoChangedFilePath(normalizedPath);
   const source = await fs.readFile(absolutePath, "utf8").catch(() => "");
   const uiStrings = extractUiStrings(source);
   const routeHints = extractRouteHints(source);
@@ -579,12 +631,9 @@ function buildSurfaceHints(targetAppId, changedFileEvidence) {
     (fileInfo.appMatches ?? []).some((entry) => entry.appId === targetAppId),
   );
 
-  return normalizeArray([
+  return sanitizeVisibleProofPhrases([
     ...matchingFiles.map((fileInfo) => fileInfo.surfaceLabel),
     ...matchingFiles.flatMap((fileInfo) => fileInfo.uiStrings),
-    ...matchingFiles.flatMap((fileInfo) => fileInfo.dataAgentSurfaces ?? []),
-    ...matchingFiles.flatMap((fileInfo) => fileInfo.dataAgentActions ?? []),
-    ...matchingFiles.flatMap((fileInfo) => fileInfo.componentNames ?? []),
   ], 8);
 }
 
@@ -707,7 +756,10 @@ function validateBrief(candidate, fallback, apps) {
     fileEvidence: fallback.scoredApps.find((entry) => entry.appId === targetApp?.id)?.fileMatches ?? [],
   });
   const setupPlan = normalizeArray(candidate.setupPlan ?? fallback.setupPlan, 6);
-  const validationSignals = normalizeArray(candidate.validationSignals ?? fallback.validationSignals, 8);
+  const validationSignals = sanitizeVisibleProofPhrases(
+    candidate.validationSignals ?? fallback.validationSignals,
+    8,
+  );
   const proofRules = buildStoryProofRules({
     story: candidate.story || fallback.story,
     targetApp,
@@ -870,3 +922,7 @@ export async function buildDemoAgentBrief({ prompt = "", changelogDoc = null, ch
 
   return fallback;
 }
+
+export {
+  sanitizeVisibleProofPhrases,
+};

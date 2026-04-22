@@ -239,6 +239,26 @@ jobs:
 
           node repo/infra/scripts/release/publish-changelog-media.mjs "${ARGS[@]}"
 
+      - name: Append changelog media diagnostics summary
+        if: always() && steps.target.outputs.ready == 'true'
+        shell: bash
+        run: |
+          summary_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-summary.md"
+          if [[ -f "$summary_file" ]]; then
+            cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload changelog media diagnostics
+        if: always() && steps.target.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-media-diagnostics-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            repo/interface/output/demo-screenshots/publish-changelog-media
+            pages/changelog/${{ steps.target.outputs.channel }}
+            pages/assets/changelog/${{ steps.target.outputs.channel }}
+
       - name: Commit and push changelog media
         if: steps.target.outputs.ready == 'true'
         shell: bash

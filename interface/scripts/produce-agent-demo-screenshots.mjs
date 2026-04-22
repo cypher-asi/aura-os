@@ -486,7 +486,7 @@ function buildPhasePlan(brief) {
     {
       id: "setup-state",
       title: startsInsideTargetApp ? "Stabilize target app" : "Set up proof state",
-      required: true,
+      required: false,
       screenshot: "01-setup-state.png",
       instruction: [
         brief.setupInstruction || brief.openAppInstruction,
@@ -825,8 +825,55 @@ async function collectPageUiSignals(page) {
         && rect.width > 0
         && rect.height > 0;
     };
+    const normalizeWhitespace = (value) =>
+      String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const getNodeLabel = (node) =>
+      normalizeWhitespace(node?.getAttribute?.("aria-label") || node?.textContent || "");
+    const extractSelectionPromptLabel = (value) => {
+      const text = normalizeWhitespace(value);
+      if (!text) return null;
+      const patterns = [
+        /\b(?:select|choose|pick)\s+(?:a|an|the)\s+([^.]{1,80}?)(?:\s+from [^.]{1,80}?)?\s+\b(?:to get started|to view|to preview|to see|to inspect|to open|to continue)\b/i,
+        /\b(?:select|choose|pick)\s+([^.]{1,80}?)\s+\b(?:to get started|to view|to preview|to see|to inspect|to open|to continue)\b/i,
+      ];
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (!match?.[1]) continue;
+        return normalizeWhitespace(match[1].replace(/\bfrom navigation\b/i, ""));
+      }
+      return null;
+    };
+    const collectLabels = (nodes, limit = 6) =>
+      Array.from(
+        new Set(
+          nodes
+            .map((node) => getNodeLabel(node))
+            .filter(Boolean),
+        ),
+      ).slice(0, limit);
     const bodyText = document.body?.innerText || "";
     const mainPanel = document.querySelector('[data-agent-surface="main-panel"]');
+    const mainPanelText = mainPanel?.innerText || bodyText;
+    const countVisibleNodes = (selectors) =>
+      Array.from(document.querySelectorAll(selectors)).filter((node) => isVisible(node)).length;
+    const visibleTreeButtons = Array.from(document.querySelectorAll('[role="tree"] button'))
+      .filter((node) => {
+        const style = window.getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return !node.disabled
+          && style.display !== "none"
+          && style.visibility !== "hidden"
+          && Number(style.opacity || 1) > 0.05
+          && rect.width > 0
+          && rect.height > 0;
+      });
+    const treeLeafButtons = visibleTreeButtons.filter((node) => {
+      const testId = String(node.getAttribute("data-testid") || "");
+      return testId.startsWith("node-") || !node.hasAttribute("aria-expanded");
+    });
+    const treeGroupButtons = visibleTreeButtons.filter((node) => node.hasAttribute("aria-expanded"));
     const mobileLayoutSelectors = [
       '[aria-label="Feedback filters"]',
       '[aria-label="Feed filters"]',
@@ -838,20 +885,51 @@ async function collectPageUiSignals(page) {
       /permission denied/i,
       /rows is not iterable/i,
     ];
+    const hasGenericEmptyStateText = (value) => {
+      const text = String(value || "").trim();
+      if (!text) return false;
+      return [
+        /\bselect (?:a|an|the) [^.]{0,80}\b(?:to get started|to view|to preview|to see)\b/i,
+        /\b(?:pick|choose) (?:a|an|the) [^.]{0,80}\b(?:to preview|to view|to see)\b/i,
+        /\badd (?:a|an|your) [^.]{0,80}\bto get started\b/i,
+        /\bcreate (?:a|an|your) [^.]{0,80}\bfirst\b/i,
+        /\bnothing here yet\b/i,
+        /\bit'?s quiet here\b/i,
+        /\bno [a-z][^.]{0,80}\b(?: yet| available| found)?\b/i,
+        /\bloading [^.]{0,80}\.\.\./i,
+      ].some((pattern) => pattern.test(text));
+    };
+    const markedEmptyStateVisible = Array.from(document.querySelectorAll("[data-agent-empty-state]")).some((node) => {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    });
+    const dominantContentCount =
+      countVisibleNodes('[data-agent-surface="main-panel"] [role="article"], [data-agent-surface="main-panel"] [role="listitem"], [data-agent-surface="main-panel"] [role="row"], [data-agent-surface="main-panel"] [data-testid^="node-"]')
+      + countVisibleNodes('[data-agent-surface="main-panel"] button, [data-agent-surface="main-panel"] [role="button"], [data-agent-surface="main-panel"] a, [data-agent-surface="main-panel"] [role="link"]');
+    const selectionPromptLabel = extractSelectionPromptLabel(mainPanelText);
+    const dominantEmptyStateVisible = !markedEmptyStateVisible
+      && hasGenericEmptyStateText(mainPanelText)
+      && (
+        Boolean(selectionPromptLabel)
+        || (normalizeWhitespace(mainPanelText).length <= 220 && dominantContentCount <= 6)
+      );
+    const genericEmptyStateTextVisible = dominantEmptyStateVisible;
 
     return {
       activeAppId: mainPanel?.getAttribute("data-agent-active-app-id") || null,
       activeAppLabel: mainPanel?.getAttribute("data-agent-active-app-label") || null,
+      mainPanelTextSnippet: normalizeWhitespace(mainPanelText).slice(0, 240) || null,
       placeholderVisible: isVisible('[data-agent-surface="shell-route-placeholder"]'),
-      emptyStateVisible: Array.from(document.querySelectorAll("[data-agent-empty-state]")).some((node) => {
-        const style = window.getComputedStyle(node);
-        const rect = node.getBoundingClientRect();
-        return style.display !== "none"
-          && style.visibility !== "hidden"
-          && Number(style.opacity || 1) > 0.05
-          && rect.width > 0
-          && rect.height > 0;
-      }),
+      emptyStateVisible: markedEmptyStateVisible || dominantEmptyStateVisible,
+      genericEmptyStateTextVisible,
+      selectionPromptLabel,
+      treeLeafLabels: collectLabels(treeLeafButtons),
+      treeGroupLabels: collectLabels(treeGroupButtons),
       mobileLayoutVisible: mobileLayoutSelectors.some((selector) => isVisible(selector)),
       errorTextVisible: errorPatterns.some((pattern) => pattern.test(bodyText)),
       feedbackThreadVisible: isVisible('[data-agent-surface="feedback-thread"]'),
@@ -861,14 +939,277 @@ async function collectPageUiSignals(page) {
   }).catch(() => ({
     activeAppId: null,
     activeAppLabel: null,
+    mainPanelTextSnippet: null,
     placeholderVisible: false,
     emptyStateVisible: false,
+    genericEmptyStateTextVisible: false,
+    selectionPromptLabel: null,
+    treeLeafLabels: [],
+    treeGroupLabels: [],
     mobileLayoutVisible: false,
     errorTextVisible: false,
     feedbackThreadVisible: false,
     notesEditorVisible: false,
     sidekickVisible: false,
   }));
+}
+
+function escapeAttributeValue(value) {
+  return String(value || "").replace(/["\\]/g, "\\$&");
+}
+
+async function collectSelectionRecoveryCandidates(page) {
+  return page.evaluate(() => {
+    const normalizeWhitespace = (value) =>
+      String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const isVisibleNode = (node) => {
+      if (!(node instanceof HTMLElement)) {
+        return false;
+      }
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return !node.hasAttribute("disabled")
+        && style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+    const getNodeLabel = (node) =>
+      normalizeWhitespace(node?.getAttribute?.("aria-label") || node?.textContent || "");
+    const extractSelectionPromptLabel = (value) => {
+      const text = normalizeWhitespace(value);
+      if (!text) return null;
+      const patterns = [
+        /\b(?:select|choose|pick)\s+(?:a|an|the)\s+([^.]{1,80}?)(?:\s+from [^.]{1,80}?)?\s+\b(?:to get started|to view|to preview|to see|to inspect|to open|to continue)\b/i,
+        /\b(?:select|choose|pick)\s+([^.]{1,80}?)\s+\b(?:to get started|to view|to preview|to see|to inspect|to open|to continue)\b/i,
+      ];
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (!match?.[1]) continue;
+        return normalizeWhitespace(match[1].replace(/\bfrom navigation\b/i, ""));
+      }
+      return null;
+    };
+    const utilityLabelPattern = /^(?:search\b|new(?:\b| )|add(?:\b| )|create(?:\b| )|attach(?:\b| )|toggle(?:\b| )|more actions\b|switch team\b|open host settings\b|desktop\b)/i;
+    const mainPanel = document.querySelector('[data-agent-surface="main-panel"]');
+    const mainPanelText = mainPanel?.innerText || document.body?.innerText || "";
+    const promptLabel = extractSelectionPromptLabel(mainPanelText);
+    const buildCandidate = (node, kind) => ({
+      kind,
+      label: getNodeLabel(node),
+      testId: node.getAttribute("data-testid") || null,
+      id: node.id || null,
+      role: node.getAttribute("role") || node.tagName.toLowerCase(),
+      expanded: node.getAttribute("aria-expanded"),
+    });
+    const dedupeCandidates = (entries, limit = 8) =>
+      Array.from(
+        new Map(
+          entries
+            .filter((entry) => entry.label && !utilityLabelPattern.test(entry.label))
+            .map((entry) => [`${entry.kind}:${entry.testId || entry.id || entry.label}`, entry]),
+        ).values(),
+      ).slice(0, limit);
+
+    const treeButtons = Array.from(document.querySelectorAll('[role="tree"] button'))
+      .filter((node) => isVisibleNode(node));
+    const treeLeafCandidates = dedupeCandidates(
+      treeButtons
+        .filter((node) => {
+          const testId = String(node.getAttribute("data-testid") || "");
+          return testId.startsWith("node-") || !node.hasAttribute("aria-expanded");
+        })
+        .map((node) => buildCandidate(node, "tree-leaf")),
+    );
+    const treeGroupCandidates = dedupeCandidates(
+      treeButtons
+        .filter((node) => node.hasAttribute("aria-expanded"))
+        .map((node) => buildCandidate(node, "tree-group")),
+    );
+
+    const mainActionCandidates = dedupeCandidates(
+      Array.from(document.querySelectorAll(
+        '[data-agent-surface="main-panel"] button, [data-agent-surface="main-panel"] [role="button"], [data-agent-surface="main-panel"] a, [data-agent-surface="main-panel"] [role="link"]',
+      ))
+        .filter((node) => isVisibleNode(node))
+        .map((node) => buildCandidate(node, node.tagName.toLowerCase() === "a" ? "main-link" : "main-action"))
+        .filter((candidate) => {
+          if (!candidate.label) {
+            return false;
+          }
+          if (/^(?:open|view|select)\b/i.test(candidate.label)) {
+            return true;
+          }
+          if (promptLabel) {
+            return candidate.label.toLowerCase().includes(promptLabel.toLowerCase());
+          }
+          return false;
+        }),
+    );
+
+    return {
+      promptLabel,
+      treeLeafCandidates,
+      treeGroupCandidates,
+      mainActionCandidates,
+    };
+  }).catch(() => ({
+    promptLabel: null,
+    treeLeafCandidates: [],
+    treeGroupCandidates: [],
+    mainActionCandidates: [],
+  }));
+}
+
+async function clickSelectionRecoveryCandidate(page, candidate) {
+  if (!candidate) {
+    return false;
+  }
+
+  const locators = [];
+  if (candidate.testId) {
+    locators.push(page.getByTestId(candidate.testId).first());
+  }
+  if (candidate.id) {
+    locators.push(page.locator(`[id="${escapeAttributeValue(candidate.id)}"]`).first());
+  }
+  if (candidate.label) {
+    if (candidate.kind === "tree-leaf" || candidate.kind === "tree-group") {
+      locators.push(
+        page.locator('[role="tree"]').getByRole("button", { name: candidate.label, exact: true }).first(),
+      );
+    }
+    if (candidate.kind === "main-link") {
+      locators.push(page.getByRole("link", { name: candidate.label, exact: true }).first());
+    }
+    locators.push(page.getByRole("button", { name: candidate.label, exact: true }).first());
+  }
+
+  for (const locator of locators) {
+    if (await maybeClick(locator)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function didSelectionRecoveryAdvance(before, after) {
+  if (!after) {
+    return false;
+  }
+  if (before?.emptyStateVisible && !after.emptyStateVisible) {
+    return true;
+  }
+  if (before?.mainPanelTextSnippet && after.mainPanelTextSnippet && before.mainPanelTextSnippet !== after.mainPanelTextSnippet) {
+    return true;
+  }
+  if (before?.selectionPromptLabel && before.selectionPromptLabel !== after.selectionPromptLabel) {
+    return true;
+  }
+  return false;
+}
+
+async function attemptSelectionPromptRecovery(page) {
+  const beforeUiSignals = await collectPageUiSignals(page);
+  const beforeUrl = page.url();
+
+  if (!beforeUiSignals.emptyStateVisible) {
+    return {
+      attempted: false,
+      reason: "no-empty-state",
+      beforeUrl,
+      beforeUiSignals,
+      afterUrl: beforeUrl,
+      afterUiSignals: beforeUiSignals,
+      candidates: null,
+      clicked: [],
+      success: false,
+    };
+  }
+
+  const initialCandidates = await collectSelectionRecoveryCandidates(page);
+  const clicked = [];
+  let afterUiSignals = beforeUiSignals;
+  let afterUrl = beforeUrl;
+  const promptLabel = String(initialCandidates.promptLabel || beforeUiSignals.selectionPromptLabel || "").toLowerCase();
+  const preferGroupsFirst = /\b(project|workspace|folder|team)\b/i.test(promptLabel);
+  const orderedPrimaryCandidates = preferGroupsFirst
+    ? [...(initialCandidates.treeGroupCandidates ?? []), ...(initialCandidates.treeLeafCandidates ?? [])]
+    : [...(initialCandidates.treeLeafCandidates ?? []), ...(initialCandidates.treeGroupCandidates ?? [])];
+
+  const tryCandidate = async (candidate) => {
+    if (!candidate || clicked.some((entry) => entry.kind === candidate.kind && entry.label === candidate.label)) {
+      return false;
+    }
+    const clickedSuccessfully = await clickSelectionRecoveryCandidate(page, candidate);
+    if (!clickedSuccessfully) {
+      return false;
+    }
+    clicked.push({
+      kind: candidate.kind,
+      label: candidate.label,
+      testId: candidate.testId || null,
+    });
+    await waitForUiToSettle(page);
+    afterUiSignals = await collectPageUiSignals(page);
+    afterUrl = page.url();
+    return didSelectionRecoveryAdvance(beforeUiSignals, afterUiSignals) || afterUrl !== beforeUrl;
+  };
+
+  let success = false;
+  for (const candidate of orderedPrimaryCandidates) {
+    success = await tryCandidate(candidate);
+    if (success) {
+      break;
+    }
+    if (candidate?.kind === "tree-group") {
+      const postExpandCandidates = await collectSelectionRecoveryCandidates(page);
+      const revealedLeaf = postExpandCandidates.treeLeafCandidates?.find((entry) =>
+        !clicked.some((clickedEntry) => clickedEntry.kind === entry.kind && clickedEntry.label === entry.label),
+      ) ?? null;
+      if (revealedLeaf) {
+        success = await tryCandidate(revealedLeaf);
+        if (success) {
+          break;
+        }
+      }
+    }
+  }
+
+  if (!success) {
+    const mainAction = initialCandidates.mainActionCandidates?.find((candidate) =>
+      !clicked.some((entry) => entry.kind === candidate.kind && entry.label === candidate.label),
+    ) ?? null;
+    if (mainAction) {
+      success = await tryCandidate(mainAction);
+    }
+  }
+
+  return {
+    attempted: clicked.length > 0,
+    reason: clicked.length > 0 ? "clicked-visible-selection-candidate" : "no-visible-selection-candidate",
+    beforeUrl,
+    beforeUiSignals,
+    afterUrl,
+    afterUiSignals,
+    candidates: initialCandidates,
+    clicked,
+    success,
+  };
+}
+
+function shouldAttemptSelectionRecovery(phaseResult) {
+  if (!phaseResult || phaseResult.success) {
+    return false;
+  }
+  if (!phaseResult?.uiSignals?.emptyStateVisible) {
+    return false;
+  }
+  return Boolean(phaseResult.routeMatched || phaseResult.activeAppMatched);
 }
 
 function buildQualityRetryInstruction(phase, phaseResult) {
@@ -881,7 +1222,20 @@ function buildQualityRetryInstruction(phase, phaseResult) {
     guidance.push("Leave the placeholder route and open the real app surface from visible desktop navigation.");
   }
   if (failedChecks.includes("empty-state")) {
-    guidance.push("Avoid empty states and show an existing seeded item, tab, sidekick, or detail view with meaningful content.");
+    const promptLabel = String(phaseResult?.uiSignals?.selectionPromptLabel || "").trim();
+    const visibleChoices = normalizeArray([
+      ...(Array.isArray(phaseResult?.uiSignals?.treeLeafLabels) ? phaseResult.uiSignals.treeLeafLabels : []),
+      ...(Array.isArray(phaseResult?.uiSignals?.treeGroupLabels) ? phaseResult.uiSignals.treeGroupLabels : []),
+    ], 6);
+    guidance.push(
+      promptLabel
+        ? `The current screen is waiting for a ${promptLabel}. Choose a concrete visible ${promptLabel} or child row so the content panel fills with real data.`
+        : "Avoid empty states and show an existing seeded item, tab, sidekick, or detail view with meaningful content.",
+    );
+    guidance.push("If a group header only expands navigation, choose a visible child row, card, thread, or detail item next instead of clicking the same header again.");
+    if (visibleChoices.length > 0) {
+      guidance.push(`Visible navigation choices right now: ${visibleChoices.join("; ")}.`);
+    }
   }
   if (failedChecks.includes("desktop-layout")) {
     guidance.push("Keep the desktop layout visible and avoid any mobile-specific filter bars or compact shells.");
@@ -1017,6 +1371,29 @@ function phaseResultRank(phaseResult) {
   score += (Array.isArray(phaseResult?.validationMatches) ? phaseResult.validationMatches.length : 0) * 8;
   if (phaseResult?.screenshot?.kind !== "full-page") score += 6;
   return score;
+}
+
+function phaseAssessmentRank(assessment) {
+  let score = 0;
+  if (assessment?.locallyValidated) score += 120;
+  if (assessment?.quality?.ok) score += 45;
+  score += Number(assessment?.quality?.score || 0);
+  score += (Array.isArray(assessment?.validationMatches) ? assessment.validationMatches.length : 0) * 8;
+  if (assessment?.routeMatched || assessment?.activeAppMatched) score += 24;
+  if (!assessment?.uiSignals?.placeholderVisible) score += 12;
+  if (!assessment?.uiSignals?.emptyStateVisible) score += 12;
+  if ((assessment?.forbiddenPhraseMatches ?? []).length === 0) score += 6;
+  return score;
+}
+
+function choosePreferredAssessment(currentAssessment, checkpointAssessment = null) {
+  if (!checkpointAssessment) {
+    return currentAssessment;
+  }
+
+  return phaseAssessmentRank(checkpointAssessment) > phaseAssessmentRank(currentAssessment)
+    ? checkpointAssessment
+    : currentAssessment;
 }
 
 function shouldStopAgentEarlyForProof({ phase, assessment, stepCount }) {
@@ -1347,6 +1724,8 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
     const controller = new AbortController();
     const phaseTimeoutMs = phase.id === "setup-state" ? 35_000 : 45_000;
     const phaseTimeout = setTimeout(() => controller.abort(), phaseTimeoutMs);
+    const checkpointScratchPath = path.join(phasesDir, `${phase.id}-checkpoint.png`);
+    const checkpointBestPath = path.join(phasesDir, `${phase.id}-checkpoint-best.png`);
     const earlyStop = {
       triggered: false,
       reason: null,
@@ -1355,6 +1734,7 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
       validationMatches: [],
       currentUrl: null,
     };
+    let bestCheckpointAssessment = null;
 
     try {
       result = await agent.execute({
@@ -1371,9 +1751,22 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
             }
             earlyStop.stepCount += 1;
             const assessment = await assessPhaseState({
+              screenshotPath: checkpointScratchPath,
               settleMode: "checkpoint",
               stagehandLogCursor,
             });
+            if (phaseAssessmentRank(assessment) > phaseAssessmentRank(bestCheckpointAssessment)) {
+              bestCheckpointAssessment = {
+                ...assessment,
+                screenshot: assessment.screenshot
+                  ? {
+                      ...assessment.screenshot,
+                      path: checkpointBestPath,
+                    }
+                  : null,
+              };
+              await fs.copyFile(checkpointScratchPath, checkpointBestPath).catch(() => {});
+            }
             if (shouldStopAgentEarlyForProof({
               phase,
               assessment,
@@ -1401,11 +1794,22 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
     }
 
     const screenshotPath = path.join(phasesDir, screenshotName);
-    const assessment = await assessPhaseState({
+    let assessment = await assessPhaseState({
       screenshotPath,
       settleMode: "full",
       stagehandLogCursor,
     });
+    assessment = choosePreferredAssessment(assessment, bestCheckpointAssessment);
+    if (assessment?.screenshot?.path === checkpointBestPath) {
+      await fs.copyFile(checkpointBestPath, screenshotPath).catch(() => {});
+      assessment = {
+        ...assessment,
+        screenshot: {
+          ...assessment.screenshot,
+          path: screenshotPath,
+        },
+      };
+    }
     const endedAt = Date.now();
 
     return {
@@ -1459,12 +1863,23 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
     maxSteps: phase.id === "setup-state" ? 8 : 10,
   });
 
+  let selectionRecovery = null;
+  if (shouldAttemptSelectionRecovery(initialResult)) {
+    selectionRecovery = await attemptSelectionPromptRecovery(page);
+    if (selectionRecovery?.attempted) {
+      initialResult.selectionRecovery = selectionRecovery;
+    }
+  }
+
   let retryResult = null;
   if (shouldRetryPhaseForQuality(initialResult)) {
     retryResult = await captureAttempt({
       instruction: buildQualityRetryInstruction(phase, initialResult),
       screenshotName: phase.screenshot.replace(/\.png$/, "-retry.png"),
-      maxSteps: 4,
+      maxSteps: /timed out/i.test(String(initialResult.error || ""))
+        && (initialResult.routeMatched || initialResult.activeAppMatched)
+        ? 6
+        : 4,
     });
     retryResult.retry = {
       attempted: true,
@@ -1484,6 +1899,9 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
     qualityOk: attempt.quality?.ok ?? null,
     validationMatches: attempt.validationMatches,
   }));
+  if (selectionRecovery?.attempted) {
+    selectedResult.selectionRecovery = selectionRecovery;
+  }
 
   return selectedResult;
 }
@@ -1740,11 +2158,14 @@ try {
   const visibleText = clipText(await page.locator("body").innerText().catch(() => ""), 2500);
   const history = await stagehand.history.catch(() => []);
   const requiredPhaseSuccess = phaseResults.filter((phase) => phase.required).every((phase) => phase.success);
+  const proofPhaseSuccess = phaseResults.some((phase) =>
+    (phase.id === "validate-proof" || phase.id === "capture-proof") && phase.success
+  );
   const screenshots = repair.screenshot
     ? [...phaseResults.map((phase) => phase.screenshot), repair.screenshot]
     : phaseResults.map((phase) => phase.screenshot);
   const summary = {
-    ok: requiredPhaseSuccess || repair.success,
+    ok: requiredPhaseSuccess || proofPhaseSuccess || repair.success,
     generatedAt: new Date().toISOString(),
     provider,
     baseUrl,
@@ -1803,6 +2224,7 @@ try {
       uiSignals: phase.uiSignals,
       stagehand: phase.stagehand ?? null,
       earlyStop: phase.earlyStop ?? null,
+      selectionRecovery: phase.selectionRecovery ?? null,
       quality: phase.quality,
       attempts: phase.attempts,
       durationMs: phase.durationMs,

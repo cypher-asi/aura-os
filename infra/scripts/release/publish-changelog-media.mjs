@@ -77,6 +77,14 @@ function writeText(filePath, value) {
   fs.writeFileSync(filePath, value, "utf8");
 }
 
+function clipText(value, maxLength = 800) {
+  const text = String(value || "").trim();
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
 function collectEntryChangedFiles(doc, entry) {
   const commitLookup = new Map((Array.isArray(doc?.rawCommits) ? doc.rawCommits : []).map((commit) => [commit.sha, commit]));
   return unique(
@@ -183,6 +191,19 @@ function updateEntryMedia(doc, slotId, updater) {
       }),
     },
   };
+}
+
+function parsePreviewHost(previewUrl) {
+  const candidate = sanitizeText(previewUrl);
+  if (!candidate) {
+    return "";
+  }
+
+  try {
+    return new URL(candidate).host;
+  } catch {
+    return candidate;
+  }
 }
 
 function isSameReleaseDoc(a, b) {
@@ -414,6 +435,11 @@ function runScreenshotCapture({
           }
           return readJson(summaryPath);
         } catch (error) {
+          const summaryPath = findProductionSummary(runRoot);
+          if (summaryPath) {
+            error.captureSummary = readJson(summaryPath);
+            error.captureRunRoot = runRoot;
+          }
           const output = [error?.stdout, error?.stderr, error?.message].filter(Boolean).join("\n");
           const shouldRetryConcurrency = captureProvider === "browserbase"
             && isBrowserbaseConcurrencyError(output)
@@ -496,7 +522,9 @@ function publishEntryMedia({
   });
 
   if (!summary?.ok) {
-    throw new Error(`Screenshot capture did not produce a passing summary for ${entry.media.slotId}`);
+    const error = new Error(`Screenshot capture did not produce a passing summary for ${entry.media.slotId}`);
+    error.captureSummary = summary;
+    throw error;
   }
 
   const selectedScreenshot = selectBestScreenshot(summary);
@@ -541,15 +569,66 @@ function publishEntryMedia({
   };
 }
 
-function buildRunSummary(results) {
+function buildRunSummary(results, context = {}) {
   return {
     generatedAt: new Date().toISOString(),
+    channel: sanitizeText(context.channel || ""),
+    version: sanitizeText(context.version || "") || null,
+    date: sanitizeText(context.date || "") || null,
+    provider: sanitizeText(context.provider || "") || null,
+    profile: sanitizeText(context.profile || "") || null,
+    previewUrl: sanitizeText(context.previewUrl || "") || null,
+    previewHost: parsePreviewHost(context.previewUrl),
+    abortRemainingReason: sanitizeText(context.abortRemainingReason || "") || null,
     attempted: results.length,
     published: results.filter((result) => result.status === "published").length,
     failed: results.filter((result) => result.status === "failed").length,
     skipped: results.filter((result) => result.status === "skipped").length,
     results,
   };
+}
+
+function buildRunSummaryMarkdown(summary) {
+  const lines = [
+    "## Changelog Media Diagnostics",
+    "",
+    `- Channel: ${summary.channel || "unknown"}`,
+    `- Version: ${summary.version || "n/a"}`,
+    `- Date: ${summary.date || "n/a"}`,
+    `- Provider: ${summary.provider || "unknown"}`,
+    `- Profile: ${summary.profile || "default"}`,
+    `- Preview host: ${summary.previewHost || "n/a"}`,
+    `- Attempted: ${summary.attempted}`,
+    `- Published: ${summary.published}`,
+    `- Failed: ${summary.failed}`,
+    `- Skipped: ${summary.skipped}`,
+  ];
+
+  if (summary.abortRemainingReason) {
+    lines.push(`- Abort reason: ${summary.abortRemainingReason}`);
+  }
+
+  lines.push("", "| Slot | Title | Status | Details |", "| --- | --- | --- | --- |");
+
+  for (const result of Array.isArray(summary.results) ? summary.results : []) {
+    const details = [
+      result.assetPath ? `asset: ${result.assetPath}` : "",
+      result.reason ? `reason: ${result.reason}` : "",
+      result.error ? `error: ${clipText(result.error, 160)}` : "",
+      result.inspectorUrl ? `inspector: ${result.inspectorUrl}` : "",
+      result.sessionId ? `session: ${result.sessionId}` : "",
+    ].filter(Boolean).join(" | ");
+    lines.push(`| ${result.slotId || ""} | ${String(result.title || "").replace(/\|/g, "\\|")} | ${result.status || "unknown"} | ${details.replace(/\|/g, "\\|") || "n/a"} |`);
+  }
+
+  lines.push("");
+  return `${lines.join("\n")}\n`;
+}
+
+function persistRunDiagnostics(baseRunRoot, summary) {
+  ensureDir(baseRunRoot);
+  writeJson(path.join(baseRunRoot, "publish-changelog-media-summary.json"), summary);
+  writeText(path.join(baseRunRoot, "publish-changelog-media-summary.md"), buildRunSummaryMarkdown(summary));
 }
 
 async function main() {
@@ -572,6 +651,7 @@ async function main() {
   const changelogDocs = resolveTargetChangelogDocs(channelDir, date, version);
   const effectiveDate = changelogDocs.target.date;
   const effectiveVersion = changelogDocs.target.version;
+  const diagnosticsRoot = path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media");
   let targetDoc = changelogDocs.target.doc;
   let latestDoc = changelogDocs.latest.doc;
   const candidateEntries = Array.isArray(targetDoc?.rendered?.entries) ? targetDoc.rendered.entries : [];
@@ -632,6 +712,9 @@ async function main() {
         status: "published",
         assetPath: published.metadata.assetPath,
         screenshotSource: published.selectedScreenshot.source,
+        outputDir: published.summary?.outputDir || null,
+        inspectorUrl: published.summary?.inspectorUrl || null,
+        sessionId: published.summary?.sessionId || null,
       });
     } catch (error) {
       targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
@@ -655,6 +738,10 @@ async function main() {
         title: entry.title,
         status: "failed",
         error: String(error),
+        outputDir: error?.captureSummary?.outputDir || error?.captureRunRoot || null,
+        inspectorUrl: error?.captureSummary?.inspectorUrl || null,
+        sessionId: error?.captureSummary?.sessionId || null,
+        captureOutput: clipText(error?.captureOutput || "", 1200) || null,
       });
 
       if (error?.abortRemaining) {
@@ -670,12 +757,18 @@ async function main() {
     writeJson(changelogDocs.latest.jsonPath, latestDoc);
   }
 
-  const summary = buildRunSummary(results);
-  console.log(JSON.stringify({
-    ...summary,
+  const summary = buildRunSummary(results, {
     channel,
     date: effectiveDate,
-    version: effectiveVersion || null,
+    version: effectiveVersion,
+    provider,
+    profile,
+    previewUrl,
+    abortRemainingReason,
+  });
+  persistRunDiagnostics(diagnosticsRoot, summary);
+  console.log(JSON.stringify({
+    ...summary,
   }, null, 2));
 
   if (summary.failed > 0) {
@@ -688,6 +781,7 @@ export {
   buildEntryPrompt,
   buildAbortRemainingError,
   buildMediaBlock,
+  buildRunSummaryMarkdown,
   buildRunSummary,
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,

@@ -95,6 +95,30 @@ test("agent skills story reuses a seeded agent instead of requiring a custom fea
   assert.ok(plan.instructionPatch.successChecklist.some((entry) => /Skills/i.test(entry)));
 });
 
+test("task output story reuses seeded project task data instead of needing a feature registry entry", async () => {
+  const brief = {
+    title: "Task output survives reloads",
+    story: "Completed task output survives remounts and reloads in the run pane.",
+    targetAppId: "tasks",
+    startPath: "/tasks",
+  };
+
+  const plan = await buildDemoSeedPlan({
+    brief,
+    changedFiles: [
+      "interface/src/components/TaskOutputPanel/CompletedTaskOutput.tsx",
+      "interface/src/stores/task-output-panel-store.ts",
+      "interface/src/stores/task-stream-bootstrap.ts",
+    ],
+  });
+
+  assert.equal(plan.capabilityId, "tasks.reuse-seeded-output");
+  assert.equal(plan.status, "runtime-ready");
+  assert.match(plan.startPath, /^\/projects\/proj-1\/agents\/proj-agent-1$/);
+  assert.ok(plan.seededEntities.some((entry) => entry.type === "task"));
+  assert.ok(plan.instructionPatch.validationSignals.includes("Completed Task Output"));
+});
+
 test("applyDemoSeedPatch merges preseeded entities into the base profile", () => {
   const profile = getDemoScreenshotProfile("agent-shell-explorer");
   const patched = applyDemoSeedPatch(profile, {
