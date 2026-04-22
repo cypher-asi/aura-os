@@ -2,19 +2,19 @@
   {
     "date": "2026-04-21",
     "channel": "nightly",
-    "version": "0.1.0-nightly.322.1",
-    "title": "Debug app debuts, run state survives reloads",
-    "intro": "Today's nightly centers on making in-flight and past runs legible. A new Debug app and companion CLI turn every dev-loop run into an inspectable bundle, while a wave of rehydration work keeps the Run panel, sidekick tabs, and live indicators consistent across refreshes and WebSocket reconnects. A browser backend vendor fork also lands to start untangling a long-running CDP log flood.",
-    "entryCount": 4,
+    "version": "0.1.0-nightly.324.1",
+    "title": "Run state that survives refresh, plus a new Debug app for dev-loop runs",
+    "intro": "Today's nightly is heavy on durability: task and process-run output now rehydrate cleanly across reloads and WebSocket reconnects, the sidekick remembers where you were, and every dev-loop run is archived to disk behind a new Debug app and CLI. A vendored chromiumoxide fork unlocks deeper browser-backend debugging, and the release pipeline grew an automated screenshot media step.",
+    "entryCount": 5,
     "highlights": [
-      "New Debug app and aura-run-analyze CLI for inspecting dev-loop runs",
-      "Task and process run output now survives page reloads",
-      "Sidekick remembers your last tab per app",
-      "chromiumoxide vendored to diagnose CDP WebSocket warnings"
+      "Task output and sidekick stats survive reloads",
+      "New Debug app + aura-run-analyze CLI for dev-loop runs",
+      "Run spinners stay accurate through refresh and re-runs",
+      "Release changelog now auto-captures screenshot media"
     ],
-    "rawCommitCount": 12,
-    "generatedAt": "2026-04-21T08:42:06.236Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.322.1",
+    "rawCommitCount": 14,
+    "generatedAt": "2026-04-22T00:29:33.679Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.324.1",
     "path": "history/2026-04-21.json"
   },
   {
