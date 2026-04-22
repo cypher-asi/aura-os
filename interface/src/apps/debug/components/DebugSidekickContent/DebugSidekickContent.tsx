@@ -50,14 +50,14 @@ export function DebugSidekickContent() {
 
   if (!projectId || !runId) {
     return (
-      <div className={sidekickStyles.sidekickBody}>
+      <div className={sidekickStyles.sidekickBody} data-agent-surface="sidekick-panel">
         <EmptyState>Select a run to see details</EmptyState>
       </div>
     );
   }
 
   return (
-    <div className={sidekickStyles.sidekickBody}>
+    <div className={sidekickStyles.sidekickBody} data-agent-surface="sidekick-panel">
       <div className={sidekickStyles.sidekickContent}>
         <div className={sidekickStyles.tabContent}>
           {selectedEntry ? (

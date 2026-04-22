@@ -251,6 +251,7 @@ function buildNoteDocument({ title, body, relPath }) {
 function extractBaselineWorld(profile) {
   const seed = profile?.seed ?? {};
   return {
+    projects: Array.isArray(seed.projects) ? seed.projects : [],
     feedbackItems: Array.isArray(seed.feedbackItems) ? seed.feedbackItems : [],
     feedbackComments: seed.feedbackComments ?? {},
     agents: Array.isArray(seed.agents) ? seed.agents : [],
@@ -263,6 +264,9 @@ function extractBaselineWorld(profile) {
     processes: Array.isArray(seed.processes) ? seed.processes : [],
     processNodes: seed.processNodes ?? {},
     feedEvents: Array.isArray(seed.feedEvents) ? seed.feedEvents : [],
+    debugRuns: seed.debugRuns ?? {},
+    debugRunLogs: seed.debugRunLogs ?? {},
+    debugRunSummaries: seed.debugRunSummaries ?? {},
   };
 }
 
@@ -377,6 +381,124 @@ function buildTaskExistingPlan(context, taskMatch) {
     score: isOutputStory ? 52 : 44,
     matchedKeywords: taskMatch.matchedKeywords,
     fileSignals: context.changedFiles.filter((file) => /\/(tasks|projects)\//i.test(file)),
+  };
+}
+
+function buildBaselineDebugRunMatches(context) {
+  const projectsById = new Map(context.baseline.projects.map((project) => [project.project_id, project]));
+
+  return Object.entries(context.baseline.debugRuns ?? {})
+    .flatMap(([projectId, runs]) => {
+      const project = projectsById.get(projectId) ?? { project_id: projectId, name: projectId };
+      return (Array.isArray(runs) ? runs : []).map((run) => {
+        const summary = context.baseline.debugRunSummaries?.[run.run_id]?.markdown ?? "";
+        const runLogs = context.baseline.debugRunLogs?.[run.run_id] ?? {};
+        const logPreview = Object.values(runLogs)
+          .map((value) => String(value || ""))
+          .join("\n");
+        const taskLabels = Array.isArray(run.tasks)
+          ? run.tasks.flatMap((task) => [task.task_id, task.spec_id, task.status])
+          : [];
+        const counterLabels = run.counters
+          ? [
+            `${run.counters.llm_calls || 0} llm calls`,
+            `${run.counters.iterations || 0} iterations`,
+            `${run.counters.blockers || 0} blockers`,
+            `${run.counters.retries || 0} retries`,
+          ]
+          : [];
+        const scored = scoreTextValues([
+          project.name,
+          run.run_id,
+          run.status,
+          summary,
+          logPreview,
+          ...taskLabels,
+          ...counterLabels,
+        ], context.storyTerms);
+
+        if (Array.isArray(run.tasks) && run.tasks.length > 0) {
+          scored.score += 4;
+        }
+        if (/\b(sidekick|inspector|toolbar|copy all|copy filtered|export|llm|blockers|retries|stats|tasks|run detail)\b/i.test(context.story)) {
+          scored.score += 8;
+        }
+
+        return {
+          project,
+          run,
+          summary,
+          score: scored.score,
+          matchedKeywords: scored.matchedKeywords,
+        };
+      });
+    })
+    .sort((left, right) => right.score - left.score || left.run.run_id.localeCompare(right.run.run_id));
+}
+
+function buildDebugExistingPlan(context, runMatch) {
+  const { project, run } = runMatch;
+  const changedFilesText = context.changedFiles.join(" ");
+  const wantsRunDetail = /\b(sidekick|inspector|toolbar|copy all|copy filtered|export|llm|blockers|retries|stats|tasks|log list|run detail)\b/i.test(context.story)
+    || /DebugRunDetailView|DebugSidekick/i.test(changedFilesText);
+  const startPath = wantsRunDetail
+    ? `/debug/${run.project_id}/runs/${run.run_id}`
+    : `/debug/${run.project_id}`;
+  const toolbarProof = {
+    label: "debug run toolbar",
+    anyOf: ["Copy all", "Copy filtered", "Export"],
+  };
+  const sidekickProof = {
+    label: "debug sidekick content",
+    anyOf: ["Copy JSONL", "Run ID", "Counters"],
+  };
+
+  return {
+    status: "runtime-ready",
+    strategy: "runtime",
+    startPath,
+    capabilityId: "debug.reuse-seeded-run",
+    supportLevel: "full",
+    rationale: `The baseline seeded shell already contains a truthful Debug run bundle inside "${project.name}", so the agent can prove Debug UI work without a handwritten scenario or a live backend run.`,
+    coverageGaps: [],
+    seed: {},
+    seededEntities: [
+      { type: "project", projectId: project.project_id, name: project.name, source: "baseline" },
+      { type: "debug-run", projectId: run.project_id, runId: run.run_id, source: "baseline" },
+    ],
+    instructionPatch: {
+      systemPromptAppend: `A seeded Debug run already exists for project "${project.name}". Prefer that seeded run detail surface over empty states or generic project routes.`,
+      proofInstruction: wantsRunDetail
+        ? `Story to demonstrate: ${context.story} Open the seeded Debug run in "${project.name}" and stop when the run-detail toolbar plus the sidekick tabs are both clearly visible.`
+        : `Story to demonstrate: ${context.story} Open the Debug app for "${project.name}" and stop on the clearest seeded run surface instead of an empty state.`,
+      interactionInstruction: wantsRunDetail
+        ? `Story to demonstrate: ${context.story} Keep the seeded Debug run selected. Avoid empty states, and stop once Copy all / Copy filtered / Export and the sidekick tabs are visible together.`
+        : `Story to demonstrate: ${context.story} Keep the seeded Debug project visible and select the seeded run if the view is still waiting for a concrete run.`,
+      successChecklist: normalizeArray([
+        "The Debug app is open and stable",
+        `The seeded project "${project.name}" is visible in the left navigation`,
+        wantsRunDetail ? "A seeded debug run is selected and the Run Detail view is visible" : "A seeded debug project or run is visible",
+        wantsRunDetail ? "The header toolbar shows Copy all, Copy filtered, and Export" : null,
+        wantsRunDetail ? "The debug sidekick content is visible with run info like Copy JSONL, Run ID, or Counters" : null,
+      ], 5),
+      validationSignals: normalizeArray([
+        "Debug",
+        project.name,
+        wantsRunDetail ? "Copy all" : null,
+        wantsRunDetail ? "Export" : null,
+        wantsRunDetail ? "Copy JSONL" : null,
+      ], 6),
+      proofRequirements: wantsRunDetail ? [toolbarProof, sidekickProof] : [],
+      requiredUiSignals: wantsRunDetail ? ["sidekickVisible"] : [],
+      setupPlan: normalizeArray([
+        "Open or keep the Debug app visible.",
+        `Select the seeded project "${project.name}" if the app is waiting on a project.`,
+        wantsRunDetail ? "Keep the seeded run detail open instead of stopping on a list or empty state." : "Select the seeded run if one is visible.",
+      ], 5),
+    },
+    score: wantsRunDetail ? 54 : 44,
+    matchedKeywords: runMatch.matchedKeywords,
+    fileSignals: context.changedFiles.filter((file) => file.toLowerCase().includes("/debug/")),
   };
 }
 
@@ -842,6 +964,11 @@ function buildSeedCandidates(context) {
     const bestTask = buildBaselineTaskMatches(context)[0] ?? null;
     if (bestTask) {
       candidates.push(buildTaskExistingPlan(context, bestTask));
+    }
+  } else if (appId === "debug") {
+    const bestRun = buildBaselineDebugRunMatches(context)[0] ?? null;
+    if (bestRun) {
+      candidates.push(buildDebugExistingPlan(context, bestRun));
     }
   } else if (appId === "process") {
     candidates.push(buildProcessPreseedPlan(context));
