@@ -101,6 +101,342 @@ fn extract_failure_reason(event: &serde_json::Value) -> Option<String> {
     None
 }
 
+// ---------------------------------------------------------------------------
+// Phase 3 — Autonomous recovery (truncation-failure remediation)
+// ---------------------------------------------------------------------------
+
+/// Upper bound on auto-generated retries/decompositions per task. A
+/// decomposition, shaped retry, or force-tool retry each count as one
+/// retry against this budget so a single pathological task can't spawn
+/// children forever when the heuristics keep matching.
+const MAX_RETRIES_PER_TASK: u32 = 3;
+
+/// Coarse bucket for failure reason strings. We only distinguish the
+/// cases Phase 3 can *do something* about (truncation / no-file-ops),
+/// everything else falls through to the existing retry path.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FailureClass {
+    /// The harness reported a truncated write, a `max_tokens` stop
+    /// without file ops, or the Phase 2b `NeedsDecomposition` outcome
+    /// surfaced as a reason string.
+    Truncation,
+    /// Anything else — auth errors, crashes, rate limits, etc. The
+    /// existing retry path is a better match for these.
+    Other,
+}
+
+/// Classify a `task_failed` reason string into a [`FailureClass`].
+///
+/// Case-insensitive substring match — the Phase 2b error formats the
+/// hint into its `Display` impl, so the reason text routinely contains
+/// phrases like `"truncated response"` / `"no file operations"`.
+fn classify_failure(reason: &str) -> FailureClass {
+    let lower = reason.to_ascii_lowercase();
+    let truncation_markers = [
+        "truncated",
+        "no file operations",
+        "needsdecomposition",
+        "needs_decomposition",
+        "needs decomposition",
+        "max_tokens",
+        "max tokens",
+    ];
+    if truncation_markers.iter().any(|m| lower.contains(m)) {
+        FailureClass::Truncation
+    } else {
+        FailureClass::Other
+    }
+}
+
+/// Returns true if the `AURA_AUTO_DECOMPOSE_DISABLED` env var is set to
+/// `1` / `true` (case-insensitive). When set, Phase 3 remediation is a
+/// no-op and the existing retry path handles every failure.
+fn auto_decompose_disabled() -> bool {
+    std::env::var("AURA_AUTO_DECOMPOSE_DISABLED")
+        .ok()
+        .map(|v| {
+            let trimmed = v.trim().to_ascii_lowercase();
+            trimmed == "1" || trimmed == "true" || trimmed == "yes" || trimmed == "on"
+        })
+        .unwrap_or(false)
+}
+
+/// Module-local retry counter keyed by task id. Intentionally in-memory
+/// (not persisted) — a server restart resets the budget, which is the
+/// safe default: a stale retry count from a previous process shouldn't
+/// permanently disable remediation on a task the operator is now
+/// retrying manually.
+fn remediation_retry_counts() -> &'static std::sync::Mutex<std::collections::HashMap<String, u32>> {
+    static COUNTS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, u32>>> =
+        std::sync::OnceLock::new();
+    COUNTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Increment the remediation-retry counter for `task_id` and return the
+/// post-increment value. Also used to pre-check the budget: callers bail
+/// out early if the current count has already reached
+/// [`MAX_RETRIES_PER_TASK`].
+fn bump_remediation_count(task_id: &str) -> u32 {
+    let mut guard = match remediation_retry_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let entry = guard.entry(task_id.to_string()).or_insert(0);
+    *entry = entry.saturating_add(1);
+    *entry
+}
+
+/// Read the current remediation-retry count without mutating it.
+fn current_remediation_count(task_id: &str) -> u32 {
+    let guard = match remediation_retry_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    *guard.get(task_id).unwrap_or(&0)
+}
+
+/// Locate the newest run bundle directory for a given
+/// `(project_id, agent_instance_id)`. Used by the remediation path to
+/// run `aura_run_heuristics` against the just-failed run without having
+/// to know the exact `run_id` up front.
+async fn latest_run_dir_for(
+    loop_log: &crate::loop_log::LoopLogWriter,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+) -> Option<std::path::PathBuf> {
+    let runs = loop_log.list_runs(project_id).await;
+    let run = runs
+        .into_iter()
+        .find(|r| r.agent_instance_id == agent_instance_id)?;
+    Some(loop_log.bundle_dir(project_id, &run.run_id))
+}
+
+/// Locate the failed task in storage by id.
+///
+/// `TaskService::get_task` requires project/spec ids that the event
+/// payload doesn't always carry, so we fall back to a project-wide
+/// `list_tasks` scan. Returns `None` on any storage/auth error so the
+/// caller can silently fall through to the existing retry path.
+async fn find_task_by_id(
+    task_service: &TaskService,
+    project_id: ProjectId,
+    task_id: &str,
+) -> Option<aura_os_core::Task> {
+    let parsed: TaskId = task_id.parse().ok()?;
+    let tasks = task_service.list_tasks(&project_id).await.ok()?;
+    tasks.into_iter().find(|t| t.task_id == parsed)
+}
+
+/// Create two follow-up tasks (skeleton + fill) that together replace a
+/// write that was too big for a single turn. Returns the child task ids
+/// on success.
+///
+/// The skeleton task depends on nothing, the fill task depends on the
+/// skeleton, so the existing scheduler picks them up in the correct
+/// order without any extra wiring.
+async fn decompose_truncated_task(
+    task_service: &TaskService,
+    parent: &aura_os_core::Task,
+    path: &str,
+    chunk_bytes: usize,
+) -> Result<Vec<TaskId>, aura_os_tasks::TaskError> {
+    let original_title = parent.title.clone();
+    let original_description = parent.description.clone();
+
+    let skeleton_title = format!("{original_title} [skeleton]");
+    let skeleton_description = format!(
+        "AUTO-DECOMPOSED from a truncated run.\n\n\
+         Create ONLY the module doc + imports + one public stub in `{path}`.\n\
+         Call `write_file` exactly once, then `task_done`.\n\n\
+         Original task description:\n\
+         {original_description}"
+    );
+    let skeleton = task_service
+        .create_follow_up_task(parent, skeleton_title, skeleton_description, Vec::new())
+        .await?;
+
+    let fill_title = format!("{original_title} [fill]");
+    let fill_description = format!(
+        "AUTO-DECOMPOSED from a truncated run. Depends on the skeleton task above.\n\n\
+         The file `{path}` already exists as a skeleton. Use `edit_file`\n\
+         exclusively to add the remaining logic in chunks of <= {chunk_bytes} bytes\n\
+         per call, and aim for <= 3 edits total.\n\n\
+         Original task description:\n\
+         {original_description}"
+    );
+    let fill = task_service
+        .create_follow_up_task(parent, fill_title, fill_description, vec![skeleton.task_id])
+        .await?;
+
+    Ok(vec![skeleton.task_id, fill.task_id])
+}
+
+/// Create a single follow-up task whose prompt discourages the
+/// overlapping-search pattern flagged by `ReshapeSearchQuery`.
+async fn enqueue_reshaped_retry(
+    task_service: &TaskService,
+    parent: &aura_os_core::Task,
+    reason: &str,
+) -> Result<Vec<TaskId>, aura_os_tasks::TaskError> {
+    let title = format!("{} [retry: reshape-search]", parent.title);
+    let description = format!(
+        "AUTO-RETRY after a run where search queries repeatedly overlapped.\n\n\
+         {reason}\n\n\
+         Before any write, consolidate your search needs into ONE refined\n\
+         search_code call. Do NOT issue two search_code calls whose patterns\n\
+         share alternation terms.\n\n\
+         Original task description:\n\
+         {}",
+        parent.description
+    );
+    let child = task_service
+        .create_follow_up_task(parent, title, description, Vec::new())
+        .await?;
+    Ok(vec![child.task_id])
+}
+
+/// Create a single follow-up task whose prompt forces a tool call on
+/// the first turn, steering the agent away from text-only iterations.
+async fn enqueue_force_tool_retry(
+    task_service: &TaskService,
+    parent: &aura_os_core::Task,
+) -> Result<Vec<TaskId>, aura_os_tasks::TaskError> {
+    let title = format!("{} [retry: force-tool]", parent.title);
+    let description = format!(
+        "AUTO-RETRY after a run with consecutive text-only turns.\n\n\
+         On your very first turn, call exactly ONE tool (submit_plan, read_file,\n\
+         or a small write_file skeleton). Do NOT narrate a multi-paragraph plan.\n\n\
+         Original task description:\n\
+         {}",
+        parent.description
+    );
+    let child = task_service
+        .create_follow_up_task(parent, title, description, Vec::new())
+        .await?;
+    Ok(vec![child.task_id])
+}
+
+/// Attempt to remediate a `task_failed` event by auto-decomposing or
+/// reshaping the task based on the first actionable
+/// `RemediationHint` the heuristic pipeline emits.
+///
+/// Returns `true` when at least one follow-up task was persisted and a
+/// `task_auto_remediated` domain event was broadcast. Returns `false`
+/// on any short-circuit (flag disabled, non-truncation failure, budget
+/// exhausted, missing parent task, heuristics produced nothing usable,
+/// or storage failure) so the caller can fall back to the existing
+/// retry path.
+#[allow(clippy::too_many_arguments)]
+async fn try_remediate_task_failure(
+    task_service: &TaskService,
+    loop_log: &crate::loop_log::LoopLogWriter,
+    broadcast_tx: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    failure_reason: &str,
+) -> bool {
+    if auto_decompose_disabled() {
+        return false;
+    }
+    if classify_failure(failure_reason) != FailureClass::Truncation {
+        return false;
+    }
+    if current_remediation_count(task_id) >= MAX_RETRIES_PER_TASK {
+        warn!(
+            %task_id,
+            "Skipping Phase 3 remediation: task has reached MAX_RETRIES_PER_TASK"
+        );
+        return false;
+    }
+
+    let Some(bundle_dir) = latest_run_dir_for(loop_log, project_id, agent_instance_id).await else {
+        warn!(%task_id, "Skipping Phase 3 remediation: no run bundle on disk yet");
+        return false;
+    };
+    let view = match aura_run_heuristics::load_bundle(&bundle_dir) {
+        Ok(v) => v,
+        Err(error) => {
+            warn!(%task_id, %error, path = %bundle_dir.display(), "Skipping Phase 3 remediation: failed to load run bundle");
+            return false;
+        }
+    };
+    let findings = aura_run_heuristics::analyze(&view);
+    let Some(hint) = findings
+        .into_iter()
+        .filter_map(|f| f.remediation)
+        .find(|r| {
+            matches!(
+                r,
+                aura_run_heuristics::RemediationHint::SplitWriteIntoSkeletonPlusAppends { .. }
+                    | aura_run_heuristics::RemediationHint::ReshapeSearchQuery { .. }
+                    | aura_run_heuristics::RemediationHint::ForceToolCallNextTurn
+            )
+        })
+    else {
+        return false;
+    };
+
+    let Some(parent) = find_task_by_id(task_service, project_id, task_id).await else {
+        warn!(%task_id, "Skipping Phase 3 remediation: parent task not found in storage");
+        return false;
+    };
+
+    let (kind, result) = match &hint {
+        aura_run_heuristics::RemediationHint::SplitWriteIntoSkeletonPlusAppends {
+            path,
+            suggested_chunk_bytes,
+        } => (
+            "split_write",
+            decompose_truncated_task(task_service, &parent, path, *suggested_chunk_bytes).await,
+        ),
+        aura_run_heuristics::RemediationHint::ReshapeSearchQuery { reason, .. } => (
+            "reshape_search",
+            enqueue_reshaped_retry(task_service, &parent, reason).await,
+        ),
+        aura_run_heuristics::RemediationHint::ForceToolCallNextTurn => (
+            "force_tool_call",
+            enqueue_force_tool_retry(task_service, &parent).await,
+        ),
+        // Unreachable — the find() above filtered everything else out.
+        _ => return false,
+    };
+
+    let child_ids = match result {
+        Ok(ids) => ids,
+        Err(error) => {
+            warn!(%task_id, kind, %error, "Phase 3 remediation failed to create follow-up tasks");
+            return false;
+        }
+    };
+
+    let child_id_strings: Vec<String> = child_ids.iter().map(|id| id.to_string()).collect();
+    let new_count = bump_remediation_count(task_id);
+
+    info!(
+        %task_id,
+        kind,
+        retry_count = new_count,
+        children = ?child_id_strings,
+        "Phase 3 auto-remediated a truncation failure"
+    );
+
+    emit_domain_event(
+        broadcast_tx,
+        "task_auto_remediated",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({
+            "parent_task_id": task_id,
+            "child_task_ids": child_id_strings,
+            "hint_kind": kind,
+            "retry_count": new_count,
+        }),
+    );
+
+    true
+}
+
 fn is_work_event_type(event_type: &str) -> bool {
     matches!(
         event_type,
@@ -1373,6 +1709,32 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     );
                                 }
                             }
+                            // Phase 3 — Autonomous recovery. If the
+                            // failure reason looks like a truncation /
+                            // no-file-ops event, run the heuristic
+                            // pipeline over the just-written run bundle
+                            // and, on an actionable `RemediationHint`,
+                            // persist follow-up tasks (skeleton + fill,
+                            // or a single shaped retry) and broadcast
+                            // `task_auto_remediated`. Silently falls
+                            // through on any short-circuit — the
+                            // `task_failed` broadcast below still goes
+                            // out either way so UI telemetry is
+                            // unaffected.
+                            if let (Some(tid), Some(reason)) =
+                                (tid.as_ref(), failure_reason.as_ref())
+                            {
+                                let _ = try_remediate_task_failure(
+                                    task_service.as_ref(),
+                                    loop_log.as_ref(),
+                                    &app_broadcast,
+                                    project_id,
+                                    agent_instance_id,
+                                    tid,
+                                    reason,
+                                )
+                                .await;
+                            }
                             Some("task_failed")
                         }
                         "done" => {
@@ -1453,9 +1815,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // (for run_single_task) or synthesise a
                             // `task_failed` with the error text as the
                             // reason.
-                            let reason = extract_failure_reason(&event).unwrap_or_else(|| {
-                                "Automaton reported an error".to_string()
-                            });
+                            let reason = extract_failure_reason(&event)
+                                .unwrap_or_else(|| "Automaton reported an error".to_string());
                             session_status = "failed";
                             if let Some(tid) = current_task_id.clone() {
                                 if let Some(ctx) = retry.take() {
@@ -1482,9 +1843,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                 task_id = %tid, %restart_err,
                                                 "Automaton restart after error failed; marking task failed"
                                             );
-                                            let combined = format!(
-                                                "{reason} (retry failed: {restart_err})"
-                                            );
+                                            let combined =
+                                                format!("{reason} (retry failed: {restart_err})");
                                             terminal_seen = true;
                                             synthesize_task_failed(
                                                 &app_broadcast,
@@ -1622,19 +1982,11 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             )
                             .await;
                             loop_log
-                                .on_task_started(
-                                    project_id,
-                                    agent_instance_id,
-                                    tid_uuid,
-                                    spec_id,
-                                )
+                                .on_task_started(project_id, agent_instance_id, tid_uuid, spec_id)
                                 .await;
                         }
                     }
-                    if matches!(
-                        forwarded_type.as_str(),
-                        "task_completed" | "task_failed"
-                    ) {
+                    if matches!(forwarded_type.as_str(), "task_completed" | "task_failed") {
                         if let Some(tid_str) = current_task_id.clone().or_else(|| {
                             forwarded
                                 .get("task_id")
@@ -2645,17 +2997,45 @@ pub(crate) async fn run_single_task(
     let result = automaton_client
         .start(start_params.clone())
         .await
-        .map_err(|e| match e {
-            AutomatonStartError::Conflict(_) => {
-                ApiError::conflict(format!("starting task runner: {e}"))
+        .map_err(|e| {
+            // Log the harness-side failure details server-side — the body is
+            // otherwise only visible in the HTTP response to the frontend, so
+            // tailing the desktop log during a `/automaton/start` 4xx/5xx
+            // previously required opening DevTools to see the actual reason.
+            match &e {
+                AutomatonStartError::Response { status, body } => warn!(
+                    harness_base_url = %automaton_client.base_url(),
+                    status = %status,
+                    body = %body,
+                    %task_id,
+                    %project_id,
+                    %agent_instance_id,
+                    "harness /automaton/start returned non-success status"
+                ),
+                AutomatonStartError::Request { message, is_connect, is_timeout } => warn!(
+                    harness_base_url = %automaton_client.base_url(),
+                    is_connect,
+                    is_timeout,
+                    error = %message,
+                    %task_id,
+                    %project_id,
+                    %agent_instance_id,
+                    "harness /automaton/start transport error"
+                ),
+                _ => {}
             }
-            AutomatonStartError::Response { status, body } => ApiError::bad_gateway(format!(
-                "starting task runner via {} failed (status {}): {}",
-                automaton_client.base_url(),
-                status,
-                body
-            )),
-            _ => ApiError::internal(format!("starting task runner: {e}")),
+            match e {
+                AutomatonStartError::Conflict(_) => {
+                    ApiError::conflict(format!("starting task runner: {e}"))
+                }
+                AutomatonStartError::Response { status, body } => ApiError::bad_gateway(format!(
+                    "starting task runner via {} failed (status {}): {}",
+                    automaton_client.base_url(),
+                    status,
+                    body
+                )),
+                _ => ApiError::internal(format!("starting task runner: {e}")),
+            }
         })?;
 
     let automaton_id = result.automaton_id;
@@ -2867,10 +3247,10 @@ async fn active_tasks(state: &AppState, project_id: ProjectId) -> Vec<ActiveLoop
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
-        extract_run_command, extract_turn_usage, is_work_event_type, map_passthrough_event_type,
-        preferred_automaton_model, requested_automaton_model, ForwarderAliveGuard,
-        VerificationStepKind,
+        classify_failure, classify_run_command_steps, estimate_usage_cost_usd,
+        extract_files_changed, extract_run_command, extract_turn_usage, is_work_event_type,
+        map_passthrough_event_type, preferred_automaton_model, requested_automaton_model,
+        FailureClass, ForwarderAliveGuard, VerificationStepKind,
     };
     use aura_os_core::{AgentInstance, AgentPermissions, AgentStatus};
     use chrono::Utc;
@@ -3146,5 +3526,106 @@ mod tests {
 
         assert!(result.is_err());
         assert!(!alive.load(Ordering::SeqCst));
+    }
+
+    // -------------------------------------------------------------------
+    // Phase 3 — Autonomous recovery
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn classify_failure_detects_truncation_phrases() {
+        // Phase 2b's `AutomatonError::NeedsDecomposition` `thiserror`
+        // Display impl formats roughly as shown below; the classifier
+        // has to recognise it both in the raw form and after the
+        // harness has wrapped the reason into a longer sentence.
+        let truncation_reasons = [
+            "Response was truncated at the max_tokens limit",
+            "Agent reached implementing stage but produced no file operations",
+            "NeedsDecomposition: failed_paths=[crates/foo.rs], last_pending_tool=write_file",
+            "needs_decomposition: last pending tool input was 12345 bytes",
+            "Turn ended with reason max_tokens and no file ops",
+            "the model was TRUNCATED mid-generation",
+        ];
+        for reason in truncation_reasons {
+            assert_eq!(
+                classify_failure(reason),
+                FailureClass::Truncation,
+                "expected truncation class for: {reason}"
+            );
+        }
+
+        let non_truncation_reasons = [
+            "rate limit exceeded (429)",
+            "upstream provider returned 529",
+            "authentication required: missing jwt",
+            "agent exited unexpectedly",
+        ];
+        for reason in non_truncation_reasons {
+            assert_eq!(
+                classify_failure(reason),
+                FailureClass::Other,
+                "expected Other class for: {reason}"
+            );
+        }
+    }
+
+    #[test]
+    fn classify_failure_is_case_insensitive() {
+        assert_eq!(classify_failure("TRUNCATED"), FailureClass::Truncation);
+        assert_eq!(
+            classify_failure("No File Operations"),
+            FailureClass::Truncation
+        );
+    }
+
+    #[test]
+    fn auto_decompose_env_flag_parses_truthy_values() {
+        use super::auto_decompose_disabled;
+        // Serialise env-var mutation behind a local mutex: `std::env`
+        // is process-wide so two tests touching the same key in
+        // parallel would clobber each other and flake.
+        use std::sync::Mutex;
+        static ENV_LOCK: Mutex<()> = Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+
+        std::env::remove_var("AURA_AUTO_DECOMPOSE_DISABLED");
+        assert!(!auto_decompose_disabled(), "unset should return false");
+
+        for value in ["1", "true", "TRUE", "Yes", "on"] {
+            std::env::set_var("AURA_AUTO_DECOMPOSE_DISABLED", value);
+            assert!(
+                auto_decompose_disabled(),
+                "value {value} should disable auto-decompose"
+            );
+        }
+
+        for value in ["0", "false", "no", "", "off"] {
+            std::env::set_var("AURA_AUTO_DECOMPOSE_DISABLED", value);
+            assert!(
+                !auto_decompose_disabled(),
+                "value {value:?} should not disable auto-decompose"
+            );
+        }
+
+        std::env::remove_var("AURA_AUTO_DECOMPOSE_DISABLED");
+    }
+
+    #[test]
+    fn remediation_retry_counter_respects_budget() {
+        use super::{bump_remediation_count, current_remediation_count, MAX_RETRIES_PER_TASK};
+        // Unique task id so the shared in-process counter doesn't clash
+        // with other tests running in parallel.
+        let tid = format!("test-task-{}", aura_os_core::TaskId::new());
+
+        assert_eq!(current_remediation_count(&tid), 0);
+        for expected in 1..=MAX_RETRIES_PER_TASK {
+            let after = bump_remediation_count(&tid);
+            assert_eq!(after, expected);
+        }
+        // The budget check in `try_remediate_task_failure` compares
+        // `current >= MAX`, which is already true here — a real caller
+        // would short-circuit before bumping again. Verify the reader
+        // reflects the final value.
+        assert_eq!(current_remediation_count(&tid), MAX_RETRIES_PER_TASK);
     }
 }

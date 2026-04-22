@@ -28,6 +28,7 @@ aura-os-process = { path = "../../crates/aura-os-process" }
 aura-os-network = { path = "../../crates/aura-os-network" }
 aura-os-storage = { path = "../../crates/aura-os-storage" }
 aura-loop-log-schema = { path = "../../crates/aura-loop-log-schema" }
+aura-run-heuristics = { path = "../../crates/aura-run-heuristics" }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

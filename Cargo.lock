@@ -704,6 +704,7 @@ dependencies = [
  "aura-os-tasks",
  "aura-os-terminal",
  "aura-protocol",
+ "aura-run-heuristics",
  "axum",
  "base64",
  "chrono",
