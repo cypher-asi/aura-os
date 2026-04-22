@@ -6,7 +6,6 @@ import { StreamingBubble } from "../StreamingBubble";
 import {
   useStreamEvents,
   useIsStreaming,
-  useIsWriting,
   useStreamingText,
   useThinkingText,
   useThinkingDurationMs,
@@ -161,7 +160,6 @@ export interface TaskOutputSectionProps {
 export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutput: externalTaskOutput, failReason }: TaskOutputSectionProps) {
   const events = useStreamEvents(streamKey);
   const isStreaming = useIsStreaming(streamKey);
-  const isWriting = useIsWriting(streamKey);
   const streamingText = useStreamingText(streamKey);
   const thinkingText = useThinkingText(streamKey);
   const thinkingDurationMs = useThinkingDurationMs(streamKey);

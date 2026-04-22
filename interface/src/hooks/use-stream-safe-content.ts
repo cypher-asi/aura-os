@@ -100,8 +100,6 @@ function trimIncompleteHeading(text: string): string {
   return text;
 }
 
-const MARKER_RUN_RE = /(\*{1,3}|_{1,3})/g;
-
 /**
  * Inside prose (code-fence and inline-code aware), count each run of
  * `*`/`_` of a given length and if the count is odd treat the last run
