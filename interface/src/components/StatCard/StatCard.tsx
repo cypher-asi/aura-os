@@ -8,10 +8,11 @@ export function cx(...classNames: Array<string | false | null | undefined>): str
 }
 
 export function formatCardCost(usd: number): string {
-  if (usd < 0.01) return "$0";
-  if (usd < 1) return `$${usd.toFixed(2)}`;
-  if (usd < 100) return `$${usd.toFixed(1)}`;
-  return `$${Math.round(usd)}`;
+  const safe = Number.isFinite(usd) ? usd : 0;
+  return `$${safe.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function formatSeconds(s: number): string {
