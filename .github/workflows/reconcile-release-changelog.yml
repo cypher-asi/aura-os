@@ -1,0 +1,432 @@
+name: Reconcile Release Changelog
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: "Optional completed desktop release run id to reconcile. If omitted, the latest successful release run for the channel is used."
+        required: false
+        default: ""
+        type: string
+      channel:
+        description: "Release channel to reconcile when release_run_id is omitted"
+        required: true
+        default: nightly
+        type: string
+      preview_url:
+        description: "Public preview URL for Browserbase to open"
+        required: false
+        default: ""
+        type: string
+      provider:
+        description: "Browser automation provider"
+        required: true
+        default: browserbase
+        type: string
+      profile:
+        description: "Optional screenshot profile override"
+        required: false
+        default: ""
+        type: string
+      deploy_wait_minutes:
+        description: "Minutes to wait before capture so the deployed frontend can settle"
+        required: false
+        default: "0"
+        type: string
+      refresh_existing:
+        description: "Regenerate already-published media instead of only backfilling missing or failed slots"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: reconcile-release-changelog-${{ inputs.release_run_id || inputs.channel }}-${{ github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release run
+        id: trigger
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          run_id="${{ inputs.release_run_id }}"
+          workflow_file=""
+          if [[ -z "$run_id" ]]; then
+            case "${{ inputs.channel }}" in
+              nightly)
+                workflow_file="release-nightly.yml"
+                ;;
+              stable)
+                workflow_file="release-stable.yml"
+                ;;
+              *)
+                echo "Unsupported channel: ${{ inputs.channel }}" >&2
+                exit 1
+                ;;
+            esac
+
+            response="$(gh api "repos/${{ github.repository }}/actions/workflows/${workflow_file}/runs?branch=main&status=completed&per_page=20")"
+            run_id="$(jq -r '.workflow_runs[] | select(.conclusion == "success") | .id' <<<"$response" | head -n 1)"
+            if [[ -z "$run_id" ]]; then
+              echo "Could not find a successful completed release run for ${workflow_file}" >&2
+              exit 1
+            fi
+          fi
+
+          response="$(gh api repos/${{ github.repository }}/actions/runs/${run_id})"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(jq -r '.head_sha' <<<"$response")" >> "$GITHUB_OUTPUT"
+          echo "workflow_name=$(jq -r '.name' <<<"$response")" >> "$GITHUB_OUTPUT"
+          echo "conclusion=$(jq -r '.conclusion' <<<"$response")" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether the release run published a release
+        id: release-check
+        if: steps.trigger.outputs.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          response="$(gh api repos/${{ github.repository }}/actions/runs/${{ steps.trigger.outputs.run_id }}/jobs --paginate)"
+          if jq -e '.jobs[] | select(.name == "release" and .conclusion == "success")' >/dev/null <<<"$response"; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip reconciliation when the release run did not publish a release
+        if: steps.trigger.outputs.conclusion != 'success' || steps.release-check.outputs.released != 'true'
+        run: echo "Release run did not publish a release. Skipping changelog reconciliation."
+
+      - name: Preflight changelog generation configuration
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+            echo "ANTHROPIC_API_KEY is not configured. Reconcile Release Changelog cannot regenerate a changelog without it." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.release-check.outputs.released == 'true'
+        with:
+          ref: ${{ steps.trigger.outputs.head_sha }}
+          fetch-depth: 0
+          path: repo
+
+      - uses: actions/checkout@v4
+        if: steps.release-check.outputs.released == 'true'
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Install Node.js
+        if: steps.release-check.outputs.released == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+          cache: npm
+          cache-dependency-path: repo/interface/package-lock.json
+
+      - name: Download release artifacts
+        if: steps.release-check.outputs.released == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: all-artifacts
+          merge-multiple: true
+          run-id: ${{ steps.trigger.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Download release metadata
+        if: steps.release-check.outputs.released == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
+          path: release-metadata
+          run-id: ${{ steps.trigger.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Determine changelog metadata
+        if: steps.release-check.outputs.released == 'true'
+        id: metadata
+        shell: bash
+        run: |
+          case "${{ steps.trigger.outputs.workflow_name }}" in
+            "Desktop Nightly Release"|"Release Nightly")
+              expected_channel="nightly"
+              ;;
+            "Desktop Stable Release"|"Release Stable")
+              expected_channel="stable"
+              ;;
+            *)
+              echo "Unsupported triggering workflow: ${{ steps.trigger.outputs.workflow_name }}" >&2
+              exit 1
+              ;;
+          esac
+
+          extract_version() {
+            local filename="$1"
+            local artifact_version
+
+            case "$filename" in
+              aura-os-desktop_*_x64-setup.exe)
+                artifact_version="${filename#aura-os-desktop_}"
+                printf '%s\n' "${artifact_version%_x64-setup.exe}"
+                ;;
+              aura-os-desktop_*_x86_64.AppImage)
+                artifact_version="${filename#aura-os-desktop_}"
+                printf '%s\n' "${artifact_version%_x86_64.AppImage}"
+                ;;
+              aura-os-desktop_*_amd64.deb)
+                artifact_version="${filename#aura-os-desktop_}"
+                printf '%s\n' "${artifact_version%_amd64.deb}"
+                ;;
+              Aura_*_aarch64.dmg)
+                artifact_version="${filename#Aura_}"
+                printf '%s\n' "${artifact_version%_aarch64.dmg}"
+                ;;
+              Aura_*_x64.dmg)
+                artifact_version="${filename#Aura_}"
+                printf '%s\n' "${artifact_version%_x64.dmg}"
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          shopt -s nullglob
+          artifact_version=""
+
+          for path in all-artifacts/*; do
+            filename="${path##*/}"
+            current_version="$(extract_version "$filename")" || continue
+
+            if [[ -z "$artifact_version" ]]; then
+              artifact_version="$current_version"
+              continue
+            fi
+
+            if [[ "$artifact_version" != "$current_version" ]]; then
+              echo "Mismatched release versions across installer artifacts: ${artifact_version} vs ${current_version}" >&2
+              exit 1
+            fi
+          done
+
+          if [[ -z "$artifact_version" ]]; then
+            echo "Could not determine release version from downloaded artifacts" >&2
+            exit 1
+          fi
+
+          metadata_file="release-metadata/release-metadata.json"
+          if [[ -f "$metadata_file" ]]; then
+            channel="$(jq -er '.channel' "$metadata_file")"
+            version="$(jq -er '.version' "$metadata_file")"
+            tag="$(jq -er '.tag' "$metadata_file")"
+            release_url="$(jq -er '.release_url' "$metadata_file")"
+          else
+            channel="$expected_channel"
+            version="$artifact_version"
+            tag="v${version}"
+            release_url="https://github.com/${{ github.repository }}/releases/tag/${tag}"
+          fi
+
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Regenerate release changelog
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CHANGELOG_TIMEZONE: America/Los_Angeles
+        run: |
+          node repo/infra/scripts/release/generate-daily-changelog.mjs \
+            --repo-dir repo \
+            --pages-dir pages \
+            --artifacts-dir all-artifacts \
+            --repo aura-os \
+            --channel "${{ steps.metadata.outputs.channel }}" \
+            --version "${{ steps.metadata.outputs.version }}" \
+            --release-url "${{ steps.metadata.outputs.release_url }}"
+
+      - name: Resolve preview URL
+        if: steps.release-check.outputs.released == 'true'
+        id: preflight
+        env:
+          INPUT_PREVIEW_URL: ${{ inputs.preview_url }}
+          DEFAULT_PREVIEW_URL_VAR: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          DEFAULT_PREVIEW_URL_SECRET: ${{ secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          INPUT_PROVIDER: ${{ inputs.provider }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+        shell: bash
+        run: |
+          provider="$INPUT_PROVIDER"
+          if [[ -z "$provider" ]]; then
+            provider="browserbase"
+          fi
+
+          preview_url="$INPUT_PREVIEW_URL"
+          preview_source="workflow input"
+          if [[ -z "$preview_url" ]]; then
+            preview_url="$DEFAULT_PREVIEW_URL_VAR"
+            preview_source="repository variable"
+          fi
+          if [[ -z "$preview_url" ]]; then
+            preview_url="$DEFAULT_PREVIEW_URL_SECRET"
+            preview_source="repository secret"
+          fi
+          if [[ -z "$preview_url" ]]; then
+            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when manually dispatching Reconcile Release Changelog." >&2
+            exit 1
+          fi
+
+          python3 - "$preview_url" <<'PY'
+          from urllib.parse import urlparse
+          import sys
+
+          candidate = sys.argv[1].strip()
+          parsed = urlparse(candidate)
+          if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+              raise SystemExit(f"preview_url must be an absolute http(s) URL, got: {candidate}")
+          PY
+
+          if [[ "$provider" == "browserbase" ]]; then
+            missing=()
+            [[ -z "$BROWSERBASE_API_KEY" ]] && missing+=("BROWSERBASE_API_KEY")
+            [[ -z "$BROWSERBASE_PROJECT_ID" ]] && missing+=("BROWSERBASE_PROJECT_ID")
+            if (( ${#missing[@]} > 0 )); then
+              echo "Browserbase provider requires ${missing[*]}." >&2
+              exit 1
+            fi
+          fi
+
+          echo "Resolved preview URL from ${preview_source}."
+          echo "provider=$provider" >> "$GITHUB_OUTPUT"
+          echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deployed frontend to settle
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
+        shell: bash
+        run: |
+          wait_minutes="${{ inputs.deploy_wait_minutes }}"
+          if [[ -z "$wait_minutes" ]]; then
+            wait_minutes="$DEFAULT_DEPLOY_WAIT_MINUTES"
+          fi
+          if [[ -z "$wait_minutes" ]]; then
+            wait_minutes="0"
+          fi
+
+          if ! [[ "$wait_minutes" =~ ^[0-9]+$ ]]; then
+            echo "deploy_wait_minutes must be an integer number of minutes, got: $wait_minutes" >&2
+            exit 1
+          fi
+
+          if [[ "$wait_minutes" -le 0 ]]; then
+            echo "Skipping deploy settle wait."
+            exit 0
+          fi
+
+          wait_seconds=$((wait_minutes * 60))
+          echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media capture so the deployed frontend can settle."
+          sleep "$wait_seconds"
+
+      - name: Verify preview URL is reachable
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            --output /dev/null \
+            --retry 3 \
+            --retry-delay 10 \
+            --max-time 30 \
+            "${{ steps.preflight.outputs.url }}"
+
+      - name: Install interface dependencies
+        if: steps.release-check.outputs.released == 'true'
+        working-directory: repo/interface
+        run: npm ci
+
+      - name: Reconcile changelog media
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+        shell: bash
+        run: |
+          ARGS=(
+            --repo-dir repo
+            --pages-dir pages
+            --channel "${{ steps.metadata.outputs.channel }}"
+            --version "${{ steps.metadata.outputs.version }}"
+            --provider "${{ steps.preflight.outputs.provider }}"
+            --preview-url "${{ steps.preflight.outputs.url }}"
+          )
+
+          if [[ -n "${{ inputs.profile }}" ]]; then
+            ARGS+=(--profile "${{ inputs.profile }}")
+          fi
+
+          if [[ "${{ inputs.refresh_existing }}" == "true" ]]; then
+            ARGS+=(--refresh-existing)
+          fi
+
+          node repo/infra/scripts/release/publish-changelog-media.mjs "${ARGS[@]}"
+
+      - name: Append changelog media diagnostics summary
+        if: always() && steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          summary_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-summary.md"
+          if [[ -f "$summary_file" ]]; then
+            cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload changelog media diagnostics
+        if: always() && steps.release-check.outputs.released == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-media-diagnostics-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            repo/interface/output/demo-screenshots/publish-changelog-media
+            pages/changelog/${{ steps.metadata.outputs.channel }}
+            pages/assets/changelog/${{ steps.metadata.outputs.channel }}
+
+      - name: Attach reconciliation summary
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push reconciled changelog
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          cd pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "changelog/${{ steps.metadata.outputs.channel }}"
+          git add "assets/changelog/${{ steps.metadata.outputs.channel }}" 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Reconcile ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}"
+          git push

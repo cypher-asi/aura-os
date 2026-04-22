@@ -10,7 +10,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, children, className }: EmptyStateProps) {
   return (
-    <div className={`${styles.root}${className ? ` ${className}` : ""}`}>
+    <div className={`${styles.root}${className ? ` ${className}` : ""}`} data-agent-empty-state="true">
       {icon && <div className={styles.icon}>{icon}</div>}
       <Text variant="muted" size="sm">{children}</Text>
     </div>

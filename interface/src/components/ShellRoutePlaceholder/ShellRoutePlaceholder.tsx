@@ -9,10 +9,17 @@ type ShellRoutePlaceholderProps = {
 /** Visible placeholder for shell routes that are not implemented yet (replaces blank `null` routes). */
 export function ShellRoutePlaceholder({ title, description }: ShellRoutePlaceholderProps) {
   return (
-    <PageEmptyState
-      icon={<LayoutTemplate size={32} />}
-      title={title}
-      description={description ?? "This area is not available in the web app yet."}
-    />
+    <div
+      data-agent-surface="shell-route-placeholder"
+      data-agent-empty-state="true"
+      data-agent-placeholder-title={title}
+      aria-label={`${title} placeholder`}
+    >
+      <PageEmptyState
+        icon={<LayoutTemplate size={32} />}
+        title={title}
+        description={description ?? "This area is not available in the web app yet."}
+      />
+    </div>
   );
 }

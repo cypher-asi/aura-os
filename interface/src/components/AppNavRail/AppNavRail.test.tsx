@@ -9,13 +9,13 @@ function MockIcon({ size = 16 }: { size?: number }) {
 }
 
 const mockApps = [
-  { id: "agents", label: "Agents", basePath: "/agents", icon: MockIcon, onPrefetch: vi.fn() },
-  { id: "projects", label: "Projects", basePath: "/projects", icon: MockIcon, onPrefetch: vi.fn() },
-  { id: "tasks", label: "Tasks", basePath: "/tasks", icon: MockIcon, onPrefetch: vi.fn() },
-  { id: "process", label: "Process", basePath: "/process", icon: MockIcon, onPrefetch: vi.fn() },
-  { id: "feed", label: "Feed", basePath: "/feed", icon: MockIcon, onPrefetch: vi.fn() },
-  { id: "profile", label: "Profile", basePath: "/profile", icon: MockIcon, onPrefetch: vi.fn() },
-  { id: "desktop", label: "Desktop", basePath: "/desktop", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "agents", label: "Agents", agentDescription: "Agent chats", agentKeywords: ["agent", "chat"], basePath: "/agents", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "projects", label: "Projects", agentDescription: "Project workspace", agentKeywords: ["project", "workspace"], basePath: "/projects", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "tasks", label: "Tasks", agentDescription: "Task runs", agentKeywords: ["task", "run"], basePath: "/tasks", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "process", label: "Process", agentDescription: "Process automation", agentKeywords: ["process", "workflow"], basePath: "/process", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "feed", label: "Feed", agentDescription: "Activity feed", agentKeywords: ["feed", "activity"], basePath: "/feed", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "profile", label: "Profile", agentDescription: "User profile", agentKeywords: ["profile"], basePath: "/profile", icon: MockIcon, onPrefetch: vi.fn() },
+  { id: "desktop", label: "Desktop", agentDescription: "Desktop shell", agentKeywords: ["desktop"], basePath: "/desktop", icon: MockIcon, onPrefetch: vi.fn() },
 ];
 
 const state = {
@@ -115,6 +115,17 @@ describe("AppNavRail", () => {
     render(<AppNavRail layout="taskbar" />);
 
     expect(screen.getByRole("button", { name: "Feed" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("adds agent-facing metadata for app launchers", () => {
+    render(<AppNavRail layout="taskbar" />);
+
+    const projectsButton = screen.getByRole("button", { name: "Projects" });
+    expect(projectsButton).toHaveAttribute("data-agent-role", "app-launcher");
+    expect(projectsButton).toHaveAttribute("data-agent-app-id", "projects");
+    expect(projectsButton).toHaveAttribute("data-agent-route", "/projects");
+    expect(projectsButton).toHaveAttribute("data-agent-description", "Project workspace");
+    expect(projectsButton).toHaveAttribute("data-agent-keywords", "project,workspace");
   });
 
   it("renders taskbar apps in the saved order while keeping profile pinned", () => {

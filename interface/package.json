@@ -25,12 +25,15 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:perf": "playwright test --project=perf-desktop-chromium",
+    "demo:screenshots:capture": "node ./scripts/capture-demo-screenshots.mjs",
+    "demo:screenshots:agent": "node ./scripts/produce-agent-demo-screenshots.mjs",
     "perf:bundle-budgets": "node ./scripts/check-bundle-budgets.mjs",
     "perf:guardrails": "npm run build && npm run perf:bundle-budgets && npm run test:e2e:perf",
     "test:evals": "playwright test tests/e2e/evals",
     "test:evals:smoke": "playwright test tests/e2e/evals/core-feature-smoke.spec.ts",
     "test:evals:workflow": "playwright test tests/e2e/evals/workflow-e2e.spec.ts",
     "test:evals:benchmark": "playwright test tests/e2e/evals/live-benchmark.spec.ts",
+    "test:demo-screenshots": "node --test ./scripts/lib/demo-screenshot-*.test.mjs",
     "test:evals:project-parity": "node ./scripts/run-project-control-plane-parity-eval.mjs",
     "test:mcp-smoke": "node ./scripts/test-dynamic-mcp-sidecar.mjs",
     "test:evals:report": "node ./scripts/summarize-evals.mjs",
@@ -38,6 +41,7 @@
     "codegen:protocol": "cd .. && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && cp crates/aura-protocol/bindings/*.ts interface/src/types/harness-protocol.ts"
   },
   "dependencies": {
+    "@browserbasehq/stagehand": "^3.2.1",
     "@capacitor/android": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",

@@ -37,7 +37,12 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
 
   return (
     <ResponsiveMainLane>
-      {children ?? <AgentInfoPanel />}
+      <div
+        data-agent-surface="agent-chat-panel"
+        data-agent-agent-id={agentId ?? ""}
+      >
+        {children ?? <AgentInfoPanel />}
+      </div>
     </ResponsiveMainLane>
   );
 }

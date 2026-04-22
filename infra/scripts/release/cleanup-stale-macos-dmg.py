@@ -4,11 +4,57 @@ import os
 import plistlib
 import re
 import subprocess
+import time
 from pathlib import Path
 
 
 VOLUME_PATTERN = re.compile(r"^/Volumes/Aura(?: \d+)?$")
 IMAGE_PATTERN = re.compile(r"^(?:rw\.)?Aura(?:_.*)?\.dmg$")
+ROOT_DEVICE_PATTERN = re.compile(r"^(/dev/disk\d+)")
+RETRYABLE_DETACH_EXIT_CODES = {16}
+
+
+def root_device(device: str) -> str:
+    match = ROOT_DEVICE_PATTERN.match(device or "")
+    return match.group(1) if match else device
+
+
+def run_detach(device: str, force: bool) -> subprocess.CompletedProcess[str]:
+    args = ["hdiutil", "detach"]
+    if force:
+        args.append("-force")
+    args.append(device)
+    return subprocess.run(
+        args,
+        capture_output=True,
+        text=True,
+    )
+
+
+def detach_device(device: str, attempts: int = 4) -> bool:
+    normalized = root_device(device)
+
+    for attempt in range(1, attempts + 1):
+        force = attempt > 1
+        result = run_detach(normalized, force=force)
+        if result.returncode == 0:
+            return True
+
+        stderr = (result.stderr or result.stdout or "").strip()
+        mode = "force detach" if force else "detach"
+        print(
+            f"Warning: {mode} of {normalized} failed"
+            f" (attempt {attempt}/{attempts}, exit {result.returncode})"
+            f"{f': {stderr}' if stderr else ''}"
+        )
+
+        if result.returncode not in RETRYABLE_DETACH_EXIT_CODES:
+            break
+
+        if attempt < attempts:
+            time.sleep(attempt)
+
+    return False
 
 
 def detach_stale_images() -> None:
@@ -32,18 +78,16 @@ def detach_stale_images() -> None:
 
         for entity in reversed(entities):
             device = entity.get("dev-entry")
-            if not device or device in seen_devices:
+            if not device:
                 continue
-            seen_devices.add(device)
-            print(f"Detaching stale DMG device {device} from {image_name or 'Aura image'}")
-            result = subprocess.run(
-                ["hdiutil", "detach", device],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
+
+            normalized_device = root_device(device)
+            if not normalized_device or normalized_device in seen_devices:
                 continue
-            subprocess.run(["hdiutil", "detach", "-force", device], check=True)
+            seen_devices.add(normalized_device)
+            print(f"Detaching stale DMG device {normalized_device} from {image_name or 'Aura image'}")
+            if not detach_device(normalized_device):
+                print(f"Warning: failed to fully detach {normalized_device}; continuing cleanup")
 
 
 def remove_stale_files() -> None:
@@ -62,7 +106,10 @@ def remove_stale_files() -> None:
 
 
 def main() -> None:
-    detach_stale_images()
+    try:
+        detach_stale_images()
+    except Exception as exc:  # Best-effort cleanup should not abort the packaging retry path.
+        print(f"Warning: stale DMG detach cleanup failed: {exc}")
     remove_stale_files()
 
 

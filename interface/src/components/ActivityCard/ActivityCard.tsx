@@ -32,6 +32,7 @@ export interface ActivityCardProps {
 
 function PushCardBody({ event }: { event: FeedEvent }) {
   const [expanded, setExpanded] = useState(false);
+  const commitCount = event.commits.length > 0 ? event.commits.length : event.commitIds.length;
   const visibleCommits = expanded
     ? event.commits
     : event.commits.slice(0, MAX_VISIBLE_COMMITS);
@@ -41,7 +42,7 @@ function PushCardBody({ event }: { event: FeedEvent }) {
   return (
     <>
       <span className={styles.action}>
-        Pushed {event.commits.length} commit{event.commits.length !== 1 ? "s" : ""} to{" "}
+        Pushed {commitCount} commit{commitCount !== 1 ? "s" : ""} to{" "}
         <span className={styles.branch}>{event.branch}</span> on{" "}
         <span className={styles.repo}>{repoShort}</span>
       </span>

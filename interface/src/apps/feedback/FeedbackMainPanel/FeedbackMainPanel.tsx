@@ -46,14 +46,23 @@ export function FeedbackMainPanel() {
 
   return (
     <Lane flex>
-      <div className={styles.container}>
-        <div className={styles.feedHeader}>
+      <div
+        className={styles.container}
+        data-demo-shot="feedback-main-panel"
+        data-agent-surface="feedback-board"
+      >
+        <div
+          className={styles.feedHeader}
+          data-agent-section="feedback-actions"
+        >
           <button
             type="button"
             className={styles.newIdeaButton}
             onClick={openComposer}
             aria-label="New Idea"
             title="Post a new idea"
+            data-agent-action="open-feedback-composer"
+            data-agent-target="feedback"
           >
             <Lightbulb size={14} aria-hidden="true" />
             <span>New Idea</span>
@@ -80,13 +89,17 @@ export function FeedbackMainPanel() {
           ) : null}
 
           {sortedItems.length === 0 ? (
-            <div className={styles.emptyWrapper}>
+            <div className={styles.emptyWrapper} data-agent-empty-state="feedback-board-empty">
               <EmptyState icon={<MessageSquare size={32} />}>
                 {emptyMessage(isPending, loadError)}
               </EmptyState>
             </div>
           ) : (
-            <div className={styles.feedbackList}>
+            <div
+              className={styles.feedbackList}
+              data-demo-shot="feedback-board-list"
+              data-agent-list="feedback-items"
+            >
               {sortedItems.map((item) => (
                 <FeedbackItemCard
                   key={item.id}

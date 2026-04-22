@@ -98,25 +98,38 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
       initialFocusRef={initialFocusRef}
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            variant="ghost"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            aria-label="Cancel feedback"
+            data-agent-action="cancel-feedback"
+          >
             Cancel
           </Button>
           <Button
             variant="primary"
             onClick={handleSubmit}
             disabled={!canSubmit}
+            aria-label="Post feedback"
+            data-agent-action="submit-feedback"
           >
             {isSubmitting ? "Posting..." : "Post"}
           </Button>
         </>
       }
     >
-      <div className={styles.formColumn}>
+      <div
+        className={styles.formColumn}
+        data-agent-surface="feedback-composer"
+        aria-label="Feedback composer"
+      >
         <Input
           ref={inputRef}
           value={title}
           placeholder="Title (optional)"
           aria-label="Feedback title"
+          data-agent-field="feedback-title"
           maxLength={160}
           onChange={(event) => setTitle(event.target.value)}
         />
@@ -127,6 +140,7 @@ export function NewFeedbackModal({ isOpen, onClose }: NewFeedbackModalProps) {
             value={body}
             placeholder="What's on your mind?"
             aria-label="Feedback body"
+            data-agent-field="feedback-body"
             rows={5}
             onChange={handleBodyChange}
           />

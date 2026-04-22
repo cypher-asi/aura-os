@@ -1,4 +1,4 @@
-name: Publish Desktop Release Changelog
+name: Publish Release Changelog
 
 on:
   workflow_run:
@@ -7,27 +7,59 @@ on:
       - Desktop Stable Release
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: "GitHub Actions run id for the completed desktop release to publish changelog for"
+        required: true
+        type: string
 
 permissions:
   actions: read
   contents: write
 
 concurrency:
-  group: publish-release-changelog-${{ github.event.workflow_run.id }}
+  group: publish-release-changelog-${{ github.event.workflow_run.id || inputs.release_run_id || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   publish-changelog:
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Check whether the triggering workflow published a release
-        id: release-check
+      - name: Resolve triggering release run
+        id: trigger
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          response="$(gh api repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs --paginate)"
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+            echo "workflow_name=${{ github.event.workflow_run.name }}" >> "$GITHUB_OUTPUT"
+            echo "conclusion=${{ github.event.workflow_run.conclusion }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          run_id="${{ inputs.release_run_id }}"
+          if [[ -z "$run_id" ]]; then
+            echo "workflow_dispatch requires release_run_id" >&2
+            exit 1
+          fi
+
+          response="$(gh api repos/${{ github.repository }}/actions/runs/${run_id})"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$(jq -r '.head_sha' <<<"$response")" >> "$GITHUB_OUTPUT"
+          echo "workflow_name=$(jq -r '.name' <<<"$response")" >> "$GITHUB_OUTPUT"
+          echo "conclusion=$(jq -r '.conclusion' <<<"$response")" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether the triggering workflow published a release
+        id: release-check
+        if: steps.trigger.outputs.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          response="$(gh api repos/${{ github.repository }}/actions/runs/${{ steps.trigger.outputs.run_id }}/jobs --paginate)"
           if jq -e '.jobs[] | select(.name == "release" and .conclusion == "success")' >/dev/null <<<"$response"; then
             echo "released=true" >> "$GITHUB_OUTPUT"
           else
@@ -35,13 +67,24 @@ jobs:
           fi
 
       - name: Skip changelog publish when the triggering run did not create a release
-        if: steps.release-check.outputs.released != 'true'
+        if: steps.trigger.outputs.conclusion != 'success' || steps.release-check.outputs.released != 'true'
         run: echo "Triggering workflow did not publish a release. Skipping changelog publish."
+
+      - name: Preflight changelog generation configuration
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+            echo "ANTHROPIC_API_KEY is not configured. Publish Release Changelog cannot generate a changelog without it." >&2
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
         if: steps.release-check.outputs.released == 'true'
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ steps.trigger.outputs.head_sha }}
           fetch-depth: 0
           path: repo
 
@@ -65,7 +108,7 @@ jobs:
           pattern: installers-*
           path: all-artifacts
           merge-multiple: true
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.trigger.outputs.run_id }}
           github-token: ${{ github.token }}
 
       - name: Download release metadata from the triggering run
@@ -75,7 +118,7 @@ jobs:
         with:
           name: release-metadata
           path: release-metadata
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.trigger.outputs.run_id }}
           github-token: ${{ github.token }}
 
       - name: Determine changelog metadata
@@ -83,15 +126,15 @@ jobs:
         id: metadata
         shell: bash
         run: |
-          case "${{ github.event.workflow_run.name }}" in
-            "Desktop Nightly Release")
+          case "${{ steps.trigger.outputs.workflow_name }}" in
+            "Desktop Nightly Release"|"Release Nightly")
               expected_channel="nightly"
               ;;
-            "Desktop Stable Release")
+            "Desktop Stable Release"|"Release Stable")
               expected_channel="stable"
               ;;
             *)
-              echo "Unsupported triggering workflow: ${{ github.event.workflow_run.name }}" >&2
+              echo "Unsupported triggering workflow: ${{ steps.trigger.outputs.workflow_name }}" >&2
               exit 1
               ;;
           esac
@@ -163,8 +206,8 @@ jobs:
               exit 1
             fi
 
-            if [[ "$workflow_name" != "${{ github.event.workflow_run.name }}" ]]; then
-              echo "Release metadata workflow ${workflow_name} did not match triggering workflow ${{ github.event.workflow_run.name }}" >&2
+            if [[ "$workflow_name" != "${{ steps.trigger.outputs.workflow_name }}" ]]; then
+              echo "Release metadata workflow ${workflow_name} did not match triggering workflow ${{ steps.trigger.outputs.workflow_name }}" >&2
               exit 1
             fi
 
@@ -214,6 +257,41 @@ jobs:
         shell: bash
         run: |
           cat "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write changelog publish metadata
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          channel="${{ steps.metadata.outputs.channel }}"
+          version="${{ steps.metadata.outputs.version }}"
+          date="$(jq -er '.date' "pages/changelog/${channel}/latest.json")"
+          mkdir -p changelog-publish-metadata
+          jq -n \
+            --arg channel "$channel" \
+            --arg version "$version" \
+            --arg date "$date" \
+            --arg latest_json "changelog/${channel}/latest.json" \
+            --arg latest_md "changelog/${channel}/latest.md" \
+            --arg history_json "changelog/${channel}/history/${date}.json" \
+            --arg history_md "changelog/${channel}/history/${date}.md" \
+            '{
+              channel: $channel,
+              version: $version,
+              date: $date,
+              files: {
+                latestJson: $latest_json,
+                latestMd: $latest_md,
+                historyJson: $history_json,
+                historyMd: $history_md
+              }
+            }' > changelog-publish-metadata/changelog-publish-metadata.json
+
+      - name: Upload changelog publish metadata
+        if: steps.release-check.outputs.released == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-publish-metadata
+          path: changelog-publish-metadata/changelog-publish-metadata.json
 
       - name: Commit and push changelog
         if: steps.release-check.outputs.released == 'true'

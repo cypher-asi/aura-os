@@ -11,7 +11,14 @@ export function FeedbackSidekickHeader() {
   if (!item) return null;
 
   return (
-    <div className={styles.header}>
+    <div
+      className={styles.header}
+      data-demo-shot="feedback-sidekick-header"
+      data-agent-surface="feedback-thread-header"
+      data-agent-item-id={item.id}
+      data-agent-item-title={item.title}
+      aria-label={`Feedback thread header for ${item.title}`}
+    >
       <span className={styles.meta}>{item.author.name}</span>
       <span className={styles.separator}>&middot;</span>
       <span className={styles.meta}>{categoryLabel(item.category)}</span>

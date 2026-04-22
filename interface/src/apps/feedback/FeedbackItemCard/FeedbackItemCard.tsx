@@ -38,7 +38,15 @@ export function FeedbackItemCard({
   // comment-count button that also selects. They're laid out side-by-side
   // by the `.card` grid, so the card still reads as a single row visually.
   return (
-    <article className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}>
+    <article
+      className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}
+      data-demo-shot={isSelected ? "feedback-selected-card" : undefined}
+      data-agent-role="feedback-item"
+      data-agent-item-id={item.id}
+      data-agent-item-title={item.title}
+      data-agent-item-status={item.status}
+      data-agent-item-category={item.category}
+    >
       <div className={styles.voteColumn}>
         <button
           type="button"
@@ -67,6 +75,7 @@ export function FeedbackItemCard({
         type="button"
         className={styles.body}
         aria-pressed={isSelected}
+        aria-label={`Open feedback item: ${item.title || "Untitled feedback"}`}
         onClick={() => onSelect(item.id)}
       >
         <span className={styles.headerRow}>
@@ -89,7 +98,7 @@ export function FeedbackItemCard({
         <button
           type="button"
           className={styles.commentPreview}
-          aria-label={`${item.commentCount} comment${item.commentCount !== 1 ? "s" : ""}`}
+          aria-label={`Open ${item.commentCount} comment${item.commentCount !== 1 ? "s" : ""} for ${item.title || "feedback item"}`}
           onClick={(event) => {
             event.stopPropagation();
             onSelect(item.id);

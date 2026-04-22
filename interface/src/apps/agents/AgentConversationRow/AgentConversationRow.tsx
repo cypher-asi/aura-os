@@ -57,6 +57,11 @@ export function AgentConversationRow({
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
+      data-agent-role="agent-row"
+      data-agent-agent-id={agent.agent_id}
+      data-agent-agent-name={agent.name}
+      data-agent-agent-role={agent.role}
+      data-agent-selected={isSelected ? "true" : "false"}
     >
       <Avatar
         avatarUrl={agent.icon ?? undefined}

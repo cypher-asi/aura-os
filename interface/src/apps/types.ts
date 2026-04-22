@@ -5,6 +5,10 @@ import type { RouteObject } from "react-router-dom";
 export interface AuraApp {
   id: string;
   label: string;
+  /** Short phrase agents can use to recognize this app in the UI and prompts. */
+  agentDescription?: string;
+  /** Searchable keywords that help browser agents match changelog themes to this app. */
+  agentKeywords?: string[];
   icon: LucideIcon;
   basePath: string;
   LeftPanel: ComponentType;

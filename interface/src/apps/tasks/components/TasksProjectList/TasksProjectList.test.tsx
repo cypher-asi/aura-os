@@ -185,12 +185,33 @@ beforeEach(() => {
 });
 
 describe("TasksProjectList", () => {
-  it("toggles a project when clicking anywhere on the project row", async () => {
+  it("navigates to the project board when clicking a project row from an agent route", async () => {
+    render(<TasksProjectList />);
+
+    const projectRow = screen.getByTestId("project-p1");
+    await screen.findByTestId("node-a1");
+
+    fireEvent.click(projectRow);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("node-a1")).not.toBeInTheDocument();
+    });
+    expect(mockClosePreview).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/tasks/p1");
+  });
+
+  it("still toggles project expansion when the project board is already selected", async () => {
+    mockProjectListData = buildMockData({
+      agentInstanceId: null,
+      location: { pathname: "/tasks/p1" },
+    });
+
     render(<TasksProjectList />);
 
     const projectRow = screen.getByTestId("project-p1");
     await screen.findByTestId("node-a1");
     mockNavigate.mockClear();
+    mockClosePreview.mockClear();
 
     fireEvent.click(projectRow);
 
@@ -198,6 +219,7 @@ describe("TasksProjectList", () => {
       expect(screen.queryByTestId("node-a1")).not.toBeInTheDocument();
     });
     expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockClosePreview).not.toHaveBeenCalled();
 
     fireEvent.click(projectRow);
 

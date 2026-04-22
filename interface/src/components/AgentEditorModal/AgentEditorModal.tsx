@@ -74,7 +74,7 @@ export function AgentEditorModal({
     />
   );
   const actionButtons = (
-    <>
+    <div data-agent-surface="agent-editor-actions">
       {showCloseAction ? (
         <Button
           variant="ghost"
@@ -97,10 +97,10 @@ export function AgentEditorModal({
           submitLabel
         )}
       </Button>
-    </>
+    </div>
   );
   const content = (
-    <div>
+    <div data-agent-surface="agent-editor">
       {formFields}
       <div className={styles.footer}>
         {actionButtons}

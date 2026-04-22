@@ -20,6 +20,7 @@ import {
   type FeedbackStatus,
   type ViewerVote,
 } from "../apps/feedback/types";
+import { shouldEnableAuraScreenshotBridge } from "../lib/screenshot-bridge";
 
 interface FeedbackState {
   items: readonly FeedbackItem[];
@@ -65,6 +66,25 @@ interface FeedbackActions {
 }
 
 type FeedbackStore = FeedbackState & FeedbackActions;
+
+declare global {
+  interface Window {
+    __AURA_ENABLE_SCREENSHOT_BRIDGE__?: boolean;
+    __AURA_SCREENSHOT_BRIDGE__?: {
+      selectFeedbackItem: (id: string | null) => void;
+      addFeedbackComment: (itemId: string, text: string) => void;
+      openFeedbackComposer: () => void;
+      createFeedback: (draft: FeedbackDraft) => Promise<FeedbackItem | null>;
+      getFeedbackState: () => {
+        selectedId: string | null;
+        itemIds: string[];
+        commentCountByItem: Record<string, number>;
+        composerOpen: boolean;
+        titlesByItem: Record<string, string>;
+      };
+    };
+  }
+}
 
 function currentAuthor(): FeedbackAuthor {
   const user = useAuthStore.getState().user;
@@ -357,6 +377,37 @@ export const useFeedbackStore = create<FeedbackStore>()((set, get) => ({
       });
   },
 }));
+
+if (typeof window !== "undefined" && shouldEnableAuraScreenshotBridge()) {
+  window.__AURA_SCREENSHOT_BRIDGE__ = {
+    selectFeedbackItem(id) {
+      useFeedbackStore.getState().selectItem(id);
+    },
+    addFeedbackComment(itemId, text) {
+      useFeedbackStore.getState().addComment(itemId, text);
+    },
+    openFeedbackComposer() {
+      useFeedbackStore.getState().openComposer();
+    },
+    createFeedback(draft) {
+      return useFeedbackStore.getState().createFeedback(draft);
+    },
+    getFeedbackState() {
+      const { selectedId, items, isComposerOpen } = useFeedbackStore.getState();
+      return {
+        selectedId,
+        itemIds: items.map((item) => item.id),
+        commentCountByItem: Object.fromEntries(
+          items.map((item) => [item.id, item.commentCount]),
+        ),
+        composerOpen: isComposerOpen,
+        titlesByItem: Object.fromEntries(
+          items.map((item) => [item.id, item.title]),
+        ),
+      };
+    },
+  };
+}
 
 function hoursBetween(nowMs: number, iso: string): number {
   const t = new Date(iso).getTime();

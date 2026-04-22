@@ -347,7 +347,13 @@ export function NotesMainPanel({ children }: { children?: ReactNode }) {
 
   return (
     <Lane flex>
-      <div className={styles.container}>
+      <div
+        className={styles.container}
+        data-agent-surface="notes-editor"
+        data-agent-note-title={note?.title || ""}
+        data-agent-note-path={activeKey?.relPath || ""}
+        data-agent-note-mode={mode}
+      >
         <div className={styles.toolbar}>
           <div className={styles.modeToggle} role="tablist" aria-label="Editor mode">
             <button
