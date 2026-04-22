@@ -13,6 +13,7 @@ pub(crate) mod follows;
 pub(crate) mod generation;
 pub(crate) mod harness_proxy;
 pub(crate) mod leaderboard;
+pub(crate) mod live_heuristics;
 pub(crate) mod log;
 pub(crate) mod marketplace;
 pub(crate) mod notes;

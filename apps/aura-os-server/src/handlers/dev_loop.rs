@@ -63,7 +63,7 @@ pub(crate) struct LoopQueryParams {
 }
 
 /// Broadcast a synthetic domain event as JSON on the global event channel.
-fn emit_domain_event(
+pub(super) fn emit_domain_event(
     broadcast_tx: &tokio::sync::broadcast::Sender<serde_json::Value>,
     event_type: &str,
     project_id: ProjectId,
@@ -1166,6 +1166,13 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         let mut terminal_seen = false;
         // Retry context is consumed on the first infra-transient failure.
         let mut retry = retry;
+        // Phase 6 — Closed-loop heuristics. Lazily bound on the first
+        // forwarded event so we can stamp the actual `run_id` into
+        // every `heuristic_finding` payload instead of a placeholder.
+        // Bundle dir is resolved once via `latest_run_dir_for` and
+        // cached so each trigger doesn't re-scan the filesystem.
+        let mut live_analyzer: Option<super::live_heuristics::LiveAnalyzer> = None;
+        let mut live_bundle_dir: Option<std::path::PathBuf> = None;
         let clear_active_automaton =
             |registry: AutomatonRegistry,
              project_id: ProjectId,
@@ -1959,6 +1966,50 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     loop_log
                         .on_json_event(project_id, agent_instance_id, &forwarded)
                         .await;
+
+                    // Phase 6 — re-run heuristics against the still-
+                    // growing bundle and surface new Warn/Error
+                    // findings as `heuristic_finding` domain events.
+                    // The analyzer is strictly observational; Phase 3
+                    // (post-failure) and Phase 5 (pre-flight) remain
+                    // the authoritative actors on RemediationHint.
+                    // The analyzer is constructed lazily and the
+                    // bundle dir is resolved only when a trigger is
+                    // imminent, so the hot path never pays the
+                    // `list_runs` filesystem cost.
+                    let analyzer = live_analyzer.get_or_insert_with(|| {
+                        super::live_heuristics::LiveAnalyzer::new(String::new())
+                    });
+                    analyzer.note_event(&forwarded_type);
+                    if analyzer.should_run() {
+                        if live_bundle_dir.is_none() {
+                            live_bundle_dir = latest_run_dir_for(
+                                loop_log.as_ref(),
+                                project_id,
+                                agent_instance_id,
+                            )
+                            .await;
+                        }
+                        if let Some(ref dir) = live_bundle_dir {
+                            let run_id = dir
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("")
+                                .to_string();
+                            if let Some(new_findings) = analyzer.maybe_analyze(dir) {
+                                for finding in new_findings {
+                                    super::live_heuristics::emit_live_heuristic(
+                                        &app_broadcast,
+                                        &finding,
+                                        project_id,
+                                        agent_instance_id,
+                                        &run_id,
+                                    );
+                                }
+                            }
+                        }
+                    }
+
                     if forwarded_type == "task_started" {
                         if let Some(tid_uuid) = forwarded
                             .get("task_id")
