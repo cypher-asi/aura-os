@@ -11,8 +11,8 @@ A quiet nightly with two focused changes: activity feed push cards now report th
 
 Activity feed push cards now display a correct commit count even when older posts lack the richer commits metadata.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts","slug":"push-cards-fall-back-to-commit-ids-for-legacy-feed-posts","alt":"Push cards fall back to commit IDs for legacy feed posts screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts","slug":"push-cards-fall-back-to-commit-ids-for-legacy-feed-posts","alt":"Push cards fall back to commit IDs for legacy feed posts screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.333.1/entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts.png","screenshotSource":"capture-proof","updatedAt":"2026-04-22T16:17:32.727Z","storyTitle":"Push Cards Fall Back to Commit IDs for Legacy Feed Posts"} -->
+![Push cards fall back to commit IDs for legacy feed posts screenshot](../../assets/changelog/nightly/0.1.0-nightly.333.1/entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts -->
 
 - PushCardBody in the activity feed now uses commitIds.length as a fallback when metadata.commits is missing, so older push posts display the real number of commits instead of '0 commits'. A store-level test covers the partial-metadata case. (`070248d`)

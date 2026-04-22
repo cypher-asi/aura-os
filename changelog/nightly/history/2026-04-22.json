@@ -252,7 +252,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 4,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -264,7 +264,11 @@
           "files": [
             "interface/src/components/ActivityCard/ActivityCard.tsx",
             "interface/src/stores/feed-store.test.ts"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.333.1/entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-22T16:17:32.727Z",
+          "storyTitle": "Push Cards Fall Back to Commit IDs for Legacy Feed Posts"
         }
       },
       {
