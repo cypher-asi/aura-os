@@ -60,7 +60,7 @@
 
 .card {
   width: 100%;
-  max-width: 440px;
+  max-width: 308px;
   padding: var(--space-4);
   position: relative;
   z-index: 1;
