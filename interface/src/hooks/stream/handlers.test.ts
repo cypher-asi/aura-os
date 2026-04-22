@@ -1,5 +1,6 @@
 vi.mock("../../api/client", () => ({
   isInsufficientCreditsError: vi.fn(() => false),
+  isAgentBusyError: vi.fn(() => false),
   dispatchInsufficientCredits: vi.fn(),
 }));
 
@@ -34,7 +35,6 @@ function makeRefs(): StreamRefs {
     thinkingBuffer: { current: "" },
     thinkingStart: { current: null },
     toolCalls: { current: [] },
-    needsSeparator: { current: false },
     raf: { current: null },
     flushTimeout: { current: null },
     displayedTextLength: { current: 0 },
@@ -60,6 +60,7 @@ function makeSetters(): StreamSetters & { calls: Record<string, unknown[]> } {
     setActiveToolCalls: track("setActiveToolCalls") as StreamSetters["setActiveToolCalls"],
     setEvents: track("setEvents") as StreamSetters["setEvents"],
     setIsStreaming: track("setIsStreaming") as StreamSetters["setIsStreaming"],
+    setIsWriting: track("setIsWriting") as StreamSetters["setIsWriting"],
     setProgressText: track("setProgressText") as StreamSetters["setProgressText"],
     setTimeline: track("setTimeline") as StreamSetters["setTimeline"],
     calls,
@@ -245,18 +246,6 @@ describe("stream/handlers", () => {
       expect(refs.streamBuffer.current).toBe("hello world");
     });
 
-    it("adds separator when needsSeparator is true", () => {
-      const refs = makeRefs();
-      refs.streamBuffer.current = "existing";
-      refs.needsSeparator.current = true;
-      const setters = makeSetters();
-
-      handleTextDelta(refs, setters, null, " more");
-
-      expect(refs.streamBuffer.current).toBe("existing\n\n more");
-      expect(refs.needsSeparator.current).toBe(false);
-    });
-
     it("adds text timeline item", () => {
       const refs = makeRefs();
       const setters = makeSetters();
@@ -342,7 +331,11 @@ describe("stream/handlers", () => {
       expect(setters.calls.setStreamingText).toEqual(["Hello,", "Hello,\n- bullet"]);
     });
 
-    it("folds text that arrives after a tool_call_started back into the earlier text item so the trailing prose renders above the tool cards (matches the post-turn persisted layout)", () => {
+    it("keeps text strictly linear when tool calls interleave with prose", () => {
+      // Arrival order `text -> tool -> tool -> text` must render in that
+      // exact order. Text that arrives after a tool block goes into a NEW
+      // text timeline item below the tools — it is NEVER folded back above
+      // them. This is the invariant the linear-stream refactor enforces.
       const refs = makeRefs();
       const setters = makeSetters();
 
@@ -351,21 +344,21 @@ describe("stream/handlers", () => {
       handleToolCallStarted(refs, setters, { id: "tc2", name: "run" });
       handleTextDelta(refs, setters, null, "tightly.");
 
-      // Expected: a single text item followed by the tool items, with a
-      // blank-line break separating the pre- and post-tool paragraphs.
-      expect(refs.timeline.current).toHaveLength(3);
+      expect(refs.timeline.current).toHaveLength(4);
       expect(refs.timeline.current[0]).toMatchObject({
         kind: "text",
-        content: "Issuing them\n\ntightly.",
+        content: "Issuing them",
       });
       expect(refs.timeline.current[1]).toMatchObject({ kind: "tool", toolCallId: "tc1" });
       expect(refs.timeline.current[2]).toMatchObject({ kind: "tool", toolCallId: "tc2" });
-      // Stream buffer and text item content stay in lockstep so the
-      // word-by-word reveal prefix maps correctly.
-      expect(refs.streamBuffer.current).toBe("Issuing them\n\ntightly.");
+      expect(refs.timeline.current[3]).toMatchObject({
+        kind: "text",
+        content: "tightly.",
+      });
+      expect(refs.streamBuffer.current).toBe("Issuing themtightly.");
     });
 
-    it("uses the tool_result separator (not a double break) when one already fired before merging across tools", () => {
+    it("creates a fresh text item after a tool_result (no retroactive merge)", () => {
       const refs = makeRefs();
       const setters = makeSetters();
 
@@ -374,14 +367,11 @@ describe("stream/handlers", () => {
       handleToolResult(refs, setters, { id: "tc1", name: "run", result: "", is_error: false });
       handleTextDelta(refs, setters, null, "after");
 
-      expect(refs.timeline.current).toHaveLength(2);
-      expect(refs.timeline.current[0]).toMatchObject({
-        kind: "text",
-        content: "before\n\nafter",
-      });
+      expect(refs.timeline.current).toHaveLength(3);
+      expect(refs.timeline.current[0]).toMatchObject({ kind: "text", content: "before" });
       expect(refs.timeline.current[1]).toMatchObject({ kind: "tool", toolCallId: "tc1" });
-      expect(refs.needsSeparator.current).toBe(false);
-      expect(refs.streamBuffer.current).toBe("before\n\nafter");
+      expect(refs.timeline.current[2]).toMatchObject({ kind: "text", content: "after" });
+      expect(refs.streamBuffer.current).toBe("beforeafter");
     });
   });
 
@@ -418,17 +408,6 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current[0].input).toEqual({
         draft_preview: "# Draft spec\n\nBody text",
       });
-    });
-
-    it("flushes any pending streamed text before starting a spec tool", () => {
-      const refs = makeRefs();
-      const setters = makeSetters();
-      refs.streamBuffer.current = "# Draft spec";
-      refs.displayedTextLength.current = 0;
-
-      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
-
-      expect(setters.calls.setStreamingText).toContain("# Draft spec");
     });
 
     it("prefers current thinking text as the initial spec preview", () => {
@@ -671,16 +650,6 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current[0].pending).toBe(false);
       expect(refs.toolCalls.current[0].result).toBe("ok");
       expect(refs.toolCalls.current[0].isError).toBe(false);
-    });
-
-    it("sets needsSeparator", () => {
-      const refs = makeRefs();
-      const setters = makeSetters();
-
-      handleToolCall(refs, setters, { id: "tc1", name: "run", input: {} });
-      handleToolResult(refs, setters, { id: "tc1", name: "run", result: "", is_error: false });
-
-      expect(refs.needsSeparator.current).toBe(true);
     });
 
     it("resolves latest pending tool by name when id is missing", () => {

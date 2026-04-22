@@ -84,7 +84,6 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       core.setEvents((prev) => [...prev, userMsg]);
       core.setIsStreaming(true);
       resetStreamBuffers(refs, setters);
-      refs.needsSeparator.current = false;
 
       abortRef.current?.abort();
       const controller = new AbortController();

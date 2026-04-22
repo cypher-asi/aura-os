@@ -114,29 +114,26 @@ function getDisplayedStreamingText(refs: StreamRefs): string {
   return refs.streamBuffer.current.slice(0, refs.displayedTextLength.current);
 }
 
+/**
+ * Walk the authoritative timeline in arrival order and clip each text item
+ * to the still-revealing prefix. Non-text items (thinking, tool) pass
+ * through unchanged; each text item consumes a slice of `visibleText`
+ * equal to at most its stored content length, preserving linear order.
+ */
 function buildDisplayedTimeline(
   refs: StreamRefs,
   visibleText: string,
 ): TimelineItem[] {
   const displayedTimeline: TimelineItem[] = [];
   let remainingVisibleText = visibleText;
-  let previousKind: TimelineItem["kind"] | null = null;
 
   for (const item of refs.timeline.current) {
     if (item.kind !== "text") {
       displayedTimeline.push({ ...item });
-      previousKind = item.kind;
       continue;
     }
 
-    if (previousKind && previousKind !== "text") {
-      remainingVisibleText = remainingVisibleText.replace(/^\s+/, "");
-    }
-
-    if (!remainingVisibleText) {
-      previousKind = item.kind;
-      continue;
-    }
+    if (!remainingVisibleText) continue;
 
     const visibleSegment = remainingVisibleText.slice(
       0,
@@ -146,10 +143,18 @@ function buildDisplayedTimeline(
     if (visibleSegment.length > 0) {
       displayedTimeline.push({ ...item, content: visibleSegment });
     }
-    previousKind = item.kind;
   }
 
   return displayedTimeline;
+}
+
+function updateWritingFlag(
+  refs: StreamRefs,
+  setters: StreamSetters,
+): void {
+  const writing =
+    refs.displayedTextLength.current < refs.streamBuffer.current.length;
+  setters.setIsWriting(writing);
 }
 
 function syncDisplayedTimeline(
@@ -170,6 +175,7 @@ function applyDisplayedStreamingState(
   const visibleText = getDisplayedStreamingText(refs);
   setters.setStreamingText(visibleText);
   setters.setTimeline(buildDisplayedTimeline(refs, visibleText));
+  updateWritingFlag(refs, setters);
 }
 
 function isWhitespace(char: string): boolean {
@@ -292,6 +298,7 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   refs.timeline.current = [];
   setters.setTimeline([]);
   setters.setProgressText("");
+  setters.setIsWriting(false);
   refs.snapshottedToolCallIds.current = new Set();
 }
 
@@ -413,46 +420,20 @@ export function handleTextDelta(
     setters.setThinkingDurationMs(Date.now() - refs.thinkingStart.current);
   }
 
-  // Find the most recent text item in the timeline, even if non-text items
-  // (tool calls, thinking) sit between it and the tail. When the model streams
-  // `text -> tool_call -> more text` in a single turn, appending the trailing
-  // prose to the existing text item keeps the layout identical to the
-  // persisted view (all prose above the tool cards) instead of flashing the
-  // tail below the tools until the run finishes and history is refetched.
+  // Strict linear ordering: text is only ever appended to the tail of the
+  // timeline. If the last item is a text item we extend it; otherwise we
+  // push a fresh text item. Text is never folded back above an intervening
+  // tool or thinking block — the visible order (text, tool, text, tool…)
+  // must match arrival order exactly.
   const tl = refs.timeline.current;
-  let lastTextIdx = -1;
-  for (let i = tl.length - 1; i >= 0; i--) {
-    if (tl[i].kind === "text") {
-      lastTextIdx = i;
-      break;
-    }
-  }
-  const lastItem = tl.length > 0 ? tl[tl.length - 1] : null;
-  const mergingAcrossNonText =
-    lastTextIdx !== -1 && lastItem !== null && lastItem.kind !== "text";
+  const last = tl.length > 0 ? tl[tl.length - 1] : null;
 
-  let chunk = text;
-  if (refs.needsSeparator.current && refs.streamBuffer.current.length > 0) {
-    // A prior tool_result requested a paragraph break before the next text.
-    chunk = "\n\n" + chunk;
-    refs.needsSeparator.current = false;
-  } else if (mergingAcrossNonText) {
-    // No tool_result separator fired (e.g. the tool is still pending), but
-    // we're folding this delta back into an earlier text item across a tool.
-    // Insert a blank-line break so pre- and post-tool prose render as
-    // distinct paragraphs inside the merged markdown block.
-    chunk = "\n\n" + chunk;
-  }
+  refs.streamBuffer.current += text;
 
-  refs.streamBuffer.current += chunk;
-
-  if (lastTextIdx !== -1) {
-    const item = tl[lastTextIdx];
-    if (item.kind === "text") {
-      item.content += chunk;
-    }
+  if (last && last.kind === "text") {
+    last.content += text;
   } else {
-    tl.push({ kind: "text", content: chunk, id: nextTimelineId() });
+    tl.push({ kind: "text", content: text, id: nextTimelineId() });
   }
 
   scheduleStreamingTextReveal(refs, setters);
@@ -481,9 +462,6 @@ export function handleToolCallStarted(
   }
 
   const isSpecTool = info.name === "create_spec" || info.name === "update_spec";
-  if (isSpecTool && refs.streamBuffer.current) {
-    flushStreamingText(refs, setters);
-  }
 
   // For write_file/edit_file we intentionally leave `initialInput` empty so
   // the FileBlock renders its compact "Writing code..." header instead of an
@@ -637,8 +615,6 @@ export function handleToolResult(
   if (resolvedId) {
     resolveToolCallInEvents(setters, resolvedId, info.result, info.is_error);
   }
-
-  refs.needsSeparator.current = true;
 }
 
 function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { type: "text" } | { type: "image" }> {
@@ -751,7 +727,7 @@ export function handleAssistantTurnBoundary(
     refs.thinkingBuffer.current = "";
     refs.thinkingStart.current = null;
     setters.setThinkingDurationMs(null);
-    refs.needsSeparator.current = false;
+    setters.setIsWriting(false);
   }
   refs.timeline.current = [];
   setters.setTimeline([]);
@@ -925,6 +901,7 @@ export function finalizeStream(
 
   setters.setProgressText("");
   setters.setIsStreaming(false);
+  setters.setIsWriting(false);
   abortRef.current?.abort();
   abortRef.current = null;
 }

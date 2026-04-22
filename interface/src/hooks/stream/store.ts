@@ -18,6 +18,11 @@ import type {
 
 export interface StreamEntryState {
   isStreaming: boolean;
+  // True while streamed text is actively revealing word-by-word (i.e. the
+  // displayed slice is still catching up to the buffered text). Drives the
+  // cooking indicator: it shows whenever the turn is in flow but we are not
+  // actively writing tokens to the screen.
+  isWriting: boolean;
   events: DisplaySessionEvent[];
   streamingText: string;
   thinkingText: string;
@@ -40,6 +45,7 @@ interface StreamStore {
 
 const INITIAL_ENTRY: StreamEntryState = {
   isStreaming: false,
+  isWriting: false,
   events: [],
   streamingText: "",
   thinkingText: "",
@@ -136,7 +142,6 @@ function makeRefs(): StreamRefs {
     thinkingBuffer: { current: "" },
     thinkingStart: { current: null },
     toolCalls: { current: [] },
-    needsSeparator: { current: false },
     raf: { current: null },
     flushTimeout: { current: null },
     displayedTextLength: { current: 0 },
@@ -306,6 +311,11 @@ export function createSetters(key: string): StreamSetters {
       touchEntry(key);
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { isStreaming: resolve(v, cur?.isStreaming ?? false) });
+    },
+    setIsWriting(v) {
+      touchEntry(key);
+      const cur = getStreamEntry(key);
+      updateStreamEntry(key, { isWriting: resolve(v, cur?.isWriting ?? false) });
     },
     setProgressText(v) {
       touchEntry(key);

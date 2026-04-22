@@ -10,6 +10,7 @@ interface StreamingBubbleProps {
   thinkingDurationMs?: number | null;
   timeline?: TimelineItem[];
   progressText?: string;
+  isWriting?: boolean;
 }
 
 export function StreamingBubble({
@@ -20,6 +21,7 @@ export function StreamingBubble({
   thinkingDurationMs,
   timeline,
   progressText,
+  isWriting,
 }: StreamingBubbleProps) {
   return (
     <div className={`${styles.message} ${styles.messageAssistant}`}>
@@ -32,6 +34,7 @@ export function StreamingBubble({
           thinkingDurationMs={thinkingDurationMs}
           timeline={timeline}
           progressText={progressText}
+          isWriting={isWriting}
         />
       </div>
     </div>

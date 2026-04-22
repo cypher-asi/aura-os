@@ -15,14 +15,27 @@ describe("getStreamSafeContent", () => {
   });
 
   describe("trailing emphasis", () => {
-    it("keeps unclosed single asterisk emphasis content as plain text", () => {
+    it("strips unclosed single asterisk emphasis so the raw marker never shows", () => {
       const result = getStreamSafeContent("hello *world", true);
-      expect(result).toBe("hello world");
+      expect(result).toBe("hello");
     });
 
-    it("keeps unclosed double asterisk emphasis content as plain text", () => {
+    it("strips unclosed double asterisk emphasis so the raw markers never show", () => {
       const result = getStreamSafeContent("hello **bold text", true);
-      expect(result).toBe("hello bold text");
+      expect(result).toBe("hello");
+    });
+
+    it("strips mid-word dangling asterisks", () => {
+      // When a closing `**` has not yet arrived, a token like `foo**` would
+      // render as literal punctuation. The safe content drops it.
+      const result = getStreamSafeContent("foo**", true);
+      expect(result).toBe("foo");
+    });
+
+    it("strips a lone trailing emphasis marker", () => {
+      expect(getStreamSafeContent("Hello **", true)).toBe("Hello");
+      expect(getStreamSafeContent("Hello *", true)).toBe("Hello");
+      expect(getStreamSafeContent("Hello __", true)).toBe("Hello");
     });
 
     it("keeps closed emphasis intact", () => {
@@ -31,6 +44,14 @@ describe("getStreamSafeContent", () => {
 
     it("keeps trailing closed emphasis formatted while streaming", () => {
       expect(getStreamSafeContent("hello **world**", true)).toBe("hello **world**");
+    });
+
+    it("keeps prior closed emphasis and trims only the trailing unclosed run", () => {
+      expect(getStreamSafeContent("a *b* c **d", true)).toBe("a *b* c");
+    });
+
+    it("leaves asterisks inside inline code alone", () => {
+      expect(getStreamSafeContent("use `a*b*c` end", true)).toBe("use `a*b*c` end");
     });
   });
 
@@ -92,7 +113,7 @@ describe("useStreamSafeContent", () => {
     const { result } = renderHook(() =>
       useStreamSafeContent("hello *world", true),
     );
-    expect(result.current).toBe("hello world");
+    expect(result.current).toBe("hello");
   });
 
   it("returns full content when not streaming", () => {

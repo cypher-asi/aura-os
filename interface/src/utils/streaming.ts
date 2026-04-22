@@ -25,11 +25,16 @@ export function getStreamingPhaseLabel(state: {
   streamingText: string;
   toolCalls: ToolCallEntry[];
   progressText?: string;
+  isWriting?: boolean;
 }): string | null {
+  // While text is actively revealing word-by-word the prose itself is
+  // the indicator — hide the cooking row so it does not flicker under
+  // the cursor.
+  if (state.isWriting) return null;
+
   const pending = state.toolCalls.find((tc) => tc.pending);
   if (pending) return TOOL_PHASE_LABELS[pending.name] ?? "Working...";
   if (state.thinkingText && !state.streamingText) return "Thinking...";
-  if (state.streamingText) return null;
   if (state.toolCalls.length > 0) return "Putting it all together...";
   if (state.progressText) {
     if (state.progressText.toLowerCase() === "connecting") {

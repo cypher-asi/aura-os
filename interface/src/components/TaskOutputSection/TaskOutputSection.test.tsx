@@ -23,6 +23,7 @@ vi.mock("@cypher-asi/zui", () => ({
 vi.mock("../../hooks/stream/hooks", () => ({
   useStreamEvents: () => streamState.events,
   useIsStreaming: () => streamState.isStreaming,
+  useIsWriting: () => false,
   useStreamingText: () => streamState.streamingText,
   useThinkingText: () => streamState.thinkingText,
   useThinkingDurationMs: () => streamState.thinkingDurationMs,

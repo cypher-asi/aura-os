@@ -4,14 +4,16 @@ import { LLMStreamOutput } from "./LLMStreamOutput";
 import type { TimelineItem, ToolCallEntry } from "../../types/stream";
 
 vi.mock("../../utils/streaming", () => ({
-  getStreamingPhaseLabel: ({ thinkingText, toolCalls, streamingText }: {
+  getStreamingPhaseLabel: ({ thinkingText, toolCalls, streamingText, isWriting }: {
     thinkingText?: string;
     toolCalls: ToolCallEntry[];
     streamingText: string;
+    isWriting?: boolean;
   }) => {
+    if (isWriting) return null;
     if (thinkingText) return "Thinking";
     if (toolCalls.length > 0) return "Calling tools";
-    if (streamingText) return "Writing";
+    if (streamingText) return "Cooking";
     return null;
   },
 }));
@@ -39,9 +41,20 @@ describe("LLMStreamOutput", () => {
     expect(screen.getByText("Explicit content")).toBeInTheDocument();
   });
 
-  it("shows streaming indicator when streaming with text", () => {
+  it("shows cooking indicator when streaming with settled text", () => {
     render(<LLMStreamOutput isStreaming={true} text="Streaming..." />);
-    expect(screen.getByText("Writing")).toBeInTheDocument();
+    expect(screen.getByText("Cooking")).toBeInTheDocument();
+  });
+
+  it("hides indicator while text is actively writing", () => {
+    render(
+      <LLMStreamOutput
+        isStreaming={true}
+        text="Streaming..."
+        isWriting={true}
+      />,
+    );
+    expect(screen.queryByText("Cooking")).not.toBeInTheDocument();
   });
 
   it("shows thinking phase label when streaming with thinking", () => {
@@ -53,6 +66,6 @@ describe("LLMStreamOutput", () => {
 
   it("does not show streaming indicator when not streaming", () => {
     render(<LLMStreamOutput isStreaming={false} text="Done" />);
-    expect(screen.queryByText("Writing")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cooking")).not.toBeInTheDocument();
   });
 });

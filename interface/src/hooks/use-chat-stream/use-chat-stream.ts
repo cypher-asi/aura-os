@@ -54,7 +54,6 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       core.setIsStreaming(true);
       sidekickRef.current.setStreamingAgentInstanceId(agentInstanceId);
       resetStreamBuffers(refs, setters);
-      refs.needsSeparator.current = false;
       pendingSpecIdsRef.current = [];
       pendingTaskIdsRef.current = [];
 

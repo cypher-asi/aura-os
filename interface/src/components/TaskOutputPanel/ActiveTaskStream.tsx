@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { useTaskStream } from "../../hooks/use-task-stream";
 import {
   useIsStreaming,
+  useIsWriting,
   useStreamingText,
   useThinkingText,
   useThinkingDurationMs,
@@ -22,6 +23,7 @@ interface ActiveTaskStreamProps {
 export function ActiveTaskStream({ taskId, title }: ActiveTaskStreamProps) {
   const { streamKey } = useTaskStream(taskId, true);
   const isStreaming = useIsStreaming(streamKey);
+  const isWriting = useIsWriting(streamKey);
   const streamingText = useStreamingText(streamKey);
   const thinkingText = useThinkingText(streamKey);
   const thinkingDurationMs = useThinkingDurationMs(streamKey);
@@ -58,6 +60,7 @@ export function ActiveTaskStream({ taskId, title }: ActiveTaskStreamProps) {
               thinkingDurationMs={thinkingDurationMs}
               timeline={timeline}
               progressText={progressText}
+              isWriting={isWriting}
             />
           ) : (
             <CookingIndicator label="Waiting for output…" />

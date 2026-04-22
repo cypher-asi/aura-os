@@ -13,6 +13,10 @@ export function useIsStreaming(key: string): boolean {
   return useStreamStore((s) => s.entries[key]?.isStreaming ?? false);
 }
 
+export function useIsWriting(key: string): boolean {
+  return useStreamStore((s) => s.entries[key]?.isWriting ?? false);
+}
+
 export function useStreamingText(key: string): string {
   return useStreamStore((s) => s.entries[key]?.streamingText ?? "");
 }

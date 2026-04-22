@@ -55,6 +55,7 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const {
     isStreaming,
+    isWriting,
     streamingText,
     thinkingText,
     thinkingDurationMs,
@@ -64,6 +65,7 @@ export function ChatMessageList({
   } = useStreamStore(
     useShallow((state) => ({
       isStreaming: state.entries[streamKey]?.isStreaming ?? false,
+      isWriting: state.entries[streamKey]?.isWriting ?? false,
       streamingText: state.entries[streamKey]?.streamingText ?? "",
       thinkingText: state.entries[streamKey]?.thinkingText ?? "",
       thinkingDurationMs: state.entries[streamKey]?.thinkingDurationMs ?? null,
@@ -191,6 +193,7 @@ export function ChatMessageList({
             thinkingDurationMs={thinkingDurationMs}
             timeline={timeline}
             progressText={progressText}
+            isWriting={isWriting}
           />
         </div>
       )}

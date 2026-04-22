@@ -60,7 +60,6 @@ export interface StreamRefs {
   thinkingBuffer: MutableRefObject<string>;
   thinkingStart: MutableRefObject<number | null>;
   toolCalls: MutableRefObject<ToolCallEntry[]>;
-  needsSeparator: MutableRefObject<boolean>;
   raf: MutableRefObject<number | null>;
   flushTimeout: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   displayedTextLength: MutableRefObject<number>;
@@ -77,6 +76,7 @@ export interface StreamSetters {
   setActiveToolCalls: Dispatch<SetStateAction<ToolCallEntry[]>>;
   setEvents: Dispatch<SetStateAction<DisplaySessionEvent[]>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
+  setIsWriting: Dispatch<SetStateAction<boolean>>;
   setProgressText: Dispatch<SetStateAction<string>>;
   setTimeline: Dispatch<SetStateAction<TimelineItem[]>>;
 }

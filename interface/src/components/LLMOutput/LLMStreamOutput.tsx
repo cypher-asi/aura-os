@@ -13,6 +13,7 @@ export interface LLMStreamOutputProps {
   timeline?: TimelineItem[];
   progressText?: string;
   artifactRefs?: ArtifactRef[];
+  isWriting?: boolean;
 }
 
 function StreamingIndicator({
@@ -21,12 +22,14 @@ function StreamingIndicator({
   thinkingText,
   toolCalls,
   progressText,
+  isWriting,
 }: {
   isStreaming: boolean;
   text: string;
   thinkingText?: string;
   toolCalls?: ToolCallEntry[];
   progressText?: string;
+  isWriting?: boolean;
 }) {
   if (!isStreaming) return null;
   const label = getStreamingPhaseLabel({
@@ -34,6 +37,7 @@ function StreamingIndicator({
     thinkingText,
     toolCalls: toolCalls ?? [],
     progressText,
+    isWriting,
   });
   return <CookingIndicator label={label ?? "Cooking..."} hidden={!label} />;
 }
@@ -47,6 +51,7 @@ export function LLMStreamOutput({
   timeline,
   progressText,
   artifactRefs,
+  isWriting,
 }: LLMStreamOutputProps) {
   const timelineForRender = useMemo<TimelineItem[]>(() => {
     if (timeline && timeline.length > 0) return timeline;
@@ -79,6 +84,7 @@ export function LLMStreamOutput({
         thinkingText={thinkingText}
         toolCalls={toolCalls}
         progressText={progressText}
+        isWriting={isWriting}
       />
     </>
   );
