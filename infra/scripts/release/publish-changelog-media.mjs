@@ -17,7 +17,7 @@ function parseArgs(argv) {
     }
     const key = part.slice(2);
     const next = argv[index + 1];
-    if (!next || next.startsWith("--")) {
+    if (next === undefined || next.startsWith("--")) {
       args[key] = true;
       continue;
     }
@@ -248,13 +248,29 @@ function runScreenshotCapture({
   }
 
   try {
-    execFileSync("node", commandArgs, {
-      cwd: interfaceDir,
-      stdio: "pipe",
-      encoding: "utf8",
-      env: process.env,
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    const maxAttempts = provider === "browserbase" ? 3 : 1;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        execFileSync("node", commandArgs, {
+          cwd: interfaceDir,
+          stdio: "pipe",
+          encoding: "utf8",
+          env: process.env,
+          maxBuffer: 10 * 1024 * 1024,
+        });
+        break;
+      } catch (error) {
+        const output = [error?.stdout, error?.stderr, error?.message].filter(Boolean).join("\n");
+        const isBrowserbaseConcurrencyError = provider === "browserbase"
+          && /max concurrent sessions limit|RateLimitError|status:\s*429/i.test(output);
+        if (!isBrowserbaseConcurrencyError || attempt === maxAttempts) {
+          throw error;
+        }
+        const backoffMs = attempt * 30_000;
+        console.warn(`Browserbase session capacity is full. Retrying screenshot capture in ${Math.round(backoffMs / 1000)}s (attempt ${attempt + 1}/${maxAttempts}).`);
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, backoffMs);
+      }
+    }
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -448,6 +464,7 @@ export {
   buildEntryPrompt,
   buildMediaBlock,
   buildRunSummary,
+  parseArgs,
   replaceChangelogMediaBlock,
   resolveAssetPath,
   selectBestScreenshot,

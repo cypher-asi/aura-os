@@ -23,7 +23,7 @@ function parseArgs(argv) {
     if (!part.startsWith("--")) continue;
     const key = part.slice(2);
     const next = argv[index + 1];
-    const value = !next || next.startsWith("--") ? true : next;
+    const value = next === undefined || next.startsWith("--") ? true : next;
     if (value !== true) {
       index += 1;
     }

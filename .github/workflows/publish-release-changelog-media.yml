@@ -98,6 +98,22 @@ jobs:
         working-directory: repo/interface
         run: npm ci
 
+      - name: Resolve preview URL
+        id: preview
+        env:
+          DEFAULT_PREVIEW_URL: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
+        shell: bash
+        run: |
+          preview_url="${{ inputs.preview_url }}"
+          if [[ -z "$preview_url" ]]; then
+            preview_url="$DEFAULT_PREVIEW_URL"
+          fi
+          if [[ -z "$preview_url" ]]; then
+            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repo variable or pass preview_url when manually dispatching Publish Release Changelog Media." >&2
+            exit 1
+          fi
+          echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+
       - name: Wait for deployed frontend to settle
         env:
           DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
@@ -130,14 +146,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
-          DEFAULT_PREVIEW_URL: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
         shell: bash
         run: |
-          preview_url="${{ inputs.preview_url }}"
-          if [[ -z "$preview_url" ]]; then
-            preview_url="$DEFAULT_PREVIEW_URL"
-          fi
-
           provider="${{ inputs.provider }}"
           if [[ -z "$provider" ]]; then
             provider="browserbase"
@@ -147,9 +157,9 @@ jobs:
             --repo-dir repo
             --pages-dir pages
             --channel "${{ steps.target.outputs.channel }}"
-            --preview-url "$preview_url"
             --provider "$provider"
           )
+          ARGS+=(--preview-url "${{ steps.preview.outputs.url }}")
 
           if [[ -n "${{ steps.target.outputs.version }}" ]]; then
             ARGS+=(--version "${{ steps.target.outputs.version }}")

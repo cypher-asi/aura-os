@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildEntryPrompt,
+  parseArgs,
   replaceChangelogMediaBlock,
   resolveAssetPath,
   selectBestScreenshot,
@@ -109,5 +110,15 @@ test("resolveAssetPath nests changelog media by channel and version/date", () =>
       sourcePath: "/tmp/proof.jpeg",
     }),
     "assets/changelog/stable/2026-04-22/entry-2-agents.jpeg",
+  );
+});
+
+test("parseArgs preserves explicit empty-string values instead of coercing them to booleans", () => {
+  assert.deepEqual(
+    parseArgs(["--preview-url", "", "--channel", "nightly"]),
+    {
+      "preview-url": "",
+      channel: "nightly",
+    },
   );
 });
