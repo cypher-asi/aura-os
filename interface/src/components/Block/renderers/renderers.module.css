@@ -190,7 +190,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   color: var(--color-text-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .listRow:last-child {
@@ -252,7 +252,7 @@
   max-width: 100%;
   max-height: 160px;
   object-fit: contain;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--color-border);
 }
 
 .mediaCaption {
@@ -287,7 +287,7 @@
   font-size: 11px;
   line-height: 1.55;
   background: transparent;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--color-border);
   padding: 8px 10px;
   margin: 0 10px;
   white-space: pre-wrap;

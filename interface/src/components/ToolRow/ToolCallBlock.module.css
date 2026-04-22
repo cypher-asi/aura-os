@@ -23,7 +23,7 @@
   gap: 8px;
   width: 100%;
   padding: 4px 8px;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text-secondary);
   font-family: inherit;

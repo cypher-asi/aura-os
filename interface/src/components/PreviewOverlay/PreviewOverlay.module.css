@@ -6,10 +6,6 @@
   background: var(--color-bg);
   z-index: 10;
   animation: overlaySlideIn 200ms ease-out;
-  /* Match the main chat's darker border token so overlays portaled out of
-     the sidekickBody (task/run previews, etc.) still share the same
-     outline style as LLM chat tables/blocks. */
-  --color-border: #17171a;
 }
 
 .fullLane {

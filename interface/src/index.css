@@ -18,6 +18,12 @@
   --status-done: #6b7280;
   --status-failed: #ff6b6b;
   --status-blocked: #ff8a50;
+  /* Unify the border token across every surface so tables, blocks, tools,
+     sidekick panes, overlays, and modals all render the same subtle outline
+     as the main LLM chat bubbles. Previously this value only lived on the
+     ChatPanel container, leaving everything outside chat on the brighter
+     vendor default (#4e4e4e). */
+  --color-border: #17171a;
 }
 
 html, body, #root {

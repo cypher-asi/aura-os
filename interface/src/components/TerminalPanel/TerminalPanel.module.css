@@ -47,7 +47,7 @@
   height: var(--control-height-sm);
   min-height: var(--control-height-sm);
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--color-border);
   user-select: none;
 }
 

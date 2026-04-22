@@ -95,10 +95,6 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  /* Match the main chat's darker border token (see ChatPanel.module.css)
-     so tables, blocks, tools, and overlays inside the sidekick render the
-     same subtle outline as the LLM chat. */
-  --color-border: #17171a;
 }
 
 .previewOverlay {

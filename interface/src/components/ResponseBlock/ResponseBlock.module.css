@@ -1,5 +1,5 @@
 .block {
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--color-border);
   border-radius: 0;
   overflow: hidden;
   background: transparent;
@@ -55,6 +55,6 @@
 }
 
 .content {
-  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+  border-top: 1px solid var(--color-border);
   padding: 10px 12px;
 }
