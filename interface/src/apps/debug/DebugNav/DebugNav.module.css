@@ -1,0 +1,9 @@
+/* Suffix shown next to a run row (e.g. "5 llm", "12 ev") or a project
+ * row (run count). Matches the 12px item size used by `.agentLabel`
+ * in `LeftMenuTree.module.css` so Debug entries don't look smaller
+ * than rows in Projects / Notes / Process navs. */
+.navSuffix {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}

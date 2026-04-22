@@ -6,10 +6,7 @@ import { api } from "../../../api/client";
 import type { ProjectId } from "../../../types";
 import { useDebugRunMetadata } from "../useDebugRunMetadata";
 import { useDebugRunLogs } from "../useDebugRunLogs";
-import {
-  channelForTab,
-  useDebugSidekickStore,
-} from "../stores/debug-sidekick-store";
+import { useDebugSidekickStore } from "../stores/debug-sidekick-store";
 import { copyToClipboard, downloadBlob } from "../clipboard";
 import { DebugLogList } from "./DebugLogList";
 import styles from "./DebugRunDetailView.module.css";
@@ -50,10 +47,9 @@ export function DebugRunDetailView() {
     projectId: ProjectId;
     runId: string;
   }>();
-  const { activeTab, typeFilter, textFilter, selectedEntry, selectEntry } =
+  const { typeFilter, textFilter, selectedEntry, selectEntry } =
     useDebugSidekickStore(
       useShallow((s) => ({
-        activeTab: s.activeTab,
         typeFilter: s.typeFilter,
         textFilter: s.textFilter,
         selectedEntry: s.selectedEntry,
@@ -61,11 +57,13 @@ export function DebugRunDetailView() {
       })),
     );
 
-  // Pull the channel from the active tab. Non-channel tabs (run/stats/
-  // tasks) default the middle panel to the primary "events" stream so
-  // the timeline is always useful even when the sidekick is not on an
-  // event-style tab.
-  const channel = channelForTab(activeTab) ?? "events";
+  // The middle panel always shows the full event timeline. Switching
+  // sidekick tabs (Run / LLM / Iterations / Blockers / Retries / etc.)
+  // used to swap this out, which made the middle title and data flip
+  // around unexpectedly. Tabs now only affect the sidekick's own
+  // content; `ChannelPanel` inside the sidekick still reads the
+  // tab-specific channel when summarizing.
+  const channel = "events" as const;
 
   const { metadata, isRunning } = useDebugRunMetadata(projectId, runId);
   const { entries, raw, isLoading } = useDebugRunLogs({
@@ -113,12 +111,6 @@ export function DebugRunDetailView() {
     return <div className={styles.empty}>Run not found.</div>;
   }
 
-  // The default "events" channel's label is redundant with the sidekick
-  // tabs and the event count, so we suppress the big label for it but
-  // still show it for more specific channels (llm_calls, blockers, ...)
-  // where it acts as a signpost for what is currently on screen.
-  const channelHeading = channel === "events" ? null : channelLabel(channel);
-
   return (
     <div className={styles.root}>
       <header className={styles.header}>
@@ -134,7 +126,7 @@ export function DebugRunDetailView() {
             title={
               hasFilter
                 ? "Copy the filtered events as JSONL"
-                : "Copy the full channel as JSONL"
+                : "Copy the full event timeline as JSONL"
             }
           >
             {hasFilter ? "Copy filtered" : "Copy all"}
@@ -151,7 +143,6 @@ export function DebugRunDetailView() {
           </button>
         </div>
         <div className={styles.channelLabel}>
-          {channelHeading}
           {filteredEntries.length !== entries.length ? (
             <span className={styles.channelSubLabel}>
               {filteredEntries.length} of {entries.length}
@@ -178,28 +169,11 @@ export function DebugRunDetailView() {
             isLoading
               ? "Loading events…"
               : entries.length === 0
-                ? "No events recorded on this channel yet."
+                ? "No events recorded on this run yet."
                 : "No events match the current filters."
           }
         />
       </div>
     </div>
   );
-}
-
-function channelLabel(channel: string): string {
-  switch (channel) {
-    case "events":
-      return "All events";
-    case "llm_calls":
-      return "LLM calls";
-    case "iterations":
-      return "Iterations";
-    case "blockers":
-      return "Blockers";
-    case "retries":
-      return "Retries";
-    default:
-      return channel;
-  }
 }

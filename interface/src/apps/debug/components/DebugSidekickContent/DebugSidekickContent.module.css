@@ -65,6 +65,11 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  /* Explicitly pin the row to the container's leading edge so action
+     buttons never drift center/right on wide sidekick widths. */
+  justify-content: flex-start;
+  padding-left: 0;
+  margin-left: 0;
 }
 
 .actionButton {
@@ -198,14 +203,20 @@
   display: flex;
   gap: 6px;
   /* Parent `.taskMeta` already applies `padding: 0 var(--space-3)`, so
-     the action row only needs vertical spacing. Without this the
-     buttons were pushed an extra `--space-3` to the right, breaking
-     left alignment with the field labels above. */
+     the action row only needs vertical spacing. Without the explicit
+     left alignment + zero margin/padding, the buttons drifted to the
+     right of where the field labels above them start. */
+  justify-content: flex-start;
+  padding-left: 0;
+  margin-left: 0;
   margin-bottom: var(--space-2);
 }
 
 .inspectorCode {
-  margin: 0 var(--space-3);
+  /* Parent `.taskMeta` already applies `padding: 0 var(--space-3)`, so
+     drop the extra horizontal margin to keep the JSON block flush with
+     the field labels above it (left-aligned, not indented deeper). */
+  margin: 0;
   padding: 10px 12px;
   border-radius: 6px;
   background: var(--color-surface-raised);
@@ -217,6 +228,7 @@
   white-space: pre;
   overflow: auto;
   max-height: 480px;
+  text-align: left;
 }
 
 /* ---------- Stats ---------- */

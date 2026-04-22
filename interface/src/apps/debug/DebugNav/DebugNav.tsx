@@ -11,7 +11,11 @@ import {
   useLeftMenuProjectReorder,
 } from "../../../features/left-menu";
 import treeStyles from "../../../features/left-menu/LeftMenuTree/LeftMenuTree.module.css";
-import { buildDebugExplorerData } from "./debug-nav-explorer-node";
+import {
+  buildDebugExplorerData,
+  buildRunningNowSection,
+  RUNNING_NOW_GROUP_ID,
+} from "./debug-nav-explorer-node";
 import { useDebugRunsByProject } from "../useDebugRunsByProject";
 
 function matchesSearch(text: string, needle: string): boolean {
@@ -22,9 +26,10 @@ function matchesSearch(text: string, needle: string): boolean {
 /**
  * Left menu for the Debug app. Every project owned by the workspace
  * appears at the top level (same as the Projects / Process apps) and
- * expands into its list of debug runs. Runs are lazy-fetched when a
- * project group is expanded, so projects without recorded runs don't
- * trigger network calls on mount.
+ * expands into its list of debug runs. Runs are fetched eagerly for
+ * all projects so the "Running now" section (and per-project blue
+ * dot) can surface in-progress runs without forcing the user to
+ * manually expand every group.
  */
 export function DebugNav() {
   const navigate = useNavigate();
@@ -43,24 +48,59 @@ export function DebugNav() {
     );
   }, [projects, searchQuery]);
 
-  const defaultExpandedIds = useMemo(
-    () => (projectId ? [projectId] : []),
-    [projectId],
+  // Always fetch runs for every project so we can surface running
+  // runs (see `runningNowSection` below) without requiring the user to
+  // manually expand each project group. The query is deduped per
+  // project by react-query, and `useDebugRunsByProject` only polls
+  // at 3 s cadence for projects that currently contain a running run
+  // (10 s otherwise).
+  const allProjectIds = useMemo(
+    () => filteredProjects.map((p) => p.project_id),
+    [filteredProjects],
   );
+  const { runsByProject, loadedProjectIds } =
+    useDebugRunsByProject(allProjectIds);
+
+  const runningRuns = useMemo(() => {
+    const out: Array<{
+      projectId: string;
+      projectName: string;
+      run: (typeof runsByProject)[string][number];
+    }> = [];
+    for (const project of filteredProjects) {
+      const runs = runsByProject[project.project_id] ?? [];
+      for (const run of runs) {
+        if (run.status === "running") {
+          out.push({
+            projectId: project.project_id,
+            projectName: project.name || project.project_id,
+            run,
+          });
+        }
+      }
+    }
+    return out;
+  }, [filteredProjects, runsByProject]);
+
+  const projectsWithRunningIds = useMemo(
+    () =>
+      Array.from(new Set(runningRuns.map((r) => r.projectId))),
+    [runningRuns],
+  );
+
+  // Seed expansion with the currently-active project (if any), the
+  // Running-now section, and any project that currently has a running
+  // run so live runs are visible on mount without needing clicks. The
+  // expanded-groups hook respects user-collapsed state, so users can
+  // still collapse these after the run ends.
+  const defaultExpandedIds = useMemo(() => {
+    const ids = new Set<string>([RUNNING_NOW_GROUP_ID]);
+    if (projectId) ids.add(projectId);
+    for (const pid of projectsWithRunningIds) ids.add(pid);
+    return Array.from(ids);
+  }, [projectId, projectsWithRunningIds]);
   const { expandedIds, toggleGroup } = useLeftMenuExpandedGroups(
     defaultExpandedIds,
-  );
-
-  const expandedProjectIds = useMemo(
-    () =>
-      filteredProjects
-        .map((project) => project.project_id)
-        .filter((id) => expandedIds.includes(id)),
-    [filteredProjects, expandedIds],
-  );
-
-  const { runsByProject, loadedProjectIds } = useDebugRunsByProject(
-    expandedProjectIds,
   );
 
   const explorerData = useMemo(
@@ -76,9 +116,21 @@ export function DebugNav() {
     [filteredProjects, runsByProject, loadedProjectIds],
   );
 
+  const runningNowSection = useMemo(
+    () => buildRunningNowSection(runningRuns),
+    [runningRuns],
+  );
+
   const handleSelect = useCallback(
     (nodeId: string) => {
-      const [pid, rid] = nodeId.split("::");
+      // Running-now items prefix their id with `__running__::` so they
+      // can share the JSONL run ids without colliding with the normal
+      // `${projectId}::${runId}` entries. Strip the prefix before
+      // routing so both surfaces land on the same detail URL.
+      const stripped = nodeId.startsWith("__running__::")
+        ? nodeId.slice("__running__::".length)
+        : nodeId;
+      const [pid, rid] = stripped.split("::");
       if (!pid) return;
       if (rid && !rid.startsWith("__")) {
         navigate(`/debug/${pid}/runs/${rid}`);
@@ -91,9 +143,18 @@ export function DebugNav() {
 
   const selectedNodeId = runId && projectId ? `${projectId}::${runId}` : null;
 
+  // Prepend the "Running now" section so in-progress runs are the
+  // first thing visible. We only include it when there is at least one
+  // running run, to avoid a permanent empty header.
+  const combinedExplorerData = useMemo(
+    () =>
+      runningNowSection ? [runningNowSection, ...explorerData] : explorerData,
+    [runningNowSection, explorerData],
+  );
+
   const entries = useMemo(
     () =>
-      buildLeftMenuEntries(explorerData, {
+      buildLeftMenuEntries(combinedExplorerData, {
         expandedIds: new Set(expandedIds),
         selectedNodeId,
         searchActive: searchQuery.trim().length > 0,
@@ -101,13 +162,19 @@ export function DebugNav() {
         itemTestIdPrefix: "run",
         emptyTestIdPrefix: "empty",
         onGroupActivate: (id) => {
+          // "Running now" is a presentation-only section; clicking
+          // its header should just toggle expansion, not navigate.
+          if (id === RUNNING_NOW_GROUP_ID) {
+            toggleGroup(id);
+            return;
+          }
           toggleGroup(id);
           navigate(`/debug/${id}`);
         },
         onItemSelect: handleSelect,
       }),
     [
-      explorerData,
+      combinedExplorerData,
       expandedIds,
       selectedNodeId,
       searchQuery,
@@ -117,6 +184,9 @@ export function DebugNav() {
     ],
   );
 
+  // `useLeftMenuProjectReorder` already excludes entries whose
+  // underlying explorer node has `variant === "section"`, so the
+  // "Running now" header we prepend above stays non-draggable.
   const rootReorder = useLeftMenuProjectReorder(entries, {
     searchActive: searchQuery.trim().length > 0,
   });

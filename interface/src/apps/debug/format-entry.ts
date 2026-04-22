@@ -2,14 +2,18 @@ import type { DebugLogEntry } from "./types";
 
 /**
  * Render a one-line summary of a debug log entry for the timeline.
- * The detail view already shows the full JSON in its inspector, so
- * this deliberately prefers short, human-oriented strings (model
- * name, tool name, error message, etc.) over comprehensive field
- * listings.
+ * The full JSON is available in the sidekick inspector when a row is
+ * selected, so this column never emits raw JSON; it always produces a
+ * short, human-oriented label (task name, tool name, model, etc.).
  */
 export function summarizeEntry(entry: DebugLogEntry): string {
   const event = entry.event as Record<string, unknown> | null;
-  if (!event) return entry.raw.slice(0, 200);
+  if (!event) {
+    // Defensive: if we couldn't parse the line, fall back to the type
+    // string the parser assigned (e.g. "parse_error") instead of
+    // spilling raw bytes into the timeline.
+    return entry.type === "unknown" ? "" : entry.type;
+  }
 
   const type = entry.type;
   const payload = (event.payload ?? event) as Record<string, unknown>;
@@ -53,26 +57,39 @@ export function summarizeEntry(entry: DebugLogEntry): string {
       return parts.join(" · ");
     }
     case "tool_call": {
-      const name = str(payload.name) ?? str(event.name);
-      const args = payload.arguments ?? payload.args;
-      const argsStr =
-        typeof args === "string"
-          ? args.slice(0, 120)
-          : args
-            ? JSON.stringify(args).slice(0, 120)
-            : "";
-      return [name, argsStr].filter(Boolean).join(" ");
+      // Emit only the tool name. The full arguments are available in
+      // the sidekick inspector when a row is selected; embedding
+      // JSON-serialized args here resurfaces exactly the kind of
+      // noise we explicitly moved off the timeline.
+      return str(payload.name) ?? str(event.name) ?? "";
     }
     case "task_completed":
     case "task_failed":
     case "task_started": {
+      const name =
+        str(payload.task_name) ??
+        str(event.task_name) ??
+        str(payload.name) ??
+        str(event.name);
       const taskId = str(event.task_id) ?? str(payload.task_id);
-      const reason = str(payload.reason) ?? str(payload.error);
-      return [taskId, reason].filter(Boolean).join(" · ");
+      return name ?? taskId ?? "";
     }
     default: {
-      const preview = entry.raw.slice(0, 200);
-      return preview;
+      // Unknown / app-specific event types. Never return raw JSON;
+      // prefer whatever task/tool/name identifier the payload carries
+      // so the timeline reads as a list of named actions. If nothing
+      // usable is present, fall back to the event type itself.
+      return (
+        str(payload.task_name) ??
+        str(event.task_name) ??
+        str(payload.name) ??
+        str(event.name) ??
+        str(payload.title) ??
+        str(event.title) ??
+        str(event.task_id) ??
+        str(payload.task_id) ??
+        (type === "unknown" ? "" : type)
+      );
     }
   }
 }

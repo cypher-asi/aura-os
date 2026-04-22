@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, type Query } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import type { DebugRunMetadata } from "../../api/debug";
+import type { DebugRunMetadata, DebugRunsResponse } from "../../api/debug";
 
 /**
  * Batch fetch runs for a set of project ids — typically the currently
@@ -24,7 +24,16 @@ export function useDebugRunsByProject(
       queryKey: ["debug", "runs", projectId, null],
       queryFn: () => api.debug.listRuns(projectId),
       enabled: Boolean(projectId),
-      refetchInterval: 10_000,
+      // Tighten the refetch cadence when this project currently has a
+      // run in `running` state so the nav badge/blue dot tracks the
+      // active run closely. Idle projects stay at 10 s to avoid
+      // needlessly chatty polling across the whole workspace.
+      refetchInterval: (query: Query<DebugRunsResponse>) =>
+        query.state.data?.runs?.some(
+          (run: DebugRunMetadata) => run.status === "running",
+        )
+          ? 3_000
+          : 10_000,
       staleTime: 5_000,
     })),
   });
