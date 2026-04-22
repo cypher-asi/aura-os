@@ -573,7 +573,7 @@ jobs:
 
           should_retry_packaging() {
             if [ "${{ matrix.target }}" = "macos" ] \
-              && grep -Eq "hdiutil: .*Resource busy" packager.log; then
+              && grep -Eiq "hdiutil: .*Resource busy|resource is being held|resource temporarily unavailable" packager.log; then
               return 0
             fi
 
