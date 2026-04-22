@@ -197,7 +197,10 @@
 .inspectorActions {
   display: flex;
   gap: 6px;
-  padding: 0 var(--space-3);
+  /* Parent `.taskMeta` already applies `padding: 0 var(--space-3)`, so
+     the action row only needs vertical spacing. Without this the
+     buttons were pushed an extra `--space-3` to the right, breaking
+     left alignment with the field labels above. */
   margin-bottom: var(--space-2);
 }
 

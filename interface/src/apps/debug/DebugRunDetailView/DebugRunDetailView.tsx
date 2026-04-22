@@ -16,28 +16,27 @@ import styles from "./DebugRunDetailView.module.css";
 
 function statusLabel(status: DebugRunStatus | undefined): string {
   if (!status) return "—";
-  return status;
-}
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString();
+  // Title-case single words like "failed" → "Failed" so the combined
+  // header reads naturally without needing CSS `text-transform`, which
+  // would also mangle locale date parts like "PM" → "Pm".
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function runTitle(metadata: DebugRunMetadata | undefined): string {
-  // Always render as "Run · <started>" so the header footprint is stable
-  // between the loading state and the hydrated state. When metadata has
-  // not loaded yet we render an em-dash placeholder rather than a
-  // shorter "Run" string, which would cause the right-hand channel
-  // label to reflow the moment metadata arrives.
-  if (!metadata) return "Run · —";
-  const started = metadata.started_at ? new Date(metadata.started_at) : null;
-  if (started && !Number.isNaN(started.getTime())) {
-    return `Run · ${started.toLocaleString()}`;
-  }
-  return `Run · ${metadata.run_id.slice(0, 8)}`;
+  // Always render as "Run · <started> · <status>" on one line so the
+  // header footprint is stable while metadata loads. When metadata is
+  // missing we render em-dash placeholders rather than shorter strings
+  // so the right-hand content never reflows.
+  const started = metadata?.started_at
+    ? new Date(metadata.started_at)
+    : null;
+  const startedLabel =
+    started && !Number.isNaN(started.getTime())
+      ? started.toLocaleString()
+      : metadata
+        ? metadata.run_id.slice(0, 8)
+        : "—";
+  return `Run · ${startedLabel} · ${statusLabel(metadata?.status)}`;
 }
 
 /**
@@ -114,15 +113,17 @@ export function DebugRunDetailView() {
     return <div className={styles.empty}>Run not found.</div>;
   }
 
+  // The default "events" channel's label is redundant with the sidekick
+  // tabs and the event count, so we suppress the big label for it but
+  // still show it for more specific channels (llm_calls, blockers, ...)
+  // where it acts as a signpost for what is currently on screen.
+  const channelHeading = channel === "events" ? null : channelLabel(channel);
+
   return (
     <div className={styles.root}>
       <header className={styles.header}>
         <div className={styles.title}>
           <span className={styles.titleMain}>{runTitle(metadata)}</span>
-          <span className={styles.titleSub}>
-            {statusLabel(metadata?.status)}
-            {` · ended ${formatDate(metadata?.ended_at)}`}
-          </span>
         </div>
         <div className={styles.headerActions}>
           <button
@@ -150,7 +151,7 @@ export function DebugRunDetailView() {
           </button>
         </div>
         <div className={styles.channelLabel}>
-          {channelLabel(channel)}
+          {channelHeading}
           {filteredEntries.length !== entries.length ? (
             <span className={styles.channelSubLabel}>
               {filteredEntries.length} of {entries.length}

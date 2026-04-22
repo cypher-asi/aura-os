@@ -15,18 +15,18 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: 0 14px;
+  border-bottom: 1px solid var(--color-border);
   flex-wrap: nowrap;
-  min-height: 46px;
+  height: var(--control-height-sm, 32px);
+  min-height: var(--control-height-sm, 32px);
+  flex-shrink: 0;
 }
 
 .title {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 240px;
-  min-height: 30px;
+  align-items: center;
+  min-width: 0;
   margin-right: auto;
   flex: 1 1 auto;
 }
@@ -36,16 +36,6 @@
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.titleSub {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  text-transform: capitalize;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
