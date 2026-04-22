@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-22T18:13:30.229Z",
+  "generatedAt": "2026-04-22T19:06:42.532Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.335.1",
+  "version": "0.1.0-nightly.337.1",
   "date": "2026-04-22",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.335.1",
-  "lastIncludedSha": "2f967828ab82093f4d045aee9e844668d094876b",
-  "previousProcessedSha": "b0e271302e2475aba05e8d230b6c7e82a12bec08",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.337.1",
+  "lastIncludedSha": "85cd8905ec7ec8b6faf31fd787710e6dd745e684",
+  "previousProcessedSha": "2f967828ab82093f4d045aee9e844668d094876b",
   "commitShas": [
     "070248dcd7edc4f496d26b777ff9e9577dc0e883",
     "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758",
@@ -42,10 +42,18 @@
     "2a78b8e0254fe0796267202bedcbd49a1722cec2",
     "d8d4ab9e7f5b81cacf77c5f9a2be56f8588858e6",
     "b0e271302e2475aba05e8d230b6c7e82a12bec08",
-    "2f967828ab82093f4d045aee9e844668d094876b"
+    "2f967828ab82093f4d045aee9e844668d094876b",
+    "dacd52ed3a37a4c8e0898b4119d4adb4808e1fa3",
+    "3fdb15efee5dd0523a404c9382a15ef22a1110e3",
+    "df72d28eef3d68054bcf0731106a825eda1849b6",
+    "3969c21cfa4fc27aa69435e4cd740d4959622db1",
+    "04b54962740d03e0f98a3fb87285f0737a76c680",
+    "a68d47952dc295d63faf1980d63fff15a4772817",
+    "61300ebd079b47076293e929132593574e8e3020",
+    "14a67af6b0999656222e7d8f92d58e037e72622e"
   ],
-  "rawCommitCount": 32,
-  "filteredCommitCount": 31,
+  "rawCommitCount": 41,
+  "filteredCommitCount": 39,
   "rawCommits": [
     {
       "sha": "070248dcd7edc4f496d26b777ff9e9577dc0e883",
@@ -1482,6 +1490,371 @@
         "Release Infrastructure",
         "Docs"
       ]
+    },
+    {
+      "sha": "dacd52ed3a37a4c8e0898b4119d4adb4808e1fa3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T10:17:22-07:00",
+      "subject": "feat(login): two-column layout with AURA visual loop video",
+      "body": "Desktop login now splits 50/50 with the sign-in panel on the left and\nthe AURA_visual_loop hero video autoplaying on the right. Mobile layout\nis unchanged; the video column is also hidden below 900px for narrow\ndesktop viewports. Video asset is bundled under interface/public/.\n\nMade-with: Cursor",
+      "parents": [
+        "b0e271302e2475aba05e8d230b6c7e82a12bec08"
+      ],
+      "files": [
+        "interface/public/AURA_visual_loop.mp4",
+        "interface/src/views/LoginView/LoginView.module.css",
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 58,
+        "deletions": 1
+      },
+      "committedAtMs": 1776878242000,
+      "cleanSubject": "two-column layout with AURA visual loop video",
+      "keywords": [
+        "column",
+        "layout",
+        "with",
+        "aura",
+        "visual",
+        "loop",
+        "video"
+      ],
+      "fileGroups": [
+        "interface/public/AURA_visual_loop.mp4",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Other"
+      ]
+    },
+    {
+      "sha": "3fdb15efee5dd0523a404c9382a15ef22a1110e3",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T10:46:48-07:00",
+      "subject": "feat(login): full-screen video bg with centered glass modal",
+      "body": "- Video now fills the area under the topbar (full width and height).\n- Sign-in card is absolutely layered above it with a translucent\n  blurred background, centered on screen.\n- Subtitle copy changed from \"Zero Identity Authentication\" to\n  \"Login with ZERO\".\n- Halved desktop modal padding (space-8 -> space-4) and tightened\n  the header spacing for a more compact card.\n\nMade-with: Cursor",
+      "parents": [
+        "dacd52ed3a37a4c8e0898b4119d4adb4808e1fa3"
+      ],
+      "files": [
+        "interface/src/views/LoginView/LoginView.module.css",
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 30,
+        "deletions": 53
+      },
+      "committedAtMs": 1776880008000,
+      "cleanSubject": "full-screen video bg with centered glass modal",
+      "keywords": [
+        "full",
+        "screen",
+        "video",
+        "with",
+        "centered",
+        "glass",
+        "modal"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "df72d28eef3d68054bcf0731106a825eda1849b6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T10:54:06-07:00",
+      "subject": "style(login): shrink sign-in card width by 30% (440px -> 308px)",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "3fdb15efee5dd0523a404c9382a15ef22a1110e3"
+      ],
+      "files": [
+        "interface/src/views/LoginView/LoginView.module.css"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1776880446000,
+      "cleanSubject": "style(login): shrink sign-in card width by 30% (440px -> 308px)",
+      "keywords": [
+        "style",
+        "login",
+        "shrink",
+        "sign",
+        "card",
+        "width",
+        "440px",
+        "308px"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "3969c21cfa4fc27aa69435e4cd740d4959622db1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T10:58:08-07:00",
+      "subject": "style(login): drop AURA heading and 'Login with ZERO' subtitle from card",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "df72d28eef3d68054bcf0731106a825eda1849b6"
+      ],
+      "files": [
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 0,
+        "deletions": 9
+      },
+      "committedAtMs": 1776880688000,
+      "cleanSubject": "style(login): drop AURA heading and 'Login with ZERO' subtitle from card",
+      "keywords": [
+        "style",
+        "login",
+        "drop",
+        "aura",
+        "heading",
+        "with",
+        "zero",
+        "subtitle",
+        "from",
+        "card"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "04b54962740d03e0f98a3fb87285f0737a76c680",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T10:58:58-07:00",
+      "subject": "style(login): add 'Login with ZERO Pro' title at top of sign-in card",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "3969c21cfa4fc27aa69435e4cd740d4959622db1"
+      ],
+      "files": [
+        "interface/src/views/LoginView/LoginView.module.css",
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 12,
+        "deletions": 0
+      },
+      "committedAtMs": 1776880738000,
+      "cleanSubject": "style(login): add 'Login with ZERO Pro' title at top of sign-in card",
+      "keywords": [
+        "style",
+        "login",
+        "with",
+        "zero",
+        "title",
+        "sign",
+        "card"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "a68d47952dc295d63faf1980d63fff15a4772817",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T10:59:11-07:00",
+      "subject": "style(login): drop bold weight from card title",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "04b54962740d03e0f98a3fb87285f0737a76c680"
+      ],
+      "files": [
+        "interface/src/views/LoginView/LoginView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 1,
+        "deletions": 1
+      },
+      "committedAtMs": 1776880751000,
+      "cleanSubject": "style(login): drop bold weight from card title",
+      "keywords": [
+        "style",
+        "login",
+        "drop",
+        "bold",
+        "weight",
+        "from",
+        "card",
+        "title"
+      ],
+      "fileGroups": [
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "61300ebd079b47076293e929132593574e8e3020",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T11:22:32-07:00",
+      "subject": "fix(desktop): make Windows auto-updater hand off to NSIS reliably",
+      "body": "On Windows, `cargo-packager-updater`'s `Update::install` spawned a hidden\nPowerShell child to launch the NSIS setup and then called\n`std::process::exit(0)` immediately. The PowerShell shim frequently got\ntorn down with the WebView2/wry job object before the installer could\nstart, and our own `trigger_shutdown` hook became dead code, so clicking\n\"Install update\" just closed Aura.\n\nTake direct control of the Windows handoff:\n\n- Thread the updater `data_dir` into `UpdateState` so staging has a\n  stable location.\n- On Windows, download the verified installer bytes ourselves, persist\n  them to `<data_dir>/runtime/updater/aura-setup-<version>.exe`, run\n  `trigger_shutdown` to kill sidecars (local harness, Vite), then spawn\n  the setup with `DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB |\n  CREATE_NEW_PROCESS_GROUP` and `/P /R` before exiting. This survives\n  Aura's exit and releases file locks so NSIS can overwrite the install\n  tree.\n- Remove the unreachable post-install Windows block from\n  `install_and_restart`.\n\nfeat(interface): promote update state to a full-width settings panel\n\nThe Updates row in General settings squished the label + description\nwhen `UpdateControl` expanded into multi-line \"available\" / \"installing\"\nstates. Split `UpdateControl` into an `inline` layout (compact, lives in\nthe row's `rowControl`) and a `panel` layout (full-width attention\ncard). `OrgSettingsGeneral` now renders a sibling full-width row with\nthe panel whenever the status is available / downloading / installing /\nfailed, keeping the row itself stable.\n\nchore(release): generalise desktop auto-update smoke to Windows\n\nAdd a Windows leg to `desktop-local-auto-update-smoke.mjs`: serve a\n`/{channel}/windows/x86_64.json` manifest with `format: \"nsis\"`, read\nthe installed `Aura.exe` ProductVersion via PowerShell, and use\n`taskkill` for cleanup. macOS behaviour is unchanged.\n\nMade-with: Cursor",
+      "parents": [
+        "a68d47952dc295d63faf1980d63fff15a4772817"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater.rs",
+        "infra/scripts/release/desktop-local-auto-update-smoke.mjs",
+        "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx",
+        "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+        "interface/src/components/UpdateControl/UpdateControl.module.css",
+        "interface/src/components/UpdateControl/UpdateControl.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 608,
+        "deletions": 82
+      },
+      "committedAtMs": 1776882152000,
+      "cleanSubject": "make Windows auto-updater hand off to NSIS reliably",
+      "keywords": [
+        "make",
+        "windows",
+        "auto",
+        "updater",
+        "hand",
+        "nsis",
+        "reliably"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "infra/scripts/release",
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Desktop",
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "14a67af6b0999656222e7d8f92d58e037e72622e",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-22T14:40:45-04:00",
+      "subject": "Tighten changelog media candidate inference",
+      "body": "",
+      "parents": [
+        "2f967828ab82093f4d045aee9e844668d094876b"
+      ],
+      "files": [
+        "infra/scripts/release/generate-daily-changelog.mjs",
+        "infra/scripts/release/generate-daily-changelog.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 146,
+        "deletions": 9
+      },
+      "committedAtMs": 1776883245000,
+      "cleanSubject": "Tighten changelog media candidate inference",
+      "keywords": [
+        "tighten",
+        "changelog",
+        "media",
+        "candidate",
+        "inference"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "85cd8905ec7ec8b6faf31fd787710e6dd745e684",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T11:52:35-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "61300ebd079b47076293e929132593574e8e3020",
+        "14a67af6b0999656222e7d8f92d58e037e72622e"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 608,
+        "deletions": 18
+      },
+      "committedAtMs": 1776883955000,
+      "cleanSubject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "keywords": [
+        "merge",
+        "branch",
+        "main",
+        "https",
+        "github",
+        "cypher",
+        "aura"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
     }
   ],
   "batchCount": 6,
@@ -1493,36 +1866,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 5165907
+          "sizeBytes": 11265379
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.335.1",
+      "version": "0.1.0-nightly.337.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 28757854
+          "sizeBytes": 34857978
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 96025080
+          "sizeBytes": 102124024
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1532,29 +1905,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.335.1",
+      "version": "0.1.0-nightly.337.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.335.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.337.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 25148736
+          "sizeBytes": 31241629
         },
         {
-          "name": "Aura_0.1.0-nightly.335.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.337.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 24959864
+          "sizeBytes": 31052389
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1564,29 +1937,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.335.1",
+      "version": "0.1.0-nightly.337.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.335.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.337.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 26839979
+          "sizeBytes": 32946746
         },
         {
-          "name": "Aura_0.1.0-nightly.335.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.337.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 26691537
+          "sizeBytes": 32790117
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1596,17 +1969,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.335.1",
+      "version": "0.1.0-nightly.337.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 17459331
+          "sizeBytes": 23633435
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.335.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.337.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -1615,61 +1988,18 @@
     }
   ],
   "rendered": {
-    "title": "Autonomous dev-loop recovery and a rebuilt Debug app",
-    "intro": "Today's nightly is a heavy one: a multi-phase autonomous recovery pipeline landed in the dev loop — classifying truncation failures, splitting oversized task specs into skeleton-plus-fill children, and surfacing heuristic findings live — alongside a project-first rebuild of the Debug app, a linearized LLM streaming surface, and a safer logout flow. Release tooling also got more forgiving when changelog media capture partially fails.",
+    "title": "Autonomous recovery lands, plus a new login and Windows updater fix",
+    "intro": "A heavy day across the stack: the dev loop gained an end-to-end autonomous recovery pipeline that decomposes oversized tasks before and after failure, the Debug app was rebuilt around a sidekick-driven layout, the live LLM stream was rewritten for correctness, and the Windows auto-updater now actually hands off to NSIS. A redesigned ZERO login screen and several tool-output decoding fixes round it out.",
     "entries": [
       {
         "time_label": "2:06 AM",
         "started_at": "2026-04-21T09:06:32.000Z",
-        "ended_at": "2026-04-22T08:13:53.000Z",
-        "title": "Autonomous recovery pipeline for truncated dev-loop runs",
-        "summary": "A full multi-phase pipeline now classifies truncation failures, decomposes oversized tasks preemptively or after the fact, and streams heuristic findings live during a run.",
+        "ended_at": "2026-04-22T00:26:02.000Z",
+        "title": "Debug app rebuilt around a sidekick inspector",
+        "summary": "The Debug experience moved to a project-first layout with a dedicated sidekick, and several chat, feed, and tool-output issues were fixed alongside it.",
         "items": [
           {
-            "text": "Dev-loop failures classified as truncation now trigger remediation: SplitWriteIntoSkeletonPlusAppends spawns skeleton+fill child tasks, while ReshapeSearchQuery and ForceToolCallNextTurn issue shaped retries, all gated by a MAX_RETRIES_PER_TASK budget and an AURA_AUTO_DECOMPOSE_DISABLED kill switch.",
-            "commit_shas": [
-              "79eab49e9c106ba5d085085f6691f08681d6ee9a",
-              "6b6d6d92510dd3f3159b7b787a48816374cb0347"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Oversized task specs are now caught at ingestion: detect_preflight_decomposition flags full-implementation phrasing and large line-count hints, splits them into skeleton+fill children at creation time, and broadcasts a task_preflight_decomposed event. The skeleton+fill fan-out is shared with the post-failure path.",
-            "commit_shas": [
-              "4f8e0a62ed93b513fe42295e47aace6e66586b99"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A new LiveAnalyzer re-runs heuristics against the in-progress bundle every 50 events, every 30s, or immediately on task_failed, broadcasting deduped Warn/Error findings as heuristic_finding domain events with remediation hints so the UI can surface them mid-flight.",
-            "commit_shas": [
-              "097b5a5cb533f7ad7d93e7f81c3c3ff33d22a870"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Loop-log counters stopped double-counting mid-stream token_usage frames and now expose narration_deltas as a first-class signal, giving heuristics cleaner input for zero-tool-call and narration-bloat rules.",
-            "commit_shas": [
-              "f5921f6233bd72733aa0b2f457cfc75316e48f62"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "A replay-based integration test reproduces the original write_file truncation scenario end-to-end (classify_failure → Truncation → SplitWriteIntoSkeletonPlusAppends → preflight match), and a golden test pins aura-run-analyze's rendered output including the new remediation fix: lines.",
-            "commit_shas": [
-              "6de6a5ee67786a76acb26e74186c8e5ae8fe689a"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Chat input now reflects agent-busy state from any source via a new useAgentBusy hook, routes Stop to /loop/stop when the automation loop holds the turn, and renders a typed 409 agent_busy response as a friendly message instead of the raw harness string.",
-            "commit_shas": [
-              "6dd691e23032fe792f16613c60c22cf6edf95262"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "The Debug app was rebuilt around a project-first left tree and a tabbed sidekick (Run, Events, LLM, Iterations, Blockers, Retries, Stats, Tasks) driven by a debug-sidekick-store; a portal-backed filter menu fixes clipped dropdowns, JSONL rows no longer show 'unknown' types, and a Copy all/Copy filtered/Export toolbar lets operators grab channel JSONL or a full run bundle in one click.",
+            "text": "Debug app now uses the shared LeftMenuTree for project-first navigation and moves the run toolbar, counters, and entry inspector into a new tabbed sidekick (Run, Events, LLM, Iterations, Blockers, Retries, Stats, Tasks); the registry was also corrected to actually mount the sidekick panel and taskbar, and the run-detail header was tightened into a single stable line with aligned inspector actions and new Copy all / Copy filtered / Export buttons.",
             "commit_shas": [
               "8e7e4f093e53573cdb4baa7ec07d34a9aadbb83b",
               "1b769a84ab1d4c12b5e21a97782ede6718e60891",
@@ -1679,48 +2009,103 @@
             "confidence": "high"
           },
           {
-            "text": "Tool output from colored CLIs (cargo, rustc, npm) now decodes correctly in the task panel — ESC bytes are allowed through base64 detection, ANSI escapes are stripped, and decoding recurses into additional output/text/content/log fields.",
+            "text": "Chat input now reflects a unified agent-busy state: a new useAgentBusy hook combines SSE streaming with loop activity so the stop button appears whenever the agent is busy, onStop routes to /loop/stop when the automation loop holds the turn, and the server returns a typed 409 agent_busy instead of echoing the raw harness error.",
+            "commit_shas": [
+              "6dd691e23032fe792f16613c60c22cf6edf95262"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Task output from colored CLIs like cargo, rustc, and npm now renders as legible text: the base64 decoder allows ANSI ESC through, strips escape sequences, and recursively decodes additional output fields instead of bailing and showing raw base64.",
             "commit_shas": [
               "7822fa1ff166396864fa96fb925170f35c37b644"
             ],
             "confidence": "high"
           },
           {
-            "text": "Border tokens across the chat, sidekick, preview overlays, tables, tool rows, message bubbles, and terminal/task panels were unified on a single darker --color-border value, and the leaderboard feed no longer produces a stray horizontal scrollbar.",
+            "text": "Feed leaderboard is centered again and no longer surfaces a stray horizontal scrollbar; nested scroll wrappers were removed so rows render directly in the parent scroll area.",
             "commit_shas": [
-              "150f142b3e2f18e3aa9ede550869a3ead2d4b7c8",
-              "cc9a050859350c73b7d991e8e5eed01ef44b9098",
-              "a6f3a4cbe111b190e7c75817a47ea3ef9be24763",
-              "b2f25e42834d175ca73c5e1f7f993445985bdfb3",
               "13e2cae1b61547b66f0a0e94d560d5414194b919"
             ],
             "confidence": "high"
           },
           {
-            "text": "PushCardBody in the feed now falls back to commitIds.length when metadata.commits is absent, so older posts stop showing a misleading 0-commit count.",
+            "text": "loop_log token counters no longer double-count mid-stream token_usage frames, and a new narration_deltas counter is emitted as a first-class signal for zero-tool-call and narration-bloat heuristics.",
             "commit_shas": [
-              "070248dcd7edc4f496d26b777ff9e9577dc0e883"
+              "f5921f6233bd72733aa0b2f457cfc75316e48f62"
             ],
             "confidence": "high"
           }
         ],
         "media": {
           "requested": true,
-          "status": "failed",
-          "score": 6,
+          "status": "pending",
+          "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
             "entry touches interface source files",
-            "entry language points to a visible product surface"
+            "entry language points to a visible product surface",
+            "entry language includes light config-style vocabulary",
+            "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-autonomous-recovery-pipeline-for-truncated-dev-loop-runs",
-          "slug": "autonomous-recovery-pipeline-for-truncated-dev-loop-runs",
-          "alt": "Autonomous recovery pipeline for truncated dev-loop runs screenshot",
+          "slotId": "entry-debug-app-rebuilt-around-a-sidekick-inspector",
+          "slug": "debug-app-rebuilt-around-a-sidekick-inspector",
+          "alt": "Debug app rebuilt around a sidekick inspector screenshot",
           "files": [
-            ".env.example",
-            "Cargo.lock",
-            "apps/aura-os-server/Cargo.toml",
-            "apps/aura-os-server/src/handlers/dev_loop.rs",
+            "interface/src/apps/debug/DebugApp.ts",
+            "interface/src/apps/debug/DebugNav/DebugNav.module.css",
+            "interface/src/apps/debug/DebugNav/DebugNav.tsx",
+            "interface/src/apps/debug/DebugNav/debug-nav-explorer-node.tsx",
+            "interface/src/apps/debug/DebugRunDetailView/DebugEntryInspector.tsx",
+            "interface/src/apps/debug/DebugRunDetailView/DebugLogList.tsx",
+            "interface/src/apps/debug/DebugRunDetailView/DebugRunCounters.tsx",
+            "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.module.css",
+            "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx",
+            "interface/src/apps/debug/DebugRunDetailView/DebugRunToolbar.tsx",
+            "interface/src/apps/debug/DebugRunListView/DebugRunListView.tsx",
+            "interface/src/apps/debug/components/DebugFilterMenu/DebugFilterMenu.module.css",
+            "interface/src/apps/debug/components/DebugFilterMenu/DebugFilterMenu.tsx",
+            "interface/src/apps/debug/components/DebugFilterMenu/index.ts",
+            "interface/src/apps/debug/components/DebugSidekickContent/ChannelSummary.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/DebugSidekickContent.module.css",
+            "interface/src/apps/debug/components/DebugSidekickContent/DebugSidekickContent.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/EntryInspector.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/FiltersPanel.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/RunInfoTab.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/StatsTab.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
+            "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
+            "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
+          ]
+        }
+      },
+      {
+        "time_label": "5:49 PM",
+        "started_at": "2026-04-22T00:49:12.000Z",
+        "ended_at": "2026-04-22T00:49:12.000Z",
+        "title": "Remediation hints attached to heuristic findings",
+        "summary": "Heuristic findings now carry actionable next steps that downstream tools and dev loops can act on directly.",
+        "items": [
+          {
+            "text": "Findings gained an optional RemediationHint enum (split-write, reshape-search, force-tool-call, retry-smaller-scope, no-auto-fix), each rule populates a hint matching its failure mode, and aura-run-analyze renders the hint as a compact one-liner under each finding.",
+            "commit_shas": [
+              "6b6d6d92510dd3f3159b7b787a48816374cb0347"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": false,
+          "status": "skipped",
+          "score": -3,
+          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
+          "reasons": [
+            "entry language points to runtime or infrastructure plumbing rather than a stable screen"
+          ],
+          "slotId": "entry-remediation-hints-attached-to-heuristic-findings",
+          "slug": "remediation-hints-attached-to-heuristic-findings",
+          "alt": "Remediation hints attached to heuristic findings screenshot",
+          "files": [
             "apps/aura-run-analyze/src/render.rs",
             "crates/aura-run-heuristics/src/finding.rs",
             "crates/aura-run-heuristics/src/lib.rs",
@@ -1730,8 +2115,239 @@
             "crates/aura-run-heuristics/src/rules/task_never_completed.rs",
             "crates/aura-run-heuristics/src/rules/token_hog_llm_call.rs",
             "crates/aura-run-heuristics/src/rules/unbalanced_io.rs",
-            "crates/aura-run-heuristics/src/rules/zero_tool_calls_in_turn.rs",
+            "crates/aura-run-heuristics/src/rules/zero_tool_calls_in_turn.rs"
+          ]
+        }
+      },
+      {
+        "time_label": "6:13 PM",
+        "started_at": "2026-04-22T01:13:13.000Z",
+        "ended_at": "2026-04-22T01:13:13.000Z",
+        "title": "Auto-decompose and reshape on truncation failure",
+        "summary": "The dev loop now reacts to truncation-style failures by spawning shaped child tasks instead of blindly retrying.",
+        "items": [
+          {
+            "text": "On truncation or no-file-ops failures, the dev loop loads the run bundle, runs heuristics, and acts on the first RemediationHint: SplitWriteIntoSkeletonPlusAppends spawns skeleton + fill child tasks, while ReshapeSearchQuery and ForceToolCallNextTurn each spawn a shaped-retry task. The parent moves to failed, a task_auto_remediated event is broadcast, and AURA_AUTO_DECOMPOSE_DISABLED=1 restores the previous retry path.",
+            "commit_shas": [
+              "79eab49e9c106ba5d085085f6691f08681d6ee9a"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": false,
+          "status": "skipped",
+          "score": 1,
+          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
+          "reasons": [
+            "entry language only weakly hints at a visible product surface"
+          ],
+          "slotId": "entry-auto-decompose-and-reshape-on-truncation-failure",
+          "slug": "auto-decompose-and-reshape-on-truncation-failure",
+          "alt": "Auto-decompose and reshape on truncation failure screenshot",
+          "files": [
+            ".env.example",
+            "Cargo.lock",
+            "apps/aura-os-server/Cargo.toml",
+            "apps/aura-os-server/src/handlers/dev_loop.rs"
+          ]
+        }
+      },
+      {
+        "time_label": "6:05 PM",
+        "started_at": "2026-04-22T01:05:42.000Z",
+        "ended_at": "2026-04-22T01:05:42.000Z",
+        "title": "Matching block borders on run and task output",
+        "summary": "Run timeline rows and task output blocks were restyled to match the standard block outline.",
+        "items": [
+          {
+            "text": "Run event timeline rows and the task live/build output blocks now use the standard --color-border token so their outline matches the shared .block primitive.",
+            "commit_shas": [
+              "b2f25e42834d175ca73c5e1f7f993445985bdfb3"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": true,
+          "status": "pending",
+          "score": 6,
+          "reason": "Entry looks like a user-visible product change and should receive changelog media.",
+          "reasons": [
+            "entry touches interface source files",
+            "entry language points to a visible product surface",
+            "entry language includes light config-style vocabulary",
+            "entry language points to release plumbing rather than a product screen",
+            "most changed files point at UI-facing surfaces"
+          ],
+          "slotId": "entry-matching-block-borders-on-run-and-task-output",
+          "slug": "matching-block-borders-on-run-and-task-output",
+          "alt": "Matching block borders on run and task output screenshot",
+          "files": [
+            "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+            "interface/src/components/Preview/Preview.module.css"
+          ]
+        }
+      },
+      {
+        "time_label": "6:40 PM",
+        "started_at": "2026-04-22T01:40:25.000Z",
+        "ended_at": "2026-04-22T01:40:25.000Z",
+        "title": "Sidekick and preview inherit chat's border token",
+        "summary": "The calmer chat border was propagated into the sidekick body and preview overlay for visual consistency.",
+        "items": [
+          {
+            "text": "The chat panel's darker #17171a border override now also applies inside the sidekick body and the preview overlay, so tables, blocks, tools, and output sections there match the LLM chat surface.",
+            "commit_shas": [
+              "cc9a050859350c73b7d991e8e5eed01ef44b9098"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": true,
+          "status": "pending",
+          "score": 8,
+          "reason": "Entry looks like a user-visible product change and should receive changelog media.",
+          "reasons": [
+            "entry touches interface source files",
+            "entry language points to a visible product surface",
+            "entry language includes light config-style vocabulary",
+            "most changed files point at UI-facing surfaces"
+          ],
+          "slotId": "entry-sidekick-and-preview-inherit-chat-s-border-token",
+          "slug": "sidekick-and-preview-inherit-chat-s-border-token",
+          "alt": "Sidekick and preview inherit chat's border token screenshot",
+          "files": [
+            "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
+            "interface/src/components/Sidekick/Sidekick.module.css"
+          ]
+        }
+      },
+      {
+        "time_label": "6:45 PM",
+        "started_at": "2026-04-22T01:45:12.000Z",
+        "ended_at": "2026-04-22T18:40:45.000Z",
+        "title": "Closed-loop autonomous recovery, Windows updater, and new login",
+        "summary": "The largest batch of the day: preflight task decomposition, live heuristics, a reliable Windows auto-updater handoff, a logout fix, a redesigned login screen, and a sweep of tool-rendering and release-media improvements.",
+        "items": [
+          {
+            "text": "Oversized task specs are now split before they ever run: detect_preflight_decomposition flags tasks whose title or description signal a likely-oversized generation, fans them out into shared skeleton + fill children (the same helper Phase 3 uses post-failure), moves the parent to a non-runnable status, and broadcasts task_preflight_decomposed. Honors AURA_AUTO_DECOMPOSE_DISABLED and a new per-task skip_auto_decompose opt-out.",
+            "commit_shas": [
+              "4f8e0a62ed93b513fe42295e47aace6e66586b99"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new LiveAnalyzer re-runs the heuristics engine against the in-progress run bundle every 50 events, every 30s, or immediately on task_failed, deduping findings by stable id and broadcasting Warn/Error results as dev_loop_advisory / heuristic_finding domain events with RemediationHint payloads so the UI can surface them mid-flight; followup cleanup removed an unused run_id field from the analyzer. AURA_LIVE_HEURISTICS_DISABLED opts out.",
+            "commit_shas": [
+              "097b5a5cb533f7ad7d93e7f81c3c3ff33d22a870",
+              "2a78b8e0254fe0796267202bedcbd49a1722cec2"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A replay-based integration test reproduces the original write_file truncation failure and asserts the full decision chain (classify_failure -> Truncation, heuristics -> SplitWriteIntoSkeletonPlusAppends, preflight detector -> Some), and a golden test in aura-run-analyze pins the rendered output including remediation lines against a committed fixture.",
+            "commit_shas": [
+              "6de6a5ee67786a76acb26e74186c8e5ae8fe689a"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Windows auto-update now reliably installs instead of silently exiting: Aura downloads and stages the verified installer itself under <data_dir>/runtime/updater, runs the shutdown hook to release file locks, then spawns the NSIS setup detached with CREATE_BREAKAWAY_FROM_JOB / CREATE_NEW_PROCESS_GROUP and /P /R. The Updates settings row also promotes to a full-width panel when an update is available, downloading, installing, or failed, and the desktop auto-update smoke test now covers Windows alongside macOS.",
+            "commit_shas": [
+              "61300ebd079b47076293e929132593574e8e3020"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Logout no longer strands users on a black-screen redirect loop: App.tsx stops using a stale boot-time isLoggedIn snapshot once the auth store resolves, logout() drops the window reload and always runs local cleanup even if the server call throws, and a new aura-force-logged-out sentinel plus wiping of the IDB localStorage fallback prevents the stale desktop init script from resurrecting a dead session.",
+            "commit_shas": [
+              "2ab59d467af5f4d049556bb581ab795429cff859"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "The live LLM stream was rewritten so arrival order equals render order: text deltas strictly append to the timeline tail instead of folding back across tool and thinking blocks, the stream-safe content pass cleans up dangling * / _ markers and odd emphasis counts, and a new isWriting signal keeps the cooking indicator visible during stalls, thinking, and pending tools but hides it while words are actively revealing. A follow-up removed an unused binding to keep tsc + vite build green.",
+            "commit_shas": [
+              "aabd229e98020db6139ddd871ead0f3284182394",
+              "b0e271302e2475aba05e8d230b6c7e82a12bec08"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Tool result rendering is now correct for several common tools: CommandBlock and FileBlock decode the base64 stdout envelope from run_command and read_file so output renders as legible, syntax-highlighted text instead of a raw JSON blob, and ListBlock pulls rows out of base64 stdout envelopes for list_files, find_files, and search_code (including splitting path:line:match into primary and secondary columns) so results no longer show up as \"0 items\". GenericToolBlock also regained its 10px left inset by switching its containers away from <pre>, and a global --color-border token unification removed drift across chat, sidekick, preview, tool rows, and terminal panels.",
+            "commit_shas": [
+              "45e55bade6d9c69d1831e73fd5f0a5e725b5d620",
+              "59d2aa69546fd668362bce16a55812a9cfb46865",
+              "f62eb9dee65f5f45389ed2450310d5b533999187",
+              "150f142b3e2f18e3aa9ede550869a3ead2d4b7c8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Login was redesigned around a full-screen AURA visual-loop video with a centered translucent sign-in card titled \"Login with ZERO Pro\" (narrower, lighter weight, mobile layout unchanged).",
+            "commit_shas": [
+              "dacd52ed3a37a4c8e0898b4119d4adb4808e1fa3",
+              "3fdb15efee5dd0523a404c9382a15ef22a1110e3",
+              "df72d28eef3d68054bcf0731106a825eda1849b6",
+              "3969c21cfa4fc27aa69435e4cd740d4959622db1",
+              "04b54962740d03e0f98a3fb87285f0737a76c680",
+              "a68d47952dc295d63faf1980d63fff15a4772817"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Billing email is now locked to the ZERO account identity: the field is rendered as read-only with a \"Tied to your ZERO account\" caption, the API no longer accepts billing_email in SetBillingRequest, and a regression that could boot users into a Free plan when edits diverged from their ZERO record is fixed.",
+            "commit_shas": [
+              "68ea3aa2687143dda4412915dabe5fca8e3305e1"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop runtime config now surfaces AURA_DESKTOP_EXTERNAL_HARNESS alongside the other harness toggles so the UI can reflect external-harness mode without reading the process environment, and an abandoned AURA_NODE_AUTH_TOKEN shared-secret bearer path between aura-os and the harness was dropped (user JWT flow untouched).",
+            "commit_shas": [
+              "9993d15a17b1e79fb149b74390cf11bffaeea0d8",
+              "c205261724ce09c64102e885c163d966f11e99f7"
+            ],
+            "confidence": "medium"
+          },
+          {
+            "text": "PushCardBody in the activity feed now falls back to commitIds.length when metadata.commits is missing, so older posts show a real commit count instead of 0.",
+            "commit_shas": [
+              "070248dcd7edc4f496d26b777ff9e9577dc0e883"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Release changelog media pipeline got more resilient: successful screenshots are committed and pushed before failures trigger an automatic retry workflow dispatch, a strict rubric gate still fails the job until every slot passes, candidate inference for the daily changelog generator was tightened, and the capture scripts now parse fenced / trailing-comma / loose-field JSON from agent briefs much more robustly.",
+            "commit_shas": [
+              "2f967828ab82093f4d045aee9e844668d094876b",
+              "14a67af6b0999656222e7d8f92d58e037e72622e",
+              "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": true,
+          "status": "pending",
+          "score": 5,
+          "reason": "Entry looks like a user-visible product change and should receive changelog media.",
+          "reasons": [
+            "entry touches interface source files",
+            "entry touches desktop shell code",
+            "entry language points to a visible product surface",
+            "entry language points to runtime or infrastructure plumbing rather than a stable screen",
+            "entry language points to release plumbing rather than a product screen",
+            "most changed files point at UI-facing surfaces"
+          ],
+          "slotId": "entry-closed-loop-autonomous-recovery-windows-updater-and-new-login",
+          "slug": "closed-loop-autonomous-recovery-windows-updater-and-new-login",
+          "alt": "Closed-loop autonomous recovery, Windows updater, and new login screenshot",
+          "files": [
             "apps/aura-os-server/src/handlers/agents/chat.rs",
+            "apps/aura-os-server/src/handlers/dev_loop.rs",
             "apps/aura-os-server/src/handlers/mod.rs",
             "apps/aura-os-server/src/handlers/task_decompose.rs",
             "apps/aura-os-server/src/handlers/tasks.rs",
@@ -1740,279 +2356,32 @@
             "crates/aura-os-core/tests/round_trips.rs",
             "crates/aura-os-storage/src/conversions.rs",
             "crates/aura-os-tasks/tests/state_machine.rs",
-            "apps/aura-os-server/src/handlers/live_heuristics.rs"
-          ],
-          "updatedAt": "2026-04-22T18:39:46.725Z",
-          "error": "Error: Screenshot capture did not produce a passing summary for entry-autonomous-recovery-pipeline-for-truncated-dev-loop-runs"
-        }
-      },
-      {
-        "time_label": "8:00 AM",
-        "started_at": "2026-04-22T15:00:46.000Z",
-        "ended_at": "2026-04-22T15:00:46.000Z",
-        "title": "Shared-secret harness bearer path retired",
-        "summary": "The in-progress AURA_NODE_AUTH_TOKEN plumbing between aura-os and the harness is formally abandoned in favor of the existing user-JWT flow.",
-        "items": [
-          {
-            "text": "Dropped the uncommitted shared-secret bearer token path (HarnessHttpGateway.auth_token, AURA_NODE_AUTH_TOKEN env reads, desktop warnings, LocalHarness WS Authorization injection). The user JWT flow through HarnessClient, auth_guard, and downstream services is untouched.",
-            "commit_shas": [
-              "c205261724ce09c64102e885c163d966f11e99f7"
-            ],
-            "confidence": "high"
-          }
-        ],
-        "media": {
-          "requested": false,
-          "status": "skipped",
-          "score": 2,
-          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
-          "reasons": [
-            "entry language points to a visible product surface"
-          ],
-          "slotId": "entry-shared-secret-harness-bearer-path-retired",
-          "slug": "shared-secret-harness-bearer-path-retired",
-          "alt": "Shared-secret harness bearer path retired screenshot",
-          "files": []
-        }
-      },
-      {
-        "time_label": "8:48 AM",
-        "started_at": "2026-04-22T15:48:58.000Z",
-        "ended_at": "2026-04-22T16:11:54.000Z",
-        "title": "Linear LLM streaming, decoded tool blocks, and a safer logout",
-        "summary": "A second wave of interface fixes untangles live streaming, makes tool-result blocks readable, and rescues logout from a redirect loop — plus a billing identity correctness fix.",
-        "items": [
-          {
-            "text": "Live LLM streaming is now strictly linear: text deltas append only to the timeline tail instead of folding back into earlier items, a new markdown-safety pass hides dangling * / _ markers under the cursor, and a writing-aware phase label hides the 'Cooking' indicator only while words are actively revealing.",
-            "commit_shas": [
-              "aabd229e98020db6139ddd871ead0f3284182394"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Command, read_file, list_files, find_files, and search_code blocks now decode their base64 stdout envelopes through a shared helper — file contents render syntax-highlighted, command stdout/stderr reads as legible text, and search_code results split into file:line plus match preview columns instead of showing '0 items'.",
-            "commit_shas": [
-              "45e55bade6d9c69d1831e73fd5f0a5e725b5d620",
-              "59d2aa69546fd668362bce16a55812a9cfb46865"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Logout no longer strands users on a black screen: App.tsx's boot-time login flag is now only a first-render hint, logout skips the full page reload that resurrected baked-in desktop auth literals, and a new aura-force-logged-out sentinel survives reloads and 401s to guarantee the app comes up on the login view.",
-            "commit_shas": [
-              "2ab59d467af5f4d049556bb581ab795429cff859"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Org billing email is now read-only and tied to the ZERO account identity — the server discards billing_email from SetBillingRequest, and the Team Settings UI shows a 'Tied to your ZERO account' caption instead of an editable input that could boot users to a Free plan on mismatch.",
-            "commit_shas": [
-              "68ea3aa2687143dda4412915dabe5fca8e3305e1"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "GenericToolBlock (task_done and unregistered tools) restored its 10px inset and visible border by rendering JSON containers as divs so Block.module.css's pre-reset stops stripping the padded JSON viewer.",
-            "commit_shas": [
-              "f62eb9dee65f5f45389ed2450310d5b533999187"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Hardened the changelog media proof-capture scripts with balanced-JSON extraction, fenced-block parsing, and loose field recovery so demo screenshot automation survives messier agent output.",
-            "commit_shas": [
-              "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758"
-            ],
-            "confidence": "medium"
-          }
-        ],
-        "media": {
-          "requested": true,
-          "status": "published",
-          "score": 6,
-          "reason": "Entry looks like a user-visible product change and should receive changelog media.",
-          "reasons": [
-            "entry touches interface source files",
-            "entry language points to a visible product surface"
-          ],
-          "slotId": "entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout",
-          "slug": "linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout",
-          "alt": "Linear LLM streaming, decoded tool blocks, and a safer logout screenshot",
-          "files": [
-            "interface/src/components/ChatMessageList/ChatMessageList.tsx",
-            "interface/src/components/LLMOutput/LLMStreamOutput.test.tsx",
-            "interface/src/components/LLMOutput/LLMStreamOutput.tsx",
-            "interface/src/components/StreamingBubble/StreamingBubble.tsx",
-            "interface/src/components/TaskOutputPanel/ActiveTaskStream.tsx",
-            "interface/src/components/TaskOutputSection/TaskOutputSection.test.tsx",
-            "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
-            "interface/src/hooks/stream/handlers.test.ts",
-            "interface/src/hooks/stream/handlers.ts",
-            "interface/src/hooks/stream/hooks.ts",
-            "interface/src/hooks/stream/store.ts",
-            "interface/src/hooks/use-agent-chat-stream.ts",
-            "interface/src/hooks/use-chat-stream/use-chat-stream.ts",
-            "interface/src/hooks/use-stream-safe-content.test.ts",
-            "interface/src/hooks/use-stream-safe-content.ts",
-            "interface/src/types/stream.ts",
-            "interface/src/utils/streaming.test.ts",
-            "interface/src/utils/streaming.ts",
-            "interface/src/components/Block/renderers/CommandBlock.tsx",
-            "interface/src/components/Block/renderers/FileBlock.tsx",
-            "interface/src/components/ToolRow/ToolRow.test.tsx",
-            "interface/src/utils/format.test.ts",
-            "interface/src/utils/format.ts",
-            "interface/src/components/Block/renderers/ListBlock.tsx"
-          ],
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.335.1/entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-22T18:26:09.232Z",
-          "storyTitle": "Linear LLM Streaming, Decoded Tool Blocks & Safer Logout"
-        }
-      },
-      {
-        "time_label": "9:51 AM",
-        "started_at": "2026-04-22T16:51:46.000Z",
-        "ended_at": "2026-04-22T16:51:46.000Z",
-        "title": "External harness flag surfaced in desktop runtime config",
-        "summary": "The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI can tell whether an external harness is in use without reading process env directly.",
-        "items": [
-          {
-            "text": "Desktop runtime config exposes AURA_DESKTOP_EXTERNAL_HARNESS alongside the other harness toggles, letting the UI reflect external-harness mode without reaching into the process environment.",
-            "commit_shas": [
-              "9993d15a17b1e79fb149b74390cf11bffaeea0d8"
-            ],
-            "confidence": "high"
-          }
-        ],
-        "media": {
-          "requested": true,
-          "status": "failed",
-          "score": 4,
-          "reason": "Entry looks like a user-visible product change and should receive changelog media.",
-          "reasons": [
-            "entry touches desktop shell code",
-            "entry language points to a visible product surface"
-          ],
-          "slotId": "entry-external-harness-flag-surfaced-in-desktop-runtime-config",
-          "slug": "external-harness-flag-surfaced-in-desktop-runtime-config",
-          "alt": "External harness flag surfaced in desktop runtime config screenshot",
-          "files": [
-            "apps/aura-os-desktop/src/handlers.rs"
-          ],
-          "updatedAt": "2026-04-22T18:45:16.162Z",
-          "error": "Error: Command failed: node ./scripts/produce-agent-demo-screenshots.mjs --prompt External harness flag surfaced in desktop runtime config The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI can tell whether an external harness is in use without reading process env directly. Key details: Desktop runtime config exposes AURA_DESKTOP_EXTERNAL_HARNESS alongside the other harness toggles, letting the UI reflect external-harness mode without reaching into the process environment. Open the most relevant product surface for this changelog entry and leave the clearest proof visible for a polished desktop screenshot. Avoid placeholder routes, empty states, settings-only screens, and generic landing views. --channel nightly --base-url https://aura-app-72ms.onrender.com/ --provider browserbase --output-dir /home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-external-harness-flag-surfaced-in-desktop-runtime-config-1776883186726-browserbase --changed-files-file /tmp/aura-changelog-media-D4wnl4/changed-files.json\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\npage.waitForTimeout: Target page, context or browser has been closed\n    at waitForUiToSettle (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:872:14)\n    at assessPhaseState (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:1973:13)\n    at captureAttempt (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:2131:28)\n    at async runAgentPhase (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:2210:19)\n    at async file:///home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:2465:9\n\nNode.js v25.9.0\n"
-        }
-      },
-      {
-        "time_label": "9:51 AM",
-        "started_at": "2026-04-22T16:51:51.000Z",
-        "ended_at": "2026-04-22T17:11:07.000Z",
-        "title": "Post-landing cleanup to unblock the build",
-        "summary": "Small follow-ups after the big dev-loop and streaming landings: dead fields trimmed, formatting applied, and unused TS declarations removed so tsc and vite build cleanly.",
-        "items": [
-          {
-            "text": "LiveAnalyzer shed its unused run_id field (callers pass run_id directly into the emitted payload), and cargo fmt was applied across the server handlers, aura-run-analyze, and aura-run-heuristics rules.",
-            "commit_shas": [
-              "2a78b8e0254fe0796267202bedcbd49a1722cec2",
-              "d8d4ab9e7f5b81cacf77c5f9a2be56f8588858e6"
-            ],
-            "confidence": "medium"
-          },
-          {
-            "text": "Dropped an unused useIsWriting binding, MARKER_RUN_RE constant, and clearStoredAuth import so tsc -b && vite build passes cleanly after the streaming and auth refactors.",
-            "commit_shas": [
-              "b0e271302e2475aba05e8d230b6c7e82a12bec08"
-            ],
-            "confidence": "high"
-          }
-        ],
-        "media": {
-          "requested": true,
-          "status": "published",
-          "score": 4,
-          "reason": "Entry looks like a user-visible product change and should receive changelog media.",
-          "reasons": [
-            "entry touches interface source files",
-            "entry language points to a visible product surface",
-            "entry language points to release plumbing rather than a product screen"
-          ],
-          "slotId": "entry-post-landing-cleanup-to-unblock-the-build",
-          "slug": "post-landing-cleanup-to-unblock-the-build",
-          "alt": "Post-landing cleanup to unblock the build screenshot",
-          "files": [
-            "apps/aura-os-server/src/handlers/dev_loop.rs",
+            ".env.example",
             "apps/aura-os-server/src/handlers/live_heuristics.rs",
-            "apps/aura-os-server/src/error.rs",
-            "apps/aura-os-server/src/handlers/debug_runs.rs",
-            "apps/aura-os-server/src/handlers/task_decompose.rs",
-            "apps/aura-os-server/src/router.rs",
-            "apps/aura-os-server/tests/agent_update_ceo_test.rs",
-            "apps/aura-run-analyze/src/locate.rs",
-            "apps/aura-run-analyze/src/render.rs",
-            "apps/aura-run-analyze/tests/cli.rs",
+            "apps/aura-os-server/src/lib.rs",
+            "apps/aura-os-server/tests/autonomous_recovery_replay.rs",
+            "apps/aura-run-analyze/tests/fixtures/truncated-run/events.jsonl",
+            "apps/aura-run-analyze/tests/fixtures/truncated-run/expected-output.txt",
+            "apps/aura-run-analyze/tests/fixtures/truncated-run/iterations.jsonl",
+            "apps/aura-run-analyze/tests/fixtures/truncated-run/metadata.json",
             "apps/aura-run-analyze/tests/golden.rs",
-            "crates/aura-os-agents/src/lib.rs",
-            "crates/aura-run-heuristics/src/bundle.rs",
-            "crates/aura-run-heuristics/src/rules/high_retry_density.rs",
-            "crates/aura-run-heuristics/src/rules/repeated_blocker_path.rs",
-            "crates/aura-run-heuristics/src/rules/slow_iteration.rs",
-            "crates/aura-run-heuristics/src/rules/task_never_completed.rs",
-            "crates/aura-run-heuristics/src/rules/token_hog_llm_call.rs",
-            "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
-            "interface/src/hooks/use-stream-safe-content.ts",
-            "interface/src/stores/auth-store.ts"
-          ],
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.335.1/entry-post-landing-cleanup-to-unblock-the-build.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-22T18:32:53.127Z",
-          "storyTitle": "Post-landing cleanup: dead fields trimmed, unused TS declarations removed, build un…"
-        }
-      },
-      {
-        "time_label": "10:58 AM",
-        "started_at": "2026-04-22T17:58:19.000Z",
-        "ended_at": "2026-04-22T17:58:19.000Z",
-        "title": "Changelog media workflow keeps successful shots when others fail",
-        "summary": "The release changelog media pipeline now commits successful slot captures before retrying failures, and a dedicated retry workflow picks up the leftovers.",
-        "items": [
-          {
-            "text": "publish-release-changelog-media and reconcile-release-changelog now tolerate capture failures, read a summary file to separate published from failed slots, commit what succeeded, and dispatch a new retry-release-changelog-media workflow for the remainder before enforcing the strict rubric.",
-            "commit_shas": [
-              "2f967828ab82093f4d045aee9e844668d094876b"
-            ],
-            "confidence": "high"
-          }
-        ],
-        "media": {
-          "requested": false,
-          "status": "skipped",
-          "score": -2,
-          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
-          "reasons": [
-            "entry language points to release plumbing rather than a product screen"
-          ],
-          "slotId": "entry-changelog-media-workflow-keeps-successful-shots-when-others-fail",
-          "slug": "changelog-media-workflow-keeps-successful-shots-when-others-fail",
-          "alt": "Changelog media workflow keeps successful shots when others fail screenshot",
-          "files": [
-            ".github/workflows/publish-release-changelog-media.yml",
-            ".github/workflows/reconcile-release-changelog.yml",
-            ".github/workflows/retry-release-changelog-media.yml",
-            "docs/demo-screenshot-pipeline.md",
-            "infra/scripts/release/publish-changelog-media.mjs",
-            "infra/scripts/release/publish-changelog-media.test.mjs"
+            "apps/aura-os-desktop/src/updater.rs",
+            "infra/scripts/release/desktop-local-auto-update-smoke.mjs",
+            "interface/src/components/OrgSettingsGeneral/OrgSettingsGeneral.tsx",
+            "interface/src/components/OrgSettingsPanel/OrgSettingsPanel.module.css",
+            "interface/src/components/UpdateControl/UpdateControl.module.css"
           ]
         }
       }
     ],
     "highlights": [
-      "Autonomous truncation recovery ships end-to-end",
-      "Debug app rebuilt around projects and a sidekick inspector",
-      "Chat streaming is now strictly linear with markdown-safe rendering",
-      "Logout no longer dead-ends on a black-screen redirect loop",
-      "Release workflow publishes successful media even when some slots fail"
+      "Debug app rebuilt around project-first nav and a sidekick inspector",
+      "Autonomous dev-loop recovery: preflight + post-failure task decomposition",
+      "Live heuristics now surface advisories mid-run",
+      "Windows auto-updater reliably hands off to NSIS",
+      "Logout no longer strands users on a black screen",
+      "New ZERO Pro login with full-screen video backdrop"
     ],
-    "raw_commit_count": 31
+    "raw_commit_count": 39
   }
 }

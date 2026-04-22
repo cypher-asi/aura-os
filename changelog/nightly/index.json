@@ -2,20 +2,21 @@
   {
     "date": "2026-04-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.335.1",
-    "title": "Autonomous dev-loop recovery and a rebuilt Debug app",
-    "intro": "Today's nightly is a heavy one: a multi-phase autonomous recovery pipeline landed in the dev loop — classifying truncation failures, splitting oversized task specs into skeleton-plus-fill children, and surfacing heuristic findings live — alongside a project-first rebuild of the Debug app, a linearized LLM streaming surface, and a safer logout flow. Release tooling also got more forgiving when changelog media capture partially fails.",
+    "version": "0.1.0-nightly.337.1",
+    "title": "Autonomous recovery lands, plus a new login and Windows updater fix",
+    "intro": "A heavy day across the stack: the dev loop gained an end-to-end autonomous recovery pipeline that decomposes oversized tasks before and after failure, the Debug app was rebuilt around a sidekick-driven layout, the live LLM stream was rewritten for correctness, and the Windows auto-updater now actually hands off to NSIS. A redesigned ZERO login screen and several tool-output decoding fixes round it out.",
     "entryCount": 6,
     "highlights": [
-      "Autonomous truncation recovery ships end-to-end",
-      "Debug app rebuilt around projects and a sidekick inspector",
-      "Chat streaming is now strictly linear with markdown-safe rendering",
-      "Logout no longer dead-ends on a black-screen redirect loop",
-      "Release workflow publishes successful media even when some slots fail"
+      "Debug app rebuilt around project-first nav and a sidekick inspector",
+      "Autonomous dev-loop recovery: preflight + post-failure task decomposition",
+      "Live heuristics now surface advisories mid-run",
+      "Windows auto-updater reliably hands off to NSIS",
+      "Logout no longer strands users on a black screen",
+      "New ZERO Pro login with full-screen video backdrop"
     ],
-    "rawCommitCount": 32,
-    "generatedAt": "2026-04-22T18:13:30.229Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.335.1",
+    "rawCommitCount": 41,
+    "generatedAt": "2026-04-22T19:06:42.532Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.337.1",
     "path": "history/2026-04-22.json"
   },
   {
