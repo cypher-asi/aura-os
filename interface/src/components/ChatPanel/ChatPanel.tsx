@@ -6,6 +6,7 @@ import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import { MessageQueue } from "../MessageQueue";
 import { OverlayScrollbar } from "../OverlayScrollbar";
+import { ChatStreamingIndicator } from "./ChatStreamingIndicator";
 import { useChatPanelState } from "./useChatPanelState";
 import type { ChatAttachment } from "../../api/streams";
 import type { Project } from "../../types";
@@ -383,6 +384,8 @@ export function ChatPanel({
             />
           </div>
         )}
+
+        <ChatStreamingIndicator streamKey={streamKey} />
 
         <ChatInputBar
           ref={inputBarRef}

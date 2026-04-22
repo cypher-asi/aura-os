@@ -68,4 +68,15 @@ describe("LLMStreamOutput", () => {
     render(<LLMStreamOutput isStreaming={false} text="Done" />);
     expect(screen.queryByText("Cooking")).not.toBeInTheDocument();
   });
+
+  it("suppresses inline phase indicator when showPhaseIndicator is false", () => {
+    render(
+      <LLMStreamOutput
+        isStreaming={true}
+        text="Streaming..."
+        showPhaseIndicator={false}
+      />,
+    );
+    expect(screen.queryByText("Cooking")).not.toBeInTheDocument();
+  });
 });

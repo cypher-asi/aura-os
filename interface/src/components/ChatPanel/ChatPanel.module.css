@@ -230,6 +230,25 @@
   pointer-events: auto;
 }
 
+/* Streaming phase indicator ("Cooking...", "Thinking...", ...).
+   Pinned in the empty zone between the bottom of the chat content and
+   the input bar so that phase transitions never reflow the chat. */
+.pinnedStreamingIndicator {
+  position: absolute;
+  bottom: 88px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  padding: 0 calc(var(--space-3) * 2);
+  pointer-events: none;
+}
+
+.pinnedStreamingIndicator > * {
+  padding: 0;
+}
+
 .newMessagesPill {
   position: absolute;
   bottom: 80px;

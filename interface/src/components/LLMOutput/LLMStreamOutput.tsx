@@ -14,6 +14,13 @@ export interface LLMStreamOutputProps {
   progressText?: string;
   artifactRefs?: ArtifactRef[];
   isWriting?: boolean;
+  /**
+   * When true (default) the inline phase indicator ("Cooking...", "Thinking...",
+   * etc.) renders right below the streamed content. Chat contexts that pin the
+   * indicator elsewhere pass `false` so it does not also appear inline and jitter
+   * the scroll flow.
+   */
+  showPhaseIndicator?: boolean;
 }
 
 function StreamingIndicator({
@@ -52,6 +59,7 @@ export function LLMStreamOutput({
   progressText,
   artifactRefs,
   isWriting,
+  showPhaseIndicator = true,
 }: LLMStreamOutputProps) {
   const timelineForRender = useMemo<TimelineItem[]>(() => {
     if (timeline && timeline.length > 0) return timeline;
@@ -78,14 +86,16 @@ export function LLMStreamOutput({
         artifactRefs={artifactRefs}
         isStreaming={isStreaming}
       />
-      <StreamingIndicator
-        isStreaming={isStreaming}
-        text={text}
-        thinkingText={thinkingText}
-        toolCalls={toolCalls}
-        progressText={progressText}
-        isWriting={isWriting}
-      />
+      {showPhaseIndicator && (
+        <StreamingIndicator
+          isStreaming={isStreaming}
+          text={text}
+          thinkingText={thinkingText}
+          toolCalls={toolCalls}
+          progressText={progressText}
+          isWriting={isWriting}
+        />
+      )}
     </>
   );
 }

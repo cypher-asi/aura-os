@@ -194,6 +194,7 @@ export function ChatMessageList({
             timeline={timeline}
             progressText={progressText}
             isWriting={isWriting}
+            showPhaseIndicator={false}
           />
         </div>
       )}
