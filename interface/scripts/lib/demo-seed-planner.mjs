@@ -947,6 +947,70 @@ export async function buildDemoSeedPlan({
   };
 }
 
+function normalizeProofRequirements(entries, limit = 8) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+      const anyOf = normalizeArray(entry.anyOf ?? entry.signals ?? [], 4);
+      if (anyOf.length === 0) {
+        return null;
+      }
+      return {
+        label: clipText(String(entry.label || anyOf[0] || "").trim(), 80),
+        anyOf,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function extractSeedEntityLabel(entity) {
+  if (!entity || typeof entity !== "object") {
+    return "";
+  }
+
+  return clipText(
+    String(
+      entity.title
+      || entity.name
+      || entity.label
+      || entity.tab
+      || entity.section
+      || entity.relPath?.split("/")?.pop()?.replace(/\.md$/i, "")
+      || ""
+    ).trim(),
+    60,
+  );
+}
+
+function deriveSeedPlanValidationSignals(seedPlan) {
+  return normalizeArray([
+    ...(Array.isArray(seedPlan?.instructionPatch?.validationSignals) ? seedPlan.instructionPatch.validationSignals : []),
+    ...(Array.isArray(seedPlan?.seededEntities) ? seedPlan.seededEntities.map(extractSeedEntityLabel) : []),
+  ], 10);
+}
+
+function deriveSeedPlanProofRequirements(seedPlan) {
+  const explicit = normalizeProofRequirements(seedPlan?.instructionPatch?.proofRequirements, 8);
+  const derived = (Array.isArray(seedPlan?.seededEntities) ? seedPlan.seededEntities : [])
+    .map((entity) => {
+      const label = extractSeedEntityLabel(entity);
+      if (!label) {
+        return null;
+      }
+      const typeLabel = String(entity.type || "item").replace(/[-_]+/g, " ");
+      return {
+        label: `seeded ${typeLabel}`,
+        anyOf: [label],
+      };
+    })
+    .filter(Boolean);
+
+  return normalizeProofRequirements([...explicit, ...derived], 8);
+}
+
 export function applyDemoSeedPlanToBrief(brief, seedPlan) {
   if (!seedPlan || !brief) {
     return brief;
@@ -965,8 +1029,20 @@ export function applyDemoSeedPlanToBrief(brief, seedPlan) {
       ...(Array.isArray(seedPlan.instructionPatch?.setupPlan) ? seedPlan.instructionPatch.setupPlan : []),
     ], 8),
     validationSignals: normalizeArray([
-      ...(Array.isArray(seedPlan.instructionPatch?.validationSignals) ? seedPlan.instructionPatch.validationSignals : []),
+      ...deriveSeedPlanValidationSignals(seedPlan),
       ...(Array.isArray(brief.validationSignals) ? brief.validationSignals : []),
+    ], 10),
+    proofRequirements: normalizeProofRequirements([
+      ...(Array.isArray(brief.proofRequirements) ? brief.proofRequirements : []),
+      ...deriveSeedPlanProofRequirements(seedPlan),
+    ], 8),
+    requiredUiSignals: normalizeArray([
+      ...(Array.isArray(brief.requiredUiSignals) ? brief.requiredUiSignals : []),
+      ...(Array.isArray(seedPlan.instructionPatch?.requiredUiSignals) ? seedPlan.instructionPatch.requiredUiSignals : []),
+    ], 6),
+    forbiddenPhrases: normalizeArray([
+      ...(Array.isArray(brief.forbiddenPhrases) ? brief.forbiddenPhrases : []),
+      ...(Array.isArray(seedPlan.instructionPatch?.forbiddenPhrases) ? seedPlan.instructionPatch.forbiddenPhrases : []),
     ], 8),
     systemPrompt: [
       brief.systemPrompt,

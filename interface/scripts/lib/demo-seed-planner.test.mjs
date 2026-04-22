@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildDemoSeedPlan } from "./demo-seed-planner.mjs";
+import { applyDemoSeedPlanToBrief, buildDemoSeedPlan } from "./demo-seed-planner.mjs";
 import { applyDemoSeedPatch, getDemoScreenshotProfile } from "./demo-screenshot-seeds.mjs";
 
 test("notes story becomes a preseeded note plan", async () => {
@@ -54,6 +54,38 @@ test("feed story becomes a preseeded feed plan from the desktop shell", async ()
   assert.equal(plan.startPath, "/desktop");
   assert.equal(plan.seededEntities[0]?.type, "feed-event");
   assert.equal(plan.seed.feedEvents.length, 1);
+});
+
+test("applyDemoSeedPlanToBrief promotes seeded entities into validation signals and proof requirements", () => {
+  const brief = {
+    title: "Show feed",
+    story: "Show the seeded feed update.",
+    targetAppId: "feed",
+    startPath: "/feed",
+    successChecklist: ["Feed is visible"],
+    setupPlan: [],
+    validationSignals: ["Feed"],
+    proofRequirements: [],
+    requiredUiSignals: [],
+    forbiddenPhrases: [],
+    systemPrompt: "Base prompt",
+    openAppInstruction: "Open Feed",
+    proofInstruction: "Show the feed card",
+    interactionInstruction: "Keep the card visible",
+  };
+  const seedPlan = {
+    startPath: "/desktop",
+    seededEntities: [{ type: "feed-event", eventId: "feed-0-commits", title: "0 commits", source: "generated" }],
+    instructionPatch: {
+      validationSignals: ["0 commits"],
+    },
+  };
+
+  const patched = applyDemoSeedPlanToBrief(brief, seedPlan);
+
+  assert.equal(patched.startPath, "/desktop");
+  assert.ok(patched.validationSignals.includes("0 commits"));
+  assert.ok(patched.proofRequirements.some((entry) => entry.anyOf.includes("0 commits")));
 });
 
 test("feedback story stays runtime-ready without extra preseed patching", async () => {

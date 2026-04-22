@@ -54,6 +54,10 @@ export function assessDemoScreenshotQuality({
   const meaningfulText = hasMeaningfulVisibleText(visibleText);
   const clipAspectRatio = aspectRatioFromClip(screenshot?.clip);
   const clipCoverage = coverageFromClip(viewport, screenshot?.clip);
+  const strictUnionCrop = screenshot?.kind === "surface-union" && Array.isArray(screenshot?.targets) && screenshot.targets.length >= 3;
+  const maxRecommendedCoverage = screenshot?.kind === "surface-union" && Array.isArray(screenshot?.targets) && screenshot.targets.length >= 3
+    ? 0.82
+    : 0.95;
   const matchedSignals = Array.isArray(validationMatches) ? validationMatches.length : 0;
   const matchedProofRequirements = Array.isArray(proofRequirementMatches) ? proofRequirementMatches.length : 0;
   const missingRequiredUiSignals = (Array.isArray(requiredUiSignals) ? requiredUiSignals : [])
@@ -210,10 +214,10 @@ export function assessDemoScreenshotQuality({
     checks.push(
       buildCheck(
         "composed-crop",
-        clipAspectRatio >= 1.25 && clipAspectRatio <= 2.15 && clipCoverage >= 0.18 && clipCoverage <= 0.95,
-        `crop aspect ${clipAspectRatio.toFixed(2)}, coverage ${(clipCoverage * 100).toFixed(1)}%`,
+        clipAspectRatio >= 1.25 && clipAspectRatio <= 2.15 && clipCoverage >= 0.18 && clipCoverage <= maxRecommendedCoverage,
+        `crop aspect ${clipAspectRatio.toFixed(2)}, coverage ${(clipCoverage * 100).toFixed(1)}% (max ${(maxRecommendedCoverage * 100).toFixed(0)}% for this shot)`,
         10,
-        false,
+        strictUnionCrop,
       ),
     );
   }

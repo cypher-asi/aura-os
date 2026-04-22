@@ -83,20 +83,229 @@ function sanitizeVisibleProofPhrases(values, limit = 10) {
   );
 }
 
-function parseJsonCandidate(text) {
-  const trimmed = String(text || "").trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]+?)```/i);
-  const raw = fenced ? fenced[1].trim() : trimmed;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const objectStart = raw.indexOf("{");
-    const objectEnd = raw.lastIndexOf("}");
-    if (objectStart >= 0 && objectEnd > objectStart) {
-      return JSON.parse(raw.slice(objectStart, objectEnd + 1));
-    }
-    throw new Error("Could not parse demo agent brief JSON payload");
+function normalizeJsonCandidateText(value) {
+  return String(value || "")
+    .replace(/^\uFEFF/, "")
+    .replace(/[“”]/g, "\"")
+    .replace(/[‘’]/g, "'")
+    .trim();
+}
+
+function removeTrailingJsonCommas(value) {
+  return String(value || "").replace(/,\s*([}\]])/g, "$1");
+}
+
+function extractBalancedBlock(value, openChar, closeChar) {
+  const text = String(value || "");
+  const start = text.indexOf(openChar);
+  if (start < 0) {
+    return null;
   }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === openChar) {
+      depth += 1;
+    } else if (char === closeChar) {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function buildJsonParseCandidates(text) {
+  const raw = normalizeJsonCandidateText(text);
+  const candidates = [];
+  const seen = new Set();
+  const addCandidate = (value) => {
+    const normalized = normalizeJsonCandidateText(value);
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+    seen.add(normalized);
+    candidates.push(normalized);
+  };
+
+  addCandidate(raw);
+
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]+?)```/i);
+  addCandidate(fenced?.[1]);
+
+  const directObject = extractBalancedBlock(raw, "{", "}");
+  addCandidate(directObject);
+
+  const fencedObject = extractBalancedBlock(fenced?.[1] || "", "{", "}");
+  addCandidate(fencedObject);
+
+  const withLooseCommas = [...candidates];
+  for (const candidate of withLooseCommas) {
+    addCandidate(removeTrailingJsonCommas(candidate));
+  }
+
+  return candidates;
+}
+
+function extractLooseStringField(text, key) {
+  const match = String(text || "").match(
+    new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"(?=\\s*,\\s*"|\\s*[,}\\]]|\\s*$)`, "i"),
+  );
+  if (!match?.[1]) {
+    return null;
+  }
+  return match[1]
+    .replace(/\\"/g, "\"")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .trim();
+}
+
+function extractLooseNullableStringField(text, key) {
+  const normalized = String(text || "");
+  const nullMatch = normalized.match(new RegExp(`"${key}"\\s*:\\s*null`, "i"));
+  if (nullMatch) {
+    return null;
+  }
+  return extractLooseStringField(normalized, key);
+}
+
+function extractLooseBooleanField(text, key) {
+  const match = String(text || "").match(new RegExp(`"${key}"\\s*:\\s*(true|false)`, "i"));
+  if (!match?.[1]) {
+    return null;
+  }
+  return match[1].toLowerCase() === "true";
+}
+
+function extractLooseArrayBlock(text, key) {
+  const normalized = String(text || "");
+  const keyPattern = new RegExp(`"${key}"\\s*:`, "i");
+  const keyMatch = keyPattern.exec(normalized);
+  if (!keyMatch) {
+    return null;
+  }
+
+  const remainder = normalized.slice(keyMatch.index + keyMatch[0].length);
+  const arrayBlock = extractBalancedBlock(remainder, "[", "]");
+  return arrayBlock;
+}
+
+function extractLooseStringArray(text, key, limit = 10) {
+  const block = extractLooseArrayBlock(text, key);
+  if (!block) {
+    return [];
+  }
+
+  return normalizeArray(
+    [...block.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map((entry) =>
+      entry[1]
+        .replace(/\\"/g, "\"")
+        .replace(/\\n/g, "\n")
+        .replace(/\\t/g, "\t")
+        .trim()
+    ),
+    limit,
+  );
+}
+
+function extractLooseProofRequirements(text, limit = 6) {
+  const block = extractLooseArrayBlock(text, "proofRequirements");
+  if (!block) {
+    return [];
+  }
+
+  return [...block.matchAll(/\{[\s\S]*?\}/g)]
+    .map((entry) => {
+      const chunk = entry[0];
+      const label = extractLooseStringField(chunk, "label");
+      const anyOf = extractLooseStringArray(chunk, "anyOf", 4);
+      if (!label && anyOf.length === 0) {
+        return null;
+      }
+      return {
+        ...(label ? { label } : {}),
+        anyOf,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function salvageBriefCandidate(text) {
+  const candidate = {
+    title: extractLooseStringField(text, "title"),
+    story: extractLooseStringField(text, "story"),
+    targetAppId: extractLooseNullableStringField(text, "targetAppId"),
+    confidence: extractLooseStringField(text, "confidence"),
+    rationale: extractLooseStringField(text, "rationale"),
+    successChecklist: extractLooseStringArray(text, "successChecklist", 6),
+    setupPlan: extractLooseStringArray(text, "setupPlan", 6),
+    systemPrompt: extractLooseStringField(text, "systemPrompt"),
+    setupInstruction: extractLooseStringField(text, "setupInstruction"),
+    openAppInstruction: extractLooseStringField(text, "openAppInstruction"),
+    proofInstruction: extractLooseStringField(text, "proofInstruction"),
+    validationSignals: extractLooseStringArray(text, "validationSignals", 8),
+    proofRequirements: extractLooseProofRequirements(text, 6),
+    requiredUiSignals: extractLooseStringArray(text, "requiredUiSignals", 4),
+    forbiddenPhrases: extractLooseStringArray(text, "forbiddenPhrases", 6),
+    validationInstruction: extractLooseStringField(text, "validationInstruction"),
+    interactionInstruction: extractLooseStringField(text, "interactionInstruction"),
+    desktopOnly: extractLooseBooleanField(text, "desktopOnly"),
+    __salvaged: true,
+  };
+
+  const populatedKeys = Object.entries(candidate)
+    .filter(([key, value]) => key !== "__salvaged" && (
+      Array.isArray(value) ? value.length > 0 : value !== null && value !== undefined && value !== ""
+    ));
+
+  return populatedKeys.length > 0 ? candidate : null;
+}
+
+function parseJsonCandidate(text) {
+  for (const candidate of buildJsonParseCandidates(text)) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // Keep trying looser candidates before falling back to field salvage.
+    }
+  }
+
+  const salvaged = salvageBriefCandidate(text);
+  if (salvaged) {
+    return salvaged;
+  }
+
+  throw new Error("Could not parse demo agent brief JSON payload");
 }
 
 function buildStoryText({ prompt, changelogDoc, changedFiles }) {
@@ -821,7 +1030,7 @@ function validateBrief(candidate, fallback, apps) {
       700,
     ),
     interactionInstruction: clipText(candidate.interactionInstruction || phases.interactionInstruction, 600),
-    generator: "anthropic",
+    generator: candidate.__salvaged ? "anthropic-salvaged" : "anthropic",
     scoredApps: fallback.scoredApps,
     changedFileEvidence: fallback.changedFileEvidence,
   };

@@ -140,3 +140,29 @@ test("assessDemoScreenshotQuality fails when a required UI state or forbidden pl
   assert.ok(report.hardFailures.some((check) => check.name === "required-ui-state"));
   assert.ok(report.hardFailures.some((check) => check.name === "forbidden-proof-phrase"));
 });
+
+test("assessDemoScreenshotQuality rejects an overly loose multi-panel crop", () => {
+  const report = assessDemoScreenshotQuality({
+    phaseId: "validate-proof",
+    viewport: { width: 1600, height: 1000 },
+    screenshot: {
+      kind: "surface-union",
+      targets: ["main-panel", "sidekick-header", "sidekick-panel"],
+      clip: { x: 0, y: 50, width: 1600, height: 900 },
+    },
+    visibleText: "Launch Team 0 commits Legacy push cards show a correct commit count Product This seeded update is ready to be shown in changelog capture mode.",
+    validationMatches: ["0 commits"],
+    minSignalMatches: 1,
+    routeMatched: true,
+    activeAppMatched: true,
+    uiSignals: {
+      placeholderVisible: false,
+      emptyStateVisible: false,
+      mobileLayoutVisible: false,
+      errorTextVisible: false,
+    },
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.checks.some((check) => check.name === "composed-crop" && check.ok === false));
+});

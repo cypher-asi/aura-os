@@ -216,3 +216,49 @@ test("buildDemoAgentBrief keeps changed-file inference working from the interfac
     }
   }
 });
+
+test("buildDemoAgentBrief salvages partially malformed Anthropic output instead of dropping to generic fallback", async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      content: [{
+        type: "text",
+        text: [
+          "Here is the best candidate I could infer:",
+          "\"title\": \"Feed proof\",",
+          "\"story\": \"Show the seeded feed event titled 0 commits and keep it visible.\",",
+          "\"targetAppId\": \"feed\",",
+          "\"confidence\": \"high\",",
+          "\"validationSignals\": [\"0 commits\", \"Feed\"],",
+          "\"desktopOnly\": true",
+        ].join("\n"),
+      }],
+    }),
+  });
+
+  try {
+    const brief = await buildDemoAgentBrief({
+      prompt: "Legacy push cards show a correct commit count.",
+      changedFiles: [
+        "interface/src/components/ActivityCard/ActivityCard.tsx",
+        "interface/src/stores/feed-store.test.ts",
+      ],
+    });
+
+    assert.equal(brief.targetAppId, "feed");
+    assert.equal(brief.generator, "anthropic-salvaged");
+    assert.ok(brief.validationSignals.includes("0 commits"));
+    assert.equal(brief.desktopOnly, true);
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey) {
+      process.env.ANTHROPIC_API_KEY = previousKey;
+    } else {
+      delete process.env.ANTHROPIC_API_KEY;
+    }
+  }
+});

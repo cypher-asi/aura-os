@@ -291,26 +291,45 @@ function expandPadding(padding) {
   };
 }
 
-async function unionClip(page, locators, padding = 24) {
-  const boxes = [];
-  for (const locator of locators) {
-    const box = await locator.boundingBox().catch(() => null);
-    if (isVisibleBox(box)) {
-      boxes.push(box);
-    }
-  }
+function boxArea(box) {
+  return Math.max(0, Number(box?.width || 0)) * Math.max(0, Number(box?.height || 0));
+}
 
-  if (boxes.length === 0) {
+function unionBounds(boxes) {
+  if (!Array.isArray(boxes) || boxes.length === 0) {
     return null;
   }
 
-  const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
-  const bounds = {
-    x: Math.min(...boxes.map((box) => box.x)),
-    y: Math.min(...boxes.map((box) => box.y)),
-    width: Math.max(...boxes.map((box) => box.x + box.width)) - Math.min(...boxes.map((box) => box.x)),
-    height: Math.max(...boxes.map((box) => box.y + box.height)) - Math.min(...boxes.map((box) => box.y)),
+  const minX = Math.min(...boxes.map((box) => box.x));
+  const minY = Math.min(...boxes.map((box) => box.y));
+  const maxX = Math.max(...boxes.map((box) => box.x + box.width));
+  const maxY = Math.max(...boxes.map((box) => box.y + box.height));
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
   };
+}
+
+function clipCoverageForViewport(viewport, clip) {
+  if (!viewport?.width || !viewport?.height || !clip?.width || !clip?.height) {
+    return null;
+  }
+
+  const viewportArea = viewport.width * viewport.height;
+  if (viewportArea <= 0) {
+    return null;
+  }
+
+  return (clip.width * clip.height) / viewportArea;
+}
+
+function buildClipFromBounds(bounds, viewport, padding = 24, options = {}) {
+  if (!bounds) {
+    return null;
+  }
+
   const inset = expandPadding(padding);
   const padded = {
     x: Math.max(0, bounds.x - inset.left),
@@ -319,8 +338,10 @@ async function unionClip(page, locators, padding = 24) {
     height: Math.min(viewport.height, bounds.y + bounds.height + inset.bottom) - Math.max(0, bounds.y - inset.top),
   };
 
-  const minWidth = Math.min(viewport.width, Math.max(720, padded.width));
-  const minHeight = Math.min(viewport.height, Math.max(420, padded.height));
+  const minWidthFloor = Number(options.minWidth || 720);
+  const minHeightFloor = Number(options.minHeight || 420);
+  const minWidth = Math.min(viewport.width, Math.max(minWidthFloor, padded.width));
+  const minHeight = Math.min(viewport.height, Math.max(minHeightFloor, padded.height));
   let width = Math.max(padded.width, minWidth);
   let height = Math.max(padded.height, minHeight);
   const centerX = padded.x + (padded.width / 2);
@@ -350,7 +371,236 @@ async function unionClip(page, locators, padding = 24) {
   };
 }
 
-async function captureProofScreenshot(page, outputPath = null) {
+function boxGap(primaryBox, companionBox) {
+  return {
+    horizontal: Math.max(
+      0,
+      primaryBox.x - (companionBox.x + companionBox.width),
+      companionBox.x - (primaryBox.x + primaryBox.width),
+    ),
+    vertical: Math.max(
+      0,
+      primaryBox.y - (companionBox.y + companionBox.height),
+      companionBox.y - (primaryBox.y + primaryBox.height),
+    ),
+  };
+}
+
+async function unionClip(page, locators, padding = 24) {
+  const boxes = [];
+  for (const locator of locators) {
+    const box = await locator.boundingBox().catch(() => null);
+    if (isVisibleBox(box)) {
+      boxes.push(box);
+    }
+  }
+
+  if (boxes.length === 0) {
+    return null;
+  }
+
+  const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
+  return buildClipFromBounds(unionBounds(boxes), viewport, padding);
+}
+
+async function collectVisibleLocatorEntries(locator, limit = 8) {
+  const entries = [];
+  const count = Math.min(await locator.count().catch(() => 0), limit);
+  for (let index = 0; index < count; index += 1) {
+    const candidate = locator.nth(index);
+    const visible = await candidate.isVisible().catch(() => false);
+    if (!visible) {
+      continue;
+    }
+    const box = await candidate.boundingBox().catch(() => null);
+    if (!isVisibleBox(box)) {
+      continue;
+    }
+    entries.push({
+      locator: candidate,
+      box,
+    });
+  }
+  return entries;
+}
+
+async function findTextLocatorFocusBox(page, focusPhrases = []) {
+  const phrases = normalizeArray(focusPhrases, 12)
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => entry.length >= 3)
+    .sort((left, right) => right.length - left.length);
+
+  for (const phrase of phrases) {
+    const locator = page.getByText(phrase, { exact: false });
+    const entries = await collectVisibleLocatorEntries(locator, 8);
+    const best = entries
+      .filter((entry) => boxArea(entry.box) >= 400)
+      .sort((left, right) => boxArea(right.box) - boxArea(left.box))[0];
+    if (best) {
+      return {
+        x: best.box.x,
+        y: best.box.y,
+        width: best.box.width,
+        height: best.box.height,
+        phrase,
+        targetName: null,
+      };
+    }
+  }
+
+  return null;
+}
+
+async function findTextFocusedSurfaceBox(page, focusPhrases = []) {
+  const phrases = normalizeArray(focusPhrases, 12)
+    .map((entry) => String(entry || "").trim())
+    .filter((entry) => entry.length >= 3)
+    .sort((left, right) => right.length - left.length);
+
+  if (phrases.length === 0) {
+    return null;
+  }
+
+  return page.evaluate((candidatePhrases) => {
+    const normalizeWhitespace = (value) =>
+      String(value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const isVisibleNode = (node) => {
+      if (!(node instanceof HTMLElement)) {
+        return false;
+      }
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none"
+        && style.visibility !== "hidden"
+        && Number(style.opacity || 1) > 0.05
+        && rect.width > 0
+        && rect.height > 0;
+    };
+
+    const minArea = 18000;
+    const roots = [
+      { targetName: "agent-detail-panel", node: document.querySelector('[data-agent-surface="agent-detail-panel"]') },
+      { targetName: "sidekick-panel", node: document.querySelector('[data-agent-surface="sidekick-panel"]') },
+      { targetName: "feedback-thread", node: document.querySelector('[data-agent-surface="feedback-thread"]') },
+      { targetName: "notes-editor", node: document.querySelector('[data-agent-surface="notes-editor"]') },
+      { targetName: "main-panel", node: document.querySelector('[data-agent-surface="main-panel"]') },
+      { targetName: "agent-chat-panel", node: document.querySelector('[data-agent-surface="agent-chat-panel"]') },
+      { targetName: null, node: document.body },
+    ].filter((entry) => entry.node instanceof HTMLElement && isVisibleNode(entry.node));
+
+    let best = null;
+
+    for (const root of roots) {
+      const rootRect = root.node.getBoundingClientRect();
+      const maxArea = rootRect.width * rootRect.height * 0.92;
+
+      for (const phrase of candidatePhrases) {
+        const normalizedPhrase = normalizeWhitespace(phrase);
+        if (!normalizedPhrase) {
+          continue;
+        }
+
+        const nodes = [root.node, ...root.node.querySelectorAll("*")];
+        for (const node of nodes) {
+          if (!isVisibleNode(node)) {
+            continue;
+          }
+          const text = normalizeWhitespace(node.innerText || node.textContent || "");
+          if (!text || !text.includes(normalizedPhrase)) {
+            continue;
+          }
+
+          const rect = node.getBoundingClientRect();
+          const area = rect.width * rect.height;
+          if (rect.width < 160 || rect.height < 80 || area < minArea || area > maxArea) {
+            continue;
+          }
+
+          const rootBonus = root.targetName === "agent-detail-panel"
+            || root.targetName === "feedback-thread"
+            || root.targetName === "notes-editor"
+            ? 1200
+            : root.targetName === "sidekick-panel"
+              ? 800
+              : 0;
+          const score = (normalizedPhrase.length * 500) - area + Math.min(text.length, 400) + rootBonus;
+          if (!best || score > best.score) {
+            best = {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+              score,
+              phrase,
+              targetName: root.targetName,
+            };
+          }
+        }
+      }
+    }
+
+    return best;
+  }, phrases).catch(() => null);
+}
+
+async function findMainPanelProofFocus(page, mainPanel) {
+  const mainPanelShot = await firstVisibleBox([{ kind: "main-panel", locator: mainPanel, padding: 24 }]);
+  if (!mainPanelShot) {
+    return null;
+  }
+
+  const maxCandidateArea = boxArea(mainPanelShot.box) * 0.88;
+  const selectors = [
+    '[data-agent-surface="main-panel"] [data-agent-selected="true"]',
+    '[data-agent-surface="main-panel"] [aria-selected="true"]',
+    '[data-agent-surface="main-panel"] [role="article"]',
+    '[data-agent-surface="main-panel"] article',
+    '[data-agent-surface="main-panel"] [role="listitem"]',
+    '[data-agent-surface="main-panel"] [role="row"]',
+  ];
+
+  for (const selector of selectors) {
+    const entries = await collectVisibleLocatorEntries(page.locator(selector), 8);
+    const best = entries
+      .filter((entry) => boxArea(entry.box) >= 24000 && boxArea(entry.box) <= maxCandidateArea)
+      .sort((left, right) => boxArea(right.box) - boxArea(left.box))[0];
+    if (best) {
+      return {
+        locator: best.locator,
+        box: best.box,
+        targetName: "main-panel",
+      };
+    }
+  }
+
+  return {
+    locator: mainPanelShot.locator,
+    box: mainPanelShot.box,
+    targetName: "main-panel",
+  };
+}
+
+function shouldIncludeCompanionSurface(primaryBox, companionBox, viewport) {
+  if (!isVisibleBox(primaryBox) || !isVisibleBox(companionBox)) {
+    return false;
+  }
+
+  const gap = boxGap(primaryBox, companionBox);
+  if (gap.horizontal > 120 || gap.vertical > 120) {
+    return false;
+  }
+
+  const combinedClip = buildClipFromBounds(unionBounds([primaryBox, companionBox]), viewport, 24);
+  const coverage = clipCoverageForViewport(viewport, combinedClip);
+  return coverage === null || coverage <= 0.82;
+}
+
+async function captureProofScreenshot(page, outputPath = null, focusPhrases = []) {
+  const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
   const dialogShot = await firstVisibleBox([
     { kind: "dialog", locator: page.getByRole("dialog"), padding: 24 },
     { kind: "agent-editor", locator: page.locator('[data-agent-surface="agent-editor"]'), padding: 24 },
@@ -377,13 +627,84 @@ async function captureProofScreenshot(page, outputPath = null) {
   const agentDetailPanel = page.locator('[data-agent-surface="agent-detail-panel"]').first();
   const notesEditor = page.locator('[data-agent-surface="notes-editor"]').first();
 
+  const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
+  if (isVisibleBox(textLocatorBox)) {
+    const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
+      minWidth: 560,
+      minHeight: 315,
+    });
+    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    return {
+      kind: "body-focus",
+      targets: [],
+      clip,
+    };
+  }
+
+  const textFocusedBox = await findTextFocusedSurfaceBox(page, focusPhrases);
+  if (isVisibleBox(textFocusedBox)) {
+    const clip = buildClipFromBounds(textFocusedBox, viewport, 28, {
+      minWidth: 560,
+      minHeight: 315,
+    });
+    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    return {
+      kind: textFocusedBox.targetName ? "main-panel-focus" : "body-focus",
+      targets: textFocusedBox.targetName ? [textFocusedBox.targetName] : [],
+      clip,
+    };
+  }
+
+  const focusedSurface = await firstVisibleBox([
+    { kind: "notes-editor", locator: notesEditor, padding: 24 },
+    { kind: "feedback-thread", locator: feedbackThread, padding: 24 },
+    { kind: "agent-detail-panel", locator: agentDetailPanel, padding: 24 },
+    { kind: "agent-chat-panel", locator: agentChatPanel, padding: 24 },
+    { kind: "agent-list", locator: agentList, padding: 24 },
+  ]);
+
+  if (focusedSurface) {
+    const clip = await unionClip(page, [focusedSurface.locator], focusedSurface.padding);
+    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    return {
+      kind: focusedSurface.kind,
+      targets: [focusedSurface.kind],
+      clip,
+    };
+  }
+
+  const mainPanelFocus = await findMainPanelProofFocus(page, mainPanel);
+  if (mainPanelFocus) {
+    const screenshotTargets = [mainPanelFocus];
+    const sidekickPanelShot = await firstVisibleBox([{ kind: "sidekick-panel", locator: sidekickPanel, padding: 24 }]);
+    const sidekickHeaderShot = await firstVisibleBox([{ kind: "sidekick-header", locator: sidekickHeader, padding: 24 }]);
+
+    if (sidekickPanelShot && shouldIncludeCompanionSurface(mainPanelFocus.box, sidekickPanelShot.box, viewport)) {
+      if (sidekickHeaderShot && shouldIncludeCompanionSurface(mainPanelFocus.box, sidekickHeaderShot.box, viewport)) {
+        screenshotTargets.push({
+          locator: sidekickHeaderShot.locator,
+          box: sidekickHeaderShot.box,
+          targetName: "sidekick-header",
+        });
+      }
+      screenshotTargets.push({
+        locator: sidekickPanelShot.locator,
+        box: sidekickPanelShot.box,
+        targetName: "sidekick-panel",
+      });
+    }
+
+    const clip = await unionClip(page, screenshotTargets.map((target) => target.locator), 24);
+    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    return {
+      kind: screenshotTargets.length > 1 ? "surface-union" : "main-panel-focus",
+      targets: screenshotTargets.map((target) => target.targetName),
+      clip,
+    };
+  }
+
   const visibleTargets = [];
   for (const target of [
-    { kind: "notes-editor", locator: notesEditor },
-    { kind: "feedback-thread", locator: feedbackThread },
-    { kind: "agent-list", locator: agentList },
-    { kind: "agent-chat-panel", locator: agentChatPanel },
-    { kind: "agent-detail-panel", locator: agentDetailPanel },
     { kind: "main-panel", locator: mainPanel },
     { kind: "sidekick-header", locator: sidekickHeader },
     { kind: "sidekick-panel", locator: sidekickPanel },
@@ -480,7 +801,9 @@ function buildPhasePlan(brief) {
   const proofRequirements = Array.isArray(brief.proofRequirements) ? brief.proofRequirements : [];
   const requiredUiSignals = Array.isArray(brief.requiredUiSignals) ? brief.requiredUiSignals : [];
   const forbiddenPhrases = Array.isArray(brief.forbiddenPhrases) ? brief.forbiddenPhrases : [];
-  const minSignalMatches = validationSignals.length >= 4 ? 2 : validationSignals.length > 0 ? 1 : 0;
+  const minSignalMatches = proofRequirements.length > 0
+    ? (validationSignals.length > 0 ? 1 : 0)
+    : validationSignals.length >= 4 ? 2 : validationSignals.length > 0 ? 1 : 0;
   const expectedRoute = brief.startPath && brief.startPath !== "/desktop" ? brief.startPath : null;
   return [
     {
@@ -1650,7 +1973,11 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
       await waitForUiToSettle(page);
     }
 
-    const screenshot = await captureProofScreenshot(page, screenshotPath);
+    const focusPhrases = normalizeArray([
+      ...(Array.isArray(phase.proofRequirements) ? phase.proofRequirements.flatMap((entry) => entry?.anyOf ?? []) : []),
+      ...(Array.isArray(phase.validationSignals) ? phase.validationSignals : []),
+    ], 12);
+    const screenshot = await captureProofScreenshot(page, screenshotPath, focusPhrases);
     const currentUrl = page.url();
     const visibleText = await collectProofVisibleText(page, screenshot);
     const validationMatches = collectValidationSignalMatches(visibleText, phase.validationSignals);
@@ -1662,8 +1989,15 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
       ? stagehandLogs.slice(stagehandLogCursor)
       : [];
     const stagehand = summarizeStagehandPhaseLogs(phaseStagehandLogs, excludedAgentTools);
+    const activeAppLabelMatched = phase.expectedAppLabel
+      ? normalizeTextForMatch(uiSignals.activeAppLabel) === normalizeTextForMatch(phase.expectedAppLabel)
+      : false;
     const activeAppMatched = phase.expectedAppId
-      ? uiSignals.activeAppId === phase.expectedAppId
+      ? (
+        uiSignals.activeAppId === phase.expectedAppId
+        || activeAppLabelMatched
+        || (!uiSignals.activeAppId && proofRequirementMatches.length > 0 && validationMatches.length > 0)
+      )
       : true;
     const requiredUiStateMissing = (Array.isArray(phase.requiredUiSignals) ? phase.requiredUiSignals : [])
       .map((entry) => String(entry || "").trim())
@@ -1672,7 +2006,7 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
     const proofRequirementsOk = proofRequirementMatches.length >= (Array.isArray(phase.proofRequirements) ? phase.proofRequirements.length : 0);
     const requiredUiStateOk = requiredUiStateMissing.length === 0;
     const surfaceMatched = phase.expectedRoute
-      ? routeMatched
+      ? (routeMatched || activeAppMatched)
       : activeAppMatched;
     const locallyValidated = (
       (phase.minSignalMatches ?? 0) === 0
@@ -2182,6 +2516,9 @@ try {
     successChecklist: seededBrief.successChecklist,
     setupPlan: seededBrief.setupPlan ?? [],
     validationSignals: seededBrief.validationSignals ?? [],
+    proofRequirements: seededBrief.proofRequirements ?? [],
+    requiredUiSignals: seededBrief.requiredUiSignals ?? [],
+    forbiddenPhrases: seededBrief.forbiddenPhrases ?? [],
     changedFiles,
     source: changelog?.source ?? (prompt ? "prompt" : null),
     stagehandCacheMode,
