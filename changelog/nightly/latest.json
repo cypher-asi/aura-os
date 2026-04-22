@@ -3,19 +3,20 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-22T08:28:02.575Z",
+  "generatedAt": "2026-04-22T16:09:15.852Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.332.1",
+  "version": "0.1.0-nightly.333.1",
   "date": "2026-04-22",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.332.1",
-  "lastIncludedSha": "070248dcd7edc4f496d26b777ff9e9577dc0e883",
-  "previousProcessedSha": "4818db084fdea9b735ee980b51d258853063c42a",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.333.1",
+  "lastIncludedSha": "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758",
+  "previousProcessedSha": "070248dcd7edc4f496d26b777ff9e9577dc0e883",
   "commitShas": [
-    "070248dcd7edc4f496d26b777ff9e9577dc0e883"
+    "070248dcd7edc4f496d26b777ff9e9577dc0e883",
+    "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 2,
+  "filteredCommitCount": 2,
   "rawCommits": [
     {
       "sha": "070248dcd7edc4f496d26b777ff9e9577dc0e883",
@@ -54,9 +55,53 @@
       "areas": [
         "Interface"
       ]
+    },
+    {
+      "sha": "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-22T11:53:11-04:00",
+      "subject": "Harden changelog media proof capture",
+      "body": "",
+      "parents": [
+        "070248dcd7edc4f496d26b777ff9e9577dc0e883"
+      ],
+      "files": [
+        "interface/scripts/lib/demo-agent-brief.mjs",
+        "interface/scripts/lib/demo-agent-brief.test.mjs",
+        "interface/scripts/lib/demo-screenshot-quality.mjs",
+        "interface/scripts/lib/demo-screenshot-quality.test.mjs",
+        "interface/scripts/lib/demo-seed-planner.mjs",
+        "interface/scripts/lib/demo-seed-planner.test.mjs",
+        "interface/scripts/produce-agent-demo-screenshots.mjs"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 774,
+        "deletions": 44
+      },
+      "committedAtMs": 1776873191000,
+      "cleanSubject": "Harden changelog media proof capture",
+      "keywords": [
+        "harden",
+        "changelog",
+        "media",
+        "proof",
+        "capture"
+      ],
+      "fileGroups": [
+        "interface/scripts/lib",
+        "interface/scripts/produce-agent-demo-screenshots.mjs"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
     }
   ],
-  "batchCount": 1,
+  "batchCount": 2,
   "artifactSummaries": [
     {
       "file": "release-summary-android-mobile.json",
@@ -65,36 +110,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 5159248
+          "sizeBytes": 5159224
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.332.1",
+      "version": "0.1.0-nightly.333.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 28491946
+          "sizeBytes": 28587406
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 95767032
+          "sizeBytes": 95869432
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -104,29 +149,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.332.1",
+      "version": "0.1.0-nightly.333.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.332.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.333.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 24871945
+          "sizeBytes": 24972414
         },
         {
-          "name": "Aura_0.1.0-nightly.332.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.333.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 24680784
+          "sizeBytes": 24783359
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -136,29 +181,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.332.1",
+      "version": "0.1.0-nightly.333.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.332.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.333.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 26452216
+          "sizeBytes": 26624482
         },
         {
-          "name": "Aura_0.1.0-nightly.332.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.333.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 26301480
+          "sizeBytes": 26474837
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -168,17 +213,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.332.1",
+      "version": "0.1.0-nightly.333.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 17192472
+          "sizeBytes": 17328026
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.332.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.333.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -187,25 +232,18 @@
     }
   ],
   "rendered": {
-    "title": "Accurate push counts on older activity cards",
-    "intro": "A small but user-visible fix to the activity feed: older push posts that were missing expanded commit metadata now show a correct commit count instead of zero.",
+    "title": "Accurate push counts and tougher demo screenshot tooling",
+    "intro": "A quiet nightly with two focused changes: activity feed push cards now report the right commit count on older posts, and the internal tooling that captures changelog demo screenshots got substantially more resilient to messy agent output.",
     "entries": [
       {
         "time_label": "1:13 AM",
         "started_at": "2026-04-22T08:13:53.000Z",
         "ended_at": "2026-04-22T08:13:53.000Z",
-        "title": "Legacy push cards show a correct commit count",
-        "summary": "PushCardBody now falls back to the raw commit ID list when expanded commit metadata is unavailable, fixing the '0 commits' display on older feed posts.",
+        "title": "Push cards fall back to commit IDs for legacy feed posts",
+        "summary": "Activity feed push cards now display a correct commit count even when older posts lack the richer commits metadata.",
         "items": [
           {
-            "text": "Push activity cards now display the number of commit IDs when detailed metadata.commits is absent, so older posts read as 'Pushed N commits' instead of 'Pushed 0 commits'.",
-            "commit_shas": [
-              "070248dcd7edc4f496d26b777ff9e9577dc0e883"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added a feed-store test covering the partial-metadata case where only commit_ids are present, locking in the fallback behavior.",
+            "text": "PushCardBody in the activity feed now uses commitIds.length as a fallback when metadata.commits is missing, so older push posts display the real number of commits instead of '0 commits'. A store-level test covers the partial-metadata case.",
             "commit_shas": [
               "070248dcd7edc4f496d26b777ff9e9577dc0e883"
             ],
@@ -220,19 +258,64 @@
           "reasons": [
             "entry touches interface source files"
           ],
-          "slotId": "entry-legacy-push-cards-show-a-correct-commit-count",
-          "slug": "legacy-push-cards-show-a-correct-commit-count",
-          "alt": "Legacy push cards show a correct commit count screenshot",
+          "slotId": "entry-push-cards-fall-back-to-commit-ids-for-legacy-feed-posts",
+          "slug": "push-cards-fall-back-to-commit-ids-for-legacy-feed-posts",
+          "alt": "Push cards fall back to commit IDs for legacy feed posts screenshot",
           "files": [
             "interface/src/components/ActivityCard/ActivityCard.tsx",
             "interface/src/stores/feed-store.test.ts"
           ]
         }
+      },
+      {
+        "time_label": "8:53 AM",
+        "started_at": "2026-04-22T15:53:11.000Z",
+        "ended_at": "2026-04-22T15:53:11.000Z",
+        "title": "Hardened JSON parsing in changelog demo screenshot pipeline",
+        "summary": "The internal script that captures agent demo screenshots for changelog media now survives smart quotes, fenced code blocks, trailing commas, and other imperfect model output.",
+        "items": [
+          {
+            "text": "demo-agent-brief now normalizes curly quotes and BOMs, extracts balanced JSON blocks, strips trailing commas, and falls back to loose per-field extraction (strings, nullable strings, booleans) when strict JSON.parse fails — making agent-brief ingestion far more tolerant of real LLM output.",
+            "commit_shas": [
+              "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Screenshot quality checks, the demo seed planner, and the produce-agent-demo-screenshots runner all received substantial hardening and expanded test coverage, tightening the end-to-end reliability of generating changelog media proofs.",
+            "commit_shas": [
+              "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758"
+            ],
+            "confidence": "medium"
+          }
+        ],
+        "media": {
+          "requested": false,
+          "status": "skipped",
+          "score": 2,
+          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
+          "reasons": [
+            "entry language points to a visible product surface"
+          ],
+          "slotId": "entry-hardened-json-parsing-in-changelog-demo-screenshot-pipeline",
+          "slug": "hardened-json-parsing-in-changelog-demo-screenshot-pipeline",
+          "alt": "Hardened JSON parsing in changelog demo screenshot pipeline screenshot",
+          "files": [
+            "interface/scripts/lib/demo-agent-brief.mjs",
+            "interface/scripts/lib/demo-agent-brief.test.mjs",
+            "interface/scripts/lib/demo-screenshot-quality.mjs",
+            "interface/scripts/lib/demo-screenshot-quality.test.mjs",
+            "interface/scripts/lib/demo-seed-planner.mjs",
+            "interface/scripts/lib/demo-seed-planner.test.mjs",
+            "interface/scripts/produce-agent-demo-screenshots.mjs"
+          ]
+        }
       }
     ],
     "highlights": [
-      "Activity feed no longer shows '0 commits' on legacy push cards"
+      "Push activity cards no longer show 0 commits on legacy posts",
+      "Demo screenshot capture tolerates malformed JSON from agent briefs"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 2
   }
 }

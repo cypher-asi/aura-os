@@ -2,16 +2,17 @@
   {
     "date": "2026-04-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.332.1",
-    "title": "Accurate push counts on older activity cards",
-    "intro": "A small but user-visible fix to the activity feed: older push posts that were missing expanded commit metadata now show a correct commit count instead of zero.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.333.1",
+    "title": "Accurate push counts and tougher demo screenshot tooling",
+    "intro": "A quiet nightly with two focused changes: activity feed push cards now report the right commit count on older posts, and the internal tooling that captures changelog demo screenshots got substantially more resilient to messy agent output.",
+    "entryCount": 2,
     "highlights": [
-      "Activity feed no longer shows '0 commits' on legacy push cards"
+      "Push activity cards no longer show 0 commits on legacy posts",
+      "Demo screenshot capture tolerates malformed JSON from agent briefs"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-04-22T08:28:02.575Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.332.1",
+    "rawCommitCount": 2,
+    "generatedAt": "2026-04-22T16:09:15.852Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.333.1",
     "path": "history/2026-04-22.json"
   },
   {
