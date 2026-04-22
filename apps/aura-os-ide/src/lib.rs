@@ -50,6 +50,7 @@ pub fn open_ide_window<E: 'static>(
     file_path: &str,
     root_path: Option<&str>,
     icon: Option<Icon>,
+    initialization_script: &str,
     make_ipc: impl FnOnce(WindowId) -> Box<dyn Fn(wry::http::Request<String>) + 'static>,
 ) -> Result<(Window, WebView), Box<dyn std::error::Error>> {
     let filename = filename_from_path(file_path);
@@ -82,10 +83,19 @@ pub fn open_ide_window<E: 'static>(
             window.ipc.postMessage('ready'); \
         }";
 
+    // WebViewBuilder only keeps the last `with_initialization_script` value, so
+    // concatenate the caller-provided bootstrap (auth/host seeding) with the
+    // IDE-specific ready notifier into a single script.
+    let combined_script = if initialization_script.is_empty() {
+        ready_script.to_string()
+    } else {
+        format!("{initialization_script}\n{ready_script}")
+    };
+
     let webview = WebViewBuilder::new()
         .with_background_color((0, 0, 0, 255))
         .with_url(&url)
-        .with_initialization_script(ready_script)
+        .with_initialization_script(&combined_script)
         .with_ipc_handler(ipc)
         .with_new_window_req_handler(|uri, _features| {
             let _ = open::that(&uri);

@@ -2032,7 +2032,19 @@ fn open_ide_window_with_fallback(
     icon_data: &IconData,
     proxy: &EventLoopProxy<UserEvent>,
     ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
+    host_origin: Option<&str>,
+    store_path: &Path,
 ) {
+    // Rebuild the same auth/host bootstrap the main webview receives so the IDE
+    // webview can talk to the API. The IDE window uses an isolated WebContext,
+    // so without this script `window.__AURA_BOOT_AUTH__` and the
+    // `aura-jwt` / `aura-session` localStorage mirrors are missing and every
+    // request fails the server's auth guard with "missing authorization
+    // token". Load fresh literals from disk each time so a user who logs in
+    // after desktop startup still gets an authenticated IDE window.
+    let bootstrapped = load_bootstrapped_auth_literals(store_path);
+    let init_script = build_initialization_script(host_origin, bootstrapped.as_ref());
+
     let proxy_clone = proxy.clone();
     match aura_os_ide::open_ide_window(
         event_target,
@@ -2040,6 +2052,7 @@ fn open_ide_window_with_fallback(
         file_path,
         root_path,
         Some(icon_data.to_icon()),
+        &init_script,
         move |wid| Box::new(ipc_handler(proxy_clone, wid)),
     ) {
         Ok((win, wv)) => {
@@ -2068,6 +2081,8 @@ fn handle_user_event(
     event_target: &tao::event_loop::EventLoopWindowTarget<UserEvent>,
     route_state: &RouteState,
     control_flow: &mut ControlFlow,
+    host_origin: Option<&str>,
+    store_path: &Path,
 ) {
     match user_event {
         UserEvent::WindowCommand { window_id, cmd } => {
@@ -2094,6 +2109,8 @@ fn handle_user_event(
                 icon_data,
                 proxy,
                 ide_windows,
+                host_origin,
+                store_path,
             );
         }
         UserEvent::ShowWindow { window_id } => {
@@ -2163,6 +2180,8 @@ fn run_event_loop(
     initial_frontend_base_url: String,
     initial_using_frontend_dev_server: bool,
     route_state: RouteState,
+    host_origin: Option<String>,
+    store_path: PathBuf,
 ) {
     let main_window_id = window.id();
     let mut ide_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)> = HashMap::new();
@@ -2202,6 +2221,8 @@ fn run_event_loop(
                 elwt,
                 &route_state,
                 control_flow,
+                host_origin.as_deref(),
+                &store_path,
             ),
             _ => {}
         }
@@ -2380,7 +2401,7 @@ fn main() {
 
     let ready_rx = spawn_server(
         std_listener,
-        store_path,
+        store_path.clone(),
         interface_dir,
         ide_proxy,
         route_state.clone(),
@@ -2467,6 +2488,8 @@ fn main() {
         initial_frontend_base_url,
         frontend_target.using_frontend_dev_server,
         route_state,
+        frontend_target.host_origin.clone(),
+        store_path.clone(),
     );
 }
 
