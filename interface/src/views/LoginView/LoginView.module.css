@@ -85,6 +85,12 @@
   align-items: center;
 }
 
+.cardTitle {
+  display: block;
+  margin-bottom: var(--space-3);
+  color: var(--color-text-primary);
+}
+
 .brand {
   font-size: var(--font-size-xl);
   font-weight: 700;
