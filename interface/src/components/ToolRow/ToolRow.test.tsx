@@ -316,6 +316,83 @@ describe("ToolCallBlock (Block dispatch)", () => {
       expect(screen.getByText("Spec A")).toBeInTheDocument();
       expect(screen.getByText("Spec B")).toBeInTheDocument();
     });
+
+    it("renders file paths from a base64 stdout envelope for find_files", () => {
+      const listing = "src/main.rs\nsrc/lib.rs\nCargo.toml\n";
+      const envelope = JSON.stringify({
+        tool: "find_files",
+        ok: true,
+        stdout: btoa(listing),
+        stderr: "",
+        metadata: { count: 3 },
+      });
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "find_files",
+            pending: false,
+            started: false,
+            input: { pattern: "*" },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(screen.getByText("src/main.rs")).toBeInTheDocument();
+      expect(screen.getByText("src/lib.rs")).toBeInTheDocument();
+      expect(screen.getByText("Cargo.toml")).toBeInTheDocument();
+      expect(screen.getByText("3 items")).toBeInTheDocument();
+    });
+
+    it("renders list rows from a base64 stdout envelope for list_files", () => {
+      const listing = "README.md\npackage.json\n";
+      const envelope = JSON.stringify({
+        tool: "list_files",
+        ok: true,
+        stdout: btoa(listing),
+        stderr: "",
+      });
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "list_files",
+            pending: false,
+            started: false,
+            input: { path: "." },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(screen.getByText("README.md")).toBeInTheDocument();
+      expect(screen.getByText("package.json")).toBeInTheDocument();
+      expect(screen.getByText("2 items")).toBeInTheDocument();
+    });
+
+    it("splits search_code stdout into file:line + match columns", () => {
+      const hits = "src/main.rs:12: fn main() {}\nsrc/lib.rs:3: pub fn hello() {}\n";
+      const envelope = JSON.stringify({
+        tool: "search_code",
+        ok: true,
+        stdout: btoa(hits),
+        stderr: "",
+      });
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "search_code",
+            pending: false,
+            started: false,
+            input: { pattern: "fn" },
+            result: envelope,
+          })}
+          defaultExpanded
+        />,
+      );
+      expect(screen.getByText("src/main.rs:12")).toBeInTheDocument();
+      expect(screen.getByText("fn main() {}")).toBeInTheDocument();
+      expect(screen.getByText("src/lib.rs:3")).toBeInTheDocument();
+    });
   });
 
   describe("generic fallback block", () => {

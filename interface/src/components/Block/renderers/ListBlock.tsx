@@ -2,7 +2,7 @@ import { List, Search, FolderSearch, FolderOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ToolCallEntry } from "../../../types/stream";
 import { TOOL_LABELS } from "../../../constants/tools";
-import { summarizeInput } from "../../../utils/format";
+import { decodeCapturedOutput, summarizeInput } from "../../../utils/format";
 import { Block } from "../Block";
 import styles from "./renderers.module.css";
 
@@ -69,6 +69,53 @@ function extractRows(result: unknown): ParsedRow[] {
   return [];
 }
 
+/**
+ * Turn captured CLI-style stdout (one entry per line) into list rows. Used for
+ * Codex-provided MCP tools (`list_files`, `find_files`, `search_code`) whose
+ * payload is a base64-encoded newline-separated listing inside the tool
+ * envelope's `stdout` field.
+ *
+ * For `search_code`-style `path:line:match` lines we split into a primary
+ * (file:line) and secondary (match preview) column so long matches don't
+ * overflow the row.
+ */
+function rowsFromTextOutput(text: string): ParsedRow[] {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  return lines.slice(0, 200).map((line, i) => {
+    const m = line.match(/^([^:\s]+:\d+):\s*(.*)$/);
+    if (m) {
+      return { id: `r-${i}`, primary: m[1], secondary: m[2] };
+    }
+    return { id: `r-${i}`, primary: line };
+  });
+}
+
+/**
+ * Resolve the most useful row list from a tool result string. Native list_*
+ * tools return bare JSON with an array somewhere in the first level. Codex
+ * MCP tools (`list_files`, `find_files`, `search_code`) wrap the payload in
+ * `{ok, stdout: <base64>, stderr, metadata}` — we decode `stdout` and treat
+ * it as either JSON (if it parses) or newline-separated plain text.
+ */
+function resolveRows(result: string | undefined): ParsedRow[] {
+  if (!result) return [];
+
+  const parsed = safeJsonParse(result);
+  const direct = extractRows(parsed);
+  if (direct.length > 0) return direct;
+
+  const envelope = decodeCapturedOutput(result);
+  const stdout = envelope.stdout;
+  if (!stdout) return direct;
+
+  const innerParsed = safeJsonParse(stdout);
+  if (innerParsed !== null) {
+    const fromInner = extractRows(innerParsed);
+    if (fromInner.length > 0) return fromInner;
+  }
+  return rowsFromTextOutput(stdout);
+}
+
 function iconFor(name: string): ReactNode {
   if (name === "search_code") return <Search size={12} />;
   if (name === "find_files") return <FolderSearch size={12} />;
@@ -80,8 +127,7 @@ export function ListBlock({ entry, defaultExpanded }: ListBlockProps) {
   const label = TOOL_LABELS[entry.name] || entry.name;
   const summary = summarizeInput(entry.name, entry.input);
 
-  const parsed = safeJsonParse(entry.result);
-  const rows = extractRows(parsed);
+  const rows = resolveRows(entry.result);
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
   const trailing = !entry.pending ? (
