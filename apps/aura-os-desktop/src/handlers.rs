@@ -143,6 +143,7 @@ pub(crate) async fn get_runtime_config() -> Json<serde_json::Value> {
         "swarm_base_url": std::env::var("SWARM_BASE_URL").ok(),
         "local_harness_url": std::env::var("LOCAL_HARNESS_URL").ok(),
         "harness_binary": std::env::var("AURA_HARNESS_BIN").ok(),
+        "external_harness": std::env::var("AURA_DESKTOP_EXTERNAL_HARNESS").ok(),
         "require_zero_pro": std::env::var("REQUIRE_ZERO_PRO").ok(),
         "disable_local_harness_autospawn": std::env::var("AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN").ok(),
     }))
