@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import type { DebugRunMetadata, DebugRunStatus } from "../../../api/debug";
+import { api } from "../../../api/client";
 import type { ProjectId } from "../../../types";
 import { useDebugRunMetadata } from "../useDebugRunMetadata";
 import { useDebugRunLogs } from "../useDebugRunLogs";
@@ -9,6 +10,7 @@ import {
   channelForTab,
   useDebugSidekickStore,
 } from "../stores/debug-sidekick-store";
+import { copyToClipboard, downloadBlob } from "../clipboard";
 import { DebugLogList } from "./DebugLogList";
 import styles from "./DebugRunDetailView.module.css";
 
@@ -67,7 +69,7 @@ export function DebugRunDetailView() {
   const channel = channelForTab(activeTab) ?? "events";
 
   const { metadata, isRunning } = useDebugRunMetadata(projectId, runId);
-  const { entries, isLoading } = useDebugRunLogs({
+  const { entries, raw, isLoading } = useDebugRunLogs({
     projectId,
     runId,
     channel,
@@ -84,6 +86,30 @@ export function DebugRunDetailView() {
     });
   }, [entries, typeFilter, textFilter]);
 
+  // "Copy all" follows the visible timeline: when no filter is active
+  // we copy the full channel JSONL (cheap string), otherwise we join
+  // the filtered rows so users get exactly what they see.
+  const hasFilter = Boolean(typeFilter || textFilter);
+  const copyPayload = useMemo(() => {
+    if (!hasFilter) return raw;
+    return filteredEntries.map((e) => e.raw).join("\n");
+  }, [hasFilter, raw, filteredEntries]);
+
+  const handleCopyAll = useCallback(() => {
+    if (!copyPayload) return;
+    void copyToClipboard(copyPayload);
+  }, [copyPayload]);
+
+  const handleExport = useCallback(async () => {
+    if (!projectId || !runId) return;
+    try {
+      const blob = await api.debug.exportRunBlob(projectId, runId);
+      downloadBlob(blob, `debug-${projectId}-${runId}.zip`);
+    } catch (error) {
+      console.error("debug export failed", error);
+    }
+  }, [projectId, runId]);
+
   if (!projectId || !runId) {
     return <div className={styles.empty}>Run not found.</div>;
   }
@@ -97,6 +123,31 @@ export function DebugRunDetailView() {
             {statusLabel(metadata?.status)}
             {` · ended ${formatDate(metadata?.ended_at)}`}
           </span>
+        </div>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={handleCopyAll}
+            disabled={!copyPayload}
+            title={
+              hasFilter
+                ? "Copy the filtered events as JSONL"
+                : "Copy the full channel as JSONL"
+            }
+          >
+            {hasFilter ? "Copy filtered" : "Copy all"}
+          </button>
+          <button
+            type="button"
+            className={styles.actionButton}
+            onClick={() => {
+              void handleExport();
+            }}
+            title="Download the full run bundle as .zip"
+          >
+            Export
+          </button>
         </div>
         <div className={styles.channelLabel}>
           {channelLabel(channel)}

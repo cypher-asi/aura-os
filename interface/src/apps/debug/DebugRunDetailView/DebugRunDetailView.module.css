@@ -51,6 +51,35 @@
   white-space: nowrap;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.actionButton {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actionButton:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .channelLabel {
   display: flex;
   flex-direction: column;

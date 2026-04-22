@@ -2,26 +2,9 @@ import { useMemo } from "react";
 import type { DebugLogEntry } from "../../types";
 import { EmptyState } from "../../../../components/EmptyState";
 import { useDebugSidekickStore } from "../../stores/debug-sidekick-store";
+import { copyToClipboard } from "../../clipboard";
 import previewStyles from "../../../../components/Preview/Preview.module.css";
 import styles from "./DebugSidekickContent.module.css";
-
-async function copyToClipboard(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.style.position = "fixed";
-  ta.style.opacity = "0";
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand("copy");
-  } finally {
-    document.body.removeChild(ta);
-  }
-}
 
 interface Props {
   entry: DebugLogEntry;

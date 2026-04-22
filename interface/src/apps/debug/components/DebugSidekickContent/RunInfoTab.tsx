@@ -6,6 +6,7 @@ import { api } from "../../../../api/client";
 import type { ProjectId } from "../../../../types";
 import { useDebugRunMetadata } from "../../useDebugRunMetadata";
 import { useDebugRunLogs } from "../../useDebugRunLogs";
+import { copyToClipboard, downloadBlob } from "../../clipboard";
 import { EmptyState } from "../../../../components/EmptyState";
 import previewStyles from "../../../../components/Preview/Preview.module.css";
 import styles from "./DebugSidekickContent.module.css";
@@ -51,36 +52,6 @@ function formatDuration(meta: DebugRunMetadata): string {
   const h = Math.floor(m / 60);
   const rm = m % 60;
   return `${h}h ${rm}m`;
-}
-
-function downloadBlob(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.style.display = "none";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
-}
-
-async function copyToClipboard(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.style.position = "fixed";
-  ta.style.opacity = "0";
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand("copy");
-  } finally {
-    document.body.removeChild(ta);
-  }
 }
 
 /**
