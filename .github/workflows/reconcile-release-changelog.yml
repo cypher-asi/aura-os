@@ -105,6 +105,17 @@ jobs:
         if: steps.trigger.outputs.conclusion != 'success' || steps.release-check.outputs.released != 'true'
         run: echo "Release run did not publish a release. Skipping changelog reconciliation."
 
+      - name: Preflight changelog generation configuration
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+            echo "ANTHROPIC_API_KEY is not configured. Reconcile Release Changelog cannot regenerate a changelog without it." >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         if: steps.release-check.outputs.released == 'true'
         with:
@@ -126,11 +137,6 @@ jobs:
           node-version: 25.9.0
           cache: npm
           cache-dependency-path: repo/interface/package-lock.json
-
-      - name: Install interface dependencies
-        if: steps.release-check.outputs.released == 'true'
-        working-directory: repo/interface
-        run: npm ci
 
       - name: Download release artifacts
         if: steps.release-check.outputs.released == 'true'
@@ -258,13 +264,22 @@ jobs:
 
       - name: Resolve preview URL
         if: steps.release-check.outputs.released == 'true'
-        id: preview
+        id: preflight
         env:
+          INPUT_PREVIEW_URL: ${{ inputs.preview_url }}
           DEFAULT_PREVIEW_URL_VAR: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
           DEFAULT_PREVIEW_URL_SECRET: ${{ secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          INPUT_PROVIDER: ${{ inputs.provider }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
         shell: bash
         run: |
-          preview_url="${{ inputs.preview_url }}"
+          provider="$INPUT_PROVIDER"
+          if [[ -z "$provider" ]]; then
+            provider="browserbase"
+          fi
+
+          preview_url="$INPUT_PREVIEW_URL"
           preview_source="workflow input"
           if [[ -z "$preview_url" ]]; then
             preview_url="$DEFAULT_PREVIEW_URL_VAR"
@@ -278,7 +293,29 @@ jobs:
             echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when manually dispatching Reconcile Release Changelog." >&2
             exit 1
           fi
+
+          python3 - "$preview_url" <<'PY'
+          from urllib.parse import urlparse
+          import sys
+
+          candidate = sys.argv[1].strip()
+          parsed = urlparse(candidate)
+          if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+              raise SystemExit(f"preview_url must be an absolute http(s) URL, got: {candidate}")
+          PY
+
+          if [[ "$provider" == "browserbase" ]]; then
+            missing=()
+            [[ -z "$BROWSERBASE_API_KEY" ]] && missing+=("BROWSERBASE_API_KEY")
+            [[ -z "$BROWSERBASE_PROJECT_ID" ]] && missing+=("BROWSERBASE_PROJECT_ID")
+            if (( ${#missing[@]} > 0 )); then
+              echo "Browserbase provider requires ${missing[*]}." >&2
+              exit 1
+            fi
+          fi
+
           echo "Resolved preview URL from ${preview_source}."
+          echo "provider=$provider" >> "$GITHUB_OUTPUT"
           echo "url=$preview_url" >> "$GITHUB_OUTPUT"
 
       - name: Wait for deployed frontend to settle
@@ -309,6 +346,26 @@ jobs:
           echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media capture so the deployed frontend can settle."
           sleep "$wait_seconds"
 
+      - name: Verify preview URL is reachable
+        if: steps.release-check.outputs.released == 'true'
+        shell: bash
+        run: |
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            --output /dev/null \
+            --retry 3 \
+            --retry-delay 10 \
+            --max-time 30 \
+            "${{ steps.preflight.outputs.url }}"
+
+      - name: Install interface dependencies
+        if: steps.release-check.outputs.released == 'true'
+        working-directory: repo/interface
+        run: npm ci
+
       - name: Reconcile changelog media
         if: steps.release-check.outputs.released == 'true'
         env:
@@ -317,18 +374,13 @@ jobs:
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
         shell: bash
         run: |
-          provider="${{ inputs.provider }}"
-          if [[ -z "$provider" ]]; then
-            provider="browserbase"
-          fi
-
           ARGS=(
             --repo-dir repo
             --pages-dir pages
             --channel "${{ steps.metadata.outputs.channel }}"
             --version "${{ steps.metadata.outputs.version }}"
-            --provider "$provider"
-            --preview-url "${{ steps.preview.outputs.url }}"
+            --provider "${{ steps.preflight.outputs.provider }}"
+            --preview-url "${{ steps.preflight.outputs.url }}"
           )
 
           if [[ -n "${{ inputs.profile }}" ]]; then

@@ -49,6 +49,7 @@ jobs:
     steps:
       - name: Download changelog publish metadata from triggering run
         if: github.event_name == 'workflow_run'
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: changelog-publish-metadata
@@ -63,49 +64,45 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
             metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
             if [[ ! -f "$metadata_file" ]]; then
-              echo "Expected changelog publish metadata artifact at $metadata_file" >&2
-              exit 1
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              echo "skip_reason=Triggering changelog workflow did not publish metadata. Skipping media publish." >> "$GITHUB_OUTPUT"
+              exit 0
             fi
+            echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "channel=$(jq -r '.channel' "$metadata_file")" >> "$GITHUB_OUTPUT"
             echo "version=$(jq -r '.version' "$metadata_file")" >> "$GITHUB_OUTPUT"
             echo "date=$(jq -r '.date' "$metadata_file")" >> "$GITHUB_OUTPUT"
           else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
             echo "version=" >> "$GITHUB_OUTPUT"
             echo "date=" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 0
-          path: repo
-
-      - uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          fetch-depth: 0
-          path: pages
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 25.9.0
-          cache: npm
-          cache-dependency-path: repo/interface/package-lock.json
-
-      - name: Install interface dependencies
-        working-directory: repo/interface
-        run: npm ci
-
-      - name: Resolve preview URL
-        id: preview
-        env:
-          DEFAULT_PREVIEW_URL_VAR: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
-          DEFAULT_PREVIEW_URL_SECRET: ${{ secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+      - name: Skip media publish when changelog metadata is unavailable
+        if: steps.target.outputs.ready != 'true'
         shell: bash
         run: |
-          preview_url="${{ inputs.preview_url }}"
+          echo "${{ steps.target.outputs.skip_reason }}"
+
+      - name: Preflight media configuration
+        if: steps.target.outputs.ready == 'true'
+        id: preflight
+        env:
+          INPUT_PREVIEW_URL: ${{ inputs.preview_url }}
+          DEFAULT_PREVIEW_URL_VAR: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          DEFAULT_PREVIEW_URL_SECRET: ${{ secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          INPUT_PROVIDER: ${{ inputs.provider }}
+          BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
+          BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+        shell: bash
+        run: |
+          provider="$INPUT_PROVIDER"
+          if [[ -z "$provider" ]]; then
+            provider="browserbase"
+          fi
+
+          preview_url="$INPUT_PREVIEW_URL"
           preview_source="workflow input"
           if [[ -z "$preview_url" ]]; then
             preview_url="$DEFAULT_PREVIEW_URL_VAR"
@@ -119,10 +116,55 @@ jobs:
             echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when manually dispatching Publish Release Changelog Media." >&2
             exit 1
           fi
+
+          python3 - "$preview_url" <<'PY'
+          from urllib.parse import urlparse
+          import sys
+
+          candidate = sys.argv[1].strip()
+          parsed = urlparse(candidate)
+          if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+              raise SystemExit(f"preview_url must be an absolute http(s) URL, got: {candidate}")
+          PY
+
+          if [[ "$provider" == "browserbase" ]]; then
+            missing=()
+            [[ -z "$BROWSERBASE_API_KEY" ]] && missing+=("BROWSERBASE_API_KEY")
+            [[ -z "$BROWSERBASE_PROJECT_ID" ]] && missing+=("BROWSERBASE_PROJECT_ID")
+            if (( ${#missing[@]} > 0 )); then
+              echo "Browserbase provider requires ${missing[*]}." >&2
+              exit 1
+            fi
+          fi
+
           echo "Resolved preview URL from ${preview_source}."
+          echo "provider=$provider" >> "$GITHUB_OUTPUT"
           echo "url=$preview_url" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/checkout@v4
+        if: steps.target.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          path: repo
+
+      - uses: actions/checkout@v4
+        if: steps.target.outputs.ready == 'true'
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Install Node.js
+        if: steps.target.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+          cache: npm
+          cache-dependency-path: repo/interface/package-lock.json
+
       - name: Wait for deployed frontend to settle
+        if: steps.target.outputs.ready == 'true'
         env:
           DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
         shell: bash
@@ -149,25 +191,41 @@ jobs:
           echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media capture so the deployed frontend can settle."
           sleep "$wait_seconds"
 
+      - name: Verify preview URL is reachable
+        if: steps.target.outputs.ready == 'true'
+        shell: bash
+        run: |
+          curl \
+            --fail \
+            --location \
+            --silent \
+            --show-error \
+            --output /dev/null \
+            --retry 3 \
+            --retry-delay 10 \
+            --max-time 30 \
+            "${{ steps.preflight.outputs.url }}"
+
+      - name: Install interface dependencies
+        if: steps.target.outputs.ready == 'true'
+        working-directory: repo/interface
+        run: npm ci
+
       - name: Publish changelog screenshots into gh-pages
+        if: steps.target.outputs.ready == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
         shell: bash
         run: |
-          provider="${{ inputs.provider }}"
-          if [[ -z "$provider" ]]; then
-            provider="browserbase"
-          fi
-
           ARGS=(
             --repo-dir repo
             --pages-dir pages
             --channel "${{ steps.target.outputs.channel }}"
-            --provider "$provider"
+            --provider "${{ steps.preflight.outputs.provider }}"
           )
-          ARGS+=(--preview-url "${{ steps.preview.outputs.url }}")
+          ARGS+=(--preview-url "${{ steps.preflight.outputs.url }}")
 
           if [[ -n "${{ steps.target.outputs.version }}" ]]; then
             ARGS+=(--version "${{ steps.target.outputs.version }}")
@@ -182,6 +240,7 @@ jobs:
           node repo/infra/scripts/release/publish-changelog-media.mjs "${ARGS[@]}"
 
       - name: Commit and push changelog media
+        if: steps.target.outputs.ready == 'true'
         shell: bash
         run: |
           cd pages

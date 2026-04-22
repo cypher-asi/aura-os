@@ -70,6 +70,17 @@ jobs:
         if: steps.trigger.outputs.conclusion != 'success' || steps.release-check.outputs.released != 'true'
         run: echo "Triggering workflow did not publish a release. Skipping changelog publish."
 
+      - name: Preflight changelog generation configuration
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+            echo "ANTHROPIC_API_KEY is not configured. Publish Release Changelog cannot generate a changelog without it." >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
         if: steps.release-check.outputs.released == 'true'
         with:
