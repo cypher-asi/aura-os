@@ -570,6 +570,10 @@ function publishEntryMedia({
 }
 
 function buildRunSummary(results, context = {}) {
+  const publishedResults = results.filter((result) => result.status === "published");
+  const failedResults = results.filter((result) => result.status === "failed");
+  const skippedResults = results.filter((result) => result.status === "skipped");
+
   return {
     generatedAt: new Date().toISOString(),
     channel: sanitizeText(context.channel || ""),
@@ -581,10 +585,41 @@ function buildRunSummary(results, context = {}) {
     previewHost: parsePreviewHost(context.previewUrl),
     abortRemainingReason: sanitizeText(context.abortRemainingReason || "") || null,
     attempted: results.length,
-    published: results.filter((result) => result.status === "published").length,
-    failed: results.filter((result) => result.status === "failed").length,
-    skipped: results.filter((result) => result.status === "skipped").length,
+    published: publishedResults.length,
+    failed: failedResults.length,
+    skipped: skippedResults.length,
+    strictRubricPassed: failedResults.length === 0 && !sanitizeText(context.abortRemainingReason || ""),
+    publishedSlotIds: publishedResults.map((result) => result.slotId).filter(Boolean),
+    failedSlotIds: failedResults.map((result) => result.slotId).filter(Boolean),
+    skippedSlotIds: skippedResults.map((result) => result.slotId).filter(Boolean),
     results,
+  };
+}
+
+function buildRetryPlan(summary) {
+  const failedResults = Array.isArray(summary?.results)
+    ? summary.results.filter((result) => result?.status === "failed")
+    : [];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    channel: sanitizeText(summary?.channel || ""),
+    version: sanitizeText(summary?.version || ""),
+    date: sanitizeText(summary?.date || ""),
+    provider: sanitizeText(summary?.provider || ""),
+    profile: sanitizeText(summary?.profile || ""),
+    previewUrl: sanitizeText(summary?.previewUrl || ""),
+    previewHost: sanitizeText(summary?.previewHost || ""),
+    strictRubricPassed: Boolean(summary?.strictRubricPassed),
+    failed: failedResults.length,
+    failedSlots: failedResults.map((result) => ({
+      slotId: sanitizeText(result?.slotId || ""),
+      title: sanitizeText(result?.title || ""),
+      error: sanitizeText(result?.error || ""),
+      inspectorUrl: sanitizeText(result?.inspectorUrl || ""),
+      sessionId: sanitizeText(result?.sessionId || ""),
+      outputDir: sanitizeText(result?.outputDir || ""),
+    })),
   };
 }
 
@@ -602,6 +637,7 @@ function buildRunSummaryMarkdown(summary) {
     `- Published: ${summary.published}`,
     `- Failed: ${summary.failed}`,
     `- Skipped: ${summary.skipped}`,
+    `- Strict rubric passed: ${summary.strictRubricPassed ? "yes" : "no"}`,
   ];
 
   if (summary.abortRemainingReason) {
@@ -629,6 +665,7 @@ function persistRunDiagnostics(baseRunRoot, summary) {
   ensureDir(baseRunRoot);
   writeJson(path.join(baseRunRoot, "publish-changelog-media-summary.json"), summary);
   writeText(path.join(baseRunRoot, "publish-changelog-media-summary.md"), buildRunSummaryMarkdown(summary));
+  writeJson(path.join(baseRunRoot, "publish-changelog-media-retry.json"), buildRetryPlan(summary));
 }
 
 async function main() {
@@ -781,6 +818,7 @@ export {
   buildEntryPrompt,
   buildAbortRemainingError,
   buildMediaBlock,
+  buildRetryPlan,
   buildRunSummaryMarkdown,
   buildRunSummary,
   isBrowserbaseConcurrencyError,

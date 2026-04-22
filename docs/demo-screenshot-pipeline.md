@@ -166,12 +166,18 @@ The release changelog flow now supports a placeholder-based handoff:
 2. `publish-release-changelog-media.yml` runs later, finds those pending slots,
    captures proof screenshots, copies them into `gh-pages/assets/changelog/...`,
    and replaces the slot marker body with the final image markdown
-3. if capture fails, the changelog text still publishes and the slot remains
-   pending for a rerun instead of blocking release notes
+3. successful screenshots are published immediately even if other slots fail,
+   so one stubborn capture does not strand the good media in CI
+4. if any slots still fail the strict proof rubric, the run stays red and
+   dispatches a dedicated retry workflow for just the unresolved media
+5. if capture still fails after retry, the changelog text still publishes and
+   the failed slot stays recorded for manual follow-up instead of blocking
+   release notes
 
 The repo now includes a dedicated workflow for that orchestration:
 
 - `.github/workflows/publish-release-changelog-media.yml`
+- `.github/workflows/retry-release-changelog-media.yml`
 
 It fetches the changelog, asks Anthropic to pick the best seeded profile,
 builds an app-aware capture brief, derives a seed/setup plan from source plus

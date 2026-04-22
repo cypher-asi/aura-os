@@ -1,22 +1,27 @@
-name: Publish Release Changelog Media
+name: Retry Release Changelog Media
 
 on:
-  workflow_run:
-    workflows:
-      - Publish Release Changelog
-    types:
-      - completed
   workflow_dispatch:
     inputs:
+      channel:
+        description: "Changelog channel to retry media for"
+        required: true
+        default: nightly
+        type: string
+      version:
+        description: "Optional release version to target"
+        required: false
+        default: ""
+        type: string
+      date:
+        description: "Optional changelog date to target"
+        required: false
+        default: ""
+        type: string
       preview_url:
         description: "Public preview URL for Browserbase to open"
         required: false
         default: ""
-        type: string
-      channel:
-        description: "Changelog channel to publish media for"
-        required: true
-        default: nightly
         type: string
       provider:
         description: "Browser automation provider"
@@ -28,65 +33,35 @@ on:
         required: false
         default: ""
         type: string
-      deploy_wait_minutes:
-        description: "Minutes to wait before capture so the deployed frontend can settle"
+      head_sha:
+        description: "Optional repo commit SHA to use for the retry capture logic"
         required: false
-        default: "5"
+        default: ""
+        type: string
+      source_run_id:
+        description: "Optional originating media workflow run id for traceability"
+        required: false
+        default: ""
+        type: string
+      deploy_wait_minutes:
+        description: "Minutes to wait before retry capture so the deployed frontend can settle"
+        required: false
+        default: "2"
         type: string
 
 permissions:
-  actions: write
+  actions: read
   contents: write
 
 concurrency:
-  group: publish-release-changelog-media-${{ github.event_name }}-${{ github.event.workflow_run.id || github.run_id }}
+  group: retry-release-changelog-media-${{ inputs.channel }}-${{ inputs.version || inputs.date || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  publish-media:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+  retry-media:
     runs-on: ubuntu-latest
     steps:
-      - name: Download changelog publish metadata from triggering run
-        if: github.event_name == 'workflow_run'
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: changelog-publish-metadata
-          path: changelog-publish-metadata
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-
-      - name: Resolve changelog target
-        id: target
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
-            if [[ ! -f "$metadata_file" ]]; then
-              echo "ready=false" >> "$GITHUB_OUTPUT"
-              echo "skip_reason=Triggering changelog workflow did not publish metadata. Skipping media publish." >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "channel=$(jq -r '.channel' "$metadata_file")" >> "$GITHUB_OUTPUT"
-            echo "version=$(jq -r '.version' "$metadata_file")" >> "$GITHUB_OUTPUT"
-            echo "date=$(jq -r '.date' "$metadata_file")" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
-            echo "version=" >> "$GITHUB_OUTPUT"
-            echo "date=" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip media publish when changelog metadata is unavailable
-        if: steps.target.outputs.ready != 'true'
-        shell: bash
-        run: |
-          echo "${{ steps.target.outputs.skip_reason }}"
-
-      - name: Preflight media configuration
-        if: steps.target.outputs.ready == 'true'
+      - name: Resolve preview URL
         id: preflight
         env:
           INPUT_PREVIEW_URL: ${{ inputs.preview_url }}
@@ -113,7 +88,7 @@ jobs:
             preview_source="repository secret"
           fi
           if [[ -z "$preview_url" ]]; then
-            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when manually dispatching Publish Release Changelog Media." >&2
+            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when dispatching Retry Release Changelog Media." >&2
             exit 1
           fi
 
@@ -137,26 +112,29 @@ jobs:
             fi
           fi
 
+          repo_ref="${{ inputs.head_sha }}"
+          if [[ -z "$repo_ref" ]]; then
+            repo_ref="main"
+          fi
+
           echo "Resolved preview URL from ${preview_source}."
           echo "provider=$provider" >> "$GITHUB_OUTPUT"
           echo "url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "repo_ref=$repo_ref" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
-        if: steps.target.outputs.ready == 'true'
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ steps.preflight.outputs.repo_ref }}
           fetch-depth: 0
           path: repo
 
       - uses: actions/checkout@v4
-        if: steps.target.outputs.ready == 'true'
         with:
           ref: gh-pages
           fetch-depth: 0
           path: pages
 
       - name: Install Node.js
-        if: steps.target.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 25.9.0
@@ -164,7 +142,6 @@ jobs:
           cache-dependency-path: repo/interface/package-lock.json
 
       - name: Wait for deployed frontend to settle
-        if: steps.target.outputs.ready == 'true'
         env:
           DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
         shell: bash
@@ -174,7 +151,7 @@ jobs:
             wait_minutes="$DEFAULT_DEPLOY_WAIT_MINUTES"
           fi
           if [[ -z "$wait_minutes" ]]; then
-            wait_minutes="5"
+            wait_minutes="2"
           fi
 
           if ! [[ "$wait_minutes" =~ ^[0-9]+$ ]]; then
@@ -188,11 +165,10 @@ jobs:
           fi
 
           wait_seconds=$((wait_minutes * 60))
-          echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media capture so the deployed frontend can settle."
+          echo "Waiting ${wait_minutes} minute(s) (${wait_seconds}s) before changelog media retry so the deployed frontend can settle."
           sleep "$wait_seconds"
 
       - name: Verify preview URL is reachable
-        if: steps.target.outputs.ready == 'true'
         shell: bash
         run: |
           curl \
@@ -207,12 +183,10 @@ jobs:
             "${{ steps.preflight.outputs.url }}"
 
       - name: Install interface dependencies
-        if: steps.target.outputs.ready == 'true'
         working-directory: repo/interface
         run: npm ci
 
-      - name: Publish changelog screenshots into gh-pages
-        if: steps.target.outputs.ready == 'true'
+      - name: Retry changelog screenshots into gh-pages
         id: capture
         continue-on-error: true
         env:
@@ -224,16 +198,16 @@ jobs:
           ARGS=(
             --repo-dir repo
             --pages-dir pages
-            --channel "${{ steps.target.outputs.channel }}"
+            --channel "${{ inputs.channel }}"
             --provider "${{ steps.preflight.outputs.provider }}"
+            --preview-url "${{ steps.preflight.outputs.url }}"
           )
-          ARGS+=(--preview-url "${{ steps.preflight.outputs.url }}")
 
-          if [[ -n "${{ steps.target.outputs.version }}" ]]; then
-            ARGS+=(--version "${{ steps.target.outputs.version }}")
+          if [[ -n "${{ inputs.version }}" ]]; then
+            ARGS+=(--version "${{ inputs.version }}")
           fi
-          if [[ -n "${{ steps.target.outputs.date }}" ]]; then
-            ARGS+=(--date "${{ steps.target.outputs.date }}")
+          if [[ -n "${{ inputs.date }}" ]]; then
+            ARGS+=(--date "${{ inputs.date }}")
           fi
           if [[ -n "${{ inputs.profile }}" ]]; then
             ARGS+=(--profile "${{ inputs.profile }}")
@@ -242,19 +216,17 @@ jobs:
           node repo/infra/scripts/release/publish-changelog-media.mjs "${ARGS[@]}"
 
       - name: Read changelog media summary
-        if: always() && steps.target.outputs.ready == 'true'
+        if: always()
         id: summary
         shell: bash
         run: |
           summary_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-summary.json"
-          retry_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-retry.json"
 
           if [[ ! -f "$summary_file" ]]; then
             echo "found=false" >> "$GITHUB_OUTPUT"
             echo "failed=0" >> "$GITHUB_OUTPUT"
             echo "published=0" >> "$GITHUB_OUTPUT"
             echo "strict_passed=false" >> "$GITHUB_OUTPUT"
-            echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -262,10 +234,9 @@ jobs:
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
 
       - name: Append changelog media diagnostics summary
-        if: always() && steps.target.outputs.ready == 'true'
+        if: always()
         shell: bash
         run: |
           summary_file="repo/interface/output/demo-screenshots/publish-changelog-media/publish-changelog-media-summary.md"
@@ -273,64 +244,45 @@ jobs:
             cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+          if [[ -n "${{ inputs.source_run_id }}" ]]; then
+            {
+              echo ""
+              echo "- Source run id: ${{ inputs.source_run_id }}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload changelog media diagnostics
-        if: always() && steps.target.outputs.ready == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: changelog-media-diagnostics-${{ github.run_id }}
+          name: changelog-media-retry-diagnostics-${{ github.run_id }}
           if-no-files-found: ignore
           path: |
             repo/interface/output/demo-screenshots/publish-changelog-media
-            pages/changelog/${{ steps.target.outputs.channel }}
-            pages/assets/changelog/${{ steps.target.outputs.channel }}
+            pages/changelog/${{ inputs.channel }}
+            pages/assets/changelog/${{ inputs.channel }}
 
-      - name: Commit and push changelog media
-        if: always() && steps.target.outputs.ready == 'true' && steps.summary.outputs.found == 'true'
+      - name: Commit and push retried changelog media
+        if: always() && steps.summary.outputs.found == 'true'
         shell: bash
         run: |
           cd pages
-          label="${{ steps.target.outputs.version }}"
+          label="${{ inputs.version }}"
           if [[ -z "$label" ]]; then
-            label="${{ steps.target.outputs.date }}"
+            label="${{ inputs.date }}"
+          fi
+          if [[ -z "$label" ]]; then
+            label="${{ inputs.channel }}"
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "changelog/${{ steps.target.outputs.channel }}"
-          git add "assets/changelog/${{ steps.target.outputs.channel }}" 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Publish ${{ steps.target.outputs.channel }} changelog media for ${label}"
+          git add "changelog/${{ inputs.channel }}"
+          git add "assets/changelog/${{ inputs.channel }}" 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Retry ${{ inputs.channel }} changelog media for ${label}"
           git push
 
-      - name: Queue failed changelog media for retry
-        if: always() && steps.target.outputs.ready == 'true' && steps.summary.outputs.found == 'true' && steps.summary.outputs.failed != '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          retry_file="${{ steps.summary.outputs.retry_file }}"
-          if [[ ! -f "$retry_file" ]]; then
-            echo "Retry plan file is missing at $retry_file" >&2
-            exit 1
-          fi
-
-          payload="$(jq -n \
-            --arg ref "main" \
-            --arg channel "${{ steps.target.outputs.channel }}" \
-            --arg version "${{ steps.target.outputs.version }}" \
-            --arg date "${{ steps.target.outputs.date }}" \
-            --arg preview_url "${{ steps.preflight.outputs.url }}" \
-            --arg provider "${{ steps.preflight.outputs.provider }}" \
-            --arg profile "${{ inputs.profile }}" \
-            --arg head_sha "$(git -C repo rev-parse HEAD)" \
-            --arg source_run_id "${{ github.run_id }}" \
-            --arg deploy_wait_minutes "2" \
-            '{ref: $ref, inputs: {channel: $channel, version: $version, date: $date, preview_url: $preview_url, provider: $provider, profile: $profile, head_sha: $head_sha, source_run_id: $source_run_id, deploy_wait_minutes: $deploy_wait_minutes}}')"
-
-          gh api "repos/${{ github.repository }}/actions/workflows/retry-release-changelog-media.yml/dispatches" \
-            --method POST \
-            --input - <<<"$payload"
-
       - name: Enforce strict changelog media rubric
-        if: always() && steps.target.outputs.ready == 'true'
+        if: always()
         shell: bash
         run: |
           if [[ "${{ steps.summary.outputs.found }}" != "true" ]]; then
@@ -339,6 +291,6 @@ jobs:
           fi
 
           if [[ "${{ steps.summary.outputs.strict_passed }}" != "true" ]]; then
-            echo "Strict changelog media rubric not satisfied: ${{ steps.summary.outputs.failed }} slot(s) still failed." >&2
+            echo "Strict changelog media rubric not satisfied after retry: ${{ steps.summary.outputs.failed }} slot(s) still failed." >&2
             exit 1
           fi
