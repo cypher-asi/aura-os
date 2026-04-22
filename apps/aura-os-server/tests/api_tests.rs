@@ -1679,6 +1679,94 @@ async fn task_routes_support_storage_backed_crud_and_state_changes() {
     assert!(listed.as_array().unwrap().is_empty());
 }
 
+#[tokio::test]
+async fn create_task_is_idempotent_on_title_within_spec() {
+    // Regression: agents chain `generate specs → extract tasks → start
+    // loop`, and the `extract_tasks` sub-session is prompted to "create
+    // or update the project's tasks". Without server-side de-dup every
+    // retry of that chain re-created every task with a fresh UUID, which
+    // surfaced as duplicate rows in the task list UI. The handler now
+    // treats `(project_id, spec_id, case-insensitive trimmed title)` as
+    // an idempotency key and returns the existing task instead.
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/specs"),
+        Some(serde_json::json!({
+            "title": "Dedupe Spec",
+            "markdownContents": "# Spec",
+            "orderIndex": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let spec = response_json(resp).await;
+    let spec_id = spec["spec_id"].as_str().unwrap().to_string();
+
+    let make_task_req = |title: &str| {
+        json_request(
+            "POST",
+            &format!("/api/projects/{project_id}/tasks"),
+            Some(serde_json::json!({
+                "spec_id": spec_id.clone(),
+                "title": title,
+                "description": "irrelevant",
+                "status": "pending",
+                "order_index": 0
+            })),
+        )
+    };
+
+    let resp = app.clone().oneshot(make_task_req("Seed Task")).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let first = response_json(resp).await;
+    let first_id = first["task_id"].as_str().unwrap().to_string();
+
+    // Exact-title re-invocation must return the same task_id.
+    let resp = app.clone().oneshot(make_task_req("Seed Task")).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let second = response_json(resp).await;
+    assert_eq!(
+        second["task_id"].as_str().unwrap(),
+        first_id,
+        "duplicate create_task call must return the existing task_id"
+    );
+
+    // Title normalisation: whitespace + case must not defeat the guard.
+    let resp = app
+        .clone()
+        .oneshot(make_task_req("  seed task  "))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let third = response_json(resp).await;
+    assert_eq!(
+        third["task_id"].as_str().unwrap(),
+        first_id,
+        "whitespace/case variations must still match the existing task"
+    );
+
+    // Sanity check: still exactly one row in the list.
+    let req = json_request("GET", &format!("/api/projects/{project_id}/tasks"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    let rows = listed.as_array().unwrap();
+    assert_eq!(rows.len(), 1, "dedupe must not create additional rows");
+
+    // Different title still creates a new task on the same spec.
+    let resp = app
+        .clone()
+        .oneshot(make_task_req("Another Task"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let fourth = response_json(resp).await;
+    assert_ne!(fourth["task_id"].as_str().unwrap(), first_id);
+}
+
 // ---------------------------------------------------------------------------
 // Agent Endpoint Tests
 // ---------------------------------------------------------------------------

@@ -478,6 +478,52 @@ pub(crate) async fn create_task(
     let detection_title = req.title.clone();
     let detection_description = req.description.clone().unwrap_or_default();
 
+    // Idempotency guard: agents chain `generate specs → extract tasks →
+    // start loop`, and the `extract_tasks` sub-session is told to "create
+    // or update the project's tasks". Without a server-side title check,
+    // any re-invocation of that chain re-creates every task with a new
+    // UUID, yielding the duplicate rows the user sees in the task list.
+    // Dedupe by `(project_id, spec_id, case-insensitive trimmed title)` —
+    // the same key `TaskService::create_follow_up_task` already enforces.
+    let norm_title = req.title.trim().to_lowercase();
+    if !norm_title.is_empty() {
+        match storage.list_tasks(&project_id.to_string(), &jwt).await {
+            Ok(existing) => {
+                if let Some(dup) = existing.into_iter().find(|t| {
+                    t.spec_id.as_deref() == Some(req.spec_id.as_str())
+                        && t.title
+                            .as_deref()
+                            .map(|title| title.trim().to_lowercase() == norm_title)
+                            .unwrap_or(false)
+                }) {
+                    let mut task = storage_task_to_task(dup).map_err(ApiError::internal)?;
+                    task.skip_auto_decompose = skip_auto_decompose;
+                    // Re-broadcast `task_saved` so any client that missed
+                    // the original creation event still lands on a consistent
+                    // view. No Phase-5 preflight here — the existing row
+                    // already went through that path at its own creation.
+                    let _ = state.event_broadcast.send(serde_json::json!({
+                        "type": "task_saved",
+                        "project_id": project_id.to_string(),
+                        "task": task,
+                        "task_id": task.task_id.to_string(),
+                    }));
+                    return Ok(Json(task));
+                }
+            }
+            Err(e) => {
+                // Dedupe is best-effort — a transient storage read failure
+                // should not block creation. Log and fall through to the
+                // normal create path.
+                tracing::warn!(
+                    %project_id,
+                    %e,
+                    "create_task dedupe pre-check failed; proceeding to create"
+                );
+            }
+        }
+    }
+
     let storage_req = aura_os_storage::CreateTaskRequest {
         spec_id: req.spec_id,
         title: req.title,

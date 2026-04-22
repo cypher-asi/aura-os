@@ -1650,6 +1650,30 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         CachedTaskOutput::default()
                                     }
                                 };
+                                // Always persist the failure reason to
+                                // `execution_notes` (even without a
+                                // `session_id`) so the UI can render a
+                                // reason on page reload via the
+                                // `TaskMetaSection` → `execution_notes`
+                                // fallback. The usage-metadata write
+                                // below still requires `session_id`
+                                // because the write also pins a session
+                                // reference onto the task row.
+                                if let (Some(storage_client), Some(jwt), Some(reason)) = (
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    failure_reason.clone(),
+                                ) {
+                                    let req = aura_os_storage::UpdateTaskRequest {
+                                        execution_notes: Some(reason),
+                                        ..Default::default()
+                                    };
+                                    if let Err(error) =
+                                        storage_client.update_task(tid, jwt, &req).await
+                                    {
+                                        warn!(task_id = %tid, %error, "Failed to persist failed-task execution_notes");
+                                    }
+                                }
                                 if let (Some(storage_client), Some(jwt), Some(session_id)) = (
                                     storage_client.as_ref(),
                                     jwt.as_deref(),
