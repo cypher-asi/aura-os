@@ -5,6 +5,15 @@
   margin-top: var(--space-2);
 }
 
+.updateControl[data-layout="inline"] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: 0;
+}
+
 .updateStatus {
   display: flex;
   align-items: center;
@@ -32,4 +41,113 @@
   max-width: 200px;
   margin-top: 0;
   line-height: 1.4;
+}
+
+/* ── Attention panel (full-width, actionable states) ── */
+
+.updatePanel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.updatePanel[data-variant="available"] {
+  border-color: color-mix(in srgb, var(--color-brand-primary, var(--color-accent)) 48%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-brand-primary, var(--color-accent)) 10%,
+    var(--color-surface)
+  );
+}
+
+.updatePanel[data-variant="progress"] {
+  border-color: color-mix(in srgb, var(--color-accent, var(--color-text)) 32%, var(--color-border));
+  background: color-mix(
+    in srgb,
+    var(--color-accent, var(--color-text)) 6%,
+    var(--color-surface)
+  );
+}
+
+.updatePanel[data-variant="failed"] {
+  border-color: color-mix(
+    in srgb,
+    var(--color-danger, #d9534f) 56%,
+    var(--color-border)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-danger, #d9534f) 8%,
+    var(--color-surface)
+  );
+}
+
+.updatePanelIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+}
+
+.updatePanel[data-variant="available"] .updatePanelIcon {
+  color: var(--color-brand-primary, var(--color-accent));
+  background: color-mix(
+    in srgb,
+    var(--color-brand-primary, var(--color-accent)) 18%,
+    transparent
+  );
+}
+
+.updatePanel[data-variant="failed"] .updatePanelIcon {
+  color: var(--color-danger, #d9534f);
+  background: color-mix(in srgb, var(--color-danger, #d9534f) 14%, transparent);
+}
+
+.updatePanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.updatePanelTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.updatePanelDescription {
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.updatePanelActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .updatePanel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .updatePanelActions {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
 }

@@ -1,8 +1,10 @@
 use base64::Engine;
 use cargo_packager_updater::{
-    semver::Version as SemverVersion, Config as PackagerUpdaterConfig, Update, UpdaterBuilder,
+    semver::Version as SemverVersion, Config as PackagerUpdaterConfig, UpdaterBuilder,
     WindowsConfig, WindowsUpdateInstallMode,
 };
+#[cfg(not(target_os = "windows"))]
+use cargo_packager_updater::Update;
 #[cfg(any(
     target_os = "linux",
     target_os = "dragonfly",
@@ -19,6 +21,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+#[cfg(target_os = "windows")]
+use tracing::debug;
 use tracing::{error, info, warn};
 
 const CHECK_INTERVAL: Duration = Duration::from_secs(30 * 60);
@@ -97,6 +101,7 @@ pub(crate) struct UpdateState {
     pub status: Arc<RwLock<UpdateStatus>>,
     pub channel: Arc<RwLock<UpdateChannel>>,
     settings_path: Arc<PathBuf>,
+    data_dir: Arc<PathBuf>,
     shutdown_hook: Arc<RwLock<Option<ShutdownHook>>>,
 }
 
@@ -106,6 +111,7 @@ impl std::fmt::Debug for UpdateState {
             .field("status", &self.status)
             .field("channel", &self.channel)
             .field("settings_path", &self.settings_path)
+            .field("data_dir", &self.data_dir)
             .finish_non_exhaustive()
     }
 }
@@ -127,6 +133,7 @@ impl UpdateState {
             status: Arc::new(RwLock::new(UpdateStatus::Idle)),
             channel: Arc::new(RwLock::new(channel)),
             settings_path: Arc::new(settings_path),
+            data_dir: Arc::new(data_dir.to_path_buf()),
             shutdown_hook: Arc::new(RwLock::new(None)),
         }
     }
@@ -312,13 +319,8 @@ fn check_for_available_update(
     Ok(Some(version))
 }
 
+#[cfg(not(target_os = "windows"))]
 fn restart_after_install(update: &Update) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        let _ = update;
-        Ok(())
-    }
-
     #[cfg(target_os = "macos")]
     {
         let bundle_path = &update.extract_path;
@@ -359,10 +361,91 @@ fn restart_after_install(update: &Update) -> Result<(), String> {
     }
 }
 
-fn download_and_install_update(
-    channel: UpdateChannel,
-    status: Arc<RwLock<UpdateStatus>>,
-) -> Result<Option<String>, String> {
+#[cfg(target_os = "windows")]
+const INSTALLER_STAGE_SUBDIR: &str = "runtime/updater";
+
+#[cfg(target_os = "windows")]
+fn sanitize_version_for_filename(version: &str) -> String {
+    version
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_') { c } else { '_' })
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn stage_installer_bytes(data_dir: &Path, version: &str, bytes: &[u8]) -> Result<PathBuf, String> {
+    let stage_dir = data_dir.join(INSTALLER_STAGE_SUBDIR);
+    fs::create_dir_all(&stage_dir).map_err(|e| {
+        format!(
+            "failed to create installer stage dir {}: {e}",
+            stage_dir.display()
+        )
+    })?;
+    let sanitized = sanitize_version_for_filename(version);
+    let final_path = stage_dir.join(format!("aura-setup-{sanitized}.exe"));
+    let temp_path = stage_dir.join(format!(
+        ".aura-setup-{sanitized}.tmp-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|v| v.as_nanos())
+            .unwrap_or(0)
+    ));
+    fs::write(&temp_path, bytes).map_err(|e| {
+        format!(
+            "failed to write staged installer {}: {e}",
+            temp_path.display()
+        )
+    })?;
+    if final_path.exists() {
+        let _ = fs::remove_file(&final_path);
+    }
+    fs::rename(&temp_path, &final_path).map_err(|e| {
+        let _ = fs::remove_file(&temp_path);
+        format!(
+            "failed to move staged installer {} -> {}: {e}",
+            temp_path.display(),
+            final_path.display()
+        )
+    })?;
+    debug!(path = %final_path.display(), bytes = bytes.len(), "staged Windows installer");
+    Ok(final_path)
+}
+
+#[cfg(target_os = "windows")]
+fn spawn_windows_installer(installer_path: &Path) -> Result<u32, String> {
+    use std::os::windows::process::CommandExt;
+    use std::process::Stdio;
+
+    // Creation flags for the detached install child. Breaking away from any
+    // enclosing Job Object (wry/WebView2 can place the host process inside
+    // one) is what actually keeps the installer alive once Aura exits.
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+
+    let child = std::process::Command::new(installer_path)
+        // `/P` enables passive mode in cargo-packager's NSIS template
+        // (small progress window, no user interaction). `/R` asks the
+        // installer to restart Aura once install completes.
+        .args(["/P", "/R"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP)
+        .spawn()
+        .map_err(|e| {
+            format!(
+                "failed to spawn installer {}: {e}",
+                installer_path.display()
+            )
+        })?;
+    Ok(child.id())
+}
+
+fn perform_update_install(state: &UpdateState) -> Result<Option<String>, String> {
+    let channel = *state.channel.read().expect("updater channel lock poisoned");
+    let status = Arc::clone(&state.status);
     let updater = build_updater(channel)?;
     let Some(update) = updater
         .check()
@@ -394,38 +477,47 @@ fn download_and_install_update(
         },
     );
 
-    update
-        .install(bytes)
-        .map_err(|e| format!("update install failed: {e}"))?;
-    restart_after_install(&update)?;
-    Ok(Some(version))
+    #[cfg(target_os = "windows")]
+    {
+        // Stage the verified installer bytes outside the install tree so
+        // the filename that appears in UAC prompts and logs is meaningful,
+        // and so the NSIS setup can still find itself after we exit.
+        let installer_path = stage_installer_bytes(state.data_dir.as_ref(), &version, &bytes)?;
+        drop(bytes);
+
+        // Ask the main event loop to drop sidecars (local harness, Vite
+        // dev server) and exit before the installer races with file
+        // locks. `trigger_shutdown` posts a UserEvent that the main
+        // thread handles asynchronously; give it a short beat to run.
+        state.trigger_shutdown();
+        std::thread::sleep(Duration::from_millis(750));
+
+        let pid = spawn_windows_installer(&installer_path)?;
+        info!(
+            pid,
+            installer = %installer_path.display(),
+            new_version = %version,
+            "spawned detached Windows installer; exiting Aura for handoff"
+        );
+        // Release our own file handles on the install tree so the
+        // installer can overwrite binaries cleanly.
+        std::process::exit(0);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        update
+            .install(bytes)
+            .map_err(|e| format!("update install failed: {e}"))?;
+        restart_after_install(&update)?;
+        Ok(Some(version))
+    }
 }
 
 /// Install the latest available update after explicit user approval.
 pub(crate) fn install_and_restart(state: UpdateState) -> Result<(), String> {
-    let channel = *state.channel.read().expect("updater channel lock poisoned");
-    let status = Arc::clone(&state.status);
-    match download_and_install_update(channel, status) {
-        Ok(Some(_)) => {
-            // On Windows, `update.install(bytes)` spawned the NSIS installer
-            // in passive mode, but the installer cannot overwrite files that
-            // are still held open by this process or its sidecar children
-            // (the local harness `aura-node.exe`, and any managed Vite dev
-            // server). Ask the main event loop to kill the sidecars and
-            // exit cleanly, then terminate the process so the installer
-            // can finish replacing files.
-            #[cfg(target_os = "windows")]
-            {
-                info!("shutting down for Windows installer to take over");
-                state.trigger_shutdown();
-                std::thread::sleep(Duration::from_millis(750));
-                std::process::exit(0);
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                Ok(())
-            }
-        }
+    match perform_update_install(&state) {
+        Ok(Some(_)) => Ok(()),
         Ok(None) => Err("no update available".into()),
         Err(error) => {
             set_status(

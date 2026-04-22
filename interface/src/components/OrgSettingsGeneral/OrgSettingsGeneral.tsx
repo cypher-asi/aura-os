@@ -1,6 +1,7 @@
 import { Input, Text } from "@cypher-asi/zui";
 import { formatBuildTime, getBuildInfo } from "../../lib/build-info";
 import { UpdateControl } from "../UpdateControl";
+import { useUpdateStatus } from "../UpdateControl/useUpdateStatus";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 
 interface Props {
@@ -10,9 +11,19 @@ interface Props {
   teamMessage: string;
 }
 
+const UPDATE_PANEL_STATUSES = new Set([
+  "available",
+  "downloading",
+  "installing",
+  "failed",
+]);
+
 export function OrgSettingsGeneral({ teamName, onTeamNameChange, teamSaving, teamMessage }: Props) {
   const build = getBuildInfo();
   const channelLabel = build.channel.charAt(0).toUpperCase() + build.channel.slice(1);
+  const { supported: updaterSupported, status: updateStatus, installPending } = useUpdateStatus();
+  const showUpdatePanel =
+    updaterSupported && (UPDATE_PANEL_STATUSES.has(updateStatus) || installPending);
 
   return (
     <>
@@ -88,9 +99,17 @@ export function OrgSettingsGeneral({ teamName, onTeamNameChange, teamSaving, tea
             <span className={styles.rowDescription}>Check for and install new versions of Aura</span>
           </div>
           <div className={styles.rowControl}>
-            <UpdateControl />
+            <UpdateControl layout="inline" />
           </div>
         </div>
+        {showUpdatePanel ? (
+          <div
+            className={`${styles.settingsRow} ${styles.settingsRowFull}`}
+            data-testid="settings-update-panel-row"
+          >
+            <UpdateControl layout="panel" />
+          </div>
+        ) : null}
       </div>
     </>
   );

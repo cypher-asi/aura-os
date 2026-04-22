@@ -89,9 +89,9 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`Usage:
   node infra/scripts/release/desktop-local-auto-update-smoke.mjs \\
-    --app /path/to/Aura.app \\
-    --update-bundle /path/to/Aura-update.app.tar.gz \\
-    --signature /path/to/Aura-update.app.tar.gz.sig \\
+    --app /path/to/Aura.app  (macOS) or C:\\\\path\\\\to\\\\Aura.exe (Windows) \\
+    --update-bundle /path/to/update.tar.gz (macOS) or update-x64-setup.exe (Windows) \\
+    --signature /path/to/update.sig \\
     --target-version 0.1.1
 `);
 }
@@ -104,6 +104,19 @@ function hostArch() {
       return "x86_64";
     default:
       throw new Error(`unsupported host arch for update smoke: ${os.arch()}`);
+  }
+}
+
+function platformKey() {
+  switch (process.platform) {
+    case "darwin":
+      return "macos";
+    case "win32":
+      return "windows";
+    default:
+      throw new Error(
+        `desktop local auto-update smoke currently supports macOS and Windows only (got ${process.platform})`,
+      );
   }
 }
 
@@ -123,26 +136,63 @@ function realPath(targetPath) {
   return fs.realpathSync.native(targetPath);
 }
 
-function findAppExecutable(appPath) {
-  const macOsDir = path.join(appPath, "Contents", "MacOS");
-  ensureDirectory(macOsDir, "app executable directory");
-  const entries = fs.readdirSync(macOsDir)
-    .map((name) => path.join(macOsDir, name))
-    .filter((fullPath) => fs.statSync(fullPath).isFile());
-  if (entries.length !== 1) {
-    throw new Error(`expected exactly one executable in ${macOsDir}, found ${entries.length}`);
+function assertAppPath(appPath) {
+  const platform = platformKey();
+  if (platform === "macos") {
+    ensureDirectory(appPath, "app bundle");
+  } else {
+    ensureFile(appPath, "app executable");
+    if (path.extname(appPath).toLowerCase() !== ".exe") {
+      throw new Error(`expected --app to point at Aura.exe on Windows, got ${appPath}`);
+    }
   }
-  return entries[0];
 }
 
-function readBundleVersion(appPath) {
-  const plistPath = path.join(appPath, "Contents", "Info.plist");
-  ensureFile(plistPath, "app Info.plist");
-  return execFileSync(
-    "plutil",
-    ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", plistPath],
-    { encoding: "utf8" },
+function findAppExecutable(appPath) {
+  const platform = platformKey();
+  if (platform === "macos") {
+    const macOsDir = path.join(appPath, "Contents", "MacOS");
+    ensureDirectory(macOsDir, "app executable directory");
+    const entries = fs.readdirSync(macOsDir)
+      .map((name) => path.join(macOsDir, name))
+      .filter((fullPath) => fs.statSync(fullPath).isFile());
+    if (entries.length !== 1) {
+      throw new Error(`expected exactly one executable in ${macOsDir}, found ${entries.length}`);
+    }
+    return entries[0];
+  }
+  return appPath;
+}
+
+function readAppVersion(appPath) {
+  const platform = platformKey();
+  if (platform === "macos") {
+    const plistPath = path.join(appPath, "Contents", "Info.plist");
+    ensureFile(plistPath, "app Info.plist");
+    return execFileSync(
+      "plutil",
+      ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", plistPath],
+      { encoding: "utf8" },
+    ).trim();
+  }
+
+  // Read ProductVersion from Windows VS_VERSION_INFO via PowerShell. Falls
+  // back to FileVersion if ProductVersion is empty (older installers).
+  const script =
+    "$p = (Get-Item -LiteralPath $env:AURA_SMOKE_EXE).VersionInfo;" +
+    " if ([string]::IsNullOrWhiteSpace($p.ProductVersion)) { $p.FileVersion.Trim() } else { $p.ProductVersion.Trim() }";
+  const output = execFileSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    {
+      encoding: "utf8",
+      env: { ...process.env, AURA_SMOKE_EXE: appPath },
+    },
   ).trim();
+  if (!output) {
+    throw new Error(`failed to read version info from ${appPath}`);
+  }
+  return output;
 }
 
 async function sleep(ms) {
@@ -164,11 +214,14 @@ async function fetchJson(url, init) {
 }
 
 function startUpdateServer({ channel, updatePort, updateBundle, signature, targetVersion }) {
+  const platform = platformKey();
   const updateBundleName = path.basename(updateBundle);
   const signatureValue = fs.readFileSync(signature, "utf8").trim();
   const arch = hostArch();
-  const manifestPath = `/${channel}/macos/${arch}.json`;
+  const manifestPath = `/${channel}/${platform}/${arch}.json`;
   const bundleUrl = `http://127.0.0.1:${updatePort}/${updateBundleName}`;
+  const format = platform === "macos" ? "app" : "nsis";
+  const bundleContentType = platform === "macos" ? "application/gzip" : "application/octet-stream";
 
   const server = http.createServer((req, res) => {
     const reqPath = req.url || "/";
@@ -177,7 +230,7 @@ function startUpdateServer({ channel, updatePort, updateBundle, signature, targe
         version: targetVersion,
         url: bundleUrl,
         signature: signatureValue,
-        format: "app",
+        format,
       };
       res.writeHead(200, { "content-type": "application/json" });
       res.end(`${JSON.stringify(manifest, null, 2)}\n`);
@@ -186,7 +239,7 @@ function startUpdateServer({ channel, updatePort, updateBundle, signature, targe
 
     if (reqPath === `/${updateBundleName}`) {
       res.writeHead(200, {
-        "content-type": "application/gzip",
+        "content-type": bundleContentType,
         "content-length": String(fs.statSync(updateBundle).size),
       });
       fs.createReadStream(updateBundle).pipe(res);
@@ -261,13 +314,33 @@ async function triggerInstall(baseUrl) {
 
 function terminateProcess(child) {
   if (!child || child.killed) return;
+  if (process.platform === "win32") {
+    try {
+      execFileSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+        stdio: "ignore",
+      });
+    } catch {
+      // ignore
+    }
+    return;
+  }
   child.kill("SIGTERM");
   setTimeout(() => {
     if (!child.killed) child.kill("SIGKILL");
   }, 5000).unref();
 }
 
-function killBundleProcesses(executablePath) {
+function killAppProcesses(executablePath) {
+  if (process.platform === "win32") {
+    const imageName = path.basename(executablePath);
+    try {
+      execFileSync("taskkill", ["/IM", imageName, "/T", "/F"], { stdio: "ignore" });
+    } catch {
+      // ignore — no process with that image name
+    }
+    return;
+  }
+
   try {
     execFileSync("pkill", ["-f", executablePath]);
   } catch (error) {
@@ -276,25 +349,23 @@ function killBundleProcesses(executablePath) {
 }
 
 async function main() {
-  if (process.platform !== "darwin") {
-    throw new Error("desktop local auto-update smoke currently supports macOS only");
-  }
+  const platform = platformKey();
 
   const options = parseArgs(process.argv.slice(2));
   const appPath = realPath(path.resolve(options.app));
   const updateBundle = realPath(path.resolve(options.updateBundle));
   const signature = realPath(path.resolve(options.signature));
 
-  ensureDirectory(appPath, "app bundle");
+  assertAppPath(appPath);
   ensureFile(updateBundle, "update bundle");
   ensureFile(signature, "update signature");
 
-  const currentVersion = readBundleVersion(appPath);
+  const currentVersion = readAppVersion(appPath);
   const executablePath = findAppExecutable(appPath);
   const baseUrl = `http://127.0.0.1:${options.serverPort}`;
 
   if (currentVersion === options.targetVersion) {
-    throw new Error(`app bundle is already at target version ${options.targetVersion}`);
+    throw new Error(`app is already at target version ${options.targetVersion}`);
   }
 
   fs.mkdirSync(options.logDir, { recursive: true });
@@ -338,13 +409,25 @@ async function main() {
 
     const startedAt = Date.now();
     while (Date.now() - startedAt < options.timeoutMs) {
-      const nextVersion = readBundleVersion(appPath);
+      let nextVersion;
+      try {
+        nextVersion = readAppVersion(appPath);
+      } catch (error) {
+        // On Windows, while the installer is replacing Aura.exe the file
+        // can briefly disappear; treat that as "not yet on target version".
+        if (installingObserved || child.exitCode !== null) {
+          await sleep(1000);
+          continue;
+        }
+        throw error;
+      }
       if (nextVersion === options.targetVersion) {
         console.log(JSON.stringify({
           ok: true,
+          platform,
           currentVersion,
           targetVersion: options.targetVersion,
-          finalBundleVersion: nextVersion,
+          finalVersion: nextVersion,
           baseUrl,
           updateBaseUrl: `http://127.0.0.1:${options.updatePort}`,
           manifestPath,
@@ -375,7 +458,8 @@ async function main() {
           }
         }
       } catch (error) {
-        // The server can disappear briefly while the app shuts down for restart.
+        // The server can disappear briefly while the app shuts down for
+        // restart (macOS) or while the Windows installer swaps files.
         if (installingObserved || child.exitCode !== null) {
           await sleep(1000);
           continue;
@@ -387,15 +471,19 @@ async function main() {
     }
 
     throw new Error(
-      `timed out waiting for bundle version ${options.targetVersion}; availableObserved=${availableObserved}; installTriggered=${installTriggered}; last status was ${JSON.stringify(lastStatus)}`,
+      `timed out waiting for app version ${options.targetVersion}; availableObserved=${availableObserved}; installTriggered=${installTriggered}; last status was ${JSON.stringify(lastStatus)}`,
     );
   } finally {
     terminateProcess(child);
-    killBundleProcesses(executablePath);
+    killAppProcesses(executablePath);
     stdout.end();
     stderr.end();
     server.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    try {
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    } catch {
+      // On Windows the installer may still hold handles; best-effort cleanup.
+    }
   }
 }
 
