@@ -47,7 +47,9 @@ export function ChatStreamingIndicator({ streamKey }: ChatStreamingIndicatorProp
 
   return (
     <div className={styles.pinnedStreamingIndicator} aria-live="polite">
-      <CookingIndicator label={label ?? "Cooking..."} hidden={!label} />
+      <div className={styles.pinnedStreamingIndicatorInner}>
+        <CookingIndicator label={label ?? "Cooking..."} hidden={!label} />
+      </div>
     </div>
   );
 }
