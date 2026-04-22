@@ -55,7 +55,7 @@ export function EventTimelineItem({ event, nodes, isLive }: EventTimelineItemPro
   return (
     <div
       style={{
-        border: "1px solid var(--color-border-light)",
+        border: "1px solid var(--color-border, rgba(255, 255, 255, 0.08))",
         borderRadius: "var(--radius-sm)",
         fontSize: 12,
         overflow: "hidden",
