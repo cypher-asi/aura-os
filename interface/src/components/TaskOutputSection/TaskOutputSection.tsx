@@ -17,6 +17,7 @@ import type { TaskOutputEntry } from "../../stores/event-store/index";
 import { useTaskOutput } from "../../stores/event-store/index";
 import { useTaskOutputView } from "../../hooks/use-task-output-view";
 import { useProjectActions } from "../../stores/project-action-store";
+import { useCooldownStatus, cooldownLabel } from "../../hooks/use-cooldown-status";
 import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
 import type { Task } from "../../types";
 import styles from "../Preview/Preview.module.css";
@@ -144,6 +145,23 @@ function formatDebugOutput(ctx: DebugContext): string {
   return lines.join("\n").trimEnd();
 }
 
+/**
+ * Render the status line shown in place of "Waiting for agent output…"
+ * when the loop is paused for a provider cooldown. Exported so the
+ * component test can assert on the exact wording without reaching into
+ * JSX internals.
+ */
+export function renderCooldownMessage(cooldown: {
+  retryKind: string | null;
+  remainingSeconds: number | null;
+}): string {
+  const label = cooldownLabel(cooldown.retryKind);
+  if (cooldown.remainingSeconds != null && cooldown.remainingSeconds > 0) {
+    return `${label} — resuming in ${cooldown.remainingSeconds}s…`;
+  }
+  return `${label} — resuming…`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -175,6 +193,7 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
   // render without any additional wiring here.
   const ctx = useProjectActions();
   useTaskOutputView(taskId, ctx?.project.project_id, !isActive);
+  const cooldown = useCooldownStatus(undefined, ctx?.project.project_id);
 
   const hydratedOutput = useTaskOutput(taskId);
   const fallbackText = hydratedOutput.text;
@@ -233,7 +252,9 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
             </span>
             <span className={styles.activityBody}>
               <span className={styles.activityMessage} style={{ opacity: 0.5 }}>
-                Waiting for agent output…
+                {cooldown.paused
+                  ? renderCooldownMessage(cooldown)
+                  : "Waiting for agent output…"}
               </span>
             </span>
           </div>

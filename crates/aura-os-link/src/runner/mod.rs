@@ -123,7 +123,7 @@ pub async fn start_and_connect(
     let tx = connect_with_retries(
         client,
         &result.automaton_id,
-        &result.event_stream_url,
+        Some(&result.event_stream_url),
         stream_retries,
     )
     .await
@@ -137,10 +137,14 @@ pub async fn start_and_connect(
 /// Connect to an automaton event stream, retrying on failure.
 ///
 /// `retries` is the number of **additional** attempts after the first.
+/// Passing `None` for `event_stream_url` lets the client fall back to its
+/// default stream path — used when adopting an existing automaton whose
+/// start-time URL is no longer available (e.g. after recovering from a
+/// `Conflict` on restart).
 pub async fn connect_with_retries(
     client: &AutomatonClient,
     automaton_id: &str,
-    event_stream_url: &str,
+    event_stream_url: Option<&str>,
     retries: u32,
 ) -> Result<broadcast::Sender<serde_json::Value>, String> {
     let total_attempts = retries + 1;
@@ -155,7 +159,7 @@ pub async fn connect_with_retries(
             tokio::time::sleep(delay).await;
         }
         match client
-            .connect_event_stream(automaton_id, Some(event_stream_url))
+            .connect_event_stream(automaton_id, event_stream_url)
             .await
         {
             Ok(tx) => return Ok(tx),

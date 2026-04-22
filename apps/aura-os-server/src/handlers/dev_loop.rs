@@ -277,9 +277,7 @@ fn register_project_cooldown_with_hint(
     let key = project_id.to_string();
     let default = infra_cooldown_for(class);
     let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
-    let requested = hint
-        .map(|h| h.min(cap).max(default))
-        .unwrap_or(default);
+    let requested = hint.map(|h| h.min(cap).max(default)).unwrap_or(default);
     let mut guard = match project_cooldowns().lock() {
         Ok(g) => g,
         Err(poisoned) => poisoned.into_inner(),
@@ -1515,12 +1513,82 @@ async fn synthesize_task_failed(
     );
 }
 
+/// Outcome of resolving an `AutomatonStartError::Conflict` on restart.
+///
+/// Mirrors the stale/adopt logic already in `start_loop` so the infra-retry
+/// path can recover from the same "dev loop is already running" race when
+/// the previous forwarder left a stale automaton registered on the harness.
+enum ConflictResolution {
+    /// We successfully started a new automaton after stopping the stale one.
+    Fresh {
+        automaton_id: String,
+        event_stream_url: String,
+    },
+    /// The existing automaton is still active; adopt it and reconnect to
+    /// its event stream using the default URL (the harness knows its own
+    /// stream path when called with `None`).
+    Adopt { automaton_id: String },
+}
+
+/// Resolve an `AutomatonStartError::Conflict` by probing the existing
+/// automaton's status: if it's stale, stop it and retry `start`; otherwise
+/// adopt the existing automaton. Returns an error only when the conflict
+/// cannot be resolved (e.g. harness reported `Conflict(None)` so we have
+/// no ID to probe or stop).
+async fn resolve_start_conflict(
+    automaton_client: &aura_os_link::AutomatonClient,
+    existing_id: Option<String>,
+    start_params: &AutomatonStartParams,
+) -> Result<ConflictResolution, String> {
+    let aid = existing_id.ok_or_else(|| {
+        "a dev loop is already running but its ID could not be determined".to_string()
+    })?;
+
+    let stale = match automaton_client.status(&aid).await {
+        Ok(status) => !automaton_is_active(&status),
+        Err(e) => {
+            warn!(%aid, error = %e, "Failed to inspect conflicting automaton; treating as stale");
+            true
+        }
+    };
+
+    if !stale {
+        info!(%aid, "Adopting live automaton on restart conflict");
+        return Ok(ConflictResolution::Adopt { automaton_id: aid });
+    }
+
+    info!(%aid, "Stopping stale conflicting automaton before restart retry");
+    if let Err(e) = automaton_client.stop(&aid).await {
+        warn!(%aid, error = %e, "Failed to stop stale conflicting automaton; will retry start anyway");
+    }
+    match automaton_client.start(start_params.clone()).await {
+        Ok(r) => Ok(ConflictResolution::Fresh {
+            automaton_id: r.automaton_id,
+            event_stream_url: r.event_stream_url,
+        }),
+        Err(AutomatonStartError::Conflict(Some(retry_id))) => {
+            info!(%retry_id, "Retry still conflicts; adopting existing automaton");
+            Ok(ConflictResolution::Adopt {
+                automaton_id: retry_id,
+            })
+        }
+        Err(AutomatonStartError::Conflict(None)) => Err(
+            "a dev loop is already running but its ID could not be determined after stop".into(),
+        ),
+        Err(e) => Err(format!("automaton start failed after stale cleanup: {e}")),
+    }
+}
+
 /// Restart the automaton once after an infra-transient failure and
 /// re-subscribe to its event stream.
 ///
 /// Emits a `task_retrying` domain event before the restart so the UI can
-/// surface the retry. Returns the new broadcast sender on success, or an
-/// error message the caller can surface as part of the failure reason.
+/// surface the retry. Handles `AutomatonStartError::Conflict` the same way
+/// the primary `start_loop` path does (stop-stale / adopt-live) so a
+/// leftover harness-side automaton from the failed run doesn't turn every
+/// rate-limit recovery into a permanent failure. Returns the new broadcast
+/// sender on success, or an error message the caller can surface as part
+/// of the failure reason.
 async fn try_restart_automaton(
     app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
     project_id: ProjectId,
@@ -1539,15 +1607,33 @@ async fn try_restart_automaton(
             "reason": reason,
         }),
     );
-    let result = ctx
+    let (automaton_id, event_stream_url) = match ctx
         .automaton_client
         .start(ctx.start_params.clone())
         .await
-        .map_err(|e| format!("automaton start failed: {e}"))?;
+    {
+        Ok(r) => (r.automaton_id, Some(r.event_stream_url)),
+        Err(AutomatonStartError::Conflict(existing_id)) => {
+            match resolve_start_conflict(
+                ctx.automaton_client.as_ref(),
+                existing_id,
+                &ctx.start_params,
+            )
+            .await?
+            {
+                ConflictResolution::Fresh {
+                    automaton_id,
+                    event_stream_url,
+                } => (automaton_id, Some(event_stream_url)),
+                ConflictResolution::Adopt { automaton_id } => (automaton_id, None),
+            }
+        }
+        Err(e) => return Err(format!("automaton start failed: {e}")),
+    };
     let tx = connect_with_retries(
         ctx.automaton_client.as_ref(),
-        &result.automaton_id,
-        &result.event_stream_url,
+        &automaton_id,
+        event_stream_url.as_deref(),
         2,
     )
     .await
@@ -2108,12 +2194,19 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // page reloads) and surface it on the live
                             // `task_failed` broadcast below.
                             let failure_reason = extract_failure_reason(&event);
+                            // Tracks whether `reset_task_for_infra_retry`
+                            // flipped the task from `in_progress` → `ready`
+                            // but the subsequent restart failed. When true,
+                            // the terminal-failure transition below must
+                            // bridge `ready → in_progress → failed` because
+                            // aura-storage rejects a direct `ready → failed`
+                            // (producing the `Invalid status transition`
+                            // warnings seen in the logs).
+                            let mut task_reset_to_ready = false;
                             if let (Some(tid), Some(reason), Some(infra_failure)) = (
                                 tid.as_ref(),
                                 failure_reason.as_ref(),
-                                failure_reason
-                                    .as_deref()
-                                    .and_then(classify_infra_failure),
+                                failure_reason.as_deref().and_then(classify_infra_failure),
                             ) {
                                 if let Some(ctx) = take_retry_context(&mut retry) {
                                     // Provider-supplied Retry-After hint,
@@ -2124,8 +2217,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     // `retries.jsonl` so the run bundle
                                     // surfaces the backoff.
                                     let retry_after_hint = extract_retry_after(&event);
-                                    let hint_ms = retry_after_hint
-                                        .map(|d| d.as_millis() as u64);
+                                    let hint_ms = retry_after_hint.map(|d| d.as_millis() as u64);
                                     loop_log
                                         .on_json_event(
                                             project_id,
@@ -2147,6 +2239,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     .await
                                     {
                                         Ok(()) => {
+                                            task_reset_to_ready = true;
                                             current_task_id = None;
                                             sync_registry_task_id(
                                                 automaton_registry.clone(),
@@ -2172,6 +2265,10 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                     rx = new_tx.subscribe();
                                                     terminal_seen = false;
                                                     session_status = "completed";
+                                                    // `task_reset_to_ready` intentionally stays
+                                                    // true here only so future maintainers see
+                                                    // the bridge exists; we `continue` before
+                                                    // any failure transition runs.
                                                     continue;
                                                 }
                                                 Err(restart_err) => {
@@ -2270,16 +2367,52 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         warn!(task_id = %tid, %error, "Failed to persist failed-task usage metadata");
                                     }
                                 }
-                                persistence::persist_task_output(
-                                    storage_client.as_ref(),
-                                    jwt.as_deref(),
-                                    tid,
-                                    &cached,
-                                )
-                                .await;
+                                // Skip the persist call entirely when we
+                                // have nothing to persist: the infra-retry
+                                // reset path can fail before any harness
+                                // events are seen, leaving `cached` empty
+                                // and `session_id` unset. Calling
+                                // `persist_task_output` on that state just
+                                // produces a `session_id missing` warning
+                                // for a row that legitimately has no
+                                // output to save.
+                                if cached.session_id.is_some()
+                                    || !cached.live_output.is_empty()
+                                    || !cached.build_steps.is_empty()
+                                    || !cached.test_steps.is_empty()
+                                {
+                                    persistence::persist_task_output(
+                                        storage_client.as_ref(),
+                                        jwt.as_deref(),
+                                        tid,
+                                        &cached,
+                                    )
+                                    .await;
+                                }
                                 if let (Some(storage_client), Some(jwt)) =
                                     (storage_client.as_ref(), jwt.as_deref())
                                 {
+                                    // When a prior `reset_task_for_infra_retry`
+                                    // already flipped this task to `ready`
+                                    // and the subsequent restart failed,
+                                    // aura-storage will reject a direct
+                                    // `ready → failed` transition. Bridge
+                                    // through `in_progress` first so the
+                                    // task actually lands in `failed` and
+                                    // the UI reflects the terminal state
+                                    // instead of leaving the row stuck in
+                                    // `ready` with no explanatory badge.
+                                    if task_reset_to_ready {
+                                        let bridge = aura_os_storage::TransitionTaskRequest {
+                                            status: "in_progress".to_string(),
+                                        };
+                                        if let Err(error) = storage_client
+                                            .transition_task(tid, jwt, &bridge)
+                                            .await
+                                        {
+                                            warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before terminal failure");
+                                        }
+                                    }
                                     let req = aura_os_storage::TransitionTaskRequest {
                                         status: "failed".to_string(),
                                     };
@@ -3772,9 +3905,10 @@ pub(crate) async fn run_single_task(
     // Connect to the event stream as early as possible to minimise the window
     // between automaton start and WS attach.  Retry a few times because the
     // harness may reset the connection if the automaton isn't ready yet.
-    let events_tx = connect_with_retries(&automaton_client, &automaton_id, &event_stream_url, 2)
-        .await
-        .ok();
+    let events_tx =
+        connect_with_retries(&automaton_client, &automaton_id, Some(&event_stream_url), 2)
+            .await
+            .ok();
 
     // Emit task_started immediately so the frontend gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
@@ -4335,9 +4469,15 @@ mod tests {
 
     #[test]
     fn parse_retry_after_seconds_recognises_common_phrasings() {
-        assert_eq!(parse_retry_after_seconds("retry after 30 seconds"), Some(30));
+        assert_eq!(
+            parse_retry_after_seconds("retry after 30 seconds"),
+            Some(30)
+        );
         assert_eq!(parse_retry_after_seconds("retry in 45s"), Some(45));
-        assert_eq!(parse_retry_after_seconds("try again in 12 seconds please"), Some(12));
+        assert_eq!(
+            parse_retry_after_seconds("try again in 12 seconds please"),
+            Some(12)
+        );
         assert_eq!(
             parse_retry_after_seconds("Please try again in 5 seconds"),
             Some(5)
@@ -4450,7 +4590,10 @@ mod tests {
             classify_infra_failure("event stream connect timeout"),
             Some(InfraFailureClass::TransportTimeout)
         );
-        assert_eq!(classify_infra_failure("syntax error in generated code"), None);
+        assert_eq!(
+            classify_infra_failure("syntax error in generated code"),
+            None
+        );
     }
 
     #[test]
@@ -4480,11 +4623,8 @@ mod tests {
     #[test]
     fn project_cooldown_prefers_longer_existing_window() {
         let project_id = ProjectId::new();
-        let first = register_project_cooldown(
-            project_id,
-            InfraFailureClass::ProviderRateLimited,
-            "429",
-        );
+        let first =
+            register_project_cooldown(project_id, InfraFailureClass::ProviderRateLimited, "429");
         let second = register_project_cooldown(project_id, InfraFailureClass::GitTimeout, "git");
         assert!(second >= first.saturating_sub(Duration::from_secs(1)));
         let active = active_project_cooldown(project_id).expect("cooldown should be active");
@@ -4558,5 +4698,71 @@ mod tests {
         // would short-circuit before bumping again. Verify the reader
         // reflects the final value.
         assert_eq!(current_remediation_count(&tid), MAX_RETRIES_PER_TASK);
+    }
+
+    /// `resolve_start_conflict` decides whether to stop-and-retry or adopt
+    /// based solely on `automaton_is_active`, so its correctness for
+    /// infra-retry recovery reduces to these cases: schemas we know are
+    /// terminal must be reported as inactive (so we stop and retry), and
+    /// anything unknown or explicitly running must be reported as active
+    /// (so we adopt instead of starting a second automaton). These
+    /// expectations match the stale/adopt branches in `start_loop`.
+    #[test]
+    fn automaton_is_active_recognises_terminal_states() {
+        for state in [
+            "done",
+            "stopped",
+            "finished",
+            "failed",
+            "cancelled",
+            "terminated",
+            "completed",
+        ] {
+            let v = serde_json::json!({ "state": state });
+            assert!(
+                !automaton_is_active(&v),
+                "{state} must be treated as terminal so conflict recovery stops-and-retries"
+            );
+        }
+    }
+
+    #[test]
+    fn automaton_is_active_treats_live_and_unknown_as_active() {
+        for state in ["running", "active", "started", "paused"] {
+            let v = serde_json::json!({ "state": state });
+            assert!(automaton_is_active(&v), "{state} must be treated as live");
+        }
+        // Unknown schema keeps us on the safe side: adopt rather than
+        // accidentally stopping a still-running automaton.
+        let unknown = serde_json::json!({ "state": "bootstrapping" });
+        assert!(automaton_is_active(&unknown));
+        let running_bool = serde_json::json!({ "running": true });
+        assert!(automaton_is_active(&running_bool));
+        let not_running = serde_json::json!({ "running": false });
+        assert!(!automaton_is_active(&not_running));
+    }
+
+    /// When `reset_task_for_infra_retry` has already flipped the task
+    /// from `in_progress` → `ready` but the subsequent restart failed,
+    /// transitioning directly to `failed` is illegal in aura-storage.
+    /// The terminal-failure handler bridges through `in_progress`; the
+    /// transition matrix below is what makes that bridge valid.
+    #[test]
+    fn ready_to_failed_requires_bridging_via_in_progress() {
+        use aura_os_core::TaskStatus;
+        use aura_os_tasks::TaskService;
+
+        assert!(
+            TaskService::validate_transition(TaskStatus::Ready, TaskStatus::Failed).is_err(),
+            "ready -> failed must remain illegal so the bridge code path keeps being exercised"
+        );
+        assert!(
+            TaskService::validate_transition(TaskStatus::Ready, TaskStatus::InProgress).is_ok(),
+            "bridge step 1 (ready -> in_progress) must be legal"
+        );
+        assert!(
+            TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Failed).is_ok(),
+            "bridge step 2 (in_progress -> failed) must be legal"
+        );
     }
 }

@@ -307,8 +307,20 @@ export type AuraEvent = AuraEventBase & (
     } }
   | { type: EventType.LoopPaused; content: {
       completed_count?: number;
+      /** Task whose failure triggered the pause, when applicable. */
+      task_id?: string;
+      /** Human-readable reason the loop paused (e.g. rate-limit details). */
+      reason?: string;
+      /** Classified infra-failure kind: `provider_rate_limited`, `provider_overloaded`, `transport_timeout`, `git_timeout`. */
+      retry_kind?: string;
+      /** How long the loop will remain paused before auto-resume, in milliseconds. */
+      cooldown_ms?: number;
     } }
-  | { type: EventType.LoopResumed; content: Record<string, never> }
+  | { type: EventType.LoopResumed; content: {
+      task_id?: string;
+      reason?: string;
+      retry_kind?: string;
+    } }
   | { type: EventType.LoopStopped; content: {
       completed_count?: number;
       tasks_completed?: number;

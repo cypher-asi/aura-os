@@ -1,7 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DisplaySessionEvent, ToolCallEntry, TimelineItem } from "../../types/stream";
-import { TaskOutputSection } from "./TaskOutputSection";
+import { TaskOutputSection, renderCooldownMessage } from "./TaskOutputSection";
+
+const cooldownState = {
+  paused: false,
+  remainingSeconds: null as number | null,
+  retryKind: null as string | null,
+  reason: null as string | null,
+  taskId: null as string | null,
+};
+
+vi.mock("../../hooks/use-cooldown-status", () => ({
+  useCooldownStatus: () => cooldownState,
+  cooldownLabel: (k: string | null) => {
+    if (k === "provider_rate_limited") return "Rate limited by provider";
+    if (k === null) return "Paused";
+    return k;
+  },
+}));
 
 const streamState = {
   events: [] as DisplaySessionEvent[],
@@ -88,6 +105,11 @@ describe("TaskOutputSection", () => {
     streamState.activeToolCalls = [];
     streamState.timeline = [];
     streamState.progressText = "";
+    cooldownState.paused = false;
+    cooldownState.remainingSeconds = null;
+    cooldownState.retryKind = null;
+    cooldownState.reason = null;
+    cooldownState.taskId = null;
   });
 
   it("keeps placeholder assistant messages on the streaming-safe render path", () => {
@@ -119,5 +141,43 @@ describe("TaskOutputSection", () => {
 
     expect(screen.queryByTestId("streaming-bubble")).not.toBeInTheDocument();
     expect(screen.queryByText("Waiting for agent output…")).not.toBeInTheDocument();
+  });
+
+  it("shows cooldown countdown instead of 'Waiting for agent output…' while paused", () => {
+    cooldownState.paused = true;
+    cooldownState.retryKind = "provider_rate_limited";
+    cooldownState.remainingSeconds = 49;
+
+    render(<TaskOutputSection isActive streamKey="task:1" />);
+
+    expect(screen.queryByText("Waiting for agent output…")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Rate limited by provider — resuming in 49s/),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to 'Waiting for agent output…' when no cooldown is active", () => {
+    render(<TaskOutputSection isActive streamKey="task:1" />);
+    expect(screen.getByText("Waiting for agent output…")).toBeInTheDocument();
+  });
+});
+
+describe("renderCooldownMessage", () => {
+  it("includes the remaining seconds when known", () => {
+    expect(
+      renderCooldownMessage({ retryKind: "provider_rate_limited", remainingSeconds: 30 }),
+    ).toBe("Rate limited by provider — resuming in 30s…");
+  });
+
+  it("omits countdown when remainingSeconds is zero", () => {
+    expect(
+      renderCooldownMessage({ retryKind: "provider_rate_limited", remainingSeconds: 0 }),
+    ).toBe("Rate limited by provider — resuming…");
+  });
+
+  it("handles missing retry_kind gracefully", () => {
+    expect(renderCooldownMessage({ retryKind: null, remainingSeconds: null })).toBe(
+      "Paused — resuming…",
+    );
   });
 });
