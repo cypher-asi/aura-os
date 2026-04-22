@@ -196,6 +196,87 @@ test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entri
   assert.equal(annotated.entries[2].media.status, "pending");
 });
 
+test("annotateRenderedEntriesWithMedia skips runtime config entries without a clear screen target", () => {
+  const rendered = {
+    title: "Demo day",
+    intro: "Intro",
+    highlights: [],
+    entries: [
+      {
+        batch_id: "entry-1",
+        time_label: "4:45 PM",
+        title: "External harness flag surfaced in desktop runtime config",
+        summary: "The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI can tell whether an external harness is in use.",
+        items: [
+          {
+            text: "Desktop runtime config exposes the external harness flag without reading env directly.",
+            commit_shas: ["abc1234"],
+          },
+        ],
+      },
+    ],
+  };
+
+  const rawCommits = [
+    { sha: "abc1234", files: ["apps/aura-os-desktop/src/handlers.rs"] },
+  ];
+
+  const annotated = annotateRenderedEntriesWithMedia(rendered, rawCommits);
+
+  assert.equal(annotated.entries[0].media.requested, false);
+  assert.equal(annotated.entries[0].media.status, "skipped");
+});
+
+test("annotateRenderedEntriesWithMedia skips backend-heavy mixed batches without a dominant UI story", () => {
+  const rendered = {
+    title: "Demo day",
+    intro: "Intro",
+    highlights: [],
+    entries: [
+      {
+        batch_id: "entry-1",
+        time_label: "5:10 PM",
+        title: "Autonomous recovery pipeline for truncated dev-loop runs",
+        summary: "A full multi-phase pipeline now classifies truncation failures, decomposes oversized tasks, and streams heuristic findings live during a run.",
+        items: [
+          {
+            text: "The Debug app gained a tabbed sidekick, but most of the landing centered on backend recovery and heuristic plumbing.",
+            commit_shas: ["abc1234", "def5678"],
+          },
+        ],
+      },
+    ],
+  };
+
+  const rawCommits = [
+    {
+      sha: "abc1234",
+      files: [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/handlers/live_heuristics.rs",
+        "crates/aura-run-heuristics/src/lib.rs",
+        "crates/aura-run-heuristics/src/rules/high_retry_density.rs",
+        "crates/aura-os-core/src/entities.rs",
+        "interface/src/apps/debug/DebugSidekick.tsx",
+      ],
+    },
+    {
+      sha: "def5678",
+      files: [
+        "apps/aura-os-server/src/handlers/tasks.rs",
+        "apps/aura-run-analyze/src/render.rs",
+        "crates/aura-os-storage/src/conversions.rs",
+        "crates/aura-os-tasks/tests/state_machine.rs",
+      ],
+    },
+  ];
+
+  const annotated = annotateRenderedEntriesWithMedia(rendered, rawCommits);
+
+  assert.equal(annotated.entries[0].media.requested, false);
+  assert.equal(annotated.entries[0].media.status, "skipped");
+});
+
 test("buildMediaPlaceholderBlock emits hidden markers only for requested slots", () => {
   const placeholderLines = buildMediaPlaceholderBlock({
     batch_id: "entry-1",
