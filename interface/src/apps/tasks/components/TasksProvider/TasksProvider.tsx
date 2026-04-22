@@ -104,11 +104,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       initialSpecs,
       initialTasks,
     });
-
-    return () => {
-      unregister();
-    };
   }, [displayProject, handleArchive, initialSpecs, initialTasks, navigateToExecution, register, setProjectSafe, unregister]);
+
+  // Keep the shared project context stable across ordinary data refreshes.
+  // Cleaning up in the registration effect creates a one-render gap where the
+  // sidekick sees no project context and briefly unmounts.
+  useEffect(() => unregister, [unregister]);
 
   return <>{children}</>;
 }

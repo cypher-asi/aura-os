@@ -258,8 +258,6 @@ export function useProjectLayoutData(): ProjectLayoutData {
       initialSpecs,
       initialTasks,
     });
-
-    return () => unregister();
   }, [
     displayProject,
     initialSpecs,
@@ -271,6 +269,10 @@ export function useProjectLayoutData(): ProjectLayoutData {
     navigateToExecution,
     unregister,
   ]);
+
+  // Preserve the registered project actions across query/cache updates so the
+  // sidekick does not briefly lose context and blink out between re-renders.
+  useEffect(() => unregister, [unregister]);
 
   return { displayProject, initialSpecs, initialTasks, loading, loadingProjects, projects };
 }
