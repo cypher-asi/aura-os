@@ -2,20 +2,20 @@
   {
     "date": "2026-04-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.334.1",
-    "title": "Autonomous dev-loop recovery lands, plus a calmer chat and debug surface",
-    "intro": "Today's nightly is anchored by a seven-phase push that teaches Aura's dev loop to detect, decompose, and replay tasks that would otherwise fail on truncated writes — backed by live heuristics, remediation hints, and golden tests. Alongside that, the Debug app gets a project-first redesign with a sidekick-driven inspector, chat gains a proper agent-busy state, and a wide sweep of tool-output rendering fixes makes command, file, and list blocks legible again.",
+    "version": "0.1.0-nightly.335.1",
+    "title": "Autonomous dev-loop recovery and a rebuilt Debug app",
+    "intro": "Today's nightly is a heavy one: a multi-phase autonomous recovery pipeline landed in the dev loop — classifying truncation failures, splitting oversized task specs into skeleton-plus-fill children, and surfacing heuristic findings live — alongside a project-first rebuild of the Debug app, a linearized LLM streaming surface, and a safer logout flow. Release tooling also got more forgiving when changelog media capture partially fails.",
     "entryCount": 6,
     "highlights": [
-      "Autonomous recovery: tasks auto-split on truncation failures",
+      "Autonomous truncation recovery ships end-to-end",
       "Debug app rebuilt around projects and a sidekick inspector",
-      "Chat input now reflects automation-loop busy state",
-      "Tool output finally decodes base64 and ANSI cleanly",
-      "Logout no longer strands users on a black-screen redirect loop"
+      "Chat streaming is now strictly linear with markdown-safe rendering",
+      "Logout no longer dead-ends on a black-screen redirect loop",
+      "Release workflow publishes successful media even when some slots fail"
     ],
-    "rawCommitCount": 31,
-    "generatedAt": "2026-04-22T17:27:16.167Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.334.1",
+    "rawCommitCount": 32,
+    "generatedAt": "2026-04-22T18:13:30.229Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.335.1",
     "path": "history/2026-04-22.json"
   },
   {

@@ -1,79 +1,84 @@
-# Autonomous dev-loop recovery lands, plus a calmer chat and debug surface
+# Autonomous dev-loop recovery and a rebuilt Debug app
 
 - Date: `2026-04-22`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.334.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.334.1
+- Version: `0.1.0-nightly.335.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.335.1
 
-Today's nightly is anchored by a seven-phase push that teaches Aura's dev loop to detect, decompose, and replay tasks that would otherwise fail on truncated writes — backed by live heuristics, remediation hints, and golden tests. Alongside that, the Debug app gets a project-first redesign with a sidekick-driven inspector, chat gains a proper agent-busy state, and a wide sweep of tool-output rendering fixes makes command, file, and list blocks legible again.
+Today's nightly is a heavy one: a multi-phase autonomous recovery pipeline landed in the dev loop — classifying truncation failures, splitting oversized task specs into skeleton-plus-fill children, and surfacing heuristic findings live — alongside a project-first rebuild of the Debug app, a linearized LLM streaming surface, and a safer logout flow. Release tooling also got more forgiving when changelog media capture partially fails.
 
-## 2:06 AM — Autonomous dev-loop recovery and a project-first Debug app
+## 2:06 AM — Autonomous recovery pipeline for truncated dev-loop runs
 
-A long overnight push delivered end-to-end autonomous recovery for truncation failures and rebuilt the Debug surface around projects and a sidekick inspector.
+A full multi-phase pipeline now classifies truncation failures, decomposes oversized tasks preemptively or after the fact, and streams heuristic findings live during a run.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-autonomous-dev-loop-recovery-and-a-project-first-debug-app","slug":"autonomous-dev-loop-recovery-and-a-project-first-debug-app","alt":"Autonomous dev-loop recovery and a project-first Debug app screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-autonomous-recovery-pipeline-for-truncated-dev-loop-runs","slug":"autonomous-recovery-pipeline-for-truncated-dev-loop-runs","alt":"Autonomous recovery pipeline for truncated dev-loop runs screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-autonomous-dev-loop-recovery-and-a-project-first-debug-app -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-autonomous-recovery-pipeline-for-truncated-dev-loop-runs -->
 
-- The dev loop can now recover from truncated-write failures on its own: heuristics emit structured remediation hints (split-write, reshape-search, force-tool-call), Phase 3 acts on the first hint by spawning skeleton+fill children or a shaped-retry task, and Phase 5 preemptively decomposes oversized task specs at ingestion — all gated by AURA_AUTO_DECOMPOSE_DISABLED and a per-task opt-out. (`6b6d6d9`, `79eab49`, `4f8e0a6`)
-- A new LiveAnalyzer re-runs heuristics against the in-progress run bundle every 50 events, every 30s, or immediately on task_failed, broadcasting deduped Warn/Error findings as heuristic_finding domain events so the UI can surface advisories mid-flight. A replay integration test and a golden-output fixture pin the full classify → heuristic → preflight decision chain. (`097b5a5`, `6de6a5e`)
-- The Debug app was rebuilt around projects: the shared LeftMenuTree now lists every project at the top level, and the run toolbar, counters, and entry inspector moved into a sidekick with Run, Events, LLM, Iterations, Blockers, Retries, Stats, and Tasks tabs driven by a new debug-sidekick-store. A portal-backed filter menu stops dropdowns from being clipped, the JSONL envelope is unwrapped so rows show real types and timestamps, and the run-detail header now carries Copy all / Copy filtered and Export buttons. (`8e7e4f0`, `1b769a8`, `865e7ec`, `586f744`)
-- Chat input now tracks a true agent-busy state: a new useAgentBusy hook combines SSE streaming and loop-active signals so the stop icon appears whenever either source holds the turn, onStop routes to /loop/stop when the automation is the one running, and the server returns a typed 409 agent_busy instead of echoing the raw harness error. (`6dd691e`)
-- Colored CLI output (cargo, rustc, npm) now renders as readable text in the task panel — the base64 decoder no longer bails on ESC bytes and strips ANSI escapes — and loop_log's token counters stop double-counting mid-stream usage frames, with a new narration_deltas signal added for downstream heuristics. (`7822fa1`, `f5921f6`)
-- Visual polish across chat-adjacent surfaces: the leaderboard's stray horizontal scrollbar is gone, and run/task output blocks, sidekick bodies, and preview overlays now share the main chat's subtler border token for a calmer, more consistent outline. (`13e2cae`, `a6f3a4c`, `b2f25e4`, `cc9a050`)
+- Dev-loop failures classified as truncation now trigger remediation: SplitWriteIntoSkeletonPlusAppends spawns skeleton+fill child tasks, while ReshapeSearchQuery and ForceToolCallNextTurn issue shaped retries, all gated by a MAX_RETRIES_PER_TASK budget and an AURA_AUTO_DECOMPOSE_DISABLED kill switch. (`79eab49`, `6b6d6d9`)
+- Oversized task specs are now caught at ingestion: detect_preflight_decomposition flags full-implementation phrasing and large line-count hints, splits them into skeleton+fill children at creation time, and broadcasts a task_preflight_decomposed event. The skeleton+fill fan-out is shared with the post-failure path. (`4f8e0a6`)
+- A new LiveAnalyzer re-runs heuristics against the in-progress bundle every 50 events, every 30s, or immediately on task_failed, broadcasting deduped Warn/Error findings as heuristic_finding domain events with remediation hints so the UI can surface them mid-flight. (`097b5a5`)
+- Loop-log counters stopped double-counting mid-stream token_usage frames and now expose narration_deltas as a first-class signal, giving heuristics cleaner input for zero-tool-call and narration-bloat rules. (`f5921f6`)
+- A replay-based integration test reproduces the original write_file truncation scenario end-to-end (classify_failure → Truncation → SplitWriteIntoSkeletonPlusAppends → preflight match), and a golden test pins aura-run-analyze's rendered output including the new remediation fix: lines. (`6de6a5e`)
+- Chat input now reflects agent-busy state from any source via a new useAgentBusy hook, routes Stop to /loop/stop when the automation loop holds the turn, and renders a typed 409 agent_busy response as a friendly message instead of the raw harness string. (`6dd691e`)
+- The Debug app was rebuilt around a project-first left tree and a tabbed sidekick (Run, Events, LLM, Iterations, Blockers, Retries, Stats, Tasks) driven by a debug-sidekick-store; a portal-backed filter menu fixes clipped dropdowns, JSONL rows no longer show 'unknown' types, and a Copy all/Copy filtered/Export toolbar lets operators grab channel JSONL or a full run bundle in one click. (`8e7e4f0`, `1b769a8`, `865e7ec`, `586f744`)
+- Tool output from colored CLIs (cargo, rustc, npm) now decodes correctly in the task panel — ESC bytes are allowed through base64 detection, ANSI escapes are stripped, and decoding recurses into additional output/text/content/log fields. (`7822fa1`)
+- Border tokens across the chat, sidekick, preview overlays, tables, tool rows, message bubbles, and terminal/task panels were unified on a single darker --color-border value, and the leaderboard feed no longer produces a stray horizontal scrollbar. (`150f142`, `cc9a050`, `a6f3a4c`, `b2f25e4`, `13e2cae`)
+- PushCardBody in the feed now falls back to commitIds.length when metadata.commits is absent, so older posts stop showing a misleading 0-commit count. (`070248d`)
 
-## 7:41 PM — Unified border token and a feed commit-count fallback
+## 8:00 AM — Shared-secret harness bearer path retired
 
-The darker chat border token was promoted to a global root variable, and feed push cards stopped showing zero commits when metadata was partial.
+The in-progress AURA_NODE_AUTH_TOKEN plumbing between aura-os and the harness is formally abandoned in favor of the existing user-JWT flow.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-unified-border-token-and-a-feed-commit-count-fallback","slug":"unified-border-token-and-a-feed-commit-count-fallback","alt":"Unified border token and a feed commit-count fallback screenshot"} -->
+- Dropped the uncommitted shared-secret bearer token path (HarnessHttpGateway.auth_token, AURA_NODE_AUTH_TOKEN env reads, desktop warnings, LocalHarness WS Authorization injection). The user JWT flow through HarnessClient, auth_guard, and downstream services is untouched. (`c205261`)
+
+## 8:48 AM — Linear LLM streaming, decoded tool blocks, and a safer logout
+
+A second wave of interface fixes untangles live streaming, makes tool-result blocks readable, and rescues logout from a redirect loop — plus a billing identity correctness fix.
+
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout","slug":"linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout","alt":"Linear LLM streaming, decoded tool blocks, and a safer logout screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-unified-border-token-and-a-feed-commit-count-fallback -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-linear-llm-streaming-decoded-tool-blocks-and-a-safer-logout -->
 
-- Promoted the #17171a border token to :root so tables, blocks, tool rows, message bubbles, preview overlays, task/terminal panels, and sidekick surfaces all inherit the same outline as the main chat — retiring the per-container overrides added earlier in the day. (`150f142`)
-- PushCardBody now falls back to commitIds.length when metadata.commits is missing, so older feed posts no longer display a misleading "0 commits". (`070248d`)
+- Live LLM streaming is now strictly linear: text deltas append only to the timeline tail instead of folding back into earlier items, a new markdown-safety pass hides dangling * / _ markers under the cursor, and a writing-aware phase label hides the 'Cooking' indicator only while words are actively revealing. (`aabd229`)
+- Command, read_file, list_files, find_files, and search_code blocks now decode their base64 stdout envelopes through a shared helper — file contents render syntax-highlighted, command stdout/stderr reads as legible text, and search_code results split into file:line plus match preview columns instead of showing '0 items'. (`45e55ba`, `59d2aa6`)
+- Logout no longer strands users on a black screen: App.tsx's boot-time login flag is now only a first-render hint, logout skips the full page reload that resurrected baked-in desktop auth literals, and a new aura-force-logged-out sentinel survives reloads and 401s to guarantee the app comes up on the login view. (`2ab59d4`)
+- Org billing email is now read-only and tied to the ZERO account identity — the server discards billing_email from SetBillingRequest, and the Team Settings UI shows a 'Tied to your ZERO account' caption instead of an editable input that could boot users to a Free plan on mismatch. (`68ea3aa`)
+- GenericToolBlock (task_done and unregistered tools) restored its 10px inset and visible border by rendering JSON containers as divs so Block.module.css's pre-reset stops stripping the padded JSON viewer. (`f62eb9d`)
+- Hardened the changelog media proof-capture scripts with balanced-JSON extraction, fenced-block parsing, and loose field recovery so demo screenshot automation survives messier agent output. (`eb42a29`)
 
-## 8:00 AM — Abandoned the AURA_NODE_AUTH_TOKEN shared-secret path
+## 9:51 AM — External harness flag surfaced in desktop runtime config
 
-Work-in-progress shared-secret plumbing between aura-os and the harness was dropped in favor of the existing user JWT flow.
+The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI can tell whether an external harness is in use without reading process env directly.
 
-- Removed the uncommitted AURA_NODE_AUTH_TOKEN bearer path across HarnessHttpGateway, LocalHarness, app_builder, and the desktop main entry, consolidating harness auth on the already-shipping user JWT flow. AutomatonClient and SwarmHarness auth_token fields remain but are now permanently unused. (`c205261`)
-
-## 8:48 AM — Tool-output decoding, linear streaming, and a logout fix
-
-Command, file, and list tool blocks now decode their envelopes correctly, the LLM stream renders strictly in arrival order, and logout no longer traps users in a redirect loop.
-
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-tool-output-decoding-linear-streaming-and-a-logout-fix","slug":"tool-output-decoding-linear-streaming-and-a-logout-fix","alt":"Tool-output decoding, linear streaming, and a logout fix screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-external-harness-flag-surfaced-in-desktop-runtime-config","slug":"external-harness-flag-surfaced-in-desktop-runtime-config","alt":"External harness flag surfaced in desktop runtime config screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-tool-output-decoding-linear-streaming-and-a-logout-fix -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-external-harness-flag-surfaced-in-desktop-runtime-config -->
 
-- CommandBlock, FileBlock, and ListBlock now run tool-result envelopes through a shared decodeCapturedOutput helper: run_command output renders as legible text, read_file contents show up syntax-highlighted instead of as raw JSON, and list_files / find_files / search_code finally return real rows (with search_code matches split into file:line + preview columns). (`45e55ba`, `59d2aa6`, `f62eb9d`)
-- Live LLM streaming was untangled: text deltas now strictly append to the timeline tail instead of folding back into earlier text items across tools, markdown safety trims dangling * / _ so half-written emphasis no longer flashes under the cursor, and a new isWriting signal keeps the "cooking" indicator hidden while words are actively revealing but visible during thinking, tool calls, and stalls. (`aabd229`)
-- Logout no longer lands on a black-screen redirect loop: App.tsx gates its boot-time showShell flag on the live auth state, logout drops the full-page reload and always runs local cleanup even when the server call throws, and a new aura-force-logged-out sentinel prevents the desktop init script's baked-in auth literals from resurrecting a dead session on reload. (`2ab59d4`)
-- Billing email in Team Settings is now read-only and captioned "Tied to your ZERO account", with billing_email dropped from SetBillingRequest — closing a regression where edits that diverged from the ZERO identity booted the org back to a Free plan. (`68ea3aa`)
-- Hardened the changelog media proof capture pipeline with balanced-block JSON extraction, loose-field fallbacks, and expanded test coverage across demo-agent-brief, demo-screenshot-quality, and demo-seed-planner. (`eb42a29`)
+- Desktop runtime config exposes AURA_DESKTOP_EXTERNAL_HARNESS alongside the other harness toggles, letting the UI reflect external-harness mode without reaching into the process environment. (`9993d15`)
 
-## 9:51 AM — External harness flag exposed in desktop runtime config
+## 9:51 AM — Post-landing cleanup to unblock the build
 
-The desktop runtime config now surfaces AURA_DESKTOP_EXTERNAL_HARNESS alongside the other harness toggles.
+Small follow-ups after the big dev-loop and streaming landings: dead fields trimmed, formatting applied, and unused TS declarations removed so tsc and vite build cleanly.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-external-harness-flag-exposed-in-desktop-runtime-config","slug":"external-harness-flag-exposed-in-desktop-runtime-config","alt":"External harness flag exposed in desktop runtime config screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-post-landing-cleanup-to-unblock-the-build","slug":"post-landing-cleanup-to-unblock-the-build","alt":"Post-landing cleanup to unblock the build screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-external-harness-flag-exposed-in-desktop-runtime-config -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-post-landing-cleanup-to-unblock-the-build -->
 
-- Desktop runtime config now reports AURA_DESKTOP_EXTERNAL_HARNESS so the UI can reflect whether an external harness is in use without reading the process environment directly. (`9993d15`)
+- LiveAnalyzer shed its unused run_id field (callers pass run_id directly into the emitted payload), and cargo fmt was applied across the server handlers, aura-run-analyze, and aura-run-heuristics rules. (`2a78b8e`, `d8d4ab9`)
+- Dropped an unused useIsWriting binding, MARKER_RUN_RE constant, and clearStoredAuth import so tsc -b && vite build passes cleanly after the streaming and auth refactors. (`b0e2713`)
 
-## 9:51 AM — Post-merge cleanup to unblock the tsc build
+## 10:58 AM — Changelog media workflow keeps successful shots when others fail
 
-Small follow-ups tightened the LiveAnalyzer constructor and removed unused declarations so the interface TypeScript build passes.
+The release changelog media pipeline now commits successful slot captures before retrying failures, and a dedicated retry workflow picks up the leftovers.
 
-- Dropped the unused run_id field from LiveAnalyzer (callers already pass it at emit time) and removed leftover useIsWriting, MARKER_RUN_RE, and clearStoredAuth declarations so `tsc -b && vite build` completes cleanly. (`2a78b8e`, `b0e2713`)
+- publish-release-changelog-media and reconcile-release-changelog now tolerate capture failures, read a summary file to separate published from failed slots, commit what succeeded, and dispatch a new retry-release-changelog-media workflow for the remainder before enforcing the strict rubric. (`2f96782`)
 
 ## Highlights
 
-- Autonomous recovery: tasks auto-split on truncation failures
+- Autonomous truncation recovery ships end-to-end
 - Debug app rebuilt around projects and a sidekick inspector
-- Chat input now reflects automation-loop busy state
-- Tool output finally decodes base64 and ANSI cleanly
-- Logout no longer strands users on a black-screen redirect loop
+- Chat streaming is now strictly linear with markdown-safe rendering
+- Logout no longer dead-ends on a black-screen redirect loop
+- Release workflow publishes successful media even when some slots fail
 
