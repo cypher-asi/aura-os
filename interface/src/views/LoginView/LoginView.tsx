@@ -39,7 +39,8 @@ export function LoginView() {
           actions={<WindowControls />}
         />
       )}
-      <div className={`${styles.container} ${f.isMobileLayout ? styles.containerMobile : ""}`}>
+      <div className={`${styles.container} ${f.isMobileLayout ? styles.containerMobile : styles.containerSplit}`}>
+        <div className={f.isMobileLayout ? "" : styles.formColumn}>
         {f.isMobileLayout && (
           <div className={styles.mobileHero}>
             <Heading level={2}><span className={styles.brand}>AURA</span></Heading>
@@ -125,6 +126,19 @@ export function LoginView() {
             />
           )}
         </Panel>
+        </div>
+        {!f.isMobileLayout && (
+          <div className={styles.videoColumn} aria-hidden="true">
+            <video
+              className={styles.loginVideo}
+              src="/AURA_visual_loop.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          </div>
+        )}
       </div>
 
       {f.features.hostRetargeting && f.hostSettingsOpen ? (
