@@ -101,17 +101,25 @@ jobs:
       - name: Resolve preview URL
         id: preview
         env:
-          DEFAULT_PREVIEW_URL: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          DEFAULT_PREVIEW_URL_VAR: ${{ vars.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          DEFAULT_PREVIEW_URL_SECRET: ${{ secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
         shell: bash
         run: |
           preview_url="${{ inputs.preview_url }}"
+          preview_source="workflow input"
           if [[ -z "$preview_url" ]]; then
-            preview_url="$DEFAULT_PREVIEW_URL"
+            preview_url="$DEFAULT_PREVIEW_URL_VAR"
+            preview_source="repository variable"
           fi
           if [[ -z "$preview_url" ]]; then
-            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repo variable or pass preview_url when manually dispatching Publish Release Changelog Media." >&2
+            preview_url="$DEFAULT_PREVIEW_URL_SECRET"
+            preview_source="repository secret"
+          fi
+          if [[ -z "$preview_url" ]]; then
+            echo "AURA_DEMO_SCREENSHOT_BASE_URL is not configured. Set the repository variable or secret, or pass preview_url when manually dispatching Publish Release Changelog Media." >&2
             exit 1
           fi
+          echo "Resolved preview URL from ${preview_source}."
           echo "url=$preview_url" >> "$GITHUB_OUTPUT"
 
       - name: Wait for deployed frontend to settle
