@@ -120,8 +120,14 @@ enum FailureClass {
     /// without file ops, or the Phase 2b `NeedsDecomposition` outcome
     /// surfaced as a reason string.
     Truncation,
-    /// Anything else — auth errors, crashes, rate limits, etc. The
-    /// existing retry path is a better match for these.
+    /// Provider-side rate limit (HTTP 429) or transient overload (HTTP
+    /// 529 / `overloaded_error`). The task didn't actually run to
+    /// completion — the LLM request itself was rejected — so we want
+    /// to back off and retry the same task instead of burning Phase 3
+    /// budget or marking it permanently failed.
+    RateLimited,
+    /// Anything else — auth errors, crashes, etc. The existing retry
+    /// path is a better match for these.
     Other,
 }
 
@@ -130,8 +136,28 @@ enum FailureClass {
 /// Case-insensitive substring match — the Phase 2b error formats the
 /// hint into its `Display` impl, so the reason text routinely contains
 /// phrases like `"truncated response"` / `"no file operations"`.
+///
+/// `RateLimited` is checked before `Truncation` so a reason that
+/// happens to include both (e.g. a truncated error body that quotes a
+/// 429 response) is routed to the backoff path — retrying a truncation
+/// inside a rate-limit window would just burn the Phase 3 budget on a
+/// follow-up 429.
 fn classify_failure(reason: &str) -> FailureClass {
     let lower = reason.to_ascii_lowercase();
+    let rate_limit_markers = [
+        "429",
+        "rate limit",
+        "rate-limit",
+        "rate_limit",
+        "ratelimit",
+        "too many requests",
+        "529",
+        "overloaded",
+        "overloaded_error",
+    ];
+    if rate_limit_markers.iter().any(|m| lower.contains(m)) {
+        return FailureClass::RateLimited;
+    }
     let truncation_markers = [
         "truncated",
         "no file operations",
@@ -2514,6 +2540,20 @@ pub(crate) async fn start_loop(
             }
         }
     }
+    // If the stale forwarder never reached its cleanup path, the on-disk
+    // run bundle for the previous (project, agent_instance) is still
+    // marked `status: running`. Flip it to `interrupted` before we start
+    // a new run so the Debug app doesn't show two "running" rows for the
+    // same instance. No-op when the previous loop exited cleanly
+    // (the in-memory run_state entry is already gone).
+    state
+        .loop_log
+        .on_loop_ended(
+            project_id,
+            agent_instance_id,
+            crate::loop_log::RunStatus::Interrupted,
+        )
+        .await;
 
     let events_tx = match automaton_client
         .connect_event_stream(&automaton_id, event_stream_url.as_deref())
@@ -2830,6 +2870,19 @@ pub(crate) async fn stop_loop(
                 }
             }
         }
+        // Finalise the on-disk run bundle so the Debug UI flips the run
+        // from `running` to `interrupted` immediately. Without this the
+        // forwarder task is aborted before it can reach its own
+        // `on_loop_ended` call and the metadata stays stuck at
+        // `status: running` until the next server restart's
+        // `reconcile_orphan_runs` sweep — which surfaces as a ghost entry
+        // in the Debug app's "Running now" list. Safe as a belt-and-
+        // suspenders call: `on_loop_ended` is idempotent (no-op when the
+        // in-memory run_state entry was already removed by the forwarder).
+        state
+            .loop_log
+            .on_loop_ended(project_id, *aiid, crate::loop_log::RunStatus::Interrupted)
+            .await;
         emit_domain_event(
             &state.event_broadcast,
             "loop_stopped",
