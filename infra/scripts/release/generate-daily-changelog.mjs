@@ -193,42 +193,98 @@ function collectEntryCommitFiles(entry, commitLookup) {
   );
 }
 
+function countMatching(values, predicate) {
+  return values.reduce((count, value) => count + (predicate(value) ? 1 : 0), 0);
+}
+
 function inferEntryMedia(entry, commitLookup) {
   const files = collectEntryCommitFiles(entry, commitLookup);
+  const headlineHaystack = [
+    entry?.title,
+    entry?.summary,
+  ].join(" ").toLowerCase();
   const textHaystack = [
     entry?.title,
     entry?.summary,
     ...(Array.isArray(entry?.items) ? entry.items.map((item) => item?.text) : []),
   ].join(" ").toLowerCase();
-  const hasUiFacingFile = files.some(isUiFacingFile);
+  const uiFacingFileCount = countMatching(files, isUiFacingFile);
+  const hasUiFacingFile = uiFacingFileCount > 0;
+  const hasInterfaceSourceFile = files.some((file) => file.startsWith("interface/src/"));
+  const hasDesktopShellFile = files.some((file) => file.startsWith("apps/aura-os-desktop/src/"));
   const onlyInfraFiles = files.length > 0 && files.every(isInfraOnlyFile);
-  const hasUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|desktop|app|tab|screen|window|skill|model)/.test(textHaystack);
+  const hasHeadlineUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|window|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(headlineHaystack);
+  const uiFacingRatio = files.length > 0 ? uiFacingFileCount / files.length : 0;
+  const hasSpecificUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|window|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(textHaystack);
+  const hasGenericUiKeyword = /(desktop|app|tab|skill|model)/.test(textHaystack);
+  const hasUiSurfaceKeyword = hasSpecificUiSurfaceKeyword || hasGenericUiKeyword;
+  const hasHeadlineStrongInfraKeyword = /(runtime config|harness|plumbing|pipeline|recovery|heuristic|analyzer|domain event|broadcast|ingestion|preflight|kill switch|retry budget|task state|server handler)/.test(headlineHaystack);
+  const hasWeakInfraKeyword = /(config|environment|env\b|flag|toggle|token|secret)/.test(textHaystack);
+  const hasReleaseKeyword = /(release|workflow|artifact|packaging|notariz|build|ci|linux|android|ios submit|code sign)/.test(textHaystack);
+  const isBackendHeavyMixedBatch = hasUiFacingFile && files.length >= 6 && uiFacingRatio < 0.35;
 
   let score = 0;
   const reasons = [];
 
-  if (files.some((file) => file.startsWith("interface/src/"))) {
+  if (hasInterfaceSourceFile) {
     score += 4;
     reasons.push("entry touches interface source files");
   }
-  if (files.some((file) => file.startsWith("apps/aura-os-desktop/src/"))) {
-    score += 2;
+  if (hasDesktopShellFile) {
+    score += 1;
     reasons.push("entry touches desktop shell code");
   }
   if (onlyInfraFiles) {
     score -= 5;
     reasons.push("entry only touches release or infrastructure files");
   }
-  if (hasUiSurfaceKeyword) {
-    score += 2;
+  if (hasSpecificUiSurfaceKeyword) {
+    score += 3;
     reasons.push("entry language points to a visible product surface");
+  } else if (hasGenericUiKeyword) {
+    score += 1;
+    reasons.push("entry language only weakly hints at a visible product surface");
   }
-  if (/(release|workflow|artifact|packaging|notariz|build|ci|linux|android|ios submit|code sign)/.test(textHaystack)) {
+  if (hasHeadlineStrongInfraKeyword) {
+    score -= 3;
+    reasons.push("entry language points to runtime or infrastructure plumbing rather than a stable screen");
+  } else if (hasWeakInfraKeyword) {
+    score -= 1;
+    reasons.push("entry language includes light config-style vocabulary");
+  }
+  if (hasReleaseKeyword) {
     score -= 2;
     reasons.push("entry language points to release plumbing rather than a product screen");
   }
+  if (uiFacingRatio >= 0.5 && hasUiFacingFile) {
+    score += 2;
+    reasons.push("most changed files point at UI-facing surfaces");
+  } else if (isBackendHeavyMixedBatch) {
+    score -= 2;
+    reasons.push("UI files are only a small slice of a larger backend-heavy batch");
+  }
 
-  const requested = !onlyInfraFiles && ((score >= 3 && (files.length === 0 || hasUiFacingFile)) || (hasUiFacingFile && hasUiSurfaceKeyword));
+  const requested = !onlyInfraFiles
+    && !(
+      hasHeadlineStrongInfraKeyword
+      && !hasInterfaceSourceFile
+      && !hasSpecificUiSurfaceKeyword
+    )
+    && !(
+      isBackendHeavyMixedBatch
+      && (!hasHeadlineUiSurfaceKeyword || uiFacingRatio < 0.2)
+    )
+    && (
+      (files.length === 0 && hasSpecificUiSurfaceKeyword && !hasHeadlineStrongInfraKeyword && !hasReleaseKeyword)
+      || (
+        hasInterfaceSourceFile
+        && hasSpecificUiSurfaceKeyword
+        && (!isBackendHeavyMixedBatch || hasHeadlineUiSurfaceKeyword)
+        && (!hasHeadlineStrongInfraKeyword || hasHeadlineUiSurfaceKeyword)
+      )
+      || (hasDesktopShellFile && hasSpecificUiSurfaceKeyword && !hasHeadlineStrongInfraKeyword)
+      || (hasUiFacingFile && score >= 5 && (!hasHeadlineStrongInfraKeyword || hasHeadlineUiSurfaceKeyword))
+    );
   const slug = slugify(entry?.title || entry?.batch_id || "entry");
   const slotId = `${sanitizeText(entry?.batch_id || "entry")}-${slug || "media"}`;
   const alt = `${sanitizeText(entry?.title || "Changelog entry")} screenshot`;

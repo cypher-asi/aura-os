@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  buildRetryPlan,
   buildRunSummary,
   buildRunSummaryMarkdown,
   isBrowserbaseConcurrencyError,
@@ -196,12 +197,20 @@ test("buildRunSummary and markdown include operator-facing diagnostics", () => {
   assert.equal(summary.previewHost, "aura-app-72ms.onrender.com");
   assert.equal(summary.published, 1);
   assert.equal(summary.failed, 1);
+  assert.equal(summary.strictRubricPassed, false);
+  assert.deepEqual(summary.failedSlotIds, ["entry-2-agents"]);
 
   const markdown = buildRunSummaryMarkdown(summary);
   assert.match(markdown, /Changelog Media Diagnostics/);
   assert.match(markdown, /Preview host: aura-app-72ms\.onrender\.com/);
+  assert.match(markdown, /Strict rubric passed: no/);
   assert.match(markdown, /entry-2-agents/);
   assert.match(markdown, /Skipping remaining media captures after provider exhaustion/);
+
+  const retryPlan = buildRetryPlan(summary);
+  assert.equal(retryPlan.failed, 1);
+  assert.equal(retryPlan.strictRubricPassed, false);
+  assert.deepEqual(retryPlan.failedSlots.map((slot) => slot.slotId), ["entry-2-agents"]);
 });
 
 test("shouldPublishEntryMedia skips healthy published assets by default", () => {
