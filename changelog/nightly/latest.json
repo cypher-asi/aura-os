@@ -1742,7 +1742,7 @@
             "crates/aura-os-tasks/tests/state_machine.rs",
             "apps/aura-os-server/src/handlers/live_heuristics.rs"
           ],
-          "updatedAt": "2026-04-22T18:25:04.545Z",
+          "updatedAt": "2026-04-22T18:39:46.725Z",
           "error": "Error: Screenshot capture did not produce a passing summary for entry-autonomous-recovery-pipeline-for-truncated-dev-loop-runs"
         }
       },
@@ -1900,8 +1900,8 @@
           "files": [
             "apps/aura-os-desktop/src/handlers.rs"
           ],
-          "updatedAt": "2026-04-22T18:30:56.353Z",
-          "error": "Error: Screenshot capture did not produce a passing summary for entry-external-harness-flag-surfaced-in-desktop-runtime-config"
+          "updatedAt": "2026-04-22T18:45:16.162Z",
+          "error": "Error: Command failed: node ./scripts/produce-agent-demo-screenshots.mjs --prompt External harness flag surfaced in desktop runtime config The desktop runtime config now exposes AURA_DESKTOP_EXTERNAL_HARNESS so the UI can tell whether an external harness is in use without reading process env directly. Key details: Desktop runtime config exposes AURA_DESKTOP_EXTERNAL_HARNESS alongside the other harness toggles, letting the UI reflect external-harness mode without reaching into the process environment. Open the most relevant product surface for this changelog entry and leave the clearest proof visible for a polished desktop screenshot. Avoid placeholder routes, empty states, settings-only screens, and generic landing views. --channel nightly --base-url https://aura-app-72ms.onrender.com/ --provider browserbase --output-dir /home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-external-harness-flag-surfaced-in-desktop-runtime-config-1776883186726-browserbase --changed-files-file /tmp/aura-changelog-media-D4wnl4/changed-files.json\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\npage.waitForTimeout: Target page, context or browser has been closed\n    at waitForUiToSettle (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:872:14)\n    at assessPhaseState (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:1973:13)\n    at captureAttempt (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:2131:28)\n    at async runAgentPhase (/home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:2210:19)\n    at async file:///home/runner/work/aura-os/aura-os/repo/interface/scripts/produce-agent-demo-screenshots.mjs:2465:9\n\nNode.js v25.9.0\n"
         }
       },
       {
