@@ -675,11 +675,20 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     }
 
     let mut command = Command::new(&harness_binary);
+    // Autonomous dev-loop sidecar: run fully permissive so agents can
+    // exercise cargo check/test/fmt/clippy — the DoD gate the
+    // harness enforces demands it. The interactive TUI flow is
+    // unaffected (no env flag set there). `AURA_ALLOW_RUN_COMMAND` +
+    // `AURA_ALLOW_SHELL` are belt-and-braces in case an operator
+    // overrides `AURA_AUTONOMOUS_DEV_LOOP=0` downstream. We
+    // deliberately leave `AURA_ALLOWED_COMMANDS` unset so the empty
+    // `binary_allowlist` keeps its "all binaries allowed" semantics.
     command
         .env("AURA_LISTEN_ADDR", &listen_addr)
         .env("AURA_DATA_DIR", &harness_data_dir)
-        .env("ENABLE_FS_TOOLS", "true")
-        .env("ENABLE_CMD_TOOLS", "true");
+        .env("AURA_AUTONOMOUS_DEV_LOOP", "1")
+        .env("AURA_ALLOW_RUN_COMMAND", "1")
+        .env("AURA_ALLOW_SHELL", "1");
     configure_background_child(&mut command, &harness_data_dir.join("sidecar.log"));
 
     if let Some(orbit_url) = env_string("ORBIT_URL").or_else(|| env_string("ORBIT_BASE_URL")) {
