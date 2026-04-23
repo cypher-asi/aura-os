@@ -3,17 +3,16 @@
     "date": "2026-04-23",
     "channel": "nightly",
     "version": "0.1.0-nightly.354.1",
-    "title": "Release pipeline hardening and sharper changelog media",
-    "intro": "Today's nightly was an infrastructure-focused day: the release pipeline picked up safer asset pruning and a gh-pages recovery path, while the auto-generated changelog media got a noticeably cleaner, better-framed look on the published site.",
+    "title": "Hardening the nightly release pipeline and changelog media",
+    "intro": "Today was a release-infrastructure day. The nightly pipeline picked up a more resilient asset-prune path, a new gh-pages recovery workflow, and a history-aware sync job, while the branded changelog media renderer was reworked to let real product screenshots dominate the frame without being clipped.",
     "entryCount": 1,
     "highlights": [
-      "Nightly asset prune now retries and tolerates vanished assets",
-      "New manual gh-pages republish recovery workflow",
-      "Changelog media respects screenshot aspect ratio with safer framing",
-      "Media updates now mirror into dated history entries"
+      "Nightly asset prune now survives missing and flaky GitHub API responses",
+      "New gh-pages republish and history-sync workflows",
+      "Changelog media frames product screenshots at their true aspect ratio"
     ],
     "rawCommitCount": 6,
-    "generatedAt": "2026-04-23T17:47:07.966Z",
+    "generatedAt": "2026-04-23T18:18:15.210Z",
     "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.354.1",
     "path": "history/2026-04-23.json"
   },
