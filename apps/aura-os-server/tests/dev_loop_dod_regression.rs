@@ -128,23 +128,47 @@ fn empty_path_write_event_accepts_pathed_write() {
 }
 
 #[test]
-fn completion_gate_rejects_any_empty_path_write_even_with_full_evidence() {
-    // A task with *all* the usual DoD artefacts still fails the moment
-    // it emits a single empty-path write — the rollback path is the
-    // only way to force the automaton to retry with a real path.
+fn completion_gate_rejects_unrecovered_empty_path_write() {
+    // Empty-path writes with no recovery (files_changed is empty) are
+    // the unambiguous misfire case: the automaton emitted bogus
+    // write_file calls and never produced a real write before
+    // task_done. The gate must reject so the dev loop retries.
     let reason = tsp::completion_validation_reason_with_empty_path_writes(
-        "implementation complete",
-        &["crates/zero-program/src/lib.rs"],
+        "never wrote anything real",
+        /* files_changed */ &[],
         /* build */ 1,
         /* test */ 1,
         /* fmt */ 1,
         /* clippy */ 1,
         /* empty-path writes */ 1,
     )
-    .expect("empty-path write must fail the DoD gate");
+    .expect("unrecovered empty-path write must fail the DoD gate");
     assert!(
         reason.contains("empty") || reason.contains("path"),
         "rejection reason must name the empty-path failure mode, got: {reason}"
+    );
+}
+
+#[test]
+fn completion_gate_accepts_empty_path_write_when_recovered() {
+    // Task 2.4 regression: the automaton emitted a handful of
+    // empty-path write_file calls, the harness surfaced the error
+    // inline, and the automaton recovered with a real-path write
+    // that did land on disk. The gate must treat the empty-path
+    // events as benign history and let the run through — the
+    // verification-step checks still enforce DoD on the real writes.
+    let reason = tsp::completion_validation_reason_with_empty_path_writes(
+        "implementation complete after a misfire",
+        &["crates/zero-program/src/lib.rs"],
+        /* build */ 1,
+        /* test */ 1,
+        /* fmt */ 1,
+        /* clippy */ 1,
+        /* empty-path writes */ 3,
+    );
+    assert!(
+        reason.is_none(),
+        "recovered empty-path writes must not fail the gate, got rejection: {reason:?}"
     );
 }
 

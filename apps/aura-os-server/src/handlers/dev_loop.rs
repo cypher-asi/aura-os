@@ -753,12 +753,16 @@ impl CompletionGateReport {
 ///
 /// Layered checks (first failure wins):
 ///
-/// 1. **Empty-path writes** — rejects runs where the harness emitted any
-///    `write_file` / `edit_file` tool call with a missing or empty
-///    `path` input. These cannot land on disk (the UI renders them as
-///    "Untitled file") and are a strong signal the automaton
-///    misfired. We reject rather than silently accept so the dev loop
-///    retries with a real path.
+/// 1. **Unrecovered empty-path writes** — rejects runs where the
+///    harness emitted one or more `write_file` / `edit_file` tool
+///    calls with a missing or empty `path` input *and* never followed
+///    them up with a successful file change. Empty-path calls cannot
+///    land on disk (the UI renders them as "Untitled file") and are a
+///    strong signal the automaton misfired. When the agent recovered
+///    (i.e. `files_changed` is non-empty), we let the run through —
+///    the empty-path events become benign history. This mirrors how
+///    the aura-harness block detector already surfaces the misfire
+///    inline and gives the model a chance to retry on the same turn.
 /// 2. **Baseline activity** — rejects runs with no live output, no file
 ///    changes, and no verification steps. Catches automatons that claim
 ///    success after doing nothing.
@@ -775,9 +779,17 @@ impl CompletionGateReport {
 ///    currently get this treatment; we'll add them once the harness
 ///    reliably emits format/lint evidence for them.
 fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
-    if cached.empty_path_writes > 0 {
+    // Empty-path writes only fail the gate when the agent *never*
+    // recovered. If any real file change landed, the misfire is
+    // benign: the verification steps below still enforce Definition
+    // of Done on the real writes, so there is no safety loss from
+    // letting the run through. Historically this check rejected any
+    // non-zero count, which caused tasks like 2.4 to fail after the
+    // agent had recovered with a valid `write_file` and the run's
+    // real output was on disk.
+    if cached.empty_path_writes > 0 && cached.files_changed.is_empty() {
         return Some(
-            "Automaton emitted write_file/edit_file tool call(s) with an empty or missing \"path\" input; the harness must retry with a real path before task_done",
+            "Automaton emitted write_file/edit_file tool call(s) with an empty or missing \"path\" input and never recovered with a real-path write; the harness must retry with a real path before task_done",
         );
     }
 
@@ -6531,10 +6543,13 @@ mod tests {
     }
 
     #[test]
-    fn completion_validation_rejects_any_empty_path_write() {
-        let mut cached = CachedTaskOutput {
+    fn completion_validation_rejects_unrecovered_empty_path_write() {
+        // Empty-path writes *without* any real files_changed indicate
+        // the automaton misfired and never recovered. The gate must
+        // still fail in that case so the dev loop retries.
+        let cached = CachedTaskOutput {
             live_output: "looked busy".to_string(),
-            files_changed: vec![modify_summary("src/lib.rs")],
+            files_changed: Vec::new(),
             build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
             test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
             format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
@@ -6542,14 +6557,38 @@ mod tests {
             empty_path_writes: 1,
             ..Default::default()
         };
-        let reason =
-            completion_validation_failure_reason(&cached).expect("gate should fire on empty paths");
+        let reason = completion_validation_failure_reason(&cached)
+            .expect("gate should fire on unrecovered empty paths");
         assert!(
             reason.contains("empty or missing \"path\""),
             "expected empty-path reason, got: {reason}"
         );
-        cached.empty_path_writes = 0;
-        assert_eq!(completion_validation_failure_reason(&cached), None);
+    }
+
+    #[test]
+    fn completion_validation_accepts_empty_path_write_when_recovered() {
+        // Task 2.4 regression: the agent emitted a few empty-path
+        // write_file calls *before* recovering with a real
+        // write_file. Because `files_changed` ended up populated,
+        // the gate must treat the empty-path events as benign
+        // history and let the run through. The verification-step
+        // checks below still enforce Definition of Done on the real
+        // writes.
+        let cached = CachedTaskOutput {
+            live_output: "wrote real file after a misfire".to_string(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
+            lint_steps: vec![serde_json::json!({"type": "lint_verification_passed"})],
+            empty_path_writes: 3,
+            ..Default::default()
+        };
+        assert_eq!(
+            completion_validation_failure_reason(&cached),
+            None,
+            "recovered empty-path writes must not fail the gate"
+        );
     }
 
     #[test]

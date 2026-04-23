@@ -181,9 +181,10 @@ pub mod phase7_test_support {
     /// Like [`completion_validation_reason`] but additionally exercises
     /// the empty-path-write short-circuit: `n_empty_path_writes` is the
     /// number of `write_file` / `edit_file` tool calls the harness
-    /// emitted with a missing/empty `path`. Any non-zero count must
-    /// fail the gate regardless of how much other evidence the run
-    /// produced.
+    /// emitted with a missing/empty `path`. The gate only fails on
+    /// non-zero counts when the agent *never* recovered (i.e.
+    /// `files_changed` is empty). If real file changes landed, the
+    /// empty-path events are treated as benign misfire history.
     pub fn completion_validation_reason_with_empty_path_writes(
         live_output: &str,
         files_changed: &[&str],
