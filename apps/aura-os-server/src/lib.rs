@@ -271,6 +271,62 @@ pub mod phase7_test_support {
         )
     }
 
+    /// Test-only: run the dev-loop invariant helper that decides
+    /// whether a push-layer failure should keep the task in `done`.
+    /// `push_class` accepts `"timeout"`, `"remote_storage_exhausted"`,
+    /// or `"generic"` (anything else is treated as `"generic"`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn should_task_complete_despite_push_failure(
+        live_output: &str,
+        files_changed: &[&str],
+        n_build_steps: usize,
+        n_test_steps: usize,
+        n_format_steps: usize,
+        n_lint_steps: usize,
+        git_steps: &[serde_json::Value],
+        push_class: &str,
+    ) -> bool {
+        crate::handlers::dev_loop::should_task_complete_despite_push_failure_for_tests(
+            live_output,
+            files_changed,
+            n_build_steps,
+            n_test_steps,
+            n_format_steps,
+            n_lint_steps,
+            git_steps,
+            push_class,
+        )
+    }
+
+    /// Test-only: classify a `task_failed` reason into one of the
+    /// push-failure classes, or `None` for non-push failures.
+    /// Returns one of `"timeout" | "remote_storage_exhausted" | "generic"`.
+    pub fn classify_push_failure(reason: &str) -> Option<&'static str> {
+        crate::handlers::dev_loop::classify_push_failure_for_tests(reason)
+    }
+
+    /// Test-only: exercise the per-project push-failure counter.
+    /// Bumps the streak `n` times on a fresh project id and returns a
+    /// vector of `project_push_stuck`-emission booleans. Exactly one
+    /// entry should be `true` even when `n` exceeds the threshold.
+    pub fn bump_project_push_failures_streak(n: u32) -> Vec<bool> {
+        crate::handlers::dev_loop::bump_project_push_failures_streak_for_tests(n)
+    }
+
+    /// Test-only: bump once, reset, bump once â proves the streak
+    /// restarts cleanly so a subsequent threshold crossing re-emits
+    /// `project_push_stuck`.
+    pub fn push_failure_reset_rearms_stuck_emission() -> bool {
+        crate::handlers::dev_loop::push_failure_reset_rearms_stuck_emission_for_tests()
+    }
+
+    /// Test-only: the dev-loop's configured push-failure stuck
+    /// threshold. Exposed so regression tests don't hard-code the
+    /// numeric constant.
+    pub fn consecutive_push_failures_stuck_threshold() -> u32 {
+        crate::handlers::dev_loop::CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD
+    }
+
     pub fn sync_state_from_git_steps(git_steps: &[serde_json::Value]) -> serde_json::Value {
         serde_json::to_value(crate::sync_state::derive_sync_state(git_steps))
             .unwrap_or_else(|_| serde_json::json!({}))

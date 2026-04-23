@@ -105,10 +105,8 @@ pub(super) fn preflight_local_workspace(
         Ok(()) => Ok(()),
         Err(err) => {
             use super::projects_helpers::WorkspacePreflightError as E;
-            let bootstrap_pending =
-                git_repo_url.is_some_and(|url| !url.trim().is_empty());
-            let skip_for_bootstrap = bootstrap_pending
-                && matches!(err, E::Empty | E::NotAGitRepo);
+            let bootstrap_pending = git_repo_url.is_some_and(|url| !url.trim().is_empty());
+            let skip_for_bootstrap = bootstrap_pending && matches!(err, E::Empty | E::NotAGitRepo);
             if skip_for_bootstrap {
                 info!(
                     workspace = %project_path,
@@ -172,6 +170,15 @@ fn extract_failure_reason(event: &serde_json::Value) -> Option<String> {
 /// retry against this budget so a single pathological task can't spawn
 /// children forever when the heuristics keep matching.
 const MAX_RETRIES_PER_TASK: u32 = 3;
+
+/// Number of consecutive push failures a single project can accumulate
+/// before the dev loop emits a one-shot `project_push_stuck` domain
+/// event advisory. The counter is per-project and resets on any
+/// `git_pushed` success observed in the harness stream or on a
+/// graceful `loop_finished`. Purely informational â the loop never
+/// halts or pauses because the counter tripped; a stuck remote (e.g.
+/// out-of-disk GitHub mirror) must not stop local task work.
+pub(crate) const CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD: u32 = 3;
 
 /// Coarse bucket for failure reason strings. We only distinguish the
 /// cases Phase 3 can *do something* about (truncation / no-file-ops),
@@ -455,6 +462,165 @@ fn infra_failure_label(class: InfraFailureClass) -> &'static str {
     }
 }
 
+/// Classification of a git-push-layer failure, independent of the
+/// broader [`InfraFailureClass`] taxonomy. Push failures are folded
+/// into a single warn-only path regardless of the specific cause
+/// because the dev-loop invariant is that task terminal status is
+/// governed by the completion gate, never by push outcome.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum PushFailureClass {
+    /// Post-commit `git push` timed out. Corresponds to
+    /// [`InfraFailureClass::GitPushTimeout`].
+    Timeout,
+    /// Remote refused the push because its storage is exhausted
+    /// (common with self-hosted git mirrors that fill up). Detected
+    /// from reason-string markers because the provider side rarely
+    /// maps this to a dedicated status code.
+    RemoteStorageExhausted,
+    /// A push failure that isn't specifically a timeout or a storage
+    /// signal â typically a network glitch, an auth blip, or a bare
+    /// `git_push_failed` surfaced by the harness. The task work is
+    /// still committed locally so it still qualifies for the "done
+    /// despite push failure" path.
+    Generic,
+}
+
+/// Classify a `task_failed` reason string into a [`PushFailureClass`]
+/// when the underlying cause is a git-push-layer failure. Returns
+/// `None` for reasons that are not push-related.
+///
+/// Distinct from [`classify_infra_failure`]: push failures that are
+/// NOT timeouts (e.g. `remote: no space left on device`, generic
+/// `git_push_failed`) still need to be folded into the warn-only
+/// push-deferred path even though the retry ladder has no cooldown
+/// to apply.
+pub(crate) fn classify_push_failure(reason: &str) -> Option<PushFailureClass> {
+    if classify_infra_failure(reason) == Some(InfraFailureClass::GitPushTimeout) {
+        return Some(PushFailureClass::Timeout);
+    }
+    let lower = reason.to_ascii_lowercase();
+    let is_storage_exhausted = lower.contains("no space left")
+        || lower.contains("space left on device")
+        || lower.contains("quota exceeded")
+        || lower.contains("remote storage")
+        || lower.contains("storage exhausted")
+        || lower.contains("out of disk")
+        || lower.contains("disk full")
+        || lower.contains("insufficient storage");
+    if is_storage_exhausted {
+        return Some(PushFailureClass::RemoteStorageExhausted);
+    }
+    let is_push = lower.contains("git push")
+        || lower.contains("git_push")
+        || lower.contains("git-push")
+        || lower.contains("orbit_push")
+        || lower.contains("commit+push")
+        || lower.contains("git_commit_push")
+        || lower.contains("git_push_failed");
+    if is_push {
+        return Some(PushFailureClass::Generic);
+    }
+    None
+}
+
+pub(crate) fn push_failure_label(class: PushFailureClass) -> &'static str {
+    match class {
+        PushFailureClass::Timeout => "push_timeout",
+        PushFailureClass::RemoteStorageExhausted => "remote_storage_exhausted",
+        PushFailureClass::Generic => "push_failed",
+    }
+}
+
+/// Dev-loop invariant helper: should a task that hit a push-layer
+/// failure still transition to `done`?
+///
+/// Returns `true` iff the cached task output passes the
+/// Definition-of-Done gate ([`completion_validation_failure_reason`]
+/// returns `None`) AND there is at least one `git_committed` step
+/// the task can be anchored to. The push class is accepted as
+/// informational input so the helper has a single contract â
+/// "the completion gate owns the terminal state; push failures never
+/// demote" â regardless of which specific push failure fired.
+///
+/// Callers should treat `false` as "run the normal `task_failed`
+/// path" (the gate itself failed or there is no commit to stand on),
+/// and `true` as "transition to done and emit `push_deferred`".
+pub(crate) fn should_task_complete_despite_push_failure(
+    cached: &CachedTaskOutput,
+    _class: PushFailureClass,
+) -> bool {
+    latest_git_commit_sha(&cached.git_steps).is_some()
+        && completion_validation_failure_reason(cached).is_none()
+}
+
+/// Per-project push-failure state: tracks a rolling streak of
+/// consecutive push failures plus a one-shot guard so
+/// `project_push_stuck` is broadcast at most once per streak.
+#[derive(Clone, Debug, Default)]
+struct ProjectPushState {
+    consecutive_push_failures: u32,
+    push_stuck_emitted: bool,
+}
+
+fn project_push_states() -> &'static std::sync::Mutex<HashMap<String, ProjectPushState>> {
+    static STATES: std::sync::OnceLock<std::sync::Mutex<HashMap<String, ProjectPushState>>> =
+        std::sync::OnceLock::new();
+    STATES.get_or_init(|| std::sync::Mutex::new(HashMap::new()))
+}
+
+/// Bump the push-failure streak for `project_id`. Returns `true` the
+/// first time the streak reaches
+/// [`CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD`] so the caller can
+/// emit `project_push_stuck` exactly once per streak. Subsequent
+/// bumps in the same streak return `false`; the guard clears on the
+/// next successful push via [`reset_project_push_failures`].
+pub(crate) fn bump_project_push_failures(project_id: ProjectId) -> bool {
+    let key = project_id.to_string();
+    let mut guard = match project_push_states().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let entry = guard.entry(key).or_default();
+    entry.consecutive_push_failures = entry.consecutive_push_failures.saturating_add(1);
+    if entry.consecutive_push_failures >= CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD
+        && !entry.push_stuck_emitted
+    {
+        entry.push_stuck_emitted = true;
+        true
+    } else {
+        false
+    }
+}
+
+/// Clear the push-failure streak for `project_id`. Called when a
+/// `git_pushed` event is observed in the harness stream, on a
+/// graceful `loop_finished`, and from tests that need a clean slate.
+pub(crate) fn reset_project_push_failures(project_id: ProjectId) {
+    let key = project_id.to_string();
+    let mut guard = match project_push_states().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if let Some(entry) = guard.get_mut(&key) {
+        entry.consecutive_push_failures = 0;
+        entry.push_stuck_emitted = false;
+    }
+}
+
+/// Test-only: peek at the current counter + guard for a project.
+#[cfg(test)]
+pub(crate) fn peek_project_push_state(project_id: ProjectId) -> (u32, bool) {
+    let key = project_id.to_string();
+    let guard = match project_push_states().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    guard
+        .get(&key)
+        .map(|s| (s.consecutive_push_failures, s.push_stuck_emitted))
+        .unwrap_or((0, false))
+}
+
 #[derive(Clone, Debug)]
 struct ProjectCooldown {
     until: Instant,
@@ -507,9 +673,8 @@ fn apply_jitter(base: Duration) -> Duration {
     // the same millisecond will still see different jitter because
     // their `base_ms` differs (class-dependent) and the instant ticks
     // on every call.
-    let seed = Instant::now().elapsed().subsec_nanos() as u64
-        ^ base.subsec_nanos() as u64
-        ^ base_ms;
+    let seed =
+        Instant::now().elapsed().subsec_nanos() as u64 ^ base.subsec_nanos() as u64 ^ base_ms;
     let offset_ms = seed % (2 * span_ms + 1);
     let jittered_ms = base_ms.saturating_sub(span_ms).saturating_add(offset_ms);
     Duration::from_millis(jittered_ms.max(1))
@@ -1183,6 +1348,90 @@ pub(crate) fn recovery_checkpoint_for_tests(
         ..Default::default()
     };
     recovery_checkpoint_label(recovery_checkpoint(&cached))
+}
+
+/// Test-only: evaluate [`should_task_complete_despite_push_failure`]
+/// against a synthetic cached task output assembled from the usual DoD
+/// gate inputs plus a push class string.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn should_task_complete_despite_push_failure_for_tests(
+    live_output: &str,
+    files_changed: &[&str],
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+    git_steps: &[serde_json::Value],
+    push_class: &str,
+) -> bool {
+    let cached = CachedTaskOutput {
+        live_output: live_output.to_string(),
+        files_changed: files_changed
+            .iter()
+            .map(|path| aura_os_storage::StorageTaskFileChangeSummary {
+                op: "modify".to_string(),
+                path: (*path).to_string(),
+                lines_added: 0,
+                lines_removed: 0,
+            })
+            .collect(),
+        build_steps: vec![serde_json::json!({"type": "build_verification_passed"}); n_build_steps],
+        test_steps: vec![serde_json::json!({"type": "test_verification_passed"}); n_test_steps],
+        format_steps: vec![
+            serde_json::json!({"type": "format_verification_passed"});
+            n_format_steps
+        ],
+        lint_steps: vec![serde_json::json!({"type": "lint_verification_passed"}); n_lint_steps],
+        git_steps: git_steps.to_vec(),
+        ..Default::default()
+    };
+    let class = match push_class {
+        "timeout" => PushFailureClass::Timeout,
+        "remote_storage_exhausted" => PushFailureClass::RemoteStorageExhausted,
+        _ => PushFailureClass::Generic,
+    };
+    should_task_complete_despite_push_failure(&cached, class)
+}
+
+/// Test-only: classify a reason string, returning the class label or
+/// `None` for non-push reasons.
+pub(crate) fn classify_push_failure_for_tests(reason: &str) -> Option<&'static str> {
+    classify_push_failure(reason).map(push_failure_label)
+}
+
+/// Test-only: run `bump_project_push_failures` `n` times against a
+/// fresh [`ProjectId`] and collect the emission flags. Resets on exit
+/// so per-test state does not leak into the global map.
+pub(crate) fn bump_project_push_failures_streak_for_tests(n: u32) -> Vec<bool> {
+    let pid = ProjectId::new();
+    let mut results = Vec::with_capacity(n as usize);
+    for _ in 0..n {
+        results.push(bump_project_push_failures(pid));
+    }
+    reset_project_push_failures(pid);
+    results
+}
+
+/// Test-only: prove the streak's one-shot guard re-arms after a
+/// reset. Bumps to the threshold (emitting once), resets, then bumps
+/// to the threshold again (which must also emit once).
+pub(crate) fn push_failure_reset_rearms_stuck_emission_for_tests() -> bool {
+    let pid = ProjectId::new();
+    let mut first_emits = 0u32;
+    for _ in 0..CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD {
+        if bump_project_push_failures(pid) {
+            first_emits += 1;
+        }
+    }
+    reset_project_push_failures(pid);
+    let mut second_emits = 0u32;
+    for _ in 0..CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD {
+        if bump_project_push_failures(pid) {
+            second_emits += 1;
+        }
+    }
+    reset_project_push_failures(pid);
+    first_emits == 1 && second_emits == 1
 }
 
 /// Locate the newest run bundle directory for a given
@@ -3080,10 +3329,20 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 | "test_fix_attempt" => {
                                     entry.test_steps.push(event.clone());
                                 }
-                                "git_committed" | "git_commit_failed"
-                                | "git_commit_rolled_back" | "git_pushed"
+                                "git_committed"
+                                | "git_commit_failed"
+                                | "git_commit_rolled_back"
+                                | "git_pushed"
                                 | "git_push_failed" => {
                                     entry.git_steps.push(event.clone());
+                                    // A successful push clears the
+                                    // per-project push-failure streak so
+                                    // a later `project_push_stuck`
+                                    // advisory is only ever emitted when
+                                    // pushes are ACTUALLY stuck.
+                                    if event_type == "git_pushed" {
+                                        reset_project_push_failures(project_id);
+                                    }
                                 }
                                 "format_verification_skipped"
                                 | "format_verification_started"
@@ -3135,11 +3394,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     if let Some((path, op)) =
                                         successful_write_event_path(event_type, &event)
                                     {
-                                        record_successful_write(
-                                            &mut entry.files_changed,
-                                            path,
-                                            op,
-                                        );
+                                        record_successful_write(&mut entry.files_changed, path, op);
                                     }
                                 }
                             }
@@ -3487,20 +3742,28 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // `task_failed` broadcast below.
                             let failure_reason = extract_failure_reason(&event);
 
-                            // Post-commit `git push` timeout: the task's
-                            // work is already committed in the workspace
-                            // repo, so the task itself is done. The push
-                            // is infrastructure and is retried separately
-                            // by the harness. Do NOT fail the task, do
-                            // NOT reset it to `ready`, and do NOT pause
-                            // the loop. Transition to `done` and surface
-                            // a `git_push_failed` event to the UI.
+                            // INVARIANT: task terminal status is governed by
+                            // the completion gate â never by git push
+                            // outcome. Push is best-effort infrastructure.
+                            //
+                            // If this `task_failed` classifies as a
+                            // push-layer failure (`GitPushTimeout`,
+                            // remote storage exhausted, generic
+                            // `git_push_failed`, or any other reason
+                            // carrying an `is_push` marker) AND the
+                            // cached output would pass the DoD gate,
+                            // transition the task to `done`, surface a
+                            // `push_deferred` domain event, and bump the
+                            // per-project consecutive-push-failure
+                            // counter. Fall through to the standard
+                            // terminal-failure path only if the gate
+                            // itself also failed (no commit / no
+                            // verification) â in that case the gate
+                            // owns the rollback, not the push layer.
                             if let (Some(tid), Some(reason)) =
                                 (tid.as_ref(), failure_reason.as_ref())
                             {
-                                if classify_infra_failure(reason)
-                                    == Some(InfraFailureClass::GitPushTimeout)
-                                {
+                                if let Some(push_class) = classify_push_failure(reason) {
                                     let cached = {
                                         let mut cache = task_output_cache.lock().await;
                                         let entry = cache.entry(tid.clone()).or_default();
@@ -3517,47 +3780,97 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             "type": "git_push_failed",
                                             "task_id": tid,
                                             "reason": reason,
+                                            "class": push_failure_label(push_class),
                                         }));
                                         entry.clone()
                                     };
-                                    persistence::persist_task_output(
-                                        storage_client.as_ref(),
-                                        jwt.as_deref(),
-                                        tid,
-                                        &cached,
-                                    )
-                                    .await;
-                                    if let (Some(storage_client), Some(jwt)) =
-                                        (storage_client.as_ref(), jwt.as_deref())
-                                    {
-                                        let req = aura_os_storage::TransitionTaskRequest {
-                                            status: "done".to_string(),
-                                        };
-                                        if let Err(error) =
-                                            storage_client.transition_task(tid, jwt, &req).await
+                                    if should_task_complete_despite_push_failure(
+                                        &cached, push_class,
+                                    ) {
+                                        persistence::persist_task_output(
+                                            storage_client.as_ref(),
+                                            jwt.as_deref(),
+                                            tid,
+                                            &cached,
+                                        )
+                                        .await;
+                                        if let (Some(storage_client), Some(jwt)) =
+                                            (storage_client.as_ref(), jwt.as_deref())
                                         {
+                                            let req = aura_os_storage::TransitionTaskRequest {
+                                                status: "done".to_string(),
+                                            };
+                                            if let Err(error) =
+                                                storage_client.transition_task(tid, jwt, &req).await
+                                            {
+                                                warn!(
+                                                    task_id = %tid,
+                                                    %error,
+                                                    class = push_failure_label(push_class),
+                                                    "Failed to transition task to Done after push failure (may already be terminal)"
+                                                );
+                                            }
+                                        }
+                                        let commit_sha = latest_git_commit_sha(&cached.git_steps);
+                                        // Legacy `git_push_failed` event preserved
+                                        // for existing UI consumers; `push_deferred`
+                                        // is the new invariant-correct carrier.
+                                        emit_domain_event(
+                                            &app_broadcast,
+                                            "git_push_failed",
+                                            project_id,
+                                            agent_instance_id,
+                                            serde_json::json!({
+                                                "task_id": tid,
+                                                "reason": reason,
+                                                "class": push_failure_label(push_class),
+                                                "commit_sha": commit_sha,
+                                                "recovery_checkpoint": recovery_checkpoint_label(recovery_checkpoint(&cached)),
+                                            }),
+                                        );
+                                        emit_domain_event(
+                                            &app_broadcast,
+                                            "push_deferred",
+                                            project_id,
+                                            agent_instance_id,
+                                            serde_json::json!({
+                                                "task_id": tid,
+                                                "reason": reason,
+                                                "class": push_failure_label(push_class),
+                                                "commit_sha": commit_sha,
+                                            }),
+                                        );
+                                        if bump_project_push_failures(project_id) {
                                             warn!(
-                                                task_id = %tid,
-                                                %error,
-                                                "Failed to transition task to Done after push timeout (may already be terminal)"
+                                                project_id = %project_id,
+                                                threshold = CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD,
+                                                "Project has hit the consecutive-push-failure threshold; emitting one-shot project_push_stuck advisory"
+                                            );
+                                            emit_domain_event(
+                                                &app_broadcast,
+                                                "project_push_stuck",
+                                                project_id,
+                                                agent_instance_id,
+                                                serde_json::json!({
+                                                    "task_id": tid,
+                                                    "threshold": CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD,
+                                                    "class": push_failure_label(push_class),
+                                                    "reason": reason,
+                                                }),
                                             );
                                         }
+                                        session_status = "completed";
+                                        terminal_seen = true;
+                                        continue;
                                     }
-                                    emit_domain_event(
-                                        &app_broadcast,
-                                        "git_push_failed",
-                                        project_id,
-                                        agent_instance_id,
-                                        serde_json::json!({
-                                            "task_id": tid,
-                                            "reason": reason,
-                                            "commit_sha": latest_git_commit_sha(&cached.git_steps),
-                                            "recovery_checkpoint": recovery_checkpoint_label(recovery_checkpoint(&cached)),
-                                        }),
-                                    );
-                                    session_status = "completed";
-                                    terminal_seen = true;
-                                    continue;
+                                    // Push-related failure BUT the gate
+                                    // also failed â fall through to the
+                                    // standard terminal-failure handler
+                                    // below so the user sees the real
+                                    // gate rejection, not a silent push
+                                    // bypass that would leave the task
+                                    // stuck in `in_progress` with no
+                                    // verification evidence.
                                 }
                             }
 
@@ -3570,9 +3883,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // (producing the `Invalid status transition`
                             // warnings seen in the logs).
                             let mut task_reset_to_ready = false;
-                            let classified_infra = failure_reason
-                                .as_deref()
-                                .and_then(classify_infra_failure);
+                            let classified_infra =
+                                failure_reason.as_deref().and_then(classify_infra_failure);
                             // `debug.retry_miss` fires when the reason
                             // text looks transient (per
                             // `looks_like_unclassified_transient`) but
@@ -3609,11 +3921,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     }
                                 }
                             }
-                            if let (Some(tid), Some(reason), Some(infra_failure)) = (
-                                tid.as_ref(),
-                                failure_reason.as_ref(),
-                                classified_infra,
-                            ) {
+                            if let (Some(tid), Some(reason), Some(infra_failure)) =
+                                (tid.as_ref(), failure_reason.as_ref(), classified_infra)
+                            {
                                 if let Some(ctx) = take_retry_context(&mut retry) {
                                     // Provider-supplied Retry-After hint,
                                     // when present, takes precedence over
@@ -3948,6 +4258,12 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     });
                                 }
                             }
+                            // Graceful stop resets the per-project push
+                            // streak so a future run starts with a clean
+                            // counter; the UI should not inherit a
+                            // `project_push_stuck` advisory across loop
+                            // restarts.
+                            reset_project_push_failures(project_id);
                             emit_domain_event(
                                 &app_broadcast,
                                 "loop_finished",
@@ -6159,10 +6475,11 @@ mod tests {
         );
         assert!(
             capped
-                >= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS)
-                    .saturating_sub(Duration::from_secs(
+                >= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS).saturating_sub(
+                    Duration::from_secs(
                         PROVIDER_BACKOFF_MAX_SECS * u64::from(JITTER_PCT) / 100 + 1,
-                    )),
+                    )
+                ),
             "cooldown {capped:?} too far below cap"
         );
         clear_project_cooldown(project_id);
@@ -6254,7 +6571,9 @@ mod tests {
     #[test]
     fn classify_infra_failure_provider_internal_is_case_insensitive() {
         assert_eq!(
-            classify_infra_failure("LLM ERROR: STREAM TERMINATED WITH ERROR: INTERNAL SERVER ERROR"),
+            classify_infra_failure(
+                "LLM ERROR: STREAM TERMINATED WITH ERROR: INTERNAL SERVER ERROR"
+            ),
             Some(InfraFailureClass::ProviderInternalError)
         );
         assert_eq!(
@@ -6564,11 +6883,7 @@ mod tests {
         let project_id = ProjectId::new();
         // Build up a short streak of internal errors.
         for _ in 0..3 {
-            register_project_cooldown(
-                project_id,
-                InfraFailureClass::ProviderInternalError,
-                "5xx",
-            );
+            register_project_cooldown(project_id, InfraFailureClass::ProviderInternalError, "5xx");
             // Expire the window so the next call doesn't short-circuit
             // on the longer-remaining-wins branch.
             let mut g = project_cooldowns().lock().unwrap();
@@ -6581,8 +6896,7 @@ mod tests {
         let git = register_project_cooldown(project_id, InfraFailureClass::GitTimeout, "git");
         let git_base = infra_cooldown_for(InfraFailureClass::GitTimeout);
         // +20% jitter allowed + 1 unit escalation (count starts at 1).
-        let max_allowed =
-            git_base + Duration::from_millis(git_base.as_millis() as u64 * 25 / 100);
+        let max_allowed = git_base + Duration::from_millis(git_base.as_millis() as u64 * 25 / 100);
         assert!(
             git <= max_allowed,
             "git cooldown {git:?} was higher than single-hit bound {max_allowed:?}; counter did not reset on class change"
@@ -6683,7 +6997,10 @@ mod tests {
             "name": "edit_file",
             "input": {"path": ""},
         });
-        assert!(is_empty_path_write_event("tool_call_completed", &empty_path));
+        assert!(is_empty_path_write_event(
+            "tool_call_completed",
+            &empty_path
+        ));
 
         let whitespace_path = serde_json::json!({
             "name": "write_file",
@@ -6844,7 +7161,9 @@ mod tests {
             &path,
             Some("https://example.com/org/repo.git"),
         )
-        .expect("empty workspace with git_repo_url should be tolerated; automaton clones on first run");
+        .expect(
+            "empty workspace with git_repo_url should be tolerated; automaton clones on first run",
+        );
     }
 
     #[test]
