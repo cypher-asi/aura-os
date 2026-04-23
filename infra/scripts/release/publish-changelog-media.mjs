@@ -43,14 +43,6 @@ function isEnabled(value, defaultValue = false) {
   return !["0", "false", "no", "off", "disabled"].includes(normalized);
 }
 
-function slugify(value, maxLength = 80) {
-  return sanitizeText(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, maxLength);
-}
-
 function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -106,18 +98,6 @@ function clipText(value, maxLength = 800) {
 function normalizeEnvChoice(value, fallback) {
   const normalized = sanitizeText(value);
   return normalized || fallback;
-}
-
-function parseImageSize(value, fallback = { width: 1536, height: 1024 }) {
-  const normalized = sanitizeText(value);
-  const match = normalized.match(/^(\d+)x(\d+)$/i);
-  if (!match) {
-    return fallback;
-  }
-  return {
-    width: Number(match[1]),
-    height: Number(match[2]),
-  };
 }
 
 function evaluateWorkflowOutcome({ published = 0, failed = 0 } = {}) {

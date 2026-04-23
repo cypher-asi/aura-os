@@ -614,9 +614,9 @@ test("publish script fixture mode keeps partial media success green and writes r
   writeFixtureChangelog({ pagesDir });
 
   const screenshotPath = path.join(rootDir, "feedback-proof.png");
-  fs.writeFileSync(screenshotPath, "fake png");
+  writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
   const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
-  fs.writeFileSync(polishedPath, "fake branded png");
+  writeSolidPng(polishedPath, 320, 213, [4, 16, 36, 255]);
   const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
   fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
     "entry-1-feedback-board": {
@@ -693,7 +693,7 @@ test("publish script fixture mode fails a slot when mandatory OpenAI polish is m
   writeFixtureChangelog({ pagesDir });
 
   const screenshotPath = path.join(rootDir, "feedback-proof.png");
-  fs.writeFileSync(screenshotPath, "fake png");
+  writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
   const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
   fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
     "entry-1-feedback-board": {
@@ -733,11 +733,11 @@ test("publish script fixture mode keeps workflow green when OpenAI polish partia
   writeFixtureChangelog({ pagesDir });
 
   const screenshotPath = path.join(rootDir, "feedback-proof.png");
-  fs.writeFileSync(screenshotPath, "fake png");
+  writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
   const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
-  fs.writeFileSync(polishedPath, "fake branded png");
+  writeSolidPng(polishedPath, 320, 213, [4, 16, 36, 255]);
   const agentScreenshotPath = path.join(rootDir, "agent-proof.png");
-  fs.writeFileSync(agentScreenshotPath, "fake png");
+  writeSolidPng(agentScreenshotPath, 320, 180, [120, 48, 210, 255]);
   const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
   fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
     "entry-1-feedback-board": {
