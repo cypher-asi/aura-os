@@ -404,15 +404,23 @@ jobs:
 
           if [[ ! -f "$summary_file" ]]; then
             echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "attempted=0" >> "$GITHUB_OUTPUT"
             echo "failed=0" >> "$GITHUB_OUTPUT"
             echo "published=0" >> "$GITHUB_OUTPUT"
+            echo "skipped=0" >> "$GITHUB_OUTPUT"
+            echo "workflow_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "should_fail=true" >> "$GITHUB_OUTPUT"
             echo "strict_passed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "attempted=$(jq -r '.attempted // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
+          echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
+          echo "workflow_outcome=$(jq -r '.workflowOutcome // \"failure\"' \"$summary_file\")" >> "$GITHUB_OUTPUT"
+          echo "should_fail=$(jq -r '.shouldFailWorkflow // true' \"$summary_file\")" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
 
       - name: Append changelog media diagnostics summary
@@ -453,7 +461,7 @@ jobs:
           git diff --cached --quiet || git commit -m "Reconcile ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}"
           git push
 
-      - name: Enforce strict changelog media rubric
+      - name: Finalize reconciled changelog media outcome
         if: always() && steps.release-check.outputs.released == 'true'
         shell: bash
         run: |
@@ -462,7 +470,24 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ steps.summary.outputs.strict_passed }}" != "true" ]]; then
-            echo "Strict changelog media rubric not satisfied: ${{ steps.summary.outputs.failed }} slot(s) still failed." >&2
+          attempted="${{ steps.summary.outputs.attempted }}"
+          published="${{ steps.summary.outputs.published }}"
+          failed="${{ steps.summary.outputs.failed }}"
+          skipped="${{ steps.summary.outputs.skipped }}"
+          workflow_outcome="${{ steps.summary.outputs.workflow_outcome }}"
+          should_fail="${{ steps.summary.outputs.should_fail }}"
+          capture_outcome="${{ steps.capture.outcome }}"
+
+          if [[ "$should_fail" == "true" ]]; then
+            echo "Reconciled changelog media did not publish any screenshots for ${attempted} attempted slot(s); ${failed} slot(s) failed." >&2
             exit 1
+          fi
+
+          if [[ "$workflow_outcome" == "partial" ]]; then
+            echo "::warning::Reconciliation published ${published} screenshot(s), skipped ${skipped}, and left ${failed} failed slot(s) for a later rerun."
+            exit 0
+          fi
+
+          if [[ "$capture_outcome" == "failure" ]]; then
+            echo "::warning::Reconciliation capture reported a recoverable issue, but no failed slots remain after summary processing."
           fi

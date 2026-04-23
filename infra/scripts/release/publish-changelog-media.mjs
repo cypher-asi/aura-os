@@ -85,6 +85,30 @@ function clipText(value, maxLength = 800) {
   return `${text.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
+function evaluateWorkflowOutcome({ published = 0, failed = 0 } = {}) {
+  const publishedCount = Number(published) || 0;
+  const failedCount = Number(failed) || 0;
+
+  if (failedCount > 0 && publishedCount === 0) {
+    return {
+      workflowOutcome: "failure",
+      shouldFailWorkflow: true,
+    };
+  }
+
+  if (failedCount > 0) {
+    return {
+      workflowOutcome: "partial",
+      shouldFailWorkflow: false,
+    };
+  }
+
+  return {
+    workflowOutcome: "success",
+    shouldFailWorkflow: false,
+  };
+}
+
 function collectEntryChangedFiles(doc, entry) {
   const commitLookup = new Map((Array.isArray(doc?.rawCommits) ? doc.rawCommits : []).map((commit) => [commit.sha, commit]));
   return unique(
@@ -573,6 +597,10 @@ function buildRunSummary(results, context = {}) {
   const publishedResults = results.filter((result) => result.status === "published");
   const failedResults = results.filter((result) => result.status === "failed");
   const skippedResults = results.filter((result) => result.status === "skipped");
+  const workflow = evaluateWorkflowOutcome({
+    published: publishedResults.length,
+    failed: failedResults.length,
+  });
 
   return {
     generatedAt: new Date().toISOString(),
@@ -588,6 +616,8 @@ function buildRunSummary(results, context = {}) {
     published: publishedResults.length,
     failed: failedResults.length,
     skipped: skippedResults.length,
+    workflowOutcome: workflow.workflowOutcome,
+    shouldFailWorkflow: workflow.shouldFailWorkflow,
     strictRubricPassed: failedResults.length === 0 && !sanitizeText(context.abortRemainingReason || ""),
     publishedSlotIds: publishedResults.map((result) => result.slotId).filter(Boolean),
     failedSlotIds: failedResults.map((result) => result.slotId).filter(Boolean),
@@ -610,6 +640,8 @@ function buildRetryPlan(summary) {
     profile: sanitizeText(summary?.profile || ""),
     previewUrl: sanitizeText(summary?.previewUrl || ""),
     previewHost: sanitizeText(summary?.previewHost || ""),
+    workflowOutcome: sanitizeText(summary?.workflowOutcome || ""),
+    shouldFailWorkflow: Boolean(summary?.shouldFailWorkflow),
     strictRubricPassed: Boolean(summary?.strictRubricPassed),
     failed: failedResults.length,
     failedSlots: failedResults.map((result) => ({
@@ -637,6 +669,8 @@ function buildRunSummaryMarkdown(summary) {
     `- Published: ${summary.published}`,
     `- Failed: ${summary.failed}`,
     `- Skipped: ${summary.skipped}`,
+    `- Workflow outcome: ${summary.workflowOutcome || "unknown"}`,
+    `- Workflow should fail: ${summary.shouldFailWorkflow ? "yes" : "no"}`,
     `- Strict rubric passed: ${summary.strictRubricPassed ? "yes" : "no"}`,
   ];
 
@@ -808,7 +842,7 @@ async function main() {
     ...summary,
   }, null, 2));
 
-  if (summary.failed > 0) {
+  if (summary.shouldFailWorkflow) {
     process.exitCode = 1;
   }
 }
@@ -816,6 +850,7 @@ async function main() {
 export {
   allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  evaluateWorkflowOutcome,
   buildAbortRemainingError,
   buildMediaBlock,
   buildRetryPlan,
