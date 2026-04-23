@@ -38,7 +38,8 @@ const ALL_ENGINE_EVENT_TYPES: EventType[] = [
   EventType.BuildFixAttempt,
   EventType.TestVerificationStarted, EventType.TestVerificationPassed,
   EventType.TestVerificationFailed, EventType.TestFixAttempt,
-  EventType.GitCommitted, EventType.GitCommitFailed, EventType.GitCommitRolledBack, EventType.GitPushed, EventType.GitPushFailed, EventType.NetworkEvent,
+  EventType.GitCommitted, EventType.GitCommitFailed, EventType.GitCommitRolledBack, EventType.GitPushed, EventType.GitPushFailed,
+  EventType.PushDeferred, EventType.ProjectPushStuck, EventType.NetworkEvent,
   EventType.Error,
 ];
 

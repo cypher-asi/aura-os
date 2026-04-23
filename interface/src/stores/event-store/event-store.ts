@@ -34,7 +34,8 @@ export interface GitStep {
     | "commit_failed"
     | "commit_rolled_back"
     | "pushed"
-    | "push_failed";
+    | "push_failed"
+    | "push_deferred";
   commitSha?: string;
   reason?: string;
   repo?: string;
@@ -51,6 +52,25 @@ export interface TaskOutputEntry {
   gitSteps: GitStep[];
 }
 
+/**
+ * Per-project advisory emitted by the dev loop when a project accumulates
+ * CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD back-to-back push failures.
+ * Rendered as a persistent banner in the project header until a successful
+ * push clears it, or the user dismisses it for the current session.
+ */
+export interface PushStuckInfo {
+  /** Classified failure reason (e.g. emote_rejected\). */
+  reason?: string;
+  /** Backend failure class label when present (e.g. \	ransport_timeout\). */
+  class?: string;
+  /** Streak threshold the backend observed when emitting the advisory. */
+  threshold: number;
+  /** Set after the user dismisses the banner for the current session. */
+  dismissed: boolean;
+  /** ms-epoch of the most recent advisory for this project. */
+  lastAt: number;
+}
+
 type EventCallback = (event: AuraEvent) => void;
 type TaskOutputListener = () => void;
 
@@ -63,9 +83,17 @@ interface EventState {
   connected: boolean;
   lastEventAt: number | null;
   taskOutputs: Record<string, TaskOutputEntry>;
+  /**
+   * Keyed by \project_id\. Populated by the \project_push_stuck\ domain
+   * event and cleared on a subsequent \git_pushed\ for the same project.
+   */
+  pushStuckByProject: Record<string, PushStuckInfo | undefined>;
 
   subscribe: <T extends EventType>(type: T, callback: (event: AuraEventOfType<T>) => void) => () => void;
   seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[], gitSteps?: GitStep[], projectId?: string) => void;
+  setPushStuck: (projectId: string, info: Omit<PushStuckInfo, "dismissed" | "lastAt"> & Partial<Pick<PushStuckInfo, "dismissed" | "lastAt">>) => void;
+  clearPushStuck: (projectId: string) => void;
+  dismissPushStuck: (projectId: string) => void;
 }
 
 export function notifyTaskOutputListeners(taskId: string) {
@@ -77,6 +105,7 @@ export const useEventStore = create<EventState>()((set, get) => ({
   connected: false,
   lastEventAt: null,
   taskOutputs: {},
+  pushStuckByProject: {},
 
   subscribe: (type, callback) => {
     let s = subscribers.get(type);
@@ -118,7 +147,52 @@ export const useEventStore = create<EventState>()((set, get) => ({
     set({ taskOutputs: { ...taskOutputs, [taskId]: entry } });
     notifyTaskOutputListeners(taskId);
   },
+
+  setPushStuck: (projectId, info) => {
+    if (!projectId) return;
+    set((state) => ({
+      pushStuckByProject: {
+        ...state.pushStuckByProject,
+        [projectId]: {
+          threshold: info.threshold,
+          reason: info.reason,
+          class: info.class,
+          dismissed: info.dismissed ?? state.pushStuckByProject[projectId]?.dismissed ?? false,
+          lastAt: info.lastAt ?? Date.now(),
+        },
+      },
+    }));
+  },
+
+  clearPushStuck: (projectId) => {
+    if (!projectId) return;
+    set((state) => {
+      if (!(projectId in state.pushStuckByProject)) return state;
+      const next = { ...state.pushStuckByProject };
+      delete next[projectId];
+      return { pushStuckByProject: next };
+    });
+  },
+
+  dismissPushStuck: (projectId) => {
+    if (!projectId) return;
+    set((state) => {
+      const existing = state.pushStuckByProject[projectId];
+      if (!existing || existing.dismissed) return state;
+      return {
+        pushStuckByProject: {
+          ...state.pushStuckByProject,
+          [projectId]: { ...existing, dismissed: true },
+        },
+      };
+    });
+  },
 }));
+
+/** Reactive selector for the current push-stuck state of a project. */
+export function usePushStuck(projectId: string | undefined): PushStuckInfo | null {
+  return useEventStore((s) => (projectId ? s.pushStuckByProject[projectId] ?? null : null));
+}
 
 export function getTaskOutput(taskId: string): TaskOutputEntry {
   return useEventStore.getState().taskOutputs[taskId] ?? EMPTY_OUTPUT;

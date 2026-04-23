@@ -55,6 +55,8 @@ export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.GitCommitRolledBack]: "Git",
   [EventType.GitPushed]: "Git",
   [EventType.GitPushFailed]: "Git",
+  [EventType.PushDeferred]: "Git",
+  [EventType.ProjectPushStuck]: "Git",
   [EventType.CreditBalanceUpdated]: "Billing",
   [EventType.ProcessRunStarted]: "Process",
   [EventType.ProcessRunProgress]: "Process",

@@ -1,9 +1,10 @@
-export type { BuildStep, TestStep, GitStep, TaskOutputEntry } from "./event-store";
+export type { BuildStep, TestStep, GitStep, TaskOutputEntry, PushStuckInfo } from "./event-store";
 export {
   useEventStore,
   EMPTY_OUTPUT,
   getTaskOutput,
   useTaskOutput,
+  usePushStuck,
   connectEventSocket,
   disconnectEventSocket,
   scheduleDeferredEventSocketConnect,

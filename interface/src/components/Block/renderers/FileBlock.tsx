@@ -142,10 +142,47 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
         : isRead
           ? "Read failed"
           : "Tool call failed";
+
+  // --- Retry status stub ----------------------------------------------------
+  //
+  // Reserved for a future `ToolCallRetrying` handler. The autonomous harness
+  // does not yet emit a structured retry event, so we fish the optional
+  // `retry_attempt` / `retry_max` fields out of the tool input bag when the
+  // call is still pending. Once `ToolCallRetrying` lands we will route those
+  // fields onto `ToolCallEntry` directly and drop this opportunistic read.
+  const rawRetryAttempt = entry.input.retry_attempt;
+  const rawRetryMax = entry.input.retry_max;
+  const retryAttempt =
+    typeof rawRetryAttempt === "number" && rawRetryAttempt > 0
+      ? rawRetryAttempt
+      : null;
+  const retryMax =
+    typeof rawRetryMax === "number" && rawRetryMax > 0 ? rawRetryMax : null;
+
+  // Coarse classifier: if the failure reason in `entry.result` smells like a
+  // transient upstream hiccup, swap the bare "Write failed" title for an
+  // action-specific explanation so the card header carries the actual cause.
+  const resultStr =
+    entry.isError && typeof entry.result === "string" ? entry.result : "";
+  const hasTransientUpstreamHint =
+    /stream terminated|internal server error|\b5\d{2}\b|upstream/i.test(resultStr);
+  const failedTitleWithReason = hasTransientUpstreamHint
+    ? `${failedTitle} - transient upstream 5xx`
+    : failedTitle;
+
+  const pendingTitle = (() => {
+    const base = TOOL_PHASE_LABELS[entry.name] ?? "Working...";
+    if (retryAttempt != null) {
+      const max = retryMax ?? "?";
+      return `${base} (retry ${retryAttempt}/${max})`;
+    }
+    return base;
+  })();
+
   const fallbackTitle = entry.pending
-    ? (TOOL_PHASE_LABELS[entry.name] ?? "Working...")
+    ? pendingTitle
     : entry.isError
-      ? failedTitle
+      ? failedTitleWithReason
       : "Untitled file";
   const fileName = hasPath
     ? (path.split(/[/\\]/).pop() || path)

@@ -248,6 +248,15 @@ export function summarise(e: AuraEvent): string {
       const c = e.content;
       return `Git push failed: ${c.reason ?? "unknown"}`;
     }
+    case EventType.PushDeferred: {
+      const c = e.content;
+      const sha = c.commit_sha?.slice(0, 8) ?? "";
+      return `Push deferred${sha ? ` (${sha})` : ""}: ${c.reason ?? "remote unavailable"}`;
+    }
+    case EventType.ProjectPushStuck: {
+      const c = e.content;
+      return `Project push stuck (>=${c.threshold}): ${c.reason ?? "remote rejected"}`;
+    }
     case EventType.NetworkEvent:
       return `Network: ${e.content.network_event_type ?? "event"}`;
     case EventType.Error:

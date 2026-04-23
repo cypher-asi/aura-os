@@ -121,6 +121,16 @@ export enum EventType {
   GitCommitRolledBack   = "git_commit_rolled_back",
   GitPushed             = "git_pushed",
   GitPushFailed         = "git_push_failed",
+  /// Emitted on every push failure (transient or terminal). Carries
+  /// the task/project context and the classified failure reason so
+  /// the UI can surface a muted "Push deferred" row on the task card
+  /// without the red "push_failed" styling.
+  PushDeferred          = "push_deferred",
+  /// Emitted ONCE per streak when a project accumulates
+  /// CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD back-to-back push
+  /// failures. The UI uses this as a signal to mount a persistent
+  /// banner on the project header until a successful push clears it.
+  ProjectPushStuck      = "project_push_stuck",
 
   // Billing
   CreditBalanceUpdated  = "credit_balance_updated",
@@ -475,6 +485,22 @@ export type AuraEvent = AuraEventBase & (
       repo?: string;
       branch?: string;
       retry_safe?: boolean;
+    } }
+  | { type: EventType.PushDeferred; content: {
+      task_id?: string;
+      reason: string;
+      /** Failure classifier, e.g. 
+emote_rejected, 	ransport_timeout. */
+      class?: string;
+      commit_sha?: string | null;
+    } }
+  | { type: EventType.ProjectPushStuck; content: {
+      task_id?: string;
+      /** The streak threshold that was hit (default 3). */
+      threshold: number;
+      /** Last observed failure classifier. */
+      class?: string;
+      reason: string;
     } }
 
   // ── Harness protocol (canonical types from aura-protocol) ────

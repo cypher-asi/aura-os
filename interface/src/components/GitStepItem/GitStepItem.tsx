@@ -1,4 +1,4 @@
-import { Check, GitCommitHorizontal, RotateCcw, Upload, XCircle } from "lucide-react";
+import { Check, CloudOff, GitCommitHorizontal, RotateCcw, Upload, XCircle } from "lucide-react";
 import type { GitStep } from "../../stores/event-store/index";
 import styles from "../Preview/Preview.module.css";
 
@@ -21,6 +21,13 @@ function getGitStepLabel(step: GitStep): string {
     }
     return step.reason ?? "Push failed";
   }
+  if (step.kind === "push_deferred") {
+    const reason = step.reason ?? "remote unavailable";
+    if (step.commitSha) {
+      return `Push deferred for ${step.commitSha.slice(0, 7)}: ${reason}`;
+    }
+    return `Push deferred: ${reason}`;
+  }
   const count = step.commits?.length ?? 0;
   const branch = step.branch ?? "main";
   return `Pushed ${count} commit${count !== 1 ? "s" : ""} to ${branch}`;
@@ -31,6 +38,7 @@ function getGitStepIcon(step: GitStep) {
     return <XCircle size={12} />;
   }
   if (step.kind === "commit_rolled_back") return <RotateCcw size={12} />;
+  if (step.kind === "push_deferred") return <CloudOff size={12} />;
   if (step.kind === "committed") return <GitCommitHorizontal size={12} />;
   return <Upload size={12} />;
 }
@@ -39,11 +47,18 @@ export function GitStepItem({ step }: { step: GitStep }) {
   const isError = step.kind === "commit_failed" || step.kind === "push_failed";
   const isRollback = step.kind === "commit_rolled_back";
   const isSuccess = step.kind === "pushed";
+  const isDeferred = step.kind === "push_deferred";
+  // push_deferred is deliberately NOT `isError`: the backend treats a
+  // deferred push as a non-terminal outcome (the task itself still ran
+  // to local completion), so a red row would overstate the severity. We
+  // style it muted instead, matching `Rolled back` visual weight.
   const statusClass = isError ? styles.buildFailed : isSuccess ? styles.buildPassed : "";
 
   const rollbackStyle = isRollback
     ? { textDecoration: "line-through" as const, opacity: 0.65 }
-    : undefined;
+    : isDeferred
+      ? { opacity: 0.75 }
+      : undefined;
 
   return (
     <div className={`${styles.activityItem} ${statusClass}`}>

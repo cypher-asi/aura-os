@@ -152,6 +152,13 @@ function handleGitCommitRolledBack(event: AuraEvent, u: OutputUpdate): void {
 
 function handleGitPushed(event: AuraEvent, u: OutputUpdate): void {
   const c = event.content as AuraEventContent<EventType.GitPushed>;
+  // A successful push clears any lingering project-level push-stuck banner
+  // BEFORE we short-circuit on missing task_id, so project-scoped pushes
+  // (e.g. manual remote-fix pushes made outside of a task run) still clear
+  // the advisory when they succeed.
+  if (event.project_id) {
+    useEventStore.getState().clearPushStuck(event.project_id);
+  }
   if (!c.task_id) return;
   appendGitStep(c.task_id, {
     kind: "pushed",
@@ -173,6 +180,35 @@ function handleGitPushFailed(event: AuraEvent, u: OutputUpdate): void {
     branch: c.branch,
     timestamp: Date.now(),
   }, u);
+}
+
+function handlePushDeferred(event: AuraEvent, u: OutputUpdate): void {
+  const c = event.content as AuraEventContent<EventType.PushDeferred>;
+  if (!c.task_id) return;
+  appendGitStep(
+    c.task_id,
+    {
+      kind: "push_deferred",
+      commitSha: c.commit_sha ?? undefined,
+      reason: c.reason,
+      timestamp: Date.now(),
+    },
+    u,
+  );
+}
+
+function handleProjectPushStuck(event: AuraEvent, u: OutputUpdate): void {
+  // Banner state lives on the event store root (not per-task), so this
+  // handler does not mutate the task-output update bag.
+  void u;
+  const c = event.content as AuraEventContent<EventType.ProjectPushStuck>;
+  const projectId = event.project_id;
+  if (!projectId) return;
+  useEventStore.getState().setPushStuck(projectId, {
+    threshold: c.threshold ?? 3,
+    reason: c.reason,
+    class: c.class,
+  });
 }
 
 function handleTaskFinish(event: AuraEvent, u: OutputUpdate): void {
@@ -219,6 +255,8 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.GitCommitRolledBack]: handleGitCommitRolledBack,
   [EventType.GitPushed]: handleGitPushed,
   [EventType.GitPushFailed]: handleGitPushFailed,
+  [EventType.PushDeferred]: handlePushDeferred,
+  [EventType.ProjectPushStuck]: handleProjectPushStuck,
   [EventType.SpecSaved]: handleSpecSaved,
   [EventType.TaskSaved]: handleTaskSaved,
   [EventType.TaskCompleted]: handleTaskFinish,

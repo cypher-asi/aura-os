@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act } from "@testing-library/react";
 import { useEventStore, getTaskOutput, connectEventSocket } from "./event-store";
+import { computeTaskGitSummary } from "../components/TaskPreview/useTaskPreviewData";
 
 const { capture } = vi.hoisted(() => {
   const capture = { onMessage: null as ((data: string) => void) | null };
@@ -43,7 +44,7 @@ function simulateEvent(event: Record<string, unknown>) {
 }
 
 beforeEach(() => {
-  useEventStore.setState({ connected: false, lastEventAt: null, taskOutputs: {} });
+  useEventStore.setState({ connected: false, lastEventAt: null, taskOutputs: {}, pushStuckByProject: {} });
   sidekickCapture.pushSpec.mockClear();
   sidekickCapture.pushTask.mockClear();
   connectEventSocket();
@@ -131,5 +132,100 @@ describe("event-store", () => {
 
     expect(sidekickCapture.pushSpec).toHaveBeenCalledWith(spec);
     expect(sidekickCapture.pushTask).toHaveBeenCalledWith(task);
+  });
+
+  it("push_deferred event appends a push_deferred GitStep", () => {
+    simulateEvent({
+      type: "push_deferred",
+      project_id: "proj-1",
+      task_id: "t-def-1",
+      reason: "remote rejected: No space left on device",
+      commit_sha: "abc1234567890",
+      class: "remote_rejected",
+    });
+    const gitSteps = getTaskOutput("t-def-1").gitSteps;
+    expect(gitSteps).toHaveLength(1);
+    expect(gitSteps[0].kind).toBe("push_deferred");
+    expect(gitSteps[0].reason).toBe("remote rejected: No space left on device");
+    expect(gitSteps[0].commitSha).toBe("abc1234567890");
+  });
+
+  it("project_push_stuck event flips a per-project banner flag", () => {
+    expect(useEventStore.getState().pushStuckByProject["proj-ps-1"]).toBeUndefined();
+    simulateEvent({
+      type: "project_push_stuck",
+      project_id: "proj-ps-1",
+      task_id: "t-ps-1",
+      threshold: 3,
+      reason: "remote rejected: No space left on device",
+      class: "remote_rejected",
+    });
+    const flag = useEventStore.getState().pushStuckByProject["proj-ps-1"];
+    expect(flag).toBeDefined();
+    expect(flag!.threshold).toBe(3);
+    expect(flag!.reason).toBe("remote rejected: No space left on device");
+    expect(flag!.dismissed).toBe(false);
+  });
+
+  it("git_pushed clears a previously-set project_push_stuck flag", () => {
+    simulateEvent({
+      type: "project_push_stuck",
+      project_id: "proj-ps-2",
+      threshold: 3,
+      reason: "stuck",
+    });
+    expect(useEventStore.getState().pushStuckByProject["proj-ps-2"]).toBeDefined();
+    simulateEvent({
+      type: "git_pushed",
+      project_id: "proj-ps-2",
+      task_id: "t-ok-1",
+      branch: "main",
+      commits: [{ sha: "deadbeef", message: "fix" }],
+    });
+    expect(useEventStore.getState().pushStuckByProject["proj-ps-2"]).toBeUndefined();
+  });
+
+  it("dismissPushStuck marks the banner dismissed without clearing the flag", () => {
+    simulateEvent({
+      type: "project_push_stuck",
+      project_id: "proj-ps-3",
+      threshold: 3,
+      reason: "stuck",
+    });
+    useEventStore.getState().dismissPushStuck("proj-ps-3");
+    const flag = useEventStore.getState().pushStuckByProject["proj-ps-3"];
+    expect(flag).toBeDefined();
+    expect(flag!.dismissed).toBe(true);
+  });
+
+  it("rollback precedence: commit_rolled_back beats committed in the summary", () => {
+    const steps = [
+      { kind: "committed" as const, commitSha: "abc1234def5678", timestamp: 1 },
+      {
+        kind: "commit_rolled_back" as const,
+        commitSha: "abc1234def5678",
+        reason: "DoD gate rejected: missing tests",
+        timestamp: 2,
+      },
+    ];
+    const summary = computeTaskGitSummary(steps, "failed");
+    expect(summary).toMatch(/^Rolled back abc1234:/);
+    expect(summary).not.toMatch(/^Committed/);
+  });
+
+  it("push_deferred surfaces in the git summary when no rollback / push_failed precedes it", () => {
+    const steps = [
+      { kind: "committed" as const, commitSha: "aaa1111bbbcccc", timestamp: 1 },
+      {
+        kind: "push_deferred" as const,
+        commitSha: "aaa1111bbbcccc",
+        reason: "remote rejected: No space left on device",
+        timestamp: 2,
+      },
+    ];
+    const summary = computeTaskGitSummary(steps, "done");
+    expect(summary).toBe(
+      "Push deferred: remote rejected: No space left on device",
+    );
   });
 });
