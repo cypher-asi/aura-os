@@ -538,7 +538,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -558,7 +558,16 @@
             "interface/src/constants/models.test.ts",
             "interface/src/constants/models.ts",
             "interface/src/lib/benchmark-pricing.test.ts"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.355.1/entry-gpt-5-5-model-support-in-chat-and-pricing.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 85,
+          "updatedAt": "2026-04-23T19:04:14.470Z",
+          "storyTitle": "GPT-5.5 Model Selectable in Chat Input Bar"
         }
       }
     ],

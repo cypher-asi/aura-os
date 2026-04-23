@@ -20,8 +20,8 @@ A broad reliability pass on the nightly release workflow, a new gh-pages recover
 
 The GPT-5.5 family is now selectable in the chat input and fully wired into Aura's per-token fee schedule.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-model-support-in-chat-and-pricing","slug":"gpt-5-5-model-support-in-chat-and-pricing","alt":"GPT-5.5 model support in chat and pricing screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-model-support-in-chat-and-pricing","slug":"gpt-5-5-model-support-in-chat-and-pricing","alt":"GPT-5.5 model support in chat and pricing screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.355.1/entry-gpt-5-5-model-support-in-chat-and-pricing.png","screenshotSource":"openai-polish","originalScreenshotSource":"capture-proof","polishProvider":"openai","polishModel":"gpt-image-2","polishJudgeModel":"gpt-4.1-mini","polishScore":85,"updatedAt":"2026-04-23T19:04:14.470Z","storyTitle":"GPT-5.5 Model Selectable in Chat Input Bar"} -->
+![GPT-5.5 model support in chat and pricing screenshot](../../assets/changelog/nightly/0.1.0-nightly.355.1/entry-gpt-5-5-model-support-in-chat-and-pricing.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-gpt-5-5-model-support-in-chat-and-pricing -->
 
 - GPT-5.5 is now exposed in the chat input bar and model constants, making it selectable alongside the existing Claude lineup. (`d9d82e9`)
