@@ -3,14 +3,14 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-23T21:23:57.506Z",
+  "generatedAt": "2026-04-23T21:38:45.694Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.357.1",
+  "version": "0.1.0-nightly.358.1",
   "date": "2026-04-23",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.357.1",
-  "lastIncludedSha": "a0f9f6329a5d4db4020b4ca26e451548a418d579",
-  "previousProcessedSha": "b2847a4249d5ccc8714d1a1f54a4239bfb37f525",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.358.1",
+  "lastIncludedSha": "4c104aec8e24f34c0db42cdbfa910c4db0a278ac",
+  "previousProcessedSha": "a0f9f6329a5d4db4020b4ca26e451548a418d579",
   "commitShas": [
     "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
     "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
@@ -21,10 +21,11 @@
     "d9d82e95311696c35325481a60190321f4501d7c",
     "b2847a4249d5ccc8714d1a1f54a4239bfb37f525",
     "8ef3f5b112074f816d23447682da93e87fef84ad",
-    "a0f9f6329a5d4db4020b4ca26e451548a418d579"
+    "a0f9f6329a5d4db4020b4ca26e451548a418d579",
+    "4c104aec8e24f34c0db42cdbfa910c4db0a278ac"
   ],
-  "rawCommitCount": 10,
-  "filteredCommitCount": 10,
+  "rawCommitCount": 11,
+  "filteredCommitCount": 11,
   "rawCommits": [
     {
       "sha": "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
@@ -438,6 +439,47 @@
         "Other",
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "4c104aec8e24f34c0db42cdbfa910c4db0a278ac",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-23T17:24:40-04:00",
+      "subject": "Enlarge branded changelog proof cards",
+      "body": "",
+      "parents": [
+        "a0f9f6329a5d4db4020b4ca26e451548a418d579"
+      ],
+      "files": [
+        "infra/scripts/release/publish-changelog-media.mjs",
+        "infra/scripts/release/publish-changelog-media.test.mjs",
+        "interface/scripts/produce-agent-demo-screenshots.mjs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 21,
+        "deletions": 11
+      },
+      "committedAtMs": 1776979480000,
+      "cleanSubject": "Enlarge branded changelog proof cards",
+      "keywords": [
+        "enlarge",
+        "branded",
+        "changelog",
+        "proof",
+        "cards"
+      ],
+      "fileGroups": [
+        "infra/scripts/release",
+        "interface/scripts/produce-agent-demo-screenshots.mjs"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure",
+        "Other"
+      ]
     }
   ],
   "batchCount": 2,
@@ -449,36 +491,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11269218
+          "sizeBytes": 11269234
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.357.1",
+      "version": "0.1.0-nightly.358.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35126312
+          "sizeBytes": 35132558
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102345208
+          "sizeBytes": 102341112
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -488,29 +530,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.357.1",
+      "version": "0.1.0-nightly.358.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.357.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.358.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31579391
+          "sizeBytes": 31525232
         },
         {
-          "name": "Aura_0.1.0-nightly.357.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.358.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31396039
+          "sizeBytes": 31331296
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -520,29 +562,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.357.1",
+      "version": "0.1.0-nightly.358.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.357.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.358.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33144746
+          "sizeBytes": 33144051
         },
         {
-          "name": "Aura_0.1.0-nightly.357.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.358.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32986199
+          "sizeBytes": 32984505
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -552,17 +594,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.357.1",
+      "version": "0.1.0-nightly.358.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23769755
+          "sizeBytes": 23767229
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.357.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.358.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -571,19 +613,34 @@
     }
   ],
   "rendered": {
-    "title": "GPT-5.5 lands alongside a tougher nightly release pipeline",
-    "intro": "Today's nightly brings GPT-5.5 into the model picker with a reworked pricing table, while most of the day went into making the nightly release pipeline, changelog media publishing, and gh-pages sync materially more resilient.",
+    "title": "GPT-5.5 support lands alongside a nightly release pipeline overhaul",
+    "intro": "Today's nightly pairs a meaningful product addition — GPT-5.5 selectable in chat with full pricing coverage — with a substantial hardening pass on the release pipeline, from asset pruning and gh-pages recovery to sharper, aspect-correct changelog proof imagery.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "9:17 AM",
         "started_at": "2026-04-23T16:17:50.000Z",
         "ended_at": "2026-04-23T17:32:36.000Z",
-        "title": "Nightly release pipeline hardened with retries and gh-pages recovery",
-        "summary": "A sustained pass on the nightly pipeline made asset pruning, changelog history sync, and gh-pages publishing far more resilient, and improved how proof screenshots get framed.",
+        "title": "Retry-safe nightly pruning and gh-pages recovery",
+        "summary": "The nightly release pipeline gained a dedicated prune-with-retry path, a gh-pages republish workflow, and a history media sync so changelog assets stay consistent across latest and dated archives.",
         "items": [
           {
-            "text": "Replaced the inline asset-prune step in the nightly workflow with a dedicated retrying script that tolerates transient GitHub API errors, and added a new workflow that mirrors published changelog media into dated history entries on gh-pages.",
+            "text": "Nightly asset pruning moved out of the workflow YAML into a retryable script that tolerates 404s and transient GitHub API failures, so a missing asset no longer fails the release.",
+            "commit_shas": [
+              "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
+              "ac61ac34f8980288b3c0de16c352756ddedd6e04"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Added a Republish GitHub Pages workflow plus allow-empty commit support in the gh-pages helper, giving operators a one-click recovery path when Pages drifts out of sync.",
+            "commit_shas": [
+              "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A new Sync Release Changelog Media History workflow mirrors freshly published media from latest.json into the matching dated history entry, keeping archived changelogs visually complete.",
             "commit_shas": [
               "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
               "d81834cdcc4667bd4b48a5a93b9fab280313e1a4"
@@ -591,21 +648,7 @@
             "confidence": "high"
           },
           {
-            "text": "Prune now shrugs off assets that 404 mid-delete instead of failing the release, keeping nightly publishes green when GitHub garbage-collects assets out from under us.",
-            "commit_shas": [
-              "ac61ac34f8980288b3c0de16c352756ddedd6e04"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Added a manual Republish GitHub Pages workflow backed by an allow-empty commit path in the gh-pages retry script, giving operators a one-click recovery when Pages gets into a bad state.",
-            "commit_shas": [
-              "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Changelog media cards now size to the screenshot's real aspect ratio, default to higher image quality, and use tighter framing so the product screenshot, not the generated background, stays the dominant element.",
+            "text": "Branded changelog proof cards now size to the real screenshot and render at higher image quality, with softer framing so the capture stays the focal point.",
             "commit_shas": [
               "22176006f737cb85f2bd007721b53a6bbadc8fe9",
               "43ac90589c9453a4ca3c2fb905beaebcc908d051"
@@ -617,17 +660,17 @@
           "requested": false,
           "status": "skipped",
           "score": -8,
-          "reason": "Entry is entirely about nightly release pipeline hardening, gh-pages recovery workflow, asset prune retries, and changelog media framing tweaks. No user-visible product surface — all changes are in CI workflows and release scripts. The media framing change is a subtle visual adjustment to changelog cards themselves, not a product surface.",
+          "reason": "Entirely release pipeline work: retry scripts, gh-pages republish workflow, media history sync, and changelog proof card framing. No user-visible product surface; a screenshot would only show CI/workflow YAML or the changelog card itself (meta). Reject.",
           "reasons": [
-            "Entry is entirely about nightly release pipeline hardening, gh-pages recovery workflow, asset prune retries, and changelog media framing tweaks. No user-visible product surface — all changes are in CI workflows and release scripts. The media framing change is a subtle visual adjustment to changelog cards themselves, not a product surface.",
+            "Entirely release pipeline work: retry scripts, gh-pages republish workflow, media history sync, and changelog proof card framing. No user-visible product surface; a screenshot would only show CI/workflow YAML or the changelog card itself (meta). Reject.",
             "entry only touches release or infrastructure files",
             "entry language points to a visible product surface",
             "entry language points to runtime or infrastructure plumbing rather than a stable screen",
             "entry language points to release plumbing rather than a product screen"
           ],
-          "slotId": "entry-1-nightly-release-pipeline-hardened-with-retries-and-gh-pages-reco",
-          "slug": "nightly-release-pipeline-hardened-with-retries-and-gh-pages-reco",
-          "alt": "Nightly release pipeline hardened with retries and gh-pages recovery screenshot",
+          "slotId": "entry-1-retry-safe-nightly-pruning-and-gh-pages-recovery",
+          "slug": "retry-safe-nightly-pruning-and-gh-pages-recovery",
+          "alt": "Retry-safe nightly pruning and gh-pages recovery screenshot",
           "files": [
             ".github/workflows/release-nightly.yml",
             ".github/workflows/sync-release-changelog-media-history.yml",
@@ -635,11 +678,11 @@
             "infra/scripts/release/prune-release-assets-with-retry.test.mjs",
             "infra/scripts/release/sync-changelog-history-media.mjs",
             "infra/scripts/release/sync-changelog-history-media.test.mjs",
-            "infra/scripts/release/publish-changelog-media.mjs",
-            "infra/scripts/release/publish-changelog-media.test.mjs",
             ".github/workflows/republish-gh-pages.yml",
             "infra/scripts/release/commit-gh-pages-with-retry.sh",
-            "infra/scripts/release/commit-gh-pages-with-retry.test.mjs"
+            "infra/scripts/release/commit-gh-pages-with-retry.test.mjs",
+            "infra/scripts/release/publish-changelog-media.mjs",
+            "infra/scripts/release/publish-changelog-media.test.mjs"
           ],
           "inferenceSource": "anthropic",
           "inferenceCategory": "release_infra",
@@ -647,56 +690,57 @@
           "proofSurface": "",
           "captureHint": "",
           "visibleProof": [],
-          "storyTitle": "Nightly release pipeline hardened with retries and gh-pages recovery"
+          "storyTitle": "Retry-safe nightly pruning and gh-pages recovery"
         }
       },
       {
         "batch_id": "entry-2",
         "time_label": "11:43 AM",
         "started_at": "2026-04-23T18:43:18.000Z",
-        "ended_at": "2026-04-23T21:10:16.000Z",
-        "title": "GPT-5.5 support and sharper changelog proof screenshots",
-        "summary": "GPT-5.5 is now a first-class model in Aura, and the release changelog's proof-screenshot pipeline got both a smarter AI media gate and a crisper rendering path.",
+        "ended_at": "2026-04-23T21:24:40.000Z",
+        "title": "GPT-5.5 selectable in chat with full pricing coverage",
+        "summary": "GPT-5.5 and its 5.4 siblings are now first-class models in the chat input bar, with a rebuilt fee schedule and ZERO Pro usage reporting wired through the dev loop.",
         "items": [
           {
-            "text": "Added GPT-5.5 to the chat input's model picker and expanded the server-side fee schedule to cover GPT-5.5, 5.4, 5.4-mini, and 5.4-nano with explicit input, output, and cache read/write rates instead of derived estimates.",
+            "text": "GPT-5.5 is now offered in the ChatInputBar model picker, backed by model constants and benchmark pricing updates covering gpt-5.5, gpt-5.4, 5.4-mini, and 5.4-nano.",
             "commit_shas": [
               "d9d82e95311696c35325481a60190321f4501d7c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Tightened the AI-driven changelog media proofing step with a structured tool schema that only requests screenshots for genuine user-visible surfaces and rejects CI, refactor, and backend-only entries.",
+            "text": "The dev loop fee schedule was rewritten to carry per-model input, output, cache-write, and cache-read rates, replacing the old derived-rate heuristic with explicit pricing for each supported model.",
             "commit_shas": [
-              "8ef3f5b112074f816d23447682da93e87fef84ad"
+              "d9d82e95311696c35325481a60190321f4501d7c"
             ],
             "confidence": "high"
           },
           {
-            "text": "Rewrote the branded screenshot compositor to render at up to 3840×2160, bilinearly resample source captures, and scale widescreen screenshots to dominate the card, producing noticeably crisper proof images in the published changelog.",
-            "commit_shas": [
-              "a0f9f6329a5d4db4020b4ca26e451548a418d579"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Server now reports ZERO Pro status alongside usage in the dev loop response, giving the client accurate entitlement context.",
+            "text": "Usage reporting now includes ZERO Pro status, so downstream clients can tell paid-tier sessions apart when accounting for model spend.",
             "commit_shas": [
               "b2847a4249d5ccc8714d1a1f54a4239bfb37f525"
             ],
             "confidence": "medium"
+          },
+          {
+            "text": "Changelog proof screenshots now preserve native aspect ratio and are composed on a 4K canvas with bilinear sampling, eliminating the old forced-16:9 squish and producing visibly crisper imagery.",
+            "commit_shas": [
+              "a0f9f6329a5d4db4020b4ca26e451548a418d579",
+              "4c104aec8e24f34c0db42cdbfa910c4db0a278ac",
+              "8ef3f5b112074f816d23447682da93e87fef84ad"
+            ],
+            "confidence": "high"
           }
         ],
         "media": {
           "requested": true,
           "status": "published",
           "score": 8,
-          "reason": "GPT-5.5 being added to the chat input's model picker is a clear user-visible product surface that a single screenshot can prove. Other items (fee schedule, AI media proofing, compositor rendering) are backend/infra and not capturable, but the model picker is concrete.",
+          "reason": "GPT-5.5 is now selectable in the ChatInputBar model picker, a clear user-visible surface provable in a single screenshot of the open model dropdown. Other items (fee schedule, ZERO Pro usage, screenshot canvas tweaks) are backend/tooling and not worth capturing, but the model picker alone justifies media.",
           "reasons": [
-            "GPT-5.5 being added to the chat input's model picker is a clear user-visible product surface that a single screenshot can prove. Other items (fee schedule, AI media proofing, compositor rendering) are backend/infra and not capturable, but the model picker is concrete.",
+            "GPT-5.5 is now selectable in the ChatInputBar model picker, a clear user-visible surface provable in a single screenshot of the open model dropdown. Other items (fee schedule, ZERO Pro usage, screenshot canvas tweaks) are backend/tooling and not worth capturing, but the model picker alone justifies media.",
             "entry touches interface source files",
             "entry language points to a visible product surface",
-            "entry language points to runtime or infrastructure plumbing rather than a stable screen",
             "entry language points to release plumbing rather than a product screen",
             "UI files are only a small slice of a larger backend-heavy batch"
           ],
@@ -710,26 +754,26 @@
             "interface/src/constants/models.test.ts",
             "interface/src/constants/models.ts",
             "interface/src/lib/benchmark-pricing.test.ts",
-            "infra/scripts/release/generate-daily-changelog.mjs",
-            "infra/scripts/release/generate-daily-changelog.test.mjs",
+            "crates/aura-os-network/src/types.rs",
             "infra/scripts/release/publish-changelog-media.mjs",
             "infra/scripts/release/publish-changelog-media.test.mjs",
-            "interface/scripts/lib/demo-agent-brief.mjs",
-            "interface/scripts/lib/demo-agent-brief.test.mjs",
-            "interface/scripts/produce-agent-demo-screenshots.mjs",
             "interface/scripts/lib/demo-screenshot-runner.mjs",
             "interface/scripts/lib/demo-screenshot-seeds.mjs",
-            "crates/aura-os-network/src/types.rs"
+            "interface/scripts/produce-agent-demo-screenshots.mjs",
+            "infra/scripts/release/generate-daily-changelog.mjs",
+            "infra/scripts/release/generate-daily-changelog.test.mjs",
+            "interface/scripts/lib/demo-agent-brief.mjs",
+            "interface/scripts/lib/demo-agent-brief.test.mjs"
           ],
           "inferenceSource": "anthropic",
           "inferenceCategory": "product_surface",
           "inferenceConfidence": "high",
-          "proofSurface": "ChatInputBar model picker dropdown showing GPT-5.5 as a selectable option",
-          "captureHint": "Open the Aura chat input bar, click the model selector dropdown, and capture the expanded menu with GPT-5.5 visible in the list of models",
+          "proofSurface": "ChatInputBar with model picker dropdown open showing GPT-5.5 and sibling models",
+          "captureHint": "Open a chat, click the model selector in the ChatInputBar, and capture the expanded dropdown so the GPT-5.5 entry is clearly visible alongside other models.",
           "visibleProof": [
             "GPT-5.5",
-            "model picker dropdown open",
-            "chat input bar visible"
+            "GPT-5.4",
+            "model picker dropdown"
           ],
           "storyTitle": "GPT-5.5 in the Chat Input Model Picker",
           "assetPath": "assets/changelog/nightly/0.1.0-nightly.356.1/entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting.png",
@@ -740,11 +784,10 @@
       }
     ],
     "highlights": [
-      "GPT-5.5 selectable in the chat input with full pricing coverage",
-      "Nightly asset pruning now retries and tolerates missing assets",
-      "New workflow mirrors changelog media into dated history entries",
-      "Changelog proof screenshots render crisper and respect real aspect ratios"
+      "GPT-5.5 available in the chat model picker with full fee schedule",
+      "Nightly release pruning and gh-pages republish are now retry-safe",
+      "Changelog proof screenshots render crisper with true aspect ratios"
     ],
-    "raw_commit_count": 10
+    "raw_commit_count": 11
   }
 }

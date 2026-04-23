@@ -1,38 +1,37 @@
-# GPT-5.5 lands alongside a tougher nightly release pipeline
+# GPT-5.5 support lands alongside a nightly release pipeline overhaul
 
 - Date: `2026-04-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.357.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.357.1
+- Version: `0.1.0-nightly.358.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.358.1
 
-Today's nightly brings GPT-5.5 into the model picker with a reworked pricing table, while most of the day went into making the nightly release pipeline, changelog media publishing, and gh-pages sync materially more resilient.
+Today's nightly pairs a meaningful product addition — GPT-5.5 selectable in chat with full pricing coverage — with a substantial hardening pass on the release pipeline, from asset pruning and gh-pages recovery to sharper, aspect-correct changelog proof imagery.
 
-## 9:17 AM — Nightly release pipeline hardened with retries and gh-pages recovery
+## 9:17 AM — Retry-safe nightly pruning and gh-pages recovery
 
-A sustained pass on the nightly pipeline made asset pruning, changelog history sync, and gh-pages publishing far more resilient, and improved how proof screenshots get framed.
+The nightly release pipeline gained a dedicated prune-with-retry path, a gh-pages republish workflow, and a history media sync so changelog assets stay consistent across latest and dated archives.
 
-- Replaced the inline asset-prune step in the nightly workflow with a dedicated retrying script that tolerates transient GitHub API errors, and added a new workflow that mirrors published changelog media into dated history entries on gh-pages. (`a7eb25a`, `d81834c`)
-- Prune now shrugs off assets that 404 mid-delete instead of failing the release, keeping nightly publishes green when GitHub garbage-collects assets out from under us. (`ac61ac3`)
-- Added a manual Republish GitHub Pages workflow backed by an allow-empty commit path in the gh-pages retry script, giving operators a one-click recovery when Pages gets into a bad state. (`ca9eaa8`)
-- Changelog media cards now size to the screenshot's real aspect ratio, default to higher image quality, and use tighter framing so the product screenshot, not the generated background, stays the dominant element. (`2217600`, `43ac905`)
+- Nightly asset pruning moved out of the workflow YAML into a retryable script that tolerates 404s and transient GitHub API failures, so a missing asset no longer fails the release. (`a7eb25a`, `ac61ac3`)
+- Added a Republish GitHub Pages workflow plus allow-empty commit support in the gh-pages helper, giving operators a one-click recovery path when Pages drifts out of sync. (`ca9eaa8`)
+- A new Sync Release Changelog Media History workflow mirrors freshly published media from latest.json into the matching dated history entry, keeping archived changelogs visually complete. (`a7eb25a`, `d81834c`)
+- Branded changelog proof cards now size to the real screenshot and render at higher image quality, with softer framing so the capture stays the focal point. (`2217600`, `43ac905`)
 
-## 11:43 AM — GPT-5.5 support and sharper changelog proof screenshots
+## 11:43 AM — GPT-5.5 selectable in chat with full pricing coverage
 
-GPT-5.5 is now a first-class model in Aura, and the release changelog's proof-screenshot pipeline got both a smarter AI media gate and a crisper rendering path.
+GPT-5.5 and its 5.4 siblings are now first-class models in the chat input bar, with a rebuilt fee schedule and ZERO Pro usage reporting wired through the dev loop.
 
 <!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting","batchId":"entry-2","slug":"gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting","alt":"GPT-5.5 in the model picker and ZERO Pro usage reporting screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.356.1/entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting.png"} -->
 ![GPT-5.5 in the model picker and ZERO Pro usage reporting screenshot](../../assets/changelog/nightly/0.1.0-nightly.356.1/entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting -->
 
-- Added GPT-5.5 to the chat input's model picker and expanded the server-side fee schedule to cover GPT-5.5, 5.4, 5.4-mini, and 5.4-nano with explicit input, output, and cache read/write rates instead of derived estimates. (`d9d82e9`)
-- Tightened the AI-driven changelog media proofing step with a structured tool schema that only requests screenshots for genuine user-visible surfaces and rejects CI, refactor, and backend-only entries. (`8ef3f5b`)
-- Rewrote the branded screenshot compositor to render at up to 3840×2160, bilinearly resample source captures, and scale widescreen screenshots to dominate the card, producing noticeably crisper proof images in the published changelog. (`a0f9f63`)
-- Server now reports ZERO Pro status alongside usage in the dev loop response, giving the client accurate entitlement context. (`b2847a4`)
+- GPT-5.5 is now offered in the ChatInputBar model picker, backed by model constants and benchmark pricing updates covering gpt-5.5, gpt-5.4, 5.4-mini, and 5.4-nano. (`d9d82e9`)
+- The dev loop fee schedule was rewritten to carry per-model input, output, cache-write, and cache-read rates, replacing the old derived-rate heuristic with explicit pricing for each supported model. (`d9d82e9`)
+- Usage reporting now includes ZERO Pro status, so downstream clients can tell paid-tier sessions apart when accounting for model spend. (`b2847a4`)
+- Changelog proof screenshots now preserve native aspect ratio and are composed on a 4K canvas with bilinear sampling, eliminating the old forced-16:9 squish and producing visibly crisper imagery. (`a0f9f63`, `4c104ae`, `8ef3f5b`)
 
 ## Highlights
 
-- GPT-5.5 selectable in the chat input with full pricing coverage
-- Nightly asset pruning now retries and tolerates missing assets
-- New workflow mirrors changelog media into dated history entries
-- Changelog proof screenshots render crisper and respect real aspect ratios
+- GPT-5.5 available in the chat model picker with full fee schedule
+- Nightly release pruning and gh-pages republish are now retry-safe
+- Changelog proof screenshots render crisper with true aspect ratios
 
