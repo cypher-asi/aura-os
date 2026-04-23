@@ -259,7 +259,7 @@ function buildOpenAIJudgePrompt(entry, summary) {
     "This is not the feature-relevance gate. Browserbase already validated the raw screenshot before this image was composed.",
     "Do not fail because a subtle product change is hard to verify, and do not re-litigate whether the screenshot proves the changelog claim.",
     "Pass only if the real product screenshot is clearly visible, readable enough for a changelog, framed professionally, and not obscured by the brand treatment.",
-    "Fail only if the screenshot is too small to understand, effectively unreadable, visually dominated by background, contains obvious hallucinated UI as the main proof, or looks like a generic marketing image without product evidence.",
+    "Fail only if the screenshot is too small to understand, effectively unreadable, visually dominated by background, clipped at the edges, contains obvious hallucinated UI as the main proof, or looks like a generic marketing image without product evidence.",
     "Aura is intentionally a dark product UI; do not fail only because the interface uses a dark theme when the product context and target surface remain visible.",
     "Score must be an integer from 0 to 100, where 70 means publishable and 90 means excellent. Do not use a 0 to 10 scale.",
     `Changelog title: ${title}`,
@@ -462,14 +462,22 @@ function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath,
   }
   const cardX = Math.round((background.width - cardWidth) / 2);
   const cardY = Math.round((background.height - cardHeight) / 2) + Math.round(background.height * 0.02);
-  const radius = 28;
+  const outerRadius = 28;
+  const screenshotInset = Math.max(12, Math.min(18, Math.round(Math.min(cardWidth, cardHeight) * 0.018)));
+  const screenshotX = cardX + screenshotInset;
+  const screenshotY = cardY + screenshotInset;
+  const screenshotWidth = Math.max(1, cardWidth - (screenshotInset * 2));
+  const screenshotHeight = Math.max(1, cardHeight - (screenshotInset * 2));
+  const screenshotRadius = Math.max(18, outerRadius - 8);
 
   drawRoundedRect(background, cardX - 34, cardY - 34, cardWidth + 68, cardHeight + 72, 44, [1, 8, 20, 138]);
   drawRoundedRect(background, cardX - 20, cardY - 20, cardWidth + 40, cardHeight + 42, 36, [0, 190, 255, 24]);
   drawRoundedRect(background, cardX - 12, cardY - 12, cardWidth + 24, cardHeight + 24, 32, [255, 255, 255, 20]);
   drawRoundedRect(background, cardX - 6, cardY - 6, cardWidth + 12, cardHeight + 12, 30, [2, 6, 15, 218]);
-  drawRoundedImage(background, screenshot, cardX, cardY, cardWidth, cardHeight, radius);
-  drawFrameBorder(background, cardX, cardY, cardWidth, cardHeight, radius, [115, 226, 255, 88]);
+  drawRoundedRect(background, cardX, cardY, cardWidth, cardHeight, outerRadius, [4, 9, 18, 246]);
+  drawRoundedRect(background, screenshotX - 1, screenshotY - 1, screenshotWidth + 2, screenshotHeight + 2, screenshotRadius + 1, [120, 228, 255, 42]);
+  drawRoundedImage(background, screenshot, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius);
+  drawFrameBorder(background, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius, [115, 226, 255, 88]);
 
   // Deterministic Aura accent marks. These keep branding consistent without asking
   // the image model to render text or recreate product UI.

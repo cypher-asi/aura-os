@@ -385,7 +385,34 @@ test("composeBrandedScreenshotCard lets widescreen screenshots dominate the canv
   const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
 
   assert.ok(redBounds);
-  assert.ok(redBounds.width >= 285, `expected screenshot footprint to stay wide, got ${redBounds.width}px`);
+  assert.ok(redBounds.width >= 250, `expected screenshot footprint to stay wide, got ${redBounds.width}px`);
+});
+
+test("composeBrandedScreenshotCard keeps a safety inset so product edges are not clipped by the frame", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-padding-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+  writeSolidPng(screenshotPath, 160, 90, [240, 32, 32, 255]);
+
+  composeBrandedScreenshotCard({
+    repoDir: repoRoot,
+    backgroundPath,
+    screenshotPath,
+    outputPath,
+  });
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
+
+  assert.ok(redBounds);
+  assert.ok(redBounds.minX >= 20, `expected left inset, got ${redBounds.minX}px`);
+  assert.ok(redBounds.minY >= 20, `expected top inset, got ${redBounds.minY}px`);
+  assert.ok((output.width - 1 - redBounds.maxX) >= 20, `expected right inset, got ${output.width - 1 - redBounds.maxX}px`);
+  assert.ok((output.height - 1 - redBounds.maxY) >= 20, `expected bottom inset, got ${output.height - 1 - redBounds.maxY}px`);
 });
 
 test("replaceChangelogMediaBlock swaps the placeholder body while preserving the slot", () => {
