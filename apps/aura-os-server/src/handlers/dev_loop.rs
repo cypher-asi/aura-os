@@ -2520,6 +2520,118 @@ async fn try_restart_automaton(
     Ok(tx)
 }
 
+/// Outcome of [`attempt_infra_retry`]. Callers branch on this instead of
+/// each duplicating the `classify_infra_failure` → `take_retry_context`
+/// → `reset_task_for_infra_retry` → `restart_with_infra_backoff` ladder.
+enum InfraRetryOutcome {
+    /// The reason classified as transient, a retry context was available,
+    /// and the automaton restarted successfully. The caller should swap
+    /// its broadcast receiver for `new_rx` and `continue` its event loop.
+    Retried {
+        new_rx: tokio::sync::broadcast::Receiver<serde_json::Value>,
+    },
+    /// Either the reason didn't classify as an infra transient, or the
+    /// retry budget was already exhausted. Caller should fall through to
+    /// its own terminal-failure handling without bridging through
+    /// `ready`.
+    NotClassified,
+    /// The reason classified and a budget slot was consumed, but the
+    /// reset (`reset_task_for_infra_retry`) or the restart
+    /// (`restart_with_infra_backoff`) itself failed. `task_reset_to_ready`
+    /// is `true` when the task was successfully flipped to `ready` before
+    /// the failure, so the caller must bridge `ready → in_progress →
+    /// failed` before persisting the terminal transition (aura-storage
+    /// rejects a direct `ready → failed`).
+    RetryFailed { task_reset_to_ready: bool },
+}
+
+/// Shared helper implementing the infra-transient retry ladder: classify
+/// the reason, consume one restart budget slot, log a `debug.retry`
+/// event, reset the task to `ready`, and trigger
+/// `restart_with_infra_backoff`.
+///
+/// Used by both the `task_failed` arm and the `task_completed`
+/// completion-validation-failure arm of the forwarder. The latter
+/// previously bypassed this ladder entirely, which reintroduced the
+/// `1.1 Create zero-core crate with newtype IDs` failure on every
+/// provider 5xx even though the classifier correctly recognised the
+/// error as transient (see the regression pinned by
+/// `classify_stream_terminated_internal_as_provider_internal_error` in
+/// `tests/autonomous_recovery_replay.rs`).
+#[allow(clippy::too_many_arguments)]
+async fn attempt_infra_retry(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    automaton_registry: &AutomatonRegistry,
+    task_service: &TaskService,
+    loop_log: &crate::loop_log::LoopLogWriter,
+    retry: &mut Option<TransientRetryContext>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    reason: &str,
+    retry_after_hint: Option<Duration>,
+) -> InfraRetryOutcome {
+    let Some(infra_failure) = classify_infra_failure(reason) else {
+        return InfraRetryOutcome::NotClassified;
+    };
+    let Some(ctx) = take_retry_context(retry) else {
+        return InfraRetryOutcome::NotClassified;
+    };
+    let hint_ms = retry_after_hint.map(|d| d.as_millis() as u64);
+    loop_log
+        .on_json_event(
+            project_id,
+            agent_instance_id,
+            &serde_json::json!({
+                "type": "debug.retry",
+                "task_id": task_id,
+                "reason": reason,
+                "class": infra_failure_label(infra_failure),
+                "retry_after_ms": hint_ms,
+            }),
+        )
+        .await;
+    match reset_task_for_infra_retry(task_service, project_id, task_id).await {
+        Ok(()) => match restart_with_infra_backoff(
+            app_broadcast,
+            automaton_registry,
+            project_id,
+            agent_instance_id,
+            task_id,
+            reason,
+            Some(infra_failure),
+            retry_after_hint,
+            &ctx,
+        )
+        .await
+        {
+            Ok(new_tx) => InfraRetryOutcome::Retried {
+                new_rx: new_tx.subscribe(),
+            },
+            Err(restart_err) => {
+                warn!(
+                    task_id = %task_id,
+                    %restart_err,
+                    "Infra retry could not restart automaton"
+                );
+                InfraRetryOutcome::RetryFailed {
+                    task_reset_to_ready: true,
+                }
+            }
+        },
+        Err(reset_err) => {
+            warn!(
+                task_id = %task_id,
+                %reset_err,
+                "Infra retry classification matched, but task reset failed"
+            );
+            InfraRetryOutcome::RetryFailed {
+                task_reset_to_ready: false,
+            }
+        }
+    }
+}
+
 /// Forward automaton events from the harness WebSocket to the app's global
 /// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
 /// Also accumulates task output in the in-memory cache and persists to storage
@@ -2578,6 +2690,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         let mut terminal_seen = false;
         // Retry context is consumed according to its local restart budget.
         let mut retry = retry;
+        // Last transient-looking failure observed during this turn (an
+        // `error` event or `task_failed` whose reason classified as
+        // `InfraFailureClass::*`). Captured so that if the harness later
+        // emits a spurious `task_completed` for the same turn — which
+        // happens after some provider 5xx / mid-stream aborts — the
+        // completion-validation gate can recover the *real* infra
+        // diagnosis instead of falling back on its own "no output, no
+        // file changes" synthesis and terminating a retryable failure.
+        // Cleared on `task_started` so each turn starts fresh.
+        let mut last_transient_reason: Option<String> = None;
         // Phase 6 — Closed-loop heuristics. Lazily bound on the first
         // forwarded event so we can stamp the actual `run_id` into
         // every `heuristic_finding` payload instead of a placeholder.
@@ -2660,6 +2782,11 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     // streaming events (text_delta, etc.) that don't carry
                     // task_id in their payload still get stamped correctly.
                     if event_type == "task_started" {
+                        // New turn — any transient-diagnosis breadcrumb
+                        // from a prior attempt must be dropped so it
+                        // cannot leak into a later turn's completion-gate
+                        // decision on a different task.
+                        last_transient_reason = None;
                         if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
                             current_task_id = Some(tid.to_owned());
                             if let (Some(session_id), Ok(task_id)) =
@@ -3063,6 +3190,80 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     );
                                 }
                                 if let Some(reason) = gate_reason {
+                                    // Phase 7b — route completion-gate
+                                    // failures through the same infra
+                                    // retry ladder as a real `task_failed`
+                                    // event. The gate's own reason ("no
+                                    // output, no file changes, no
+                                    // verification evidence") never
+                                    // classifies as an infra transient on
+                                    // its own, so we first consult any
+                                    // `last_transient_reason` captured
+                                    // from a preceding `error` event —
+                                    // that's the real diagnosis (e.g.
+                                    // "LLM error: stream terminated with
+                                    // error: Internal server error") and
+                                    // is what `classify_infra_failure`
+                                    // will recognise as
+                                    // `ProviderInternalError`. Falls back
+                                    // to the gate reason so a non-infra
+                                    // gate failure still follows the
+                                    // classifier's normal `NotClassified`
+                                    // path into terminal handling.
+                                    let retry_reason = last_transient_reason
+                                        .clone()
+                                        .unwrap_or_else(|| reason.to_string());
+                                    let mut gate_retry_reset = false;
+                                    let outcome = attempt_infra_retry(
+                                        &app_broadcast,
+                                        &automaton_registry,
+                                        task_service.as_ref(),
+                                        loop_log.as_ref(),
+                                        &mut retry,
+                                        project_id,
+                                        agent_instance_id,
+                                        tid,
+                                        &retry_reason,
+                                        None,
+                                    )
+                                    .await;
+                                    match outcome {
+                                        InfraRetryOutcome::Retried { new_rx } => {
+                                            // Retry ladder owns the
+                                            // terminal state now: swap
+                                            // the receiver, clear
+                                            // per-turn state, and
+                                            // restart the outer event
+                                            // loop without emitting a
+                                            // rollback, persisting
+                                            // failure metadata, or
+                                            // transitioning the task.
+                                            rx = new_rx;
+                                            terminal_seen = false;
+                                            session_status = "completed";
+                                            current_task_id = None;
+                                            last_synced_task_id = None;
+                                            last_transient_reason = None;
+                                            sync_registry_task_id(
+                                                automaton_registry.clone(),
+                                                agent_instance_id,
+                                                None,
+                                            )
+                                            .await;
+                                            continue;
+                                        }
+                                        InfraRetryOutcome::NotClassified => {
+                                            // Non-infra gate failure —
+                                            // fall through to the
+                                            // existing terminal handling
+                                            // below.
+                                        }
+                                        InfraRetryOutcome::RetryFailed {
+                                            task_reset_to_ready,
+                                        } => {
+                                            gate_retry_reset = task_reset_to_ready;
+                                        }
+                                    }
                                     session_status = "failed";
                                     // Surface the rollback on the task
                                     // card so users never see a
@@ -3108,6 +3309,27 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                 %error,
                                                 "Failed to persist completion-validation failure metadata"
                                             );
+                                        }
+                                        // When the retry ladder moved the
+                                        // task to `ready` before the
+                                        // restart failed, aura-storage
+                                        // rejects a direct `ready →
+                                        // failed` transition. Bridge
+                                        // through `in_progress` first so
+                                        // the row actually lands in
+                                        // `failed` instead of getting
+                                        // stuck in `ready` with no
+                                        // terminal badge.
+                                        if gate_retry_reset {
+                                            let bridge = aura_os_storage::TransitionTaskRequest {
+                                                status: "in_progress".to_string(),
+                                            };
+                                            if let Err(error) = storage_client
+                                                .transition_task(tid, jwt, &bridge)
+                                                .await
+                                            {
+                                                warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before completion-gate terminal failure");
+                                            }
                                         }
                                         let req = aura_os_storage::TransitionTaskRequest {
                                             status: "failed".to_string(),
@@ -3636,6 +3858,15 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             let reason = extract_failure_reason(&event)
                                 .unwrap_or_else(|| "Automaton reported an error".to_string());
                             let retry_after_hint = extract_retry_after(&event);
+                            // Breadcrumb for the completion-gate path: if
+                            // this error looks like an infra transient and
+                            // the harness later emits a spurious
+                            // `task_completed`, we want to recover this
+                            // reason rather than classify the gate's
+                            // "no output, no file changes" synthesis.
+                            if classify_infra_failure(&reason).is_some() {
+                                last_transient_reason = Some(reason.clone());
+                            }
                             session_status = "failed";
                             if let Some(tid) = current_task_id.clone() {
                                 if let Some(ctx) = take_retry_context(&mut retry) {
@@ -5933,6 +6164,53 @@ mod tests {
         assert_eq!(
             classify_infra_failure("HTTP 502 but upstream says 429 Too Many Requests"),
             Some(InfraFailureClass::ProviderRateLimited)
+        );
+    }
+
+    /// Regression for the `1.1 Create zero-core crate with newtype IDs`
+    /// failure: when the harness emits a spurious `task_completed`
+    /// after a provider 5xx / mid-stream abort, the completion
+    /// validation gate rejects it with a synthesized "no output, no
+    /// file changes, no verification evidence" reason that does NOT
+    /// classify as an infra transient. Without the
+    /// `last_transient_reason` breadcrumb the retry ladder would then
+    /// be skipped entirely and the task would go terminal even though
+    /// `classify_infra_failure` correctly recognises the underlying
+    /// 5xx. This test pins the selection rule used by the gate-failure
+    /// branch: prefer the tracked transient reason over the gate's
+    /// own text.
+    #[test]
+    fn completion_gate_retry_prefers_tracked_transient_reason() {
+        let gate_reason =
+            "Automaton reported task_completed without output, file changes, or verification evidence";
+        // No breadcrumb → classifier has nothing infra to grab onto
+        // and the gate's own reason stays `None` (non-transient).
+        assert_eq!(classify_infra_failure(gate_reason), None);
+
+        // Exact reason string surfaced by aura-reasoner when an LLM
+        // stream aborts mid-frame. This is what a preceding `error`
+        // event captures into `last_transient_reason`.
+        let transient_reason = "LLM error: stream terminated with error: Internal server error";
+        assert_eq!(
+            classify_infra_failure(transient_reason),
+            Some(InfraFailureClass::ProviderInternalError),
+        );
+
+        // Gate-failure branch's selection: prefer tracked breadcrumb,
+        // fall back to the gate reason. Mirrors the inline `match` in
+        // `forward_automaton_events`' completion-gate arm.
+        fn select<'a>(gate_reason: &'a str, last_transient_reason: Option<&'a str>) -> &'a str {
+            last_transient_reason.unwrap_or(gate_reason)
+        }
+        assert_eq!(
+            classify_infra_failure(select(gate_reason, Some(transient_reason))),
+            Some(InfraFailureClass::ProviderInternalError),
+            "with breadcrumb, gate-failure must route through ProviderInternalError retry path",
+        );
+        assert_eq!(
+            classify_infra_failure(select(gate_reason, None)),
+            None,
+            "without breadcrumb, gate-failure falls through to NotClassified terminal path",
         );
     }
 

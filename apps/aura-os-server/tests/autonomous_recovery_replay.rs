@@ -386,6 +386,46 @@ fn looks_like_unclassified_transient_detects_retry_miss_candidates() {
 }
 
 #[test]
+fn completion_gate_failure_routes_tracked_transient_reason_to_retry() {
+    // Phase 7b regression for the `1.1 Create zero-core crate with
+    // newtype IDs` failure. When the harness emits a spurious
+    // `task_completed` after a mid-stream provider 5xx, the completion
+    // validation gate rejects it with its own synthesised reason ("no
+    // output, file changes, or verification evidence"). That reason
+    // does NOT contain any 5xx / stream-abort marker, so on its own
+    // the infra classifier would return `None` and the retry ladder
+    // would be skipped entirely.
+    //
+    // The fix is to capture any preceding `error` event that
+    // classifies as a provider-internal failure into
+    // `last_transient_reason` and hand THAT to the classifier when
+    // the gate fires. This test pins the contract the forwarder's
+    // completion-gate branch relies on:
+    //
+    //   * the gate's own reason does not classify as infra-transient,
+    //   * the tracked breadcrumb does,
+    //
+    // so the selection rule "prefer breadcrumb, fall back to gate"
+    // is guaranteed to flip the retry ladder on when both are
+    // available.
+    let gate_reason =
+        "Automaton reported task_completed without output, file changes, or verification evidence";
+    let transient_reason = "LLM error: stream terminated with error: Internal server error";
+
+    assert!(
+        !aura_os_server::phase7_test_support::is_provider_internal_error(gate_reason),
+        "gate reason must NOT look like an infra transient on its own — \
+         otherwise the fix is load-bearing on the classifier rather than \
+         on the `last_transient_reason` breadcrumb",
+    );
+    assert!(
+        aura_os_server::phase7_test_support::is_provider_internal_error(transient_reason),
+        "pre-completion `error` reason must classify as ProviderInternalError \
+         so the gate-failure branch's retry ladder fires on a tracked breadcrumb",
+    );
+}
+
+#[test]
 fn preflight_decomposition_flags_full_implementation_description() {
     let hit = aura_os_server::phase7_test_support::preflight_decomposition_reason(
         "Implement NeuralKey",
