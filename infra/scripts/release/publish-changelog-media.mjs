@@ -272,21 +272,21 @@ function buildOpenAIPolishPrompt(entry, summary) {
 
 function buildOpenAIJudgePrompt(entry, summary) {
   const title = sanitizeText(entry?.title || summary?.storyTitle || "Aura changelog update");
-  const proofRequirements = (Array.isArray(summary?.proofRequirements) ? summary.proofRequirements : [])
-    .map((requirement) => sanitizeText(requirement?.label || requirement?.description || requirement))
-    .filter(Boolean);
   return [
     "You are the final visual quality gate for Aura changelog media.",
     "Review this final branded image and return JSON only.",
+    "This is not the feature-relevance gate. Browserbase already validated the raw screenshot before this image was composed.",
+    "Do not fail because a subtle product change is hard to verify, and do not re-litigate whether the screenshot proves the changelog claim.",
     "Pass only if the real product screenshot is clearly visible, readable enough for a changelog, framed professionally, and not obscured by the brand treatment.",
-    "Fail if the screenshot is too small, too dark to understand, visually dominated by background, contains obvious hallucinated UI as the main proof, or looks like a generic marketing image without product evidence.",
+    "Fail only if the screenshot is too small to understand, effectively unreadable, visually dominated by background, contains obvious hallucinated UI as the main proof, or looks like a generic marketing image without product evidence.",
+    "Aura is intentionally a dark product UI; do not fail only because the interface uses a dark theme when the product context and target surface remain visible.",
+    "Score must be an integer from 0 to 100, where 70 means publishable and 90 means excellent. Do not use a 0 to 10 scale.",
     `Changelog title: ${title}`,
-    proofRequirements.length ? `Expected proof signals: ${proofRequirements.join("; ")}` : "",
   ].filter(Boolean).join("\n");
 }
 
 function getOpenAIImageModel() {
-  return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL, "gpt-image-1.5");
+  return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_MODEL, "gpt-image-2");
 }
 
 function getOpenAIImageQuality() {
@@ -513,6 +513,17 @@ function extractOpenAIResponseText(json) {
   return chunks.join("\n").trim();
 }
 
+function normalizeOpenAIJudgeScore(score) {
+  const numericScore = Number(score || 0);
+  if (!Number.isFinite(numericScore) || numericScore <= 0) {
+    return 0;
+  }
+  if (numericScore <= 10) {
+    return Math.round(numericScore * 10);
+  }
+  return Math.max(0, Math.min(100, Math.round(numericScore)));
+}
+
 async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
   const imageB64 = fs.readFileSync(imagePath).toString("base64");
   const response = await fetch(OPENAI_RESPONSES_URL, {
@@ -549,7 +560,7 @@ async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
             additionalProperties: false,
             properties: {
               passed: { type: "boolean" },
-              score: { type: "integer" },
+              score: { type: "integer", minimum: 0, maximum: 100 },
               reasons: { type: "array", items: { type: "string" } },
               concerns: { type: "array", items: { type: "string" } },
             },
@@ -565,7 +576,7 @@ async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
   const json = await response.json();
   const text = extractOpenAIResponseText(json);
   const judgement = JSON.parse(text);
-  const score = Number(judgement.score || 0);
+  const score = normalizeOpenAIJudgeScore(judgement.score);
   return {
     passed: Boolean(judgement.passed) && score >= 70,
     score,
@@ -1450,6 +1461,7 @@ export {
   isEnabled,
   loadFixtureCaptureResults,
   mergePublishedMedia,
+  normalizeOpenAIJudgeScore,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,

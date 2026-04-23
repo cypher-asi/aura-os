@@ -19,6 +19,7 @@ import {
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
   mergePublishedMedia,
+  normalizeOpenAIJudgeScore,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
@@ -270,6 +271,13 @@ test("selectBestScreenshot prefers repair, then capture-proof, then validate-pro
       source: "capture-proof",
     },
   );
+});
+
+test("normalizeOpenAIJudgeScore accepts accidental 0-10 judge scales", () => {
+  assert.equal(normalizeOpenAIJudgeScore(8), 80);
+  assert.equal(normalizeOpenAIJudgeScore(87), 87);
+  assert.equal(normalizeOpenAIJudgeScore(140), 100);
+  assert.equal(normalizeOpenAIJudgeScore(""), 0);
 });
 
 test("composeBrandedScreenshotCard keeps output as a valid branded PNG", () => {
@@ -715,6 +723,79 @@ test("publish script fixture mode fails a slot when mandatory OpenAI polish is m
   assert.equal(summary.published, 0);
   assert.equal(summary.failed, 2);
   assert.equal(summary.results[0].failureClass, "openai_polish");
+});
+
+test("publish script fixture mode keeps workflow green when OpenAI polish partially succeeds", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-polish-partial-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  const screenshotPath = path.join(rootDir, "feedback-proof.png");
+  fs.writeFileSync(screenshotPath, "fake png");
+  const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
+  fs.writeFileSync(polishedPath, "fake branded png");
+  const agentScreenshotPath = path.join(rootDir, "agent-proof.png");
+  fs.writeFileSync(agentScreenshotPath, "fake png");
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: true,
+      storyTitle: "Feedback board proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: screenshotPath },
+        },
+      ],
+      screenshots: [{ path: screenshotPath }],
+      polishedScreenshot: {
+        path: polishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        score: 94,
+      },
+    },
+    "entry-2-agent-create": {
+      ok: true,
+      storyTitle: "Agent creation proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: agentScreenshotPath },
+        },
+      ],
+      screenshots: [{ path: agentScreenshotPath }],
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const summaryPath = path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-summary.json");
+  const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  assert.equal(summary.workflowOutcome, "partial");
+  assert.equal(summary.shouldFailWorkflow, false);
+  assert.equal(summary.published, 1);
+  assert.equal(summary.failed, 1);
+  assert.deepEqual(summary.publishedSlotIds, ["entry-1-feedback-board"]);
+  assert.deepEqual(summary.failedSlotIds, ["entry-2-agent-create"]);
+  assert.equal(summary.results[1].failureClass, "openai_polish");
+
+  const retryPlan = JSON.parse(fs.readFileSync(path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-retry.json"), "utf8"));
+  assert.equal(retryPlan.failed, 1);
+  assert.equal(retryPlan.failedSlots[0].slotId, "entry-2-agent-create");
+  assert.equal(retryPlan.failedSlots[0].failureClass, "openai_polish");
+
+  const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[1].media.status, "failed");
+  assert.equal(latestDoc.rendered.entries[1].media.failureClass, "openai_polish");
+  assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
 });
 
 test("publish script fixture mode fails when every attempted media slot fails", () => {
