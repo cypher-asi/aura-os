@@ -329,7 +329,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 300;
   line-height: 1.25;
   color: inherit;
 }
@@ -391,7 +391,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 300;
   line-height: 1.25;
   color: inherit;
 }
