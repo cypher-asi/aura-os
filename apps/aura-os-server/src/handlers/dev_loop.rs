@@ -2153,6 +2153,22 @@ struct TransientRetryContext {
     restart_budget: Option<u32>,
 }
 
+/// Restart budget for user-initiated single-task runs
+/// (`POST /api/projects/:project_id/tasks/:task_id/run`).
+///
+/// The dev loop itself uses `None` (unlimited) because its scheduler
+/// will pick the task up again on the next iteration. Single-task runs
+/// are one-shot from the user's perspective, so the budget caps how
+/// many infra-level restarts a single click can schedule.
+///
+/// 3 was chosen to give a ~30-60s healing window when combined with
+/// the existing `ProviderInternalError` cooldown (10s base with
+/// escalation via `escalate_by_count` up to ~40s). A budget of 1 (the
+/// previous value) meant a single mid-stream provider 500 terminally
+/// failed the retry even though `classify_infra_failure` had
+/// identified the error as transient.
+const SINGLE_TASK_RESTART_BUDGET: u32 = 3;
+
 fn take_retry_context(retry: &mut Option<TransientRetryContext>) -> Option<TransientRetryContext> {
     let ctx = retry.as_mut()?;
     match ctx.restart_budget.as_mut() {
@@ -5111,15 +5127,20 @@ pub(crate) async fn run_single_task(
             usage_reporting,
             router_url: state.agent_runtime.router_url.clone(),
             http_client: state.agent_runtime.http_client.clone(),
-            // Allow one automatic restart of the automaton on infra-transient
-            // failures (stream closed without terminal event, or `error`
-            // event with no accompanying `task_failed`). We intentionally do
-            // not retry harness-reported `task_failed`, since the harness
-            // already runs its own build/test fix loop inside the task.
+            // Allow a small number of automatic restarts of the automaton
+            // on infra-transient failures (stream closed without terminal
+            // event, `error` event with no accompanying `task_failed`, and
+            // upstream provider 500s classified as
+            // `InfraFailureClass::ProviderInternalError`). The budget is
+            // `SINGLE_TASK_RESTART_BUDGET`; see its docs for rationale.
+            //
+            // We intentionally do not retry harness-reported `task_failed`
+            // with a non-infra reason, since the harness already runs
+            // its own build/test fix loop inside the task.
             retry: Some(TransientRetryContext {
                 automaton_client: automaton_client.clone(),
                 start_params,
-                restart_budget: Some(1),
+                restart_budget: Some(SINGLE_TASK_RESTART_BUDGET),
             }),
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             loop_log: state.loop_log.clone(),
@@ -5995,6 +6016,46 @@ mod tests {
         assert!(take_retry_context(&mut retry).is_some());
         assert!(take_retry_context(&mut retry).is_some());
         assert!(take_retry_context(&mut retry).is_none());
+    }
+
+    /// The single-task retry flow pins its restart budget to a value
+    /// greater than 1 so a single transient provider 500 (classified
+    /// as `ProviderInternalError`) does not terminally fail a user's
+    /// "Retry" click. See `SINGLE_TASK_RESTART_BUDGET` for rationale.
+    #[test]
+    fn single_task_restart_budget_allows_more_than_one_retry() {
+        assert!(
+            SINGLE_TASK_RESTART_BUDGET >= 2,
+            "single-task retry must survive at least one mid-stream provider blip; got {}",
+            SINGLE_TASK_RESTART_BUDGET
+        );
+        let start_params = AutomatonStartParams {
+            project_id: ProjectId::new().to_string(),
+            auth_token: None,
+            model: None,
+            workspace_root: None,
+            task_id: None,
+            git_repo_url: None,
+            git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
+        };
+        let client = std::sync::Arc::new(aura_os_link::AutomatonClient::new("http://127.0.0.1:1"));
+        let mut retry = Some(TransientRetryContext {
+            automaton_client: client,
+            start_params,
+            restart_budget: Some(SINGLE_TASK_RESTART_BUDGET),
+        });
+        for _ in 0..SINGLE_TASK_RESTART_BUDGET {
+            assert!(
+                take_retry_context(&mut retry).is_some(),
+                "restart budget exhausted before allowance"
+            );
+        }
+        assert!(
+            take_retry_context(&mut retry).is_none(),
+            "restart budget must be bounded"
+        );
     }
 
     #[test]
