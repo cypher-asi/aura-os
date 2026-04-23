@@ -739,6 +739,30 @@ function findHistoryJsonPathByVersion(historyDir, version) {
   return null;
 }
 
+function findHistoryJsonPathForRelease(historyDir, releaseDoc) {
+  if (!fs.existsSync(historyDir)) {
+    return null;
+  }
+
+  const versionMatch = findHistoryJsonPathByVersion(historyDir, sanitizeText(releaseDoc?.version));
+  if (versionMatch) {
+    return versionMatch;
+  }
+
+  const date = sanitizeText(releaseDoc?.date);
+  if (!date) {
+    return null;
+  }
+
+  const candidatePath = path.join(historyDir, `${date}.json`);
+  if (!fs.existsSync(candidatePath)) {
+    return null;
+  }
+
+  const candidate = readJson(candidatePath);
+  return isSameReleaseDoc(candidate, releaseDoc) ? candidatePath : null;
+}
+
 function resolveTargetChangelogDocs(channelDir, requestedDate, requestedVersion) {
   const latestJsonPath = path.join(channelDir, "latest.json");
   const latestMarkdownPath = path.join(channelDir, "latest.md");
@@ -761,7 +785,15 @@ function resolveTargetChangelogDocs(channelDir, requestedDate, requestedVersion)
     throw new Error(`Could not find changelog document at ${targetJsonPath}`);
   }
 
-  const targetDoc = targetJsonPath === latestJsonPath ? latestDoc : readJson(targetJsonPath);
+  let targetDoc = targetJsonPath === latestJsonPath ? latestDoc : readJson(targetJsonPath);
+  if (targetJsonPath === latestJsonPath) {
+    const historyMirrorPath = findHistoryJsonPathForRelease(historyDir, latestDoc);
+    if (historyMirrorPath) {
+      targetJsonPath = historyMirrorPath;
+      targetDoc = readJson(historyMirrorPath);
+    }
+  }
+
   const targetDate = sanitizeText(targetDoc?.date);
   const targetVersion = sanitizeText(targetDoc?.version);
   if (normalizedVersion && targetVersion !== normalizedVersion) {

@@ -574,6 +574,30 @@ test("resolveTargetChangelogDocs can target a historical changelog by version", 
   assert.match(resolved.target.jsonPath, /2026-04-21\.json$/);
 });
 
+test("resolveTargetChangelogDocs prefers the dated history mirror for the latest release when it exists", () => {
+  const pagesDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-pages-latest-history-"));
+  const channelDir = path.join(pagesDir, "changelog", "nightly");
+  const historyDir = path.join(channelDir, "history");
+  fs.mkdirSync(historyDir, { recursive: true });
+
+  const latestDoc = {
+    channel: "nightly",
+    date: "2026-04-22",
+    version: "0.1.0-nightly.325.1",
+  };
+
+  fs.writeFileSync(path.join(channelDir, "latest.json"), `${JSON.stringify(latestDoc, null, 2)}\n`);
+  fs.writeFileSync(path.join(channelDir, "latest.md"), "# latest\n");
+  fs.writeFileSync(path.join(historyDir, "2026-04-22.json"), `${JSON.stringify(latestDoc, null, 2)}\n`);
+  fs.writeFileSync(path.join(historyDir, "2026-04-22.md"), "# history\n");
+
+  const resolved = resolveTargetChangelogDocs(channelDir, "", "0.1.0-nightly.325.1");
+  assert.equal(resolved.target.version, "0.1.0-nightly.325.1");
+  assert.equal(resolved.target.date, "2026-04-22");
+  assert.equal(resolved.target.isLatest, true);
+  assert.match(resolved.target.jsonPath, /2026-04-22\.json$/);
+});
+
 test("resolveTargetChangelogDocs validates date and version when both are supplied", () => {
   const pagesDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-pages-date-version-"));
   const channelDir = path.join(pagesDir, "changelog", "nightly");
@@ -667,8 +691,11 @@ test("publish script fixture mode keeps partial media success green and writes r
   assert.equal(retryPlan.failedSlots[0].failureClass, "quality_gate");
 
   const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  const historyDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-22.json"), "utf8"));
   assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(historyDoc.rendered.entries[0].media.status, "published");
   assert.equal(latestDoc.rendered.entries[0].media.screenshotSource, "openai-polish");
+  assert.equal(historyDoc.rendered.entries[0].media.screenshotSource, "openai-polish");
   assert.equal(latestDoc.rendered.entries[0].media.originalScreenshotSource, "capture-proof");
   assert.equal(latestDoc.rendered.entries[0].media.polishProvider, "fixture");
   assert.equal(latestDoc.rendered.entries[0].media.polishModel, "fixture-image-model");
@@ -678,10 +705,16 @@ test("publish script fixture mode keeps partial media success green and writes r
   assert.equal(latestDoc.rendered.entries[1].media.status, "failed");
   assert.equal(latestDoc.rendered.entries[1].media.failureClass, "quality_gate");
   assert.match(latestDoc.rendered.entries[1].media.retryInstruction, /Retry correction pass:/);
+  assert.equal(historyDoc.rendered.entries[1].media.status, "failed");
+  assert.equal(historyDoc.rendered.entries[1].media.failureClass, "quality_gate");
   assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
   assert.match(
     fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.md"), "utf8"),
     /!\[Feedback board screenshot\]\(\.\.\/\.\.\/assets\/changelog\/nightly\/0\.1\.0-nightly\.fixture\.1\/entry-1-feedback-board\.png\)/,
+  );
+  assert.match(
+    fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "history", "2026-04-22.md"), "utf8"),
+    /!\[Feedback board screenshot\]\(\.\.\/\.\.\/\.\.\/assets\/changelog\/nightly\/0\.1\.0-nightly\.fixture\.1\/entry-1-feedback-board\.png\)/,
   );
 });
 
