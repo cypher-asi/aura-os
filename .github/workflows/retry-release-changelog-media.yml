@@ -130,6 +130,12 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          path: workflow
+
+      - uses: actions/checkout@v4
+        with:
           ref: gh-pages
           fetch-depth: 0
           path: pages
@@ -239,8 +245,10 @@ jobs:
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "workflow_outcome=$(jq -r '.workflowOutcome // \"failure\"' \"$summary_file\")" >> "$GITHUB_OUTPUT"
-          echo "should_fail=$(jq -r '.shouldFailWorkflow // true' \"$summary_file\")" >> "$GITHUB_OUTPUT"
+          workflow_outcome="$(jq -r '.workflowOutcome // "failure"' "$summary_file")"
+          should_fail="$(jq -r '.shouldFailWorkflow // true' "$summary_file")"
+          echo "workflow_outcome=$workflow_outcome" >> "$GITHUB_OUTPUT"
+          echo "should_fail=$should_fail" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
 
       - name: Append changelog media diagnostics summary
@@ -274,7 +282,6 @@ jobs:
         if: always() && steps.summary.outputs.found == 'true'
         shell: bash
         run: |
-          cd pages
           label="${{ inputs.version }}"
           if [[ -z "$label" ]]; then
             label="${{ inputs.date }}"
@@ -282,12 +289,11 @@ jobs:
           if [[ -z "$label" ]]; then
             label="${{ inputs.channel }}"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "changelog/${{ inputs.channel }}"
-          git add "assets/changelog/${{ inputs.channel }}" 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Retry ${{ inputs.channel }} changelog media for ${label}"
-          git push
+          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Retry ${{ inputs.channel }} changelog media for ${label}" \
+            "changelog/${{ inputs.channel }}" \
+            "assets/changelog/${{ inputs.channel }}"
 
       - name: Finalize retried changelog media outcome
         if: always()
