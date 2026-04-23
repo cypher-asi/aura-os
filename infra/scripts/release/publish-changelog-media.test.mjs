@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,6 +11,7 @@ import {
   buildRetryPlan,
   buildRunSummary,
   buildRunSummaryMarkdown,
+  classifyMediaFailure,
   evaluateWorkflowOutcome,
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
@@ -20,6 +22,112 @@ import {
   selectBestScreenshot,
   shouldPublishEntryMedia,
 } from "./publish-changelog-media.mjs";
+
+const scriptPath = path.join(import.meta.dirname, "publish-changelog-media.mjs");
+
+function writeFixtureChangelog({ pagesDir, version = "0.1.0-nightly.fixture.1" } = {}) {
+  const channelDir = path.join(pagesDir, "changelog", "nightly");
+  const historyDir = path.join(channelDir, "history");
+  fs.mkdirSync(historyDir, { recursive: true });
+
+  const doc = {
+    schemaVersion: 1,
+    channel: "nightly",
+    version,
+    date: "2026-04-22",
+    rawCommits: [
+      { sha: "abc1234", files: ["interface/src/apps/feedback/FeedbackMainPanel.tsx"] },
+      { sha: "def5678", files: ["interface/src/apps/agents/AgentCreateModal.tsx"] },
+    ],
+    rendered: {
+      title: "Fixture changelog",
+      intro: "Fixture intro.",
+      highlights: [],
+      entries: [
+        {
+          batch_id: "entry-1",
+          time_label: "9:10 AM",
+          title: "Feedback board and comments stay visible",
+          summary: "The feedback board now keeps discussion visible while triaging ideas.",
+          items: [{ text: "Comments remain visible.", commit_shas: ["abc1234"] }],
+          media: {
+            requested: true,
+            status: "pending",
+            slotId: "entry-1-feedback-board",
+            slug: "feedback-board",
+            alt: "Feedback board screenshot",
+          },
+        },
+        {
+          batch_id: "entry-2",
+          time_label: "10:20 AM",
+          title: "Agent creation screen exposes model choice",
+          summary: "The agent creation screen makes the model selection visible.",
+          items: [{ text: "Model choices are visible.", commit_shas: ["def5678"] }],
+          media: {
+            requested: true,
+            status: "pending",
+            slotId: "entry-2-agent-create",
+            slug: "agent-create",
+            alt: "Agent creation screenshot",
+          },
+        },
+      ],
+    },
+  };
+
+  const markdown = [
+    "# Fixture changelog",
+    "",
+    "## 9:10 AM — Feedback board and comments stay visible",
+    "",
+    "The feedback board now keeps discussion visible while triaging ideas.",
+    "",
+    "<!-- AURA_CHANGELOG_MEDIA:BEGIN {\"slotId\":\"entry-1-feedback-board\",\"batchId\":\"entry-1\",\"slug\":\"feedback-board\",\"alt\":\"Feedback board screenshot\"} -->",
+    "<!-- AURA_CHANGELOG_MEDIA:PENDING -->",
+    "<!-- AURA_CHANGELOG_MEDIA:END entry-1-feedback-board -->",
+    "",
+    "- Comments remain visible. (`abc1234`)",
+    "",
+    "## 10:20 AM — Agent creation screen exposes model choice",
+    "",
+    "The agent creation screen makes the model selection visible.",
+    "",
+    "<!-- AURA_CHANGELOG_MEDIA:BEGIN {\"slotId\":\"entry-2-agent-create\",\"batchId\":\"entry-2\",\"slug\":\"agent-create\",\"alt\":\"Agent creation screenshot\"} -->",
+    "<!-- AURA_CHANGELOG_MEDIA:PENDING -->",
+    "<!-- AURA_CHANGELOG_MEDIA:END entry-2-agent-create -->",
+    "",
+    "- Model choices are visible. (`def5678`)",
+    "",
+  ].join("\n");
+
+  fs.writeFileSync(path.join(channelDir, "latest.json"), `${JSON.stringify(doc, null, 2)}\n`);
+  fs.writeFileSync(path.join(channelDir, "latest.md"), markdown);
+  fs.writeFileSync(path.join(historyDir, "2026-04-22.json"), `${JSON.stringify(doc, null, 2)}\n`);
+  fs.writeFileSync(path.join(historyDir, "2026-04-22.md"), markdown);
+}
+
+function runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath, version = "0.1.0-nightly.fixture.1" }) {
+  return spawnSync(process.execPath, [
+    scriptPath,
+    "--repo-dir",
+    repoDir,
+    "--pages-dir",
+    pagesDir,
+    "--channel",
+    "nightly",
+    "--version",
+    version,
+    "--preview-url",
+    "https://example.test",
+    "--provider",
+    "browserbase",
+    "--fixture-results-file",
+    fixtureResultsPath,
+  ], {
+    encoding: "utf8",
+  });
+}
 
 test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
   const prompt = buildEntryPrompt({
@@ -169,6 +277,25 @@ test("Browserbase local fallback is enabled by default and can be disabled expli
   }
 });
 
+test("classifyMediaFailure turns capture errors into retry-actionable classes", () => {
+  assert.equal(
+    classifyMediaFailure(new Error("Screenshot capture did not produce a passing summary for entry-feedback")),
+    "quality_gate",
+  );
+  assert.equal(
+    classifyMediaFailure(new Error("RateLimitError: max concurrent sessions limit reached (status: 429)")),
+    "browserbase_concurrency",
+  );
+  assert.equal(
+    classifyMediaFailure(new Error("APIError: 402 Free plan browser minutes limit reached. Please upgrade your account")),
+    "browserbase_quota",
+  );
+  assert.equal(
+    classifyMediaFailure(new Error("No publishable screenshot was produced for entry-feedback")),
+    "missing_capture_output",
+  );
+});
+
 test("buildRunSummary and markdown include operator-facing diagnostics", () => {
   const summary = buildRunSummary([
     {
@@ -182,6 +309,7 @@ test("buildRunSummary and markdown include operator-facing diagnostics", () => {
       slotId: "entry-2-agents",
       title: "Permissions tab",
       status: "failed",
+      failureClass: "quality_gate",
       error: "Screenshot capture did not produce a passing summary for entry-2-agents",
       sessionId: "bb-session-1",
     },
@@ -209,6 +337,7 @@ test("buildRunSummary and markdown include operator-facing diagnostics", () => {
   assert.match(markdown, /Workflow outcome: partial/);
   assert.match(markdown, /Workflow should fail: no/);
   assert.match(markdown, /Strict rubric passed: no/);
+  assert.match(markdown, /class: quality_gate/);
   assert.match(markdown, /entry-2-agents/);
   assert.match(markdown, /Skipping remaining media captures after provider exhaustion/);
 
@@ -217,6 +346,7 @@ test("buildRunSummary and markdown include operator-facing diagnostics", () => {
   assert.equal(retryPlan.workflowOutcome, "partial");
   assert.equal(retryPlan.shouldFailWorkflow, false);
   assert.equal(retryPlan.strictRubricPassed, false);
+  assert.equal(retryPlan.failedSlots[0].failureClass, "quality_gate");
   assert.deepEqual(retryPlan.failedSlots.map((slot) => slot.slotId), ["entry-2-agents"]);
 });
 
@@ -317,4 +447,97 @@ test("resolveTargetChangelogDocs can target a historical changelog by version", 
   assert.equal(resolved.target.date, "2026-04-21");
   assert.equal(resolved.target.isLatest, false);
   assert.match(resolved.target.jsonPath, /2026-04-21\.json$/);
+});
+
+test("publish script fixture mode keeps partial media success green and writes retry diagnostics", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  const screenshotPath = path.join(rootDir, "feedback-proof.png");
+  fs.writeFileSync(screenshotPath, "fake png");
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: true,
+      storyTitle: "Feedback board proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: screenshotPath },
+        },
+      ],
+      screenshots: [{ path: screenshotPath }],
+      inspectorUrl: "https://browserbase.example/session/success",
+      sessionId: "fixture-success",
+      outputDir: path.join(rootDir, "capture-success"),
+    },
+    "entry-2-agent-create": {
+      ok: false,
+      inspectorUrl: "https://browserbase.example/session/failure",
+      sessionId: "fixture-failure",
+      outputDir: path.join(rootDir, "capture-failure"),
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const summaryPath = path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-summary.json");
+  const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  assert.equal(summary.workflowOutcome, "partial");
+  assert.equal(summary.shouldFailWorkflow, false);
+  assert.equal(summary.published, 1);
+  assert.equal(summary.failed, 1);
+  assert.deepEqual(summary.publishedSlotIds, ["entry-1-feedback-board"]);
+  assert.deepEqual(summary.failedSlotIds, ["entry-2-agent-create"]);
+
+  const retryPlan = JSON.parse(fs.readFileSync(path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-retry.json"), "utf8"));
+  assert.equal(retryPlan.failed, 1);
+  assert.equal(retryPlan.failedSlots[0].slotId, "entry-2-agent-create");
+  assert.equal(retryPlan.failedSlots[0].failureClass, "quality_gate");
+
+  const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[1].media.status, "failed");
+  assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
+  assert.match(
+    fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.md"), "utf8"),
+    /!\[Feedback board screenshot\]\(\.\.\/\.\.\/assets\/changelog\/nightly\/0\.1\.0-nightly\.fixture\.1\/entry-1-feedback-board\.png\)/,
+  );
+});
+
+test("publish script fixture mode fails when every attempted media slot fails", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-fail-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: false,
+      inspectorUrl: "https://browserbase.example/session/failure-1",
+      sessionId: "fixture-failure-1",
+    },
+    "entry-2-agent-create": {
+      ok: false,
+      inspectorUrl: "https://browserbase.example/session/failure-2",
+      sessionId: "fixture-failure-2",
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+
+  const summaryPath = path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-summary.json");
+  const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  assert.equal(summary.workflowOutcome, "failure");
+  assert.equal(summary.shouldFailWorkflow, true);
+  assert.equal(summary.published, 0);
+  assert.equal(summary.failed, 2);
 });

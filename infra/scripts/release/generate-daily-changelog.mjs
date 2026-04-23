@@ -304,6 +304,73 @@ function inferEntryMedia(entry, commitLookup) {
   };
 }
 
+function isPublishedMedia(media) {
+  return media?.status === "published" && Boolean(sanitizeText(media?.assetPath));
+}
+
+function collectPublishedMedia(existingDocs) {
+  const bySlotId = new Map();
+  const byBatchId = new Map();
+
+  for (const doc of existingDocs.filter(Boolean)) {
+    for (const entry of Array.isArray(doc?.rendered?.entries) ? doc.rendered.entries : []) {
+      if (!isPublishedMedia(entry?.media)) {
+        continue;
+      }
+
+      const record = {
+        batchId: sanitizeText(entry.batch_id),
+        media: entry.media,
+      };
+      const slotId = sanitizeText(entry.media.slotId);
+      if (slotId && !bySlotId.has(slotId)) {
+        bySlotId.set(slotId, record);
+      }
+      if (record.batchId && !byBatchId.has(record.batchId)) {
+        byBatchId.set(record.batchId, record);
+      }
+    }
+  }
+
+  return { bySlotId, byBatchId };
+}
+
+function preserveExistingPublishedMedia(rendered, existingDocs = []) {
+  const lookup = collectPublishedMedia(existingDocs);
+
+  return {
+    ...rendered,
+    entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry) => {
+      const inferredMedia = entry?.media;
+      const previous = lookup.bySlotId.get(sanitizeText(inferredMedia?.slotId))
+        || lookup.byBatchId.get(sanitizeText(entry?.batch_id));
+
+      if (!previous?.media) {
+        return entry;
+      }
+
+      return {
+        ...entry,
+        media: {
+          ...inferredMedia,
+          requested: true,
+          status: "published",
+          slotId: sanitizeText(previous.media.slotId || inferredMedia?.slotId),
+          slug: sanitizeText(previous.media.slug || inferredMedia?.slug),
+          alt: sanitizeText(previous.media.alt || inferredMedia?.alt),
+          assetPath: sanitizeText(previous.media.assetPath),
+          screenshotSource: sanitizeText(previous.media.screenshotSource || ""),
+          updatedAt: sanitizeText(previous.media.updatedAt || ""),
+          storyTitle: sanitizeText(previous.media.storyTitle || ""),
+          preservedFromSlotId: sanitizeText(previous.media.slotId) === sanitizeText(inferredMedia?.slotId)
+            ? undefined
+            : sanitizeText(previous.media.slotId),
+        },
+      };
+    }),
+  };
+}
+
 function annotateRenderedEntriesWithMedia(rendered, rawCommits) {
   const commitLookup = new Map((Array.isArray(rawCommits) ? rawCommits : []).map((commit) => [commit.sha, commit]));
   return {
@@ -315,7 +382,14 @@ function annotateRenderedEntriesWithMedia(rendered, rawCommits) {
   };
 }
 
-function buildMediaPlaceholderBlock(entry) {
+function relativeAssetReference(markdownPath, pagesDir, assetPath) {
+  return path.relative(
+    path.dirname(markdownPath),
+    path.join(pagesDir, assetPath),
+  ).split(path.sep).join("/");
+}
+
+function buildMediaPlaceholderBlock(entry, options = {}) {
   const media = entry?.media;
   if (!media?.requested) {
     return [];
@@ -327,6 +401,18 @@ function buildMediaPlaceholderBlock(entry) {
     slug: media.slug,
     alt: media.alt,
   };
+
+  if (isPublishedMedia(media)) {
+    const assetRef = options.pagesDir && options.markdownPath
+      ? relativeAssetReference(options.markdownPath, options.pagesDir, media.assetPath)
+      : media.assetPath;
+    return [
+      `<!-- AURA_CHANGELOG_MEDIA:BEGIN ${JSON.stringify({ ...metadata, status: "published", assetPath: media.assetPath })} -->`,
+      `![${media.alt}](${assetRef})`,
+      `<!-- AURA_CHANGELOG_MEDIA:END ${media.slotId} -->`,
+      "",
+    ];
+  }
 
   return [
     `<!-- AURA_CHANGELOG_MEDIA:BEGIN ${JSON.stringify(metadata)} -->`,
@@ -995,7 +1081,7 @@ async function generateWithAnthropic(bundle, totalCommitCount) {
   throw new Error(lastError || "Anthropic response could not be parsed");
 }
 
-function renderMarkdown(doc) {
+function renderMarkdown(doc, options = {}) {
   const lines = [
     `# ${doc.rendered.title}`,
     "",
@@ -1015,7 +1101,7 @@ function renderMarkdown(doc) {
   for (const entry of doc.rendered.entries) {
     lines.push(`## ${entry.time_label} — ${entry.title}`, "");
     lines.push(entry.summary, "");
-    lines.push(...buildMediaPlaceholderBlock(entry));
+    lines.push(...buildMediaPlaceholderBlock(entry, options));
     for (const item of entry.items) {
       const suffix = item.commit_shas.length ? ` (${item.commit_shas.map((sha) => `\`${sha.slice(0, 7)}\``).join(", ")})` : "";
       lines.push(`- ${item.text}${suffix}`);
@@ -1199,16 +1285,20 @@ async function main() {
     rawCommits: allCommits,
     batchCount: timeBatches.length,
     artifactSummaries,
-    rendered: annotateRenderedEntriesWithMedia(rendered, allCommits),
+    rendered: preserveExistingPublishedMedia(
+      annotateRenderedEntriesWithMedia(rendered, allCommits),
+      [existingToday, latestExisting],
+    ),
   };
 
   writeJson(todayJsonPath, doc);
   writeJson(latestPath, doc);
 
-  const markdown = renderMarkdown(doc);
+  const todayMarkdown = renderMarkdown(doc, { pagesDir, markdownPath: todayMdPath });
+  const latestMarkdown = renderMarkdown(doc, { pagesDir, markdownPath: latestMdPath });
   fs.mkdirSync(path.dirname(todayMdPath), { recursive: true });
-  fs.writeFileSync(todayMdPath, markdown);
-  fs.writeFileSync(latestMdPath, markdown);
+  fs.writeFileSync(todayMdPath, todayMarkdown);
+  fs.writeFileSync(latestMdPath, latestMarkdown);
 
   const indexEntries = fs.readdirSync(historyDir)
     .filter((name) => name.endsWith(".json"))
@@ -1258,6 +1348,7 @@ export {
   batchCommits,
   buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
+  preserveExistingPublishedMedia,
   validateRenderedEntry,
 };
 

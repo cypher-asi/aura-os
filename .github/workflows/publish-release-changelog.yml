@@ -15,7 +15,7 @@ on:
         type: string
 
 permissions:
-  actions: read
+  actions: write
   contents: write
 
 concurrency:
@@ -302,3 +302,35 @@ jobs:
           git add "changelog/${{ steps.metadata.outputs.channel }}"
           git diff --cached --quiet || git commit -m "Update ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}"
           git push
+
+      - name: Dispatch changelog media publish
+        if: steps.release-check.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_DEPLOY_WAIT_MINUTES: ${{ vars.AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES }}
+        shell: bash
+        run: |
+          deploy_wait_minutes="$DEFAULT_DEPLOY_WAIT_MINUTES"
+          if [[ -z "$deploy_wait_minutes" ]]; then
+            deploy_wait_minutes="5"
+          fi
+
+          if ! [[ "$deploy_wait_minutes" =~ ^[0-9]+$ ]]; then
+            echo "AURA_CHANGELOG_MEDIA_DEPLOY_WAIT_MINUTES must be an integer number of minutes, got: $deploy_wait_minutes" >&2
+            exit 1
+          fi
+
+          payload="$(jq -n \
+            --arg ref "main" \
+            --arg channel "${{ steps.metadata.outputs.channel }}" \
+            --arg version "${{ steps.metadata.outputs.version }}" \
+            --arg date "$(jq -er '.date' "pages/changelog/${{ steps.metadata.outputs.channel }}/latest.json")" \
+            --arg provider "browserbase" \
+            --arg profile "" \
+            --arg head_sha "${{ steps.trigger.outputs.head_sha }}" \
+            --arg deploy_wait_minutes "$deploy_wait_minutes" \
+            '{ref: $ref, inputs: {channel: $channel, version: $version, date: $date, provider: $provider, profile: $profile, head_sha: $head_sha, deploy_wait_minutes: $deploy_wait_minutes}}')"
+
+          gh api "repos/${{ github.repository }}/actions/workflows/publish-release-changelog-media.yml/dispatches" \
+            --method POST \
+            --input - <<<"$payload"

@@ -77,6 +77,20 @@ function writeText(filePath, value) {
   fs.writeFileSync(filePath, value, "utf8");
 }
 
+function loadFixtureCaptureResults(filePath) {
+  const normalizedPath = sanitizeText(filePath);
+  if (!normalizedPath) {
+    return null;
+  }
+
+  const raw = readJson(path.resolve(normalizedPath));
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`Fixture capture results must be an object keyed by slot id: ${normalizedPath}`);
+  }
+
+  return new Map(Object.entries(raw));
+}
+
 function clipText(value, maxLength = 800) {
   const text = String(value || "").trim();
   if (text.length <= maxLength) {
@@ -338,6 +352,34 @@ function buildAbortRemainingError(message, options = {}) {
   return error;
 }
 
+function classifyMediaFailure(error) {
+  const output = [
+    error?.code,
+    error?.message,
+    error?.captureOutput,
+    error?.captureSummary?.error,
+    error?.captureSummary?.reason,
+  ].filter(Boolean).join("\n");
+
+  if (error?.code === "BROWSERBASE_QUOTA_EXHAUSTED" || isBrowserbaseQuotaError(output)) {
+    return "browserbase_quota";
+  }
+  if (isBrowserbaseConcurrencyError(output)) {
+    return "browserbase_concurrency";
+  }
+  if (/did not produce a passing summary|quality|rubric|validation/i.test(output)) {
+    return "quality_gate";
+  }
+  if (/No publishable screenshot|Could not find production-summary|summary.+missing|missing.+summary/i.test(output)) {
+    return "missing_capture_output";
+  }
+  if (/timeout|navigation|net::|ERR_|locator|element/i.test(output)) {
+    return "navigation_or_timeout";
+  }
+
+  return "capture_error";
+}
+
 function shouldPublishEntryMedia(entry, pagesDir, { refreshExisting = false } = {}) {
   if (!entry?.media?.requested) {
     return {
@@ -410,7 +452,26 @@ function runScreenshotCapture({
   prompt,
   changedFiles,
   slotId,
+  fixtureCaptureResults,
 }) {
+  if (fixtureCaptureResults) {
+    if (!fixtureCaptureResults.has(slotId)) {
+      throw new Error(`Fixture capture result missing for ${slotId}`);
+    }
+    const fixture = fixtureCaptureResults.get(slotId);
+    if (fixture?.error) {
+      const error = new Error(String(fixture.error));
+      if (fixture.summary) {
+        error.captureSummary = fixture.summary;
+      }
+      if (fixture.outputDir) {
+        error.captureRunRoot = fixture.outputDir;
+      }
+      throw error;
+    }
+    return fixture?.summary || fixture;
+  }
+
   const interfaceDir = path.join(repoDir, "interface");
   const baseRunRoot = path.join(interfaceDir, "output", "demo-screenshots", "publish-changelog-media");
   const runStamp = `${slotId}-${Date.now()}`;
@@ -531,6 +592,7 @@ function publishEntryMedia({
   previewUrl,
   provider,
   profile,
+  fixtureCaptureResults,
 }) {
   const prompt = buildEntryPrompt(entry);
   const changedFiles = collectEntryChangedFiles(doc, entry);
@@ -543,6 +605,7 @@ function publishEntryMedia({
     prompt,
     changedFiles,
     slotId: entry.media.slotId,
+    fixtureCaptureResults,
   });
 
   if (!summary?.ok) {
@@ -647,6 +710,7 @@ function buildRetryPlan(summary) {
     failedSlots: failedResults.map((result) => ({
       slotId: sanitizeText(result?.slotId || ""),
       title: sanitizeText(result?.title || ""),
+      failureClass: sanitizeText(result?.failureClass || "capture_error"),
       error: sanitizeText(result?.error || ""),
       inspectorUrl: sanitizeText(result?.inspectorUrl || ""),
       sessionId: sanitizeText(result?.sessionId || ""),
@@ -684,6 +748,7 @@ function buildRunSummaryMarkdown(summary) {
     const details = [
       result.assetPath ? `asset: ${result.assetPath}` : "",
       result.reason ? `reason: ${result.reason}` : "",
+      result.failureClass ? `class: ${result.failureClass}` : "",
       result.error ? `error: ${clipText(result.error, 160)}` : "",
       result.inspectorUrl ? `inspector: ${result.inspectorUrl}` : "",
       result.sessionId ? `session: ${result.sessionId}` : "",
@@ -713,6 +778,7 @@ async function main() {
   const date = sanitizeText(args.date || "");
   const version = sanitizeText(args.version || "");
   const refreshExisting = args["refresh-existing"] === true;
+  const fixtureCaptureResults = loadFixtureCaptureResults(args["fixture-results-file"]);
 
   if (!previewUrl) {
     throw new Error("A preview URL is required. Pass --preview-url or set AURA_DEMO_SCREENSHOT_BASE_URL.");
@@ -762,6 +828,7 @@ async function main() {
         previewUrl,
         provider,
         profile,
+        fixtureCaptureResults,
       });
 
       targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
@@ -808,6 +875,7 @@ async function main() {
         slotId: entry.media.slotId,
         title: entry.title,
         status: "failed",
+        failureClass: classifyMediaFailure(error),
         error: String(error),
         outputDir: error?.captureSummary?.outputDir || error?.captureRunRoot || null,
         inspectorUrl: error?.captureSummary?.inspectorUrl || null,
@@ -852,6 +920,7 @@ export {
   buildEntryPrompt,
   evaluateWorkflowOutcome,
   buildAbortRemainingError,
+  classifyMediaFailure,
   buildMediaBlock,
   buildRetryPlan,
   buildRunSummaryMarkdown,
@@ -859,6 +928,7 @@ export {
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
   isEnabled,
+  loadFixtureCaptureResults,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,

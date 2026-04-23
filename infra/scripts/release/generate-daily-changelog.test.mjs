@@ -8,6 +8,7 @@ import {
   batchCommits,
   buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
+  preserveExistingPublishedMedia,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
 
@@ -302,4 +303,73 @@ test("buildMediaPlaceholderBlock emits hidden markers only for requested slots",
     }),
     [],
   );
+});
+
+test("buildMediaPlaceholderBlock keeps published media visible when rerendering markdown", () => {
+  const placeholderLines = buildMediaPlaceholderBlock(
+    {
+      batch_id: "entry-1",
+      title: "Feedback board and comments stay visible",
+      media: {
+        requested: true,
+        status: "published",
+        slotId: "entry-1-feedback-board",
+        slug: "feedback-board",
+        alt: "Feedback board screenshot",
+        assetPath: "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png",
+      },
+    },
+    {
+      pagesDir: "/tmp/aura-pages",
+      markdownPath: "/tmp/aura-pages/changelog/nightly/latest.md",
+    },
+  );
+
+  assert.match(placeholderLines[0], /"status":"published"/);
+  assert.match(placeholderLines[1], /!\[Feedback board screenshot\]\(\.\.\/\.\.\/assets\/changelog\/nightly\/0\.1\.0-nightly\.321\.1\/entry-1-feedback-board\.png\)/);
+});
+
+test("preserveExistingPublishedMedia prevents rerenders from downgrading existing screenshots", () => {
+  const rendered = {
+    entries: [
+      {
+        batch_id: "entry-1",
+        title: "Feedback board and comments stay visible",
+        media: {
+          requested: true,
+          status: "pending",
+          slotId: "entry-1-feedback-board-and-comments-stay-visible",
+          slug: "feedback-board-and-comments-stay-visible",
+          alt: "New feedback screenshot",
+        },
+      },
+    ],
+  };
+  const existingDoc = {
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-1",
+          title: "Feedback board",
+          media: {
+            requested: true,
+            status: "published",
+            slotId: "entry-1-feedback-board",
+            slug: "feedback-board",
+            alt: "Feedback board screenshot",
+            assetPath: "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png",
+            screenshotSource: "capture-proof",
+            updatedAt: "2026-04-22T10:00:00.000Z",
+            storyTitle: "Feedback board proof",
+          },
+        },
+      ],
+    },
+  };
+
+  const preserved = preserveExistingPublishedMedia(rendered, [existingDoc]);
+  assert.equal(preserved.entries[0].media.status, "published");
+  assert.equal(preserved.entries[0].media.slotId, "entry-1-feedback-board");
+  assert.equal(preserved.entries[0].media.assetPath, "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png");
+  assert.equal(preserved.entries[0].media.preservedFromSlotId, "entry-1-feedback-board");
 });
