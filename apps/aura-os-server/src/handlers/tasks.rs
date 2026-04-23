@@ -19,6 +19,11 @@ use super::task_decompose::{
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+use crate::sync_state::{
+    checkpoint_from_git_step, derive_checkpoint_summary, derive_recovery_point, derive_sync_state,
+    derive_sync_state_from_checkpoints, TaskCheckpointSummary, TaskRecoveryPoint,
+    TaskSyncCheckpoint, TaskSyncState,
+};
 
 const TASK_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 const TASK_RESULT_POLL_TIMEOUT: Duration = Duration::from_secs(5);
@@ -313,12 +318,169 @@ pub(crate) struct TaskOutputResponse {
     pub test_steps: Vec<serde_json::Value>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub git_steps: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sync_state: Option<TaskSyncState>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub sync_checkpoints: Vec<TaskSyncCheckpoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checkpoints: Option<TaskCheckpointSummary>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery_point: Option<TaskRecoveryPoint>,
     /// True when we could not locate any persisted output for this task
     /// (e.g. the task's `session_id` never made it into storage and the
     /// in-memory cache does not have it either). The frontend uses this
     /// as a terminal "no output available" signal to stop retrying.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub unavailable: bool,
+}
+
+fn has_task_output_content(response: &TaskOutputResponse) -> bool {
+    !response.output.is_empty()
+        || !response.build_steps.is_empty()
+        || !response.test_steps.is_empty()
+        || !response.git_steps.is_empty()
+        || !response.sync_checkpoints.is_empty()
+        || response.sync_state.is_some()
+        || response.checkpoints.as_ref().is_some_and(|checkpoints| {
+            checkpoints.execution_started
+                || checkpoints.files_changed
+                || checkpoints.verification_passed
+                || checkpoints.commit_created
+                || checkpoints.push_confirmed
+                || checkpoints.push_failed
+        })
+        || response.recovery_point.is_some()
+}
+
+fn task_output_from_events(
+    task_id_str: &str,
+    events: &[aura_os_storage::StorageSessionEvent],
+) -> Option<TaskOutputResponse> {
+    let matches_task = |e: &&aura_os_storage::StorageSessionEvent, expected_type: &str| -> bool {
+        e.event_type.as_deref() == Some(expected_type)
+            && e.content
+                .as_ref()
+                .and_then(|c| c.get("task_id"))
+                .and_then(|v| v.as_str())
+                .is_some_and(|id| id == task_id_str)
+    };
+
+    let output: String = events
+        .iter()
+        .filter(|e| matches_task(e, "task_output"))
+        .filter_map(|e| {
+            e.content
+                .as_ref()
+                .and_then(|c| c.get("text"))
+                .and_then(|v| v.as_str())
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let (mut build_steps, mut test_steps, mut git_steps) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut sync_state, mut sync_checkpoints, mut checkpoints, mut recovery_point) =
+        (None, Vec::new(), None, None);
+    for evt in events {
+        if !matches_task(&evt, "task_steps") {
+            if matches_task(&evt, "task_git_steps") {
+                if let Some(content) = evt.content.as_ref() {
+                    if let Some(gs) = content.get("git_steps").and_then(|v| v.as_array()) {
+                        git_steps = gs.clone();
+                    }
+                }
+            }
+            if matches_task(&evt, "task_sync_checkpoint") {
+                if let Some(content) = evt.content.as_ref() {
+                    if let Some(checkpoint) = content
+                        .get("checkpoint")
+                        .cloned()
+                        .and_then(|value| serde_json::from_value(value).ok())
+                    {
+                        sync_checkpoints.push(checkpoint);
+                    }
+                }
+            }
+            if matches_task(&evt, "task_sync_state") {
+                if let Some(content) = evt.content.as_ref() {
+                    sync_state = content
+                        .get("sync_state")
+                        .cloned()
+                        .and_then(|value| serde_json::from_value(value).ok());
+                }
+            }
+            if matches_task(&evt, "task_checkpoint_state") {
+                if let Some(content) = evt.content.as_ref() {
+                    sync_state = content
+                        .get("sync_state")
+                        .cloned()
+                        .and_then(|value| serde_json::from_value(value).ok());
+                    checkpoints = content
+                        .get("checkpoints")
+                        .cloned()
+                        .and_then(|value| serde_json::from_value(value).ok());
+                    recovery_point = content
+                        .get("recovery_point")
+                        .cloned()
+                        .and_then(|value| serde_json::from_value(value).ok());
+                }
+            }
+            continue;
+        }
+        if let Some(content) = evt.content.as_ref() {
+            if let Some(bs) = content.get("build_steps").and_then(|v| v.as_array()) {
+                build_steps = bs.clone();
+            }
+            if let Some(ts) = content.get("test_steps").and_then(|v| v.as_array()) {
+                test_steps = ts.clone();
+            }
+        }
+    }
+
+    if output.is_empty()
+        && build_steps.is_empty()
+        && test_steps.is_empty()
+        && git_steps.is_empty()
+        && sync_state.is_none()
+        && sync_checkpoints.is_empty()
+        && checkpoints.is_none()
+    {
+        return None;
+    }
+    if sync_checkpoints.is_empty() && !git_steps.is_empty() {
+        sync_checkpoints = git_steps
+            .iter()
+            .filter_map(checkpoint_from_git_step)
+            .collect();
+    }
+    if sync_state.is_none() {
+        sync_state = derive_sync_state_from_checkpoints(&sync_checkpoints)
+            .or_else(|| Some(derive_sync_state(&git_steps)));
+    }
+    if checkpoints.is_none() {
+        checkpoints = Some(derive_checkpoint_summary(
+            !output.is_empty(),
+            0,
+            &build_steps,
+            &test_steps,
+            &git_steps,
+        ));
+    }
+    if recovery_point.is_none() {
+        recovery_point = sync_state.as_ref().and_then(derive_recovery_point);
+    }
+
+    let response = TaskOutputResponse {
+        output,
+        build_steps,
+        test_steps,
+        git_steps,
+        sync_state,
+        sync_checkpoints,
+        checkpoints,
+        recovery_point,
+        unavailable: false,
+    };
+    has_task_output_content(&response).then_some(response)
 }
 
 async fn fetch_task_output_from_storage(
@@ -344,65 +506,17 @@ async fn fetch_task_output_from_storage(
         .ok()?;
 
     let task_id_str = task_id.to_string();
-    let matches_task = |e: &&aura_os_storage::StorageSessionEvent, expected_type: &str| -> bool {
-        e.event_type.as_deref() == Some(expected_type)
-            && e.content
-                .as_ref()
-                .and_then(|c| c.get("task_id"))
-                .and_then(|v| v.as_str())
-                .is_some_and(|id| id == task_id_str)
-    };
-
-    let output: String = events
-        .iter()
-        .filter(|e| matches_task(e, "task_output"))
-        .filter_map(|e| {
-            e.content
-                .as_ref()
-                .and_then(|c| c.get("text"))
-                .and_then(|v| v.as_str())
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    let (mut build_steps, mut test_steps, mut git_steps) = (Vec::new(), Vec::new(), Vec::new());
-    for evt in &events {
-        if !matches_task(&evt, "task_steps") {
-            if matches_task(&evt, "task_git_steps") {
-                if let Some(content) = evt.content.as_ref() {
-                    if let Some(gs) = content.get("git_steps").and_then(|v| v.as_array()) {
-                        git_steps = gs.clone();
-                    }
-                }
-            }
-            continue;
-        }
-        if let Some(content) = evt.content.as_ref() {
-            if let Some(bs) = content.get("build_steps").and_then(|v| v.as_array()) {
-                build_steps = bs.clone();
-            }
-            if let Some(ts) = content.get("test_steps").and_then(|v| v.as_array()) {
-                test_steps = ts.clone();
-            }
-        }
+    if let Some(response) = task_output_from_events(&task_id_str, &events) {
+        return Some(response);
     }
-
-    if output.is_empty() && build_steps.is_empty() && test_steps.is_empty() && git_steps.is_empty()
     {
         debug!(
             %task_id, %session_id,
             total_events = events.len(),
             "Session has events but none matched this task_id or all were empty"
         );
-        return None;
     }
-    Some(TaskOutputResponse {
-        output,
-        build_steps,
-        test_steps,
-        git_steps,
-        unavailable: false,
-    })
+    None
 }
 
 pub(crate) async fn get_task_output(
@@ -414,17 +528,32 @@ pub(crate) async fn get_task_output(
     let cached_session_id = {
         let cache = state.task_output_cache.lock().await;
         if let Some(entry) = cache.get(&task_id.to_string()) {
-            if !entry.live_output.is_empty()
-                || !entry.build_steps.is_empty()
-                || !entry.test_steps.is_empty()
-            {
-                return Ok(Json(TaskOutputResponse {
-                    output: entry.live_output.clone(),
-                    build_steps: entry.build_steps.clone(),
-                    test_steps: entry.test_steps.clone(),
-                    git_steps: entry.git_steps.clone(),
-                    unavailable: false,
-                }));
+            let sync_state = entry
+                .sync_state
+                .clone()
+                .or_else(|| derive_sync_state_from_checkpoints(&entry.sync_checkpoints))
+                .or_else(|| {
+                    (!entry.git_steps.is_empty()).then(|| derive_sync_state(&entry.git_steps))
+                });
+            let response = TaskOutputResponse {
+                output: entry.live_output.clone(),
+                build_steps: entry.build_steps.clone(),
+                test_steps: entry.test_steps.clone(),
+                git_steps: entry.git_steps.clone(),
+                sync_state: sync_state.clone(),
+                sync_checkpoints: entry.sync_checkpoints.clone(),
+                checkpoints: Some(derive_checkpoint_summary(
+                    !entry.live_output.is_empty(),
+                    entry.files_changed.len(),
+                    &entry.build_steps,
+                    &entry.test_steps,
+                    &entry.git_steps,
+                )),
+                recovery_point: sync_state.as_ref().and_then(derive_recovery_point),
+                unavailable: false,
+            };
+            if has_task_output_content(&response) {
+                return Ok(Json(response));
             }
             entry.session_id.clone()
         } else {
@@ -455,6 +584,10 @@ pub(crate) async fn get_task_output(
         build_steps: Vec::new(),
         test_steps: Vec::new(),
         git_steps: Vec::new(),
+        sync_state: None,
+        sync_checkpoints: Vec::new(),
+        checkpoints: None,
+        recovery_point: None,
         unavailable: true,
     }))
 }
@@ -853,7 +986,7 @@ pub(crate) async fn delete_task(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aura_os_storage::StorageTask;
+    use aura_os_storage::{StorageSessionEvent, StorageTask};
 
     fn make_valid_storage_task() -> StorageTask {
         StorageTask {
@@ -875,6 +1008,30 @@ mod tests {
             session_id: None,
             created_at: Some(chrono::Utc::now().to_rfc3339()),
             updated_at: Some(chrono::Utc::now().to_rfc3339()),
+        }
+    }
+
+    fn session_event(
+        event_type: &str,
+        task_id: &str,
+        content: serde_json::Value,
+    ) -> StorageSessionEvent {
+        let mut payload = content.as_object().cloned().unwrap_or_default();
+        payload.insert(
+            "task_id".into(),
+            serde_json::Value::String(task_id.to_string()),
+        );
+        StorageSessionEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            session_id: Some(uuid::Uuid::new_v4().to_string()),
+            user_id: None,
+            agent_id: None,
+            sender: Some("agent".into()),
+            project_id: None,
+            org_id: None,
+            event_type: Some(event_type.into()),
+            content: Some(serde_json::Value::Object(payload)),
+            created_at: Some(chrono::Utc::now().to_rfc3339()),
         }
     }
 
@@ -935,6 +1092,99 @@ mod tests {
         assert!(
             preflight_should_run(false),
             "with neither flag set, the preflight path should run"
+        );
+    }
+
+    #[test]
+    fn task_output_from_events_reads_durable_sync_progress() {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let response = task_output_from_events(
+            &task_id,
+            &[
+                session_event(
+                    "task_output",
+                    &task_id,
+                    serde_json::json!({ "text": "done" }),
+                ),
+                session_event(
+                    "task_sync_checkpoint",
+                    &task_id,
+                    serde_json::json!({
+                        "checkpoint": {
+                            "kind": "git_committed",
+                            "phase": "committed",
+                            "commit_sha": "abc123",
+                        }
+                    }),
+                ),
+                session_event(
+                    "task_sync_state",
+                    &task_id,
+                    serde_json::json!({
+                        "sync_state": {
+                            "phase": "completed",
+                            "status": "pending_push",
+                            "last_commit_sha": "abc123",
+                            "retry_safe": true,
+                            "orphaned_commits": ["abc123"],
+                            "needs_reconciliation": true,
+                        }
+                    }),
+                ),
+            ],
+        )
+        .expect("response should be hydrated");
+
+        assert_eq!(response.output, "done");
+        assert_eq!(response.sync_checkpoints.len(), 1);
+        assert_eq!(
+            response
+                .sync_state
+                .as_ref()
+                .and_then(|state| state.last_commit_sha.as_deref()),
+            Some("abc123")
+        );
+        assert_eq!(
+            response
+                .recovery_point
+                .as_ref()
+                .map(|point| point.commit_sha.as_str()),
+            Some("abc123")
+        );
+    }
+
+    #[test]
+    fn task_output_from_events_derives_sync_state_from_legacy_git_steps() {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let response = task_output_from_events(
+            &task_id,
+            &[session_event(
+                "task_git_steps",
+                &task_id,
+                serde_json::json!({
+                    "git_steps": [
+                        { "type": "git_committed", "commit_sha": "abc123" },
+                        { "type": "git_push_failed", "reason": "timed out" }
+                    ]
+                }),
+            )],
+        )
+        .expect("response should be hydrated");
+
+        assert_eq!(response.sync_checkpoints.len(), 2);
+        assert_eq!(
+            response
+                .sync_state
+                .as_ref()
+                .map(|state| state.status.clone()),
+            Some(crate::sync_state::TaskSyncStatus::PushFailed)
+        );
+        assert_eq!(
+            response
+                .recovery_point
+                .as_ref()
+                .map(|point| point.commit_sha.as_str()),
+            Some("abc123")
         );
     }
 }

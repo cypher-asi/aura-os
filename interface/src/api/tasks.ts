@@ -77,6 +77,29 @@ export const tasksApi = {
         branch?: string;
         commits?: { sha: string; message: string }[];
       }[];
+      sync_state?: {
+        phase?: string;
+        commit_sha?: string;
+        branch?: string;
+        remote?: string;
+        reason?: string;
+        attempt?: number;
+        orphaned_commits?: string[];
+        needs_reconciliation?: boolean;
+      };
+      checkpoints?: {
+        execution_started: boolean;
+        files_changed: boolean;
+        verification_passed: boolean;
+        commit_created: boolean;
+        push_confirmed: boolean;
+        push_failed: boolean;
+      };
+      recovery_point?: {
+        kind: "pending_push" | "retry_push";
+        commit_sha: string;
+        retry_safe: boolean;
+      };
       /**
        * When true, the server has no persisted output for this task
        * (e.g. session_id is missing and the fallback scan found nothing).

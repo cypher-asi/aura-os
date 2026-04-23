@@ -15,6 +15,7 @@ pub mod loop_log;
 pub(crate) mod persistence;
 pub(crate) mod router;
 pub(crate) mod state;
+pub(crate) mod sync_state;
 
 pub use app_builder::build_app_state;
 pub use harness_client::{
@@ -130,6 +131,49 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::is_rate_limited_failure_for_tests(reason)
     }
 
+    /// True when `reason` is recognized as a post-commit `git push`
+    /// timeout. This is the non-fatal infra path: the task can still be
+    /// marked done because the commit already exists locally.
+    pub fn is_git_push_timeout_failure(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_git_push_timeout_failure_for_tests(reason)
+    }
+
+    /// Run the Definition-of-Done gate against a synthetic task-output
+    /// summary. Returns the rejection reason when the completion would
+    /// be rewritten to `task_failed`, `None` when the completion would
+    /// be accepted.
+    pub fn completion_validation_reason(
+        live_output: &str,
+        files_changed: &[&str],
+        n_build_steps: usize,
+        n_test_steps: usize,
+        n_format_steps: usize,
+        n_lint_steps: usize,
+    ) -> Option<String> {
+        crate::handlers::dev_loop::completion_validation_failure_reason_for_tests(
+            live_output,
+            files_changed,
+            n_build_steps,
+            n_test_steps,
+            n_format_steps,
+            n_lint_steps,
+        )
+    }
+
+    /// Summarize how far a task got in the recovery lifecycle without
+    /// requiring callers to replay the full handler state machine.
+    pub fn recovery_checkpoint(
+        live_output: &str,
+        files_changed: &[&str],
+        git_steps: &[serde_json::Value],
+    ) -> &'static str {
+        crate::handlers::dev_loop::recovery_checkpoint_for_tests(
+            live_output,
+            files_changed,
+            git_steps,
+        )
+    }
+
     /// Run Phase 5's preflight decomposition detector against a
     /// prospective task's `(title, description)`. Returns
     /// `Some((reason_label, target_path))` when the heuristic would
@@ -142,6 +186,19 @@ pub mod phase7_test_support {
             title,
             description,
         )
+    }
+
+    pub fn sync_state_from_git_steps(git_steps: &[serde_json::Value]) -> serde_json::Value {
+        serde_json::to_value(crate::sync_state::derive_sync_state(git_steps))
+            .unwrap_or_else(|_| serde_json::json!({}))
+    }
+
+    pub fn recovery_point_from_git_steps(
+        git_steps: &[serde_json::Value],
+    ) -> Option<serde_json::Value> {
+        let sync_state = crate::sync_state::derive_sync_state(git_steps);
+        crate::sync_state::derive_recovery_point(&sync_state)
+            .and_then(|point| serde_json::to_value(point).ok())
     }
 }
 

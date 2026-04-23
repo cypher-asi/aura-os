@@ -14,6 +14,13 @@ use tracing::{info, warn};
 use crate::runner::automaton_event_kinds::DONE;
 use aura_protocol::{InstalledIntegration, InstalledTool};
 
+const GENERIC_MILESTONE_EVENT_TYPES: &[&str] =
+    &["milestone", "sync_milestone", "git_sync_milestone"];
+const GIT_COMMITTED: &str = "git_committed";
+const GIT_COMMIT_FAILED: &str = "git_commit_failed";
+const GIT_PUSHED: &str = "git_pushed";
+const GIT_PUSH_FAILED: &str = "git_push_failed";
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AutomatonStartParams {
     pub project_id: String,
@@ -53,8 +60,114 @@ pub enum AutomatonStartError {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AutomatonStartResult {
+    #[serde(alias = "id")]
     pub automaton_id: String,
+    #[serde(alias = "ws_url", alias = "stream_url")]
     pub event_stream_url: String,
+}
+
+fn canonical_git_event_type(value: &str) -> Option<&'static str> {
+    match value {
+        GIT_COMMITTED | "git_commit" | "commit" => Some(GIT_COMMITTED),
+        GIT_COMMIT_FAILED | "git_commit_error" | "commit_failed" => Some(GIT_COMMIT_FAILED),
+        GIT_PUSHED | "git_push" | "push" => Some(GIT_PUSHED),
+        GIT_PUSH_FAILED | "git_push_error" | "push_failed" => Some(GIT_PUSH_FAILED),
+        _ => None,
+    }
+}
+
+fn is_git_like_payload(value: &serde_json::Value) -> bool {
+    value.get("commit_sha").is_some()
+        || value.get("branch").is_some()
+        || value.get("remote").is_some()
+        || value.get("push_id").is_some()
+        || value.get("commits").is_some()
+}
+
+fn normalized_milestone_git_event(
+    event: &serde_json::Value,
+) -> Option<(&'static str, serde_json::Value)> {
+    let mut candidates: Vec<serde_json::Value> = vec![event.clone()];
+    for key in ["milestone", "sync", "git", "commit", "push"] {
+        if let Some(value) = event.get(key) {
+            candidates.push(value.clone());
+        }
+    }
+
+    for candidate in &candidates {
+        if let Some(kind) = candidate
+            .get("event_type")
+            .or_else(|| candidate.get("kind"))
+            .or_else(|| candidate.get("type"))
+            .and_then(|v| v.as_str())
+            .and_then(canonical_git_event_type)
+        {
+            return Some((kind, candidate.clone()));
+        }
+    }
+
+    for candidate in candidates {
+        if !candidate.is_object() || !is_git_like_payload(&candidate) {
+            continue;
+        }
+        if candidate.get("reason").is_some() || candidate.get("error").is_some() {
+            if candidate.get("branch").is_some()
+                || candidate.get("remote").is_some()
+                || candidate.get("push_id").is_some()
+            {
+                return Some((GIT_PUSH_FAILED, candidate));
+            }
+            return Some((GIT_COMMIT_FAILED, candidate));
+        }
+        if candidate.get("branch").is_some()
+            || candidate.get("remote").is_some()
+            || candidate.get("push_id").is_some()
+            || candidate.get("commits").is_some()
+        {
+            return Some((GIT_PUSHED, candidate));
+        }
+        if candidate.get("commit_sha").is_some() {
+            return Some((GIT_COMMITTED, candidate));
+        }
+    }
+
+    None
+}
+
+fn copy_if_missing(target: &mut serde_json::Value, source: &serde_json::Value, key: &str) {
+    if target.get(key).is_none() {
+        if let Some(value) = source.get(key) {
+            target[key] = value.clone();
+        }
+    }
+}
+
+fn normalize_automaton_event(mut event: serde_json::Value) -> serde_json::Value {
+    let Some(event_type) = event.get("type").and_then(|t| t.as_str()) else {
+        return event;
+    };
+    if !GENERIC_MILESTONE_EVENT_TYPES.contains(&event_type) {
+        return event;
+    }
+    let Some((canonical_type, payload)) = normalized_milestone_git_event(&event) else {
+        return event;
+    };
+
+    event["type"] = serde_json::Value::String(canonical_type.to_string());
+    for key in [
+        "commit_sha",
+        "branch",
+        "remote",
+        "reason",
+        "error",
+        "summary",
+        "push_id",
+        "commit_ids",
+        "commits",
+    ] {
+        copy_if_missing(&mut event, &payload, key);
+    }
+    event
 }
 
 /// Client for the harness automaton REST + WebSocket API.
@@ -294,7 +407,7 @@ impl AutomatonClient {
             }
             Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text)))) => {
                 if let Ok(event) = serde_json::from_str::<serde_json::Value>(&text) {
-                    buffered_event = Some(event);
+                    buffered_event = Some(normalize_automaton_event(event));
                 }
             }
             Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Close(_)))) => {
@@ -321,6 +434,7 @@ impl AutomatonClient {
                     Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
                         match serde_json::from_str::<serde_json::Value>(&text) {
                             Ok(event) => {
+                                let event = normalize_automaton_event(event);
                                 let is_done =
                                     event.get("type").and_then(|t| t.as_str()) == Some(DONE);
                                 let _ = tx.send(event);
@@ -345,5 +459,45 @@ impl AutomatonClient {
         });
 
         Ok(broadcast_tx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_automaton_event, AutomatonStartResult};
+
+    #[test]
+    fn automaton_start_result_accepts_ws_url_alias() {
+        let result: AutomatonStartResult = serde_json::from_value(serde_json::json!({
+            "id": "auto-123",
+            "ws_url": "/stream/automaton/auto-123",
+        }))
+        .expect("start result should deserialize");
+
+        assert_eq!(result.automaton_id, "auto-123");
+        assert_eq!(result.event_stream_url, "/stream/automaton/auto-123");
+    }
+
+    #[test]
+    fn normalize_automaton_event_promotes_git_sync_milestones() {
+        let event = normalize_automaton_event(serde_json::json!({
+            "type": "sync_milestone",
+            "summary": "Committed and pushed",
+            "milestone": {
+                "kind": "git_pushed",
+                "commit_sha": "abc12345",
+                "branch": "main",
+                "remote": "origin",
+                "push_id": "push-1",
+                "commits": ["abc12345"],
+            }
+        }));
+
+        assert_eq!(event["type"], "git_pushed");
+        assert_eq!(event["commit_sha"], "abc12345");
+        assert_eq!(event["branch"], "main");
+        assert_eq!(event["remote"], "origin");
+        assert_eq!(event["push_id"], "push-1");
+        assert_eq!(event["summary"], "Committed and pushed");
     }
 }

@@ -247,6 +247,19 @@ fn classify_failure_recognizes_needs_decomposition_reason() {
 }
 
 #[test]
+fn classify_push_timeout_as_post_commit_infra_not_truncation() {
+    let reason = "git_commit_push timed out while waiting for git push to origin";
+    assert!(
+        aura_os_server::phase7_test_support::is_git_push_timeout_failure(reason),
+        "push-leg timeouts must route to the non-fatal post-commit infra path",
+    );
+    assert!(
+        !aura_os_server::phase7_test_support::is_truncation_failure(reason),
+        "push timeouts must not burn truncation-remediation budget",
+    );
+}
+
+#[test]
 fn heuristics_surface_split_write_for_blocked_path() {
     let (_tmp, bundle_dir) = stage_bundle();
     let view = load_bundle(&bundle_dir).expect("load synthesized bundle");
@@ -263,6 +276,40 @@ fn heuristics_surface_split_write_for_blocked_path() {
         matched,
         "expected a SplitWriteIntoSkeletonPlusAppends finding for \
          path={BLOCKED_PATH} with chunk=6000; got {findings:#?}"
+    );
+}
+
+#[test]
+fn completion_validation_rejects_unverified_source_changes() {
+    let reason = aura_os_server::phase7_test_support::completion_validation_reason(
+        "edited source",
+        &["src/lib.rs"],
+        0,
+        0,
+        0,
+        0,
+    )
+    .expect("source changes without verification should be rejected");
+    assert!(
+        reason.contains("no build/compile step"),
+        "expected build-step rejection, got {reason:?}",
+    );
+}
+
+#[test]
+fn recovery_checkpoint_marks_commit_created_when_push_fails() {
+    let git_steps = vec![
+        json!({"type": "git_committed", "commit_sha": "abc123"}),
+        json!({"type": "git_push_failed", "reason": "timeout"}),
+    ];
+    assert_eq!(
+        aura_os_server::phase7_test_support::recovery_checkpoint(
+            "implementation completed",
+            &["src/lib.rs"],
+            &git_steps,
+        ),
+        "commit_created",
+        "post-commit push failures should preserve the durable local-work checkpoint",
     );
 }
 

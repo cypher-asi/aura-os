@@ -5,6 +5,8 @@ use tracing::{info, warn};
 use aura_os_storage::StorageClient;
 
 use crate::state::CachedTaskOutput;
+use crate::sync_state::{derive_checkpoint_summary, derive_recovery_point, derive_sync_state};
+use crate::sync_state::{TaskSyncCheckpoint, TaskSyncState};
 
 // ---------------------------------------------------------------------------
 // Log-worthy event filter
@@ -303,6 +305,99 @@ pub(crate) async fn persist_task_output(
         } else {
             info!(task_id, %session_id, git_steps = cached.git_steps.len(), "Persisted task git steps event");
         }
+    }
+
+    let sync_state = derive_sync_state(&cached.git_steps);
+    let checkpoints = derive_checkpoint_summary(
+        !cached.live_output.is_empty(),
+        cached.files_changed.len(),
+        &cached.build_steps,
+        &cached.test_steps,
+        &cached.git_steps,
+    );
+    let recovery_point = derive_recovery_point(&sync_state);
+    if checkpoints.execution_started {
+        let req = aura_os_storage::CreateSessionEventRequest {
+            session_id: Some(session_id.to_string()),
+            user_id: None,
+            agent_id: agent_id.map(str::to_owned),
+            sender: Some("agent".to_string()),
+            project_id: project_id.map(str::to_owned),
+            org_id: None,
+            event_type: "task_checkpoint_state".to_string(),
+            content: Some(serde_json::json!({
+                "task_id": task_id,
+                "sync_state": sync_state,
+                "checkpoints": checkpoints,
+                "recovery_point": recovery_point,
+            })),
+        };
+
+        if let Err(e) = storage.create_event(&session_id, jwt, &req).await {
+            warn!(task_id, %session_id, error = %e, "Failed to persist task checkpoint state event");
+        }
+    }
+}
+
+pub(crate) async fn persist_task_sync_progress(
+    storage: Option<&Arc<StorageClient>>,
+    jwt: Option<&str>,
+    session_id: &str,
+    task_id: &str,
+    checkpoint: &TaskSyncCheckpoint,
+    sync_state: &TaskSyncState,
+) {
+    let (Some(storage), Some(jwt)) = (storage, jwt) else {
+        return;
+    };
+    if session_id.is_empty() || task_id.is_empty() {
+        return;
+    }
+
+    let checkpoint_req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(session_id.to_string()),
+        user_id: None,
+        agent_id: None,
+        sender: Some("agent".to_string()),
+        project_id: None,
+        org_id: None,
+        event_type: "task_sync_checkpoint".to_string(),
+        content: Some(serde_json::json!({
+            "task_id": task_id,
+            "checkpoint": checkpoint,
+        })),
+    };
+    if let Err(error) = storage.create_event(session_id, jwt, &checkpoint_req).await {
+        warn!(
+            %session_id,
+            %task_id,
+            checkpoint = checkpoint.kind,
+            %error,
+            "Failed to persist task sync checkpoint"
+        );
+    }
+
+    let state_req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(session_id.to_string()),
+        user_id: None,
+        agent_id: None,
+        sender: Some("agent".to_string()),
+        project_id: None,
+        org_id: None,
+        event_type: "task_sync_state".to_string(),
+        content: Some(serde_json::json!({
+            "task_id": task_id,
+            "sync_state": sync_state,
+        })),
+    };
+    if let Err(error) = storage.create_event(session_id, jwt, &state_req).await {
+        warn!(
+            %session_id,
+            %task_id,
+            phase = sync_state.phase.as_deref().unwrap_or("unknown"),
+            %error,
+            "Failed to persist task sync state"
+        );
     }
 }
 

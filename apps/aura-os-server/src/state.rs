@@ -33,6 +33,7 @@ use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
 use crate::error::ApiError;
+use crate::sync_state::{TaskSyncCheckpoint, TaskSyncState};
 
 // ---------------------------------------------------------------------------
 // Per-request auth extractors (set by `require_verified_session` middleware)
@@ -309,6 +310,8 @@ pub struct CachedTaskOutput {
     pub build_steps: Vec<serde_json::Value>,
     pub test_steps: Vec<serde_json::Value>,
     pub git_steps: Vec<serde_json::Value>,
+    pub sync_checkpoints: Vec<TaskSyncCheckpoint>,
+    pub sync_state: Option<TaskSyncState>,
     /// Evidence of `cargo fmt --check` / `prettier --check` / equivalent
     /// being exercised during the task. Part of the Definition-of-Done gate
     /// the dev loop enforces before marking a task as done.

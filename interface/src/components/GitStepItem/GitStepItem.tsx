@@ -11,6 +11,9 @@ function getGitStepLabel(step: GitStep): string {
     return step.reason ?? "Commit failed";
   }
   if (step.kind === "push_failed") {
+    if (step.commitSha) {
+      return `Push failed for ${step.commitSha.slice(0, 7)}: ${step.reason ?? "unknown reason"}`;
+    }
     return step.reason ?? "Push failed";
   }
   const count = step.commits?.length ?? 0;

@@ -6,6 +6,7 @@
 
 pub mod automaton_event_kinds;
 
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::warn;
@@ -16,7 +17,7 @@ use automaton_event_kinds::{
 };
 
 pub use automaton_event_kinds::{
-    is_process_progress_broadcast_event, is_process_stream_forward_event,
+    is_git_sync_event, is_process_progress_broadcast_event, is_process_stream_forward_event,
     normalize_process_tool_type_field,
 };
 
@@ -25,6 +26,19 @@ use crate::{AutomatonClient, AutomatonStartError, AutomatonStartParams, Automato
 const MAX_COLLECTED_OUTPUT_TEXT_CHARS: usize = 16_000;
 const MAX_COLLECTED_TEXT_BLOCK_CHARS: usize = 4_000;
 const MAX_COLLECTED_TOOL_RESULT_CHARS: usize = 8_000;
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GitSyncMilestone {
+    pub event_type: String,
+    pub commit_sha: Option<String>,
+    pub branch: Option<String>,
+    pub remote: Option<String>,
+    pub push_id: Option<String>,
+    pub reason: Option<String>,
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub commits: Vec<String>,
+}
 
 fn truncate_with_marker(input: &str, limit: usize) -> String {
     if input.chars().count() <= limit {
@@ -59,6 +73,78 @@ fn append_truncated(buf: &mut String, text: &str, limit: usize) {
     }
 }
 
+fn first_string<'a>(value: &'a serde_json::Value, keys: &[&str]) -> Option<&'a str> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(serde_json::Value::as_str))
+}
+
+fn extract_summary(value: &serde_json::Value) -> Option<String> {
+    first_string(value, &["summary", "completion_summary", "message"])
+        .map(str::to_owned)
+        .or_else(|| {
+            ["milestone", "sync", "git", "commit", "push"]
+                .into_iter()
+                .find_map(|key| value.get(key).and_then(extract_summary))
+        })
+}
+
+fn extract_commit_list(value: &serde_json::Value) -> Vec<String> {
+    value
+        .get("commits")
+        .or_else(|| value.get("commit_ids"))
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| match entry {
+            serde_json::Value::String(sha) => Some(sha.clone()),
+            serde_json::Value::Object(map) => map
+                .get("sha")
+                .or_else(|| map.get("commit_sha"))
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned),
+            _ => None,
+        })
+        .collect()
+}
+
+fn extract_git_milestone_from_value(
+    value: &serde_json::Value,
+    event_type: Option<&str>,
+) -> Option<GitSyncMilestone> {
+    let event_type = event_type
+        .filter(|evt_type| is_git_sync_event(evt_type))
+        .or_else(|| {
+            first_string(value, &["event_type", "kind", "type"])
+                .filter(|evt_type| is_git_sync_event(evt_type))
+        })?;
+
+    Some(GitSyncMilestone {
+        event_type: event_type.to_string(),
+        commit_sha: first_string(value, &["commit_sha", "sha"]).map(str::to_owned),
+        branch: first_string(value, &["branch"]).map(str::to_owned),
+        remote: first_string(value, &["remote"]).map(str::to_owned),
+        push_id: first_string(value, &["push_id"]).map(str::to_owned),
+        reason: first_string(value, &["reason", "error"]).map(str::to_owned),
+        summary: extract_summary(value),
+        commits: extract_commit_list(value),
+    })
+}
+
+fn extract_git_milestones(event: &serde_json::Value, event_type: &str) -> Vec<GitSyncMilestone> {
+    let mut milestones = Vec::new();
+    if let Some(milestone) = extract_git_milestone_from_value(event, Some(event_type)) {
+        milestones.push(milestone);
+    }
+    for key in ["milestone", "sync", "git", "commit", "push"] {
+        if let Some(value) = event.get(key) {
+            if let Some(milestone) = extract_git_milestone_from_value(value, None) {
+                milestones.push(milestone);
+            }
+        }
+    }
+    milestones
+}
+
 /// Output collected from an automaton event stream.
 #[derive(Debug, Clone, Default)]
 pub struct CollectedOutput {
@@ -66,6 +152,8 @@ pub struct CollectedOutput {
     pub input_tokens: u64,
     pub output_tokens: u64,
     pub model: Option<String>,
+    pub completion_summary: Option<String>,
+    pub git_milestones: Vec<GitSyncMilestone>,
     pub content_blocks: Vec<serde_json::Value>,
 }
 
@@ -222,6 +310,18 @@ where
             Ok(Ok(evt)) => {
                 let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
                 on_event(&evt, evt_type);
+                if out.completion_summary.is_none() {
+                    out.completion_summary = extract_summary(&evt);
+                }
+                for milestone in extract_git_milestones(&evt, evt_type) {
+                    if !out
+                        .git_milestones
+                        .iter()
+                        .any(|existing| existing == &milestone)
+                    {
+                        out.git_milestones.push(milestone);
+                    }
+                }
                 match evt_type {
                     TEXT_DELTA => {
                         let text = evt
@@ -464,5 +564,76 @@ mod tests {
             .unwrap_or_default();
         assert!(result.ends_with("\n[truncated]"));
         assert_eq!(result.chars().count(), 8_012);
+    }
+
+    #[tokio::test]
+    async fn collect_automaton_events_captures_git_sync_milestones() {
+        let (tx, rx) = broadcast::channel(16);
+        tx.send(serde_json::json!({
+            "type": "task_completed",
+            "summary": "Committed and pushed changes",
+            "sync": {
+                "event_type": "git_pushed",
+                "commit_sha": "abc12345",
+                "branch": "main",
+                "remote": "origin",
+                "push_id": "push-1",
+                "commits": ["abc12345"],
+            }
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+        let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+        let output = match completion {
+            RunCompletion::Done(output) => output,
+            other => panic!("expected completed output, got {other:?}"),
+        };
+
+        assert_eq!(
+            output.completion_summary.as_deref(),
+            Some("Committed and pushed changes")
+        );
+        assert_eq!(output.git_milestones.len(), 1);
+        assert_eq!(
+            output.git_milestones[0],
+            super::GitSyncMilestone {
+                event_type: "git_pushed".to_string(),
+                commit_sha: Some("abc12345".to_string()),
+                branch: Some("main".to_string()),
+                remote: Some("origin".to_string()),
+                push_id: Some("push-1".to_string()),
+                reason: None,
+                summary: None,
+                commits: vec!["abc12345".to_string()],
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn collect_automaton_events_captures_flat_git_failure() {
+        let (tx, rx) = broadcast::channel(16);
+        tx.send(serde_json::json!({
+            "type": "git_push_failed",
+            "reason": "timed out",
+            "branch": "main",
+            "remote": "origin",
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+        let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+        let output = match completion {
+            RunCompletion::Done(output) => output,
+            other => panic!("expected completed output, got {other:?}"),
+        };
+
+        assert_eq!(output.git_milestones.len(), 1);
+        assert_eq!(output.git_milestones[0].event_type, "git_push_failed");
+        assert_eq!(
+            output.git_milestones[0].reason.as_deref(),
+            Some("timed out")
+        );
+        assert_eq!(output.git_milestones[0].branch.as_deref(), Some("main"));
     }
 }

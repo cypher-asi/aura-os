@@ -150,7 +150,14 @@ function handleGitPushed(event: AuraEvent, u: OutputUpdate): void {
 function handleGitPushFailed(event: AuraEvent, u: OutputUpdate): void {
   const c = event.content as AuraEventContent<EventType.GitPushFailed>;
   if (!c.task_id) return;
-  appendGitStep(c.task_id, { kind: "push_failed", reason: c.reason, timestamp: Date.now() }, u);
+  appendGitStep(c.task_id, {
+    kind: "push_failed",
+    commitSha: c.commit_sha,
+    reason: c.reason,
+    repo: c.repo,
+    branch: c.branch,
+    timestamp: Date.now(),
+  }, u);
 }
 
 function handleTaskFinish(event: AuraEvent, u: OutputUpdate): void {

@@ -21,6 +21,29 @@ pub const TASK_FAILED: &str = "task_failed";
 pub const DONE: &str = "done";
 pub const ERROR: &str = "error";
 
+pub const GIT_COMMITTED: &str = "git_committed";
+pub const GIT_COMMIT_FAILED: &str = "git_commit_failed";
+pub const GIT_PUSHED: &str = "git_pushed";
+pub const GIT_PUSH_FAILED: &str = "git_push_failed";
+
+#[inline]
+pub fn normalize_sync_milestone_type(evt_type: &str) -> &str {
+    match evt_type {
+        "commit_created" => GIT_COMMITTED,
+        "push_succeeded" => GIT_PUSHED,
+        "push_failed" => GIT_PUSH_FAILED,
+        other => other,
+    }
+}
+
+#[inline]
+pub fn is_sync_milestone_event(evt_type: &str) -> bool {
+    matches!(
+        normalize_sync_milestone_type(evt_type),
+        GIT_COMMITTED | GIT_COMMIT_FAILED | GIT_PUSHED | GIT_PUSH_FAILED
+    )
+}
+
 /// Stream events forwarded into the process UI when mirroring harness output.
 #[inline]
 pub fn is_process_stream_forward_event(evt_type: &str) -> bool {
@@ -49,6 +72,15 @@ pub fn is_usage_totals_event(evt_type: &str) -> bool {
 #[inline]
 pub fn is_process_progress_broadcast_event(evt_type: &str) -> bool {
     matches!(evt_type, TOKEN_USAGE | ASSISTANT_MESSAGE_END)
+}
+
+/// Git/sync milestone events that callers may want to persist or summarize.
+#[inline]
+pub fn is_git_sync_event(evt_type: &str) -> bool {
+    matches!(
+        evt_type,
+        GIT_COMMITTED | GIT_COMMIT_FAILED | GIT_PUSHED | GIT_PUSH_FAILED
+    )
 }
 
 /// Map harness tool-start aliases to the type string used on process streams.

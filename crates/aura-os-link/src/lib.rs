@@ -17,9 +17,10 @@ pub use harness_url::local_harness_base_url;
 pub use local_harness::LocalHarness;
 pub use runner::automaton_event_kinds;
 pub use runner::{
-    collect_automaton_events, connect_with_retries, is_process_progress_broadcast_event,
-    is_process_stream_forward_event, normalize_process_tool_type_field, start_and_connect,
-    CollectedOutput, RunCompletion, RunStartError,
+    collect_automaton_events, connect_with_retries, is_git_sync_event,
+    is_process_progress_broadcast_event, is_process_stream_forward_event,
+    normalize_process_tool_type_field, start_and_connect, CollectedOutput, GitSyncMilestone,
+    RunCompletion, RunStartError,
 };
 pub use swarm_harness::{CreateAgentResponse, SwarmHarness};
 

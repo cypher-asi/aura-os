@@ -28,6 +28,7 @@ use crate::persistence;
 use crate::state::{
     ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
 };
+use crate::sync_state::{derive_sync_state_from_checkpoints, TaskSyncCheckpoint, TaskSyncState};
 
 /// One of the four Definition-of-Done verification step categories the dev
 /// loop recognises. `classify_run_command_steps` maps shell commands to
@@ -434,6 +435,7 @@ struct CompletionGateReport {
     n_test_steps: usize,
     n_format_steps: usize,
     n_lint_steps: usize,
+    recovery_checkpoint: String,
     /// `None` on pass; the reason string that would be recorded on the
     /// task on fail.
     failure_reason: Option<String>,
@@ -451,6 +453,7 @@ impl CompletionGateReport {
             n_test_steps: cached.test_steps.len(),
             n_format_steps: cached.format_steps.len(),
             n_lint_steps: cached.lint_steps.len(),
+            recovery_checkpoint: recovery_checkpoint_label(recovery_checkpoint(cached)).to_string(),
             failure_reason: None,
         }
     }
@@ -682,6 +685,63 @@ fn parse_retry_after_seconds(text: &str) -> Option<u64> {
 /// Test-only predicate over [`classify_failure`].
 pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
     classify_failure(reason) == FailureClass::RateLimited
+}
+
+/// Test-only predicate over [`classify_infra_failure`].
+pub(crate) fn is_git_push_timeout_failure_for_tests(reason: &str) -> bool {
+    classify_infra_failure(reason) == Some(InfraFailureClass::GitPushTimeout)
+}
+
+pub(crate) fn completion_validation_failure_reason_for_tests(
+    live_output: &str,
+    files_changed: &[&str],
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+) -> Option<String> {
+    let mut cached = CachedTaskOutput {
+        live_output: live_output.to_string(),
+        files_changed: files_changed
+            .iter()
+            .map(|path| aura_os_storage::StorageTaskFileChangeSummary {
+                op: "modify".to_string(),
+                path: (*path).to_string(),
+                lines_added: 0,
+                lines_removed: 0,
+            })
+            .collect(),
+        ..Default::default()
+    };
+    cached.build_steps =
+        vec![serde_json::json!({"type": "build_verification_passed"}); n_build_steps];
+    cached.test_steps = vec![serde_json::json!({"type": "test_verification_passed"}); n_test_steps];
+    cached.format_steps =
+        vec![serde_json::json!({"type": "format_verification_passed"}); n_format_steps];
+    cached.lint_steps = vec![serde_json::json!({"type": "lint_verification_passed"}); n_lint_steps];
+    completion_validation_failure_reason(&cached).map(str::to_string)
+}
+
+pub(crate) fn recovery_checkpoint_for_tests(
+    live_output: &str,
+    files_changed: &[&str],
+    git_steps: &[serde_json::Value],
+) -> &'static str {
+    let cached = CachedTaskOutput {
+        live_output: live_output.to_string(),
+        files_changed: files_changed
+            .iter()
+            .map(|path| aura_os_storage::StorageTaskFileChangeSummary {
+                op: "modify".to_string(),
+                path: (*path).to_string(),
+                lines_added: 0,
+                lines_removed: 0,
+            })
+            .collect(),
+        git_steps: git_steps.to_vec(),
+        ..Default::default()
+    };
+    recovery_checkpoint_label(recovery_checkpoint(&cached))
 }
 
 /// Locate the newest run bundle directory for a given
@@ -1243,6 +1303,117 @@ fn latest_git_commit_sha(git_steps: &[serde_json::Value]) -> Option<String> {
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned)
     })
+}
+
+fn sync_string_field(event: &serde_json::Value, keys: &[&str]) -> Option<String> {
+    keys.iter().find_map(|key| {
+        event
+            .get(*key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+    })
+}
+
+fn sync_attempt_field(event: &serde_json::Value) -> Option<u32> {
+    ["attempt", "retry_attempt"].iter().find_map(|key| {
+        event
+            .get(*key)
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| u32::try_from(value).ok())
+    })
+}
+
+fn sync_commit_sha(event: &serde_json::Value) -> Option<String> {
+    sync_string_field(event, &["commit_sha", "sha"]).or_else(|| {
+        event
+            .get("commits")
+            .and_then(serde_json::Value::as_array)
+            .and_then(|commits| commits.last())
+            .and_then(|commit| commit.get("sha"))
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    })
+}
+
+fn checkpoint_phase_for_event(event_type: &str) -> Option<&'static str> {
+    match event_type {
+        "task_started" => Some("executing"),
+        "task_retrying" => Some("retrying"),
+        "git_committed" => Some("committed"),
+        "git_commit_failed" => Some("commit_failed"),
+        "git_pushed" => Some("pushed"),
+        "git_push_failed" => Some("push_failed"),
+        "task_completed" => Some("completed"),
+        "task_failed" => Some("failed"),
+        _ => None,
+    }
+}
+
+fn build_task_sync_checkpoint(event: &serde_json::Value) -> Option<TaskSyncCheckpoint> {
+    let event_type = event.get("type").and_then(|t| t.as_str())?;
+    Some(TaskSyncCheckpoint {
+        kind: event_type.to_string(),
+        phase: checkpoint_phase_for_event(event_type).map(str::to_owned),
+        commit_sha: sync_commit_sha(event),
+        branch: sync_string_field(event, &["branch", "git_branch"]),
+        repo: sync_string_field(event, &["repo", "remote", "remote_name"]),
+        reason: sync_string_field(event, &["reason", "error", "message"]),
+        attempt: sync_attempt_field(event),
+        observed_at: sync_string_field(event, &["created_at", "timestamp"]),
+    })
+}
+
+fn update_task_sync_progress(
+    cached: &mut CachedTaskOutput,
+    event: &serde_json::Value,
+) -> Option<(TaskSyncCheckpoint, TaskSyncState)> {
+    let checkpoint = build_task_sync_checkpoint(event)?;
+    cached.sync_checkpoints.push(checkpoint.clone());
+    let state = derive_sync_state_from_checkpoints(&cached.sync_checkpoints)?;
+    cached.sync_state = Some(state.clone());
+    Some((checkpoint, state))
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RecoveryCheckpoint {
+    NoProgress,
+    OutputObserved,
+    WorkspaceChanged,
+    CommitCreated,
+    RemoteSynced,
+}
+
+fn recovery_checkpoint_label(checkpoint: RecoveryCheckpoint) -> &'static str {
+    match checkpoint {
+        RecoveryCheckpoint::NoProgress => "no_progress",
+        RecoveryCheckpoint::OutputObserved => "output_observed",
+        RecoveryCheckpoint::WorkspaceChanged => "workspace_changed",
+        RecoveryCheckpoint::CommitCreated => "commit_created",
+        RecoveryCheckpoint::RemoteSynced => "remote_synced",
+    }
+}
+
+fn recovery_checkpoint(cached: &CachedTaskOutput) -> RecoveryCheckpoint {
+    let has_push = cached
+        .git_steps
+        .iter()
+        .rev()
+        .any(|step| step.get("type").and_then(serde_json::Value::as_str) == Some("git_pushed"));
+    if has_push {
+        return RecoveryCheckpoint::RemoteSynced;
+    }
+    if latest_git_commit_sha(&cached.git_steps).is_some() {
+        return RecoveryCheckpoint::CommitCreated;
+    }
+    if !cached.files_changed.is_empty() {
+        return RecoveryCheckpoint::WorkspaceChanged;
+    }
+    if !cached.live_output.trim().is_empty() {
+        return RecoveryCheckpoint::OutputObserved;
+    }
+    RecoveryCheckpoint::NoProgress
 }
 
 fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
@@ -2531,6 +2702,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             "task_id": tid,
                                             "reason": reason,
                                             "commit_sha": latest_git_commit_sha(&cached.git_steps),
+                                            "recovery_checkpoint": recovery_checkpoint_label(recovery_checkpoint(&cached)),
                                         }),
                                     );
                                     session_status = "completed";
@@ -2994,7 +3166,49 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             obj.insert("type".into(), serde_json::Value::String(mapped.into()));
                         }
                     }
+
+                    let sync_progress = if let Some(tid) = forwarded
+                        .get("task_id")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned)
+                    {
+                        let mut cache = task_output_cache.lock().await;
+                        let entry = cache.entry(tid.clone()).or_default();
+                        if entry.project_id.is_none() {
+                            entry.project_id = Some(pid.clone());
+                        }
+                        if entry.agent_instance_id.is_none() {
+                            entry.agent_instance_id = Some(aiid.clone());
+                        }
+                        if entry.session_id.is_none() {
+                            entry.session_id = current_session_id_string.clone();
+                        }
+                        update_task_sync_progress(entry, &forwarded)
+                            .map(|(checkpoint, state)| (tid, checkpoint, state))
+                    } else {
+                        None
+                    };
+
                     let _ = app_broadcast.send(forwarded.clone());
+
+                    if let (Some(session_id), Some((task_id, checkpoint, sync_state))) =
+                        (current_session_id_string.as_deref(), sync_progress)
+                    {
+                        let sc = storage_client.clone();
+                        let j = jwt.clone();
+                        let sid = session_id.to_string();
+                        tokio::spawn(async move {
+                            persistence::persist_task_sync_progress(
+                                sc.as_ref(),
+                                j.as_deref(),
+                                &sid,
+                                &task_id,
+                                &checkpoint,
+                                &sync_state,
+                            )
+                            .await;
+                        });
+                    }
 
                     if let Some(session_id) = current_session_id_string.as_deref() {
                         let event_type =
@@ -5114,6 +5328,74 @@ mod tests {
     }
 
     #[test]
+    fn derive_task_sync_state_marks_push_failures_for_reconciliation() {
+        let checkpoints = vec![
+            TaskSyncCheckpoint {
+                kind: "task_started".into(),
+                phase: Some("executing".into()),
+                ..Default::default()
+            },
+            TaskSyncCheckpoint {
+                kind: "git_committed".into(),
+                phase: Some("committed".into()),
+                commit_sha: Some("abc123".into()),
+                branch: Some("main".into()),
+                ..Default::default()
+            },
+            TaskSyncCheckpoint {
+                kind: "git_push_failed".into(),
+                phase: Some("push_failed".into()),
+                reason: Some("timed out".into()),
+                ..Default::default()
+            },
+        ];
+
+        let state =
+            derive_sync_state_from_checkpoints(&checkpoints).expect("state should be derived");
+        assert_eq!(state.phase.as_deref(), Some("push_failed"));
+        assert_eq!(state.last_commit_sha.as_deref(), Some("abc123"));
+        assert_eq!(state.orphaned_commits, vec!["abc123".to_string()]);
+        assert!(state.needs_reconciliation);
+    }
+
+    #[test]
+    fn derive_task_sync_state_clears_orphan_after_push() {
+        let checkpoints = vec![
+            TaskSyncCheckpoint {
+                kind: "git_committed".into(),
+                phase: Some("committed".into()),
+                commit_sha: Some("abc123".into()),
+                ..Default::default()
+            },
+            TaskSyncCheckpoint {
+                kind: "git_pushed".into(),
+                phase: Some("pushed".into()),
+                commit_sha: Some("abc123".into()),
+                branch: Some("main".into()),
+                repo: Some("origin".into()),
+                ..Default::default()
+            },
+        ];
+
+        let state =
+            derive_sync_state_from_checkpoints(&checkpoints).expect("state should be derived");
+        assert_eq!(state.phase.as_deref(), Some("pushed"));
+        assert!(state.orphaned_commits.is_empty());
+        assert!(!state.needs_reconciliation);
+        assert_eq!(state.repo.as_deref(), Some("origin"));
+    }
+
+    #[test]
+    fn classify_infra_failure_prefers_git_push_timeout_over_git_timeout() {
+        let reason = "git_commit_push timed out while waiting for git push to origin";
+        assert_eq!(
+            classify_infra_failure(reason),
+            Some(InfraFailureClass::GitPushTimeout)
+        );
+        assert_ne!(classify_failure(reason), FailureClass::Truncation);
+    }
+
+    #[test]
     fn completion_validation_blocks_code_changes_without_build() {
         // Modifying code without any build/compile step violates the
         // Definition of Done: the agent cannot prove the change
@@ -5303,10 +5585,61 @@ mod tests {
         assert_eq!(report.n_test_steps, 1);
         assert_eq!(report.n_format_steps, 0);
         assert_eq!(report.n_lint_steps, 0);
+        assert_eq!(report.recovery_checkpoint, "workspace_changed");
         // The report itself doesn't run the gate — failure_reason is
         // populated by the caller using
         // `completion_validation_failure_reason`.
         assert!(report.failure_reason.is_none());
+    }
+
+    #[test]
+    fn recovery_checkpoint_distinguishes_workspace_commit_and_remote_sync() {
+        let output_only = CachedTaskOutput {
+            live_output: "looked into it".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            recovery_checkpoint(&output_only),
+            RecoveryCheckpoint::OutputObserved
+        );
+
+        let workspace = CachedTaskOutput {
+            live_output: "edited files".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            ..Default::default()
+        };
+        assert_eq!(
+            recovery_checkpoint(&workspace),
+            RecoveryCheckpoint::WorkspaceChanged
+        );
+
+        let committed = CachedTaskOutput {
+            live_output: "committed".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            git_steps: vec![
+                serde_json::json!({"type": "git_committed", "commit_sha": "abc123"}),
+                serde_json::json!({"type": "git_push_failed", "reason": "timeout"}),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            recovery_checkpoint(&committed),
+            RecoveryCheckpoint::CommitCreated
+        );
+
+        let pushed = CachedTaskOutput {
+            live_output: "pushed".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            git_steps: vec![
+                serde_json::json!({"type": "git_committed", "commit_sha": "abc123"}),
+                serde_json::json!({"type": "git_pushed", "remote": "origin"}),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            recovery_checkpoint(&pushed),
+            RecoveryCheckpoint::RemoteSynced
+        );
     }
 
     #[test]

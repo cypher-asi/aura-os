@@ -428,6 +428,10 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.GitPushFailed; content: {
       task_id?: string;
       reason: string;
+      commit_sha?: string;
+      repo?: string;
+      branch?: string;
+      retry_safe?: boolean;
     } }
 
   // ── Harness protocol (canonical types from aura-protocol) ────
