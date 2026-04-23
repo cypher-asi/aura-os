@@ -215,6 +215,48 @@ function buildProcessNode({ processId, nodeId, label, prompt = "", x = 120, y = 
   };
 }
 
+function buildProcessRun({ processId, runId, startedAt, completedAt, output }) {
+  return {
+    run_id: runId,
+    process_id: processId,
+    status: "completed",
+    trigger: "manual",
+    error: null,
+    started_at: startedAt,
+    completed_at: completedAt,
+    total_input_tokens: 1280,
+    total_output_tokens: 412,
+    cost_usd: 0.01,
+    output,
+  };
+}
+
+function buildProcessEvent({ processId, runId, nodeId, startedAt, completedAt, output }) {
+  return {
+    event_id: `event-${runId}`,
+    run_id: runId,
+    node_id: nodeId,
+    process_id: processId,
+    status: "completed",
+    input_snapshot: JSON.stringify({
+      task: "Render a seeded changelog proof output block.",
+      source: "changelog-media-seed",
+    }),
+    output,
+    started_at: startedAt,
+    completed_at: completedAt,
+    input_tokens: 1280,
+    output_tokens: 412,
+    model: "claude-sonnet-4-6",
+    content_blocks: [
+      {
+        type: "text",
+        text: output,
+      },
+    ],
+  };
+}
+
 function buildNoteDocument({ title, body, relPath }) {
   const timestamp = new Date().toISOString();
   const normalizedTitle = String(title || "").trim() || "Untitled";
@@ -583,11 +625,49 @@ function buildNotesPreseedPlan(context) {
   };
 }
 
+function detectProcessRunOutputIntent(context) {
+  const fileEvidenceText = (Array.isArray(context.brief?.changedFileEvidence?.files)
+    ? context.brief.changedFileEvidence.files
+      .flatMap((fileInfo) => [
+        fileInfo?.filePath,
+        fileInfo?.surfaceLabel,
+        ...(Array.isArray(fileInfo?.componentNames) ? fileInfo.componentNames : []),
+      ])
+    : []
+  ).join(" ");
+  const text = [
+    context.story,
+    context.brief?.title,
+    context.brief?.rationale,
+    ...(Array.isArray(context.brief?.setupPlan) ? context.brief.setupPlan : []),
+    ...(Array.isArray(context.changedFiles) ? context.changedFiles : []),
+    fileEvidenceText,
+  ].join(" ").toLowerCase();
+
+  const wantsRunSurface = /\b(run|runs|timeline|event|events|node|sidekick|preview)\b/i.test(text);
+  const wantsOutputSurface = /\b(output|outputs|task|tasks|live|build|block|blocks|artifact|artifacts)\b/i.test(text);
+
+  return {
+    wantsRunSurface,
+    wantsOutputSurface,
+  };
+}
+
 function buildProcessPreseedPlan(context) {
   const requestedName = extractNamedEntity(context.story, { fallback: "Demo Process" }).trim();
   const name = requestedName || "Demo Process";
   const description = buildStorySummary(context);
   const processId = `process-${slugify(name) || "demo-process"}`;
+  const processIntent = detectProcessRunOutputIntent(context);
+  const shouldSeedRun = processIntent.wantsRunSurface || processIntent.wantsOutputSurface;
+  const runId = `run-${slugify(name) || "demo-process"}-proof`;
+  const runStartedAt = "2026-03-17T01:20:00.000Z";
+  const runCompletedAt = "2026-03-17T01:24:30.000Z";
+  const outputText = [
+    "Completed Task Output",
+    "PASS visual-border-contract",
+    "Run timeline rows and task output blocks use the standard block outline.",
+  ].join("\n");
   const process = buildProcessRecord({
     id: processId,
     name,
@@ -597,9 +677,28 @@ function buildProcessPreseedPlan(context) {
   const starterNode = buildProcessNode({
     processId,
     nodeId: `node-${slugify(name) || "demo"}`,
-    label: "Starter Step",
+    label: processIntent.wantsOutputSurface ? "Build Output" : "Starter Step",
     prompt: description,
   });
+  const processWithRun = shouldSeedRun
+    ? {
+        ...process,
+        last_run_at: runCompletedAt,
+        updated_at: runCompletedAt,
+      }
+    : process;
+  const runDetailRequirement = {
+    label: "process run detail",
+    anyOf: ["Run Detail", "Node Events", "Events", "Build Output"],
+  };
+  const outputRequirement = {
+    label: "process output block",
+    anyOf: ["Completed Task Output", "Output", "Copy output"],
+  };
+  const proofRequirements = normalizeProofRequirements([
+    shouldSeedRun ? runDetailRequirement : null,
+    processIntent.wantsOutputSurface ? outputRequirement : null,
+  ], 4);
   return {
     status: "preseeded",
     strategy: "preseed",
@@ -609,32 +708,76 @@ function buildProcessPreseedPlan(context) {
     rationale: `The process UI is most reliable when a concrete seeded process already exists, so the planner creates "${name}" ahead of capture.`,
     coverageGaps: [],
     seed: {
-      processes: [process],
+      processes: [processWithRun],
       processNodes: {
         [processId]: [starterNode],
       },
       processConnections: {
         [processId]: [],
       },
+      ...(shouldSeedRun ? {
+        processRuns: {
+          [processId]: [buildProcessRun({
+            processId,
+            runId,
+            startedAt: runStartedAt,
+            completedAt: runCompletedAt,
+            output: outputText,
+          })],
+        },
+        processRunEvents: {
+          [runId]: [buildProcessEvent({
+            processId,
+            runId,
+            nodeId: starterNode.node_id,
+            startedAt: "2026-03-17T01:20:10.000Z",
+            completedAt: "2026-03-17T01:23:48.000Z",
+            output: outputText,
+          })],
+        },
+      } : {}),
     },
-    seededEntities: [{ type: "process", processId, name, source: "generated" }],
+    seededEntities: [
+      { type: "process", processId, name, source: "generated" },
+      ...(shouldSeedRun ? [{ type: "process-run", processId, runId, label: "Completed Task Output", source: "generated" }] : []),
+    ],
     instructionPatch: {
-      systemPromptAppend: `A process named "${name}" is already seeded. Open that seeded process and leave its detail surface visible. Do not create another process.`,
-      proofInstruction: `Story to demonstrate: ${context.story} The seeded environment already contains a process named "${name}". Open that process and leave its detail or workflow surface visible. Do not create another process.`,
-      interactionInstruction: `Story to demonstrate: ${context.story} Keep the seeded process "${name}" selected. Prefer showing the process details or canvas state rather than reopening the creation dialog.`,
-      successChecklist: [
+      systemPromptAppend: [
+        `A process named "${name}" is already seeded. Open that seeded process and leave its detail surface visible. Do not create another process.`,
+        shouldSeedRun ? "A completed seeded run is also available; use it when the story mentions runs, events, tasks, output, blocks, or timeline UI." : null,
+      ].filter(Boolean).join(" "),
+      proofInstruction: shouldSeedRun
+        ? `Story to demonstrate: ${context.story} The seeded environment already contains a process named "${name}" with a completed run. Open that process, keep the Run Detail or Node Events surface visible, and expand the completed event if output text is hidden. Do not create another process.`
+        : `Story to demonstrate: ${context.story} The seeded environment already contains a process named "${name}". Open that process and leave its detail or workflow surface visible. Do not create another process.`,
+      interactionInstruction: shouldSeedRun
+        ? `Story to demonstrate: ${context.story} Keep the seeded process "${name}" selected. If the Run Detail opens, keep it visible. If Node Events are collapsed, expand the completed "${starterNode.label}" event so "Completed Task Output" or "Output" is visible.`
+        : `Story to demonstrate: ${context.story} Keep the seeded process "${name}" selected. Prefer showing the process details or canvas state rather than reopening the creation dialog.`,
+      successChecklist: normalizeArray([
         "The Processes app is open and its main panel is visible",
         `The seeded process "${name}" is present in the process list`,
         `The process name "${name}" is legible in the UI`,
-        "The process detail or selected-process sidekick is visible",
-      ],
-      validationSignals: [name, "Process"],
-      setupPlan: [
+        shouldSeedRun ? "Run Detail or Node Events are visible in the sidekick" : "The process detail or selected-process sidekick is visible",
+        processIntent.wantsOutputSurface ? "Completed Task Output or Output is visible inside a run/event block" : null,
+      ], 5),
+      validationSignals: normalizeArray([
+        name,
+        "Process",
+        shouldSeedRun ? "Run Detail" : null,
+        shouldSeedRun ? "Node Events" : null,
+        processIntent.wantsOutputSurface ? "Completed Task Output" : null,
+        processIntent.wantsOutputSurface ? "Output" : null,
+      ], 8),
+      proofRequirements,
+      requiredUiSignals: shouldSeedRun ? ["sidekickVisible"] : [],
+      forbiddenPhrases: shouldSeedRun ? ["No runs yet", "No events for this run", "No output persisted for this node"] : [],
+      setupPlan: normalizeArray([
         "Open or keep the Processes app visible.",
         `Select the seeded process "${name}".`,
-      ],
+        shouldSeedRun ? "Use the sidekick Runs, Events, or Run Detail surface instead of stopping on the blank canvas." : null,
+        processIntent.wantsOutputSurface ? `Expand the completed "${starterNode.label}" event if the output block is collapsed.` : null,
+      ], 6),
     },
-    score: 45,
+    score: shouldSeedRun ? 54 : 45,
     matchedKeywords: normalizeArray([name]),
     fileSignals: context.changedFiles.filter((file) => file.toLowerCase().includes("/process/")),
   };
@@ -1093,6 +1236,24 @@ function normalizeProofRequirements(entries, limit = 8) {
     .slice(0, limit);
 }
 
+function mergeProofRequirements(entries, limit = 8) {
+  const mergedByLabel = new Map();
+  for (const entry of normalizeProofRequirements(entries, 40)) {
+    const key = normalizeTextForMatch(entry.label || entry.anyOf[0]);
+    if (!key) {
+      continue;
+    }
+    const current = mergedByLabel.get(key);
+    mergedByLabel.set(key, current
+      ? {
+          ...current,
+          anyOf: normalizeArray([...current.anyOf, ...entry.anyOf], 4),
+        }
+      : entry);
+  }
+  return Array.from(mergedByLabel.values()).slice(0, limit);
+}
+
 function extractSeedEntityLabel(entity) {
   if (!entity || typeof entity !== "object") {
     return "";
@@ -1163,7 +1324,7 @@ export function applyDemoSeedPlanToBrief(brief, seedPlan) {
       ...deriveSeedPlanValidationSignals(seedPlan),
       ...(Array.isArray(brief.validationSignals) ? brief.validationSignals : []),
     ], 10),
-    proofRequirements: normalizeProofRequirements([
+    proofRequirements: mergeProofRequirements([
       ...(Array.isArray(brief.proofRequirements) ? brief.proofRequirements : []),
       ...deriveSeedPlanProofRequirements(seedPlan),
     ], 8),

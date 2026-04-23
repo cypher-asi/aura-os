@@ -191,6 +191,77 @@ test("buildDemoAgentBrief filters implementation-only validation hints from chan
   }
 });
 
+test("buildDemoAgentBrief requires process run output proof for output-block stories", async () => {
+  const previous = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+
+  const brief = await buildDemoAgentBrief({
+    prompt: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+    changedFiles: [
+      "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+      "interface/src/apps/process/components/ProcessEventOutput/ProcessEventOutput.tsx",
+    ],
+  });
+
+  assert.equal(brief.generator, "fallback");
+  assert.equal(brief.targetAppId, "process");
+  assert.ok(brief.requiredUiSignals.includes("sidekickVisible"));
+  assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Node Events")));
+  assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Completed Task Output")));
+  assert.ok(brief.forbiddenPhrases.includes("No output persisted for this node"));
+
+  if (previous) {
+    process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
+test("buildDemoAgentBrief keeps deterministic proof rules when Anthropic omits them", async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          title: "Process output borders",
+          story: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+          targetAppId: "process",
+          confidence: "high",
+          validationSignals: ["Demo Process", "Process"],
+          proofRequirements: [],
+          requiredUiSignals: [],
+          forbiddenPhrases: [],
+          desktopOnly: true,
+        }),
+      }],
+    }),
+  });
+
+  try {
+    const brief = await buildDemoAgentBrief({
+      prompt: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+      changedFiles: [
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+      ],
+    });
+
+    assert.equal(brief.targetAppId, "process");
+    assert.equal(brief.generator, "anthropic");
+    assert.ok(brief.requiredUiSignals.includes("sidekickVisible"));
+    assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Completed Task Output")));
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey) {
+      process.env.ANTHROPIC_API_KEY = previousKey;
+    } else {
+      delete process.env.ANTHROPIC_API_KEY;
+    }
+  }
+});
+
 test("buildDemoAgentBrief keeps changed-file inference working from the interface cwd", async () => {
   const previous = process.env.ANTHROPIC_API_KEY;
   const originalCwd = process.cwd();

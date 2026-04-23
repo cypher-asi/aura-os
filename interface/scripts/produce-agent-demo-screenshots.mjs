@@ -255,6 +255,9 @@ function isVisibleBox(box) {
 
 const TARGET_SCREENSHOT_ASPECT_RATIO = 16 / 9;
 const EARLY_STOP_REASON = "proof-achieved";
+const MAIN_PANEL_SELECTOR = '[data-agent-surface="main-panel"]';
+const SIDEKICK_HEADER_SELECTOR = '[data-agent-surface="sidekick-header"], [aria-label="Sidekick header"]';
+const SIDEKICK_PANEL_SELECTOR = '[data-agent-surface="sidekick-panel"], [aria-label="Sidekick panel"]';
 
 async function firstVisibleBox(candidates) {
   for (const candidate of candidates) {
@@ -484,7 +487,7 @@ async function findTextFocusedSurfaceBox(page, focusPhrases = []) {
     const minArea = 18000;
     const roots = [
       { targetName: "agent-detail-panel", node: document.querySelector('[data-agent-surface="agent-detail-panel"]') },
-      { targetName: "sidekick-panel", node: document.querySelector('[data-agent-surface="sidekick-panel"]') },
+      { targetName: "sidekick-panel", node: document.querySelector('[data-agent-surface="sidekick-panel"], [aria-label="Sidekick panel"]') },
       { targetName: "feedback-thread", node: document.querySelector('[data-agent-surface="feedback-thread"]') },
       { targetName: "notes-editor", node: document.querySelector('[data-agent-surface="notes-editor"]') },
       { targetName: "main-panel", node: document.querySelector('[data-agent-surface="main-panel"]') },
@@ -555,12 +558,12 @@ async function findMainPanelProofFocus(page, mainPanel) {
 
   const maxCandidateArea = boxArea(mainPanelShot.box) * 0.88;
   const selectors = [
-    '[data-agent-surface="main-panel"] [data-agent-selected="true"]',
-    '[data-agent-surface="main-panel"] [aria-selected="true"]',
-    '[data-agent-surface="main-panel"] [role="article"]',
-    '[data-agent-surface="main-panel"] article',
-    '[data-agent-surface="main-panel"] [role="listitem"]',
-    '[data-agent-surface="main-panel"] [role="row"]',
+    `${MAIN_PANEL_SELECTOR} [data-agent-selected="true"]`,
+    `${MAIN_PANEL_SELECTOR} [aria-selected="true"]`,
+    `${MAIN_PANEL_SELECTOR} [role="article"]`,
+    `${MAIN_PANEL_SELECTOR} article`,
+    `${MAIN_PANEL_SELECTOR} [role="listitem"]`,
+    `${MAIN_PANEL_SELECTOR} [role="row"]`,
   ];
 
   for (const selector of selectors) {
@@ -617,9 +620,9 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     };
   }
 
-  const mainPanel = page.locator('[data-agent-surface="main-panel"]').first();
-  const sidekickHeader = page.locator('[data-agent-surface="sidekick-header"]').first();
-  const sidekickPanel = page.locator('[data-agent-surface="sidekick-panel"]').first();
+  const mainPanel = page.locator(MAIN_PANEL_SELECTOR).first();
+  const sidekickHeader = page.locator(SIDEKICK_HEADER_SELECTOR).first();
+  const sidekickPanel = page.locator(SIDEKICK_PANEL_SELECTOR).first();
   const shellPlaceholder = page.locator('[data-agent-surface="shell-route-placeholder"]').first();
   const feedbackThread = page.locator('[data-agent-surface="feedback-thread"]').first();
   const agentList = page.locator('[data-agent-surface="agent-list"]').first();
@@ -627,42 +630,6 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const agentDetailPanel = page.locator('[data-agent-surface="agent-detail-panel"]').first();
   const notesEditor = page.locator('[data-agent-surface="notes-editor"]').first();
   const requiresSidekick = normalizeArray(options.requiredUiSignals).includes("sidekickVisible");
-
-  if (requiresSidekick) {
-    const requiredTargets = [];
-    const mainPanelShot = await firstVisibleBox([{ kind: "main-panel", locator: mainPanel, padding: 24 }]);
-    const sidekickHeaderShot = await firstVisibleBox([{ kind: "sidekick-header", locator: sidekickHeader, padding: 24 }]);
-    const sidekickPanelShot = await firstVisibleBox([{ kind: "sidekick-panel", locator: sidekickPanel, padding: 24 }]);
-
-    if (mainPanelShot) {
-      requiredTargets.push({
-        locator: mainPanelShot.locator,
-        targetName: "main-panel",
-      });
-    }
-    if (sidekickHeaderShot) {
-      requiredTargets.push({
-        locator: sidekickHeaderShot.locator,
-        targetName: "sidekick-header",
-      });
-    }
-    if (sidekickPanelShot) {
-      requiredTargets.push({
-        locator: sidekickPanelShot.locator,
-        targetName: "sidekick-panel",
-      });
-    }
-
-    if (sidekickPanelShot && requiredTargets.length > 0) {
-      const clip = await unionClip(page, requiredTargets.map((target) => target.locator), 24);
-      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
-      return {
-        kind: "surface-union",
-        targets: requiredTargets.map((target) => target.targetName),
-        clip,
-      };
-    }
-  }
 
   const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
   if (isVisibleBox(textLocatorBox)) {
@@ -695,6 +662,42 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     };
   }
 
+  if (requiresSidekick) {
+    const requiredTargets = [];
+    const mainPanelFocus = await findMainPanelProofFocus(page, mainPanel);
+    const sidekickHeaderShot = await firstVisibleBox([{ kind: "sidekick-header", locator: sidekickHeader, padding: 24 }]);
+    const sidekickPanelShot = await firstVisibleBox([{ kind: "sidekick-panel", locator: sidekickPanel, padding: 24 }]);
+
+    if (mainPanelFocus) {
+      requiredTargets.push({
+        locator: mainPanelFocus.locator,
+        targetName: "main-panel",
+      });
+    }
+    if (sidekickHeaderShot) {
+      requiredTargets.push({
+        locator: sidekickHeaderShot.locator,
+        targetName: "sidekick-header",
+      });
+    }
+    if (sidekickPanelShot) {
+      requiredTargets.push({
+        locator: sidekickPanelShot.locator,
+        targetName: "sidekick-panel",
+      });
+    }
+
+    if (sidekickPanelShot && requiredTargets.length > 0) {
+      const clip = await unionClip(page, requiredTargets.map((target) => target.locator), 24);
+      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+      return {
+        kind: "surface-union",
+        targets: requiredTargets.map((target) => target.targetName),
+        clip,
+      };
+    }
+  }
+
   const focusedSurface = await firstVisibleBox([
     { kind: "notes-editor", locator: notesEditor, padding: 24 },
     { kind: "feedback-thread", locator: feedbackThread, padding: 24 },
@@ -718,9 +721,29 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     const screenshotTargets = [mainPanelFocus];
     const sidekickPanelShot = await firstVisibleBox([{ kind: "sidekick-panel", locator: sidekickPanel, padding: 24 }]);
     const sidekickHeaderShot = await firstVisibleBox([{ kind: "sidekick-header", locator: sidekickHeader, padding: 24 }]);
+    const sidekickText = sidekickPanelShot
+      ? await sidekickPanel.innerText().catch(() => "")
+      : "";
+    const normalizedSidekickText = normalizeTextForMatch(sidekickText);
+    const sidekickHasFocusText = normalizeArray(focusPhrases).some((phrase) => {
+      const normalizedPhrase = normalizeTextForMatch(phrase);
+      return normalizedPhrase && normalizedSidekickText.includes(normalizedPhrase);
+    });
 
-    if (sidekickPanelShot && shouldIncludeCompanionSurface(mainPanelFocus.box, sidekickPanelShot.box, viewport)) {
-      if (sidekickHeaderShot && shouldIncludeCompanionSurface(mainPanelFocus.box, sidekickHeaderShot.box, viewport)) {
+    if (
+      sidekickPanelShot
+      && (
+        sidekickHasFocusText
+        || shouldIncludeCompanionSurface(mainPanelFocus.box, sidekickPanelShot.box, viewport)
+      )
+    ) {
+      if (
+        sidekickHeaderShot
+        && (
+          sidekickHasFocusText
+          || shouldIncludeCompanionSurface(mainPanelFocus.box, sidekickHeaderShot.box, viewport)
+        )
+      ) {
         screenshotTargets.push({
           locator: sidekickHeaderShot.locator,
           box: sidekickHeaderShot.box,
@@ -806,9 +829,9 @@ function resolveScreenshotTargetLocators(page, screenshot) {
   addTarget("agent-list", page.locator('[data-agent-surface="agent-list"]'));
   addTarget("agent-chat-panel", page.locator('[data-agent-surface="agent-chat-panel"]'));
   addTarget("agent-detail-panel", page.locator('[data-agent-surface="agent-detail-panel"]'));
-  addTarget("main-panel", page.locator('[data-agent-surface="main-panel"]'));
-  addTarget("sidekick-header", page.locator('[data-agent-surface="sidekick-header"]'));
-  addTarget("sidekick-panel", page.locator('[data-agent-surface="sidekick-panel"]'));
+  addTarget("main-panel", page.locator(MAIN_PANEL_SELECTOR));
+  addTarget("sidekick-header", page.locator(SIDEKICK_HEADER_SELECTOR));
+  addTarget("sidekick-panel", page.locator(SIDEKICK_PANEL_SELECTOR));
   addTarget("shell-route-placeholder", page.locator('[data-agent-surface="shell-route-placeholder"]'));
 
   return locators;
@@ -1297,7 +1320,7 @@ async function collectPageUiSignals(page) {
       errorTextVisible: errorPatterns.some((pattern) => pattern.test(bodyText)),
       feedbackThreadVisible: isVisible('[data-agent-surface="feedback-thread"]'),
       notesEditorVisible: isVisible('[data-agent-surface="notes-editor"]'),
-      sidekickVisible: isVisible('[data-agent-surface="sidekick-panel"]'),
+      sidekickVisible: isVisible('[data-agent-surface="sidekick-panel"], [aria-label="Sidekick panel"]'),
     };
   }).catch(() => ({
     activeAppId: null,

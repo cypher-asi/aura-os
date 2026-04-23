@@ -260,7 +260,7 @@ jobs:
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           workflow_outcome="$(jq -r '.workflowOutcome // "failure"' "$summary_file")"
-          should_fail="$(jq -r '.shouldFailWorkflow // true' "$summary_file")"
+          should_fail="$(jq -r 'if has("shouldFailWorkflow") then .shouldFailWorkflow else true end' "$summary_file")"
           echo "workflow_outcome=$workflow_outcome" >> "$GITHUB_OUTPUT"
           echo "should_fail=$should_fail" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"

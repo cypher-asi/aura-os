@@ -31,6 +31,14 @@ function tokenize(values) {
   );
 }
 
+function normalizeTextForMatch(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function humanizeIdentifier(value) {
   return String(value || "")
     .replace(/\.[^.]+$/, "")
@@ -54,8 +62,11 @@ function looksLikeInternalProofPhrase(value) {
     return true;
   }
 
+  const words = text.split(/\s+/g).filter(Boolean);
+  const looksLikeShortUiLabel = words.length <= 3 && words.some((word) => /^[A-Z][A-Za-z0-9]*$/.test(word));
   if (
-    /(?:store|cache|bootstrap|hydration|handler|handlers|hook|hooks|selector|selectors|state|query|queries|util|utils|runner|stream|event|events|fixture|fixtures|test|tests|spec|specs|module)$/i.test(text)
+    !looksLikeShortUiLabel
+    && /(?:store|cache|bootstrap|hydration|handler|handlers|hook|hooks|selector|selectors|state|query|queries|util|utils|runner|stream|event|events|fixture|fixtures|test|tests|spec|specs|module)$/i.test(text)
   ) {
     return true;
   }
@@ -630,6 +641,24 @@ function normalizeProofRequirements(requirements, limit = 6) {
     .slice(0, limit);
 }
 
+function mergeProofRequirements(requirements, limit = 6) {
+  const mergedByLabel = new Map();
+  for (const requirement of normalizeProofRequirements(requirements, 40)) {
+    const key = normalizeTextForMatch(requirement.label || requirement.anyOf[0]);
+    if (!key) {
+      continue;
+    }
+    const current = mergedByLabel.get(key);
+    mergedByLabel.set(key, current
+      ? {
+          ...current,
+          anyOf: sanitizeVisibleProofPhrases([...current.anyOf, ...requirement.anyOf], 4),
+        }
+      : requirement);
+  }
+  return Array.from(mergedByLabel.values()).slice(0, limit);
+}
+
 function buildStoryProofRules({ story, targetApp, surfaceHints = [] }) {
   const loweredStory = String(story || "").toLowerCase();
   const isAgentCreationStory = targetApp?.id === "agents"
@@ -671,6 +700,26 @@ function buildStoryProofRules({ story, targetApp, surfaceHints = [] }) {
 
   if (/\bskills?\b/i.test(loweredStory) && !(/\bdelete\b|\bremove\b/i.test(loweredStory) && /\bskill\b/i.test(loweredStory))) {
     addRequirement("skills surface", ["Installed", "My Skills", "Available", "Skill Shop"]);
+  }
+
+  if (targetApp?.id === "process") {
+    const surfaceText = surfaceHints.join(" ").toLowerCase();
+    const wantsRunSurface = /\b(run|runs|timeline|event|events|node|sidekick|preview)\b/i.test(loweredStory)
+      || /\b(event timeline|run preview|process sidekick|node output|process event)\b/i.test(surfaceText);
+    const wantsOutputSurface = /\b(output|outputs|task|tasks|live|build|block|blocks|artifact|artifacts)\b/i.test(loweredStory)
+      || /\b(node output|process event output|run preview)\b/i.test(surfaceText);
+
+    if (wantsRunSurface || wantsOutputSurface) {
+      requiredUiSignals.push("sidekickVisible");
+      addRequirement("process run detail", ["Run Detail", "Node Events", "Events", "Build Output"]);
+      forbiddenPhrases.push("No runs yet");
+      forbiddenPhrases.push("No events for this run");
+    }
+
+    if (wantsOutputSurface) {
+      addRequirement("process output block", ["Output", "Completed Task Output", "Copy output"]);
+      forbiddenPhrases.push("No output persisted for this node");
+    }
   }
 
   if (isAgentCreationStory) {
@@ -974,22 +1023,25 @@ function validateBrief(candidate, fallback, apps) {
     targetApp,
     surfaceHints,
   });
-  const proofRequirements = normalizeProofRequirements(
-    candidate.proofRequirements
-    ?? fallback.proofRequirements
-    ?? proofRules.proofRequirements,
-    6,
-  );
+  const proofRequirements = mergeProofRequirements([
+    ...(Array.isArray(candidate.proofRequirements) ? candidate.proofRequirements : []),
+    ...(Array.isArray(fallback.proofRequirements) ? fallback.proofRequirements : []),
+    ...proofRules.proofRequirements,
+  ], 6);
   const requiredUiSignals = normalizeArray(
-    candidate.requiredUiSignals
-    ?? fallback.requiredUiSignals
-    ?? proofRules.requiredUiSignals,
+    [
+      ...(Array.isArray(candidate.requiredUiSignals) ? candidate.requiredUiSignals : []),
+      ...(Array.isArray(fallback.requiredUiSignals) ? fallback.requiredUiSignals : []),
+      ...proofRules.requiredUiSignals,
+    ],
     4,
   );
   const forbiddenPhrases = normalizeArray(
-    candidate.forbiddenPhrases
-    ?? fallback.forbiddenPhrases
-    ?? proofRules.forbiddenPhrases,
+    [
+      ...(Array.isArray(candidate.forbiddenPhrases) ? candidate.forbiddenPhrases : []),
+      ...(Array.isArray(fallback.forbiddenPhrases) ? fallback.forbiddenPhrases : []),
+      ...proofRules.forbiddenPhrases,
+    ],
     6,
   );
 

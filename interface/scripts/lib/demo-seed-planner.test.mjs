@@ -39,6 +39,40 @@ test("process story becomes a preseeded process plan", async () => {
   assert.equal(plan.seed.processNodes["process-launch-review"][0]?.label, "Starter Step");
 });
 
+test("process output story seeds run detail proof instead of accepting a blank canvas", async () => {
+  const brief = {
+    title: "Process output borders",
+    story: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+    targetAppId: "process",
+    startPath: "/process",
+    changedFileEvidence: {
+      files: [
+        {
+          filePath: "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+          surfaceLabel: "Event Timeline Item",
+          componentNames: ["EventTimelineItem", "EventsTimeline"],
+        },
+      ],
+    },
+  };
+
+  const plan = await buildDemoSeedPlan({
+    brief,
+    changedFiles: [
+      "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+    ],
+  });
+
+  assert.equal(plan.capabilityId, "process.preseed-process");
+  assert.equal(plan.status, "preseeded");
+  assert.ok(plan.seed.processRuns["process-demo-process"]);
+  assert.ok(plan.seed.processRunEvents["run-demo-process-proof"]);
+  assert.equal(plan.seed.processNodes["process-demo-process"][0]?.label, "Build Output");
+  assert.ok(plan.instructionPatch.proofRequirements.some((entry) => entry.anyOf.includes("Completed Task Output")));
+  assert.ok(plan.instructionPatch.requiredUiSignals.includes("sidekickVisible"));
+  assert.ok(plan.instructionPatch.forbiddenPhrases.includes("No output persisted for this node"));
+});
+
 test("feed story becomes a preseeded feed plan from the desktop shell", async () => {
   const brief = {
     title: "Show feed",
