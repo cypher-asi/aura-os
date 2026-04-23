@@ -344,35 +344,119 @@ fn loop_status_details(
     (state.to_string(), None, None, None)
 }
 
+/// Summary of what kinds of files a task actually touched. Drives the
+/// Definition-of-Done gate: docs-only changes skip build/test, while
+/// Rust source changes get the full four-gate treatment.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct PathChangeClassification {
+    /// At least one changed path is source code we recognise (a file
+    /// whose extension implies it participates in a build).
+    has_source: bool,
+    /// At least one changed path is a Rust source file (`*.rs`). When
+    /// true, `has_source` is also true. `Cargo.lock` and `Cargo.toml`
+    /// are not treated as Rust source for gate purposes — they don't
+    /// change behavior on their own, and Cargo regenerates `Cargo.lock`
+    /// on build.
+    has_rust: bool,
+}
+
+/// Classify the set of changed paths into source/docs/Rust buckets.
+///
+/// Source extensions are deliberately conservative: if we're unsure,
+/// we treat a path as docs-like so we don't false-fail a legitimate
+/// content-only task. Adding an extension here tightens the gate; the
+/// flip side is that new languages default to the loose docs treatment
+/// until they're added.
+fn classify_changed_paths(
+    files_changed: &[aura_os_storage::StorageTaskFileChangeSummary],
+) -> PathChangeClassification {
+    const SOURCE_EXTS: &[&str] = &[
+        ".rs", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rb", ".java", ".kt",
+        ".swift", ".cpp", ".cc", ".c", ".h", ".hpp", ".cs", ".scala", ".php",
+    ];
+    let mut result = PathChangeClassification::default();
+    for f in files_changed {
+        let lower = f.path.to_ascii_lowercase();
+        if lower.ends_with(".rs") {
+            result.has_rust = true;
+            result.has_source = true;
+            continue;
+        }
+        if SOURCE_EXTS.iter().any(|ext| lower.ends_with(ext)) {
+            result.has_source = true;
+        }
+    }
+    result
+}
+
+/// Snapshot of the inputs the Definition-of-Done gate considered when
+/// it decided whether to accept or reject a completion. Emitted as a
+/// `task_completion_gate` domain event so supervisors and the UI can
+/// audit gate decisions without having to replay the full run stream.
+#[derive(Clone, Debug, Default, serde::Serialize)]
+struct CompletionGateReport {
+    had_live_output: bool,
+    n_files_changed: usize,
+    has_source_change: bool,
+    has_rust_change: bool,
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+    /// `None` on pass; the reason string that would be recorded on the
+    /// task on fail.
+    failure_reason: Option<String>,
+}
+
+impl CompletionGateReport {
+    fn from_cached(cached: &CachedTaskOutput) -> Self {
+        let paths = classify_changed_paths(&cached.files_changed);
+        Self {
+            had_live_output: !cached.live_output.trim().is_empty(),
+            n_files_changed: cached.files_changed.len(),
+            has_source_change: paths.has_source,
+            has_rust_change: paths.has_rust,
+            n_build_steps: cached.build_steps.len(),
+            n_test_steps: cached.test_steps.len(),
+            n_format_steps: cached.format_steps.len(),
+            n_lint_steps: cached.lint_steps.len(),
+            failure_reason: None,
+        }
+    }
+}
+
 /// Determine whether a cached task output represents genuine, verified work.
 ///
 /// This is the **Definition-of-Done gate** that sits between the harness
 /// emitting `task_completed` and the server transitioning the task to
-/// `done` in storage. It rejects completions that either show no activity
-/// at all, or show code changes without accompanying build/test evidence.
+/// `done` in storage. Rejects completions that either show no activity,
+/// or show source-code changes without accompanying verification
+/// evidence matching the change's language.
 ///
-/// Layered checks, returning the first failure reason found:
+/// Layered checks (first failure wins):
 ///
-/// 1. **Baseline activity check** — rejects runs that produced no live
-///    output, no file changes, and no verification steps. Catches
-///    automatons that claim success after doing literally nothing.
-/// 2. **Code-change evidence check** — if the task modified files, the
-///    run must include at least one build step *and* at least one test
-///    step. Catches "I'm done" claims where the agent edited code but
-///    never compiled or ran the suite. This is the core of the
-///    Definition of Done: a code change without `cargo build` + `cargo
-///    test` (or equivalent) evidence cannot be marked done.
-///
-/// `format_steps` / `lint_steps` are tracked for observability but are
-/// not yet gate-blocking — too many legitimate tasks (docs, schema,
-/// chores) have no lint surface, and we don't want to false-fail them.
-/// The fields are surfaced in telemetry so the gate can be tightened
-/// once the harness reliably emits fmt/clippy evidence.
+/// 1. **Baseline activity** — rejects runs with no live output, no file
+///    changes, and no verification steps. Catches automatons that claim
+///    success after doing nothing.
+/// 2. **Source-change evidence** — if the task modified a file with a
+///    recognised source extension (`*.rs`, `*.ts`, `*.py`, etc.), the
+///    run must include at least one build step and one test step. Docs
+///    or config-only changes (`*.md`, `*.toml`, `*.yaml`, etc.) skip
+///    this check since `cargo build` / `cargo test` would be nonsense
+///    for them.
+/// 3. **Rust-strict evidence** — if the task modified any `*.rs` file,
+///    the run must additionally include a format step and a lint step
+///    (e.g. `cargo fmt --check` and `cargo clippy`). This is the full
+///    four-gate Definition of Done. Non-Rust source languages don't
+///    currently get this treatment; we'll add them once the harness
+///    reliably emits format/lint evidence for them.
 fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
     let has_output = !cached.live_output.trim().is_empty();
     let has_file_changes = !cached.files_changed.is_empty();
     let has_build = !cached.build_steps.is_empty();
     let has_test = !cached.test_steps.is_empty();
+    let has_fmt = !cached.format_steps.is_empty();
+    let has_lint = !cached.lint_steps.is_empty();
     let has_verification = has_build || has_test;
 
     if !has_output && !has_file_changes && !has_verification {
@@ -381,15 +465,29 @@ fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'s
         );
     }
 
-    if has_file_changes && !has_build {
+    let paths = classify_changed_paths(&cached.files_changed);
+
+    if paths.has_source && !has_build {
         return Some(
-            "Task modified code but no build/compile step was run (Definition of Done: cargo build or equivalent must pass before task_done)",
+            "Task modified source code but no build/compile step was run (Definition of Done: cargo build or equivalent must pass before task_done)",
         );
     }
 
-    if has_file_changes && !has_test {
+    if paths.has_source && !has_test {
         return Some(
-            "Task modified code but no test step was run (Definition of Done: cargo test or equivalent must pass before task_done)",
+            "Task modified source code but no test step was run (Definition of Done: cargo test or equivalent must pass before task_done)",
+        );
+    }
+
+    if paths.has_rust && !has_fmt {
+        return Some(
+            "Task modified Rust source but no format check was run (Definition of Done: cargo fmt --all -- --check must pass before task_done)",
+        );
+    }
+
+    if paths.has_rust && !has_lint {
+        return Some(
+            "Task modified Rust source but no lint check was run (Definition of Done: cargo clippy --workspace --all-targets -- -D warnings must pass before task_done)",
         );
     }
 
@@ -2233,8 +2331,32 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     &cached,
                                 )
                                 .await;
-                                if let Some(reason) = completion_validation_failure_reason(&cached)
-                                {
+                                let gate_reason =
+                                    completion_validation_failure_reason(&cached);
+                                let mut gate_report = CompletionGateReport::from_cached(&cached);
+                                gate_report.failure_reason =
+                                    gate_reason.map(|r| r.to_string());
+                                if let Ok(payload) = serde_json::to_value(&gate_report) {
+                                    let mut payload = payload;
+                                    if let Some(obj) = payload.as_object_mut() {
+                                        obj.insert(
+                                            "task_id".into(),
+                                            serde_json::Value::String(tid.clone()),
+                                        );
+                                        obj.insert(
+                                            "passed".into(),
+                                            serde_json::Value::Bool(gate_reason.is_none()),
+                                        );
+                                    }
+                                    emit_domain_event(
+                                        &app_broadcast,
+                                        "task_completion_gate",
+                                        project_id,
+                                        agent_instance_id,
+                                        payload,
+                                    );
+                                }
+                                if let Some(reason) = gate_reason {
                                     session_status = "failed";
                                     if let (Some(storage_client), Some(jwt)) =
                                         (storage_client.as_ref(), jwt.as_deref())
@@ -4873,12 +4995,86 @@ mod tests {
     }
 
     #[test]
-    fn completion_validation_passes_code_changes_with_build_and_test() {
+    fn completion_validation_blocks_rust_changes_without_format() {
+        // Rust change with build + test but no `cargo fmt --check` must
+        // fail the Rust-strict tier of the Definition of Done.
+        let cached = CachedTaskOutput {
+            live_output: "ran build+test but skipped formatter".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            ..Default::default()
+        };
+        let reason = completion_validation_failure_reason(&cached).expect("gate should fire");
+        assert!(
+            reason.contains("no format check"),
+            "expected format-step reason, got: {reason}"
+        );
+    }
+
+    #[test]
+    fn completion_validation_blocks_rust_changes_without_lint() {
+        // Rust change with build + test + fmt but no clippy must still
+        // fail: the four-gate DoD requires lint evidence for Rust.
+        let cached = CachedTaskOutput {
+            live_output: "ran build+test+fmt but skipped clippy".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
+            ..Default::default()
+        };
+        let reason = completion_validation_failure_reason(&cached).expect("gate should fire");
+        assert!(
+            reason.contains("no lint check"),
+            "expected lint-step reason, got: {reason}"
+        );
+    }
+
+    #[test]
+    fn completion_validation_passes_rust_changes_with_full_four_gate() {
+        // build + test + fmt + clippy evidence for a Rust change is
+        // exactly what the Definition of Done asks for.
         let cached = CachedTaskOutput {
             live_output: "all green".into(),
             files_changed: vec![modify_summary("src/lib.rs")],
             build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
             test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
+            lint_steps: vec![serde_json::json!({"type": "lint_verification_passed"})],
+            ..Default::default()
+        };
+        assert_eq!(completion_validation_failure_reason(&cached), None);
+    }
+
+    #[test]
+    fn completion_validation_passes_non_rust_source_with_build_and_test() {
+        // Non-Rust source (TypeScript here) currently only needs
+        // build + test evidence. We'll tighten this once the harness
+        // reliably emits fmt/lint evidence for JS/TS tasks; for now
+        // the looser rule prevents legitimate pnpm-only projects from
+        // false-failing the gate.
+        let cached = CachedTaskOutput {
+            live_output: "tsc + vitest green".into(),
+            files_changed: vec![modify_summary("apps/web/src/app.ts")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            ..Default::default()
+        };
+        assert_eq!(completion_validation_failure_reason(&cached), None);
+    }
+
+    #[test]
+    fn completion_validation_allows_docs_only_changes_without_verification() {
+        // Editing a README should not require `cargo build` / `cargo
+        // test` to pass the gate — there's no source to build.
+        let cached = CachedTaskOutput {
+            live_output: "updated README".into(),
+            files_changed: vec![
+                modify_summary("README.md"),
+                modify_summary("docs/spec.md"),
+                modify_summary(".gitignore"),
+            ],
             ..Default::default()
         };
         assert_eq!(completion_validation_failure_reason(&cached), None);
@@ -4894,6 +5090,70 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(completion_validation_failure_reason(&cached), None);
+    }
+
+    #[test]
+    fn classify_changed_paths_distinguishes_rust_from_docs() {
+        let only_docs = vec![modify_summary("README.md"), modify_summary("CHANGELOG.md")];
+        let c = classify_changed_paths(&only_docs);
+        assert!(
+            !c.has_source && !c.has_rust,
+            "docs-only must not be classified as source"
+        );
+
+        let rust = vec![modify_summary("crates/aura-os-core/src/lib.rs")];
+        let c = classify_changed_paths(&rust);
+        assert!(c.has_rust && c.has_source, "*.rs must be Rust source");
+
+        let ts = vec![modify_summary("apps/web/src/main.tsx")];
+        let c = classify_changed_paths(&ts);
+        assert!(
+            c.has_source && !c.has_rust,
+            "*.tsx must be source but not Rust"
+        );
+
+        let mixed = vec![
+            modify_summary("README.md"),
+            modify_summary("crates/foo/src/lib.rs"),
+        ];
+        let c = classify_changed_paths(&mixed);
+        assert!(c.has_rust && c.has_source, "mixed set must see the Rust file");
+
+        let cargo_lock = vec![modify_summary("Cargo.lock")];
+        let c = classify_changed_paths(&cargo_lock);
+        assert!(
+            !c.has_rust && !c.has_source,
+            "Cargo.lock alone must not force the Rust gate"
+        );
+    }
+
+    #[test]
+    fn completion_gate_report_snapshots_all_inputs() {
+        let cached = CachedTaskOutput {
+            live_output: "hello".into(),
+            files_changed: vec![
+                modify_summary("src/lib.rs"),
+                modify_summary("README.md"),
+            ],
+            build_steps: vec![serde_json::json!({"ok": true})],
+            test_steps: vec![serde_json::json!({"ok": true})],
+            format_steps: vec![],
+            lint_steps: vec![],
+            ..Default::default()
+        };
+        let report = CompletionGateReport::from_cached(&cached);
+        assert!(report.had_live_output);
+        assert_eq!(report.n_files_changed, 2);
+        assert!(report.has_source_change);
+        assert!(report.has_rust_change);
+        assert_eq!(report.n_build_steps, 1);
+        assert_eq!(report.n_test_steps, 1);
+        assert_eq!(report.n_format_steps, 0);
+        assert_eq!(report.n_lint_steps, 0);
+        // The report itself doesn't run the gate — failure_reason is
+        // populated by the caller using
+        // `completion_validation_failure_reason`.
+        assert!(report.failure_reason.is_none());
     }
 
     #[test]
