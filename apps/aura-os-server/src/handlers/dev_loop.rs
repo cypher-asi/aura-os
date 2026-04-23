@@ -197,6 +197,13 @@ enum FailureClass {
 enum InfraFailureClass {
     ProviderRateLimited,
     ProviderOverloaded,
+    /// Upstream LLM / proxy returned a transient 5xx (500/502/503/504),
+    /// or the streaming connection aborted mid-response without a
+    /// terminal event. Distinct from [`ProviderOverloaded`] (429/529)
+    /// because the typical clear time is much shorter — provider
+    /// internal errors usually resolve within seconds, while rate-limit
+    /// windows are on the order of a minute.
+    ProviderInternalError,
     TransportTimeout,
     /// Pre-commit git operation timeout (`git add` / `git commit`). The
     /// task's work is not yet persisted anywhere, so we reset the task
@@ -300,6 +307,29 @@ fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
     {
         return Some(InfraFailureClass::ProviderOverloaded);
     }
+    // Transient upstream 5xx from the LLM provider / proxy. Includes
+    // mid-stream aborts surfaced by aura-reasoner as "stream terminated
+    // with error: …" (see `aura-harness/crates/aura-reasoner/src/types/
+    // streaming.rs`), which the harness wraps as "LLM error: …" before
+    // the task_failed event carries the string here. Matched against
+    // the lowercased reason so both the bare HTTP status codes and the
+    // prose forms classify the same way.
+    let has_5xx_status = lower.contains("500")
+        || lower.contains("502")
+        || lower.contains("503")
+        || lower.contains("504");
+    let has_5xx_prose = lower.contains("internal server error")
+        || lower.contains("bad gateway")
+        || lower.contains("service unavailable")
+        || lower.contains("gateway timeout");
+    let has_stream_abort = lower.contains("stream terminated")
+        || lower.contains("stream closed prematurely")
+        || lower.contains("connection reset")
+        || lower.contains("broken pipe")
+        || lower.contains("connection closed unexpectedly");
+    if has_5xx_status || has_5xx_prose || has_stream_abort {
+        return Some(InfraFailureClass::ProviderInternalError);
+    }
     if lower.contains("timed out") || lower.contains("timeout") {
         return Some(InfraFailureClass::TransportTimeout);
     }
@@ -310,6 +340,10 @@ fn infra_cooldown_for(class: InfraFailureClass) -> Duration {
     match class {
         InfraFailureClass::ProviderRateLimited => Duration::from_secs(60),
         InfraFailureClass::ProviderOverloaded => Duration::from_secs(30),
+        // Provider 5xx / stream aborts typically clear faster than
+        // rate-limit windows — keep the base cooldown short so a
+        // single blip doesn't stall the loop for a minute.
+        InfraFailureClass::ProviderInternalError => Duration::from_secs(10),
         InfraFailureClass::TransportTimeout => Duration::from_secs(20),
         InfraFailureClass::GitTimeout => Duration::from_secs(15),
         // `GitPushTimeout` never takes the pause-and-restart path, so
@@ -323,6 +357,7 @@ fn infra_failure_label(class: InfraFailureClass) -> &'static str {
     match class {
         InfraFailureClass::ProviderRateLimited => "provider_rate_limited",
         InfraFailureClass::ProviderOverloaded => "provider_overloaded",
+        InfraFailureClass::ProviderInternalError => "provider_internal_error",
         InfraFailureClass::TransportTimeout => "transport_timeout",
         InfraFailureClass::GitTimeout => "git_timeout",
         InfraFailureClass::GitPushTimeout => "git_push_timeout",
@@ -5395,6 +5430,116 @@ mod tests {
         assert_eq!(
             classify_infra_failure("syntax error in generated code"),
             None
+        );
+    }
+
+    #[test]
+    fn classify_infra_failure_detects_provider_internal_errors() {
+        // The exact string this user saw: the harness wraps the
+        // aura-reasoner stream-terminator as `LLM error: …`, so the
+        // dev loop observes it verbatim inside the `task_failed`
+        // event's reason field. Must classify as
+        // `ProviderInternalError` so the auto-retry path fires.
+        assert_eq!(
+            classify_infra_failure(
+                "LLM error: stream terminated with error: Internal server error"
+            ),
+            Some(InfraFailureClass::ProviderInternalError)
+        );
+        // Status-only variants cover the case where the classifier
+        // is fed the raw HTTP error without prose.
+        for reason in [
+            "HTTP 500 from upstream",
+            "upstream returned 502 Bad Gateway",
+            "Received 503 Service Unavailable",
+            "504 Gateway Timeout from Anthropic proxy",
+        ] {
+            assert_eq!(
+                classify_infra_failure(reason),
+                Some(InfraFailureClass::ProviderInternalError),
+                "expected ProviderInternalError for: {reason}"
+            );
+        }
+        // Prose-only variants (no status code) must classify too —
+        // some proxies elide the numeric status.
+        for reason in [
+            "Internal Server Error",
+            "bad gateway",
+            "service unavailable, try again",
+            "gateway timeout while reading response",
+        ] {
+            assert_eq!(
+                classify_infra_failure(reason),
+                Some(InfraFailureClass::ProviderInternalError),
+                "expected ProviderInternalError for: {reason}"
+            );
+        }
+        // Stream-abort variants — reasoner can surface the
+        // underlying socket error without a status code when the
+        // response body closes mid-flight.
+        for reason in [
+            "stream terminated unexpectedly",
+            "stream closed prematurely",
+            "connection reset by peer",
+            "broken pipe while reading SSE body",
+            "connection closed unexpectedly",
+        ] {
+            assert_eq!(
+                classify_infra_failure(reason),
+                Some(InfraFailureClass::ProviderInternalError),
+                "expected ProviderInternalError for: {reason}"
+            );
+        }
+    }
+
+    #[test]
+    fn classify_infra_failure_provider_internal_is_case_insensitive() {
+        assert_eq!(
+            classify_infra_failure("LLM ERROR: STREAM TERMINATED WITH ERROR: INTERNAL SERVER ERROR"),
+            Some(InfraFailureClass::ProviderInternalError)
+        );
+        assert_eq!(
+            classify_infra_failure("Connection Reset"),
+            Some(InfraFailureClass::ProviderInternalError)
+        );
+    }
+
+    #[test]
+    fn classify_infra_failure_rate_limit_takes_precedence_over_5xx() {
+        // When a reason happens to contain both a rate-limit marker
+        // and a 5xx-like status (unusual but possible if a proxy
+        // stuffs the 429 into a 502 envelope), the rate-limit class
+        // must win — its cooldown is longer and the retry hint is
+        // where the useful `Retry-After` lives.
+        assert_eq!(
+            classify_infra_failure("HTTP 502 but upstream says 429 Too Many Requests"),
+            Some(InfraFailureClass::ProviderRateLimited)
+        );
+    }
+
+    #[test]
+    fn provider_internal_error_has_short_cooldown() {
+        // 5xx / stream aborts typically clear within seconds, so the
+        // base cooldown stays short — much shorter than rate-limit
+        // windows. Regression test for tuning.
+        assert_eq!(
+            infra_cooldown_for(InfraFailureClass::ProviderInternalError),
+            Duration::from_secs(10)
+        );
+        assert!(
+            infra_cooldown_for(InfraFailureClass::ProviderInternalError)
+                < infra_cooldown_for(InfraFailureClass::ProviderRateLimited)
+        );
+    }
+
+    #[test]
+    fn provider_internal_error_has_stable_label() {
+        // The label is written verbatim into `retries.jsonl` and
+        // `loop_paused` events; keep the snake_case form stable so
+        // downstream consumers can match on it.
+        assert_eq!(
+            infra_failure_label(InfraFailureClass::ProviderInternalError),
+            "provider_internal_error"
         );
     }
 
