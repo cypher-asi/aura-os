@@ -64,10 +64,8 @@ export function useCooldownStatus(
     const unsubs = [
       subscribe(EventType.LoopPaused, (e) => {
         const content = e.content;
-        const eventAgent =
-          (content.agent_instance_id as string | undefined) ?? e.agent_id ?? undefined;
-        const eventProject =
-          (content.project_id as string | undefined) ?? e.project_id ?? undefined;
+        const eventAgent = e.agent_id || undefined;
+        const eventProject = e.project_id || undefined;
         if (!matches(eventAgent, eventProject)) return;
         const cooldownMs = content.cooldown_ms;
         const remaining =
@@ -93,17 +91,14 @@ export function useCooldownStatus(
         }
       }),
       subscribe(EventType.LoopResumed, (e) => {
-        const content = e.content;
-        const eventAgent =
-          (content.agent_instance_id as string | undefined) ?? e.agent_id ?? undefined;
-        const eventProject =
-          (content.project_id as string | undefined) ?? e.project_id ?? undefined;
+        const eventAgent = e.agent_id || undefined;
+        const eventProject = e.project_id || undefined;
         if (!matches(eventAgent, eventProject)) return;
         clearTick();
         setState(EMPTY);
       }),
       subscribe(EventType.LoopStopped, (e) => {
-        const eventProject = e.content.project_id ?? e.project_id ?? undefined;
+        const eventProject = e.project_id || undefined;
         if (projectId && eventProject && eventProject !== projectId) return;
         clearTick();
         setState(EMPTY);
