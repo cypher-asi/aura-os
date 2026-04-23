@@ -3591,7 +3591,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "failed",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3630,10 +3630,10 @@
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
           ],
-          "updatedAt": "2026-04-23T04:08:38.253Z",
-          "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-rebuilt-around-projects-and-a-sidekick-inspector",
-          "failureClass": "quality_gate",
-          "retryInstruction": "Retry correction pass: Previous failure class: quality_gate. Previous error summary: Error: Screenshot capture did not produce a passing summary for entry-debug-app-rebuilt-around-projects-and-a-sidekick-inspector. The previous screenshot failed the quality gate. Do not stop on an empty state, generic overview, placeholder route, or loosely framed full desktop. Complete one visible correction: select a concrete row/tab/item, open the relevant detail surface, and leave the story-specific proof text centered."
+          "updatedAt": "2026-04-23T04:14:50.472Z",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.346.1/entry-debug-app-rebuilt-around-projects-and-a-sidekick-inspector.png",
+          "screenshotSource": "capture-proof",
+          "storyTitle": "Debug App — Project-First Layout with Sidekick Inspector"
         }
       },
       {
