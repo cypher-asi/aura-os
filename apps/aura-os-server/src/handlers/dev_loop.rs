@@ -163,6 +163,195 @@ fn extract_failure_reason(event: &serde_json::Value) -> Option<String> {
     None
 }
 
+/// Structured failure context derived from a harness-emitted `task_failed`
+/// event (or a synthetic one we build on the server side).
+///
+/// Today the reason string is the single source of truth; these fields are
+/// best-effort extras used to let the UI render a compact
+/// `req=req_01 · claude-sonnet-4 · api_error` label underneath the reason,
+/// and to let operators correlate a failure with provider / router logs
+/// without parsing the reason string.
+///
+/// Sources, in priority order:
+///   1. Sibling fields on the event (`provider_request_id`, `model`,
+///      `sse_error_type`, `message_id` — populated by the harness once
+///      `aura-automaton` forwards them from `DebugEvent::LlmCall`).
+///   2. Fragments parsed out of the reason string produced by
+///      `StreamAccumulator::into_response` (aura-harness), which has the
+///      shape
+///      `stream terminated with error (model=…, msg_id=…, request_id=…): <type>: <raw>`.
+///
+/// All fields are optional; an empty `TaskFailureContext` is a valid value
+/// and tells the UI to render nothing but the raw reason.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(super) struct TaskFailureContext {
+    pub(super) provider_request_id: Option<String>,
+    pub(super) model: Option<String>,
+    pub(super) sse_error_type: Option<String>,
+    pub(super) message_id: Option<String>,
+}
+
+impl TaskFailureContext {
+    /// `true` iff at least one field is populated. The forwarded
+    /// `task_failed` event only gains sibling fields when this is `true`,
+    /// so existing consumers see an unchanged payload on paths where no
+    /// structured context is available (e.g. a bare "reset: …" reason from
+    /// an infra retry).
+    pub(super) fn has_any(&self) -> bool {
+        self.provider_request_id.is_some()
+            || self.model.is_some()
+            || self.sse_error_type.is_some()
+            || self.message_id.is_some()
+    }
+
+    /// Merge sibling fields into the given object under their canonical
+    /// names. Only populated fields are inserted, so the shape stays
+    /// backward-compatible on failures that don't carry a provider
+    /// context (e.g. Phase 3 remediation failures).
+    pub(super) fn merge_into(&self, obj: &mut serde_json::Map<String, serde_json::Value>) {
+        if let Some(ref v) = self.provider_request_id {
+            obj.insert(
+                "provider_request_id".into(),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if let Some(ref v) = self.model {
+            obj.insert("model".into(), serde_json::Value::String(v.clone()));
+        }
+        if let Some(ref v) = self.sse_error_type {
+            obj.insert(
+                "sse_error_type".into(),
+                serde_json::Value::String(v.clone()),
+            );
+        }
+        if let Some(ref v) = self.message_id {
+            obj.insert("message_id".into(), serde_json::Value::String(v.clone()));
+        }
+    }
+}
+
+/// Extract a [`TaskFailureContext`] from a harness-emitted `task_failed`
+/// event.
+///
+/// Prefers structured sibling fields (once the harness starts emitting
+/// them) and falls back to parsing fragments from the reason string
+/// produced by `StreamAccumulator::into_response` in aura-harness. See the
+/// `TaskFailureContext` doc-comment for the full precedence order and wire
+/// format.
+pub(super) fn extract_task_failure_context(
+    event: &serde_json::Value,
+    reason: Option<&str>,
+) -> TaskFailureContext {
+    let mut ctx = TaskFailureContext::default();
+
+    let read_str = |key: &str| -> Option<String> {
+        event
+            .get(key)
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+    };
+
+    ctx.provider_request_id = read_str("provider_request_id").or_else(|| read_str("request_id"));
+    ctx.model = read_str("model");
+    ctx.sse_error_type = read_str("sse_error_type").or_else(|| read_str("error_type"));
+    ctx.message_id = read_str("message_id").or_else(|| read_str("msg_id"));
+
+    if let Some(reason) = reason {
+        let parsed = parse_failure_context_from_reason(reason);
+        if ctx.provider_request_id.is_none() {
+            ctx.provider_request_id = parsed.provider_request_id;
+        }
+        if ctx.model.is_none() {
+            ctx.model = parsed.model;
+        }
+        if ctx.sse_error_type.is_none() {
+            ctx.sse_error_type = parsed.sse_error_type;
+        }
+        if ctx.message_id.is_none() {
+            ctx.message_id = parsed.message_id;
+        }
+    }
+
+    ctx
+}
+
+/// Parse `model=…, msg_id=…, request_id=…` fragments out of the reason
+/// string produced by `StreamAccumulator::into_response` in aura-harness.
+///
+/// The full wire format is:
+///   `stream terminated with error (<fragments>): <error_type>: <raw>`
+/// where `<fragments>` is a comma-separated list of `key=value` pairs and
+/// `<error_type>` is the Anthropic `error.type` (e.g. `overloaded_error`,
+/// `api_error`) when the upstream supplied one.
+///
+/// This parser is intentionally forgiving: any missing piece collapses to
+/// `None`, and the fragments list may appear with or without the leading
+/// `stream terminated with error` prefix (so prefix-amended reasons like
+/// `reset: <orig>` still yield a context).
+fn parse_failure_context_from_reason(reason: &str) -> TaskFailureContext {
+    let mut ctx = TaskFailureContext::default();
+
+    if let (Some(open), Some(close)) = (reason.find('('), reason.find(')')) {
+        if close > open {
+            let fragments = &reason[open + 1..close];
+            for raw in fragments.split(',') {
+                let part = raw.trim();
+                if let Some(value) = part.strip_prefix("model=") {
+                    let v = value.trim().to_string();
+                    if !v.is_empty() {
+                        ctx.model = Some(v);
+                    }
+                } else if let Some(value) = part.strip_prefix("msg_id=") {
+                    let v = value.trim().to_string();
+                    if !v.is_empty() {
+                        ctx.message_id = Some(v);
+                    }
+                } else if let Some(value) = part.strip_prefix("request_id=") {
+                    let v = value.trim().to_string();
+                    if !v.is_empty() {
+                        ctx.provider_request_id = Some(v);
+                    }
+                }
+            }
+        }
+    }
+
+    // After the fragments' closing paren the reason continues as
+    // `: <error_type>: <raw_message>` when the upstream SSE error carried
+    // a `type`. Extract just the first token up to the second colon.
+    if let Some(close) = reason.find(") :").or_else(|| reason.find("): ")) {
+        // Position *after* the `): ` / `) :` marker.
+        let after = &reason[close + 2..];
+        let after = after.trim_start_matches(|c: char| c == ':' || c.is_whitespace());
+        if let Some(colon_idx) = after.find(':') {
+            let candidate = after[..colon_idx].trim();
+            if is_plausible_error_type(candidate) {
+                ctx.sse_error_type = Some(candidate.to_string());
+            }
+        }
+    }
+
+    ctx
+}
+
+/// Guard for the `parse_failure_context_from_reason` error-type extractor.
+///
+/// The reason string can carry arbitrary upstream text after the fragments
+/// parenthetical, and we do not want to mis-identify e.g. `HTTP 500` or
+/// `stream timed out` as an error_type. An Anthropic `error.type` is
+/// always a snake_case identifier (`overloaded_error`, `api_error`,
+/// `invalid_request_error`, …), so we accept only short ASCII
+/// `[a-z0-9_]` tokens.
+fn is_plausible_error_type(candidate: &str) -> bool {
+    !candidate.is_empty()
+        && candidate.len() <= 64
+        && candidate
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+}
+
 // ---------------------------------------------------------------------------
 // Phase 3 — Autonomous recovery (truncation-failure remediation)
 // ---------------------------------------------------------------------------
@@ -2391,16 +2580,29 @@ async fn synthesize_task_failed(
     task_id: &str,
     reason: &str,
 ) {
+    // Parse whatever structured fragments the reason string carries so
+    // synthetic events (done-without-terminal, error-without-task_failed,
+    // restart-failed) get the same `req=… model=… sse_error_type=…`
+    // siblings as a harness-emitted event would. `extract_task_failure_context`
+    // tolerates a `None`/empty event object.
+    let context =
+        extract_task_failure_context(&serde_json::Value::Null, Some(reason));
+    let mut payload = serde_json::json!({
+        "task_id": task_id.to_string(),
+        "reason": reason,
+    });
+    if context.has_any() {
+        if let Some(obj) = payload.as_object_mut() {
+            context.merge_into(obj);
+        }
+    }
     persist_task_failure_reason(storage_client, jwt, task_id, reason).await;
     emit_domain_event(
         app_broadcast,
         "task_failed",
         project_id,
         agent_instance_id,
-        serde_json::json!({
-            "task_id": task_id.to_string(),
-            "reason": reason,
-        }),
+        payload,
     );
 }
 
@@ -3397,6 +3599,20 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // page reloads) and surface it on the live
                             // `task_failed` broadcast below.
                             let failure_reason = extract_failure_reason(&event);
+                            // Pull structured provider context out of the
+                            // event (sibling fields once the harness
+                            // forwards them from `DebugEvent::LlmCall`)
+                            // and, as a fallback, parse the fragments
+                            // embedded in the reason string by
+                            // `StreamAccumulator::into_response`. Merged
+                            // onto the forwarded broadcast payload below
+                            // so the UI can render a compact
+                            // `req=req_01 · claude-sonnet-4 · api_error`
+                            // label next to the reason.
+                            let failure_context = extract_task_failure_context(
+                                &event,
+                                failure_reason.as_deref(),
+                            );
 
                             // Post-commit `git push` timeout: the task's
                             // work is already committed in the workspace
@@ -3752,21 +3968,32 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             }
                             // Normalize the broadcast payload: ensure
                             // `reason` is always populated so the UI's
-                            // `useTaskStatus` hook can display it.
-                            if let (Some(reason), Some(obj)) =
-                                (failure_reason.as_ref(), event.as_object_mut())
-                            {
-                                if obj
-                                    .get("reason")
-                                    .and_then(|v| v.as_str())
-                                    .map(str::trim)
-                                    .map(str::is_empty)
-                                    .unwrap_or(true)
-                                {
-                                    obj.insert(
-                                        "reason".into(),
-                                        serde_json::Value::String(reason.clone()),
-                                    );
+                            // `useTaskStatus` hook can display it, and
+                            // merge the structured provider context
+                            // (`provider_request_id`, `model`,
+                            // `sse_error_type`, `message_id`) onto the
+                            // event as sibling fields. The UI renders
+                            // these as a compact mono label next to the
+                            // reason; consumers that don't know about the
+                            // new fields keep seeing the same `reason`
+                            // shape as before.
+                            if let Some(obj) = event.as_object_mut() {
+                                if let Some(ref reason) = failure_reason {
+                                    if obj
+                                        .get("reason")
+                                        .and_then(|v| v.as_str())
+                                        .map(str::trim)
+                                        .map(str::is_empty)
+                                        .unwrap_or(true)
+                                    {
+                                        obj.insert(
+                                            "reason".into(),
+                                            serde_json::Value::String(reason.clone()),
+                                        );
+                                    }
+                                }
+                                if failure_context.has_any() {
+                                    failure_context.merge_into(obj);
                                 }
                             }
                             // Phase 3 — Autonomous recovery. If the
@@ -5576,6 +5803,125 @@ mod tests {
             created_at: now,
             updated_at: now,
         }
+    }
+
+    #[test]
+    fn extract_task_failure_context_parses_fragments_from_reason() {
+        // Matches the wire format produced by
+        // `StreamAccumulator::into_response` in aura-harness once all
+        // three fragments are known.
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "reason":
+                "stream terminated with error \
+                 (model=claude-sonnet-4, msg_id=msg_01ABC, request_id=req_01XYZ): \
+                 api_error: Internal server error",
+        });
+        let reason = extract_failure_reason(&event);
+        assert!(reason.is_some());
+        let ctx = extract_task_failure_context(&event, reason.as_deref());
+        assert_eq!(ctx.provider_request_id.as_deref(), Some("req_01XYZ"));
+        assert_eq!(ctx.model.as_deref(), Some("claude-sonnet-4"));
+        assert_eq!(ctx.message_id.as_deref(), Some("msg_01ABC"));
+        assert_eq!(ctx.sse_error_type.as_deref(), Some("api_error"));
+        assert!(ctx.has_any());
+    }
+
+    #[test]
+    fn extract_task_failure_context_prefers_structured_event_fields() {
+        // Once the harness forwards `DebugEvent::LlmCall` bits on the
+        // outgoing `task_failed` event, sibling fields should win over
+        // any fragments we might be able to re-parse from the reason
+        // string (the reason may have been amended by an infra-retry
+        // wrapper like `"reset: …"`).
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "provider_request_id": "req_header_01",
+            "model": "claude-opus-4",
+            "sse_error_type": "overloaded_error",
+            "message_id": "msg_header_01",
+            "reason": "stream terminated with error \
+                (model=claude-sonnet-4, msg_id=msg_ignored, request_id=req_ignored): \
+                api_error: ignored",
+        });
+        let ctx = extract_task_failure_context(&event, Some("unused"));
+        assert_eq!(ctx.provider_request_id.as_deref(), Some("req_header_01"));
+        assert_eq!(ctx.model.as_deref(), Some("claude-opus-4"));
+        assert_eq!(ctx.sse_error_type.as_deref(), Some("overloaded_error"));
+        assert_eq!(ctx.message_id.as_deref(), Some("msg_header_01"));
+    }
+
+    #[test]
+    fn extract_task_failure_context_empty_on_vanilla_reason() {
+        // A garden-variety synthesized failure (e.g. "Automaton finished
+        // without emitting task_completed") should yield an empty
+        // context so the forwarded payload keeps its existing shape.
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "reason": "Automaton finished without emitting task_completed",
+        });
+        let ctx = extract_task_failure_context(&event, Some(&event["reason"].as_str().unwrap()));
+        assert!(!ctx.has_any());
+        assert_eq!(ctx, TaskFailureContext::default());
+    }
+
+    #[test]
+    fn extract_task_failure_context_parses_partial_fragments() {
+        // `StreamAccumulator::into_response` only emits the fragments it
+        // actually has. A streaming error that arrived before
+        // `message_start` (and therefore has no `msg_id=`) must still
+        // surface `request_id=` / `model=` when present.
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "reason":
+                "stream terminated with error \
+                 (model=claude-sonnet-4, request_id=req_01NOMSG): \
+                 api_error: upstream hung up",
+        });
+        let ctx = extract_task_failure_context(&event, event["reason"].as_str());
+        assert_eq!(ctx.provider_request_id.as_deref(), Some("req_01NOMSG"));
+        assert_eq!(ctx.model.as_deref(), Some("claude-sonnet-4"));
+        assert_eq!(ctx.message_id, None);
+        assert_eq!(ctx.sse_error_type.as_deref(), Some("api_error"));
+    }
+
+    #[test]
+    fn extract_task_failure_context_ignores_non_snake_case_error_type() {
+        // Anthropic error types are snake_case identifiers; anything
+        // else (e.g. "HTTP 500", "stream timed out") must be rejected so
+        // we don't persist it as `sse_error_type`.
+        let event = serde_json::json!({
+            "type": "task_failed",
+            "reason":
+                "stream terminated with error \
+                 (model=claude-sonnet-4): \
+                 HTTP 500: Internal Server Error",
+        });
+        let ctx = extract_task_failure_context(&event, event["reason"].as_str());
+        assert_eq!(ctx.model.as_deref(), Some("claude-sonnet-4"));
+        assert_eq!(ctx.sse_error_type, None);
+    }
+
+    #[test]
+    fn task_failure_context_merge_into_only_writes_populated_fields() {
+        let mut obj = serde_json::Map::new();
+        let ctx = TaskFailureContext {
+            provider_request_id: Some("req_01".into()),
+            model: None,
+            sse_error_type: Some("api_error".into()),
+            message_id: None,
+        };
+        ctx.merge_into(&mut obj);
+        assert_eq!(
+            obj.get("provider_request_id").and_then(|v| v.as_str()),
+            Some("req_01")
+        );
+        assert_eq!(
+            obj.get("sse_error_type").and_then(|v| v.as_str()),
+            Some("api_error")
+        );
+        assert!(!obj.contains_key("model"));
+        assert!(!obj.contains_key("message_id"));
     }
 
     #[test]
