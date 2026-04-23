@@ -28,6 +28,10 @@ This folder keeps the documents that are still useful for current architecture, 
 - [Mobile Store Compliance Audit](./mobile-store-compliance-audit.md) - current App Store and Play submission readiness audit.
 - [Mobile UI Release Gate](./mobile-ui-release-gate.md) - mobile-specific UX and verification gate for release decisions.
 
+## Runbooks
+
+- [Remote push recovery](./runbooks/remote-push-recovery.md) - diagnose and unblock a stuck git remote when the autonomous dev-loop is running.
+
 ## Dependency Maintenance
 
 - [ZUI Vendoring](./zui-vendoring.md) - how Aura vendors and updates the `vendor/zui` subtree.
