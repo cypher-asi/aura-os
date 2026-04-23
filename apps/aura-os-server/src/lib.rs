@@ -290,38 +290,7 @@ pub mod phase7_test_support {
         inputs.failure_class = failure;
         inputs.has_live_automaton = has_live_automaton;
         inputs.auto_decompose_disabled = auto_decompose_disabled;
-        let action = crate::reconciler::decide_reconcile_action(&inputs);
-        action_to_json(&action)
-    }
-
-    fn action_to_json(action: &crate::reconciler::ReconcileAction) -> serde_json::Value {
-        use crate::reconciler::{ReconcileAction, TerminalReason};
-        match action {
-            ReconcileAction::AdoptRun => serde_json::json!({ "action": "adopt_run" }),
-            ReconcileAction::RetryPush {
-                commit_sha,
-                retry_safe,
-            } => serde_json::json!({
-                "action": "retry_push",
-                "commit_sha": commit_sha,
-                "retry_safe": retry_safe,
-            }),
-            ReconcileAction::RetryTask => serde_json::json!({ "action": "retry_task" }),
-            ReconcileAction::Decompose => serde_json::json!({ "action": "decompose" }),
-            ReconcileAction::MarkTerminal { reason } => {
-                let reason_label = match reason {
-                    TerminalReason::RetryBudgetExhausted => "retry_budget_exhausted",
-                    TerminalReason::RateLimited => "rate_limited",
-                    TerminalReason::CommitFailed => "commit_failed",
-                    TerminalReason::DecomposeDisabled => "decompose_disabled",
-                };
-                serde_json::json!({
-                    "action": "mark_terminal",
-                    "reason": reason_label,
-                })
-            }
-            ReconcileAction::Noop => serde_json::json!({ "action": "noop" }),
-        }
+        crate::reconciler::decide_reconcile_action(&inputs).to_json()
     }
 }
 

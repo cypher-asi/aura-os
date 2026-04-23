@@ -19,6 +19,9 @@ use super::task_decompose::{
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+use crate::reconciler::{
+    decide_reconcile_action, FailureClass as ReconcileFailureClass, ReconcileInputs,
+};
 use crate::sync_state::{
     checkpoint_from_git_step, derive_checkpoint_summary, derive_recovery_point, derive_sync_state,
     derive_sync_state_from_checkpoints, TaskCheckpointSummary, TaskRecoveryPoint,
@@ -326,6 +329,20 @@ pub(crate) struct TaskOutputResponse {
     pub checkpoints: Option<TaskCheckpointSummary>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recovery_point: Option<TaskRecoveryPoint>,
+    /// Durable next action the recovery reconciler would pick for this
+    /// task given only persisted sync state and any terminal failure
+    /// reason observed in session history. Absent when no meaningful
+    /// recommendation is available (no recovery point, no terminal
+    /// failure) — the UI should treat missing as "noop".
+    ///
+    /// Wire shape matches [`crate::reconciler::ReconcileAction::to_json`],
+    /// e.g. `{"action":"retry_push","commit_sha":"abc123","retry_safe":true}`.
+    /// This is additive and advisory today: the backend does not yet
+    /// act on the recommendation, but exposing it lets the interface
+    /// surface recovery intent and lets a future supervisor
+    /// double-check its own decision against the same inputs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recommended_action: Option<serde_json::Value>,
     /// True when we could not locate any persisted output for this task
     /// (e.g. the task's `session_id` never made it into storage and the
     /// in-memory cache does not have it either). The frontend uses this
@@ -350,6 +367,71 @@ fn has_task_output_content(response: &TaskOutputResponse) -> bool {
                 || checkpoints.push_failed
         })
         || response.recovery_point.is_some()
+}
+
+/// Scan session history for the most recent `task_failed` event
+/// targeting `task_id_str` and classify its `reason` via the dev-loop's
+/// existing substring match. Returns `None` when no terminal failure
+/// for this task has been persisted yet.
+fn classify_failure_from_events(
+    task_id_str: &str,
+    events: &[aura_os_storage::StorageSessionEvent],
+) -> Option<ReconcileFailureClass> {
+    events
+        .iter()
+        .rev()
+        .find(|e| {
+            e.event_type.as_deref() == Some("task_failed")
+                && e.content
+                    .as_ref()
+                    .and_then(|c| c.get("task_id"))
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|id| id == task_id_str)
+        })
+        .and_then(|e| {
+            e.content
+                .as_ref()
+                .and_then(|c| c.get("reason").or_else(|| c.get("error")))
+                .and_then(|v| v.as_str())
+        })
+        .map(crate::handlers::dev_loop::classify_failure_for_reconciler)
+}
+
+/// Build the advisory `recommended_action` for a task-output response.
+///
+/// Returns `None` for "nothing actionable" cases so the field can be
+/// omitted from the wire payload. Callers without full dev-loop
+/// context pass `failure_class = None` and `has_live_automaton = false`;
+/// that still produces useful `retry_push` recommendations from
+/// `TaskSyncState` alone.
+fn recommended_action_from_state(
+    sync_state: Option<&TaskSyncState>,
+    recovery_point: Option<&TaskRecoveryPoint>,
+    failure_class: Option<ReconcileFailureClass>,
+    has_live_automaton: bool,
+) -> Option<serde_json::Value> {
+    let effective_state;
+    let state_ref = match sync_state {
+        Some(state) => state,
+        None => {
+            effective_state = TaskSyncState::default();
+            &effective_state
+        }
+    };
+    let mut inputs = ReconcileInputs::from_sync_state(state_ref);
+    inputs.recovery_point = recovery_point;
+    inputs.failure_class = failure_class.unwrap_or(ReconcileFailureClass::None);
+    inputs.has_live_automaton = has_live_automaton;
+    let action = decide_reconcile_action(&inputs);
+    // Omit the field entirely for "noop" — saves wire bytes and lets
+    // `skip_serializing_if` drop it so the client sees an explicit
+    // absence instead of `{"action":"noop"}` boilerplate on every
+    // successful task.
+    if matches!(action, crate::reconciler::ReconcileAction::Noop) {
+        None
+    } else {
+        Some(action.to_json())
+    }
 }
 
 fn task_output_from_events(
@@ -469,6 +551,14 @@ fn task_output_from_events(
         recovery_point = sync_state.as_ref().and_then(derive_recovery_point);
     }
 
+    let failure_class = classify_failure_from_events(task_id_str, events);
+    let recommended_action = recommended_action_from_state(
+        sync_state.as_ref(),
+        recovery_point.as_ref(),
+        failure_class,
+        false,
+    );
+
     let response = TaskOutputResponse {
         output,
         build_steps,
@@ -478,6 +568,7 @@ fn task_output_from_events(
         sync_checkpoints,
         checkpoints,
         recovery_point,
+        recommended_action,
         unavailable: false,
     };
     has_task_output_content(&response).then_some(response)
@@ -535,6 +626,19 @@ pub(crate) async fn get_task_output(
                 .or_else(|| {
                     (!entry.git_steps.is_empty()).then(|| derive_sync_state(&entry.git_steps))
                 });
+            let recovery_point = sync_state.as_ref().and_then(derive_recovery_point);
+            // Cache branch: the in-memory cache is populated by an
+            // actively-running automaton, so we always flag
+            // `has_live_automaton = true`. That short-circuits the
+            // reconciler to `adopt_run` whenever any other branch
+            // might otherwise have fired — consistent with the
+            // dev-loop's existing "adopt over restart" policy.
+            let recommended_action = recommended_action_from_state(
+                sync_state.as_ref(),
+                recovery_point.as_ref(),
+                None,
+                true,
+            );
             let response = TaskOutputResponse {
                 output: entry.live_output.clone(),
                 build_steps: entry.build_steps.clone(),
@@ -549,7 +653,8 @@ pub(crate) async fn get_task_output(
                     &entry.test_steps,
                     &entry.git_steps,
                 )),
-                recovery_point: sync_state.as_ref().and_then(derive_recovery_point),
+                recovery_point,
+                recommended_action,
                 unavailable: false,
             };
             if has_task_output_content(&response) {
@@ -588,6 +693,7 @@ pub(crate) async fn get_task_output(
         sync_checkpoints: Vec::new(),
         checkpoints: None,
         recovery_point: None,
+        recommended_action: None,
         unavailable: true,
     }))
 }
@@ -1151,6 +1257,15 @@ mod tests {
                 .map(|point| point.commit_sha.as_str()),
             Some("abc123")
         );
+        assert_eq!(
+            response.recommended_action,
+            Some(serde_json::json!({
+                "action": "retry_push",
+                "commit_sha": "abc123",
+                "retry_safe": true,
+            })),
+            "pending-push state should surface a retry_push recommendation",
+        );
     }
 
     #[test]
@@ -1185,6 +1300,99 @@ mod tests {
                 .as_ref()
                 .map(|point| point.commit_sha.as_str()),
             Some("abc123")
+        );
+        assert_eq!(
+            response.recommended_action,
+            Some(serde_json::json!({
+                "action": "retry_push",
+                "commit_sha": "abc123",
+                "retry_safe": true,
+            })),
+            "push-failed retry_safe state should surface a retry_push recommendation",
+        );
+    }
+
+    #[test]
+    fn task_output_from_events_recommends_decompose_for_truncation_failure() {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let response = task_output_from_events(
+            &task_id,
+            &[
+                session_event(
+                    "task_output",
+                    &task_id,
+                    serde_json::json!({ "text": "partial" }),
+                ),
+                session_event(
+                    "task_failed",
+                    &task_id,
+                    serde_json::json!({
+                        "reason": "harness response truncated; needs decomposition",
+                    }),
+                ),
+            ],
+        )
+        .expect("response should be hydrated");
+
+        assert_eq!(
+            response.recommended_action,
+            Some(serde_json::json!({ "action": "decompose" })),
+            "truncation-shaped task_failed reason should trigger a decompose recommendation",
+        );
+    }
+
+    #[test]
+    fn task_output_from_events_recommends_terminal_for_rate_limited_failure() {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let response = task_output_from_events(
+            &task_id,
+            &[
+                session_event(
+                    "task_output",
+                    &task_id,
+                    serde_json::json!({ "text": "retrying" }),
+                ),
+                session_event(
+                    "task_failed",
+                    &task_id,
+                    serde_json::json!({
+                        "reason": "HTTP 429 too many requests",
+                    }),
+                ),
+            ],
+        )
+        .expect("response should be hydrated");
+
+        // Rate-limited failures are handled by the cooldown path, not
+        // the reconciler — so the advisory action is explicitly
+        // terminal with the "rate_limited" reason so the UI can show
+        // "provider throttling" rather than "reconciler working on it".
+        assert_eq!(
+            response.recommended_action,
+            Some(serde_json::json!({
+                "action": "mark_terminal",
+                "reason": "rate_limited",
+            })),
+        );
+    }
+
+    #[test]
+    fn task_output_from_events_omits_recommendation_when_nothing_actionable() {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let response = task_output_from_events(
+            &task_id,
+            &[session_event(
+                "task_output",
+                &task_id,
+                serde_json::json!({ "text": "hello" }),
+            )],
+        )
+        .expect("response should be hydrated");
+
+        assert!(
+            response.recommended_action.is_none(),
+            "no sync state and no terminal failure should produce a noop → field omitted; got {:?}",
+            response.recommended_action,
         );
     }
 }

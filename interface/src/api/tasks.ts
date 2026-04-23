@@ -101,6 +101,30 @@ export const tasksApi = {
         retry_safe: boolean;
       };
       /**
+       * Advisory next action the server's recovery reconciler would
+       * pick for this task given only persisted state. The backend
+       * does not yet act on it automatically — it is surfaced so the
+       * UI can show recovery intent (e.g. "retrying push of abc1234"
+       * or "decomposing truncated work") instead of a bare failure.
+       *
+       * Absent when the reconciler would return "noop" (no recovery
+       * point, no terminal failure classification).
+       */
+      recommended_action?:
+        | { action: "adopt_run" }
+        | { action: "retry_push"; commit_sha: string; retry_safe: boolean }
+        | { action: "retry_task" }
+        | { action: "decompose" }
+        | {
+            action: "mark_terminal";
+            reason:
+              | "retry_budget_exhausted"
+              | "rate_limited"
+              | "commit_failed"
+              | "decompose_disabled";
+          }
+        | { action: "noop" };
+      /**
        * When true, the server has no persisted output for this task
        * (e.g. session_id is missing and the fallback scan found nothing).
        * Callers should treat this as a terminal "no output" signal and

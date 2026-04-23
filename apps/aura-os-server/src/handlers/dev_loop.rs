@@ -263,6 +263,26 @@ pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
     classify_failure(reason) == FailureClass::Truncation
 }
 
+/// Map the dev-loop's reason-string classifier onto the reconciler's
+/// broader [`crate::reconciler::FailureClass`] vocabulary. Lets the
+/// task-output API and future background reconciler reuse one
+/// classifier instead of reimplementing the substring match.
+///
+/// The dev-loop classifier only distinguishes `Truncation`,
+/// `RateLimited`, and `Other`. Post-commit `git push` timeouts flow
+/// through [`InfraFailureClass::GitPushTimeout`] rather than the
+/// `task_failed` reason path, so callers who can observe that signal
+/// separately should override with
+/// [`crate::reconciler::FailureClass::PushTimeout`] before running the
+/// decision engine.
+pub(crate) fn classify_failure_for_reconciler(reason: &str) -> crate::reconciler::FailureClass {
+    match classify_failure(reason) {
+        FailureClass::Truncation => crate::reconciler::FailureClass::Truncation,
+        FailureClass::RateLimited => crate::reconciler::FailureClass::RateLimited,
+        FailureClass::Other => crate::reconciler::FailureClass::Other,
+    }
+}
+
 fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
     let lower = reason.to_ascii_lowercase();
     // Check `git push` first so it is routed to the non-fatal

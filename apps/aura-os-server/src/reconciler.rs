@@ -134,6 +134,50 @@ pub enum ReconcileAction {
     Noop,
 }
 
+impl ReconcileAction {
+    /// Canonical JSON wire shape for this action.
+    ///
+    /// Stable contract used by the task-output API and the
+    /// `phase7_test_support::reconcile_decision` helper so external
+    /// consumers (interface, integration tests, future supervisor
+    /// tooling) see the same strings regardless of which call site
+    /// produced the action.
+    pub fn to_json(&self) -> serde_json::Value {
+        match self {
+            ReconcileAction::AdoptRun => serde_json::json!({ "action": "adopt_run" }),
+            ReconcileAction::RetryPush {
+                commit_sha,
+                retry_safe,
+            } => serde_json::json!({
+                "action": "retry_push",
+                "commit_sha": commit_sha,
+                "retry_safe": retry_safe,
+            }),
+            ReconcileAction::RetryTask => serde_json::json!({ "action": "retry_task" }),
+            ReconcileAction::Decompose => serde_json::json!({ "action": "decompose" }),
+            ReconcileAction::MarkTerminal { reason } => serde_json::json!({
+                "action": "mark_terminal",
+                "reason": reason.as_label(),
+            }),
+            ReconcileAction::Noop => serde_json::json!({ "action": "noop" }),
+        }
+    }
+}
+
+impl TerminalReason {
+    /// Wire label used by [`ReconcileAction::to_json`]. Kept as a method
+    /// so the JSON contract and any debug/metrics output share one
+    /// source of truth.
+    pub fn as_label(&self) -> &'static str {
+        match self {
+            TerminalReason::RetryBudgetExhausted => "retry_budget_exhausted",
+            TerminalReason::RateLimited => "rate_limited",
+            TerminalReason::CommitFailed => "commit_failed",
+            TerminalReason::DecomposeDisabled => "decompose_disabled",
+        }
+    }
+}
+
 /// Why the reconciler chose to leave a task terminal instead of
 /// retrying. Kept narrow so the supervisor can translate these into
 /// operator-facing messages without inventing new strings.
