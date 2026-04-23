@@ -195,10 +195,18 @@ test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
       { text: "Comments remain visible next to the board." },
       { text: "Reviewers can keep context while triaging." },
     ],
+    media: {
+      proofSurface: "Feedback board thread view",
+      captureHint: "Open a feedback thread and keep the comments column visible.",
+      visibleProof: ["Feedback", "Comments"],
+    },
   });
 
   assert.match(prompt, /Feedback board and comments stay visible/);
   assert.match(prompt, /Key details:/);
+  assert.match(prompt, /Expected proof surface: Feedback board thread view/);
+  assert.match(prompt, /Visible proof to keep on screen: Feedback; Comments/);
+  assert.match(prompt, /Capture guidance: Open a feedback thread and keep the comments column visible\./);
   assert.match(prompt, /leave the clearest proof visible/);
 });
 
@@ -940,6 +948,71 @@ test("publish script fixture mode keeps workflow green when OpenAI polish partia
   assert.equal(latestDoc.rendered.entries[0].media.status, "published");
   assert.equal(latestDoc.rendered.entries[1].media.status, "failed");
   assert.equal(latestDoc.rendered.entries[1].media.failureClass, "openai_polish");
+  assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
+});
+
+test("publish script fixture mode falls back to the raw proof screenshot when the polished card loses the proof", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-polish-fallback-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  const screenshotPath = path.join(rootDir, "feedback-proof.png");
+  writeSolidPng(screenshotPath, 320, 180, [20, 120, 150, 255]);
+  const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
+  writeSolidPng(polishedPath, 320, 213, [4, 16, 36, 255]);
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: true,
+      storyTitle: "Feedback board proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: screenshotPath },
+        },
+      ],
+      screenshots: [{ path: screenshotPath }],
+      polishedScreenshot: {
+        path: polishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        score: 52,
+        judge: {
+          passed: false,
+          proofVisible: false,
+          score: 52,
+          reasons: ["background is readable"],
+          concerns: ["proof surface is too small"],
+          missingProof: ["Feedback"],
+        },
+      },
+    },
+    "entry-2-agent-create": {
+      ok: false,
+      inspectorUrl: "https://browserbase.example/session/failure",
+      sessionId: "fixture-failure",
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const summaryPath = path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-summary.json");
+  const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  assert.equal(summary.workflowOutcome, "partial");
+  assert.equal(summary.shouldFailWorkflow, false);
+  assert.equal(summary.results[0].status, "published");
+  assert.equal(summary.results[0].screenshotSource, "capture-proof");
+  assert.equal(summary.results[0].polishFallbackReason, "openai_polish_quality_gate");
+
+  const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
+  assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[0].media.screenshotSource, "capture-proof");
+  assert.equal(latestDoc.rendered.entries[0].media.polishFallbackReason, "openai_polish_quality_gate");
   assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
 });
 

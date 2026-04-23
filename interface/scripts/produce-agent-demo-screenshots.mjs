@@ -1260,6 +1260,13 @@ async function collectPageUiSignals(page) {
       return testId.startsWith("node-") || !node.hasAttribute("aria-expanded");
     });
     const treeGroupButtons = visibleTreeButtons.filter((node) => node.hasAttribute("aria-expanded"));
+    const visibleInteractiveTexts = Array.from(document.querySelectorAll('button, [role="button"], [role="option"], [role="menuitem"]'))
+      .filter((node) => isVisible(node))
+      .map((node) => normalizeWhitespace(node.textContent || ""))
+      .filter(Boolean);
+    const visibleVersionedOptionCount = visibleInteractiveTexts.filter((text) =>
+      /[A-Za-z]/.test(text) && /\d/.test(text)
+    ).length;
     const mobileLayoutSelectors = [
       '[aria-label="Feedback filters"]',
       '[aria-label="Feed filters"]',
@@ -1320,6 +1327,10 @@ async function collectPageUiSignals(page) {
       errorTextVisible: errorPatterns.some((pattern) => pattern.test(bodyText)),
       feedbackThreadVisible: isVisible('[data-agent-surface="feedback-thread"]'),
       notesEditorVisible: isVisible('[data-agent-surface="notes-editor"]'),
+      chatComposerVisible: isVisible('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"], textarea[placeholder="What do you want to create?"]'),
+      modelPickerVisible: isVisible('[data-agent-surface="model-picker"]')
+        || visibleInteractiveTexts.some((text) => /show all models/i.test(text))
+        || visibleVersionedOptionCount >= 3,
       sidekickVisible: isVisible('[data-agent-surface="sidekick-panel"], [aria-label="Sidekick panel"]'),
     };
   }).catch(() => ({
@@ -1336,6 +1347,8 @@ async function collectPageUiSignals(page) {
     errorTextVisible: false,
     feedbackThreadVisible: false,
     notesEditorVisible: false,
+    chatComposerVisible: false,
+    modelPickerVisible: false,
     sidekickVisible: false,
   }));
 }

@@ -8,6 +8,8 @@ import {
   batchCommits,
   buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
+  inferEntryMediaHeuristic,
+  mergeMediaDecision,
   preserveExistingPublishedMedia,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
@@ -136,7 +138,7 @@ test("assertStrictToolModelSupport accepts Claude Opus 4.7", () => {
   assert.equal(assertStrictToolModelSupport("claude-opus-4-7"), true);
 });
 
-test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entries", () => {
+test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entries", async () => {
   const rendered = {
     title: "Demo day",
     intro: "Intro",
@@ -187,7 +189,7 @@ test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entri
     { sha: "9876abc", files: ["apps/aura-os-desktop/src/chat/errors.ts"] },
   ];
 
-  const annotated = annotateRenderedEntriesWithMedia(rendered, rawCommits);
+  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, { enableAiInference: false });
 
   assert.equal(annotated.entries[0].media.requested, true);
   assert.equal(annotated.entries[0].media.status, "pending");
@@ -197,7 +199,7 @@ test("annotateRenderedEntriesWithMedia requests placeholders for UI-facing entri
   assert.equal(annotated.entries[2].media.status, "pending");
 });
 
-test("annotateRenderedEntriesWithMedia skips runtime config entries without a clear screen target", () => {
+test("annotateRenderedEntriesWithMedia skips runtime config entries without a clear screen target", async () => {
   const rendered = {
     title: "Demo day",
     intro: "Intro",
@@ -222,13 +224,13 @@ test("annotateRenderedEntriesWithMedia skips runtime config entries without a cl
     { sha: "abc1234", files: ["apps/aura-os-desktop/src/handlers.rs"] },
   ];
 
-  const annotated = annotateRenderedEntriesWithMedia(rendered, rawCommits);
+  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, { enableAiInference: false });
 
   assert.equal(annotated.entries[0].media.requested, false);
   assert.equal(annotated.entries[0].media.status, "skipped");
 });
 
-test("annotateRenderedEntriesWithMedia skips backend-heavy mixed batches without a dominant UI story", () => {
+test("annotateRenderedEntriesWithMedia skips backend-heavy mixed batches without a dominant UI story", async () => {
   const rendered = {
     title: "Demo day",
     intro: "Intro",
@@ -272,10 +274,112 @@ test("annotateRenderedEntriesWithMedia skips backend-heavy mixed batches without
     },
   ];
 
-  const annotated = annotateRenderedEntriesWithMedia(rendered, rawCommits);
+  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, { enableAiInference: false });
 
   assert.equal(annotated.entries[0].media.requested, false);
   assert.equal(annotated.entries[0].media.status, "skipped");
+});
+
+test("mergeMediaDecision lets Anthropic inference override the heuristic and preserves proof hints", () => {
+  const entry = {
+    batch_id: "entry-1",
+    title: "GPT-5.5 in the model picker",
+    summary: "The chat model picker now shows GPT-5.5.",
+    items: [
+      {
+        text: "Open the chat model picker and verify GPT-5.5 is selectable.",
+        commit_shas: ["abc1234"],
+      },
+    ],
+  };
+  const heuristic = inferEntryMediaHeuristic(entry, new Map([
+    ["abc1234", { files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"] }],
+  ]));
+
+  const merged = mergeMediaDecision(entry, heuristic, {
+    requested: true,
+    confidence: "high",
+    category: "product_surface",
+    rationale: "The feature adds a visible option to the chat model picker.",
+    proofSurface: "Chat model picker",
+    captureHint: "Open the chat model picker and keep GPT-5.5 visible.",
+    visibleProof: ["GPT-5.5", "Model picker"],
+  });
+
+  assert.equal(merged.requested, true);
+  assert.equal(merged.status, "pending");
+  assert.equal(merged.inferenceSource, "anthropic");
+  assert.equal(merged.inferenceCategory, "product_surface");
+  assert.equal(merged.proofSurface, "Chat model picker");
+  assert.equal(merged.captureHint, "Open the chat model picker and keep GPT-5.5 visible.");
+  assert.deepEqual(merged.visibleProof, ["GPT-5.5", "Model picker"]);
+});
+
+test("annotateRenderedEntriesWithMedia accepts injected Anthropic media decisions", async () => {
+  const rendered = {
+    title: "Demo day",
+    intro: "Intro",
+    highlights: [],
+    entries: [
+      {
+        batch_id: "entry-1",
+        time_label: "9:10 AM",
+        title: "Release pipeline hardening",
+        summary: "The nightly release workflow now retries asset pruning.",
+        items: [
+          {
+            text: "Nightly release tooling became more resilient.",
+            commit_shas: ["abc1234"],
+          },
+        ],
+      },
+      {
+        batch_id: "entry-2",
+        time_label: "11:30 AM",
+        title: "GPT-5.5 in the model picker",
+        summary: "The chat composer now includes GPT-5.5.",
+        items: [
+          {
+            text: "Open the chat model picker and verify GPT-5.5 is selectable.",
+            commit_shas: ["def5678"],
+          },
+        ],
+      },
+    ],
+  };
+  const rawCommits = [
+    { sha: "abc1234", files: [".github/workflows/release-nightly.yml"] },
+    { sha: "def5678", files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"] },
+  ];
+
+  const annotated = await annotateRenderedEntriesWithMedia(rendered, rawCommits, {
+    mediaInferenceByBatchId: {
+      "entry-1": {
+        requested: false,
+        confidence: "high",
+        category: "release_infra",
+        rationale: "Release hardening is tooling, not a product screenshot target.",
+        proofSurface: "",
+        captureHint: "",
+        visibleProof: [],
+      },
+      "entry-2": {
+        requested: true,
+        confidence: "high",
+        category: "product_surface",
+        rationale: "GPT-5.5 is a visible model-picker option.",
+        proofSurface: "Chat model picker",
+        captureHint: "Open the chat model picker and keep GPT-5.5 visible.",
+        visibleProof: ["GPT-5.5", "Model"],
+      },
+    },
+  });
+
+  assert.equal(annotated.entries[0].media.requested, false);
+  assert.equal(annotated.entries[0].media.inferenceCategory, "release_infra");
+  assert.equal(annotated.entries[1].media.requested, true);
+  assert.equal(annotated.entries[1].media.proofSurface, "Chat model picker");
+  assert.deepEqual(annotated.entries[1].media.visibleProof, ["GPT-5.5", "Model"]);
 });
 
 test("buildMediaPlaceholderBlock emits hidden markers only for requested slots", () => {

@@ -188,11 +188,19 @@ function buildEntryPrompt(entry) {
   const bullets = (Array.isArray(entry?.items) ? entry.items : [])
     .map((item) => sanitizeText(item?.text))
     .filter(Boolean);
+  const proofSurface = sanitizeText(entry?.media?.proofSurface);
+  const captureHint = sanitizeText(entry?.media?.captureHint);
+  const visibleProof = Array.isArray(entry?.media?.visibleProof)
+    ? entry.media.visibleProof.map((value) => sanitizeText(value)).filter(Boolean).slice(0, 6)
+    : [];
   const retryGuidance = buildRetryCorrectionGuidance(entry?.media);
   const storyParts = [
     sanitizeText(entry?.title),
     sanitizeText(entry?.summary),
     bullets.length ? `Key details: ${bullets.join(" ")}` : "",
+    proofSurface ? `Expected proof surface: ${proofSurface}.` : "",
+    visibleProof.length ? `Visible proof to keep on screen: ${visibleProof.join("; ")}.` : "",
+    captureHint ? `Capture guidance: ${captureHint}` : "",
     retryGuidance,
     "Open the most relevant product surface for this changelog entry and leave the clearest proof visible for a polished desktop screenshot.",
     "Avoid placeholder routes, empty states, settings-only screens, and generic landing views.",
@@ -253,16 +261,21 @@ function buildOpenAIPolishPrompt(entry, summary) {
 
 function buildOpenAIJudgePrompt(entry, summary) {
   const title = sanitizeText(entry?.title || summary?.storyTitle || "Aura changelog update");
+  const proofSurface = sanitizeText(entry?.media?.proofSurface);
+  const visibleProof = Array.isArray(entry?.media?.visibleProof)
+    ? entry.media.visibleProof.map((value) => sanitizeText(value)).filter(Boolean).slice(0, 6)
+    : [];
   return [
     "You are the final visual quality gate for Aura changelog media.",
     "Review this final branded image and return JSON only.",
-    "This is not the feature-relevance gate. Browserbase already validated the raw screenshot before this image was composed.",
-    "Do not fail because a subtle product change is hard to verify, and do not re-litigate whether the screenshot proves the changelog claim.",
+    "Browserbase already validated the raw screenshot before this image was composed, but you must verify that the final branded card still preserves the proof surface.",
     "Pass only if the real product screenshot is clearly visible, readable enough for a changelog, framed professionally, and not obscured by the brand treatment.",
-    "Fail only if the screenshot is too small to understand, effectively unreadable, visually dominated by background, clipped at the edges, contains obvious hallucinated UI as the main proof, or looks like a generic marketing image without product evidence.",
+    "Fail if the screenshot is too small to understand, effectively unreadable, visually dominated by background, clipped at the edges, contains obvious hallucinated UI as the main proof, or loses the expected proof surface.",
     "Aura is intentionally a dark product UI; do not fail only because the interface uses a dark theme when the product context and target surface remain visible.",
     "Score must be an integer from 0 to 100, where 70 means publishable and 90 means excellent. Do not use a 0 to 10 scale.",
     `Changelog title: ${title}`,
+    proofSurface ? `Expected proof surface: ${proofSurface}` : "",
+    visibleProof.length ? `Expected visible proof phrases or labels: ${visibleProof.join("; ")}` : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -556,11 +569,13 @@ async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
             additionalProperties: false,
             properties: {
               passed: { type: "boolean" },
+              proofVisible: { type: "boolean" },
               score: { type: "integer", minimum: 0, maximum: 100 },
               reasons: { type: "array", items: { type: "string" } },
               concerns: { type: "array", items: { type: "string" } },
+              missingProof: { type: "array", items: { type: "string" } },
             },
-            required: ["passed", "score", "reasons", "concerns"],
+            required: ["passed", "proofVisible", "score", "reasons", "concerns", "missingProof"],
           },
         },
       },
@@ -574,10 +589,12 @@ async function judgePolishedImage({ apiKey, imagePath, entry, summary }) {
   const judgement = JSON.parse(text);
   const score = normalizeOpenAIJudgeScore(judgement.score);
   return {
-    passed: Boolean(judgement.passed) && score >= 70,
+    passed: Boolean(judgement.passed) && Boolean(judgement.proofVisible) && score >= 70,
     score,
     reasons: Array.isArray(judgement.reasons) ? judgement.reasons.map(sanitizeText).filter(Boolean) : [],
     concerns: Array.isArray(judgement.concerns) ? judgement.concerns.map(sanitizeText).filter(Boolean) : [],
+    missingProof: Array.isArray(judgement.missingProof) ? judgement.missingProof.map(sanitizeText).filter(Boolean) : [],
+    proofVisible: Boolean(judgement.proofVisible),
     model: getOpenAIJudgeModel(),
   };
 }
@@ -588,6 +605,29 @@ async function polishSelectedScreenshot({ repoDir, entry, summary, selectedScree
     if (!fs.existsSync(fixturePolish.path)) {
       throw buildOpenAIError(`Fixture polished screenshot does not exist: ${fixturePolish.path}`);
     }
+    const fixtureJudge = fixturePolish.judge || {
+      passed: true,
+      proofVisible: true,
+      score: fixturePolish.score ?? 100,
+      reasons: ["fixture polish accepted"],
+      concerns: [],
+      missingProof: [],
+    };
+    const normalizedFixtureJudge = {
+      ...fixtureJudge,
+      proofVisible: fixtureJudge.proofVisible !== false,
+      score: normalizeOpenAIJudgeScore(fixtureJudge.score ?? fixturePolish.score ?? 100),
+      reasons: Array.isArray(fixtureJudge.reasons) ? fixtureJudge.reasons.map(sanitizeText).filter(Boolean) : [],
+      concerns: Array.isArray(fixtureJudge.concerns) ? fixtureJudge.concerns.map(sanitizeText).filter(Boolean) : [],
+      missingProof: Array.isArray(fixtureJudge.missingProof) ? fixtureJudge.missingProof.map(sanitizeText).filter(Boolean) : [],
+    };
+    if (!(Boolean(normalizedFixtureJudge.passed) && normalizedFixtureJudge.proofVisible && normalizedFixtureJudge.score >= 70)) {
+      throw buildOpenAIError(
+        `OpenAI branded media judge rejected ${slotId} with score ${normalizedFixtureJudge.score}: ${normalizedFixtureJudge.concerns.join("; ") || normalizedFixtureJudge.missingProof.join("; ") || "no details"}`,
+        "OPENAI_POLISH_QUALITY_GATE",
+        { polishJudge: normalizedFixtureJudge },
+      );
+    }
     return {
       path: fixturePolish.path,
       source: OPENAI_POLISH_SOURCE,
@@ -595,8 +635,8 @@ async function polishSelectedScreenshot({ repoDir, entry, summary, selectedScree
       polishProvider: fixturePolish.provider || "fixture",
       polishModel: fixturePolish.model || "fixture",
       polishJudgeModel: fixturePolish.judgeModel || "fixture",
-      polishScore: Number(fixturePolish.score || 100),
-      polishJudge: fixturePolish.judge || { passed: true, score: 100, reasons: ["fixture polish accepted"], concerns: [] },
+      polishScore: normalizedFixtureJudge.score,
+      polishJudge: normalizedFixtureJudge,
       rawScreenshotPath: selectedScreenshot.path,
     };
   }
@@ -629,7 +669,7 @@ async function polishSelectedScreenshot({ repoDir, entry, summary, selectedScree
   });
   if (!judge.passed) {
     throw buildOpenAIError(
-      `OpenAI branded media judge rejected ${slotId} with score ${judge.score}: ${judge.concerns.join("; ") || "no details"}`,
+      `OpenAI branded media judge rejected ${slotId} with score ${judge.score}: ${judge.concerns.join("; ") || judge.missingProof.join("; ") || "no details"}`,
       "OPENAI_POLISH_QUALITY_GATE",
       { polishJudge: judge },
     );
@@ -664,6 +704,7 @@ function buildMediaMetadata(entry, assetPath, selectedScreenshot, summary) {
     polishModel: selectedScreenshot.polishModel || "",
     polishJudgeModel: selectedScreenshot.polishJudgeModel || "",
     polishScore: selectedScreenshot.polishScore ?? null,
+    polishFallbackReason: sanitizeText(selectedScreenshot.polishFallbackReason || ""),
     updatedAt: new Date().toISOString(),
     storyTitle: summary?.storyTitle || entry.title,
   };
@@ -907,6 +948,10 @@ function classifyMediaFailure(error) {
   return "capture_error";
 }
 
+function shouldFallbackToRawProof(error) {
+  return error?.code === "OPENAI_POLISH_QUALITY_GATE";
+}
+
 function shouldPublishEntryMedia(entry, pagesDir, { refreshExisting = false } = {}) {
   if (!entry?.media?.requested) {
     return {
@@ -1145,13 +1190,30 @@ async function publishEntryMedia({
   if (!selectedScreenshot?.path || !fs.existsSync(selectedScreenshot.path)) {
     throw new Error(`No publishable screenshot was produced for ${entry.media.slotId}`);
   }
-  const polishedScreenshot = await polishSelectedScreenshot({
-    repoDir,
-    entry,
-    summary,
-    selectedScreenshot,
-    slotId: entry.media.slotId,
-  });
+  let polishedScreenshot;
+  try {
+    polishedScreenshot = await polishSelectedScreenshot({
+      repoDir,
+      entry,
+      summary,
+      selectedScreenshot,
+      slotId: entry.media.slotId,
+    });
+  } catch (error) {
+    if (!shouldFallbackToRawProof(error)) {
+      throw error;
+    }
+    polishedScreenshot = {
+      ...selectedScreenshot,
+      polishProvider: "openai",
+      polishModel: "",
+      polishJudgeModel: sanitizeText(error?.polishJudge?.model || getOpenAIJudgeModel()),
+      polishScore: error?.polishJudge?.score ?? null,
+      polishJudge: error?.polishJudge || null,
+      polishFallbackReason: "openai_polish_quality_gate",
+      originalScreenshotSource: selectedScreenshot.source,
+    };
+  }
 
   const assetPath = resolveAssetPath({
     channel: doc.channel,
@@ -1283,6 +1345,7 @@ function buildRunSummaryMarkdown(summary) {
     const details = [
       result.assetPath ? `asset: ${result.assetPath}` : "",
       result.reason ? `reason: ${result.reason}` : "",
+      result.polishFallbackReason ? `fallback: ${result.polishFallbackReason}` : "",
       result.failureClass ? `class: ${result.failureClass}` : "",
       result.error ? `error: ${clipText(result.error, 160)}` : "",
       result.inspectorUrl ? `inspector: ${result.inspectorUrl}` : "",
@@ -1397,6 +1460,7 @@ async function main() {
         polishModel: published.selectedScreenshot.polishModel || null,
         polishJudgeModel: published.selectedScreenshot.polishJudgeModel || null,
         polishScore: published.selectedScreenshot.polishScore ?? null,
+        polishFallbackReason: published.selectedScreenshot.polishFallbackReason || null,
         outputDir: published.summary?.outputDir || null,
         inspectorUrl: published.summary?.inspectorUrl || null,
         sessionId: published.summary?.sessionId || null,
