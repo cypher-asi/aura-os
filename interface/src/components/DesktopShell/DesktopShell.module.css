@@ -28,13 +28,9 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
-  background: var(--color-bg);
+  background: transparent;
   margin: 0 5px;
   border-radius: 8px;
-}
-
-:global([data-desktop-mode]) .desktopContent {
-  background: transparent;
 }
 
 .mainPanelHost {
@@ -44,6 +40,7 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
+  background: var(--color-bg);
 }
 
 .mainPanelHostWithSidekick {
