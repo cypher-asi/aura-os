@@ -3591,7 +3591,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3629,7 +3629,11 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ]
+          ],
+          "updatedAt": "2026-04-23T04:08:38.253Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-rebuilt-around-projects-and-a-sidekick-inspector",
+          "failureClass": "quality_gate",
+          "retryInstruction": "Retry correction pass: Previous failure class: quality_gate. Previous error summary: Error: Screenshot capture did not produce a passing summary for entry-debug-app-rebuilt-around-projects-and-a-sidekick-inspector. The previous screenshot failed the quality gate. Do not stop on an empty state, generic overview, placeholder route, or loosely framed full desktop. Complete one visible correction: select a concrete row/tab/item, open the relevant detail surface, and leave the story-specific proof text centered."
         }
       },
       {
@@ -3689,7 +3693,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3705,7 +3709,11 @@
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.346.1/entry-darker-block-outlines-on-run-and-task-output.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-23T04:10:29.149Z",
+          "storyTitle": "Darker block outlines on run and task output — Process event timeline rows and Prev…"
         }
       },
       {
@@ -3759,7 +3767,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3774,7 +3782,11 @@
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.346.1/entry-chat-border-token-reaches-sidekick-and-preview-overlays.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-23T04:11:09.924Z",
+          "storyTitle": "Chat border token reaches Sidekick and Preview Overlay"
         }
       },
       {
