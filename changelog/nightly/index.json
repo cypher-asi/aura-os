@@ -2,18 +2,19 @@
   {
     "date": "2026-04-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.352.1",
-    "title": "Nightly release pipeline gets a safety net",
-    "intro": "Today was a focused release-infrastructure day. The nightly pipeline picked up retry-aware asset pruning, a dedicated workflow to keep dated changelog history in sync with the latest entry, and a manual recovery path for republishing GitHub Pages when things go sideways.",
+    "version": "0.1.0-nightly.354.1",
+    "title": "Release pipeline hardening and sharper changelog media",
+    "intro": "Today's nightly was an infrastructure-focused day: the release pipeline picked up safer asset pruning and a gh-pages recovery path, while the auto-generated changelog media got a noticeably cleaner, better-framed look on the published site.",
     "entryCount": 1,
     "highlights": [
-      "Retry-aware nightly asset pruning tolerates vanished assets",
-      "Dated changelog history now mirrors the latest release automatically",
-      "New one-click workflow to republish GitHub Pages for recovery"
+      "Nightly asset prune now retries and tolerates vanished assets",
+      "New manual gh-pages republish recovery workflow",
+      "Changelog media respects screenshot aspect ratio with safer framing",
+      "Media updates now mirror into dated history entries"
     ],
-    "rawCommitCount": 4,
-    "generatedAt": "2026-04-23T17:29:26.455Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.352.1",
+    "rawCommitCount": 6,
+    "generatedAt": "2026-04-23T17:47:07.966Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.354.1",
     "path": "history/2026-04-23.json"
   },
   {

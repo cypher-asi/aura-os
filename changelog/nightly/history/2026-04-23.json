@@ -3,22 +3,24 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-23T17:29:26.455Z",
+  "generatedAt": "2026-04-23T17:47:07.966Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.352.1",
+  "version": "0.1.0-nightly.354.1",
   "date": "2026-04-23",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.352.1",
-  "lastIncludedSha": "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d",
-  "previousProcessedSha": "ac61ac34f8980288b3c0de16c352756ddedd6e04",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.354.1",
+  "lastIncludedSha": "43ac90589c9453a4ca3c2fb905beaebcc908d051",
+  "previousProcessedSha": "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d",
   "commitShas": [
     "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
     "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
     "ac61ac34f8980288b3c0de16c352756ddedd6e04",
-    "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d"
+    "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d",
+    "22176006f737cb85f2bd007721b53a6bbadc8fe9",
+    "43ac90589c9453a4ca3c2fb905beaebcc908d051"
   ],
-  "rawCommitCount": 4,
-  "filteredCommitCount": 4,
+  "rawCommitCount": 6,
+  "filteredCommitCount": 6,
   "rawCommits": [
     {
       "sha": "d81834cdcc4667bd4b48a5a93b9fab280313e1a4",
@@ -182,6 +184,80 @@
       "areas": [
         "Release Infrastructure"
       ]
+    },
+    {
+      "sha": "22176006f737cb85f2bd007721b53a6bbadc8fe9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-23T13:29:36-04:00",
+      "subject": "Improve changelog media readability",
+      "body": "",
+      "parents": [
+        "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d"
+      ],
+      "files": [
+        "infra/scripts/release/publish-changelog-media.mjs",
+        "infra/scripts/release/publish-changelog-media.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 103,
+        "deletions": 10
+      },
+      "committedAtMs": 1776965376000,
+      "cleanSubject": "Improve changelog media readability",
+      "keywords": [
+        "improve",
+        "changelog",
+        "media",
+        "readability"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "43ac90589c9453a4ca3c2fb905beaebcc908d051",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-23T13:32:36-04:00",
+      "subject": "Tighten changelog media framing",
+      "body": "",
+      "parents": [
+        "22176006f737cb85f2bd007721b53a6bbadc8fe9"
+      ],
+      "files": [
+        "infra/scripts/release/publish-changelog-media.mjs",
+        "infra/scripts/release/publish-changelog-media.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 40,
+        "deletions": 5
+      },
+      "committedAtMs": 1776965556000,
+      "cleanSubject": "Tighten changelog media framing",
+      "keywords": [
+        "tighten",
+        "changelog",
+        "media",
+        "framing"
+      ],
+      "fileGroups": [
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
     }
   ],
   "batchCount": 1,
@@ -193,36 +269,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11269122
+          "sizeBytes": 11269130
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.352.1",
+      "version": "0.1.0-nightly.354.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35127818
+          "sizeBytes": 35126174
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102345208
+          "sizeBytes": 102337016
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -232,29 +308,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.352.1",
+      "version": "0.1.0-nightly.354.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.352.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.354.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31515409
+          "sizeBytes": 31522721
         },
         {
-          "name": "Aura_0.1.0-nightly.352.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.354.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31326338
+          "sizeBytes": 31330778
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -264,29 +340,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.352.1",
+      "version": "0.1.0-nightly.354.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.352.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.354.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33225557
+          "sizeBytes": 33227706
         },
         {
-          "name": "Aura_0.1.0-nightly.352.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.354.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33064582
+          "sizeBytes": 33067817
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -296,17 +372,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.352.1",
+      "version": "0.1.0-nightly.354.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23756671
+          "sizeBytes": 23752331
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.352.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.354.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -315,18 +391,18 @@
     }
   ],
   "rendered": {
-    "title": "Nightly release pipeline gets a safety net",
-    "intro": "Today was a focused release-infrastructure day. The nightly pipeline picked up retry-aware asset pruning, a dedicated workflow to keep dated changelog history in sync with the latest entry, and a manual recovery path for republishing GitHub Pages when things go sideways.",
+    "title": "Release pipeline hardening and sharper changelog media",
+    "intro": "Today's nightly was an infrastructure-focused day: the release pipeline picked up safer asset pruning and a gh-pages recovery path, while the auto-generated changelog media got a noticeably cleaner, better-framed look on the published site.",
     "entries": [
       {
         "time_label": "9:17 AM",
         "started_at": "2026-04-23T16:17:50.000Z",
-        "ended_at": "2026-04-23T17:07:35.000Z",
-        "title": "Hardened nightly pruning and changelog history sync",
-        "summary": "The nightly release workflow moved pruning into a dedicated retry-aware script, gained a new job that mirrors changelog media into dated history entries, and added a manual gh-pages republish path for recovery.",
+        "ended_at": "2026-04-23T17:32:36.000Z",
+        "title": "Safer nightly asset prune and gh-pages recovery",
+        "summary": "The nightly release workflow moved its asset cleanup into a dedicated retry-aware script, gained a manual gh-pages republish escape hatch, and learned to sync generated changelog media into the right historical entry.",
         "items": [
           {
-            "text": "Nightly asset pruning was extracted into a reusable script with retries and graceful handling of assets that have already disappeared (HTTP 404), so transient GitHub API hiccups no longer fail the release job.",
+            "text": "Nightly asset pruning was extracted into a standalone retry-capable script that tolerates already-deleted assets (HTTP 404) and retries transient GitHub API failures, so a flaky prune step no longer fails the release.",
             "commit_shas": [
               "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
               "ac61ac34f8980288b3c0de16c352756ddedd6e04"
@@ -334,7 +410,7 @@
             "confidence": "high"
           },
           {
-            "text": "A new Sync Release Changelog Media History workflow runs after each changelog publish to copy media into the matching dated history entry on gh-pages, and the publish script now resolves the latest release to its dated history mirror so updates land in both places.",
+            "text": "Added a new Sync Release Changelog Media History workflow that reconciles latest changelog media into dated gh-pages history files after publish, reconcile, and media-publish runs complete successfully.",
             "commit_shas": [
               "a7eb25a2b1472bcd917e359463ed33b3e2393bdf",
               "d81834cdcc4667bd4b48a5a93b9fab280313e1a4"
@@ -342,9 +418,24 @@
             "confidence": "high"
           },
           {
-            "text": "Added a manually triggered Republish GitHub Pages workflow, backed by an allow-empty commit mode in the gh-pages push helper, giving operators a clean way to force a Pages rebuild with an optional reason note.",
+            "text": "Introduced a manual Republish GitHub Pages workflow with an optional reason input, backed by a gh-pages commit helper that can now create an allow-empty commit to force a fresh Pages deploy when content has not changed.",
             "commit_shas": [
               "ca9eaa8fb4a3b1df4078df4ceb0afe950e134c1d"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "When publishing media for the latest release, the script now prefers the dated history mirror (e.g. 2026-04-22.json) over latest.json so history entries stay in sync with the canonical published record.",
+            "commit_shas": [
+              "d81834cdcc4667bd4b48a5a93b9fab280313e1a4"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Reworked the branded changelog screenshot card: it now preserves the screenshot's real aspect ratio instead of forcing 16:9, lets widescreen captures dominate the canvas, keeps a safety inset so product edges aren't clipped by the frame, and pushes background energy toward the edges with a darker, quieter central field and higher default image quality.",
+            "commit_shas": [
+              "22176006f737cb85f2bd007721b53a6bbadc8fe9",
+              "43ac90589c9453a4ca3c2fb905beaebcc908d051"
             ],
             "confidence": "high"
           }
@@ -352,17 +443,17 @@
         "media": {
           "requested": false,
           "status": "skipped",
-          "score": -9,
+          "score": -7,
           "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
           "reasons": [
             "entry only touches release or infrastructure files",
-            "entry language only weakly hints at a visible product surface",
+            "entry language points to a visible product surface",
             "entry language points to runtime or infrastructure plumbing rather than a stable screen",
             "entry language points to release plumbing rather than a product screen"
           ],
-          "slotId": "entry-hardened-nightly-pruning-and-changelog-history-sync",
-          "slug": "hardened-nightly-pruning-and-changelog-history-sync",
-          "alt": "Hardened nightly pruning and changelog history sync screenshot",
+          "slotId": "entry-safer-nightly-asset-prune-and-gh-pages-recovery",
+          "slug": "safer-nightly-asset-prune-and-gh-pages-recovery",
+          "alt": "Safer nightly asset prune and gh-pages recovery screenshot",
           "files": [
             ".github/workflows/release-nightly.yml",
             ".github/workflows/sync-release-changelog-media-history.yml",
@@ -380,10 +471,11 @@
       }
     ],
     "highlights": [
-      "Retry-aware nightly asset pruning tolerates vanished assets",
-      "Dated changelog history now mirrors the latest release automatically",
-      "New one-click workflow to republish GitHub Pages for recovery"
+      "Nightly asset prune now retries and tolerates vanished assets",
+      "New manual gh-pages republish recovery workflow",
+      "Changelog media respects screenshot aspect ratio with safer framing",
+      "Media updates now mirror into dated history entries"
     ],
-    "raw_commit_count": 4
+    "raw_commit_count": 6
   }
 }
