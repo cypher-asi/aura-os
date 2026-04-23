@@ -1,0 +1,85 @@
+name: Sync Release Changelog Media History
+
+on:
+  push:
+    branches:
+      - main
+  workflow_run:
+    workflows:
+      - Publish Release Changelog
+      - Publish Release Changelog Media
+      - Reconcile Release Changelog
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-release-changelog-media-history
+  cancel-in-progress: false
+
+jobs:
+  sync-history-media:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 1
+          path: repo
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          path: workflow
+
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+
+      - name: Sync latest/history changelog media
+        id: sync
+        shell: bash
+        run: |
+          summary_file="sync-changelog-history-media-summary.json"
+          node repo/infra/scripts/release/sync-changelog-history-media.mjs \
+            --pages-dir pages > "$summary_file"
+          cat "$summary_file"
+          echo "summary_file=$summary_file" >> "$GITHUB_OUTPUT"
+          echo "updated_slots=$(jq -r '.updatedSlots // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
+
+      - name: Attach sync summary
+        shell: bash
+        run: |
+          summary_file="${{ steps.sync.outputs.summary_file }}"
+          if [[ -f "$summary_file" ]]; then
+            {
+              echo "## Changelog History Media Sync"
+              echo
+              echo "- Updated slots: ${{ steps.sync.outputs.updated_slots }}"
+              echo
+              echo '```json'
+              cat "$summary_file"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Commit and push synced history media
+        if: steps.sync.outputs.updated_slots != '0'
+        shell: bash
+        run: |
+          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Sync changelog history media from latest entries" \
+            "changelog"
