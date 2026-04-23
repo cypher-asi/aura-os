@@ -10,6 +10,7 @@ import {
   buildRetryPlan,
   buildRunSummary,
   buildRunSummaryMarkdown,
+  evaluateWorkflowOutcome,
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
   parseArgs,
@@ -197,20 +198,52 @@ test("buildRunSummary and markdown include operator-facing diagnostics", () => {
   assert.equal(summary.previewHost, "aura-app-72ms.onrender.com");
   assert.equal(summary.published, 1);
   assert.equal(summary.failed, 1);
+  assert.equal(summary.workflowOutcome, "partial");
+  assert.equal(summary.shouldFailWorkflow, false);
   assert.equal(summary.strictRubricPassed, false);
   assert.deepEqual(summary.failedSlotIds, ["entry-2-agents"]);
 
   const markdown = buildRunSummaryMarkdown(summary);
   assert.match(markdown, /Changelog Media Diagnostics/);
   assert.match(markdown, /Preview host: aura-app-72ms\.onrender\.com/);
+  assert.match(markdown, /Workflow outcome: partial/);
+  assert.match(markdown, /Workflow should fail: no/);
   assert.match(markdown, /Strict rubric passed: no/);
   assert.match(markdown, /entry-2-agents/);
   assert.match(markdown, /Skipping remaining media captures after provider exhaustion/);
 
   const retryPlan = buildRetryPlan(summary);
   assert.equal(retryPlan.failed, 1);
+  assert.equal(retryPlan.workflowOutcome, "partial");
+  assert.equal(retryPlan.shouldFailWorkflow, false);
   assert.equal(retryPlan.strictRubricPassed, false);
   assert.deepEqual(retryPlan.failedSlots.map((slot) => slot.slotId), ["entry-2-agents"]);
+});
+
+test("evaluateWorkflowOutcome only fails when every attempted publish failed", () => {
+  assert.deepEqual(
+    evaluateWorkflowOutcome({ published: 2, failed: 0 }),
+    {
+      workflowOutcome: "success",
+      shouldFailWorkflow: false,
+    },
+  );
+
+  assert.deepEqual(
+    evaluateWorkflowOutcome({ published: 2, failed: 1 }),
+    {
+      workflowOutcome: "partial",
+      shouldFailWorkflow: false,
+    },
+  );
+
+  assert.deepEqual(
+    evaluateWorkflowOutcome({ published: 0, failed: 3 }),
+    {
+      workflowOutcome: "failure",
+      shouldFailWorkflow: true,
+    },
+  );
 });
 
 test("shouldPublishEntryMedia skips healthy published assets by default", () => {

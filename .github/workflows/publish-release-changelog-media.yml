@@ -255,6 +255,8 @@ jobs:
             echo "failed=0" >> "$GITHUB_OUTPUT"
             echo "published=0" >> "$GITHUB_OUTPUT"
             echo "skipped=0" >> "$GITHUB_OUTPUT"
+            echo "workflow_outcome=failure" >> "$GITHUB_OUTPUT"
+            echo "should_fail=true" >> "$GITHUB_OUTPUT"
             echo "strict_passed=false" >> "$GITHUB_OUTPUT"
             echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
             exit 0
@@ -265,6 +267,8 @@ jobs:
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
+          echo "workflow_outcome=$(jq -r '.workflowOutcome // \"failure\"' \"$summary_file\")" >> "$GITHUB_OUTPUT"
+          echo "should_fail=$(jq -r '.shouldFailWorkflow // true' \"$summary_file\")" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
 
@@ -346,16 +350,18 @@ jobs:
           published="${{ steps.summary.outputs.published }}"
           failed="${{ steps.summary.outputs.failed }}"
           skipped="${{ steps.summary.outputs.skipped }}"
+          workflow_outcome="${{ steps.summary.outputs.workflow_outcome }}"
+          should_fail="${{ steps.summary.outputs.should_fail }}"
           capture_outcome="${{ steps.capture.outcome }}"
 
-          if [[ "$failed" != "0" && "$published" != "0" ]]; then
-            echo "::warning::Changelog media published ${published} screenshot(s), skipped ${skipped}, and queued retry for ${failed} failed slot(s)."
-            exit 0
-          fi
-
-          if [[ "$failed" != "0" ]]; then
+          if [[ "$should_fail" == "true" ]]; then
             echo "Changelog media did not publish any screenshots for ${attempted} attempted slot(s); ${failed} slot(s) failed." >&2
             exit 1
+          fi
+
+          if [[ "$workflow_outcome" == "partial" ]]; then
+            echo "::warning::Changelog media published ${published} screenshot(s), skipped ${skipped}, and queued retry for ${failed} failed slot(s)."
+            exit 0
           fi
 
           if [[ "$capture_outcome" == "failure" ]]; then
