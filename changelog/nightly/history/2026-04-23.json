@@ -572,7 +572,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -593,7 +593,11 @@
             "interface/src/constants/models.ts",
             "interface/src/lib/benchmark-pricing.test.ts",
             "crates/aura-os-network/src/types.rs"
-          ]
+          ],
+          "updatedAt": "2026-04-23T19:35:05.534Z",
+          "error": "Error: OpenAI branded media judge rejected entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting with score 40: Unreadable or cut-off text in the main product screenshot area.; Product UI details are not clearly visible or easily readable for changelog purposes.",
+          "failureClass": "openai_polish",
+          "retryInstruction": "Retry correction pass: Previous failure class: openai_polish. Previous error summary: Error: OpenAI branded media judge rejected entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting with score 40: Unreadable or cut-off text in the main product screenshot area.; Product UI details are not clearl…. The previous run captured a proof screenshot but failed the mandatory OpenAI branded polish stage. Capture the clearest, most readable screenshot possible so the polish stage can frame it without hiding the feature. Avoid sparse or tiny proof surfaces; keep the important UI centered and readable before polish."
         }
       }
     ],
