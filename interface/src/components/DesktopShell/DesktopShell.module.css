@@ -58,14 +58,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--color-border);
+  margin-right: 2px;
   background: var(--color-bg);
-  transition: border-color var(--transition-fast, 0.15s);
 }
 
 :global([data-desktop-mode]) .desktopSidebar {
   background: transparent;
-  border-right-color: transparent;
 }
 
 .desktopSidebarBody {
