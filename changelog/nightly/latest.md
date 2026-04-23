@@ -1,37 +1,36 @@
-# GPT-5.5 pricing lands and nightly release pipeline gets sturdier
+# GPT-5.5 support lands alongside hardened nightly release plumbing
 
 - Date: `2026-04-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.355.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.355.1
+- Version: `0.1.0-nightly.356.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.356.1
 
-Today's nightly brings the GPT-5.5 family into Aura's chat and cost accounting, on top of a substantial hardening pass across the release pipeline — dated changelog history, safer nightly asset pruning, a gh-pages recovery path, and cleaner changelog media framing.
+Today's nightly brings GPT-5.5 to the model picker with an expanded pricing table, plus a significant round of release infrastructure work that makes nightly publishes, changelog media, and GitHub Pages republishes far more resilient.
 
-## 9:17 AM — Nightly release pipeline hardening and changelog media overhaul
+## 9:17 AM — Hardened nightly publish pipeline and changelog media polish
 
-A broad reliability pass on the nightly release workflow, a new gh-pages recovery path, and sharper changelog media rendering.
+A focused morning pass on release infrastructure made nightly pruning retry-safe, added recovery workflows for gh-pages and changelog history, and sharpened how branded changelog screenshots are framed.
 
-- Nightly asset pruning moved into a dedicated retry-aware script that tolerates missing releases and 404s on already-deleted assets, replacing the inline workflow step that would fail on transient GitHub API errors. (`a7eb25a`, `ac61ac3`)
-- Added a Sync Release Changelog Media History workflow plus a script that mirrors newly published media into dated history entries, so older changelog pages stop drifting from latest. (`a7eb25a`, `d81834c`)
-- New Republish GitHub Pages workflow can force a fresh gh-pages push — including an allow-empty commit path — giving operators a one-click recovery when Pages gets stuck. (`ca9eaa8`)
-- Changelog media now renders screenshots at their true aspect ratio with a larger card footprint, a safety inset that prevents edge clipping, a quieter central background, and higher OpenAI image quality by default. (`2217600`, `43ac905`)
+- Nightly asset pruning moved into a dedicated retrying script and now gracefully skips assets that 404 mid-delete, so transient GitHub API hiccups no longer fail a nightly release. (`a7eb25a`, `ac61ac3`)
+- Added a Sync Release Changelog Media History workflow plus a manual Republish GitHub Pages workflow with allow-empty commits, giving operators a clean recovery path when Pages drifts or needs a forced redeploy. (`a7eb25a`, `ca9eaa8`)
+- Published changelog media now mirrors into the correct dated history entry when the latest release has already been archived, keeping per-date history JSON and Markdown in sync with the latest doc. (`d81834c`)
+- Branded screenshot cards preserve the real screenshot's aspect ratio, claim more of the canvas, add a safety inset so product edges aren't clipped, and bump OpenAI image quality to high for a cleaner changelog look. (`2217600`, `43ac905`)
 
-## 11:43 AM — GPT-5.5 model support in chat and pricing
+## 11:43 AM — GPT-5.5 in the model picker and ZERO Pro usage reporting
 
-The GPT-5.5 family is now selectable in the chat input and fully wired into Aura's per-token fee schedule.
+Aura gained first-class GPT-5.5 support with a richer per-model pricing schedule, and the server now forwards ZERO Pro status alongside usage reports.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-model-support-in-chat-and-pricing","slug":"gpt-5-5-model-support-in-chat-and-pricing","alt":"GPT-5.5 model support in chat and pricing screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.355.1/entry-gpt-5-5-model-support-in-chat-and-pricing.png","screenshotSource":"openai-polish","originalScreenshotSource":"capture-proof","polishProvider":"openai","polishModel":"gpt-image-2","polishJudgeModel":"gpt-4.1-mini","polishScore":85,"updatedAt":"2026-04-23T19:04:14.470Z","storyTitle":"GPT-5.5 Model Selectable in Chat Input Bar"} -->
-![GPT-5.5 model support in chat and pricing screenshot](../../assets/changelog/nightly/0.1.0-nightly.355.1/entry-gpt-5-5-model-support-in-chat-and-pricing.png)
-<!-- AURA_CHANGELOG_MEDIA:END entry-gpt-5-5-model-support-in-chat-and-pricing -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting","slug":"gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting","alt":"GPT-5.5 in the model picker and ZERO Pro usage reporting screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-gpt-5-5-in-the-model-picker-and-zero-pro-usage-reporting -->
 
-- GPT-5.5 is now exposed in the chat input bar and model constants, making it selectable alongside the existing Claude lineup. (`d9d82e9`)
-- Server-side fee schedule was restructured to carry explicit input, output, cache-write, and cache-read rates per model, and now covers gpt-5.5, gpt-5.4, gpt-5.4-mini, and gpt-5.4-nano in addition to the Claude 4 family. (`d9d82e9`)
-- Benchmark pricing tooling was updated in lockstep so cost reporting recognizes the new GPT-5 tier instead of falling back to default rates. (`d9d82e9`)
+- GPT-5.5 is available from the chat input model picker, backed by a rebuilt fee schedule that tracks input, output, cache-write and cache-read rates for the full GPT-5.4/5.5 family next to existing Claude models. (`d9d82e9`)
+- Usage reports sent from the dev loop now include a zero_pro_user flag sourced from the cached session, letting the network service distinguish ZERO Pro accounts when recording automaton usage. (`b2847a4`)
 
 ## Highlights
 
-- GPT-5.5 available in chat with full pricing support
-- Nightly asset prune tolerates missing releases
-- New gh-pages republish recovery workflow
-- Changelog media preserves screenshot aspect and framing
+- GPT-5.5 model support with expanded OpenAI pricing
+- Nightly asset pruning now retries and tolerates missing files
+- New gh-pages republish and changelog history sync workflows
+- Changelog media framing preserves screenshot aspect and avoids edge clipping
 

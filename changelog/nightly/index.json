@@ -2,19 +2,19 @@
   {
     "date": "2026-04-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.355.1",
-    "title": "GPT-5.5 pricing lands and nightly release pipeline gets sturdier",
-    "intro": "Today's nightly brings the GPT-5.5 family into Aura's chat and cost accounting, on top of a substantial hardening pass across the release pipeline — dated changelog history, safer nightly asset pruning, a gh-pages recovery path, and cleaner changelog media framing.",
+    "version": "0.1.0-nightly.356.1",
+    "title": "GPT-5.5 support lands alongside hardened nightly release plumbing",
+    "intro": "Today's nightly brings GPT-5.5 to the model picker with an expanded pricing table, plus a significant round of release infrastructure work that makes nightly publishes, changelog media, and GitHub Pages republishes far more resilient.",
     "entryCount": 2,
     "highlights": [
-      "GPT-5.5 available in chat with full pricing support",
-      "Nightly asset prune tolerates missing releases",
-      "New gh-pages republish recovery workflow",
-      "Changelog media preserves screenshot aspect and framing"
+      "GPT-5.5 model support with expanded OpenAI pricing",
+      "Nightly asset pruning now retries and tolerates missing files",
+      "New gh-pages republish and changelog history sync workflows",
+      "Changelog media framing preserves screenshot aspect and avoids edge clipping"
     ],
-    "rawCommitCount": 7,
-    "generatedAt": "2026-04-23T18:55:13.426Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.355.1",
+    "rawCommitCount": 8,
+    "generatedAt": "2026-04-23T19:26:06.072Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.356.1",
     "path": "history/2026-04-23.json"
   },
   {
