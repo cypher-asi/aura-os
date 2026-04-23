@@ -47,7 +47,9 @@ function TestResultIcon({ status }: { status: string }) {
 function getStepLabel(variant: VerificationVariant, step: VerificationStep, active: boolean): string {
   switch (step.kind) {
     case "started": {
-      const prefix = variant === "test" ? `Running tests \`${step.command}\`` : `Running \`${step.command}\``;
+      const prefix = step.command
+        ? (variant === "test" ? `Running tests \`${step.command}\`` : `Running \`${step.command}\``)
+        : (variant === "test" ? "Running tests" : "Running build");
       return active ? `${prefix}...` : prefix;
     }
     case "passed":

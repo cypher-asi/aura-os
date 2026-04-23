@@ -115,4 +115,100 @@ describe("useTaskOutputHydration", () => {
     expect(seed).not.toHaveBeenCalled();
     expect(api.getTaskOutput).not.toHaveBeenCalled();
   });
+
+  it("normalises raw tool_call_snapshot/completed build steps into labelled rows", () => {
+    const seed = vi.fn();
+    const task = makeTask({
+      live_output: "seed",
+      build_steps: [
+        {
+          type: "tool_call_snapshot",
+          id: "call-1",
+          name: "run_command",
+          input: { command: "cargo check --workspace" },
+        },
+        {
+          type: "tool_call_completed",
+          id: "call-1",
+          name: "run_command",
+          input: { command: "cargo check --workspace" },
+        },
+        {
+          type: "tool_call_snapshot",
+          id: "call-2",
+          name: "run_command",
+          input: { program: "npm", args: ["run", "build"] },
+        },
+      ] as unknown as Task["build_steps"],
+    });
+
+    renderHook(() =>
+      useTaskOutputHydration("p-1", task, true, false, "", seed),
+    );
+
+    expect(seed).toHaveBeenCalledTimes(1);
+    const [, , buildSteps] = seed.mock.calls[0];
+    expect(buildSteps).toHaveLength(2);
+    expect(buildSteps[0]).toMatchObject({
+      kind: "passed",
+      command: "cargo check --workspace",
+    });
+    expect(buildSteps[1]).toMatchObject({
+      kind: "started",
+      command: "npm run build",
+    });
+  });
+
+  it("normalises raw tool_call events for test steps", () => {
+    const seed = vi.fn();
+    const task = makeTask({
+      live_output: "seed",
+      test_steps: [
+        {
+          type: "tool_call_completed",
+          id: "call-t1",
+          name: "run_command",
+          input: { command: "pnpm test" },
+        },
+      ] as unknown as Task["test_steps"],
+    });
+
+    renderHook(() =>
+      useTaskOutputHydration("p-1", task, true, false, "", seed),
+    );
+
+    expect(seed).toHaveBeenCalledTimes(1);
+    const [, , , testSteps] = seed.mock.calls[0];
+    expect(testSteps).toHaveLength(1);
+    expect(testSteps[0]).toMatchObject({
+      kind: "passed",
+      command: "pnpm test",
+    });
+  });
+
+  it("preserves native build_verification_* event shape", () => {
+    const seed = vi.fn();
+    const task = makeTask({
+      live_output: "seed",
+      build_steps: [
+        {
+          type: "build_verification_started",
+          command: "cargo build",
+        },
+        {
+          type: "build_verification_passed",
+          command: "cargo build",
+        },
+      ] as unknown as Task["build_steps"],
+    });
+
+    renderHook(() =>
+      useTaskOutputHydration("p-1", task, true, false, "", seed),
+    );
+
+    const [, , buildSteps] = seed.mock.calls[0];
+    expect(buildSteps).toHaveLength(2);
+    expect(buildSteps[0]).toMatchObject({ kind: "started", command: "cargo build" });
+    expect(buildSteps[1]).toMatchObject({ kind: "passed", command: "cargo build" });
+  });
 });
