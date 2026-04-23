@@ -3,14 +3,14 @@
   "promptVersion": 3,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-22T20:21:25.619Z",
+  "generatedAt": "2026-04-23T01:18:34.684Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.338.1",
+  "version": "0.1.0-nightly.343.1",
   "date": "2026-04-22",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.338.1",
-  "lastIncludedSha": "027e0e2864f5082afa0a6d1930bc0361d8d265c4",
-  "previousProcessedSha": "85cd8905ec7ec8b6faf31fd787710e6dd745e684",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.343.1",
+  "lastIncludedSha": "7a735ec67b3f785e7e4ebfc84ac8685de474bbfb",
+  "previousProcessedSha": "027e0e2864f5082afa0a6d1930bc0361d8d265c4",
   "commitShas": [
     "070248dcd7edc4f496d26b777ff9e9577dc0e883",
     "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758",
@@ -51,10 +51,33 @@
     "a68d47952dc295d63faf1980d63fff15a4772817",
     "61300ebd079b47076293e929132593574e8e3020",
     "14a67af6b0999656222e7d8f92d58e037e72622e",
-    "027e0e2864f5082afa0a6d1930bc0361d8d265c4"
+    "027e0e2864f5082afa0a6d1930bc0361d8d265c4",
+    "c4f512df38ea646b42eec99b3f3d62ebdff3d8d1",
+    "46ae8e9ca9d837c197aeae6ab7759db4bc1bcf40",
+    "8fb8af9782eba9e7c02a63db776522b6134f25a4",
+    "27d79bd338caabf4911ee2facf239e95e3c00512",
+    "4f83bcf91cfd11a9ed88028ea1bba611179d32d6",
+    "fe0605586c63b50b1150057f4410651ab0d56d96",
+    "38555081b12d331d92143485124925e315074b61",
+    "dc504292affb0beb7c6d4e0f4fbca7089141a5d0",
+    "2d0124d8641c4626627a7bf48b3368b0b1d5fdd6",
+    "dd972910ff9ac1df00c1b85c7daec4ffc499676e",
+    "16f38ac5d85a876f68dd5959c2100b030d0fd9cf",
+    "5e25855a24ab0f6db1e1a8c39e6e6805b71d8d8b",
+    "88a1fee6c8209f39f48069e3142795f679e96a81",
+    "53dec4dae5b747b0ccc8673eb22602264e07e253",
+    "ed2e66956cca202f85120e1279e5cfc4fd2f8e15",
+    "ea9ab6eb61c371c02b24b389414bb706cc8918dc",
+    "773a3a8f7a5440013de880f5e9c586176b73c624",
+    "764be8b7222758b285f0c746cfaf89cb67493d3e",
+    "371aacf812b5a9d174ac9e017d1e553e911bd2e8",
+    "9005c601df82443541f1cf21a6de059d3fe0bec9",
+    "15c87288a657e572fa07e4ca3c12e000495eea66",
+    "e0b0ade10d2ee6161b73d23b7084be7670a57004",
+    "7a735ec67b3f785e7e4ebfc84ac8685de474bbfb"
   ],
-  "rawCommitCount": 42,
-  "filteredCommitCount": 40,
+  "rawCommitCount": 68,
+  "filteredCommitCount": 63,
   "rawCommits": [
     {
       "sha": "070248dcd7edc4f496d26b777ff9e9577dc0e883",
@@ -1903,6 +1926,1064 @@
         "Other",
         "Interface"
       ]
+    },
+    {
+      "sha": "c4f512df38ea646b42eec99b3f3d62ebdff3d8d1",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T12:40:52-07:00",
+      "subject": "fix(chat): pin streaming phase indicator so it no longer jitters content",
+      "body": "The Cooking/Thinking/... indicator was rendered inline inside the\nstreaming bubble and toggled between null and a label on every phase\nchange (notably `isWriting`), pushing chat content up and down. Move the\nindicator out of the message flow for the agent chat: add an opt-in\n`showPhaseIndicator` prop to `LLMStreamOutput`/`StreamingBubble` (default\ntrue, disabled only in `ChatMessageList`), and render a new\n`ChatStreamingIndicator` absolutely positioned in the empty zone above\nthe input bar in `ChatPanel`. Scroll flow is unaffected regardless of\nwhether or when the indicator appears.\n\nMade-with: Cursor",
+      "parents": [
+        "85cd8905ec7ec8b6faf31fd787710e6dd745e684"
+      ],
+      "files": [
+        "interface/src/components/ChatMessageList/ChatMessageList.tsx",
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatPanel.tsx",
+        "interface/src/components/ChatPanel/ChatStreamingIndicator.test.tsx",
+        "interface/src/components/ChatPanel/ChatStreamingIndicator.tsx",
+        "interface/src/components/LLMOutput/LLMStreamOutput.test.tsx",
+        "interface/src/components/LLMOutput/LLMStreamOutput.tsx",
+        "interface/src/components/StreamingBubble/StreamingBubble.tsx"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 183,
+        "deletions": 8
+      },
+      "committedAtMs": 1776886852000,
+      "cleanSubject": "pin streaming phase indicator so it no longer jitters content",
+      "keywords": [
+        "streaming",
+        "phase",
+        "indicator",
+        "longer",
+        "jitters",
+        "content"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "46ae8e9ca9d837c197aeae6ab7759db4bc1bcf40",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T13:22:44-07:00",
+      "subject": "feat(debug): surface live runs, left-align sidekick, stable timeline",
+      "body": "- Debug left menu: fetch runs for every project so a new \"Running now\"\n  section can list in-progress runs across the workspace; auto-expand\n  projects with active runs; poll at 3s when running, 10s when idle.\n- Sidekick Run tab / entry inspector: pin buttons and JSON block to\n  the container's leading edge so they line up with field labels\n  above instead of drifting right on wide sidekicks.\n- Run detail middle panel: always show the full event timeline. The\n  channel no longer flips when sidekick tabs change (fixes Run and\n  All events appearing identical and the heading swapping around).\n- Timeline third column: never render raw JSON; prefer task name /\n  tool name / task id over payload JSON, and drop the stringified\n  tool_call arguments preview. Full JSON is still available in the\n  sidekick inspector when a row is selected.\n- Normalize nav suffix sizing (run count / event count) to a shared\n  12px class so Debug rows visually match Projects/Notes/Process.\n\nMade-with: Cursor",
+      "parents": [
+        "c4f512df38ea646b42eec99b3f3d62ebdff3d8d1"
+      ],
+      "files": [
+        "interface/src/apps/debug/DebugNav/DebugNav.module.css",
+        "interface/src/apps/debug/DebugNav/DebugNav.tsx",
+        "interface/src/apps/debug/DebugNav/debug-nav-explorer-node.tsx",
+        "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx",
+        "interface/src/apps/debug/components/DebugSidekickContent/DebugSidekickContent.module.css",
+        "interface/src/apps/debug/format-entry.ts",
+        "interface/src/apps/debug/useDebugRunsByProject.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 232,
+        "deletions": 91
+      },
+      "committedAtMs": 1776889364000,
+      "cleanSubject": "surface live runs, left-align sidekick, stable timeline",
+      "keywords": [
+        "surface",
+        "live",
+        "runs",
+        "left",
+        "align",
+        "sidekick",
+        "stable",
+        "timeline"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "8fb8af9782eba9e7c02a63db776522b6134f25a4",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T13:38:30-07:00",
+      "subject": "fix(tasks): dedupe create_task by title and always persist failure reason",
+      "body": "The `extract_tasks` agent flow is prompted to \"create or update\" project\ntasks, but the server-side `create_task` handler unconditionally minted\nfresh UUIDs, so every re-run of the generate-spec → extract-tasks → start-\nloop chain doubled the task list. Enforce idempotency on\n`(project_id, spec_id, case-insensitive trimmed title)` — the same key\n`TaskService::create_follow_up_task` already uses — and re-broadcast\n`task_saved` for the existing row so clients stay in sync. Cover it with\nan integration test that repeats the POST with whitespace + case variants\nand asserts exactly one row survives.\n\nSeparately, `task_failed` only wrote `execution_notes` to storage when a\n`session_id` was cached, which meant failures that happened before the\nautomaton reported a session (e.g. early connect failures) left the row\nwith `execution_notes = NULL`. The UI falls back to `execution_notes` on\nreload, so these failures rendered as blank reasons. Split the write:\npersist the reason unconditionally, and keep the session/usage write\ngated on `session_id` as before.\n\nMade-with: Cursor",
+      "parents": [
+        "46ae8e9ca9d837c197aeae6ab7759db4bc1bcf40"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/handlers/tasks.rs",
+        "apps/aura-os-server/tests/api_tests.rs"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 158,
+        "deletions": 0
+      },
+      "committedAtMs": 1776890310000,
+      "cleanSubject": "dedupe create_task by title and always persist failure reason",
+      "keywords": [
+        "dedupe",
+        "create",
+        "task",
+        "title",
+        "always",
+        "persist",
+        "failure",
+        "reason"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "27d79bd338caabf4911ee2facf239e95e3c00512",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T14:28:09-07:00",
+      "subject": "fix(agents): restore scrolling in standalone agent chat",
+      "body": "The changelog-screenshot instrumentation wrapper added in 3b93c76a wraps\n`AgentMainPanel`'s children in a plain `<div data-agent-surface=...>`\nwith no flex styling. That broke the flex-column height chain between\n`ResponsiveMainLane`'s `.mainContent` and `ChatPanel`'s\n`.container { flex: 1; min-height: 0 }`, leaving the message area's\n`overflow-y: auto` viewport with no bounded ancestor - so the\ntranscript collapsed to content height and the mouse wheel / scrollbar\nstopped working. Only the standalone `/agents/:agentId` route was\naffected because `ProjectMainPanel` doesn't introduce an extra wrapper.\n\nKeep the `data-agent-surface` / `data-agent-agent-id` attributes the\nautomation relies on, but make the wrapper a flex-column filler\n(flex: 1; min-height: 0; min-width: 0) so the height chain is\npreserved. Add a comment above the div so the next person doing\nchangelog instrumentation doesn't drop the styles.\n\nMade-with: Cursor",
+      "parents": [
+        "8fb8af9782eba9e7c02a63db776522b6134f25a4"
+      ],
+      "files": [
+        "interface/src/apps/agents/AgentMainPanel/AgentMainPanel.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 18,
+        "deletions": 0
+      },
+      "committedAtMs": 1776893289000,
+      "cleanSubject": "restore scrolling in standalone agent chat",
+      "keywords": [
+        "restore",
+        "scrolling",
+        "standalone",
+        "agent",
+        "chat"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "4f83bcf91cfd11a9ed88028ea1bba611179d32d6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T14:48:03-07:00",
+      "subject": "fix(debug): reconcile orphan running runs on server startup",
+      "body": "Dev-loop run bundles only flip their on-disk status from Running to a\nterminal state inside `on_loop_ended`, which runs in a tokio task\nspawned by the dev-loop handler. If the server crashes, is killed, or\nthat task is aborted before reaching the cleanup path, metadata.json\nstays permanently at Running and the Debug UI shows the bundle in\n\"RUNNING NOW\" forever.\n\nAdd `LoopLogWriter::reconcile_orphan_runs` that walks the loop_logs\nbase dir at boot, rewrites any stale Running metadata to Interrupted\nwith ended_at backfilled from the events.jsonl mtime, and backfills\na summary.md so the Debug sidekick's summary tab isn't empty. Called\nfrom `build_app_state` before the writer is handed to AppState, so\nthere's no race with live runs.\n\nMade-with: Cursor",
+      "parents": [
+        "27d79bd338caabf4911ee2facf239e95e3c00512"
+      ],
+      "files": [
+        "apps/aura-os-server/src/app_builder.rs",
+        "apps/aura-os-server/src/loop_log.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 217,
+        "deletions": 1
+      },
+      "committedAtMs": 1776894483000,
+      "cleanSubject": "reconcile orphan running runs on server startup",
+      "keywords": [
+        "reconcile",
+        "orphan",
+        "running",
+        "runs",
+        "server",
+        "startup"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "fe0605586c63b50b1150057f4410651ab0d56d96",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T14:54:31-07:00",
+      "subject": "fix(tasks): keep sidekick context stable during refresh",
+      "body": "Avoid unregistering shared project actions during ordinary provider/query updates so the automation sidekick no longer blinks off between re-renders.\n\nMade-with: Cursor",
+      "parents": [
+        "4f83bcf91cfd11a9ed88028ea1bba611179d32d6"
+      ],
+      "files": [
+        "interface/src/apps/tasks/components/TasksProvider/TasksProvider.tsx",
+        "interface/src/views/ProjectLayout/useProjectLayoutData.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 9,
+        "deletions": 6
+      },
+      "committedAtMs": 1776894871000,
+      "cleanSubject": "keep sidekick context stable during refresh",
+      "keywords": [
+        "keep",
+        "sidekick",
+        "context",
+        "stable",
+        "during",
+        "refresh"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/views"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "38555081b12d331d92143485124925e315074b61",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T14:56:56-07:00",
+      "subject": "fix(debug): finalise run bundle as interrupted on stop/restart",
+      "body": "When `stop_loop` aborted the forwarder task (or `start_loop` replaced a\nstale registry entry), the on-disk run bundle stayed pinned at\n`status: running` because the task never reached its own\n`on_loop_ended` cleanup. With the new \"Running now\" list in the Debug\nleft menu, those orphans now show as ghost live runs until the next\nserver restart (when `reconcile_orphan_runs` sweeps them).\n\nCall `LoopLogWriter::on_loop_ended(..., Interrupted)` explicitly from\nboth sites so the metadata flips immediately. Both calls are no-ops\nwhen the forwarder already finalised the run, so this is a safe\nbelt-and-suspenders fix and doesn't race with the natural exit path.\n\nMade-with: Cursor",
+      "parents": [
+        "fe0605586c63b50b1150057f4410651ab0d56d96"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 55,
+        "deletions": 2
+      },
+      "committedAtMs": 1776895016000,
+      "cleanSubject": "finalise run bundle as interrupted on stop/restart",
+      "keywords": [
+        "finalise",
+        "bundle",
+        "interrupted",
+        "stop",
+        "restart"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "dc504292affb0beb7c6d4e0f4fbca7089141a5d0",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T15:08:23-07:00",
+      "subject": "fix(dev-loop): honour provider Retry-After on rate-limited retries",
+      "body": "The orchestrator's infra-retry path already recognises 429/529\ntask_failed events but always waits the class-default cooldown (60s\nfor rate limits, 30s for overload) regardless of the Retry-After the\nprovider actually sent. When Anthropic's bucket window is longer than\nthe default, the automaton wakes up, immediately 429s again, resets\nthe task, and pays another full cooldown - turning a transient rate\nlimit into a cascading failure that burns through every task in a\nrun.\n\n- FailureClass now recognises a RateLimited variant, checked before\n  Truncation so a 429 that happens to quote 'truncated' in the error\n  body stays on the backoff path instead of triggering Phase 3\n  remediation.\n- extract_retry_after() + parse_retry_after_seconds() pull a delay\n  out of task_failed / error events, preferring structured fields\n  (retry_after_ms, retry_after, headers.Retry-After) before scanning\n  reason / error / message text for 'retry after N', 'retry in Ns',\n  'try again in N seconds'.\n- register_project_cooldown_with_hint() raises the project-wide\n  cooldown to max(class default, hint), clamped to 120s. Hints\n  longer than the default are respected; hints shorter (including 0)\n  never undercut the default. restart_with_infra_backoff threads the\n  hint through so a restart that itself 429s respects the provider\n  delay.\n- Every rate-limit retry emits a debug.retry event so it lands in\n  the run bundle's retries.jsonl for postmortem analysis.\n\nCovered by six new unit tests (classifier precedence, retry-after\nparsing, structured vs. header vs. text extraction, ceiling\nclamping, and cooldown monotonicity) plus a test-only re-export of\nis_rate_limited_failure for integration tests.\n\nMade-with: Cursor",
+      "parents": [
+        "38555081b12d331d92143485124925e315074b61"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 698,
+        "deletions": 25
+      },
+      "committedAtMs": 1776895703000,
+      "cleanSubject": "honour provider Retry-After on rate-limited retries",
+      "keywords": [
+        "honour",
+        "provider",
+        "retry",
+        "after",
+        "rate",
+        "limited",
+        "retries"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "2d0124d8641c4626627a7bf48b3368b0b1d5fdd6",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T15:15:19-07:00",
+      "subject": "fix(dev-loop): expose cooldown state and reject empty completions",
+      "body": "Surface provider cooldown details in loop status so callers can distinguish active runs from backoff pauses, and turn empty task_completed events into task_failed when the run produced no output, file changes, or verification evidence.\n\nMade-with: Cursor",
+      "parents": [
+        "dc504292affb0beb7c6d4e0f4fbca7089141a5d0"
+      ],
+      "files": [
+        "apps/aura-os-server/src/dto.rs",
+        "apps/aura-os-server/src/handlers/dev_loop.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 151,
+        "deletions": 5
+      },
+      "committedAtMs": 1776896119000,
+      "cleanSubject": "expose cooldown state and reject empty completions",
+      "keywords": [
+        "expose",
+        "cooldown",
+        "state",
+        "reject",
+        "empty",
+        "completions"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "dd972910ff9ac1df00c1b85c7daec4ffc499676e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T15:18:57-07:00",
+      "subject": "fix(ide): bootstrap auth into IDE window webview",
+      "body": "The IDE window is a separate wry WebView with an isolated WebContext, so\nit never received the auth/host initialization script the main webview\ngets from build_initialization_script. Without window.__AURA_BOOT_AUTH__\nand the seeded localStorage mirrors, every API call from the IDE webview\nfailed the server's auth guard with \"missing authorization token\",\nleaving the file tree blank and the editor body showing ApiClientError\non every file open.\n\nRebuild the same bootstrap script at IDE-open time (so a login after\ndesktop startup still yields an authenticated IDE window) and inject it\nalongside the existing ready notifier via open_ide_window.\n\nMade-with: Cursor",
+      "parents": [
+        "2d0124d8641c4626627a7bf48b3368b0b1d5fdd6"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/main.rs",
+        "apps/aura-os-ide/src/lib.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 35,
+        "deletions": 2
+      },
+      "committedAtMs": 1776896337000,
+      "cleanSubject": "bootstrap auth into IDE window webview",
+      "keywords": [
+        "bootstrap",
+        "auth",
+        "into",
+        "window",
+        "webview"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-ide/src"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Other"
+      ]
+    },
+    {
+      "sha": "16f38ac5d85a876f68dd5959c2100b030d0fd9cf",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T15:23:43-07:00",
+      "subject": "fix(chat): lift cooking indicator above input fade and align to text column",
+      "body": "Bump the pinned streaming indicator's z-index above the input wrapper's\nfade gradient so phase labels (\"Cooking...\", \"Drafting specs...\", etc.)\nstay legible, and wrap the indicator in a 680px column so its left edge\nmatches the message and input text column instead of centering.\n\nMade-with: Cursor",
+      "parents": [
+        "dd972910ff9ac1df00c1b85c7daec4ffc499676e"
+      ],
+      "files": [
+        "interface/src/components/ChatPanel/ChatPanel.module.css",
+        "interface/src/components/ChatPanel/ChatStreamingIndicator.tsx"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 11,
+        "deletions": 2
+      },
+      "committedAtMs": 1776896623000,
+      "cleanSubject": "lift cooking indicator above input fade and align to text column",
+      "keywords": [
+        "lift",
+        "cooking",
+        "indicator",
+        "above",
+        "input",
+        "fade",
+        "align",
+        "text",
+        "column"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "5e25855a24ab0f6db1e1a8c39e6e6805b71d8d8b",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T15:27:17-07:00",
+      "subject": "feat(debug): remember expand/collapse, last project, and last run",
+      "body": "Mirror the Projects app's persistence model in the Debug app so the\nleft nav survives reloads. Expand/collapse of project groups and the\n\"Running now\" section persists to `aura-debug-collapsed-projects`,\nthe last visited project/run persists to `aura-debug-last-project`\nand `aura-debug-last-run`, and a new `DebugIndexRedirect` routes\n`/debug` back to the remembered project and run. Project order was\nalready persisted via the shared `aura-project-order` reorder hook.\n\nMade-with: Cursor",
+      "parents": [
+        "16f38ac5d85a876f68dd5959c2100b030d0fd9cf"
+      ],
+      "files": [
+        "interface/src/apps/debug/DebugIndexRedirect.tsx",
+        "interface/src/apps/debug/DebugNav/DebugNav.tsx",
+        "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx",
+        "interface/src/apps/debug/DebugRunListView/DebugRunListView.tsx",
+        "interface/src/apps/debug/routes.tsx",
+        "interface/src/constants.ts",
+        "interface/src/features/left-menu/use-left-menu-expanded-groups.ts",
+        "interface/src/utils/storage.ts"
+      ],
+      "stats": {
+        "fileCount": 8,
+        "insertions": 295,
+        "deletions": 29
+      },
+      "committedAtMs": 1776896837000,
+      "cleanSubject": "remember expand/collapse, last project, and last run",
+      "keywords": [
+        "remember",
+        "expand",
+        "collapse",
+        "last",
+        "project"
+      ],
+      "fileGroups": [
+        "interface/src/apps",
+        "interface/src/constants.ts",
+        "interface/src/features",
+        "interface/src/utils"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "88a1fee6c8209f39f48069e3142795f679e96a81",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T15:52:30-07:00",
+      "subject": "fix(desktop): make window resize fluid and remove black resize edges",
+      "body": "Two issues conspired to make dragging the main window feel janky:\n\n- useAuraCapabilities was subscribed from ~40 components, each with its\n  own window.resize listener and each re-rendering on every resize tick\n  because readCapabilities() returned a new object reference even when\n  no breakpoint actually changed. Every live-resize frame cascaded\n  re-renders through the entire shell. Replaced with a single shared\n  useSyncExternalStore snapshot: one set of listeners for all consumers,\n  shallow-equality dedup so intra-breakpoint drags are zero-work, and\n  rAF coalescing so bursts collapse to one recompute per frame.\n- The main window's class background brush was BLACK_BRUSH, so Windows\n  erased newly-exposed client area to black during live resize before\n  the WebView2 child HWND had caught up, producing visible black bars\n  chasing the right/bottom edge. Switched to NULL_BRUSH so the OS no\n  longer erases: the WebView2 HWND already covers the client area with\n  its own black background, and the previous frame stays visible while\n  the webview resizes. Startup behavior is preserved because the window\n  stays hidden until the frontend posts ready.\n\nMade-with: Cursor",
+      "parents": [
+        "5e25855a24ab0f6db1e1a8c39e6e6805b71d8d8b"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/main.rs",
+        "interface/src/hooks/use-aura-capabilities.ts"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 174,
+        "deletions": 36
+      },
+      "committedAtMs": 1776898350000,
+      "cleanSubject": "make window resize fluid and remove black resize edges",
+      "keywords": [
+        "make",
+        "window",
+        "resize",
+        "fluid",
+        "remove",
+        "black",
+        "edges"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Interface"
+      ]
+    },
+    {
+      "sha": "53dec4dae5b747b0ccc8673eb22602264e07e253",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T16:36:16-07:00",
+      "subject": "fix(dev-loop): recover from restart conflicts and surface cooldowns in UI",
+      "body": "An Anthropic 429 on a single task could knock the whole infra-retry path\noff the rails: try_restart_automaton never handled the\nAutomatonStartError::Conflict that fires when the previous automaton is\nstill registered on the harness, the post-retry failure handler tried an\nillegal ready -> failed transition that aura-storage rejects, and\npersist_task_output logged a noisy \"session_id missing\" warning for rows\nthat legitimately had no output yet. In the UI, TaskOutputSection sat on\n\"Waiting for agent output...\" through the entire cooldown because it\nnever listened to loop_paused.\n\n- Add resolve_start_conflict mirroring start_loop's stop-stale /\n  adopt-live logic and call it from try_restart_automaton so a leftover\n  harness-side automaton doesn't turn every rate-limit recovery into a\n  permanent failure.\n- Make connect_with_retries accept Option<&str> for the event-stream URL\n  so the adopt path (which has no start-time URL) uses the client's\n  default instead of building a broken one.\n- Bridge ready -> in_progress -> failed when a prior\n  reset_task_for_infra_retry already flipped the task to ready but the\n  restart failed, restoring a valid terminal state.\n- Skip persist_task_output entirely when there is no session_id and no\n  cached content, silencing the spurious warning.\n- Add useCooldownStatus hook and wire it into TaskOutputSection so the\n  panel renders \"Rate limited by provider - resuming in Ns...\" while the\n  loop is paused.\n\nTests: new unit tests for automaton_is_active, the\nready -> in_progress -> failed bridge assumption, the cooldown hook's\ncountdown behaviour, and the renderCooldownMessage label mapping.\n\nMade-with: Cursor",
+      "parents": [
+        "88a1fee6c8209f39f48069e3142795f679e96a81"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "crates/aura-os-link/src/runner/mod.rs",
+        "interface/src/components/TaskOutputSection/TaskOutputSection.test.tsx",
+        "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
+        "interface/src/hooks/use-cooldown-status.test.ts",
+        "interface/src/hooks/use-cooldown-status.ts",
+        "interface/src/types/aura-events.ts"
+      ],
+      "stats": {
+        "fileCount": 7,
+        "insertions": 629,
+        "deletions": 38
+      },
+      "committedAtMs": 1776900976000,
+      "cleanSubject": "recover from restart conflicts and surface cooldowns in UI",
+      "keywords": [
+        "recover",
+        "from",
+        "restart",
+        "conflicts",
+        "surface",
+        "cooldowns"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-link/src",
+        "interface/src/components",
+        "interface/src/hooks",
+        "interface/src/types"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface",
+        "Core Rust",
+        "Other"
+      ]
+    },
+    {
+      "sha": "2e630be8eee4ae9d3b2c8c82edb577332d384124",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T16:40:18-07:00",
+      "subject": "style: apply rustfmt to updater and api_tests",
+      "body": "No behaviour changes; just reorders a cfg-gated import and breaks long\nchained/closure expressions across multiple lines to match rustfmt.\n\nMade-with: Cursor",
+      "parents": [
+        "53dec4dae5b747b0ccc8673eb22602264e07e253"
+      ],
+      "files": [
+        "apps/aura-os-desktop/src/updater.rs",
+        "apps/aura-os-server/tests/api_tests.rs"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 19,
+        "deletions": 5
+      },
+      "committedAtMs": 1776901218000,
+      "cleanSubject": "style: apply rustfmt to updater and api_tests",
+      "keywords": [
+        "style",
+        "apply",
+        "rustfmt",
+        "updater",
+        "tests"
+      ],
+      "fileGroups": [
+        "apps/aura-os-desktop/src",
+        "apps/aura-os-server/tests"
+      ],
+      "primaryArea": "Desktop",
+      "areas": [
+        "Desktop",
+        "Other"
+      ]
+    },
+    {
+      "sha": "ed2e66956cca202f85120e1279e5cfc4fd2f8e15",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T16:40:28-07:00",
+      "subject": "fix(ui): stop block title from crowding trailing badges",
+      "body": "Truncation was being declared twice: on the inner renderer span (which\nis inline-formatted and ignored the flex/overflow rules) and on the\nouter block title span (where it actually applies). Drop the dead\nrules on the inner span and add a small padding-right on the outer\ntitle container so long command titles no longer ellipsize flush\nagainst EXIT badges and other trailing labels.\n\nMade-with: Cursor",
+      "parents": [
+        "2e630be8eee4ae9d3b2c8c82edb577332d384124"
+      ],
+      "files": [
+        "interface/src/components/Block/Block.module.css",
+        "interface/src/components/Block/renderers/renderers.module.css"
+      ],
+      "stats": {
+        "fileCount": 2,
+        "insertions": 14,
+        "deletions": 5
+      },
+      "committedAtMs": 1776901228000,
+      "cleanSubject": "stop block title from crowding trailing badges",
+      "keywords": [
+        "stop",
+        "block",
+        "title",
+        "from",
+        "crowding",
+        "trailing",
+        "badges"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "421596d454e4b896c4892916d5a878b9af3d5375",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T16:40:47-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "ed2e66956cca202f85120e1279e5cfc4fd2f8e15",
+        "027e0e2864f5082afa0a6d1930bc0361d8d265c4"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 565,
+        "deletions": 14
+      },
+      "committedAtMs": 1776901247000,
+      "cleanSubject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "keywords": [
+        "merge",
+        "branch",
+        "main",
+        "https",
+        "github",
+        "cypher",
+        "aura"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "ea9ab6eb61c371c02b24b389414bb706cc8918dc",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T16:43:38-07:00",
+      "subject": "feat(debug): confirm Copy All with transient Copied label",
+      "body": "The header copy action in the Debug run view now flips its label to\n\"Copied\" for ~2s after a successful clipboard write, so users get\ndirect feedback instead of a silent click. Button labels are also\ntitle-cased (\"Copy All\" / \"Copy Filtered\") for consistency with other\ncopy affordances.\n\nMade-with: Cursor",
+      "parents": [
+        "421596d454e4b896c4892916d5a878b9af3d5375"
+      ],
+      "files": [
+        "interface/src/apps/debug/DebugRunDetailView/DebugRunDetailView.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 35,
+        "deletions": 5
+      },
+      "committedAtMs": 1776901418000,
+      "cleanSubject": "confirm Copy All with transient Copied label",
+      "keywords": [
+        "confirm",
+        "copy",
+        "with",
+        "transient",
+        "copied",
+        "label"
+      ],
+      "fileGroups": [
+        "interface/src/apps"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "773a3a8f7a5440013de880f5e9c586176b73c624",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T16:45:35-07:00",
+      "subject": "fix(ui): always show two decimals for stat card dollar values",
+      "body": "Made-with: Cursor",
+      "parents": [
+        "ea9ab6eb61c371c02b24b389414bb706cc8918dc"
+      ],
+      "files": [
+        "interface/src/components/StatCard/StatCard.tsx"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 4
+      },
+      "committedAtMs": 1776901535000,
+      "cleanSubject": "always show two decimals for stat card dollar values",
+      "keywords": [
+        "always",
+        "show",
+        "decimals",
+        "stat",
+        "card",
+        "dollar",
+        "values"
+      ],
+      "fileGroups": [
+        "interface/src/components"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "764be8b7222758b285f0c746cfaf89cb67493d3e",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T17:07:44-07:00",
+      "subject": "fix(debug): stop last sidekick tab from doubling beside More button",
+      "body": "At the Debug sidekick width the last tab (\"Tasks\", ScrollText icon) sat\nright on the overflow threshold, so useOverflowTabs' integer-floor\nmeasurement flipped maxVisible between 7 and 8 on every ResizeObserver\ntick and SidekickTabBar rendered a 150 ms exit-fade ghost of the icon\nnext to the 3-dot More button each time - visible as a duplicated icon\nblinking back and forth.\n\n- Keep the More button slot painted (hidden/disabled when its menu is\n  empty) whenever measurement reserved it, so toggling overflow no\n  longer changes the tab bar's effective width.\n- Add hysteresis to useOverflowTabs: require a few px of slack past the\n  raw threshold before bringing an overflowed tab back into view.\n  Shrinking stays immediate.\n- Skip the exit animation for tabs removed within 200 ms of entering,\n  so any residual single flip is not visually duplicated.\n- Add a regression test covering boundary widths that used to oscillate.\n\nMade-with: Cursor",
+      "parents": [
+        "773a3a8f7a5440013de880f5e9c586176b73c624"
+      ],
+      "files": [
+        "interface/src/components/SidekickTabBar/SidekickTabBar.tsx",
+        "interface/src/hooks/use-overflow-tabs.test.ts",
+        "interface/src/hooks/use-overflow-tabs.ts"
+      ],
+      "stats": {
+        "fileCount": 3,
+        "insertions": 187,
+        "deletions": 23
+      },
+      "committedAtMs": 1776902864000,
+      "cleanSubject": "stop last sidekick tab from doubling beside More button",
+      "keywords": [
+        "stop",
+        "last",
+        "sidekick",
+        "from",
+        "doubling",
+        "beside",
+        "more",
+        "button"
+      ],
+      "fileGroups": [
+        "interface/src/components",
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
+    },
+    {
+      "sha": "371aacf812b5a9d174ac9e017d1e553e911bd2e8",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T17:13:09-07:00",
+      "subject": "feat(dev-loop): gate task completion on build+test evidence for code changes",
+      "body": "Strengthen completion_validation_failure_reason so any task that modified\nfiles must have at least one build step and one test step in its\ntelemetry before the dev loop will transition it to `done`. Previously a\ntask that touched code but ran no `cargo build` / `cargo test` could\nstill be auto-marked done on the strength of any live output.\n\nAlso track `cargo fmt` / `cargo clippy` / `eslint` / `prettier --check`\netc. as new Format/Lint verification steps on CachedTaskOutput. These\nare surfaced for observability but not yet gate-blocking (too many\nlegitimate tasks have no lint surface). Harness events\n`format_verification_*` / `lint_verification_*` are now recognised\nalongside the existing build/test equivalents.\n\nUpdate the CEO prompt (both the helper and the template source that\nmust render byte-identically to it) and the spec-gen kickoff message so\nevery newly generated spec ends with a ## Definition of Done section\nnaming the exact build/test/format/lint commands that must pass, and so\nexternal spec-defined types must cite an authoritative source before\nthey are implemented.\n\nMade-with: Cursor",
+      "parents": [
+        "764be8b7222758b285f0c746cfaf89cb67493d3e"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs",
+        "apps/aura-os-server/src/handlers/specs.rs",
+        "apps/aura-os-server/src/state.rs",
+        "crates/aura-os-agent-templates/src/prompt.rs",
+        "crates/aura-os-agent-templates/src/template.rs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 301,
+        "deletions": 6
+      },
+      "committedAtMs": 1776903189000,
+      "cleanSubject": "gate task completion on build+test evidence for code changes",
+      "keywords": [
+        "gate",
+        "task",
+        "completion",
+        "build",
+        "test",
+        "evidence",
+        "code",
+        "changes"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src",
+        "crates/aura-os-agent-templates/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Core Rust"
+      ]
+    },
+    {
+      "sha": "9005c601df82443541f1cf21a6de059d3fe0bec9",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-22T20:17:42-04:00",
+      "subject": "Relax changelog media partial failure gate",
+      "body": "",
+      "parents": [
+        "421596d454e4b896c4892916d5a878b9af3d5375"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog-media.yml"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 22,
+        "deletions": 3
+      },
+      "committedAtMs": 1776903462000,
+      "cleanSubject": "Relax changelog media partial failure gate",
+      "keywords": [
+        "relax",
+        "changelog",
+        "media",
+        "partial",
+        "failure",
+        "gate"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog-media.yml"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "15c87288a657e572fa07e4ca3c12e000495eea66",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T17:19:26-07:00",
+      "subject": "feat(dev-loop): tighten DoD gate for Rust changes and emit gate telemetry",
+      "body": "Completes the Definition-of-Done work started in 371aacf8.\n\nGate behavior, by change type:\n- Output-only / analysis task: unchanged — passes on live output alone.\n- Docs-only change (*.md, *.toml, *.yaml, Cargo.lock, .gitignore, etc.):\n  passes without build/test evidence. Previously any non-empty\n  files_changed required build+test, which would false-fail a README\n  edit.\n- Non-Rust source change (*.ts, *.py, *.go, ...): must have at least one\n  build step AND one test step in telemetry. fmt/lint still advisory\n  until the harness emits them reliably for these languages.\n- Rust source change (*.rs): must have build + test + format + clippy\n  evidence. Full four-gate DoD. Missing any of the four rejects the\n  `task_completed` event and transitions the task to `failed` with a\n  reason naming the exact command the agent should have run\n  (e.g. `cargo fmt --all -- --check`,\n  `cargo clippy --workspace --all-targets -- -D warnings`).\n\nThe path classifier is deliberately conservative: unknown extensions\ndefault to the docs-like bucket so new file types don't silently fail\nthe gate. Cargo.lock alone does not force the Rust-strict gate since\n`cargo build` regenerates it.\n\nObservability:\n- New `task_completion_gate` domain event emitted alongside the existing\n  task_completed / task_failed transitions. Payload is a snapshot of the\n  gate inputs — had_live_output, n_files_changed, has_source_change,\n  has_rust_change, n_build_steps, n_test_steps, n_format_steps,\n  n_lint_steps — plus `passed` and, on failure, the `failure_reason`\n  string. This lets supervisors and the UI audit why a task was let\n  through or rejected without replaying the run stream.\n\nTests: 8 new unit tests in handlers::dev_loop::tests covering the new\npath-classifier, each rejection branch (docs-only passes, Rust missing\nfmt fails, Rust missing clippy fails, non-Rust source passes on\nbuild+test, full four-gate Rust passes), and the gate-report snapshot.\nAll 14 dev-loop gate/classifier tests green. Pre-existing failures in\nhandlers::agents and handlers::trusted_mcp (Win32 MCP-bridge binary\nincompatibility) are unchanged.\n\nMade-with: Cursor",
+      "parents": [
+        "371aacf812b5a9d174ac9e017d1e553e911bd2e8"
+      ],
+      "files": [
+        "apps/aura-os-server/src/handlers/dev_loop.rs"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 285,
+        "deletions": 25
+      },
+      "committedAtMs": 1776903566000,
+      "cleanSubject": "tighten DoD gate for Rust changes and emit gate telemetry",
+      "keywords": [
+        "tighten",
+        "gate",
+        "rust",
+        "changes",
+        "emit",
+        "telemetry"
+      ],
+      "fileGroups": [
+        "apps/aura-os-server/src"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e0b0ade10d2ee6161b73d23b7084be7670a57004",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-22T20:23:04-04:00",
+      "subject": "Unify changelog media partial success policy",
+      "body": "",
+      "parents": [
+        "9005c601df82443541f1cf21a6de059d3fe0bec9"
+      ],
+      "files": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        ".github/workflows/reconcile-release-changelog.yml",
+        ".github/workflows/retry-release-changelog-media.yml",
+        "infra/scripts/release/publish-changelog-media.mjs",
+        "infra/scripts/release/publish-changelog-media.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 5,
+        "insertions": 137,
+        "deletions": 13
+      },
+      "committedAtMs": 1776903784000,
+      "cleanSubject": "Unify changelog media partial success policy",
+      "keywords": [
+        "unify",
+        "changelog",
+        "media",
+        "partial",
+        "success",
+        "policy"
+      ],
+      "fileGroups": [
+        ".github/workflows/publish-release-changelog-media.yml",
+        ".github/workflows/reconcile-release-changelog.yml",
+        ".github/workflows/retry-release-changelog-media.yml",
+        "infra/scripts/release"
+      ],
+      "primaryArea": "Release Infrastructure",
+      "areas": [
+        "Release Infrastructure"
+      ]
+    },
+    {
+      "sha": "6580daf771ff07f8c4e86126eba616a0b83ca66c",
+      "author": {
+        "name": "n3o",
+        "email": "n3o@zero.tech"
+      },
+      "committedAt": "2026-04-22T17:41:11-07:00",
+      "subject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "body": "",
+      "parents": [
+        "15c87288a657e572fa07e4ca3c12e000495eea66",
+        "e0b0ade10d2ee6161b73d23b7084be7670a57004"
+      ],
+      "files": [],
+      "stats": {
+        "fileCount": 0,
+        "insertions": 153,
+        "deletions": 10
+      },
+      "committedAtMs": 1776904871000,
+      "cleanSubject": "Merge branch 'main' of https://github.com/cypher-asi/aura-os",
+      "keywords": [
+        "merge",
+        "branch",
+        "main",
+        "https",
+        "github",
+        "cypher",
+        "aura"
+      ],
+      "fileGroups": [],
+      "primaryArea": "Other",
+      "areas": []
+    },
+    {
+      "sha": "7a735ec67b3f785e7e4ebfc84ac8685de474bbfb",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-22T21:04:37-04:00",
+      "subject": "fix(ui): use event metadata for cooldown matching",
+      "body": "",
+      "parents": [
+        "6580daf771ff07f8c4e86126eba616a0b83ca66c"
+      ],
+      "files": [
+        "interface/src/hooks/use-cooldown-status.ts"
+      ],
+      "stats": {
+        "fileCount": 1,
+        "insertions": 5,
+        "deletions": 10
+      },
+      "committedAtMs": 1776906277000,
+      "cleanSubject": "use event metadata for cooldown matching",
+      "keywords": [
+        "event",
+        "metadata",
+        "cooldown",
+        "matching"
+      ],
+      "fileGroups": [
+        "interface/src/hooks"
+      ],
+      "primaryArea": "Interface",
+      "areas": [
+        "Interface"
+      ]
     }
   ],
   "batchCount": 6,
@@ -1914,36 +2995,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11265387
+          "sizeBytes": 11268894
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.338.1",
+      "version": "0.1.0-nightly.343.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 34859912
+          "sizeBytes": 35095260
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102128120
+          "sizeBytes": 102308344
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -1953,29 +3034,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.338.1",
+      "version": "0.1.0-nightly.343.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.338.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.343.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31240358
+          "sizeBytes": 31485009
         },
         {
-          "name": "Aura_0.1.0-nightly.338.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.343.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31056465
+          "sizeBytes": 31285108
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -1985,29 +3066,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.338.1",
+      "version": "0.1.0-nightly.343.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.338.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.343.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 32930386
+          "sizeBytes": 33134999
         },
         {
-          "name": "Aura_0.1.0-nightly.338.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.343.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 32762927
+          "sizeBytes": 32975261
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -2017,17 +3098,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.338.1",
+      "version": "0.1.0-nightly.343.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23632406
+          "sizeBytes": 23783386
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.338.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.343.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -2036,49 +3117,50 @@
     }
   ],
   "rendered": {
-    "title": "Autonomous recovery loop, streaming fixes, and a new login surface",
-    "intro": "A heavy day across the stack: Aura gains an end-to-end autonomous recovery pipeline that detects oversized tasks, splits them preemptively, and learns from live runs. The chat surface fixes several long-standing streaming glitches, the Debug app gets a project-first redesign with exports, logout finally stops black-screening, and Windows auto-updates actually install. The Login view also picked up a full-screen video treatment.",
+    "title": "Autonomous recovery, Debug workspace overhaul, and Windows updater reliability",
+    "intro": "A dense nightly covering three major threads: a new self-healing dev loop that decomposes oversized tasks and rides out provider rate limits, a top-to-bottom rework of the Debug app around project-first navigation and a sidekick inspector, and a raft of reliability fixes spanning the Windows auto-updater, logout, live LLM streaming, and the changelog media pipeline.",
     "entries": [
       {
         "time_label": "2:06 AM",
         "started_at": "2026-04-21T09:06:32.000Z",
         "ended_at": "2026-04-22T00:26:02.000Z",
-        "title": "Debug app redesign and agent-busy chat signal",
-        "summary": "The Debug workspace shifts to a project-first, sidekick-driven layout while chat gains a real busy state, and tool output stops rendering as raw base64.",
+        "title": "Debug app gains a sidekick inspector and chat learns when the agent is busy",
+        "summary": "A long evening thread reshaped the Debug experience around project-first navigation and a right-hand inspector, while the chat surface finally reflects automation-loop activity.",
         "items": [
           {
-            "text": "Debug app now lists every project at the top level via the shared LeftMenuTree, moves the run toolbar, counters, and entry inspector into a tabbed sidekick (Run, Events, LLM, Iterations, Blockers, Retries, Stats, Tasks), and adds a portal-backed type-filter dropdown that no longer clips against the main lane. JSONL rows also unwrap the `{_ts, event}` envelope so type and timestamp stop showing as \"unknown\".",
+            "text": "Debug was restructured around a shared project tree with a dedicated sidekick (Run, Events, LLM, Iterations, Blockers, Retries, Stats, Tasks tabs), a portal-backed filter menu that no longer clips, and proper unwrapping of the loop_log JSONL envelope so rows stop showing 'unknown' type and timestamp. Follow-ups mounted the sidekick panel/taskbar via the app registry, stabilized the run-detail header against reflow, tightened it into a single line matched to the sidebar search height, and added Copy All / Copy Filtered / Export buttons for grabbing JSONL or a full run bundle.",
             "commit_shas": [
               "8e7e4f093e53573cdb4baa7ec07d34a9aadbb83b",
-              "1b769a84ab1d4c12b5e21a97782ede6718e60891"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Run detail view gained Copy all / Copy filtered and Export buttons in the header, with the copy payload following the visible timeline and export reusing the existing run-bundle zip. The header itself was tightened to a single stable line so metadata arrival no longer reflows the title, and inspector actions were re-aligned with their field labels.",
-            "commit_shas": [
+              "1b769a84ab1d4c12b5e21a97782ede6718e60891",
               "865e7ec8ade3f61b34220e7ab64758184460e448",
               "586f74498f537c924a203dc710e0962cd788d554"
             ],
             "confidence": "high"
           },
           {
-            "text": "Chat input now reflects agent-busy state from any source: a new `useAgentBusy` hook combines SSE streaming with loop activity so the stop icon appears whenever an automation turn is in flight, `onStop` routes to `/loop/stop` when the loop owns the turn, and the server returns a typed `409 agent_busy` rendered as a friendly message instead of the raw harness string.",
+            "text": "Chat now surfaces agent-busy state when the automation loop holds a turn: a new useAgentBusy hook drives the stop icon from either SSE streaming or loop activity, Stop routes to /loop/stop when appropriate, and the server returns a typed 409 agent_busy instead of echoing the raw 'A turn is currently in progress' harness string.",
             "commit_shas": [
               "6dd691e23032fe792f16613c60c22cf6edf95262"
             ],
             "confidence": "high"
           },
           {
-            "text": "ANSI-colored tool output from cargo, rustc, npm and friends now decodes cleanly in the task panel — the base64 decoder no longer bails on ESC bytes, strips ANSI escapes, and recurses into `output`/`text`/`content`/`log` fields. Per-turn token counters also stopped double-counting mid-stream `token_usage` frames, and `narration_deltas` is now a first-class run counter.",
+            "text": "ANSI-colored CLI output (cargo, rustc, npm) in the task panel is now decoded properly — the base64 decoder allows ESC bytes through, strips ANSI escapes, and recurses into more output keys instead of rendering a raw blob.",
             "commit_shas": [
-              "7822fa1ff166396864fa96fb925170f35c37b644",
-              "f5921f6233bd72733aa0b2f457cfc75316e48f62"
+              "7822fa1ff166396864fa96fb925170f35c37b644"
             ],
             "confidence": "high"
           },
           {
-            "text": "Leaderboard content renders directly inside the feed's scroll area, removing a nested wrapper that surfaced a stray horizontal scrollbar and threw off centering.",
+            "text": "Run telemetry got more trustworthy: loop_log's token counters no longer double-count mid-stream usage frames, and a new narration_deltas counter becomes a first-class signal for zero-tool-call and narration-bloat heuristics. Output block borders were also softened to match the calmer LLM chat treatment.",
+            "commit_shas": [
+              "f5921f6233bd72733aa0b2f457cfc75316e48f62",
+              "a6f3a4cbe111b190e7c75817a47ea3ef9be24763"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "A stray horizontal scrollbar on the Feed leaderboard was eliminated by dropping the nested chartWrap and rendering rows directly inside the parent scroll area.",
             "commit_shas": [
               "13e2cae1b61547b66f0a0e94d560d5414194b919"
             ],
@@ -2087,7 +3169,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "failed",
+          "status": "pending",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2096,9 +3178,9 @@
             "entry language includes light config-style vocabulary",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-debug-app-redesign-and-agent-busy-chat-signal",
-          "slug": "debug-app-redesign-and-agent-busy-chat-signal",
-          "alt": "Debug app redesign and agent-busy chat signal screenshot",
+          "slotId": "entry-debug-app-gains-a-sidekick-inspector-and-chat-learns-when-the-ag",
+          "slug": "debug-app-gains-a-sidekick-inspector-and-chat-learns-when-the-ag",
+          "alt": "Debug app gains a sidekick inspector and chat learns when the agent is busy screenshot",
           "files": [
             "interface/src/apps/debug/DebugApp.ts",
             "interface/src/apps/debug/DebugNav/DebugNav.module.css",
@@ -2124,20 +3206,18 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ],
-          "updatedAt": "2026-04-22T20:48:44.464Z",
-          "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-redesign-and-agent-busy-chat-signal"
+          ]
         }
       },
       {
         "time_label": "5:49 PM",
         "started_at": "2026-04-22T00:49:12.000Z",
         "ended_at": "2026-04-22T00:49:12.000Z",
-        "title": "Remediation hints attached to run heuristics",
-        "summary": "Each heuristic finding now carries an actionable RemediationHint, setting up the autonomous recovery work that follows.",
+        "title": "Heuristic findings now carry actionable remediation hints",
+        "summary": "Run-analysis findings gained a RemediationHint so downstream loops inherit concrete next steps instead of raw diagnostics.",
         "items": [
           {
-            "text": "Extends `Finding` with an optional `RemediationHint` enum (split-write, reshape-search, force-tool-call, retry-smaller-scope, no-auto-fix) and wires every existing rule to emit the hint that matches its failure mode; `aura-run-analyze` renders the hint as a compact one-liner under each finding so dev loops inherit next-step guidance.",
+            "text": "Each heuristic rule now emits a typed RemediationHint (SplitWriteIntoSkeletonPlusAppends, ReshapeSearchQuery, ForceToolCallNextTurn, RetrySmallerScope, NoAutoFix), and aura-run-analyze renders it as a compact one-liner under each finding — setting up the autonomous recovery work later in the day.",
             "commit_shas": [
               "6b6d6d92510dd3f3159b7b787a48816374cb0347"
             ],
@@ -2147,14 +3227,15 @@
         "media": {
           "requested": false,
           "status": "skipped",
-          "score": -3,
+          "score": -2,
           "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
           "reasons": [
+            "entry language only weakly hints at a visible product surface",
             "entry language points to runtime or infrastructure plumbing rather than a stable screen"
           ],
-          "slotId": "entry-remediation-hints-attached-to-run-heuristics",
-          "slug": "remediation-hints-attached-to-run-heuristics",
-          "alt": "Remediation hints attached to run heuristics screenshot",
+          "slotId": "entry-heuristic-findings-now-carry-actionable-remediation-hints",
+          "slug": "heuristic-findings-now-carry-actionable-remediation-hints",
+          "alt": "Heuristic findings now carry actionable remediation hints screenshot",
           "files": [
             "apps/aura-run-analyze/src/render.rs",
             "crates/aura-run-heuristics/src/finding.rs",
@@ -2170,48 +3251,14 @@
         }
       },
       {
-        "time_label": "6:13 PM",
-        "started_at": "2026-04-22T01:13:13.000Z",
-        "ended_at": "2026-04-22T01:13:13.000Z",
-        "title": "Auto-decompose tasks after truncation failures",
-        "summary": "Phase 3 turns the new remediation hints into real action: failed tasks are automatically split or reshaped instead of blindly retried.",
-        "items": [
-          {
-            "text": "When a task fails with a truncation / no-file-ops reason, the server now loads the run bundle, runs heuristics, and acts on the first RemediationHint: SplitWriteIntoSkeletonPlusAppends spawns skeleton + fill child tasks, while ReshapeSearchQuery and ForceToolCallNextTurn spawn a single shaped-retry task. Parents transition to failed, a `task_auto_remediated` domain event is broadcast for the UI, and the feature honors `MAX_RETRIES_PER_TASK` and an `AURA_AUTO_DECOMPOSE_DISABLED=1` kill switch.",
-            "commit_shas": [
-              "79eab49e9c106ba5d085085f6691f08681d6ee9a"
-            ],
-            "confidence": "high"
-          }
-        ],
-        "media": {
-          "requested": false,
-          "status": "skipped",
-          "score": 1,
-          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
-          "reasons": [
-            "entry language only weakly hints at a visible product surface"
-          ],
-          "slotId": "entry-auto-decompose-tasks-after-truncation-failures",
-          "slug": "auto-decompose-tasks-after-truncation-failures",
-          "alt": "Auto-decompose tasks after truncation failures screenshot",
-          "files": [
-            ".env.example",
-            "Cargo.lock",
-            "apps/aura-os-server/Cargo.toml",
-            "apps/aura-os-server/src/handlers/dev_loop.rs"
-          ]
-        }
-      },
-      {
         "time_label": "6:05 PM",
         "started_at": "2026-04-22T01:05:42.000Z",
         "ended_at": "2026-04-22T01:05:42.000Z",
-        "title": "Darker outline on run timeline and task output blocks",
-        "summary": "Run and task output containers move to the standard border token so they match the rest of the block primitive.",
+        "title": "Run and task output blocks adopt the standard block border",
+        "summary": "A small visual pass unified the stroke used on run timeline rows and task output panels.",
         "items": [
           {
-            "text": "Run event timeline rows and the task live/build output blocks swap the lighter `--color-border-light` stroke for `--color-border`, aligning with the `.block` primitive outline.",
+            "text": "Run event timeline rows and task live/build output containers now use the standard --color-border token, matching the .block primitive outline instead of the lighter variant.",
             "commit_shas": [
               "b2f25e42834d175ca73c5e1f7f993445985bdfb3"
             ],
@@ -2220,7 +3267,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "failed",
+          "status": "pending",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2230,26 +3277,58 @@
             "entry language points to release plumbing rather than a product screen",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-darker-outline-on-run-timeline-and-task-output-blocks",
-          "slug": "darker-outline-on-run-timeline-and-task-output-blocks",
-          "alt": "Darker outline on run timeline and task output blocks screenshot",
+          "slotId": "entry-run-and-task-output-blocks-adopt-the-standard-block-border",
+          "slug": "run-and-task-output-blocks-adopt-the-standard-block-border",
+          "alt": "Run and task output blocks adopt the standard block border screenshot",
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
+          ]
+        }
+      },
+      {
+        "time_label": "6:13 PM",
+        "started_at": "2026-04-22T01:13:13.000Z",
+        "ended_at": "2026-04-22T01:13:13.000Z",
+        "title": "Automatic task decomposition after truncation failures",
+        "summary": "Phase 3 of the autonomous recovery work: truncation/no-file-ops failures now fan out into skeleton+fill or shaped-retry children automatically.",
+        "items": [
+          {
+            "text": "When a task fails with truncation or no-file-ops, the dev loop loads the run bundle, runs heuristics, and acts on the first RemediationHint — spawning a skeleton+fill pair, a reshaped-search retry, or a force-tool-call retry. The parent is moved to failed and a task_auto_remediated event is broadcast, all gated by MAX_RETRIES_PER_TASK and the AURA_AUTO_DECOMPOSE_DISABLED kill switch.",
+            "commit_shas": [
+              "79eab49e9c106ba5d085085f6691f08681d6ee9a"
+            ],
+            "confidence": "high"
+          }
+        ],
+        "media": {
+          "requested": false,
+          "status": "skipped",
+          "score": -3,
+          "reason": "Entry does not look like a reliable screenshot target, so no media slot was requested.",
+          "reasons": [
+            "entry language points to runtime or infrastructure plumbing rather than a stable screen"
           ],
-          "updatedAt": "2026-04-22T20:53:07.342Z",
-          "error": "Error: Screenshot capture did not produce a passing summary for entry-darker-outline-on-run-timeline-and-task-output-blocks"
+          "slotId": "entry-automatic-task-decomposition-after-truncation-failures",
+          "slug": "automatic-task-decomposition-after-truncation-failures",
+          "alt": "Automatic task decomposition after truncation failures screenshot",
+          "files": [
+            ".env.example",
+            "Cargo.lock",
+            "apps/aura-os-server/Cargo.toml",
+            "apps/aura-os-server/src/handlers/dev_loop.rs"
+          ]
         }
       },
       {
         "time_label": "6:40 PM",
         "started_at": "2026-04-22T01:40:25.000Z",
         "ended_at": "2026-04-22T01:40:25.000Z",
-        "title": "Chat border token propagated to sidekick and preview overlays",
-        "summary": "The main chat's darker border override now extends into the sidekick body and preview overlay for a unified outline.",
+        "title": "Chat border token propagates into sidekick and preview overlays",
+        "summary": "A small follow-up aligned sidekick and preview surfaces with the darker chat border.",
         "items": [
           {
-            "text": "Propagates the `#17171a` `--color-border` override from ChatPanel into the Sidekick and PreviewOverlay stylesheets so tables, blocks, tool rows, and output sections inside the sidekick share the subtle outline used by the main LLM chat.",
+            "text": "The main chat's darker --color-border override (#17171a) now also applies inside the sidekick body and the preview overlay, so tables, blocks, tools, and output sections share the same subtle outline as the LLM chat.",
             "commit_shas": [
               "cc9a050859350c73b7d991e8e5eed01ef44b9098"
             ],
@@ -2258,7 +3337,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "published",
+          "status": "pending",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2267,28 +3346,24 @@
             "entry language includes light config-style vocabulary",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-chat-border-token-propagated-to-sidekick-and-preview-overlays",
-          "slug": "chat-border-token-propagated-to-sidekick-and-preview-overlays",
-          "alt": "Chat border token propagated to sidekick and preview overlays screenshot",
+          "slotId": "entry-chat-border-token-propagates-into-sidekick-and-preview-overlays",
+          "slug": "chat-border-token-propagates-into-sidekick-and-preview-overlays",
+          "alt": "Chat border token propagates into sidekick and preview overlays screenshot",
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ],
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.338.1/entry-chat-border-token-propagated-to-sidekick-and-preview-overlays.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-22T20:39:38.453Z",
-          "storyTitle": "Chat border token propagated to Sidekick and PreviewOverlay"
+          ]
         }
       },
       {
         "time_label": "6:45 PM",
         "started_at": "2026-04-22T01:45:12.000Z",
-        "ended_at": "2026-04-22T20:06:31.000Z",
-        "title": "Preflight decomposition, live heuristics, and a reshaped login flow",
-        "summary": "A major thread finishes the autonomous recovery pipeline end to end, alongside rebuilt chat streaming, a new login experience, a Windows auto-updater fix, and logout reliability.",
+        "ended_at": "2026-04-23T01:04:37.000Z",
+        "title": "Self-healing dev loop, Debug live runs, Windows updater fix, and a pile of reliability work",
+        "summary": "The day's largest batch lands autonomous task recovery end-to-end, a live-runs view in the Debug app, a reliable Windows auto-update handoff, a logout fix, streaming-chat cleanups, and hardening for the changelog media pipeline.",
         "items": [
           {
-            "text": "Tasks whose titles or descriptions signal a likely-oversized generation are now detected at ingestion by `detect_preflight_decomposition()` and split into skeleton + fill children before they ever run, with the parent moved to a non-runnable status and a `task_preflight_decomposed` event broadcast. A new `LiveAnalyzer` re-runs heuristics every 50 events / 30s / on task_failed during an active run and broadcasts deduped Warn/Error findings as `dev_loop_advisory` events so the UI can surface hints mid-flight. A replay integration test and an `aura-run-analyze` golden test pin the full decision chain end to end.",
+            "text": "Autonomous recovery is now wired front-to-back: oversized task specs are decomposed into skeleton+fill children at ingestion (Phase 5), a LiveAnalyzer re-runs heuristics every 50 events or 30s during a run and broadcasts advisories (Phase 6), and a replay integration test plus a golden fixture pin the full classify→heuristics→decompose chain against a synthetic truncated run (Phase 7).",
             "commit_shas": [
               "4f8e0a62ed93b513fe42295e47aace6e66586b99",
               "097b5a5cb533f7ad7d93e7f81c3c3ff33d22a870",
@@ -2298,39 +3373,82 @@
             "confidence": "high"
           },
           {
-            "text": "Live LLM streaming was rebuilt around strict tail-append ordering so text chunks no longer fold back across intervening tool/thinking blocks, a hardened `getStreamSafeContent` keeps dangling `*` / `_` markers from flashing under the cursor, and a new `isWriting` signal hides the cooking indicator only while words are actively revealing — it stays up for thinking, pending tools, and inter-chunk stalls.",
+            "text": "Provider rate limits no longer cascade: a new RateLimited failure class is checked before Truncation, Retry-After is extracted from structured fields or parsed from message text, project-wide cooldowns are raised to max(default, hint) capped at 120s, restart conflicts on the harness are resolved by stop-stale or adopt-live, and the TaskOutputSection now renders 'Rate limited by provider — resuming in Ns…' via a new useCooldownStatus hook instead of hanging on 'Waiting for agent output'.",
             "commit_shas": [
-              "aabd229e98020db6139ddd871ead0f3284182394",
-              "b0e271302e2475aba05e8d230b6c7e82a12bec08"
+              "dc504292affb0beb7c6d4e0f4fbca7089141a5d0",
+              "2d0124d8641c4626627a7bf48b3368b0b1d5fdd6",
+              "53dec4dae5b747b0ccc8673eb22602264e07e253",
+              "7a735ec67b3f785e7e4ebfc84ac8685de474bbfb"
             ],
             "confidence": "high"
           },
           {
-            "text": "Command and read_file tool blocks now render captured stdout/stderr as legible text via a shared `decodeCapturedOutput` helper, with read_file piping decoded contents into CodeView for syntax highlighting instead of a raw JSON envelope. ListBlock also learned to extract rows from base64 stdout envelopes used by list_files, find_files, and search_code (including `path:line: match` line splitting) so these tools stop rendering as \"0 items / No results\".",
+            "text": "Definition-of-Done completion gate now requires evidence that matches the change type: docs-only edits pass freely, non-Rust source needs build+test, and Rust source must have build, test, cargo fmt, and clippy telemetry before a task can transition to done. Every decision emits a task_completion_gate event with the full input snapshot, and create_task is now idempotent on (project, spec, title) so repeated generate-spec→extract-tasks cycles stop doubling the task list.",
             "commit_shas": [
-              "45e55bade6d9c69d1831e73fd5f0a5e725b5d620",
-              "59d2aa69546fd668362bce16a55812a9cfb46865",
-              "f62eb9dee65f5f45389ed2450310d5b533999187"
+              "371aacf812b5a9d174ac9e017d1e553e911bd2e8",
+              "15c87288a657e572fa07e4ca3c12e000495eea66",
+              "8fb8af9782eba9e7c02a63db776522b6134f25a4",
+              "2d0124d8641c4626627a7bf48b3368b0b1d5fdd6"
             ],
             "confidence": "high"
           },
           {
-            "text": "Logout no longer strands users on a black-screen redirect loop: the boot-time `initiallyLoggedIn` flag is now gated on the auth store having resolved, `logout()` drops its `window.location.href` reload and always runs local cleanup even when the server call fails, and a sticky `aura-force-logged-out` sentinel survives reloads that would otherwise resurrect a ghost session from baked-in desktop init globals.",
+            "text": "Debug got a live operational view: a 'Running now' section lists in-progress runs across the workspace (polling 3s active / 10s idle), expand/collapse state and last-visited project/run are persisted, /debug redirects back to the remembered location, and server startup now reconciles orphan Running bundles to Interrupted. stop_loop and start_loop also finalize bundles explicitly so ghost live runs can't linger until the next restart. The run-detail timeline is now always shown in full, and the Copy All action confirms with a transient 'Copied' label.",
+            "commit_shas": [
+              "46ae8e9ca9d837c197aeae6ab7759db4bc1bcf40",
+              "5e25855a24ab0f6db1e1a8c39e6e6805b71d8d8b",
+              "4f83bcf91cfd11a9ed88028ea1bba611179d32d6",
+              "38555081b12d331d92143485124925e315074b61",
+              "ea9ab6eb61c371c02b24b389414bb706cc8918dc"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Windows auto-update now hands off to NSIS reliably: Aura downloads the verified installer itself, stages it under runtime/updater, triggers shutdown to release sidecar file locks, and spawns setup with DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB so it survives Aura's exit — replacing the cargo-packager PowerShell shim that kept getting torn down with WebView2. The settings Updates row promotes to a full-width panel during available/downloading/installing/failed states, and the local auto-update smoke test gained a Windows leg.",
+            "commit_shas": [
+              "61300ebd079b47076293e929132593574e8e3020"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Desktop window dragging is now fluid: a single shared useSyncExternalStore snapshot replaces ~40 per-component window.resize listeners with shallow-equality dedup and rAF coalescing, and the main window's background brush switched from BLACK_BRUSH to NULL_BRUSH so Windows no longer paints black bars chasing the resize edge. The IDE window also now receives the auth bootstrap script, fixing the blank file tree and 'missing authorization token' errors in the separate WebView.",
+            "commit_shas": [
+              "88a1fee6c8209f39f48069e3142795f679e96a81",
+              "dd972910ff9ac1df00c1b85c7daec4ffc499676e",
+              "9993d15a17b1e79fb149b74390cf11bffaeea0d8"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Logout no longer strands users on a black-screen redirect loop. The boot-time logged-in snapshot is now gated behind unresolved-session state, logout skips the window.location reload and always runs local cleanup even when the server call fails, and a sticky aura-force-logged-out sentinel plus an IDB-localStorage wipe prevent the desktop init script from resurrecting a dead session on reload.",
             "commit_shas": [
               "2ab59d467af5f4d049556bb581ab795429cff859"
             ],
             "confidence": "high"
           },
           {
-            "text": "Desktop on Windows now installs updates reliably: Aura downloads the verified NSIS installer itself, stages it under `runtime/updater/`, runs `trigger_shutdown` to release file locks, and spawns setup with `DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP` so the installer survives app exit. UpdateControl also split into inline and full-width panel layouts so the settings row stops squishing in available/installing states, and the local auto-update smoke test gained a Windows leg.",
+            "text": "Live LLM streaming was simplified and made safer: text deltas now strictly append to the timeline tail so arrival order matches render order across tools and thinking blocks; the stream-safe content pass hides dangling *, _ and odd emphasis markers while closers are in flight; and the cooking indicator is now pinned above the input bar, aligned to the 680px text column, with isWriting used to hide it only while words are actively revealing. Standalone agent chat scrolling, broken by the earlier changelog instrumentation wrapper, was also restored by preserving the flex height chain.",
             "commit_shas": [
-              "61300ebd079b47076293e929132593574e8e3020",
-              "9993d15a17b1e79fb149b74390cf11bffaeea0d8"
+              "aabd229e98020db6139ddd871ead0f3284182394",
+              "c4f512df38ea646b42eec99b3f3d62ebdff3d8d1",
+              "16f38ac5d85a876f68dd5959c2100b030d0fd9cf",
+              "27d79bd338caabf4911ee2facf239e95e3c00512"
             ],
             "confidence": "high"
           },
           {
-            "text": "Login view was rebuilt around a full-screen AURA visual-loop video with a centered, translucent glass sign-in card titled \"Login with ZERO Pro\", iterated down to a tighter 308px card width. Billing email was also locked to the ZERO account identity — the field is now read-only, the server silently discards `billing_email` from `SetBillingRequest`, and the Team Settings UI drops the stale Save flow that was kicking users into Free plan.",
+            "text": "Tool output rendering became legible across the board: command and read_file blocks now decode the base64 stdout/stderr envelope and render file contents as syntax-highlighted code instead of raw JSON; list_files, find_files and search_code envelopes are unpacked so tables stop showing '0 items'; GenericToolBlock's Input/Result panels regained their 10px inset by rendering as divs; and the global --color-border token was unified across chat, sidekick, tools, blocks and previews.",
+            "commit_shas": [
+              "45e55bade6d9c69d1831e73fd5f0a5e725b5d620",
+              "59d2aa69546fd668362bce16a55812a9cfb46865",
+              "f62eb9dee65f5f45389ed2450310d5b533999187",
+              "150f142b3e2f18e3aa9ede550869a3ead2d4b7c8",
+              "ed2e66956cca202f85120e1279e5cfc4fd2f8e15"
+            ],
+            "confidence": "high"
+          },
+          {
+            "text": "Login was redesigned around a full-screen AURA_visual_loop video background with a centered translucent sign-in card titled 'Login with ZERO Pro', trimmed to a narrower 308px width. Billing email is now read-only in Org Settings and tied to the ZERO account identity, so stale clients can't knock an org back to Free by editing it.",
             "commit_shas": [
               "dacd52ed3a37a4c8e0898b4119d4adb4808e1fa3",
               "3fdb15efee5dd0523a404c9382a15ef22a1110e3",
@@ -2343,28 +3461,32 @@
             "confidence": "high"
           },
           {
-            "text": "Release Infrastructure: the changelog media workflow now publishes successful screenshots before retrying failures, dispatching a separate retry workflow for the still-failed slots while enforcing a strict rubric. Candidate inference was tightened and the debug and agent-brief capture scripts were hardened with balanced-block JSON extraction and seeded Debug API routes for repeatable proofs.",
+            "text": "The release changelog media pipeline now publishes successful captures before retrying failures, dispatches a dedicated retry workflow for failed slots, unifies partial-success policy across publish/reconcile/retry, tightens JSON candidate inference for agent briefs, and hardens screenshot proof capture — with a relaxed partial-failure gate so one flaky slot no longer blocks the whole release.",
             "commit_shas": [
               "2f967828ab82093f4d045aee9e844668d094876b",
               "14a67af6b0999656222e7d8f92d58e037e72622e",
+              "9005c601df82443541f1cf21a6de059d3fe0bec9",
+              "e0b0ade10d2ee6161b73d23b7084be7670a57004",
               "eb42a29c9adf0a2aa07d0d4a0c911fe6bfdae758",
               "027e0e2864f5082afa0a6d1930bc0361d8d265c4"
             ],
             "confidence": "high"
           },
           {
-            "text": "Global `--color-border` token was promoted to `:root` so tables, blocks, tool rows, message bubbles, preview overlays, task/terminal panels, and sidekick surfaces all share the main chat's subtle outline, dropping the per-container overrides added earlier. The feed's push card also falls back to `commitIds.length` when `metadata.commits` is missing instead of showing a 0 count, and GenericToolBlock's Input/Result containers switched to `<div>`s so the intended 10px inset border renders again.",
+            "text": "Smaller polish: the Feed push card now falls back to commitIds.length when metadata.commits is absent; sidekick context no longer blinks during task-provider refresh; the last Debug sidekick tab no longer ghost-duplicates next to the More button thanks to hysteresis in useOverflowTabs; stat-card dollar values always render two decimals; and long block titles stop crowding trailing EXIT badges.",
             "commit_shas": [
-              "150f142b3e2f18e3aa9ede550869a3ead2d4b7c8",
               "070248dcd7edc4f496d26b777ff9e9577dc0e883",
-              "f62eb9dee65f5f45389ed2450310d5b533999187"
+              "fe0605586c63b50b1150057f4410651ab0d56d96",
+              "764be8b7222758b285f0c746cfaf89cb67493d3e",
+              "773a3a8f7a5440013de880f5e9c586176b73c624",
+              "ed2e66956cca202f85120e1279e5cfc4fd2f8e15"
             ],
             "confidence": "medium"
           }
         ],
         "media": {
           "requested": true,
-          "status": "published",
+          "status": "pending",
           "score": 5,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -2375,9 +3497,9 @@
             "entry language points to release plumbing rather than a product screen",
             "most changed files point at UI-facing surfaces"
           ],
-          "slotId": "entry-preflight-decomposition-live-heuristics-and-a-reshaped-login-flo",
-          "slug": "preflight-decomposition-live-heuristics-and-a-reshaped-login-flo",
-          "alt": "Preflight decomposition, live heuristics, and a reshaped login flow screenshot",
+          "slotId": "entry-self-healing-dev-loop-debug-live-runs-windows-updater-fix-and-a-",
+          "slug": "self-healing-dev-loop-debug-live-runs-windows-updater-fix-and-a-",
+          "alt": "Self-healing dev loop, Debug live runs, Windows updater fix, and a pile of reliability work screenshot",
           "files": [
             "apps/aura-os-server/src/handlers/agents/chat.rs",
             "apps/aura-os-server/src/handlers/dev_loop.rs",
@@ -2398,26 +3520,22 @@
             "apps/aura-run-analyze/tests/fixtures/truncated-run/iterations.jsonl",
             "apps/aura-run-analyze/tests/fixtures/truncated-run/metadata.json",
             "apps/aura-run-analyze/tests/golden.rs",
-            "interface/src/components/ChatMessageList/ChatMessageList.tsx",
-            "interface/src/components/LLMOutput/LLMStreamOutput.test.tsx",
-            "interface/src/components/LLMOutput/LLMStreamOutput.tsx",
-            "interface/src/components/StreamingBubble/StreamingBubble.tsx",
-            "interface/src/components/TaskOutputPanel/ActiveTaskStream.tsx"
-          ],
-          "assetPath": "assets/changelog/nightly/0.1.0-nightly.338.1/entry-preflight-decomposition-live-heuristics-and-a-reshaped-login-flo.png",
-          "screenshotSource": "capture-proof",
-          "updatedAt": "2026-04-22T20:41:51.583Z",
-          "storyTitle": "Preflight Decomposition, Live Heuristics & Rebuilt Chat Streaming"
+            "apps/aura-os-server/src/dto.rs",
+            "crates/aura-os-link/src/runner/mod.rs",
+            "interface/src/components/TaskOutputSection/TaskOutputSection.test.tsx",
+            "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
+            "interface/src/hooks/use-cooldown-status.test.ts"
+          ]
         }
       }
     ],
     "highlights": [
-      "Autonomous dev-loop recovery: preflight + post-failure task decomposition",
-      "Chat streaming: linear ordering, safe markdown, writing-aware indicator",
-      "Debug app redesigned with sidekick, export, and ANSI-decoded output",
-      "Windows auto-updater now hands off to NSIS reliably",
-      "Logout no longer traps users on a black-screen redirect loop"
+      "Dev loop now auto-decomposes truncated tasks and honours provider Retry-After",
+      "Debug app rebuilt around project-first nav with a live-runs sidekick",
+      "Windows auto-updater hands off to NSIS reliably",
+      "Logout no longer traps users on a black-screen redirect loop",
+      "Definition-of-Done gate requires build, test, fmt, and clippy evidence for Rust changes"
     ],
-    "raw_commit_count": 40
+    "raw_commit_count": 63
   }
 }
