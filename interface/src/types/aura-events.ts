@@ -103,6 +103,13 @@ export enum EventType {
   // Git
   GitCommitted          = "git_committed",
   GitCommitFailed       = "git_commit_failed",
+  /// Emitted when the DoD completion gate rejects a task *after* the
+  /// automaton already reported `git_committed`. The SHA carried in
+  /// the event cannot be reached from `git log` (the push was never
+  /// made, and the commit is effectively orphaned). The UI renders
+  /// this as a muted/strikethrough row so users are not misled by a
+  /// committed-looking SHA that does not actually exist on main.
+  GitCommitRolledBack   = "git_commit_rolled_back",
   GitPushed             = "git_pushed",
   GitPushFailed         = "git_push_failed",
 
@@ -415,6 +422,11 @@ export type AuraEvent = AuraEventBase & (
     } }
   | { type: EventType.GitCommitFailed; content: {
       task_id?: string;
+      reason: string;
+    } }
+  | { type: EventType.GitCommitRolledBack; content: {
+      task_id?: string;
+      commit_sha: string;
       reason: string;
     } }
   | { type: EventType.GitPushed; content: {

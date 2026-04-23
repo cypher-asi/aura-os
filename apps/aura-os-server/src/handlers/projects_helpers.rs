@@ -132,6 +132,98 @@ pub(crate) fn ensure_canonical_workspace_dir(
     Ok(workspace_root)
 }
 
+/// Outcome of [`validate_workspace_is_initialised`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum WorkspacePreflightError {
+    /// The workspace path does not exist at all.
+    Missing,
+    /// The path exists but is not a directory.
+    NotADirectory,
+    /// The directory exists but is effectively empty (no files other
+    /// than `.git` metadata) — a strong signal the repo was never
+    /// cloned / bootstrapped.
+    Empty,
+    /// The directory has content but no `.git` marker (file or dir) at
+    /// its root. The dev loop refuses to run here because commits /
+    /// pushes would have no repository to land in.
+    NotAGitRepo,
+    /// Filesystem error while inspecting the directory.
+    Io(String),
+}
+
+impl WorkspacePreflightError {
+    pub(crate) fn remediation_hint(&self, path: &std::path::Path) -> String {
+        let path = path.display();
+        match self {
+            WorkspacePreflightError::Missing => format!(
+                "workspace at {path} does not exist; bootstrap the project (clone / create) before starting the dev loop"
+            ),
+            WorkspacePreflightError::NotADirectory => format!(
+                "workspace at {path} is not a directory; remove the conflicting file and re-bootstrap the project"
+            ),
+            WorkspacePreflightError::Empty => format!(
+                "workspace at {path} is empty; clone the project repository before starting the dev loop so the automaton has source to work with"
+            ),
+            WorkspacePreflightError::NotAGitRepo => format!(
+                "workspace at {path} is not a git repository (no .git entry); initialise the repo or re-clone before starting the dev loop"
+            ),
+            WorkspacePreflightError::Io(err) => format!(
+                "workspace at {path} is not accessible: {err}"
+            ),
+        }
+    }
+}
+
+/// Preflight check run before an automaton is spawned against a
+/// workspace. Rejects empty / uninitialised directories so the agent
+/// does not flail producing `Untitled file` writes and later fail the
+/// DoD gate with no useful diagnosis.
+///
+/// A workspace passes when all of the following hold:
+/// 1. the path exists and is a directory,
+/// 2. it contains a `.git` entry (either a directory or a worktree
+///    file), and
+/// 3. it contains at least one entry besides `.git`.
+pub(crate) fn validate_workspace_is_initialised(
+    workspace_root: &std::path::Path,
+) -> Result<(), WorkspacePreflightError> {
+    let metadata = match std::fs::symlink_metadata(workspace_root) {
+        Ok(m) => m,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            return Err(WorkspacePreflightError::Missing);
+        }
+        Err(err) => return Err(WorkspacePreflightError::Io(err.to_string())),
+    };
+    if !metadata.is_dir() {
+        return Err(WorkspacePreflightError::NotADirectory);
+    }
+
+    let mut has_git_marker = false;
+    let mut has_non_git_entry = false;
+    let entries =
+        std::fs::read_dir(workspace_root).map_err(|e| WorkspacePreflightError::Io(e.to_string()))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| WorkspacePreflightError::Io(e.to_string()))?;
+        let name = entry.file_name();
+        if name == ".git" {
+            has_git_marker = true;
+        } else {
+            has_non_git_entry = true;
+        }
+        if has_git_marker && has_non_git_entry {
+            break;
+        }
+    }
+
+    if !has_git_marker {
+        return Err(WorkspacePreflightError::NotAGitRepo);
+    }
+    if !has_non_git_entry {
+        return Err(WorkspacePreflightError::Empty);
+    }
+    Ok(())
+}
+
 pub(crate) fn slugify(name: &str) -> String {
     let s = name
         .trim()
@@ -414,7 +506,10 @@ pub(crate) fn normalize_optional_path(value: &Option<String>) -> Option<String> 
 
 #[cfg(test)]
 mod tests {
-    use super::{canonical_workspace_path, ensure_canonical_workspace_dir};
+    use super::{
+        canonical_workspace_path, ensure_canonical_workspace_dir,
+        validate_workspace_is_initialised, WorkspacePreflightError,
+    };
     use aura_os_core::ProjectId;
 
     #[test]
@@ -430,5 +525,89 @@ mod tests {
             canonical_workspace_path(temp_dir.path(), &project_id)
         );
         assert!(workspace_root.is_dir());
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_rejects_missing_path() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let missing = temp_dir.path().join("does-not-exist");
+        assert_eq!(
+            validate_workspace_is_initialised(&missing),
+            Err(WorkspacePreflightError::Missing)
+        );
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_rejects_files() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let file_path = temp_dir.path().join("not-a-dir");
+        std::fs::write(&file_path, b"oops").expect("write file");
+        assert_eq!(
+            validate_workspace_is_initialised(&file_path),
+            Err(WorkspacePreflightError::NotADirectory)
+        );
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_rejects_empty_dirs() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        assert_eq!(
+            validate_workspace_is_initialised(temp_dir.path()),
+            Err(WorkspacePreflightError::NotAGitRepo)
+        );
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_rejects_git_only_worktrees() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        std::fs::create_dir(temp_dir.path().join(".git")).expect("mkdir .git");
+        assert_eq!(
+            validate_workspace_is_initialised(temp_dir.path()),
+            Err(WorkspacePreflightError::Empty)
+        );
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_rejects_content_without_git() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        std::fs::write(temp_dir.path().join("README.md"), b"hello").expect("write");
+        assert_eq!(
+            validate_workspace_is_initialised(temp_dir.path()),
+            Err(WorkspacePreflightError::NotAGitRepo)
+        );
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_accepts_bootstrapped_repos() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        std::fs::create_dir(temp_dir.path().join(".git")).expect("mkdir .git");
+        std::fs::write(temp_dir.path().join("Cargo.toml"), b"[workspace]\n").expect("write");
+        assert_eq!(
+            validate_workspace_is_initialised(temp_dir.path()),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn validate_workspace_is_initialised_accepts_git_file_worktrees() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        std::fs::write(
+            temp_dir.path().join(".git"),
+            b"gitdir: /elsewhere/main/.git/worktrees/feature",
+        )
+        .expect("write gitdir file");
+        std::fs::write(temp_dir.path().join("src.txt"), b"content").expect("write");
+        assert_eq!(
+            validate_workspace_is_initialised(temp_dir.path()),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn remediation_hint_names_the_offending_path() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let hint = WorkspacePreflightError::Empty.remediation_hint(temp_dir.path());
+        assert!(hint.contains(&temp_dir.path().display().to_string()));
+        assert!(hint.contains("clone the project repository"));
     }
 }

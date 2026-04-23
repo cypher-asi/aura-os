@@ -17,7 +17,9 @@ use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_tasks::TaskService;
 
-use super::projects_helpers::resolve_agent_instance_workspace_path;
+use super::projects_helpers::{
+    resolve_agent_instance_workspace_path, validate_workspace_is_initialised,
+};
 use crate::dto::{ActiveLoopTask, LoopStatusResponse};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::tool_dedupe::dedupe_and_log_installed_tools;
@@ -69,6 +71,57 @@ fn resolve_git_repo_url(project: Option<&aura_os_core::Project>) -> Option<Strin
 pub(crate) struct LoopQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
     pub model: Option<String>,
+}
+
+/// Preflight-validate a resolved **local** workspace path before starting
+/// an automaton against it. When the harness mode is `Swarm`, the
+/// workspace lives on the remote runner and local inspection is
+/// meaningless, so we skip the check.
+///
+/// When a `git_repo_url` is configured, the automaton is expected to
+/// clone into a previously-empty workspace on first run, so we relax
+/// the check to only reject `Missing` and `NotADirectory` (i.e. the
+/// workspace path cannot be created or is outright broken). When no
+/// repo URL is configured we enforce the full check: the workspace
+/// must already contain a `.git` entry and at least one non-`.git`
+/// file, otherwise the automaton has no source to work with and will
+/// flail producing `Untitled file` writes that the DoD gate later
+/// rejects with no useful diagnosis.
+pub(super) fn preflight_local_workspace(
+    harness_mode: HarnessMode,
+    project_path: &str,
+    git_repo_url: Option<&str>,
+) -> ApiResult<()> {
+    if harness_mode != HarnessMode::Local {
+        return Ok(());
+    }
+    if project_path.is_empty() {
+        return Err(ApiError::bad_request(
+            "workspace path is empty; project workspace must be configured before starting the dev loop".to_string(),
+        ));
+    }
+    let path = std::path::Path::new(project_path);
+    match validate_workspace_is_initialised(path) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            use super::projects_helpers::WorkspacePreflightError as E;
+            let bootstrap_pending =
+                git_repo_url.is_some_and(|url| !url.trim().is_empty());
+            let skip_for_bootstrap = bootstrap_pending
+                && matches!(err, E::Empty | E::NotAGitRepo);
+            if skip_for_bootstrap {
+                info!(
+                    workspace = %project_path,
+                    reason = ?err,
+                    "Workspace preflight tolerated empty dir because git_repo_url is configured; automaton will clone on first run"
+                );
+                return Ok(());
+            }
+            let hint = err.remediation_hint(path);
+            warn!(workspace = %project_path, reason = ?err, "Workspace preflight rejected dev loop start");
+            Err(ApiError::bad_request(hint))
+        }
+    }
 }
 
 /// Broadcast a synthetic domain event as JSON on the global event channel.
@@ -435,6 +488,9 @@ struct CompletionGateReport {
     n_test_steps: usize,
     n_format_steps: usize,
     n_lint_steps: usize,
+    /// Number of `write_file`/`edit_file` calls the harness emitted with
+    /// an empty or missing `path` input. Non-zero always fails the gate.
+    n_empty_path_writes: u32,
     recovery_checkpoint: String,
     /// `None` on pass; the reason string that would be recorded on the
     /// task on fail.
@@ -453,6 +509,7 @@ impl CompletionGateReport {
             n_test_steps: cached.test_steps.len(),
             n_format_steps: cached.format_steps.len(),
             n_lint_steps: cached.lint_steps.len(),
+            n_empty_path_writes: cached.empty_path_writes,
             recovery_checkpoint: recovery_checkpoint_label(recovery_checkpoint(cached)).to_string(),
             failure_reason: None,
         }
@@ -469,22 +526,34 @@ impl CompletionGateReport {
 ///
 /// Layered checks (first failure wins):
 ///
-/// 1. **Baseline activity** — rejects runs with no live output, no file
+/// 1. **Empty-path writes** — rejects runs where the harness emitted any
+///    `write_file` / `edit_file` tool call with a missing or empty
+///    `path` input. These cannot land on disk (the UI renders them as
+///    "Untitled file") and are a strong signal the automaton
+///    misfired. We reject rather than silently accept so the dev loop
+///    retries with a real path.
+/// 2. **Baseline activity** — rejects runs with no live output, no file
 ///    changes, and no verification steps. Catches automatons that claim
 ///    success after doing nothing.
-/// 2. **Source-change evidence** — if the task modified a file with a
+/// 3. **Source-change evidence** — if the task modified a file with a
 ///    recognised source extension (`*.rs`, `*.ts`, `*.py`, etc.), the
 ///    run must include at least one build step and one test step. Docs
 ///    or config-only changes (`*.md`, `*.toml`, `*.yaml`, etc.) skip
 ///    this check since `cargo build` / `cargo test` would be nonsense
 ///    for them.
-/// 3. **Rust-strict evidence** — if the task modified any `*.rs` file,
+/// 4. **Rust-strict evidence** — if the task modified any `*.rs` file,
 ///    the run must additionally include a format step and a lint step
 ///    (e.g. `cargo fmt --check` and `cargo clippy`). This is the full
 ///    four-gate Definition of Done. Non-Rust source languages don't
 ///    currently get this treatment; we'll add them once the harness
 ///    reliably emits format/lint evidence for them.
 fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
+    if cached.empty_path_writes > 0 {
+        return Some(
+            "Automaton emitted write_file/edit_file tool call(s) with an empty or missing \"path\" input; the harness must retry with a real path before task_done",
+        );
+    }
+
     let has_output = !cached.live_output.trim().is_empty();
     let has_file_changes = !cached.files_changed.is_empty();
     let has_build = !cached.build_steps.is_empty();
@@ -700,6 +769,26 @@ pub(crate) fn completion_validation_failure_reason_for_tests(
     n_format_steps: usize,
     n_lint_steps: usize,
 ) -> Option<String> {
+    completion_validation_failure_reason_with_empty_path_writes_for_tests(
+        live_output,
+        files_changed,
+        n_build_steps,
+        n_test_steps,
+        n_format_steps,
+        n_lint_steps,
+        0,
+    )
+}
+
+pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_tests(
+    live_output: &str,
+    files_changed: &[&str],
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+    n_empty_path_writes: u32,
+) -> Option<String> {
     let mut cached = CachedTaskOutput {
         live_output: live_output.to_string(),
         files_changed: files_changed
@@ -711,6 +800,7 @@ pub(crate) fn completion_validation_failure_reason_for_tests(
                 lines_removed: 0,
             })
             .collect(),
+        empty_path_writes: n_empty_path_writes,
         ..Default::default()
     };
     cached.build_steps =
@@ -1286,15 +1376,62 @@ fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChange
             .into_iter()
             .flatten()
             .filter_map(move |value| {
-                value.as_str().map(|path| StorageTaskFileChangeSummary {
-                    op: op.to_string(),
-                    path: path.to_string(),
-                    lines_added: 0,
-                    lines_removed: 0,
-                })
+                value
+                    .as_str()
+                    .map(str::trim)
+                    .filter(|path| !path.is_empty())
+                    .map(|path| StorageTaskFileChangeSummary {
+                        op: op.to_string(),
+                        path: path.to_string(),
+                        lines_added: 0,
+                        lines_removed: 0,
+                    })
             })
     })
     .collect()
+}
+
+/// Returns `true` if `event` is a `tool_call_started` / `tool_call_snapshot`
+/// for `write_file` or `edit_file` whose `input.path` is missing, not a
+/// string, or empty/whitespace-only.
+///
+/// These events cannot land on disk (the UI renders them as "Untitled
+/// file") and indicate the automaton misfired. The DoD gate rejects any
+/// task whose harness emitted at least one so the dev loop retries with
+/// a real path.
+pub(crate) fn is_empty_path_write_event_for_tests(
+    event_type: &str,
+    event: &serde_json::Value,
+) -> bool {
+    is_empty_path_write_event(event_type, event)
+}
+
+pub(crate) fn preflight_local_workspace_for_tests(
+    project_path: &str,
+    git_repo_url: Option<&str>,
+) -> Result<(), String> {
+    preflight_local_workspace(HarnessMode::Local, project_path, git_repo_url)
+        .map_err(|err| err.1 .0.error.clone())
+}
+
+fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> bool {
+    if !matches!(
+        event_type,
+        "tool_call_started" | "tool_call_snapshot" | "tool_call_completed"
+    ) {
+        return false;
+    }
+    let name = event.get("name").and_then(|v| v.as_str());
+    if !matches!(name, Some("write_file") | Some("edit_file")) {
+        return false;
+    }
+    let path = event
+        .get("input")
+        .and_then(|input| input.get("path"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .unwrap_or("");
+    path.is_empty()
 }
 
 fn latest_git_commit_sha(git_steps: &[serde_json::Value]) -> Option<String> {
@@ -2370,7 +2507,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 | "test_fix_attempt" => {
                                     entry.test_steps.push(event.clone());
                                 }
-                                "git_committed" | "git_commit_failed" | "git_pushed"
+                                "git_committed" | "git_commit_failed"
+                                | "git_commit_rolled_back" | "git_pushed"
                                 | "git_push_failed" => {
                                     entry.git_steps.push(event.clone());
                                 }
@@ -2416,6 +2554,10 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                 entry.lint_steps.push(event.clone())
                                             }
                                         }
+                                    }
+                                    if is_empty_path_write_event(event_type, &event) {
+                                        entry.empty_path_writes =
+                                            entry.empty_path_writes.saturating_add(1);
                                     }
                                 }
                             }
@@ -2567,6 +2709,28 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 }
                                 if let Some(reason) = gate_reason {
                                     session_status = "failed";
+                                    // Surface the rollback on the task
+                                    // card so users never see a
+                                    // "Committed <sha>" row that
+                                    // refers to a SHA unreachable
+                                    // from `git log`. We emit this
+                                    // before transitioning task
+                                    // state so the UI has a chance
+                                    // to observe the rollback before
+                                    // the `task_failed` terminal.
+                                    if let Some(sha) = latest_git_commit_sha(&cached.git_steps) {
+                                        emit_domain_event(
+                                            &app_broadcast,
+                                            "git_commit_rolled_back",
+                                            project_id,
+                                            agent_instance_id,
+                                            serde_json::json!({
+                                                "task_id": tid,
+                                                "commit_sha": sha,
+                                                "reason": reason,
+                                            }),
+                                        );
+                                    }
                                     if let (Some(storage_client), Some(jwt)) =
                                         (storage_client.as_ref(), jwt.as_deref())
                                     {
@@ -3547,6 +3711,12 @@ pub(crate) async fn start_loop(
             .unwrap_or_default()
     };
 
+    preflight_local_workspace(
+        harness_mode,
+        &project_path,
+        resolve_git_repo_url(project.as_ref()).as_deref(),
+    )?;
+
     let jwt_for_persist = jwt.clone();
     let installed_tools = match jwt
         .as_deref()
@@ -4363,6 +4533,11 @@ pub(crate) async fn run_single_task(
             .await
             .unwrap_or_default()
     };
+    preflight_local_workspace(
+        harness_mode,
+        &project_path,
+        resolve_git_repo_url(project.as_ref()).as_deref(),
+    )?;
     let usage_reporting = build_usage_reporting_context(
         &state,
         project_id,
@@ -5306,6 +5481,163 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(completion_validation_failure_reason(&with_output), None);
+    }
+
+    #[test]
+    fn latest_git_commit_sha_extracts_sha_after_push_failure() {
+        // Regression: when the completion gate emits a rollback event
+        // it needs the SHA of whichever commit was reported last, even
+        // if a later step (e.g. `git_push_failed`) didn't carry one.
+        let steps = vec![
+            serde_json::json!({"type": "git_committed", "commit_sha": "deadbeef"}),
+            serde_json::json!({"type": "git_push_failed", "reason": "net down"}),
+        ];
+        assert_eq!(latest_git_commit_sha(&steps).as_deref(), Some("deadbeef"));
+    }
+
+    #[test]
+    fn completion_validation_rejects_any_empty_path_write() {
+        let mut cached = CachedTaskOutput {
+            live_output: "looked busy".to_string(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
+            lint_steps: vec![serde_json::json!({"type": "lint_verification_passed"})],
+            empty_path_writes: 1,
+            ..Default::default()
+        };
+        let reason =
+            completion_validation_failure_reason(&cached).expect("gate should fire on empty paths");
+        assert!(
+            reason.contains("empty or missing \"path\""),
+            "expected empty-path reason, got: {reason}"
+        );
+        cached.empty_path_writes = 0;
+        assert_eq!(completion_validation_failure_reason(&cached), None);
+    }
+
+    #[test]
+    fn is_empty_path_write_event_detects_missing_and_whitespace_paths() {
+        let missing_path = serde_json::json!({
+            "name": "write_file",
+            "input": {"content": "hi"},
+        });
+        assert!(is_empty_path_write_event("tool_call_snapshot", &missing_path));
+
+        let empty_path = serde_json::json!({
+            "name": "edit_file",
+            "input": {"path": ""},
+        });
+        assert!(is_empty_path_write_event("tool_call_started", &empty_path));
+
+        let whitespace_path = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": "   \t"},
+        });
+        assert!(is_empty_path_write_event(
+            "tool_call_completed",
+            &whitespace_path
+        ));
+
+        let good_path = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": "src/lib.rs"},
+        });
+        assert!(!is_empty_path_write_event("tool_call_snapshot", &good_path));
+
+        let unrelated_tool = serde_json::json!({
+            "name": "read_file",
+            "input": {"path": ""},
+        });
+        assert!(!is_empty_path_write_event(
+            "tool_call_snapshot",
+            &unrelated_tool
+        ));
+
+        let unrelated_event = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": ""},
+        });
+        assert!(!is_empty_path_write_event("text_delta", &unrelated_event));
+    }
+
+    #[test]
+    fn extract_files_changed_skips_empty_paths() {
+        let event = serde_json::json!({
+            "files_changed": {
+                "created": ["src/lib.rs", "", "   "],
+                "modified": ["\t"],
+                "deleted": ["docs/old.md"],
+            }
+        });
+        let summaries = extract_files_changed(&event);
+        let paths: Vec<&str> = summaries.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(paths, vec!["src/lib.rs", "docs/old.md"]);
+    }
+
+    fn preflight_error_message(err: (axum::http::StatusCode, axum::Json<ApiError>)) -> String {
+        err.1 .0.error.clone()
+    }
+
+    #[test]
+    fn preflight_local_workspace_rejects_empty_dir_without_git_url() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let path = temp_dir.path().to_string_lossy().into_owned();
+        let err = preflight_local_workspace(HarnessMode::Local, &path, None)
+            .expect_err("empty workspace without git_repo_url should be rejected");
+        let msg = preflight_error_message(err);
+        assert!(
+            msg.contains("not a git repository"),
+            "expected not-a-git-repo message, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn preflight_local_workspace_tolerates_empty_dir_with_git_url() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let path = temp_dir.path().to_string_lossy().into_owned();
+        preflight_local_workspace(
+            HarnessMode::Local,
+            &path,
+            Some("https://example.com/org/repo.git"),
+        )
+        .expect("empty workspace with git_repo_url should be tolerated; automaton clones on first run");
+    }
+
+    #[test]
+    fn preflight_local_workspace_rejects_missing_path_even_with_git_url() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let missing = temp_dir
+            .path()
+            .join("never-created")
+            .to_string_lossy()
+            .into_owned();
+        let err = preflight_local_workspace(
+            HarnessMode::Local,
+            &missing,
+            Some("https://example.com/org/repo.git"),
+        )
+        .expect_err("a non-existent workspace path cannot be rescued by git_repo_url");
+        let msg = preflight_error_message(err);
+        assert!(
+            msg.contains("does not exist"),
+            "expected missing-path message, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn preflight_local_workspace_skipped_in_swarm_mode() {
+        preflight_local_workspace(HarnessMode::Swarm, "/nonexistent/remote/path", None)
+            .expect("swarm mode should skip local preflight");
+    }
+
+    #[test]
+    fn preflight_local_workspace_rejects_empty_path_string() {
+        let err = preflight_local_workspace(HarnessMode::Local, "", None)
+            .expect_err("empty string should be rejected");
+        let msg = preflight_error_message(err);
+        assert!(msg.contains("workspace path is empty"));
     }
 
     fn modify_summary(path: &str) -> StorageTaskFileChangeSummary {

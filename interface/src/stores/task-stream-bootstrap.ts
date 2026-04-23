@@ -198,6 +198,23 @@ function handleGitCommitFailedEvent(
   });
 }
 
+function handleGitCommitRolledBackEvent(
+  e: AuraEventOfType<EventType.GitCommitRolledBack>,
+): void {
+  const taskId = e.content.task_id;
+  if (!taskId) return;
+  const { refs, setters } = contextForTask(taskId);
+  const id = crypto.randomUUID();
+  const sha = e.content.commit_sha?.slice(0, 7) ?? "unknown";
+  handleToolCallStarted(refs, setters, { id, name: "git_commit_rolled_back" });
+  handleToolResult(refs, setters, {
+    id,
+    name: "git_commit_rolled_back",
+    result: `Rolled back ${sha}: ${e.content.reason ?? "DoD gate rejected commit"}`,
+    is_error: true,
+  });
+}
+
 function handleGitPushedEvent(e: AuraEventOfType<EventType.GitPushed>): void {
   const taskId = e.content.task_id;
   if (!taskId) return;
@@ -318,6 +335,7 @@ export function bootstrapTaskStreamSubscriptions(): void {
     subscribe(EventType.Progress, handleProgressEvent),
     subscribe(EventType.GitCommitted, handleGitCommittedEvent),
     subscribe(EventType.GitCommitFailed, handleGitCommitFailedEvent),
+    subscribe(EventType.GitCommitRolledBack, handleGitCommitRolledBackEvent),
     subscribe(EventType.GitPushed, handleGitPushedEvent),
     subscribe(EventType.GitPushFailed, handleGitPushFailedEvent),
     subscribe(EventType.TaskCompleted, handleTaskCompleted),

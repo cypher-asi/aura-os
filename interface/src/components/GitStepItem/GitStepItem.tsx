@@ -1,4 +1,4 @@
-import { Check, GitCommitHorizontal, Upload, XCircle } from "lucide-react";
+import { Check, GitCommitHorizontal, RotateCcw, Upload, XCircle } from "lucide-react";
 import type { GitStep } from "../../stores/event-store/index";
 import styles from "../Preview/Preview.module.css";
 
@@ -9,6 +9,11 @@ function getGitStepLabel(step: GitStep): string {
   }
   if (step.kind === "commit_failed") {
     return step.reason ?? "Commit failed";
+  }
+  if (step.kind === "commit_rolled_back") {
+    const sha = step.commitSha ? step.commitSha.slice(0, 7) : "unknown";
+    const reason = step.reason ?? "Definition of Done gate rejected the commit";
+    return `Rolled back ${sha}: ${reason}`;
   }
   if (step.kind === "push_failed") {
     if (step.commitSha) {
@@ -25,14 +30,20 @@ function getGitStepIcon(step: GitStep) {
   if (step.kind === "commit_failed" || step.kind === "push_failed") {
     return <XCircle size={12} />;
   }
+  if (step.kind === "commit_rolled_back") return <RotateCcw size={12} />;
   if (step.kind === "committed") return <GitCommitHorizontal size={12} />;
   return <Upload size={12} />;
 }
 
 export function GitStepItem({ step }: { step: GitStep }) {
   const isError = step.kind === "commit_failed" || step.kind === "push_failed";
+  const isRollback = step.kind === "commit_rolled_back";
   const isSuccess = step.kind === "pushed";
   const statusClass = isError ? styles.buildFailed : isSuccess ? styles.buildPassed : "";
+
+  const rollbackStyle = isRollback
+    ? { textDecoration: "line-through" as const, opacity: 0.65 }
+    : undefined;
 
   return (
     <div className={`${styles.activityItem} ${statusClass}`}>
@@ -40,7 +51,9 @@ export function GitStepItem({ step }: { step: GitStep }) {
         {getGitStepIcon(step)}
       </span>
       <span className={styles.activityBody}>
-        <span className={styles.activityMessage}>{getGitStepLabel(step)}</span>
+        <span className={styles.activityMessage} style={rollbackStyle}>
+          {getGitStepLabel(step)}
+        </span>
         {step.kind === "pushed" && step.commits && step.commits.length > 0 && (
           <div style={{ marginTop: 4, fontSize: "0.8em", opacity: 0.7 }}>
             {step.commits.map((c) => (

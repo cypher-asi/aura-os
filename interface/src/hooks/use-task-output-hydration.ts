@@ -126,6 +126,7 @@ function mapGitSteps(steps: PersistedGitStepShape[]): GitStep[] {
   const kindMap: Record<string, GitStep["kind"]> = {
     git_committed: "committed",
     git_commit_failed: "commit_failed",
+    git_commit_rolled_back: "commit_rolled_back",
     git_pushed: "pushed",
     git_push_failed: "push_failed",
   };

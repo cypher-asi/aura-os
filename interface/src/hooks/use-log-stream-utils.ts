@@ -235,6 +235,11 @@ export function summarise(e: AuraEvent): string {
       const c = e.content;
       return `Git commit failed: ${c.reason ?? "unknown"}`;
     }
+    case EventType.GitCommitRolledBack: {
+      const c = e.content;
+      const sha = c.commit_sha?.slice(0, 8) ?? "";
+      return `Git commit rolled back${sha ? ` (${sha})` : ""}: ${c.reason ?? "DoD gate rejected"}`;
+    }
     case EventType.GitPushed: {
       const c = e.content;
       return `Git push: ${c.branch ?? c.task_id ?? ""}`;

@@ -334,6 +334,13 @@ pub struct CachedTaskOutput {
     pub input_tokens: u64,
     pub output_tokens: u64,
     pub saw_rich_usage: bool,
+    /// Count of `write_file` / `edit_file` tool calls the harness emitted
+    /// with an empty or missing `path` input. These cannot land on disk
+    /// and are a strong signal that the automaton misfired (the UI
+    /// renders them as "Untitled file"). The completion gate rejects any
+    /// turn that produced at least one so the automaton is forced to
+    /// retry with a real path instead of silently "succeeding".
+    pub empty_path_writes: u32,
 }
 pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
 

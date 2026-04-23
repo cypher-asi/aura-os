@@ -50,6 +50,39 @@ You are a high-level orchestrator that manages projects, agents, and all system 
     )
 }
 
+/// Executor-facing Definition-of-Done checklist the dev loop expects a
+/// task-running automaton to follow before emitting `task_completed`.
+///
+/// This is the **executor** prompt, not the CEO prompt: it targets the
+/// per-task automaton that is actually running tools in a project
+/// workspace. The server-side DoD gate in
+/// `apps/aura-os-server/src/handlers/dev_loop.rs::completion_validation_failure_reason`
+/// enforces a strict subset of the same rules, so keeping the two in
+/// sync is what prevents the "reported `task_completed` without
+/// verification evidence" class of failure.
+///
+/// The returned string intentionally lists concrete commands for the
+/// current repo (Rust, JS/TS) rather than vague guidance — the
+/// automaton's harness may concatenate this onto a larger prompt
+/// verbatim, so it must be self-contained.
+pub fn dev_loop_executor_dod_prompt() -> &'static str {
+    DEV_LOOP_EXECUTOR_DOD_PROMPT
+}
+
+const DEV_LOOP_EXECUTOR_DOD_PROMPT: &str = r#"## Definition of Done (executor checklist)
+
+You are running as the task-executing automaton inside a project workspace. Before you emit `task_completed`, the server-side Definition-of-Done gate will validate your run and REJECT the completion (failing the task and rolling back any commit) unless the following hold:
+
+1. **Pathed writes only.** Every `write_file` / `edit_file` tool call must include a concrete `path` argument pointing at a real file under the workspace. A missing or empty path is treated as a tool error by the server and aborts the turn. If you need a placeholder, pick an actual path like `crates/<name>/src/lib.rs` — never submit a write without one.
+2. **Verify your work with real commands.** If you touched source code, you must run and wait for:
+   - `cargo build --workspace --all-targets` (Rust workspaces) or `pnpm build` (JS/TS)
+   - `cargo test --workspace --all-features` (Rust) or `pnpm test` (JS/TS)
+   - For any Rust change additionally: `cargo fmt --all -- --check` AND `cargo clippy --workspace --all-targets -- -D warnings`
+   Each command must be issued via a real `run_command` tool call so the harness can emit a `tool_call_snapshot` the gate will recognise. Describing what you would have run is not evidence — the gate reads tool events, not chat text.
+3. **Do not claim success after a no-op.** If you made no file changes, produced no output, and ran no verification commands, do not call `task_completed` — the gate will reject it and transition the task to `failed` with a rollback event on any commit that slipped through.
+4. **Docs-only / config-only changes** (e.g. `*.md`, `*.toml`, `.gitignore`) are exempt from the build/test/fmt/lint requirements. Source changes are not.
+"#;
+
 /// Render an optional "Current State" section appended to the system prompt.
 ///
 /// Any of the three strings may be empty and will simply be omitted.
@@ -121,5 +154,59 @@ mod tests {
         let credits_idx = ctx.find("### Credits").unwrap();
         assert!(projects_idx < fleet_idx);
         assert!(fleet_idx < credits_idx);
+    }
+
+    #[test]
+    fn dev_loop_executor_dod_prompt_names_dod_commands_explicitly() {
+        let prompt = dev_loop_executor_dod_prompt();
+        // The executor prompt must spell out the exact commands so the
+        // automaton issues them via `run_command` — not paraphrases — so
+        // the server-side DoD gate classifier can bucket them as build /
+        // test / format / lint evidence.
+        assert!(prompt.contains("Definition of Done"));
+        assert!(
+            prompt.contains("cargo build --workspace"),
+            "Rust build command missing from executor prompt"
+        );
+        assert!(
+            prompt.contains("cargo test --workspace"),
+            "Rust test command missing from executor prompt"
+        );
+        assert!(
+            prompt.contains("cargo fmt"),
+            "Rust fmt command missing from executor prompt"
+        );
+        assert!(
+            prompt.contains("cargo clippy"),
+            "Rust clippy command missing from executor prompt"
+        );
+        assert!(
+            prompt.contains("pnpm build") && prompt.contains("pnpm test"),
+            "JS/TS equivalents missing from executor prompt"
+        );
+    }
+
+    #[test]
+    fn dev_loop_executor_dod_prompt_forbids_empty_path_writes() {
+        let prompt = dev_loop_executor_dod_prompt();
+        assert!(
+            prompt.contains("write_file") && prompt.contains("path"),
+            "executor prompt must explicitly warn against empty-path writes"
+        );
+        assert!(
+            prompt.to_ascii_lowercase().contains("empty path")
+                || prompt.contains("missing or empty path"),
+            "executor prompt must call out empty/missing path as a tool error"
+        );
+    }
+
+    #[test]
+    fn dev_loop_executor_dod_prompt_rejects_noop_task_completed() {
+        let prompt = dev_loop_executor_dod_prompt();
+        assert!(
+            prompt.contains("do not call `task_completed`")
+                || prompt.contains("do not claim success"),
+            "executor prompt must forbid task_completed after a no-op run"
+        );
     }
 }

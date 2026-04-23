@@ -52,6 +52,7 @@ const LOG_WORTHY_TYPES: &[&str] = &[
     "test_fix_attempt",
     // Git
     "git_committed",
+    "git_commit_rolled_back",
     "git_pushed",
     "git_push_failed",
     // Errors
@@ -106,6 +107,20 @@ fn log_message_for_event(event: &serde_json::Value) -> String {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             format!("Git commit: {}", &sha[..sha.len().min(8)])
+        }
+        "git_commit_rolled_back" => {
+            let sha = event
+                .get("commit_sha")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let reason = event
+                .get("reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            format!(
+                "Git commit rolled back ({}): {reason}",
+                &sha[..sha.len().min(8)]
+            )
         }
         "git_pushed" => {
             let branch = event.get("branch").and_then(|v| v.as_str()).unwrap_or("");

@@ -29,7 +29,12 @@ export interface TestStep {
 }
 
 export interface GitStep {
-  kind: "committed" | "commit_failed" | "pushed" | "push_failed";
+  kind:
+    | "committed"
+    | "commit_failed"
+    | "commit_rolled_back"
+    | "pushed"
+    | "push_failed";
   commitSha?: string;
   reason?: string;
   repo?: string;

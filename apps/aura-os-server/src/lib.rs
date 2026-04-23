@@ -160,6 +160,51 @@ pub mod phase7_test_support {
         )
     }
 
+    /// Like [`completion_validation_reason`] but additionally exercises
+    /// the empty-path-write short-circuit: `n_empty_path_writes` is the
+    /// number of `write_file` / `edit_file` tool calls the harness
+    /// emitted with a missing/empty `path`. Any non-zero count must
+    /// fail the gate regardless of how much other evidence the run
+    /// produced.
+    pub fn completion_validation_reason_with_empty_path_writes(
+        live_output: &str,
+        files_changed: &[&str],
+        n_build_steps: usize,
+        n_test_steps: usize,
+        n_format_steps: usize,
+        n_lint_steps: usize,
+        n_empty_path_writes: u32,
+    ) -> Option<String> {
+        crate::handlers::dev_loop::completion_validation_failure_reason_with_empty_path_writes_for_tests(
+            live_output,
+            files_changed,
+            n_build_steps,
+            n_test_steps,
+            n_format_steps,
+            n_lint_steps,
+            n_empty_path_writes,
+        )
+    }
+
+    /// True when the harness streamed a `write_file` / `edit_file`
+    /// tool event with a missing or empty `path`. Those events cannot
+    /// land on disk and the DoD gate rejects any task that emitted at
+    /// least one.
+    pub fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> bool {
+        crate::handlers::dev_loop::is_empty_path_write_event_for_tests(event_type, event)
+    }
+
+    /// Preflight a local workspace directory the way the dev-loop would
+    /// when starting a task. Returns `Ok(())` if the workspace is
+    /// usable (or eligible for auto-clone via `git_repo_url`), and the
+    /// remediation hint string otherwise.
+    pub fn preflight_local_workspace(
+        project_path: &str,
+        git_repo_url: Option<&str>,
+    ) -> Result<(), String> {
+        crate::handlers::dev_loop::preflight_local_workspace_for_tests(project_path, git_repo_url)
+    }
+
     /// Summarize how far a task got in the recovery lifecycle without
     /// requiring callers to replay the full handler state machine.
     pub fn recovery_checkpoint(

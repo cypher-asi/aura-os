@@ -135,6 +135,21 @@ function handleGitCommitFailed(event: AuraEvent, u: OutputUpdate): void {
   appendGitStep(c.task_id, { kind: "commit_failed", reason: c.reason, timestamp: Date.now() }, u);
 }
 
+function handleGitCommitRolledBack(event: AuraEvent, u: OutputUpdate): void {
+  const c = event.content as AuraEventContent<EventType.GitCommitRolledBack>;
+  if (!c.task_id) return;
+  appendGitStep(
+    c.task_id,
+    {
+      kind: "commit_rolled_back",
+      commitSha: c.commit_sha,
+      reason: c.reason,
+      timestamp: Date.now(),
+    },
+    u,
+  );
+}
+
 function handleGitPushed(event: AuraEvent, u: OutputUpdate): void {
   const c = event.content as AuraEventContent<EventType.GitPushed>;
   if (!c.task_id) return;
@@ -201,6 +216,7 @@ const DISPATCH: Partial<Record<EventType, EngineHandler>> = {
   [EventType.TestFixAttempt]: handleTestVerification,
   [EventType.GitCommitted]: handleGitCommitted,
   [EventType.GitCommitFailed]: handleGitCommitFailed,
+  [EventType.GitCommitRolledBack]: handleGitCommitRolledBack,
   [EventType.GitPushed]: handleGitPushed,
   [EventType.GitPushFailed]: handleGitPushFailed,
   [EventType.SpecSaved]: handleSpecSaved,
