@@ -402,6 +402,8 @@ export const apps: AuraApp[] = [
     loadAura3DApp,
     {
       hasResponsiveControls: true,
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
     },
   ),
   createAppDefinition(

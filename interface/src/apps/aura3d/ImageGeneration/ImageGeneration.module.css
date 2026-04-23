@@ -1,0 +1,8 @@
+.root {
+  display: flex;
+  flex-direction: column;
+}
+
+.previewArea {
+  padding: var(--space-3) var(--space-4);
+}

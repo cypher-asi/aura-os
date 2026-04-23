@@ -4,11 +4,11 @@ import { EmptyState } from "../../../components/EmptyState";
 import styles from "./Aura3DNav.module.css";
 
 export function Aura3DNav() {
-  const assets = useAura3DStore((s) => s.assets);
-  const selectedAssetId = useAura3DStore((s) => s.selectedAssetId);
-  const selectAsset = useAura3DStore((s) => s.selectAsset);
+  const images = useAura3DStore((s) => s.images);
+  const selectedImageId = useAura3DStore((s) => s.selectedImageId);
+  const selectImage = useAura3DStore((s) => s.selectImage);
 
-  if (assets.length === 0) {
+  if (images.length === 0) {
     return (
       <div className={styles.root}>
         <EmptyState icon={<Box size={24} />}>
@@ -20,28 +20,23 @@ export function Aura3DNav() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>Assets</div>
+      <div className={styles.header}>Images</div>
       <div className={styles.list}>
-        {assets.map((asset) => (
+        {images.map((image) => (
           <button
-            key={asset.id}
+            key={image.id}
             type="button"
-            className={`${styles.item} ${asset.id === selectedAssetId ? styles.itemActive : ""}`}
-            onClick={() => selectAsset(asset.id)}
+            className={`${styles.item} ${image.id === selectedImageId ? styles.itemActive : ""}`}
+            onClick={() => selectImage(image.id)}
           >
-            {asset.image && (
-              <img
-                src={asset.image.imageUrl}
-                alt={asset.name}
-                className={styles.thumb}
-              />
-            )}
+            <img
+              src={image.imageUrl}
+              alt={image.prompt}
+              className={styles.thumb}
+            />
             <div className={styles.itemInfo}>
-              <span className={styles.itemName}>{asset.name}</span>
-              <span className={styles.itemMeta}>
-                {asset.model ? "3D" : "Image"}
-                {asset.tokenized ? " · NFT" : ""}
-              </span>
+              <span className={styles.itemName}>{image.prompt}</span>
+              <span className={styles.itemMeta}>{image.model}</span>
             </div>
           </button>
         ))}
