@@ -13,6 +13,7 @@ mod network_bridge;
 pub mod loop_log;
 
 pub(crate) mod persistence;
+pub(crate) mod reconciler;
 pub(crate) mod router;
 pub(crate) mod state;
 pub(crate) mod sync_state;
@@ -244,6 +245,83 @@ pub mod phase7_test_support {
         let sync_state = crate::sync_state::derive_sync_state(git_steps);
         crate::sync_state::derive_recovery_point(&sync_state)
             .and_then(|point| serde_json::to_value(point).ok())
+    }
+
+    /// Run the reconciler's pure decision engine against a synthetic
+    /// task recovery context and return the chosen action as a small
+    /// JSON payload. Exposed so integration tests and downstream
+    /// supervisors can exercise the decision table without depending
+    /// on the server's private module layout.
+    ///
+    /// `failure_class` accepts one of `"none"`, `"truncation"`,
+    /// `"rate_limited"`, `"push_timeout"`, `"other"`. Anything else is
+    /// treated as `"other"`.
+    ///
+    /// A `max_retries` of `0` is treated as "use the default"
+    /// ([`crate::reconciler::DEFAULT_MAX_RETRIES_PER_TASK`]) so callers
+    /// that don't yet persist a per-task budget stay in lockstep with
+    /// `handlers::dev_loop`'s `MAX_RETRIES_PER_TASK`.
+    pub fn reconcile_decision(
+        git_steps: &[serde_json::Value],
+        failure_class: &str,
+        retry_count: u32,
+        max_retries: u32,
+        has_live_automaton: bool,
+        auto_decompose_disabled: bool,
+    ) -> serde_json::Value {
+        let sync_state = crate::sync_state::derive_sync_state(git_steps);
+        let recovery_point = crate::sync_state::derive_recovery_point(&sync_state);
+        let failure = match failure_class {
+            "none" => crate::reconciler::FailureClass::None,
+            "truncation" => crate::reconciler::FailureClass::Truncation,
+            "rate_limited" => crate::reconciler::FailureClass::RateLimited,
+            "push_timeout" => crate::reconciler::FailureClass::PushTimeout,
+            _ => crate::reconciler::FailureClass::Other,
+        };
+        let effective_max = if max_retries == 0 {
+            crate::reconciler::DEFAULT_MAX_RETRIES_PER_TASK
+        } else {
+            max_retries
+        };
+        let mut inputs = crate::reconciler::ReconcileInputs::from_sync_state(&sync_state);
+        inputs.recovery_point = recovery_point.as_ref();
+        inputs.retry_count = retry_count;
+        inputs.max_retries = effective_max;
+        inputs.failure_class = failure;
+        inputs.has_live_automaton = has_live_automaton;
+        inputs.auto_decompose_disabled = auto_decompose_disabled;
+        let action = crate::reconciler::decide_reconcile_action(&inputs);
+        action_to_json(&action)
+    }
+
+    fn action_to_json(action: &crate::reconciler::ReconcileAction) -> serde_json::Value {
+        use crate::reconciler::{ReconcileAction, TerminalReason};
+        match action {
+            ReconcileAction::AdoptRun => serde_json::json!({ "action": "adopt_run" }),
+            ReconcileAction::RetryPush {
+                commit_sha,
+                retry_safe,
+            } => serde_json::json!({
+                "action": "retry_push",
+                "commit_sha": commit_sha,
+                "retry_safe": retry_safe,
+            }),
+            ReconcileAction::RetryTask => serde_json::json!({ "action": "retry_task" }),
+            ReconcileAction::Decompose => serde_json::json!({ "action": "decompose" }),
+            ReconcileAction::MarkTerminal { reason } => {
+                let reason_label = match reason {
+                    TerminalReason::RetryBudgetExhausted => "retry_budget_exhausted",
+                    TerminalReason::RateLimited => "rate_limited",
+                    TerminalReason::CommitFailed => "commit_failed",
+                    TerminalReason::DecomposeDisabled => "decompose_disabled",
+                };
+                serde_json::json!({
+                    "action": "mark_terminal",
+                    "reason": reason_label,
+                })
+            }
+            ReconcileAction::Noop => serde_json::json!({ "action": "noop" }),
+        }
     }
 }
 
