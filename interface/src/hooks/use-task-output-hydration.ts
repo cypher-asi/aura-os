@@ -4,40 +4,104 @@ import type { BuildStep, TestStep } from "../stores/event-store/index";
 import { hydrateTaskOutputOnce } from "../stores/task-output-hydration-cache";
 import type { Task } from "../types";
 
-function mapBuildSteps(steps: { kind?: string; command?: string; stderr?: string; stdout?: string; attempt?: number; type?: string; reason?: string }[]): BuildStep[] {
+// Persisted `build_steps` / `test_steps` on the server mix two shapes:
+//   1. Native `build_verification_*` / `test_verification_*` events with
+//      the command at the top level.
+//   2. Raw `tool_call_snapshot` / `tool_call_completed` events that the
+//      dev loop classifies as build/test/format/lint work via
+//      `classify_run_command_steps` in `apps/aura-os-server/.../dev_loop.rs`.
+//      Those store the command under `input` (mirror of the Rust
+//      `extract_run_command` helper).
+// This module normalises both into the `BuildStep` / `TestStep` shape the
+// UI expects so rows never render as "Running `undefined`".
+
+interface PersistedStepShape {
+  kind?: string;
+  command?: string;
+  stderr?: string;
+  stdout?: string;
+  attempt?: number;
+  type?: string;
+  reason?: string;
+  name?: string;
+  id?: string;
+  tests?: { name: string; status: string; message?: string }[];
+  summary?: string;
+  input?: unknown;
+}
+
+function extractRunCommand(step: PersistedStepShape): string | undefined {
+  if (step.name !== "run_command") return undefined;
+  const input = step.input;
+  if (!input || typeof input !== "object") return undefined;
+  const obj = input as Record<string, unknown>;
+  const raw = obj.command;
+  if (typeof raw === "string" && raw.trim()) {
+    return raw.trim();
+  }
+  const program = obj.program;
+  if (typeof program !== "string" || !program.trim()) return undefined;
+  const args = Array.isArray(obj.args)
+    ? obj.args.filter((v): v is string => typeof v === "string")
+    : [];
+  return args.length === 0 ? program.trim() : `${program.trim()} ${args.join(" ")}`;
+}
+
+// Collapse snapshot/completed pairs for the same tool call id so each
+// command surfaces as a single row. When both exist we keep the
+// `completed` event (it represents the final state).
+function dedupeToolCallPairs(steps: PersistedStepShape[]): PersistedStepShape[] {
+  const completedIds = new Set<string>();
+  for (const s of steps) {
+    if (s.type === "tool_call_completed" && typeof s.id === "string") {
+      completedIds.add(s.id);
+    }
+  }
+  return steps.filter(
+    (s) => !(s.type === "tool_call_snapshot" && typeof s.id === "string" && completedIds.has(s.id)),
+  );
+}
+
+function mapBuildSteps(steps: PersistedStepShape[]): BuildStep[] {
   const kindMap: Record<string, BuildStep["kind"]> = {
     build_verification_skipped: "skipped",
     build_verification_started: "started",
     build_verification_passed: "passed",
     build_verification_failed: "failed",
     build_fix_attempt: "fix_attempt",
+    tool_call_snapshot: "started",
+    tool_call_completed: "passed",
   };
-  return steps.map((s) => {
-    const raw = s as { type?: string; reason?: string };
+  return dedupeToolCallPairs(steps).map((s) => {
+    const type = s.type ?? "";
+    const toolCommand = extractRunCommand(s);
     return {
-      kind: (kindMap[raw.type ?? ""] ?? s.kind ?? "started") as BuildStep["kind"],
-      command: s.command,
+      kind: (kindMap[type] ?? s.kind ?? "started") as BuildStep["kind"],
+      command: s.command ?? toolCommand,
       stderr: s.stderr,
       stdout: s.stdout,
       attempt: s.attempt,
-      reason: (raw.type === "build_verification_skipped" || s.kind === "skipped") ? (raw.reason ?? s.stdout) : undefined,
+      reason: (type === "build_verification_skipped" || s.kind === "skipped") ? (s.reason ?? s.stdout) : undefined,
       timestamp: 0,
     };
   });
 }
 
-function mapTestSteps(steps: { kind?: string; command?: string; stderr?: string; stdout?: string; attempt?: number; tests?: { name: string; status: string; message?: string }[]; summary?: string; type?: string }[]): TestStep[] {
+function mapTestSteps(steps: PersistedStepShape[]): TestStep[] {
   const kindMap: Record<string, TestStep["kind"]> = {
     test_verification_started: "started",
     test_verification_passed: "passed",
     test_verification_failed: "failed",
     test_fix_attempt: "fix_attempt",
+    tool_call_snapshot: "started",
+    tool_call_completed: "passed",
   };
-  return steps.map((s) => {
-    const raw = s as { type?: string };
+  return dedupeToolCallPairs(steps).map((s) => {
+    const type = s.type ?? "";
+    const toolCommand = extractRunCommand(s);
     return {
-      kind: (kindMap[raw.type ?? ""] ?? s.kind ?? "started") as TestStep["kind"],
-      command: s.command,
+      kind: (kindMap[type] ?? s.kind ?? "started") as TestStep["kind"],
+      command: s.command ?? toolCommand,
       stderr: s.stderr,
       stdout: s.stdout,
       attempt: s.attempt,

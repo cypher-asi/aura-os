@@ -144,7 +144,18 @@ enum InfraFailureClass {
     ProviderRateLimited,
     ProviderOverloaded,
     TransportTimeout,
+    /// Pre-commit git operation timeout (`git add` / `git commit`). The
+    /// task's work is not yet persisted anywhere, so we reset the task
+    /// to `ready` and restart the automaton.
     GitTimeout,
+    /// Post-commit `git push` timeout. The commit is already in the
+    /// workspace repo and, from the task's perspective, the work is
+    /// done. We do NOT reset the task — the push is infrastructure and
+    /// is retried separately by the harness. Treated as non-fatal on
+    /// this side: the task is transitioned to `done` and a
+    /// `git_push_failed` event is surfaced to the UI, but the loop is
+    /// not paused.
+    GitPushTimeout,
 }
 
 /// Classify a `task_failed` reason string into a [`FailureClass`].
@@ -200,6 +211,21 @@ pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
 
 fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
     let lower = reason.to_ascii_lowercase();
+    // Check `git push` first so it is routed to the non-fatal
+    // `GitPushTimeout` path instead of the pre-commit `GitTimeout`
+    // reset-to-ready path. A push-specific marker also includes things
+    // like `orbit_push` / `git_commit_push` (where only the push leg
+    // timed out — `git_commit_push_impl` preserves the commit SHA on
+    // push failure, see `aura-harness/crates/aura-tools/src/git_tool`).
+    let is_push = lower.contains("git push")
+        || lower.contains("git_push")
+        || lower.contains("git-push")
+        || lower.contains("orbit_push")
+        || lower.contains("commit+push")
+        || lower.contains("git_commit_push");
+    if is_push && (lower.contains("timed out") || lower.contains("timeout")) {
+        return Some(InfraFailureClass::GitPushTimeout);
+    }
     if (lower.contains("git ") || lower.contains("git_") || lower.contains("git-"))
         && (lower.contains("timed out") || lower.contains("timeout"))
     {
@@ -232,6 +258,10 @@ fn infra_cooldown_for(class: InfraFailureClass) -> Duration {
         InfraFailureClass::ProviderOverloaded => Duration::from_secs(30),
         InfraFailureClass::TransportTimeout => Duration::from_secs(20),
         InfraFailureClass::GitTimeout => Duration::from_secs(15),
+        // `GitPushTimeout` never takes the pause-and-restart path, so
+        // the cooldown is unused. Keep a small sentinel here so the
+        // match remains exhaustive without implying a real backoff.
+        InfraFailureClass::GitPushTimeout => Duration::from_secs(0),
     }
 }
 
@@ -241,6 +271,7 @@ fn infra_failure_label(class: InfraFailureClass) -> &'static str {
         InfraFailureClass::ProviderOverloaded => "provider_overloaded",
         InfraFailureClass::TransportTimeout => "transport_timeout",
         InfraFailureClass::GitTimeout => "git_timeout",
+        InfraFailureClass::GitPushTimeout => "git_push_timeout",
     }
 }
 
@@ -2427,6 +2458,55 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // page reloads) and surface it on the live
                             // `task_failed` broadcast below.
                             let failure_reason = extract_failure_reason(&event);
+
+                            // Post-commit `git push` timeout: the task's
+                            // work is already committed in the workspace
+                            // repo, so the task itself is done. The push
+                            // is infrastructure and is retried separately
+                            // by the harness. Do NOT fail the task, do
+                            // NOT reset it to `ready`, and do NOT pause
+                            // the loop. Transition to `done` and surface
+                            // a `git_push_failed` event to the UI.
+                            if let (Some(tid), Some(reason)) = (
+                                tid.as_ref(),
+                                failure_reason.as_ref(),
+                            ) {
+                                if classify_infra_failure(reason)
+                                    == Some(InfraFailureClass::GitPushTimeout)
+                                {
+                                    if let (Some(storage_client), Some(jwt)) =
+                                        (storage_client.as_ref(), jwt.as_deref())
+                                    {
+                                        let req = aura_os_storage::TransitionTaskRequest {
+                                            status: "done".to_string(),
+                                        };
+                                        if let Err(error) = storage_client
+                                            .transition_task(tid, jwt, &req)
+                                            .await
+                                        {
+                                            warn!(
+                                                task_id = %tid,
+                                                %error,
+                                                "Failed to transition task to Done after push timeout (may already be terminal)"
+                                            );
+                                        }
+                                    }
+                                    emit_domain_event(
+                                        &app_broadcast,
+                                        "git_push_failed",
+                                        project_id,
+                                        agent_instance_id,
+                                        serde_json::json!({
+                                            "task_id": tid,
+                                            "reason": reason,
+                                        }),
+                                    );
+                                    session_status = "completed";
+                                    terminal_seen = true;
+                                    continue;
+                                }
+                            }
+
                             // Tracks whether `reset_task_for_infra_retry`
                             // flipped the task from `in_progress` → `ready`
                             // but the subsequent restart failed. When true,
@@ -4895,6 +4975,38 @@ mod tests {
         assert_eq!(
             classify_infra_failure("syntax error in generated code"),
             None
+        );
+    }
+
+    #[test]
+    fn classify_infra_failure_routes_push_timeouts_separately() {
+        // The exact string surfaced by the harness when `git push`
+        // itself times out. Must route to `GitPushTimeout`, not
+        // `GitTimeout`, because the commit already landed and the
+        // task's work is done — we do not want the server to reset
+        // the task to `ready` and re-run the LLM.
+        assert_eq!(
+            classify_infra_failure("git push orbit HEAD:main: timed out after 60s"),
+            Some(InfraFailureClass::GitPushTimeout)
+        );
+        // Pre-commit operations keep the retry semantics.
+        assert_eq!(
+            classify_infra_failure("git add -A timed out after 30s"),
+            Some(InfraFailureClass::GitTimeout)
+        );
+        assert_eq!(
+            classify_infra_failure("git commit timed out"),
+            Some(InfraFailureClass::GitTimeout)
+        );
+        // Harness-side push wrappers also classify as push timeouts
+        // so their failure strings are handled the same way.
+        assert_eq!(
+            classify_infra_failure("Commit+push failed: git push timed out after 60s"),
+            Some(InfraFailureClass::GitPushTimeout)
+        );
+        assert_eq!(
+            classify_infra_failure("orbit_push timed out after 120s"),
+            Some(InfraFailureClass::GitPushTimeout)
         );
     }
 
