@@ -206,11 +206,30 @@ pub mod phase7_test_support {
     }
 
     /// True when the harness streamed a `write_file` / `edit_file`
-    /// tool event with a missing or empty `path`. Those events cannot
-    /// land on disk and the DoD gate rejects any task that emitted at
-    /// least one.
+    /// `tool_call_completed` event with a missing or empty `path`.
+    /// Those events cannot land on disk and contribute to the
+    /// `empty_path_writes` counter the DoD gate consults.
+    ///
+    /// Started/snapshot events are intentionally ignored so a single
+    /// malformed call is only counted once.
     pub fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> bool {
         crate::handlers::dev_loop::is_empty_path_write_event_for_tests(event_type, event)
+    }
+
+    /// Extracts `(path, op)` for a successful
+    /// `tool_call_completed` representing a `write_file`,
+    /// `edit_file`, or `delete_file` with a real path. The returned
+    /// `op` is one of `"create" | "modify" | "delete"` (aligned with
+    /// `StorageTaskFileChangeSummary::op`).
+    ///
+    /// This is the fallback signal the DoD gate uses to populate
+    /// `files_changed` when the upstream `assistant_message_end` did
+    /// not carry a `files_changed` payload.
+    pub fn successful_write_event_path(
+        event_type: &str,
+        event: &serde_json::Value,
+    ) -> Option<(String, &'static str)> {
+        crate::handlers::dev_loop::successful_write_event_path_for_tests(event_type, event)
     }
 
     /// Preflight a local workspace directory the way the dev-loop would

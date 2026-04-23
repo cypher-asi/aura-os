@@ -1742,19 +1742,32 @@ fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChange
     .collect()
 }
 
-/// Returns `true` if `event` is a `tool_call_started` / `tool_call_snapshot`
-/// for `write_file` or `edit_file` whose `input.path` is missing, not a
-/// string, or empty/whitespace-only.
+/// Returns `true` if `event` is a `tool_call_completed` for `write_file`
+/// or `edit_file` whose `input.path` is missing, not a string, or
+/// empty/whitespace-only.
 ///
 /// These events cannot land on disk (the UI renders them as "Untitled
-/// file") and indicate the automaton misfired. The DoD gate rejects any
-/// task whose harness emitted at least one so the dev loop retries with
-/// a real path.
+/// file") and indicate the automaton misfired. The DoD gate rejects
+/// unrecovered tasks (see [`completion_validation_failure_reason`]) so
+/// the dev loop retries with a real path.
+///
+/// Only `tool_call_completed` is counted: a single malformed call
+/// fires `tool_call_started`, possibly one or more `tool_call_snapshot`
+/// events, and finally `tool_call_completed`. Counting all three
+/// inflates `empty_path_writes` 2-3x per misfire, which masks whether
+/// the agent actually recovered.
 pub(crate) fn is_empty_path_write_event_for_tests(
     event_type: &str,
     event: &serde_json::Value,
 ) -> bool {
     is_empty_path_write_event(event_type, event)
+}
+
+pub(crate) fn successful_write_event_path_for_tests(
+    event_type: &str,
+    event: &serde_json::Value,
+) -> Option<(String, &'static str)> {
+    successful_write_event_path(event_type, event)
 }
 
 pub(crate) fn preflight_local_workspace_for_tests(
@@ -1766,10 +1779,7 @@ pub(crate) fn preflight_local_workspace_for_tests(
 }
 
 fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> bool {
-    if !matches!(
-        event_type,
-        "tool_call_started" | "tool_call_snapshot" | "tool_call_completed"
-    ) {
+    if event_type != "tool_call_completed" {
         return false;
     }
     let name = event.get("name").and_then(|v| v.as_str());
@@ -1783,6 +1793,64 @@ fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> boo
         .map(str::trim)
         .unwrap_or("");
     path.is_empty()
+}
+
+/// Extracts the logical file mutation implied by a successful
+/// `tool_call_completed` for `write_file` / `edit_file` / `delete_file`.
+///
+/// Returns `Some((path, op))` where `op` is one of `"create"`,
+/// `"modify"`, or `"delete"` (aligned with
+/// [`StorageTaskFileChangeSummary::op`]).
+///
+/// This is the fallback signal the DoD gate uses to populate
+/// `CachedTaskOutput::files_changed` when the upstream
+/// `assistant_message_end` did not carry a `files_changed` payload
+/// (e.g. runtimes that always emit `FilesChanged::default()`). Without
+/// this, real writes land on disk but the gate still sees `files 0`
+/// and rejects the task via the unrecovered-empty-path reason.
+fn successful_write_event_path(
+    event_type: &str,
+    event: &serde_json::Value,
+) -> Option<(String, &'static str)> {
+    if event_type != "tool_call_completed" {
+        return None;
+    }
+    if event
+        .get("is_error")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+    {
+        return None;
+    }
+    let name = event.get("name").and_then(|v| v.as_str())?;
+    let op = match name {
+        "write_file" | "edit_file" => "modify",
+        "delete_file" => "delete",
+        _ => return None,
+    };
+    let path = event
+        .get("input")
+        .and_then(|input| input.get("path"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())?;
+    Some((path.to_string(), op))
+}
+
+fn record_successful_write(
+    files_changed: &mut Vec<StorageTaskFileChangeSummary>,
+    path: String,
+    op: &'static str,
+) {
+    if files_changed.iter().any(|entry| entry.path == path) {
+        return;
+    }
+    files_changed.push(StorageTaskFileChangeSummary {
+        op: op.to_string(),
+        path,
+        lines_added: 0,
+        lines_removed: 0,
+    });
 }
 
 fn latest_git_commit_sha(git_steps: &[serde_json::Value]) -> Option<String> {
@@ -3063,6 +3131,15 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     if is_empty_path_write_event(event_type, &event) {
                                         entry.empty_path_writes =
                                             entry.empty_path_writes.saturating_add(1);
+                                    }
+                                    if let Some((path, op)) =
+                                        successful_write_event_path(event_type, &event)
+                                    {
+                                        record_successful_write(
+                                            &mut entry.files_changed,
+                                            path,
+                                            op,
+                                        );
                                     }
                                 }
                             }
@@ -6597,13 +6674,16 @@ mod tests {
             "name": "write_file",
             "input": {"content": "hi"},
         });
-        assert!(is_empty_path_write_event("tool_call_snapshot", &missing_path));
+        assert!(is_empty_path_write_event(
+            "tool_call_completed",
+            &missing_path
+        ));
 
         let empty_path = serde_json::json!({
             "name": "edit_file",
             "input": {"path": ""},
         });
-        assert!(is_empty_path_write_event("tool_call_started", &empty_path));
+        assert!(is_empty_path_write_event("tool_call_completed", &empty_path));
 
         let whitespace_path = serde_json::json!({
             "name": "write_file",
@@ -6618,14 +6698,17 @@ mod tests {
             "name": "write_file",
             "input": {"path": "src/lib.rs"},
         });
-        assert!(!is_empty_path_write_event("tool_call_snapshot", &good_path));
+        assert!(!is_empty_path_write_event(
+            "tool_call_completed",
+            &good_path
+        ));
 
         let unrelated_tool = serde_json::json!({
             "name": "read_file",
             "input": {"path": ""},
         });
         assert!(!is_empty_path_write_event(
-            "tool_call_snapshot",
+            "tool_call_completed",
             &unrelated_tool
         ));
 
@@ -6634,6 +6717,91 @@ mod tests {
             "input": {"path": ""},
         });
         assert!(!is_empty_path_write_event("text_delta", &unrelated_event));
+    }
+
+    #[test]
+    fn is_empty_path_write_event_ignores_started_and_snapshot_events() {
+        // A single malformed tool call fires started -> (snapshot)* ->
+        // completed. Only the final completed event represents an
+        // actual execution attempt; counting the earlier events would
+        // inflate empty_path_writes 2-3x per misfire and defeat the
+        // "recovered with real write" gate logic.
+        let ev = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": ""},
+        });
+        assert!(!is_empty_path_write_event("tool_call_started", &ev));
+        assert!(!is_empty_path_write_event("tool_call_snapshot", &ev));
+        assert!(is_empty_path_write_event("tool_call_completed", &ev));
+    }
+
+    #[test]
+    fn successful_write_event_path_extracts_write_and_edit_paths() {
+        let write = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": "crates/foo/src/lib.rs"},
+        });
+        let (path, op) = successful_write_event_path("tool_call_completed", &write)
+            .expect("successful write_file must be recorded");
+        assert_eq!(path, "crates/foo/src/lib.rs");
+        assert_eq!(op, "modify");
+
+        let edit = serde_json::json!({
+            "name": "edit_file",
+            "input": {"path": "crates/bar/src/baz.rs"},
+        });
+        let (path, op) = successful_write_event_path("tool_call_completed", &edit)
+            .expect("successful edit_file must be recorded");
+        assert_eq!(path, "crates/bar/src/baz.rs");
+        assert_eq!(op, "modify");
+
+        let delete = serde_json::json!({
+            "name": "delete_file",
+            "input": {"path": "docs/legacy.md"},
+        });
+        let (path, op) = successful_write_event_path("tool_call_completed", &delete)
+            .expect("successful delete_file must be recorded");
+        assert_eq!(path, "docs/legacy.md");
+        assert_eq!(op, "delete");
+    }
+
+    #[test]
+    fn successful_write_event_path_skips_errors_and_non_write_tools() {
+        let errored = serde_json::json!({
+            "name": "write_file",
+            "is_error": true,
+            "input": {"path": "src/lib.rs"},
+        });
+        assert!(successful_write_event_path("tool_call_completed", &errored).is_none());
+
+        let empty = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": "   "},
+        });
+        assert!(successful_write_event_path("tool_call_completed", &empty).is_none());
+
+        let non_write = serde_json::json!({
+            "name": "read_file",
+            "input": {"path": "src/lib.rs"},
+        });
+        assert!(successful_write_event_path("tool_call_completed", &non_write).is_none());
+
+        let non_completion = serde_json::json!({
+            "name": "write_file",
+            "input": {"path": "src/lib.rs"},
+        });
+        assert!(successful_write_event_path("tool_call_started", &non_completion).is_none());
+    }
+
+    #[test]
+    fn record_successful_write_dedupes_repeat_paths() {
+        let mut files = Vec::new();
+        record_successful_write(&mut files, "src/lib.rs".into(), "modify");
+        record_successful_write(&mut files, "src/lib.rs".into(), "modify");
+        record_successful_write(&mut files, "src/main.rs".into(), "modify");
+        assert_eq!(files.len(), 2);
+        let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        assert_eq!(paths, vec!["src/lib.rs", "src/main.rs"]);
     }
 
     #[test]

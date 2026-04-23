@@ -327,6 +327,18 @@ pub struct CachedTaskOutput {
     pub context_usage_estimate: Option<f64>,
     pub provider: Option<String>,
     pub model: Option<String>,
+    /// Files the task mutated during its run.
+    ///
+    /// Populated from two independent signals:
+    ///
+    /// 1. Structured `files_changed` on `assistant_message_end`
+    ///    (canonical path when the harness emits it).
+    /// 2. Successful `write_file` / `edit_file` / `delete_file`
+    ///    `tool_call_completed` events with a non-empty `input.path`.
+    ///    This fallback exists because some runtime adapters emit
+    ///    `AssistantMessageEnd` with `FilesChanged::default()` (empty),
+    ///    which would otherwise leave the DoD gate believing zero
+    ///    files changed even when writes landed on disk.
     pub files_changed: Vec<StorageTaskFileChangeSummary>,
     pub session_id: Option<String>,
     pub agent_instance_id: Option<String>,
@@ -334,14 +346,20 @@ pub struct CachedTaskOutput {
     pub input_tokens: u64,
     pub output_tokens: u64,
     pub saw_rich_usage: bool,
-    /// Count of `write_file` / `edit_file` tool calls the harness emitted
-    /// with an empty or missing `path` input. These cannot land on disk
-    /// and are a strong signal that the automaton misfired (the UI
-    /// renders them as "Untitled file"). The completion gate rejects
-    /// turns that produced at least one *and* never followed up with a
-    /// successful file change. When `files_changed` is non-empty the
-    /// empty-path events are treated as benign recovery history and
-    /// the verification-step checks handle the real writes.
+    /// Count of `write_file` / `edit_file` `tool_call_completed`
+    /// events the harness emitted with an empty or missing `path`
+    /// input. These cannot land on disk and indicate the automaton
+    /// misfired (the UI renders them as "Untitled file"). Only the
+    /// `tool_call_completed` event is counted; the upstream
+    /// `tool_call_started` / `tool_call_snapshot` events for the same
+    /// call are deliberately ignored so a single misfire is counted
+    /// exactly once.
+    ///
+    /// The completion gate rejects turns that produced at least one
+    /// *and* never followed up with a successful file change. When
+    /// `files_changed` is non-empty the empty-path events are treated
+    /// as benign recovery history and the verification-step checks
+    /// handle the real writes.
     pub empty_path_writes: u32,
 }
 pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
