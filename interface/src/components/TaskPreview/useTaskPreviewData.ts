@@ -58,6 +58,11 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const fileOps = taskOutput.fileOps.length > 0
     ? taskOutput.fileOps
     : (task.files_changed ?? []);
+  const latestGitStep = taskOutput.gitSteps[taskOutput.gitSteps.length - 1] ?? null;
+  const syncWarning =
+    effectiveStatus === "done" && latestGitStep?.kind === "push_failed"
+      ? (latestGitStep.reason ?? "Remote push failed after local completion.")
+      : null;
   const notes = task.execution_notes || null;
   const showNotes = !!notes;
 
@@ -95,7 +100,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
 
   return {
     taskOutput, effectiveStatus, effectiveSessionId, isActive, isTerminal,
-    elapsed, failReason, agentInstance, completedByAgent,
+    elapsed, failReason, syncWarning, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
     fileOps, notes, showNotes, streamKey: taskStreamKey,
   };

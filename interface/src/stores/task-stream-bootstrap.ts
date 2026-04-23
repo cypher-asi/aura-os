@@ -239,7 +239,7 @@ function mergeBufferedOutput(taskId: string, streamBuffer: string, projectId?: s
   if (mergedText && mergedText !== existingText) {
     useEventStore
       .getState()
-      .seedTaskOutput(taskId, mergedText, undefined, undefined, projectId);
+      .seedTaskOutput(taskId, mergedText, undefined, undefined, undefined, projectId);
   }
 }
 

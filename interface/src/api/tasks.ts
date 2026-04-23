@@ -68,6 +68,15 @@ export const tasksApi = {
       output: string;
       build_steps?: BuildStepRecord[];
       test_steps?: TestStepRecord[];
+      git_steps?: {
+        type?: string;
+        kind?: string;
+        reason?: string;
+        commit_sha?: string;
+        repo?: string;
+        branch?: string;
+        commits?: { sha: string; message: string }[];
+      }[];
       /**
        * When true, the server has no persisted output for this task
        * (e.g. session_id is missing and the fallback scan found nothing).

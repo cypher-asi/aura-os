@@ -1237,6 +1237,14 @@ fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChange
     .collect()
 }
 
+fn latest_git_commit_sha(git_steps: &[serde_json::Value]) -> Option<String> {
+    git_steps.iter().rev().find_map(|step| {
+        step.get("commit_sha")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    })
+}
+
 fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
     [
         ("claude-opus-4-6", 5.0, 25.0),
@@ -1827,29 +1835,26 @@ async fn try_restart_automaton(
             "reason": reason,
         }),
     );
-    let (automaton_id, event_stream_url) = match ctx
-        .automaton_client
-        .start(ctx.start_params.clone())
-        .await
-    {
-        Ok(r) => (r.automaton_id, Some(r.event_stream_url)),
-        Err(AutomatonStartError::Conflict(existing_id)) => {
-            match resolve_start_conflict(
-                ctx.automaton_client.as_ref(),
-                existing_id,
-                &ctx.start_params,
-            )
-            .await?
-            {
-                ConflictResolution::Fresh {
-                    automaton_id,
-                    event_stream_url,
-                } => (automaton_id, Some(event_stream_url)),
-                ConflictResolution::Adopt { automaton_id } => (automaton_id, None),
+    let (automaton_id, event_stream_url) =
+        match ctx.automaton_client.start(ctx.start_params.clone()).await {
+            Ok(r) => (r.automaton_id, Some(r.event_stream_url)),
+            Err(AutomatonStartError::Conflict(existing_id)) => {
+                match resolve_start_conflict(
+                    ctx.automaton_client.as_ref(),
+                    existing_id,
+                    &ctx.start_params,
+                )
+                .await?
+                {
+                    ConflictResolution::Fresh {
+                        automaton_id,
+                        event_stream_url,
+                    } => (automaton_id, Some(event_stream_url)),
+                    ConflictResolution::Adopt { automaton_id } => (automaton_id, None),
+                }
             }
-        }
-        Err(e) => return Err(format!("automaton start failed: {e}")),
-    };
+            Err(e) => return Err(format!("automaton start failed: {e}")),
+        };
     let tx = connect_with_retries(
         ctx.automaton_client.as_ref(),
         &automaton_id,
@@ -2194,6 +2199,10 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 | "test_fix_attempt" => {
                                     entry.test_steps.push(event.clone());
                                 }
+                                "git_committed" | "git_commit_failed" | "git_pushed"
+                                | "git_push_failed" => {
+                                    entry.git_steps.push(event.clone());
+                                }
                                 "format_verification_skipped"
                                 | "format_verification_started"
                                 | "format_verification_passed"
@@ -2362,11 +2371,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     &cached,
                                 )
                                 .await;
-                                let gate_reason =
-                                    completion_validation_failure_reason(&cached);
+                                let gate_reason = completion_validation_failure_reason(&cached);
                                 let mut gate_report = CompletionGateReport::from_cached(&cached);
-                                gate_report.failure_reason =
-                                    gate_reason.map(|r| r.to_string());
+                                gate_report.failure_reason = gate_reason.map(|r| r.to_string());
                                 if let Ok(payload) = serde_json::to_value(&gate_report) {
                                     let mut payload = payload;
                                     if let Some(obj) = payload.as_object_mut() {
@@ -2467,22 +2474,46 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // NOT reset it to `ready`, and do NOT pause
                             // the loop. Transition to `done` and surface
                             // a `git_push_failed` event to the UI.
-                            if let (Some(tid), Some(reason)) = (
-                                tid.as_ref(),
-                                failure_reason.as_ref(),
-                            ) {
+                            if let (Some(tid), Some(reason)) =
+                                (tid.as_ref(), failure_reason.as_ref())
+                            {
                                 if classify_infra_failure(reason)
                                     == Some(InfraFailureClass::GitPushTimeout)
                                 {
+                                    let cached = {
+                                        let mut cache = task_output_cache.lock().await;
+                                        let entry = cache.entry(tid.clone()).or_default();
+                                        if entry.project_id.is_none() {
+                                            entry.project_id = Some(pid.clone());
+                                        }
+                                        if entry.agent_instance_id.is_none() {
+                                            entry.agent_instance_id = Some(aiid.clone());
+                                        }
+                                        if entry.session_id.is_none() {
+                                            entry.session_id = current_session_id_string.clone();
+                                        }
+                                        entry.git_steps.push(serde_json::json!({
+                                            "type": "git_push_failed",
+                                            "task_id": tid,
+                                            "reason": reason,
+                                        }));
+                                        entry.clone()
+                                    };
+                                    persistence::persist_task_output(
+                                        storage_client.as_ref(),
+                                        jwt.as_deref(),
+                                        tid,
+                                        &cached,
+                                    )
+                                    .await;
                                     if let (Some(storage_client), Some(jwt)) =
                                         (storage_client.as_ref(), jwt.as_deref())
                                     {
                                         let req = aura_os_storage::TransitionTaskRequest {
                                             status: "done".to_string(),
                                         };
-                                        if let Err(error) = storage_client
-                                            .transition_task(tid, jwt, &req)
-                                            .await
+                                        if let Err(error) =
+                                            storage_client.transition_task(tid, jwt, &req).await
                                         {
                                             warn!(
                                                 task_id = %tid,
@@ -2499,6 +2530,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         serde_json::json!({
                                             "task_id": tid,
                                             "reason": reason,
+                                            "commit_sha": latest_git_commit_sha(&cached.git_steps),
                                         }),
                                     );
                                     session_status = "completed";
@@ -2719,9 +2751,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         let bridge = aura_os_storage::TransitionTaskRequest {
                                             status: "in_progress".to_string(),
                                         };
-                                        if let Err(error) = storage_client
-                                            .transition_task(tid, jwt, &bridge)
-                                            .await
+                                        if let Err(error) =
+                                            storage_client.transition_task(tid, jwt, &bridge).await
                                         {
                                             warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before terminal failure");
                                         }
@@ -5073,6 +5104,16 @@ mod tests {
     }
 
     #[test]
+    fn latest_git_commit_sha_reads_most_recent_commit_event() {
+        let steps = vec![
+            serde_json::json!({"type": "git_committed", "commit_sha": "11111111"}),
+            serde_json::json!({"type": "git_push_failed", "reason": "timeout"}),
+            serde_json::json!({"type": "git_committed", "commit_sha": "22222222"}),
+        ];
+        assert_eq!(latest_git_commit_sha(&steps).as_deref(), Some("22222222"));
+    }
+
+    #[test]
     fn completion_validation_blocks_code_changes_without_build() {
         // Modifying code without any build/compile step violates the
         // Definition of Done: the agent cannot prove the change
@@ -5229,7 +5270,10 @@ mod tests {
             modify_summary("crates/foo/src/lib.rs"),
         ];
         let c = classify_changed_paths(&mixed);
-        assert!(c.has_rust && c.has_source, "mixed set must see the Rust file");
+        assert!(
+            c.has_rust && c.has_source,
+            "mixed set must see the Rust file"
+        );
 
         let cargo_lock = vec![modify_summary("Cargo.lock")];
         let c = classify_changed_paths(&cargo_lock);
@@ -5243,10 +5287,7 @@ mod tests {
     fn completion_gate_report_snapshots_all_inputs() {
         let cached = CachedTaskOutput {
             live_output: "hello".into(),
-            files_changed: vec![
-                modify_summary("src/lib.rs"),
-                modify_summary("README.md"),
-            ],
+            files_changed: vec![modify_summary("src/lib.rs"), modify_summary("README.md")],
             build_steps: vec![serde_json::json!({"ok": true})],
             test_steps: vec![serde_json::json!({"ok": true})],
             format_steps: vec![],

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { api } from "../api/client";
-import type { BuildStep, TestStep } from "../stores/event-store/index";
+import type { BuildStep, TestStep, GitStep } from "../stores/event-store/index";
 import { hydrateTaskOutputOnce } from "../stores/task-output-hydration-cache";
 import type { Task } from "../types";
 
@@ -28,6 +28,16 @@ interface PersistedStepShape {
   tests?: { name: string; status: string; message?: string }[];
   summary?: string;
   input?: unknown;
+}
+
+interface PersistedGitStepShape {
+  type?: string;
+  kind?: string;
+  reason?: string;
+  commit_sha?: string;
+  repo?: string;
+  branch?: string;
+  commits?: { sha: string; message: string }[];
 }
 
 function extractRunCommand(step: PersistedStepShape): string | undefined {
@@ -112,6 +122,24 @@ function mapTestSteps(steps: PersistedStepShape[]): TestStep[] {
   });
 }
 
+function mapGitSteps(steps: PersistedGitStepShape[]): GitStep[] {
+  const kindMap: Record<string, GitStep["kind"]> = {
+    git_committed: "committed",
+    git_commit_failed: "commit_failed",
+    git_pushed: "pushed",
+    git_push_failed: "push_failed",
+  };
+  return steps.map((s) => ({
+    kind: (kindMap[s.type ?? ""] ?? s.kind ?? "committed") as GitStep["kind"],
+    commitSha: s.commit_sha,
+    reason: s.reason,
+    repo: s.repo,
+    branch: s.branch,
+    commits: s.commits,
+    timestamp: 0,
+  }));
+}
+
 /**
  * Hydrates task output from persisted data (inline on the task) or by
  * fetching from the API when needed.
@@ -129,7 +157,7 @@ export function useTaskOutputHydration(
   isActive: boolean,
   isTerminal: boolean,
   streamBuf: string,
-  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[]) => void,
+  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[], gitSteps?: GitStep[]) => void,
 ): void {
   useEffect(() => {
     if (!projectId) return;
@@ -154,8 +182,9 @@ export function useTaskOutputHydration(
         const res = await api.getTaskOutput(projectId, task.task_id);
         const loadedBuildSteps = res.build_steps ? mapBuildSteps(res.build_steps) : undefined;
         const loadedTestSteps = res.test_steps ? mapTestSteps(res.test_steps) : undefined;
-        if (res.output || loadedBuildSteps?.length || loadedTestSteps?.length) {
-          seedTaskOutput(task.task_id, res.output, loadedBuildSteps, loadedTestSteps);
+        const loadedGitSteps = res.git_steps ? mapGitSteps(res.git_steps) : undefined;
+        if (res.output || loadedBuildSteps?.length || loadedTestSteps?.length || loadedGitSteps?.length) {
+          seedTaskOutput(task.task_id, res.output, loadedBuildSteps, loadedTestSteps, loadedGitSteps);
           return "loaded";
         }
         return "empty";

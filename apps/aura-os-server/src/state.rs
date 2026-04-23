@@ -308,6 +308,7 @@ pub struct CachedTaskOutput {
     pub live_output: String,
     pub build_steps: Vec<serde_json::Value>,
     pub test_steps: Vec<serde_json::Value>,
+    pub git_steps: Vec<serde_json::Value>,
     /// Evidence of `cargo fmt --check` / `prettier --check` / equivalent
     /// being exercised during the task. Part of the Definition-of-Done gate
     /// the dev loop enforces before marking a task as done.

@@ -60,7 +60,7 @@ interface EventState {
   taskOutputs: Record<string, TaskOutputEntry>;
 
   subscribe: <T extends EventType>(type: T, callback: (event: AuraEventOfType<T>) => void) => () => void;
-  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[], projectId?: string) => void;
+  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[], gitSteps?: GitStep[], projectId?: string) => void;
 }
 
 export function notifyTaskOutputListeners(taskId: string) {
@@ -85,12 +85,13 @@ export const useEventStore = create<EventState>()((set, get) => ({
     };
   },
 
-  seedTaskOutput: (taskId, text, buildSteps, testSteps, projectId) => {
-    if (!text && (!buildSteps || buildSteps.length === 0) && (!testSteps || testSteps.length === 0)) return;
+  seedTaskOutput: (taskId, text, buildSteps, testSteps, gitSteps, projectId) => {
+    if (!text && (!buildSteps || buildSteps.length === 0) && (!testSteps || testSteps.length === 0) && (!gitSteps || gitSteps.length === 0)) return;
     const { taskOutputs } = get();
     const existing = taskOutputs[taskId];
     const seededBuildSteps = buildSteps?.map((s) => ({ ...s, timestamp: 0 })) ?? existing?.buildSteps ?? [];
     const seededTestSteps = testSteps?.map((s) => ({ ...s, timestamp: 0 })) ?? existing?.testSteps ?? [];
+    const seededGitSteps = gitSteps?.map((s) => ({ ...s, timestamp: 0 })) ?? existing?.gitSteps ?? [];
     let mergedText = existing?.text ?? "";
     if (text) {
       if (!mergedText || text.length >= mergedText.length || text.includes(mergedText)) {
@@ -106,7 +107,7 @@ export const useEventStore = create<EventState>()((set, get) => ({
       fileOps: existing?.fileOps ?? [],
       buildSteps: finalBuildSteps,
       testSteps: finalTestSteps,
-      gitSteps: existing?.gitSteps ?? [],
+      gitSteps: seededGitSteps,
     };
     if (entry.text) persistTaskOutputText(taskId, entry.text, projectId);
     set({ taskOutputs: { ...taskOutputs, [taskId]: entry } });

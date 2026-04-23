@@ -86,7 +86,7 @@ export function useTaskOutputView(
     if (!existing?.text) {
       const cached = getCachedTaskOutputText(taskId, projectId);
       if (cached) {
-        seedTaskOutput(taskId, cached, undefined, undefined, projectId);
+        seedTaskOutput(taskId, cached, undefined, undefined, undefined, projectId);
       }
     }
 
@@ -96,8 +96,8 @@ export function useTaskOutputView(
       try {
         const res = await api.getTaskOutput(projectId, taskId);
         if (cancelled) return "empty";
-        if (res.output || res.build_steps?.length || res.test_steps?.length) {
-          seedTaskOutput(taskId, res.output, undefined, undefined, projectId);
+        if (res.output || res.build_steps?.length || res.test_steps?.length || res.git_steps?.length) {
+          seedTaskOutput(taskId, res.output, undefined, undefined, undefined, projectId);
           return "loaded";
         }
         return "empty";

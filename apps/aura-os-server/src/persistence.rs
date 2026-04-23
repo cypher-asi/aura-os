@@ -51,6 +51,7 @@ const LOG_WORTHY_TYPES: &[&str] = &[
     // Git
     "git_committed",
     "git_pushed",
+    "git_push_failed",
     // Errors
     "error",
 ];
@@ -107,6 +108,13 @@ fn log_message_for_event(event: &serde_json::Value) -> String {
         "git_pushed" => {
             let branch = event.get("branch").and_then(|v| v.as_str()).unwrap_or("");
             format!("Git push: {branch}")
+        }
+        "git_push_failed" => {
+            let reason = event
+                .get("reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            format!("Git push failed: {reason}")
         }
         "error" => {
             let msg = event
@@ -272,6 +280,28 @@ pub(crate) async fn persist_task_output(
             warn!(task_id, %session_id, error = %e, "Failed to persist task steps event");
         } else {
             info!(task_id, %session_id, "Persisted task steps event");
+        }
+    }
+
+    if !cached.git_steps.is_empty() {
+        let req = aura_os_storage::CreateSessionEventRequest {
+            session_id: Some(session_id.to_string()),
+            user_id: None,
+            agent_id: agent_id.map(str::to_owned),
+            sender: Some("agent".to_string()),
+            project_id: project_id.map(str::to_owned),
+            org_id: None,
+            event_type: "task_git_steps".to_string(),
+            content: Some(serde_json::json!({
+                "task_id": task_id,
+                "git_steps": cached.git_steps,
+            })),
+        };
+
+        if let Err(e) = storage.create_event(&session_id, jwt, &req).await {
+            warn!(task_id, %session_id, error = %e, "Failed to persist task git steps event");
+        } else {
+            info!(task_id, %session_id, git_steps = cached.git_steps.len(), "Persisted task git steps event");
         }
     }
 }

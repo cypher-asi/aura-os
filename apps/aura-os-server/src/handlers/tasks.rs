@@ -311,6 +311,8 @@ pub(crate) struct TaskOutputResponse {
     pub build_steps: Vec<serde_json::Value>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub test_steps: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub git_steps: Vec<serde_json::Value>,
     /// True when we could not locate any persisted output for this task
     /// (e.g. the task's `session_id` never made it into storage and the
     /// in-memory cache does not have it either). The frontend uses this
@@ -363,9 +365,16 @@ async fn fetch_task_output_from_storage(
         .collect::<Vec<_>>()
         .join("\n");
 
-    let (mut build_steps, mut test_steps) = (Vec::new(), Vec::new());
+    let (mut build_steps, mut test_steps, mut git_steps) = (Vec::new(), Vec::new(), Vec::new());
     for evt in &events {
         if !matches_task(&evt, "task_steps") {
+            if matches_task(&evt, "task_git_steps") {
+                if let Some(content) = evt.content.as_ref() {
+                    if let Some(gs) = content.get("git_steps").and_then(|v| v.as_array()) {
+                        git_steps = gs.clone();
+                    }
+                }
+            }
             continue;
         }
         if let Some(content) = evt.content.as_ref() {
@@ -378,7 +387,8 @@ async fn fetch_task_output_from_storage(
         }
     }
 
-    if output.is_empty() && build_steps.is_empty() && test_steps.is_empty() {
+    if output.is_empty() && build_steps.is_empty() && test_steps.is_empty() && git_steps.is_empty()
+    {
         debug!(
             %task_id, %session_id,
             total_events = events.len(),
@@ -390,6 +400,7 @@ async fn fetch_task_output_from_storage(
         output,
         build_steps,
         test_steps,
+        git_steps,
         unavailable: false,
     })
 }
@@ -411,6 +422,7 @@ pub(crate) async fn get_task_output(
                     output: entry.live_output.clone(),
                     build_steps: entry.build_steps.clone(),
                     test_steps: entry.test_steps.clone(),
+                    git_steps: entry.git_steps.clone(),
                     unavailable: false,
                 }));
             }
@@ -442,6 +454,7 @@ pub(crate) async fn get_task_output(
         output: String::new(),
         build_steps: Vec::new(),
         test_steps: Vec::new(),
+        git_steps: Vec::new(),
         unavailable: true,
     }))
 }

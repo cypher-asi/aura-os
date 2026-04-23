@@ -49,6 +49,7 @@ export interface TaskMetaSectionProps {
   isActive: boolean;
   elapsed: number;
   failReason: string | null;
+  syncWarning: string | null;
   agentInstance: AgentInstance | null;
   completedByAgent: AgentInstance | null;
   retrying: boolean;
@@ -63,6 +64,7 @@ export function TaskMetaSection({
   isActive,
   elapsed,
   failReason,
+  syncWarning,
   agentInstance,
   completedByAgent,
   retrying,
@@ -108,6 +110,9 @@ export function TaskMetaSection({
         </span>
         {effectiveStatus === "failed" && (failReason || task.execution_notes) && (
           <Text size="xs" className={styles.failReason}>{extractErrorMessage(failReason || task.execution_notes)}</Text>
+        )}
+        {effectiveStatus === "done" && syncWarning && (
+          <Text size="xs" className={styles.failReason}>{extractErrorMessage(syncWarning)}</Text>
         )}
       </div>
       <div className={styles.taskField}>

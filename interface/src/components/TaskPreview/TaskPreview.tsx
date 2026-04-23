@@ -32,7 +32,7 @@ export function RunTaskButton({ task }: { task: import("../../types").Task }) {
 export function TaskPreview({ task }: { task: import("../../types").Task }) {
   const {
     taskOutput, effectiveStatus, effectiveSessionId, isActive,
-    elapsed, failReason, agentInstance, completedByAgent,
+    elapsed, failReason, syncWarning, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
     fileOps, notes, showNotes, streamKey,
   } = useTaskPreviewData(task);
@@ -45,6 +45,7 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
         isActive={isActive}
         elapsed={elapsed}
         failReason={failReason}
+        syncWarning={syncWarning}
         agentInstance={agentInstance}
         completedByAgent={completedByAgent}
         retrying={retrying}

@@ -4,7 +4,7 @@ import type { Task } from "../types";
 
 vi.mock("../api/client", () => ({
   api: {
-    getTaskOutput: vi.fn().mockResolvedValue({ output: "", build_steps: [], test_steps: [] }),
+    getTaskOutput: vi.fn().mockResolvedValue({ output: "", build_steps: [], test_steps: [], git_steps: [] }),
   },
 }));
 
@@ -37,7 +37,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 describe("useTaskOutputHydration", () => {
   beforeEach(() => {
-    vi.mocked(api.getTaskOutput).mockReset().mockResolvedValue({ output: "", build_steps: [], test_steps: [] });
+    vi.mocked(api.getTaskOutput).mockReset().mockResolvedValue({ output: "", build_steps: [], test_steps: [], git_steps: [] });
   });
 
   it("does nothing when projectId is undefined", () => {
@@ -74,6 +74,7 @@ describe("useTaskOutputHydration", () => {
       output: "fetched output",
       build_steps: [],
       test_steps: [],
+      git_steps: [],
     });
 
     const seed = vi.fn();
@@ -210,5 +211,37 @@ describe("useTaskOutputHydration", () => {
     expect(buildSteps).toHaveLength(2);
     expect(buildSteps[0]).toMatchObject({ kind: "started", command: "cargo build" });
     expect(buildSteps[1]).toMatchObject({ kind: "passed", command: "cargo build" });
+  });
+
+  it("hydrates persisted git steps from the API", async () => {
+    vi.mocked(api.getTaskOutput).mockResolvedValue({
+      output: "",
+      build_steps: [],
+      test_steps: [],
+      git_steps: [
+        { type: "git_committed", commit_sha: "abc12345" },
+        { type: "git_push_failed", reason: "git push orbit HEAD:main: timed out after 60s" },
+      ],
+    });
+
+    const seed = vi.fn();
+    const task = makeTask({ task_id: "t-git", status: "done", live_output: "" });
+
+    renderHook(() =>
+      useTaskOutputHydration("p-1", task, false, true, "", seed),
+    );
+
+    await vi.waitFor(() => {
+      expect(seed).toHaveBeenCalledWith(
+        "t-git",
+        "",
+        [],
+        [],
+        [
+          expect.objectContaining({ kind: "committed", commitSha: "abc12345" }),
+          expect.objectContaining({ kind: "push_failed", reason: "git push orbit HEAD:main: timed out after 60s" }),
+        ],
+      );
+    });
   });
 });
