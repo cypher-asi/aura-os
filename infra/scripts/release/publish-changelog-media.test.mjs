@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -8,6 +9,7 @@ import test from "node:test";
 import {
   allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  composeBrandedScreenshotCard,
   buildRetryCorrectionGuidance,
   buildRetryPlan,
   buildRunSummary,
@@ -26,6 +28,7 @@ import {
 } from "./publish-changelog-media.mjs";
 
 const scriptPath = path.join(import.meta.dirname, "publish-changelog-media.mjs");
+const repoRoot = path.resolve(import.meta.dirname, "../../..");
 
 function writeFixtureChangelog({ pagesDir, version = "0.1.0-nightly.fixture.1" } = {}) {
   const channelDir = path.join(pagesDir, "changelog", "nightly");
@@ -129,6 +132,22 @@ function runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath, version
   ], {
     encoding: "utf8",
   });
+}
+
+function writeSolidPng(filePath, width, height, rgba) {
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const image = new PNG({ width, height });
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = ((y * width) + x) * 4;
+      image.data[index] = rgba[0];
+      image.data[index + 1] = rgba[1];
+      image.data[index + 2] = rgba[2];
+      image.data[index + 3] = rgba[3];
+    }
+  }
+  fs.writeFileSync(filePath, PNG.sync.write(image));
 }
 
 test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
@@ -251,6 +270,29 @@ test("selectBestScreenshot prefers repair, then capture-proof, then validate-pro
       source: "capture-proof",
     },
   );
+});
+
+test("composeBrandedScreenshotCard keeps output as a valid branded PNG", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-card-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+  writeSolidPng(screenshotPath, 160, 90, [28, 190, 210, 255]);
+
+  composeBrandedScreenshotCard({
+    repoDir: repoRoot,
+    backgroundPath,
+    screenshotPath,
+    outputPath,
+  });
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  assert.equal(output.width, 320);
+  assert.equal(output.height, 213);
+  assert.equal(fs.statSync(outputPath).size > 0, true);
 });
 
 test("replaceChangelogMediaBlock swaps the placeholder body while preserving the slot", () => {
@@ -565,6 +607,8 @@ test("publish script fixture mode keeps partial media success green and writes r
 
   const screenshotPath = path.join(rootDir, "feedback-proof.png");
   fs.writeFileSync(screenshotPath, "fake png");
+  const polishedPath = path.join(rootDir, "feedback-proof-branded.png");
+  fs.writeFileSync(polishedPath, "fake branded png");
   const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
   fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
     "entry-1-feedback-board": {
@@ -578,6 +622,13 @@ test("publish script fixture mode keeps partial media success green and writes r
         },
       ],
       screenshots: [{ path: screenshotPath }],
+      polishedScreenshot: {
+        path: polishedPath,
+        provider: "fixture",
+        model: "fixture-image-model",
+        judgeModel: "fixture-judge-model",
+        score: 96,
+      },
       inspectorUrl: "https://browserbase.example/session/success",
       sessionId: "fixture-success",
       outputDir: path.join(rootDir, "capture-success"),
@@ -609,6 +660,12 @@ test("publish script fixture mode keeps partial media success green and writes r
 
   const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
   assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal(latestDoc.rendered.entries[0].media.screenshotSource, "openai-polish");
+  assert.equal(latestDoc.rendered.entries[0].media.originalScreenshotSource, "capture-proof");
+  assert.equal(latestDoc.rendered.entries[0].media.polishProvider, "fixture");
+  assert.equal(latestDoc.rendered.entries[0].media.polishModel, "fixture-image-model");
+  assert.equal(latestDoc.rendered.entries[0].media.polishJudgeModel, "fixture-judge-model");
+  assert.equal(latestDoc.rendered.entries[0].media.polishScore, 96);
   assert.equal("failureClass" in latestDoc.rendered.entries[0].media, false);
   assert.equal(latestDoc.rendered.entries[1].media.status, "failed");
   assert.equal(latestDoc.rendered.entries[1].media.failureClass, "quality_gate");
@@ -618,6 +675,46 @@ test("publish script fixture mode keeps partial media success green and writes r
     fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.md"), "utf8"),
     /!\[Feedback board screenshot\]\(\.\.\/\.\.\/assets\/changelog\/nightly\/0\.1\.0-nightly\.fixture\.1\/entry-1-feedback-board\.png\)/,
   );
+});
+
+test("publish script fixture mode fails a slot when mandatory OpenAI polish is missing", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-fixture-polish-fail-"));
+  const repoDir = path.join(rootDir, "repo");
+  const pagesDir = path.join(rootDir, "pages");
+  fs.mkdirSync(repoDir, { recursive: true });
+  writeFixtureChangelog({ pagesDir });
+
+  const screenshotPath = path.join(rootDir, "feedback-proof.png");
+  fs.writeFileSync(screenshotPath, "fake png");
+  const fixtureResultsPath = path.join(rootDir, "fixture-results.json");
+  fs.writeFileSync(fixtureResultsPath, `${JSON.stringify({
+    "entry-1-feedback-board": {
+      ok: true,
+      storyTitle: "Feedback board proof",
+      phases: [
+        {
+          id: "capture-proof",
+          success: true,
+          screenshot: { path: screenshotPath },
+        },
+      ],
+      screenshots: [{ path: screenshotPath }],
+    },
+    "entry-2-agent-create": {
+      ok: false,
+      inspectorUrl: "https://browserbase.example/session/failure",
+      sessionId: "fixture-failure",
+    },
+  }, null, 2)}\n`);
+
+  const result = runPublishMediaFixture({ pagesDir, repoDir, fixtureResultsPath });
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+
+  const summaryPath = path.join(repoDir, "interface", "output", "demo-screenshots", "publish-changelog-media", "publish-changelog-media-summary.json");
+  const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+  assert.equal(summary.published, 0);
+  assert.equal(summary.failed, 2);
+  assert.equal(summary.results[0].failureClass, "openai_polish");
 });
 
 test("publish script fixture mode fails when every attempted media slot fails", () => {

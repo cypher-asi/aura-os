@@ -80,6 +80,7 @@ jobs:
           INPUT_PROVIDER: ${{ inputs.provider }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           provider="$INPUT_PROVIDER"
@@ -120,6 +121,11 @@ jobs:
               echo "Browserbase provider requires ${missing[*]}." >&2
               exit 1
             fi
+          fi
+
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "OPENAI_API_KEY is required because changelog screenshots are always transformed into branded OpenAI-polished media before publishing." >&2
+            exit 1
           fi
 
           echo "Resolved preview URL from ${preview_source}."
@@ -211,6 +217,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           ARGS=(
