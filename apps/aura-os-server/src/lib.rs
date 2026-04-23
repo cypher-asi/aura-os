@@ -179,11 +179,14 @@ pub mod phase7_test_support {
     }
 
     /// Like [`completion_validation_reason`] but additionally exercises
-    /// the empty-path-write short-circuit: `n_empty_path_writes` is the
-    /// number of `write_file` / `edit_file` tool calls the harness
-    /// emitted with a missing/empty `path`. Any non-zero count must
-    /// fail the gate regardless of how much other evidence the run
-    /// produced.
+    /// the empty-path-write short-circuit: `n_empty_path_writes` is
+    /// modelled as the number of `write_file` / `edit_file` misfires
+    /// that are still *unreconciled* at `task_done` time. A misfire
+    /// that the automaton recovered from by re-issuing the call with a
+    /// real path does not count here. See
+    /// [`replay_task_completion_gate`] for a higher-fidelity replay
+    /// harness that drives the same bookkeeping from a raw event
+    /// stream.
     pub fn completion_validation_reason_with_empty_path_writes(
         live_output: &str,
         files_changed: &[&str],
@@ -201,6 +204,38 @@ pub mod phase7_test_support {
             n_format_steps,
             n_lint_steps,
             n_empty_path_writes,
+        )
+    }
+
+    /// Replay a raw sequence of streamed `tool_call_*` events through
+    /// the dev-loop's empty-path-writes bookkeeping and then ask the
+    /// Definition-of-Done gate for a verdict. The evidence fields
+    /// (`live_output`, `files_changed`, step counts) are populated
+    /// into a synthetic [`crate::state::CachedTaskOutput`] exactly the
+    /// way the live handler does, so this is the closest
+    /// externally-reachable equivalent to running a full task.
+    ///
+    /// Returns `None` if the gate passes and `Some(reason)` if it
+    /// rejects — the reason string matches what the production
+    /// handler would record on the task. Use this to regression-test
+    /// real failure transcripts without booting the full server.
+    pub fn replay_task_completion_gate(
+        events: &[(String, serde_json::Value)],
+        live_output: &str,
+        files_changed: &[&str],
+        n_build_steps: usize,
+        n_test_steps: usize,
+        n_format_steps: usize,
+        n_lint_steps: usize,
+    ) -> Option<String> {
+        crate::handlers::dev_loop::replay_task_completion_gate_for_tests(
+            events,
+            live_output,
+            files_changed,
+            n_build_steps,
+            n_test_steps,
+            n_format_steps,
+            n_lint_steps,
         )
     }
 
@@ -278,6 +313,50 @@ pub mod phase7_test_support {
     /// ([`crate::reconciler::DEFAULT_MAX_RETRIES_PER_TASK`]) so callers
     /// that don't yet persist a per-task budget stay in lockstep with
     /// `handlers::dev_loop`'s `MAX_RETRIES_PER_TASK`.
+    /// Extract the structured provider-failure context that the dev loop
+    /// plumbs onto `task_failed` events, in the exact shape the UI sees:
+    /// a JSON object with optional `provider_request_id`, `model`,
+    /// `sse_error_type`, and `message_id` siblings next to the human-
+    /// readable `reason`.
+    ///
+    /// `event_sibling_fields` is merged into the synthetic `task_failed`
+    /// event *before* context extraction, so callers can exercise both
+    /// the "harness emitted structured siblings" path and the
+    /// "classic reason-string-only" fallback through a single entry
+    /// point. Pass `None` to exercise the fallback path on its own.
+    ///
+    /// The returned payload is the same object the UI decodes (see
+    /// `interface/src/stores/task-stream-bootstrap.ts::handleTaskFailed`),
+    /// so integration tests can assert against the full wire shape
+    /// without reaching into private handler internals.
+    pub fn task_failed_payload_with_context(
+        task_id: &str,
+        reason: &str,
+        event_sibling_fields: Option<&serde_json::Map<String, serde_json::Value>>,
+    ) -> serde_json::Value {
+        let mut synthetic = serde_json::json!({
+            "task_id": task_id,
+            "reason": reason,
+        });
+        if let Some(extra) = event_sibling_fields {
+            if let Some(obj) = synthetic.as_object_mut() {
+                for (k, v) in extra {
+                    obj.insert(k.clone(), v.clone());
+                }
+            }
+        }
+        let ctx = crate::handlers::dev_loop::extract_task_failure_context(
+            &synthetic,
+            Some(reason),
+        );
+        if ctx.has_any() {
+            if let Some(obj) = synthetic.as_object_mut() {
+                ctx.merge_into(obj);
+            }
+        }
+        synthetic
+    }
+
     pub fn reconcile_decision(
         git_steps: &[serde_json::Value],
         failure_class: &str,

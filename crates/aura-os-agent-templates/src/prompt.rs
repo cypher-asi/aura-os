@@ -73,7 +73,7 @@ const DEV_LOOP_EXECUTOR_DOD_PROMPT: &str = r#"## Definition of Done (executor ch
 
 You are running as the task-executing automaton inside a project workspace. Before you emit `task_completed`, the server-side Definition-of-Done gate will validate your run and REJECT the completion (failing the task and rolling back any commit) unless the following hold:
 
-1. **Pathed writes only.** Every `write_file` / `edit_file` tool call must include a concrete `path` argument pointing at a real file under the workspace. A missing or empty path is treated as a tool error by the server and aborts the turn. If you need a placeholder, pick an actual path like `crates/<name>/src/lib.rs` — never submit a write without one.
+1. **Pathed writes only.** Every `write_file` / `edit_file` tool call must include a concrete `path` argument pointing at a real file under the workspace. A missing or empty path is treated as a tool error by the server and aborts the turn. If you need a placeholder, pick an actual path like `crates/<name>/src/lib.rs` — never submit a write without one. If you *do* misfire with an empty path, recovery is simple: immediately re-issue the same call with a real path in the **same turn**. The DoD gate only rejects `task_done` when a misfire is left unreconciled — a misfire followed by a successful pathed write/edit is treated as a non-event, so never abandon a task just because one call came back with the empty-path error.
 2. **Verify your work with real commands.** If you touched source code, you must run and wait for:
    - `cargo build --workspace --all-targets` (Rust workspaces) or `pnpm build` (JS/TS)
    - `cargo test --workspace --all-features` (Rust) or `pnpm test` (JS/TS)

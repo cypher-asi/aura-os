@@ -165,6 +165,147 @@ fn completion_gate_accepts_fully_evidenced_run_with_no_empty_path_writes() {
     );
 }
 
+/// Regression for task `2.1 Secret wrappers: NeuralKey, ShamirShare,
+/// Secret<T>`, which failed on 2026-04-23 with the reason
+/// "Automaton emitted write_file/edit_file tool call(s) with an empty
+/// or missing \"path\" input; the harness must retry with a real
+/// path before task_done".
+///
+/// The automaton in that run *did* retry — a `write_file` with no
+/// input was immediately followed by a `write_file` to
+/// `crates/zero-identity/src/secret.rs`, and later an `edit_file`
+/// misfire was reconciled by an `edit_file` against
+/// `crates/zero-identity/src/types.rs`. The old gate implementation
+/// held a monotonic counter, so `task_done` was rejected even though
+/// every actual file edit landed. This test replays the exact shape
+/// and pins the new behaviour: a misfire that is reconciled by a
+/// subsequent pathed completion does not poison the gate.
+#[test]
+fn task_21_empty_path_misfire_then_retry_passes_the_gate() {
+    let events = vec![
+        (
+            "tool_call_started".to_string(),
+            json!({
+                "id": "w1",
+                "name": "write_file",
+                "input": { "path": "" },
+            }),
+        ),
+        (
+            "tool_call_completed".to_string(),
+            json!({
+                "id": "w1",
+                "name": "write_file",
+                "input": { "path": "" },
+            }),
+        ),
+        (
+            "tool_call_started".to_string(),
+            json!({
+                "id": "w2",
+                "name": "write_file",
+                "input": { "path": "crates/zero-identity/src/secret.rs" },
+            }),
+        ),
+        (
+            "tool_call_completed".to_string(),
+            json!({
+                "id": "w2",
+                "name": "write_file",
+                "input": { "path": "crates/zero-identity/src/secret.rs" },
+            }),
+        ),
+        (
+            "tool_call_started".to_string(),
+            json!({
+                "id": "e1",
+                "name": "edit_file",
+                "input": { "path": "" },
+            }),
+        ),
+        (
+            "tool_call_completed".to_string(),
+            json!({
+                "id": "e1",
+                "name": "edit_file",
+                "input": { "path": "" },
+            }),
+        ),
+        (
+            "tool_call_started".to_string(),
+            json!({
+                "id": "e2",
+                "name": "edit_file",
+                "input": { "path": "crates/zero-identity/src/types.rs" },
+            }),
+        ),
+        (
+            "tool_call_completed".to_string(),
+            json!({
+                "id": "e2",
+                "name": "edit_file",
+                "input": { "path": "crates/zero-identity/src/types.rs" },
+            }),
+        ),
+    ];
+    let reason = tsp::replay_task_completion_gate(
+        &events,
+        "implementation complete",
+        &[
+            "crates/zero-identity/src/secret.rs",
+            "crates/zero-identity/src/types.rs",
+        ],
+        1,
+        1,
+        1,
+        1,
+    );
+    assert!(
+        reason.is_none(),
+        "2.1 replay: misfires that were reconciled by a subsequent pathed write must not fail the gate, got rejection: {reason:?}"
+    );
+}
+
+/// Companion to [`task_21_empty_path_misfire_then_retry_passes_the_gate`]:
+/// if the automaton emits an empty-path write and *never* recovers
+/// (no subsequent pathed completion), the gate must still fail —
+/// otherwise the rollback path that forces a real retry disappears.
+#[test]
+fn empty_path_misfire_without_recovery_still_fails_the_gate() {
+    let events = vec![
+        (
+            "tool_call_started".to_string(),
+            json!({
+                "id": "w1",
+                "name": "write_file",
+                "input": { "path": "" },
+            }),
+        ),
+        (
+            "tool_call_completed".to_string(),
+            json!({
+                "id": "w1",
+                "name": "write_file",
+                "input": { "path": "" },
+            }),
+        ),
+    ];
+    let reason = tsp::replay_task_completion_gate(
+        &events,
+        "implementation complete",
+        &["crates/zero-program/src/lib.rs"],
+        1,
+        1,
+        1,
+        1,
+    )
+    .expect("unreconciled misfire must fail the gate");
+    assert!(
+        reason.contains("empty or missing \"path\""),
+        "rejection must name the empty-path failure mode, got: {reason}"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Missing verification evidence
 // ---------------------------------------------------------------------------

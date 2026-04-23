@@ -184,11 +184,11 @@ fn extract_failure_reason(event: &serde_json::Value) -> Option<String> {
 /// All fields are optional; an empty `TaskFailureContext` is a valid value
 /// and tells the UI to render nothing but the raw reason.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(super) struct TaskFailureContext {
-    pub(super) provider_request_id: Option<String>,
-    pub(super) model: Option<String>,
-    pub(super) sse_error_type: Option<String>,
-    pub(super) message_id: Option<String>,
+pub(crate) struct TaskFailureContext {
+    pub(crate) provider_request_id: Option<String>,
+    pub(crate) model: Option<String>,
+    pub(crate) sse_error_type: Option<String>,
+    pub(crate) message_id: Option<String>,
 }
 
 impl TaskFailureContext {
@@ -197,7 +197,7 @@ impl TaskFailureContext {
     /// so existing consumers see an unchanged payload on paths where no
     /// structured context is available (e.g. a bare "reset: …" reason from
     /// an infra retry).
-    pub(super) fn has_any(&self) -> bool {
+    pub(crate) fn has_any(&self) -> bool {
         self.provider_request_id.is_some()
             || self.model.is_some()
             || self.sse_error_type.is_some()
@@ -208,7 +208,7 @@ impl TaskFailureContext {
     /// names. Only populated fields are inserted, so the shape stays
     /// backward-compatible on failures that don't carry a provider
     /// context (e.g. Phase 3 remediation failures).
-    pub(super) fn merge_into(&self, obj: &mut serde_json::Map<String, serde_json::Value>) {
+    pub(crate) fn merge_into(&self, obj: &mut serde_json::Map<String, serde_json::Value>) {
         if let Some(ref v) = self.provider_request_id {
             obj.insert(
                 "provider_request_id".into(),
@@ -238,7 +238,7 @@ impl TaskFailureContext {
 /// produced by `StreamAccumulator::into_response` in aura-harness. See the
 /// `TaskFailureContext` doc-comment for the full precedence order and wire
 /// format.
-pub(super) fn extract_task_failure_context(
+pub(crate) fn extract_task_failure_context(
     event: &serde_json::Value,
     reason: Option<&str>,
 ) -> TaskFailureContext {
@@ -904,9 +904,24 @@ struct CompletionGateReport {
     n_test_steps: usize,
     n_format_steps: usize,
     n_lint_steps: usize,
-    /// Number of `write_file`/`edit_file` calls the harness emitted with
-    /// an empty or missing `path` input. Non-zero always fails the gate.
+    /// Telemetry: total number of distinct `write_file`/`edit_file`
+    /// tool calls the harness emitted with a missing or empty `path`
+    /// input over the life of the task, de-duplicated across event
+    /// phases (`tool_call_started` + `tool_call_snapshot` +
+    /// `tool_call_completed` carry the same payload and must not
+    /// triple-count). This is *not* the gate signal — see
+    /// `n_outstanding_empty_path_writes` below — it exists so the UI
+    /// and analytics can tell how often the automaton misfires even
+    /// on runs that ultimately recovered.
     n_empty_path_writes: u32,
+    /// Gate signal: number of empty-path write misfires still
+    /// unreconciled at the moment the gate ran. A misfire is
+    /// *reconciled* when a subsequent `tool_call_completed` for
+    /// `write_file`/`edit_file` lands with a non-empty path (proof
+    /// the automaton heard the error and retried correctly). The
+    /// gate rejects completion iff this count is non-zero.
+    #[serde(default)]
+    n_outstanding_empty_path_writes: usize,
     recovery_checkpoint: String,
     /// `None` on pass; the reason string that would be recorded on the
     /// task on fail.
@@ -926,6 +941,7 @@ impl CompletionGateReport {
             n_format_steps: cached.format_steps.len(),
             n_lint_steps: cached.lint_steps.len(),
             n_empty_path_writes: cached.empty_path_writes,
+            n_outstanding_empty_path_writes: cached.outstanding_empty_path_write_ids.len(),
             recovery_checkpoint: recovery_checkpoint_label(recovery_checkpoint(cached)).to_string(),
             failure_reason: None,
         }
@@ -942,12 +958,17 @@ impl CompletionGateReport {
 ///
 /// Layered checks (first failure wins):
 ///
-/// 1. **Empty-path writes** — rejects runs where the harness emitted any
-///    `write_file` / `edit_file` tool call with a missing or empty
-///    `path` input. These cannot land on disk (the UI renders them as
-///    "Untitled file") and are a strong signal the automaton
-///    misfired. We reject rather than silently accept so the dev loop
-///    retries with a real path.
+/// 1. **Unrecovered empty-path writes** — rejects runs where the harness
+///    emitted a `write_file` / `edit_file` tool call with a missing or
+///    empty `path` input that was *never* followed by a successful
+///    pathed write (on any path, for any tool call id). These cannot
+///    land on disk (the UI renders them as "Untitled file") and are a
+///    strong signal the automaton misfired. A misfire that the
+///    automaton recovered from by immediately re-issuing with a real
+///    path is fine — the gate only fires when at least one misfire is
+///    still unreconciled at `task_done` time. This matches the error
+///    string's promise ("the harness must retry with a real path
+///    before task_done"): we observe the retry and clear the flag.
 /// 2. **Baseline activity** — rejects runs with no live output, no file
 ///    changes, and no verification steps. Catches automatons that claim
 ///    success after doing nothing.
@@ -964,7 +985,7 @@ impl CompletionGateReport {
 ///    currently get this treatment; we'll add them once the harness
 ///    reliably emits format/lint evidence for them.
 fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
-    if cached.empty_path_writes > 0 {
+    if !cached.outstanding_empty_path_write_ids.is_empty() {
         return Some(
             "Automaton emitted write_file/edit_file tool call(s) with an empty or missing \"path\" input; the harness must retry with a real path before task_done",
         );
@@ -1329,6 +1350,14 @@ pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_te
             })
             .collect(),
         empty_path_writes: n_empty_path_writes,
+        // Test harness models "N empty-path writes" as "N outstanding
+        // misfires that were never reconciled". That matches how
+        // production wires the two fields together — tests mirror the
+        // gate-visible state (outstanding ids), not just the
+        // telemetry counter.
+        outstanding_empty_path_write_ids: (0..n_empty_path_writes)
+            .map(|i| format!("test-misfire-{i}"))
+            .collect(),
         ..Default::default()
     };
     cached.build_steps =
@@ -1337,6 +1366,46 @@ pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_te
     cached.format_steps =
         vec![serde_json::json!({"type": "format_verification_passed"}); n_format_steps];
     cached.lint_steps = vec![serde_json::json!({"type": "lint_verification_passed"}); n_lint_steps];
+    completion_validation_failure_reason(&cached).map(str::to_string)
+}
+
+/// Replay a vector of `(event_type, event)` pairs through the
+/// dev-loop's empty-path-writes accumulator, populate the rest of the
+/// Definition-of-Done evidence the way production does, then ask the
+/// gate for a verdict. Surfaced via `phase7_test_support` so
+/// regression tests can lock in production-shaped behaviour against
+/// real failure transcripts without standing up the HTTP server.
+pub(crate) fn replay_task_completion_gate_for_tests(
+    events: &[(String, serde_json::Value)],
+    live_output: &str,
+    files_changed: &[&str],
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+) -> Option<String> {
+    let mut cached = CachedTaskOutput {
+        live_output: live_output.to_string(),
+        files_changed: files_changed
+            .iter()
+            .map(|path| aura_os_storage::StorageTaskFileChangeSummary {
+                op: "modify".to_string(),
+                path: (*path).to_string(),
+                lines_added: 0,
+                lines_removed: 0,
+            })
+            .collect(),
+        ..Default::default()
+    };
+    cached.build_steps =
+        vec![serde_json::json!({"type": "build_verification_passed"}); n_build_steps];
+    cached.test_steps = vec![serde_json::json!({"type": "test_verification_passed"}); n_test_steps];
+    cached.format_steps =
+        vec![serde_json::json!({"type": "format_verification_passed"}); n_format_steps];
+    cached.lint_steps = vec![serde_json::json!({"type": "lint_verification_passed"}); n_lint_steps];
+    for (event_type, event) in events {
+        record_write_event(&mut cached, event_type, event);
+    }
     completion_validation_failure_reason(&cached).map(str::to_string)
 }
 
@@ -1920,13 +1989,15 @@ fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChange
 }
 
 /// Returns `true` if `event` is a `tool_call_started` / `tool_call_snapshot`
-/// for `write_file` or `edit_file` whose `input.path` is missing, not a
-/// string, or empty/whitespace-only.
+/// / `tool_call_completed` for `write_file` or `edit_file` whose
+/// `input.path` is missing, not a string, or empty/whitespace-only.
 ///
 /// These events cannot land on disk (the UI renders them as "Untitled
 /// file") and indicate the automaton misfired. The DoD gate rejects any
-/// task whose harness emitted at least one so the dev loop retries with
-/// a real path.
+/// task whose harness emitted at least one *without* a subsequent
+/// successful pathed write to reconcile it — see
+/// [`classify_write_event`] for how the accumulator applies that
+/// recovery rule.
 pub(crate) fn is_empty_path_write_event_for_tests(
     event_type: &str,
     event: &serde_json::Value,
@@ -1943,15 +2014,106 @@ pub(crate) fn preflight_local_workspace_for_tests(
 }
 
 fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> bool {
+    matches!(
+        classify_write_event(event_type, event),
+        WriteEventObservation::Misfire { .. }
+    )
+}
+
+/// Categorisation of a streamed `tool_call_*` event used by the
+/// outstanding-empty-path-writes tracker on [`CachedTaskOutput`].
+///
+/// The input event stream carries three phases per tool call —
+/// `tool_call_started`, `tool_call_snapshot`, and `tool_call_completed`
+/// — all with the same payload. Counting each phase separately would
+/// triple-score every misfire, so the classifier returns
+/// [`Misfire`](WriteEventObservation::Misfire) with the tool-call id
+/// (when present) and the accumulator dedupes via a `HashSet<String>`.
+///
+/// [`Recovered`](WriteEventObservation::Recovered) is only emitted on
+/// the *completed* phase — a `started` / `snapshot` with a pathed input
+/// could still abort mid-turn, so we wait for the completion to credit
+/// recovery. Any completed pathed write clears every outstanding id:
+/// the contract is "automaton has proven it can emit a real path
+/// again", not "this specific call id was recovered".
+pub(crate) enum WriteEventObservation<'a> {
+    /// Not a write/edit event, or a non-terminal phase for a pathed
+    /// write. Leave the outstanding set untouched.
+    Ignore,
+    /// Observed a `write_file` / `edit_file` event with a missing or
+    /// empty `path`. The id (when the event carries one) is used to
+    /// dedupe across the three phases. When absent the accumulator
+    /// falls back to a synthetic key so repeated misfires without ids
+    /// still count distinctly — losing dedup is a price worth paying
+    /// to keep the gate sensitive to genuinely-new misfires.
+    Misfire { id: Option<&'a str> },
+    /// Observed a `tool_call_completed` for `write_file` / `edit_file`
+    /// that *did* carry a real path. Signal to clear the outstanding
+    /// set: the automaton recovered.
+    Recovered,
+}
+
+/// Apply a single streamed `tool_call_*` event to the empty-path
+/// bookkeeping on `entry`. Extracted from the streaming forwarder so
+/// tests can replay a vector of events and assert the end-of-turn
+/// state without spinning up the full dev-loop plumbing.
+///
+/// Behavior summary:
+/// * A `Misfire` inserts the tool-call id (or a synthetic fallback
+///   key) into the outstanding set, and bumps the telemetry counter
+///   only on the *first* sighting of that id — the three event phases
+///   (`started`/`snapshot`/`completed`) no longer triple-score.
+/// * A `Recovered` (pathed `tool_call_completed` for `write_file` /
+///   `edit_file`) clears the outstanding set entirely. The telemetry
+///   counter is intentionally *not* reset so the UI can still show the
+///   misfires that happened.
+/// * Anything else is a no-op.
+pub(crate) fn record_write_event(
+    entry: &mut CachedTaskOutput,
+    event_type: &str,
+    event: &serde_json::Value,
+) {
+    match classify_write_event(event_type, event) {
+        WriteEventObservation::Misfire { id } => {
+            let key = id.map(str::to_owned).unwrap_or_else(|| {
+                // Anonymous misfires (no id on the event) can't be
+                // deduped across phases, so we mint a fresh key each
+                // time and count them all distinctly. The fallback
+                // combines `len(outstanding)` and `empty_path_writes`
+                // to keep the key unique even after a recovery clear
+                // has drained the set.
+                format!(
+                    "anon:{}",
+                    entry
+                        .outstanding_empty_path_write_ids
+                        .len()
+                        .saturating_add(entry.empty_path_writes as usize)
+                )
+            });
+            if entry.outstanding_empty_path_write_ids.insert(key) {
+                entry.empty_path_writes = entry.empty_path_writes.saturating_add(1);
+            }
+        }
+        WriteEventObservation::Recovered => {
+            entry.outstanding_empty_path_write_ids.clear();
+        }
+        WriteEventObservation::Ignore => {}
+    }
+}
+
+fn classify_write_event<'a>(
+    event_type: &str,
+    event: &'a serde_json::Value,
+) -> WriteEventObservation<'a> {
     if !matches!(
         event_type,
         "tool_call_started" | "tool_call_snapshot" | "tool_call_completed"
     ) {
-        return false;
+        return WriteEventObservation::Ignore;
     }
     let name = event.get("name").and_then(|v| v.as_str());
     if !matches!(name, Some("write_file") | Some("edit_file")) {
-        return false;
+        return WriteEventObservation::Ignore;
     }
     let path = event
         .get("input")
@@ -1959,7 +2121,19 @@ fn is_empty_path_write_event(event_type: &str, event: &serde_json::Value) -> boo
         .and_then(serde_json::Value::as_str)
         .map(str::trim)
         .unwrap_or("");
-    path.is_empty()
+    if path.is_empty() {
+        let id = event.get("id").and_then(|v| v.as_str());
+        return WriteEventObservation::Misfire { id };
+    }
+    if event_type == "tool_call_completed" {
+        WriteEventObservation::Recovered
+    } else {
+        // A pathed `started`/`snapshot` doesn't prove the write
+        // actually landed — the turn could still be aborted before
+        // the harness finishes writing the file. Wait for the
+        // `completed` phase before crediting recovery.
+        WriteEventObservation::Ignore
+    }
 }
 
 fn latest_git_commit_sha(git_steps: &[serde_json::Value]) -> Option<String> {
@@ -3250,10 +3424,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             }
                                         }
                                     }
-                                    if is_empty_path_write_event(event_type, &event) {
-                                        entry.empty_path_writes =
-                                            entry.empty_path_writes.saturating_add(1);
-                                    }
+                                    record_write_event(entry, event_type, &event);
                                 }
                             }
                         }
@@ -6920,7 +7091,11 @@ mod tests {
     }
 
     #[test]
-    fn completion_validation_rejects_any_empty_path_write() {
+    fn completion_validation_rejects_unrecovered_empty_path_write() {
+        // An empty-path misfire that the automaton never reconciled
+        // (no subsequent successful pathed write to clear the
+        // outstanding set) still fails the DoD gate, even when every
+        // verification step is present.
         let mut cached = CachedTaskOutput {
             live_output: "looked busy".to_string(),
             files_changed: vec![modify_summary("src/lib.rs")],
@@ -6929,6 +7104,7 @@ mod tests {
             format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
             lint_steps: vec![serde_json::json!({"type": "lint_verification_passed"})],
             empty_path_writes: 1,
+            outstanding_empty_path_write_ids: std::iter::once("call-1".to_string()).collect(),
             ..Default::default()
         };
         let reason =
@@ -6937,8 +7113,15 @@ mod tests {
             reason.contains("empty or missing \"path\""),
             "expected empty-path reason, got: {reason}"
         );
-        cached.empty_path_writes = 0;
+        // Telemetry stays at 1 (the misfire happened), but the
+        // outstanding set is cleared to model the "automaton retried
+        // with a real path" recovery. The gate must now PASS.
+        cached.outstanding_empty_path_write_ids.clear();
         assert_eq!(completion_validation_failure_reason(&cached), None);
+        assert_eq!(
+            cached.empty_path_writes, 1,
+            "telemetry counter must survive recovery so analytics can see how often the automaton misfires"
+        );
     }
 
     #[test]
@@ -6984,6 +7167,204 @@ mod tests {
             "input": {"path": ""},
         });
         assert!(!is_empty_path_write_event("text_delta", &unrelated_event));
+    }
+
+    // ---------------------------------------------------------------
+    // Outstanding-empty-path-writes bookkeeping
+    //
+    // Regression for the failure mode that crashed task 2.1 ("Secret
+    // wrappers: NeuralKey, ShamirShare, Secret<T>"). The automaton
+    // emitted a `write_file` with no input, was rejected by the
+    // harness, retried the same call with a real path and succeeded —
+    // but the DoD gate was a monotonic ratchet on a cumulative
+    // counter, so `task_done` still failed even though every actual
+    // file edit landed.
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn record_write_event_dedupes_three_phases_for_one_call() {
+        // Production emits `tool_call_started`, `tool_call_snapshot`,
+        // and `tool_call_completed` with the same payload. Prior
+        // behaviour counted each phase separately, triple-scoring
+        // every misfire.
+        let misfire = serde_json::json!({
+            "id": "call-1",
+            "name": "write_file",
+            "input": {"path": ""},
+        });
+        let mut entry = CachedTaskOutput::default();
+        for phase in [
+            "tool_call_started",
+            "tool_call_snapshot",
+            "tool_call_completed",
+        ] {
+            record_write_event(&mut entry, phase, &misfire);
+        }
+        assert_eq!(
+            entry.empty_path_writes, 1,
+            "three phases of one call must score as one misfire"
+        );
+        assert_eq!(entry.outstanding_empty_path_write_ids.len(), 1);
+    }
+
+    #[test]
+    fn record_write_event_tracks_anonymous_misfires_independently() {
+        // Without an `id`, we can't dedupe, so consecutive anonymous
+        // misfires must register as distinct entries rather than
+        // collapsing into one.
+        let misfire = serde_json::json!({
+            "name": "edit_file",
+            "input": {"path": ""},
+        });
+        let mut entry = CachedTaskOutput::default();
+        record_write_event(&mut entry, "tool_call_started", &misfire);
+        record_write_event(&mut entry, "tool_call_started", &misfire);
+        assert_eq!(entry.empty_path_writes, 2);
+        assert_eq!(entry.outstanding_empty_path_write_ids.len(), 2);
+    }
+
+    #[test]
+    fn record_write_event_pathed_completion_clears_outstanding_set() {
+        // The recovery rule: the moment the automaton completes a
+        // pathed `write_file` / `edit_file`, every prior misfire is
+        // considered reconciled. Telemetry counter survives so
+        // analytics can still see the misfire happened.
+        let misfire = serde_json::json!({
+            "id": "call-1",
+            "name": "write_file",
+            "input": {"path": ""},
+        });
+        let pathed = serde_json::json!({
+            "id": "call-2",
+            "name": "write_file",
+            "input": {"path": "crates/foo/src/lib.rs"},
+        });
+        let mut entry = CachedTaskOutput::default();
+        record_write_event(&mut entry, "tool_call_started", &misfire);
+        assert_eq!(entry.outstanding_empty_path_write_ids.len(), 1);
+        record_write_event(&mut entry, "tool_call_completed", &pathed);
+        assert!(
+            entry.outstanding_empty_path_write_ids.is_empty(),
+            "pathed completion must clear the outstanding set"
+        );
+        assert_eq!(
+            entry.empty_path_writes, 1,
+            "telemetry must survive recovery so we can see how often the automaton misfires"
+        );
+    }
+
+    #[test]
+    fn record_write_event_pathed_snapshot_does_not_clear_outstanding_set() {
+        // A started/snapshot with a real path isn't proof the write
+        // landed — the turn could still abort before the completion
+        // phase. We only credit recovery on `tool_call_completed`.
+        let misfire = serde_json::json!({
+            "id": "call-1",
+            "name": "write_file",
+            "input": {"path": ""},
+        });
+        let pathed_snapshot = serde_json::json!({
+            "id": "call-2",
+            "name": "write_file",
+            "input": {"path": "crates/foo/src/lib.rs"},
+        });
+        let mut entry = CachedTaskOutput::default();
+        record_write_event(&mut entry, "tool_call_started", &misfire);
+        record_write_event(&mut entry, "tool_call_snapshot", &pathed_snapshot);
+        record_write_event(&mut entry, "tool_call_started", &pathed_snapshot);
+        assert_eq!(
+            entry.outstanding_empty_path_write_ids.len(),
+            1,
+            "only a pathed tool_call_completed should clear outstanding misfires"
+        );
+    }
+
+    #[test]
+    fn task_21_replay_misfire_then_retry_passes_gate() {
+        // Faithful replay of the task 2.1 shape:
+        //   1. write_file with no input -> rejected (misfire).
+        //   2. write_file with a real path -> succeeded.
+        //   3. edit_file with no input -> rejected (misfire).
+        //   4. edit_file with a real path -> succeeded.
+        //   5. task_done.
+        // Before the fix, step 5 was rejected because the empty-path
+        // counter was a monotonic ratchet. After the fix, steps 2 and
+        // 4 reconcile the misfires and the gate passes.
+        let misfire_w = serde_json::json!({
+            "id": "w1",
+            "name": "write_file",
+            "input": {"path": ""},
+        });
+        let pathed_w = serde_json::json!({
+            "id": "w2",
+            "name": "write_file",
+            "input": {"path": "crates/zero-identity/src/secret.rs"},
+        });
+        let misfire_e = serde_json::json!({
+            "id": "e1",
+            "name": "edit_file",
+            "input": {"path": ""},
+        });
+        let pathed_e = serde_json::json!({
+            "id": "e2",
+            "name": "edit_file",
+            "input": {"path": "crates/zero-identity/src/types.rs"},
+        });
+
+        let mut entry = CachedTaskOutput {
+            live_output: "implementation complete".to_string(),
+            files_changed: vec![
+                modify_summary("crates/zero-identity/src/secret.rs"),
+                modify_summary("crates/zero-identity/src/types.rs"),
+            ],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            format_steps: vec![serde_json::json!({"type": "format_verification_passed"})],
+            lint_steps: vec![serde_json::json!({"type": "lint_verification_passed"})],
+            ..Default::default()
+        };
+
+        let phases = [
+            "tool_call_started",
+            "tool_call_snapshot",
+            "tool_call_completed",
+        ];
+        for event in [&misfire_w, &pathed_w, &misfire_e, &pathed_e] {
+            for phase in phases {
+                record_write_event(&mut entry, phase, event);
+            }
+        }
+
+        assert_eq!(
+            entry.empty_path_writes, 2,
+            "telemetry should show two distinct misfires across the run"
+        );
+        assert!(
+            entry.outstanding_empty_path_write_ids.is_empty(),
+            "both misfires were reconciled by a subsequent pathed completion"
+        );
+        assert_eq!(
+            completion_validation_failure_reason(&entry),
+            None,
+            "DoD gate must accept task_done when every misfire was recovered"
+        );
+    }
+
+    #[test]
+    fn completion_gate_report_exposes_telemetry_and_outstanding_counts() {
+        // Wire contract: the gate report still carries
+        // `n_empty_path_writes` (cumulative telemetry) so existing
+        // consumers keep rendering, and adds
+        // `n_outstanding_empty_path_writes` so callers that need the
+        // gate signal can read it directly.
+        let entry = CachedTaskOutput {
+            empty_path_writes: 3,
+            outstanding_empty_path_write_ids: ["a", "b"].into_iter().map(str::to_owned).collect(),
+            ..Default::default()
+        };
+        let report = CompletionGateReport::from_cached(&entry);
+        assert_eq!(report.n_empty_path_writes, 3);
+        assert_eq!(report.n_outstanding_empty_path_writes, 2);
     }
 
     #[test]

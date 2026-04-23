@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -334,13 +334,27 @@ pub struct CachedTaskOutput {
     pub input_tokens: u64,
     pub output_tokens: u64,
     pub saw_rich_usage: bool,
-    /// Count of `write_file` / `edit_file` tool calls the harness emitted
-    /// with an empty or missing `path` input. These cannot land on disk
-    /// and are a strong signal that the automaton misfired (the UI
-    /// renders them as "Untitled file"). The completion gate rejects any
-    /// turn that produced at least one so the automaton is forced to
-    /// retry with a real path instead of silently "succeeding".
+    /// Total number of `write_file` / `edit_file` tool calls the harness
+    /// emitted with an empty or missing `path` input across the life of
+    /// this task — counted *once per distinct tool call* (dedup'd across
+    /// the `tool_call_started` / `tool_call_snapshot` / `tool_call_completed`
+    /// event phases that all carry the same payload). Pure telemetry:
+    /// surfaced to clients via the gate report's `n_empty_path_writes`
+    /// field so the UI/analytics can still see how often the automaton
+    /// misfires. The DoD gate no longer reads this counter directly —
+    /// see `outstanding_empty_path_write_ids` for the actual
+    /// pass/fail signal.
     pub empty_path_writes: u32,
+    /// Set of tool-call identifiers that were observed emitting a
+    /// `write_file` / `edit_file` with an empty or missing `path` and
+    /// have *not* yet been reconciled by a subsequent successful pathed
+    /// write/edit. The Definition-of-Done gate fails a `task_done` if
+    /// and only if this set is non-empty at completion time: an empty
+    /// set means the automaton either never misfired or always recovered
+    /// by immediately re-issuing the same call with a real path, which
+    /// is exactly the "retry with a real path before task_done" contract
+    /// the gate's error string already promises.
+    pub outstanding_empty_path_write_ids: HashSet<String>,
 }
 pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
 
