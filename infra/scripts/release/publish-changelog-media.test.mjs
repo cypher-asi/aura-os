@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   allowLocalFallbackOnBrowserbaseQuota,
   buildEntryPrompt,
+  buildRetryCorrectionGuidance,
   buildRetryPlan,
   buildRunSummary,
   buildRunSummaryMarkdown,
@@ -15,6 +16,7 @@ import {
   evaluateWorkflowOutcome,
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
+  mergePublishedMedia,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
@@ -142,6 +144,61 @@ test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
   assert.match(prompt, /Feedback board and comments stay visible/);
   assert.match(prompt, /Key details:/);
   assert.match(prompt, /leave the clearest proof visible/);
+});
+
+test("buildEntryPrompt adds targeted retry guidance for failed media slots", () => {
+  const prompt = buildEntryPrompt({
+    title: "Agent creation screen exposes model choice",
+    summary: "The agent creation screen makes the model selection visible.",
+    items: [{ text: "Model choices are visible." }],
+    media: {
+      status: "failed",
+      failureClass: "quality_gate",
+      error: "Screenshot capture did not produce a passing summary for entry-2-agent-create",
+    },
+  });
+
+  assert.match(prompt, /Retry correction pass:/);
+  assert.match(prompt, /Previous failure class: quality_gate/);
+  assert.match(prompt, /failed the quality gate/);
+  assert.match(prompt, /select a concrete row\/tab\/item/);
+});
+
+test("buildRetryCorrectionGuidance maps navigation failures to a shorter correction path", () => {
+  const guidance = buildRetryCorrectionGuidance({
+    status: "failed",
+    failureClass: "navigation_or_timeout",
+    error: "locator timed out while opening panel",
+  });
+
+  assert.match(guidance, /Previous failure class: navigation_or_timeout/);
+  assert.match(guidance, /shortest visible path/);
+  assert.match(guidance, /Avoid deep exploration/);
+});
+
+test("mergePublishedMedia clears stale retry failure metadata", () => {
+  assert.deepEqual(
+    mergePublishedMedia(
+      {
+        requested: true,
+        status: "failed",
+        error: "old failure",
+        failureClass: "quality_gate",
+        retryInstruction: "retry harder",
+      },
+      {
+        status: "published",
+        assetPath: "assets/changelog/nightly/demo/proof.png",
+        updatedAt: "2026-04-22T00:00:00.000Z",
+      },
+    ),
+    {
+      requested: true,
+      status: "published",
+      assetPath: "assets/changelog/nightly/demo/proof.png",
+      updatedAt: "2026-04-22T00:00:00.000Z",
+    },
+  );
 });
 
 test("selectBestScreenshot prefers repair, then capture-proof, then validate-proof", () => {
@@ -502,7 +559,10 @@ test("publish script fixture mode keeps partial media success green and writes r
 
   const latestDoc = JSON.parse(fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.json"), "utf8"));
   assert.equal(latestDoc.rendered.entries[0].media.status, "published");
+  assert.equal("failureClass" in latestDoc.rendered.entries[0].media, false);
   assert.equal(latestDoc.rendered.entries[1].media.status, "failed");
+  assert.equal(latestDoc.rendered.entries[1].media.failureClass, "quality_gate");
+  assert.match(latestDoc.rendered.entries[1].media.retryInstruction, /Retry correction pass:/);
   assert.equal(fs.existsSync(path.join(pagesDir, latestDoc.rendered.entries[0].media.assetPath)), true);
   assert.match(
     fs.readFileSync(path.join(pagesDir, "changelog", "nightly", "latest.md"), "utf8"),

@@ -132,14 +132,62 @@ function collectEntryChangedFiles(doc, entry) {
   );
 }
 
+function buildRetryCorrectionGuidance(media = {}) {
+  const status = sanitizeText(media?.status);
+  const failureClass = sanitizeText(media?.failureClass);
+  const error = clipText(media?.error || "", 220);
+  if (status !== "failed" && !failureClass && !error) {
+    return "";
+  }
+
+  const classGuidance = {
+    quality_gate: [
+      "The previous screenshot failed the quality gate.",
+      "Do not stop on an empty state, generic overview, placeholder route, or loosely framed full desktop.",
+      "Complete one visible correction: select a concrete row/tab/item, open the relevant detail surface, and leave the story-specific proof text centered.",
+    ],
+    navigation_or_timeout: [
+      "The previous capture timed out or struggled with navigation.",
+      "Use the shortest visible path through the launcher, taskbar, app sidebar, or labeled tabs.",
+      "Avoid deep exploration; pick the first clearly relevant seeded item and stop once the proof surface is stable.",
+    ],
+    missing_capture_output: [
+      "The previous run did not produce a usable capture summary.",
+      "Keep the flow short, wait for the desktop surface to settle, and stop as soon as a valid proof screen is visible.",
+    ],
+    browserbase_concurrency: [
+      "The previous Browserbase session was capacity-limited.",
+      "Once the fresh session opens, keep the capture path short and stop at the first strong proof screen.",
+    ],
+    browserbase_quota: [
+      "The previous provider run hit Browserbase quota limits.",
+      "If this retry has a session, avoid unnecessary exploration and capture the strongest visible proof quickly.",
+    ],
+    capture_error: [
+      "The previous capture hit a generic automation error.",
+      "Prefer stable visible controls, avoid brittle interactions, and stop on the clearest proof screen before attempting optional refinements.",
+    ],
+  };
+
+  const guidance = classGuidance[failureClass] || classGuidance.capture_error;
+  return [
+    "Retry correction pass:",
+    failureClass ? `Previous failure class: ${failureClass}.` : "",
+    error ? `Previous error summary: ${error}.` : "",
+    ...guidance,
+  ].filter(Boolean).join(" ");
+}
+
 function buildEntryPrompt(entry) {
   const bullets = (Array.isArray(entry?.items) ? entry.items : [])
     .map((item) => sanitizeText(item?.text))
     .filter(Boolean);
+  const retryGuidance = buildRetryCorrectionGuidance(entry?.media);
   const storyParts = [
     sanitizeText(entry?.title),
     sanitizeText(entry?.summary),
     bullets.length ? `Key details: ${bullets.join(" ")}` : "",
+    retryGuidance,
     "Open the most relevant product surface for this changelog entry and leave the clearest proof visible for a polished desktop screenshot.",
     "Avoid placeholder routes, empty states, settings-only screens, and generic landing views.",
   ].filter(Boolean);
@@ -192,6 +240,17 @@ function buildMediaMetadata(entry, assetPath, selectedScreenshot, summary) {
     updatedAt: new Date().toISOString(),
     storyTitle: summary?.storyTitle || entry.title,
   };
+}
+
+function mergePublishedMedia(media, metadata) {
+  const next = {
+    ...media,
+    ...metadata,
+  };
+  delete next.error;
+  delete next.failureClass;
+  delete next.retryInstruction;
+  return next;
 }
 
 function buildMediaBlock(metadata, bodyLines = []) {
@@ -831,17 +890,15 @@ async function main() {
         fixtureCaptureResults,
       });
 
-      targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
-        ...media,
-        ...published.metadata,
-      }));
+      targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) =>
+        mergePublishedMedia(media, published.metadata)
+      );
       if (changelogDocs.target.isLatest) {
         latestDoc = targetDoc;
       } else if (isSameReleaseDoc(latestDoc, targetDoc)) {
-        latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) => ({
-          ...media,
-          ...published.metadata,
-        }));
+        latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) =>
+          mergePublishedMedia(media, published.metadata)
+        );
       }
 
       results.push({
@@ -855,11 +912,19 @@ async function main() {
         sessionId: published.summary?.sessionId || null,
       });
     } catch (error) {
+      const failureClass = classifyMediaFailure(error);
+      const retryInstruction = buildRetryCorrectionGuidance({
+        status: "failed",
+        failureClass,
+        error: String(error),
+      });
       targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
         ...media,
         status: "failed",
         updatedAt: new Date().toISOString(),
         error: String(error),
+        failureClass,
+        retryInstruction,
       }));
       if (changelogDocs.target.isLatest) {
         latestDoc = targetDoc;
@@ -869,13 +934,15 @@ async function main() {
           status: "failed",
           updatedAt: new Date().toISOString(),
           error: String(error),
+          failureClass,
+          retryInstruction,
         }));
       }
       results.push({
         slotId: entry.media.slotId,
         title: entry.title,
         status: "failed",
-        failureClass: classifyMediaFailure(error),
+        failureClass,
         error: String(error),
         outputDir: error?.captureSummary?.outputDir || error?.captureRunRoot || null,
         inspectorUrl: error?.captureSummary?.inspectorUrl || null,
@@ -920,6 +987,7 @@ export {
   buildEntryPrompt,
   evaluateWorkflowOutcome,
   buildAbortRemainingError,
+  buildRetryCorrectionGuidance,
   classifyMediaFailure,
   buildMediaBlock,
   buildRetryPlan,
@@ -929,6 +997,7 @@ export {
   isBrowserbaseQuotaError,
   isEnabled,
   loadFixtureCaptureResults,
+  mergePublishedMedia,
   parseArgs,
   resolveTargetChangelogDocs,
   replaceChangelogMediaBlock,
