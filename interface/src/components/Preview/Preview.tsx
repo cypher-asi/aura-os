@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useCallback, useLayoutEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -114,15 +114,6 @@ function previewTitle(item: PreviewItem): string {
   }
 }
 
-function isUserInteractingWithPreview(el: HTMLElement): boolean {
-  const activeElement = document.activeElement;
-  return (
-    activeElement instanceof HTMLElement &&
-    activeElement !== el &&
-    el.contains(activeElement)
-  );
-}
-
 function useDisplayItem() {
   return useSidekickStore((s) => s.previewItem);
 }
@@ -173,11 +164,11 @@ export function PreviewHeader() {
   );
 }
 
+const FOLLOW_THRESHOLD_PX = 40;
+
 export function PreviewContent() {
   const displayItem = useDisplayItem();
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  const autoScrollRef = useRef(true);
-  const prevScrollHeightRef = useRef(0);
 
   const resetKey = displayItem
     ? displayItem.kind === "task" ? displayItem.task.task_id
@@ -189,110 +180,53 @@ export function PreviewContent() {
     : null;
 
   const shouldAutoScroll = displayItem?.kind === "task";
+  const [isAutoFollowing, setIsAutoFollowing] = useState(true);
 
-  useEffect(() => {
-    autoScrollRef.current = shouldAutoScroll;
-    prevScrollHeightRef.current = 0;
-  }, [resetKey, shouldAutoScroll]);
-
-  useEffect(() => {
+  // On resetKey change, jump to the correct end of the body: bottom for a
+  // task (where live output lands) and top for everything else. We run
+  // this in a layout effect so the initial position is applied before the
+  // browser paints — no visible scroll jump on preview switch. The
+  // programmatic scrollTop assignment will dispatch a scroll event that
+  // runs through handleScroll below, so pin state re-syncs from the new
+  // position without a direct setState here.
+  useLayoutEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
-
-    if (!shouldAutoScroll) {
-      el.scrollTop = 0;
-      prevScrollHeightRef.current = el.scrollHeight;
-      return;
-    }
-
-    let contentChangeRaf = 0;
-
-    const scrollToBottom = () => {
-      requestAnimationFrame(() => {
-        el.scrollTop = el.scrollHeight;
-      });
-    };
-
-    const syncHeight = () => {
-      prevScrollHeightRef.current = el.scrollHeight;
-    };
-
-    const onContentChange = () => {
-      const oldSH = prevScrollHeightRef.current;
-      const newSH = el.scrollHeight;
-      if (newSH === oldSH) return;
-
-      if (isUserInteractingWithPreview(el)) {
-        autoScrollRef.current = false;
-      } else if (autoScrollRef.current && newSH > oldSH) {
-        scrollToBottom();
-      }
-
-      syncHeight();
-    };
-
-    const queueContentChange = () => {
-      if (contentChangeRaf !== 0) return;
-      contentChangeRaf = requestAnimationFrame(() => {
-        contentChangeRaf = 0;
-        onContentChange();
-      });
-    };
-
-    const onScroll = () => {
-      const { scrollHeight, scrollTop, clientHeight } = el;
-      autoScrollRef.current = scrollHeight - scrollTop - clientHeight < 40;
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-
-    const contentObs =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(queueContentChange);
-    const observedChildren = new Set<Element>();
-    const syncObservedChildren = () => {
-      if (!contentObs) return;
-      const children = new Set(Array.from(el.children));
-      for (const child of observedChildren) {
-        if (!children.has(child)) {
-          contentObs.unobserve(child);
-          observedChildren.delete(child);
-        }
-      }
-      for (const child of children) {
-        if (!observedChildren.has(child)) {
-          observedChildren.add(child);
-          contentObs.observe(child);
-        }
-      }
-    };
-
-    const observer = new MutationObserver(() => {
-      syncObservedChildren();
-      queueContentChange();
-    });
-    observer.observe(el, { childList: true, subtree: true, characterData: true });
-
-    syncObservedChildren();
-    scrollToBottom();
-    syncHeight();
-
-    return () => {
-      if (contentChangeRaf !== 0) {
-        cancelAnimationFrame(contentChangeRaf);
-      }
-      observer.disconnect();
-      contentObs?.disconnect();
-      el.removeEventListener("scroll", onScroll);
-    };
+    el.scrollTop = shouldAutoScroll ? el.scrollHeight : 0;
   }, [resetKey, shouldAutoScroll]);
 
+  // Track pin/unpin while a task is showing. Tail-growth pinning (new
+  // tokens, tool rows) is handled inside `TaskOutputSection` via a
+  // useLayoutEffect keyed on the stream store — pairs with CSS
+  // `overflow-anchor: auto` on `.previewBody` which covers growth above
+  // the anchor natively. Mirrors the main chat's pattern.
+  const handleScroll = useCallback(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    if (!shouldAutoScroll) {
+      setIsAutoFollowing(true);
+      return;
+    }
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setIsAutoFollowing(distFromBottom < FOLLOW_THRESHOLD_PX);
+  }, [shouldAutoScroll]);
+
   return (
-    <div ref={bodyRef} className={styles.previewBody} data-testid="preview-body">
+    <div
+      ref={bodyRef}
+      className={styles.previewBody}
+      data-testid="preview-body"
+      onScroll={handleScroll}
+    >
       {displayItem?.kind === "spec" && <SpecPreview spec={displayItem.spec} />}
       {displayItem?.kind === "specs_overview" && <SpecsOverviewPreview specs={displayItem.specs} />}
-      {displayItem?.kind === "task" && <TaskPreview task={displayItem.task} />}
+      {displayItem?.kind === "task" && (
+        <TaskPreview
+          task={displayItem.task}
+          scrollRef={bodyRef}
+          isAutoFollowing={isAutoFollowing}
+        />
+      )}
       {displayItem?.kind === "session" && <SessionPreview session={displayItem.session} />}
       {displayItem?.kind === "log" && <LogPreview entry={displayItem.entry} />}
     </div>

@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { Button, GroupCollapsible } from "@cypher-asi/zui";
 import { GitCommitHorizontal, Loader2, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -29,7 +30,13 @@ export function RunTaskButton({ task }: { task: import("../../types").Task }) {
   );
 }
 
-export function TaskPreview({ task }: { task: import("../../types").Task }) {
+interface TaskPreviewProps {
+  task: import("../../types").Task;
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  isAutoFollowing?: boolean;
+}
+
+export function TaskPreview({ task, scrollRef, isAutoFollowing }: TaskPreviewProps) {
   const {
     taskOutput, effectiveStatus, effectiveSessionId, isActive,
     elapsed, failReason, syncWarning, agentInstance, completedByAgent,
@@ -119,6 +126,8 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
         task={task}
         taskOutput={taskOutput}
         failReason={failReason}
+        scrollRef={scrollRef}
+        isAutoFollowing={isAutoFollowing}
       />
     </>
   );

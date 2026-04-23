@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const clearCompleted = vi.fn();
@@ -102,8 +102,25 @@ vi.mock("../TerminalPanelBody", () => ({
   TerminalPanelBody: () => <div data-testid="terminal-panel-body" />,
 }));
 
+const activeTaskStreamProps = vi.fn<
+  (props: {
+    taskId: string;
+    title?: string;
+    scrollRef?: React.RefObject<HTMLDivElement | null>;
+    isAutoFollowing?: boolean;
+  }) => void
+>();
+
 vi.mock("./ActiveTaskStream", () => ({
-  ActiveTaskStream: ({ title }: { title: string }) => <div data-testid="active-task">{title}</div>,
+  ActiveTaskStream: (props: {
+    taskId: string;
+    title?: string;
+    scrollRef?: React.RefObject<HTMLDivElement | null>;
+    isAutoFollowing?: boolean;
+  }) => {
+    activeTaskStreamProps(props);
+    return <div data-testid="active-task">{props.title}</div>;
+  },
 }));
 
 vi.mock("./CompletedTaskOutput", () => ({
@@ -115,20 +132,6 @@ vi.mock("./TaskOutputPanel.module.css", () => ({
 }));
 
 import { RunSidekickPane, TerminalSidekickPane } from "./TaskOutputPanel";
-
-function installImmediateRaf() {
-  const originalRaf = globalThis.requestAnimationFrame;
-  const originalCaf = globalThis.cancelAnimationFrame;
-  globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
-    callback(performance.now());
-    return 1;
-  }) as typeof requestAnimationFrame;
-  globalThis.cancelAnimationFrame = (() => {}) as typeof cancelAnimationFrame;
-  return () => {
-    globalThis.requestAnimationFrame = originalRaf;
-    globalThis.cancelAnimationFrame = originalCaf;
-  };
-}
 
 function setScrollMetrics(
   el: HTMLElement,
@@ -187,75 +190,39 @@ describe("RunSidekickPane", () => {
     expect(clearCompleted).toHaveBeenCalled();
   });
 
-  it("keeps following content growth while pinned", async () => {
-    const restoreRaf = installImmediateRaf();
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
-    const scrollIntoView = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      configurable: true,
-      value: scrollIntoView,
-    });
+  it("wires scrollRef and initial auto-follow state down to active task streams", () => {
+    const { container } = render(<RunSidekickPane />);
+    const content = container.querySelector(".content");
+    expect(content).toBeInstanceOf(HTMLDivElement);
 
-    try {
-      const { container } = render(<RunSidekickPane />);
-      const content = container.querySelector(".content");
-      expect(content).toBeInstanceOf(HTMLDivElement);
-      setScrollMetrics(content as HTMLDivElement, {
-        scrollHeight: 600,
-        scrollTop: 600,
-        clientHeight: 200,
-      });
-      scrollIntoView.mockClear();
-
-      (content as HTMLDivElement).appendChild(document.createElement("div"));
-      (content as any).scrollHeight = 900;
-
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    } finally {
-      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-        configurable: true,
-        value: originalScrollIntoView,
-      });
-      restoreRaf();
-    }
+    expect(activeTaskStreamProps).toHaveBeenCalled();
+    const props = activeTaskStreamProps.mock.calls.at(-1)?.[0];
+    expect(props).toBeDefined();
+    expect(props!.scrollRef?.current).toBe(content);
+    expect(props!.isAutoFollowing).toBe(true);
   });
 
-  it("does not force-scroll on collapse while interacting inside the pane", async () => {
-    const restoreRaf = installImmediateRaf();
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
-    const scrollIntoView = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-      configurable: true,
-      value: scrollIntoView,
+  it("unpins isAutoFollowing when the user scrolls away from the bottom", async () => {
+    const { container } = render(<RunSidekickPane />);
+    const content = container.querySelector(".content") as HTMLDivElement;
+    setScrollMetrics(content, {
+      scrollHeight: 1000,
+      scrollTop: 200,
+      clientHeight: 300,
     });
 
-    try {
-      const { container } = render(<RunSidekickPane />);
-      const content = container.querySelector(".content") as HTMLDivElement | null;
-      expect(content).toBeInstanceOf(HTMLDivElement);
-      setScrollMetrics(content as HTMLDivElement, {
-        scrollHeight: 700,
-        scrollTop: 700,
-        clientHeight: 200,
-      });
+    // The scroll-anchor hook guards the handler for one rAF after its
+    // initial mount scroll-to-bottom; flush a frame so our synthetic
+    // scroll is actually observed.
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    activeTaskStreamProps.mockClear();
 
-      const toggle = document.createElement("button");
-      content?.appendChild(toggle);
-      toggle.focus();
-      scrollIntoView.mockClear();
+    fireEvent.scroll(content);
 
-      (content as any).scrollHeight = 400;
-      content?.appendChild(document.createElement("div"));
-
-      await Promise.resolve();
-      expect(scrollIntoView).not.toHaveBeenCalled();
-    } finally {
-      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
-        configurable: true,
-        value: originalScrollIntoView,
-      });
-      restoreRaf();
-    }
+    await waitFor(() => {
+      const latest = activeTaskStreamProps.mock.calls.at(-1)?.[0];
+      expect(latest?.isAutoFollowing).toBe(false);
+    });
   });
 });
 

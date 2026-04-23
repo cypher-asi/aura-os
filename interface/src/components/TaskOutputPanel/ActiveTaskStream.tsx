@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useState, type RefObject } from "react";
 import { ChevronRight } from "lucide-react";
 import { useTaskStream } from "../../hooks/use-task-stream";
 import {
@@ -18,9 +18,16 @@ import styles from "./TaskOutputPanel.module.css";
 interface ActiveTaskStreamProps {
   taskId: string;
   title?: string;
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  isAutoFollowing?: boolean;
 }
 
-export function ActiveTaskStream({ taskId, title }: ActiveTaskStreamProps) {
+export function ActiveTaskStream({
+  taskId,
+  title,
+  scrollRef,
+  isAutoFollowing = true,
+}: ActiveTaskStreamProps) {
   const { streamKey } = useTaskStream(taskId, true);
   const isStreaming = useIsStreaming(streamKey);
   const isWriting = useIsWriting(streamKey);
@@ -34,6 +41,29 @@ export function ActiveTaskStream({ taskId, title }: ActiveTaskStreamProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const hasContent = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
+
+  // Pin to bottom when the tail grows. CSS `overflow-anchor: auto` on the
+  // parent scroller (see TaskOutputPanel.module.css `.content`) handles
+  // growth *above* the anchor natively; this effect covers growth *at* the
+  // anchor (streaming tokens, new tool rows) by pushing scrollTop to the
+  // fresh bottom synchronously during commit — before the browser paints
+  // the intermediate "pushed up" state. Mirrors ChatMessageList's approach.
+  useLayoutEffect(() => {
+    if (!scrollRef || !isAutoFollowing || collapsed || !hasContent) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [
+    scrollRef,
+    isAutoFollowing,
+    collapsed,
+    hasContent,
+    streamingText,
+    thinkingText,
+    activeToolCalls.length,
+    progressText,
+    timeline.length,
+  ]);
 
   return (
     <div className={styles.taskSection}>

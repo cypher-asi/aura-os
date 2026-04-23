@@ -68,6 +68,11 @@
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  /* Native CSS scroll anchoring keeps the viewport stable when blocks are
+     inserted above the anchor during streaming, eliminating the flash the
+     old MutationObserver + rAF + scrollTop pattern caused. Tail-growth
+     pinning happens in TaskOutputSection via a commit-phase useLayoutEffect. */
+  overflow-anchor: auto;
   padding: var(--space-3) 0;
 }
 

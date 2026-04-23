@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useLayoutEffect, useState, type RefObject } from "react";
 import { GroupCollapsible } from "@cypher-asi/zui";
 import { ClipboardCopy, Check, Loader2 } from "lucide-react";
 import { MessageBubble } from "../MessageBubble";
@@ -173,9 +173,20 @@ export interface TaskOutputSectionProps {
   task?: Task;
   taskOutput?: TaskOutputEntry;
   failReason?: string | null;
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  isAutoFollowing?: boolean;
 }
 
-export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutput: externalTaskOutput, failReason }: TaskOutputSectionProps) {
+export function TaskOutputSection({
+  isActive,
+  streamKey,
+  taskId,
+  task,
+  taskOutput: externalTaskOutput,
+  failReason,
+  scrollRef,
+  isAutoFollowing = true,
+}: TaskOutputSectionProps) {
   const events = useStreamEvents(streamKey);
   const isStreaming = useIsStreaming(streamKey);
   const streamingText = useStreamingText(streamKey);
@@ -204,6 +215,30 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
   const hasStreamContent = events.length > 0 || hasLiveContent;
   const hasFallback = !hasStreamContent && !!fallbackText;
   const hasContent = hasStreamContent || hasFallback;
+
+  // Pin the parent scroll container to the bottom when the tail of the
+  // stream grows. CSS `overflow-anchor: auto` on the scroll container
+  // handles growth above the anchor natively; this effect covers growth
+  // at the anchor by writing scrollTop synchronously during commit, before
+  // the browser paints the intermediate "pushed up" state. Mirrors the
+  // main chat's pattern in ChatMessageList.
+  useLayoutEffect(() => {
+    if (!scrollRef || !isActive || !isAutoFollowing || !hasLiveContent) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [
+    scrollRef,
+    isActive,
+    isAutoFollowing,
+    hasLiveContent,
+    streamingText,
+    thinkingText,
+    activeToolCalls.length,
+    progressText,
+    timeline.length,
+    events.length,
+  ]);
 
   const handleCopy = useCallback(() => {
     if (!task) return;

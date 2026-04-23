@@ -95,6 +95,10 @@
 .content {
   height: 100%;
   overflow-y: auto;
+  /* Native CSS scroll anchoring keeps the viewport stable when blocks are
+     inserted above the anchor during streaming, eliminating the flash
+     that the old MutationObserver + rAF + scrollIntoView pattern caused. */
+  overflow-anchor: auto;
   scrollbar-width: none;
 }
 
@@ -108,7 +112,8 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.taskSection:last-child {
+.taskSection:last-child,
+.taskSection:last-of-type {
   border-bottom: none;
 }
 
