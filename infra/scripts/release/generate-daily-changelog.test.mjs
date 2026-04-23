@@ -351,6 +351,12 @@ test("preserveExistingPublishedMedia prevents rerenders from downgrading existin
         {
           batch_id: "entry-1",
           title: "Feedback board",
+          items: [
+            {
+              text: "Feedback board ships.",
+              commit_shas: ["abc1234"],
+            },
+          ],
           media: {
             requested: true,
             status: "published",
@@ -372,4 +378,57 @@ test("preserveExistingPublishedMedia prevents rerenders from downgrading existin
   assert.equal(preserved.entries[0].media.slotId, "entry-1-feedback-board");
   assert.equal(preserved.entries[0].media.assetPath, "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png");
   assert.equal(preserved.entries[0].media.preservedFromSlotId, "entry-1-feedback-board");
+});
+
+test("preserveExistingPublishedMedia does not carry batch media to unrelated regenerated entries", () => {
+  const rendered = {
+    entries: [
+      {
+        batch_id: "entry-1",
+        title: "Model picker gains provider filters",
+        items: [
+          {
+            text: "Provider filters are visible.",
+            commit_shas: ["new1234"],
+          },
+        ],
+        media: {
+          requested: true,
+          status: "pending",
+          slotId: "entry-1-model-picker-gains-provider-filters",
+          slug: "model-picker-gains-provider-filters",
+          alt: "Model picker screenshot",
+        },
+      },
+    ],
+  };
+  const existingDoc = {
+    rendered: {
+      entries: [
+        {
+          batch_id: "entry-1",
+          title: "Feedback board",
+          items: [
+            {
+              text: "Feedback board ships.",
+              commit_shas: ["abc1234"],
+            },
+          ],
+          media: {
+            requested: true,
+            status: "published",
+            slotId: "entry-1-feedback-board",
+            slug: "feedback-board",
+            alt: "Feedback board screenshot",
+            assetPath: "assets/changelog/nightly/0.1.0-nightly.321.1/entry-1-feedback-board.png",
+          },
+        },
+      ],
+    },
+  };
+
+  const preserved = preserveExistingPublishedMedia(rendered, [existingDoc]);
+  assert.equal(preserved.entries[0].media.status, "pending");
+  assert.equal(preserved.entries[0].media.slotId, "entry-1-model-picker-gains-provider-filters");
+  assert.equal(preserved.entries[0].media.assetPath, undefined);
 });

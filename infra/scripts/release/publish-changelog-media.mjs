@@ -196,7 +196,9 @@ function buildEntryPrompt(entry) {
 }
 
 function selectBestScreenshot(summary) {
-  const repairPath = summary?.repair?.success ? summary?.repair?.screenshot?.path : null;
+  const repairPath = summary?.repair?.success && summary?.repair?.quality?.ok
+    ? summary?.repair?.screenshot?.path
+    : null;
   if (repairPath) {
     return {
       path: repairPath,
@@ -337,13 +339,13 @@ function resolveTargetChangelogDocs(channelDir, requestedDate, requestedVersion)
   const normalizedVersion = sanitizeText(requestedVersion);
 
   let targetJsonPath = latestJsonPath;
-  if (normalizedDate) {
-    targetJsonPath = path.join(historyDir, `${normalizedDate}.json`);
-  } else if (normalizedVersion && sanitizeText(latestDoc?.version) !== normalizedVersion) {
+  if (normalizedVersion && sanitizeText(latestDoc?.version) !== normalizedVersion) {
     targetJsonPath = findHistoryJsonPathByVersion(historyDir, normalizedVersion);
     if (!targetJsonPath) {
       throw new Error(`Could not find changelog history entry for version ${normalizedVersion}`);
     }
+  } else if (!normalizedVersion && normalizedDate) {
+    targetJsonPath = path.join(historyDir, `${normalizedDate}.json`);
   }
 
   if (!fs.existsSync(targetJsonPath)) {
@@ -353,6 +355,12 @@ function resolveTargetChangelogDocs(channelDir, requestedDate, requestedVersion)
   const targetDoc = targetJsonPath === latestJsonPath ? latestDoc : readJson(targetJsonPath);
   const targetDate = sanitizeText(targetDoc?.date);
   const targetVersion = sanitizeText(targetDoc?.version);
+  if (normalizedVersion && targetVersion !== normalizedVersion) {
+    throw new Error(`Resolved changelog version ${targetVersion || "(missing)"} does not match requested version ${normalizedVersion}`);
+  }
+  if (normalizedDate && targetDate !== normalizedDate) {
+    throw new Error(`Resolved changelog date ${targetDate || "(missing)"} does not match requested date ${normalizedDate}`);
+  }
   const targetMarkdownPath = targetJsonPath === latestJsonPath
     ? latestMarkdownPath
     : path.join(historyDir, `${targetDate}.md`);

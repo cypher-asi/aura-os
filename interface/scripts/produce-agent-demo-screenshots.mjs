@@ -1849,13 +1849,141 @@ function shouldReusePreviousPhaseScreenshot(phaseResult, previousPhase) {
     || (!hasMeaningfulVisibleText(phaseResult.visibleText) && phaseResult?.screenshot?.kind === "full-page");
 }
 
+async function assessProofState(page, phase, screenshotPath, {
+  excludedAgentTools = [],
+  stagehandLogs = [],
+  stagehandLogCursor = 0,
+} = {}) {
+  const focusPhrases = normalizeArray([
+    ...(Array.isArray(phase.proofRequirements) ? phase.proofRequirements.flatMap((entry) => entry?.anyOf ?? []) : []),
+    ...(Array.isArray(phase.validationSignals) ? phase.validationSignals : []),
+  ], 12);
+  const screenshot = await captureProofScreenshot(page, screenshotPath, focusPhrases, {
+    requiredUiSignals: phase.requiredUiSignals,
+  });
+  const currentUrl = page.url();
+  const visibleText = await collectProofVisibleText(page, screenshot);
+  const validationMatches = collectValidationSignalMatches(visibleText, phase.validationSignals);
+  const proofRequirementMatches = collectProofRequirementMatches(visibleText, phase.proofRequirements);
+  const forbiddenPhraseMatches = collectForbiddenPhraseMatches(visibleText, phase.forbiddenPhrases);
+  const routeMatched = hasExpectedRoute(currentUrl, phase.expectedRoute);
+  const uiSignals = await collectPageUiSignals(page);
+  const phaseStagehandLogs = Array.isArray(stagehandLogs)
+    ? stagehandLogs.slice(stagehandLogCursor)
+    : [];
+  const stagehand = summarizeStagehandPhaseLogs(phaseStagehandLogs, excludedAgentTools);
+  const activeAppLabelMatched = phase.expectedAppLabel
+    ? normalizeTextForMatch(uiSignals.activeAppLabel) === normalizeTextForMatch(phase.expectedAppLabel)
+    : false;
+  const activeAppMatched = phase.expectedAppId
+    ? (
+      uiSignals.activeAppId === phase.expectedAppId
+      || activeAppLabelMatched
+      || (!uiSignals.activeAppId && proofRequirementMatches.length > 0 && validationMatches.length > 0)
+    )
+    : true;
+  const requiredUiStateMissing = (Array.isArray(phase.requiredUiSignals) ? phase.requiredUiSignals : [])
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean)
+    .filter((signalName) => !uiSignals?.[signalName]);
+  const proofRequirementsOk = proofRequirementMatches.length >= (Array.isArray(phase.proofRequirements) ? phase.proofRequirements.length : 0);
+  const requiredUiStateOk = requiredUiStateMissing.length === 0;
+  const surfaceMatched = phase.expectedRoute
+    ? (routeMatched || activeAppMatched)
+    : activeAppMatched;
+  const locallyValidated = (
+    (phase.minSignalMatches ?? 0) === 0
+      ? surfaceMatched || hasMeaningfulVisibleText(visibleText)
+      : validationMatches.length >= (phase.minSignalMatches ?? 0)
+  ) && surfaceMatched && proofRequirementsOk && requiredUiStateOk && forbiddenPhraseMatches.length === 0;
+  const quality = assessDemoScreenshotQuality({
+    phaseId: phase.id,
+    viewport: page.viewportSize() ?? { width: 1600, height: 1000 },
+    screenshot,
+    visibleText,
+    validationMatches,
+    minSignalMatches: phase.minSignalMatches ?? 0,
+    proofRequirements: phase.proofRequirements,
+    proofRequirementMatches,
+    requiredUiSignals: phase.requiredUiSignals,
+    routeMatched,
+    activeAppMatched,
+    uiSignals,
+    forbiddenToolCalls: stagehand.forbiddenToolCalls,
+    forbiddenPhrases: phase.forbiddenPhrases,
+    forbiddenPhraseMatches,
+  });
+
+  return {
+    screenshot,
+    currentUrl,
+    visibleText,
+    validationMatches,
+    proofRequirementMatches,
+    proofRequirementsOk,
+    requiredUiStateMissing,
+    requiredUiStateOk,
+    forbiddenPhraseMatches,
+    routeMatched,
+    activeAppMatched,
+    locallyValidated,
+    uiSignals,
+    stagehand,
+    quality,
+  };
+}
+
+async function captureRepairProof(page, brief, phasesDir) {
+  await waitForUiToSettle(page);
+  const validatePhase = buildPhasePlan(brief).find((phase) => phase.id === "validate-proof");
+  const repairPhase = {
+    ...validatePhase,
+    id: "repair-proof",
+    title: "Repair proof",
+  };
+  const screenshotPath = path.join(phasesDir, "04-repaired-result.png");
+  const assessment = await assessProofState(page, repairPhase, screenshotPath);
+  return {
+    ...assessment,
+    screenshot: {
+      path: screenshotPath,
+      ...assessment.screenshot,
+    },
+  };
+}
+
+function applyRepairProofAssessment(repair, domSuccess, assessment) {
+  repair.domSuccess = domSuccess;
+  repair.screenshot = assessment.screenshot;
+  repair.currentUrl = assessment.currentUrl;
+  repair.visibleText = assessment.visibleText;
+  repair.validationMatches = assessment.validationMatches;
+  repair.proofRequirementMatches = assessment.proofRequirementMatches;
+  repair.proofRequirementsOk = assessment.proofRequirementsOk;
+  repair.requiredUiStateMissing = assessment.requiredUiStateMissing;
+  repair.requiredUiStateOk = assessment.requiredUiStateOk;
+  repair.forbiddenPhraseMatches = assessment.forbiddenPhraseMatches;
+  repair.routeMatched = assessment.routeMatched;
+  repair.activeAppMatched = assessment.activeAppMatched;
+  repair.locallyValidated = assessment.locallyValidated;
+  repair.uiSignals = assessment.uiSignals;
+  repair.stagehand = assessment.stagehand;
+  repair.quality = assessment.quality;
+  repair.success = Boolean(domSuccess && assessment.locallyValidated && assessment.quality?.ok);
+  if (domSuccess && !repair.success) {
+    repair.failureReason = "repair proof did not pass the production screenshot quality gate";
+  }
+}
+
 async function runFeedbackRepair(page, brief, phasesDir) {
   const repair = {
     attempted: false,
     success: false,
+    domSuccess: false,
     draft: buildFeedbackRepairDraft(brief),
     steps: [],
     screenshot: null,
+    quality: null,
   };
 
   const composer = page.locator('[data-agent-surface="feedback-composer"]').first();
@@ -1916,27 +2044,27 @@ async function runFeedbackRepair(page, brief, phasesDir) {
   const createdTitleVisible = await page.getByText(repair.draft.title, { exact: false }).first().isVisible().catch(() => false);
   const threadVisible = await maybeVisible(page.locator('[data-agent-surface="feedback-thread"]'));
   const commentVisible = await page.getByText(repair.draft.comment, { exact: false }).first().isVisible().catch(() => false);
-  repair.success = createdTitleVisible && threadVisible && commentVisible;
+  const domSuccess = createdTitleVisible && threadVisible && commentVisible;
 
   if (repair.attempted) {
-    const screenshotPath = path.join(phasesDir, "04-repaired-result.png");
-    const screenshotMeta = await captureProofScreenshot(page, screenshotPath);
-    repair.screenshot = {
-      path: screenshotPath,
-      ...screenshotMeta,
-    };
+    const assessment = await captureRepairProof(page, brief, phasesDir);
+    applyRepairProofAssessment(repair, domSuccess, assessment);
+  } else {
+    repair.domSuccess = domSuccess;
   }
 
   return repair;
 }
 
-async function runAgentRepair(page, phasesDir) {
+async function runAgentRepair(page, brief, phasesDir) {
   const repair = {
     attempted: false,
     success: false,
+    domSuccess: false,
     draft: buildAgentRepairDraft(),
     steps: [],
     screenshot: null,
+    quality: null,
   };
 
   const dialog = page.locator('[data-agent-surface="agent-editor"]').first();
@@ -1954,14 +2082,10 @@ async function runAgentRepair(page, phasesDir) {
     && !/\/agents\/undefined(?:$|[?#])/.test(page.url());
 
   if (alreadyCreated) {
-    repair.success = true;
+    const domSuccess = true;
     repair.steps.push("reused-existing-agent-proof");
-    const screenshotPath = path.join(phasesDir, "04-repaired-result.png");
-    const screenshotMeta = await captureProofScreenshot(page, screenshotPath);
-    repair.screenshot = {
-      path: screenshotPath,
-      ...screenshotMeta,
-    };
+    const assessment = await captureRepairProof(page, brief, phasesDir);
+    applyRepairProofAssessment(repair, domSuccess, assessment);
     return repair;
   }
 
@@ -2017,15 +2141,13 @@ async function runAgentRepair(page, phasesDir) {
   const detailVisibleAfter = await maybeVisible(page.locator('[data-agent-surface="agent-detail-panel"]'));
   const invalidUrl = /\/agents\/undefined(?:$|[?#])/.test(page.url());
 
-  repair.success = !invalidUrl && createdNameVisibleAfter && (selectedRowVisibleAfter || detailVisibleAfter);
+  const domSuccess = !invalidUrl && createdNameVisibleAfter && (selectedRowVisibleAfter || detailVisibleAfter);
 
   if (repair.attempted) {
-    const screenshotPath = path.join(phasesDir, "04-repaired-result.png");
-    const screenshotMeta = await captureProofScreenshot(page, screenshotPath);
-    repair.screenshot = {
-      path: screenshotPath,
-      ...screenshotMeta,
-    };
+    const assessment = await captureRepairProof(page, brief, phasesDir);
+    applyRepairProofAssessment(repair, domSuccess, assessment);
+  } else {
+    repair.domSuccess = domSuccess;
   }
 
   return repair;
@@ -2039,83 +2161,11 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
       await waitForUiToSettle(page);
     }
 
-    const focusPhrases = normalizeArray([
-      ...(Array.isArray(phase.proofRequirements) ? phase.proofRequirements.flatMap((entry) => entry?.anyOf ?? []) : []),
-      ...(Array.isArray(phase.validationSignals) ? phase.validationSignals : []),
-    ], 12);
-    const screenshot = await captureProofScreenshot(page, screenshotPath, focusPhrases, {
-      requiredUiSignals: phase.requiredUiSignals,
+    return assessProofState(page, phase, screenshotPath, {
+      excludedAgentTools,
+      stagehandLogs,
+      stagehandLogCursor,
     });
-    const currentUrl = page.url();
-    const visibleText = await collectProofVisibleText(page, screenshot);
-    const validationMatches = collectValidationSignalMatches(visibleText, phase.validationSignals);
-    const proofRequirementMatches = collectProofRequirementMatches(visibleText, phase.proofRequirements);
-    const forbiddenPhraseMatches = collectForbiddenPhraseMatches(visibleText, phase.forbiddenPhrases);
-    const routeMatched = hasExpectedRoute(currentUrl, phase.expectedRoute);
-    const uiSignals = await collectPageUiSignals(page);
-    const phaseStagehandLogs = Array.isArray(stagehandLogs)
-      ? stagehandLogs.slice(stagehandLogCursor)
-      : [];
-    const stagehand = summarizeStagehandPhaseLogs(phaseStagehandLogs, excludedAgentTools);
-    const activeAppLabelMatched = phase.expectedAppLabel
-      ? normalizeTextForMatch(uiSignals.activeAppLabel) === normalizeTextForMatch(phase.expectedAppLabel)
-      : false;
-    const activeAppMatched = phase.expectedAppId
-      ? (
-        uiSignals.activeAppId === phase.expectedAppId
-        || activeAppLabelMatched
-        || (!uiSignals.activeAppId && proofRequirementMatches.length > 0 && validationMatches.length > 0)
-      )
-      : true;
-    const requiredUiStateMissing = (Array.isArray(phase.requiredUiSignals) ? phase.requiredUiSignals : [])
-      .map((entry) => String(entry || "").trim())
-      .filter(Boolean)
-      .filter((signalName) => !uiSignals?.[signalName]);
-    const proofRequirementsOk = proofRequirementMatches.length >= (Array.isArray(phase.proofRequirements) ? phase.proofRequirements.length : 0);
-    const requiredUiStateOk = requiredUiStateMissing.length === 0;
-    const surfaceMatched = phase.expectedRoute
-      ? (routeMatched || activeAppMatched)
-      : activeAppMatched;
-    const locallyValidated = (
-      (phase.minSignalMatches ?? 0) === 0
-        ? surfaceMatched || hasMeaningfulVisibleText(visibleText)
-        : validationMatches.length >= (phase.minSignalMatches ?? 0)
-    ) && surfaceMatched && proofRequirementsOk && requiredUiStateOk && forbiddenPhraseMatches.length === 0;
-    const quality = assessDemoScreenshotQuality({
-      phaseId: phase.id,
-      viewport: page.viewportSize() ?? { width: 1600, height: 1000 },
-      screenshot,
-      visibleText,
-      validationMatches,
-      minSignalMatches: phase.minSignalMatches ?? 0,
-      proofRequirements: phase.proofRequirements,
-      proofRequirementMatches,
-      requiredUiSignals: phase.requiredUiSignals,
-      routeMatched,
-      activeAppMatched,
-      uiSignals,
-      forbiddenToolCalls: stagehand.forbiddenToolCalls,
-      forbiddenPhrases: phase.forbiddenPhrases,
-      forbiddenPhraseMatches,
-    });
-
-    return {
-      screenshot,
-      currentUrl,
-      visibleText,
-      validationMatches,
-      proofRequirementMatches,
-      proofRequirementsOk,
-      requiredUiStateMissing,
-      requiredUiStateOk,
-      forbiddenPhraseMatches,
-      routeMatched,
-      activeAppMatched,
-      locallyValidated,
-      uiSignals,
-      stagehand,
-      quality,
-    };
   }
 
   async function captureAttempt({ instruction, screenshotName, maxSteps }) {
@@ -2554,7 +2604,7 @@ try {
   if (shouldAttemptFeedbackRepair(seededBrief)) {
     repair = await runFeedbackRepair(page, seededBrief, phasesDir);
   } else if (shouldAttemptAgentRepair(seededBrief)) {
-    repair = await runAgentRepair(page, phasesDir);
+    repair = await runAgentRepair(page, seededBrief, phasesDir);
   }
   const currentUrl = page.url();
   const visibleText = clipText(await page.locator("body").innerText().catch(() => ""), 2500);

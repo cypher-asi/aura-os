@@ -308,6 +308,62 @@ function isPublishedMedia(media) {
   return media?.status === "published" && Boolean(sanitizeText(media?.assetPath));
 }
 
+function collectEntryCommitShas(entry) {
+  const shas = new Set();
+  for (const item of Array.isArray(entry?.items) ? entry.items : []) {
+    for (const sha of Array.isArray(item?.commit_shas) ? item.commit_shas : []) {
+      const normalized = sanitizeText(sha);
+      if (normalized) {
+        shas.add(normalized);
+      }
+    }
+  }
+  return shas;
+}
+
+function normalizeTitleTokens(value) {
+  return sanitizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length >= 3);
+}
+
+function entriesHaveCommitOverlap(entry, previousEntry) {
+  const currentShas = collectEntryCommitShas(entry);
+  const previousShas = collectEntryCommitShas(previousEntry);
+  if (currentShas.size === 0 || previousShas.size === 0) {
+    return false;
+  }
+  return [...currentShas].some((sha) => previousShas.has(sha));
+}
+
+function entriesHaveCompatibleTitles(entry, previousEntry) {
+  const currentTitle = sanitizeText(entry?.title).toLowerCase();
+  const previousTitle = sanitizeText(previousEntry?.title).toLowerCase();
+  if (!currentTitle || !previousTitle) {
+    return false;
+  }
+  if (currentTitle.includes(previousTitle) || previousTitle.includes(currentTitle)) {
+    return true;
+  }
+
+  const currentTokens = new Set(normalizeTitleTokens(currentTitle));
+  const previousTokens = new Set(normalizeTitleTokens(previousTitle));
+  if (currentTokens.size === 0 || previousTokens.size === 0) {
+    return false;
+  }
+
+  const overlap = [...currentTokens].filter((token) => previousTokens.has(token)).length;
+  return overlap / Math.min(currentTokens.size, previousTokens.size) >= 0.6;
+}
+
+function canPreservePublishedMediaByBatch(entry, previousEntry) {
+  return entriesHaveCommitOverlap(entry, previousEntry)
+    || entriesHaveCompatibleTitles(entry, previousEntry);
+}
+
 function collectPublishedMedia(existingDocs) {
   const bySlotId = new Map();
   const byBatchId = new Map();
@@ -320,6 +376,7 @@ function collectPublishedMedia(existingDocs) {
 
       const record = {
         batchId: sanitizeText(entry.batch_id),
+        entry,
         media: entry.media,
       };
       const slotId = sanitizeText(entry.media.slotId);
@@ -342,8 +399,14 @@ function preserveExistingPublishedMedia(rendered, existingDocs = []) {
     ...rendered,
     entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry) => {
       const inferredMedia = entry?.media;
-      const previous = lookup.bySlotId.get(sanitizeText(inferredMedia?.slotId))
-        || lookup.byBatchId.get(sanitizeText(entry?.batch_id));
+      const slotPrevious = lookup.bySlotId.get(sanitizeText(inferredMedia?.slotId));
+      const batchPrevious = lookup.byBatchId.get(sanitizeText(entry?.batch_id));
+      const previous = slotPrevious
+        || (
+          batchPrevious && canPreservePublishedMediaByBatch(entry, batchPrevious.entry)
+            ? batchPrevious
+            : null
+        );
 
       if (!previous?.media) {
         return entry;

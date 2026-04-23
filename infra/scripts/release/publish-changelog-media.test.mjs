@@ -206,6 +206,7 @@ test("selectBestScreenshot prefers repair, then capture-proof, then validate-pro
     selectBestScreenshot({
       repair: {
         success: true,
+        quality: { ok: true },
         screenshot: { path: "/tmp/repaired.png" },
       },
       phases: [
@@ -215,6 +216,23 @@ test("selectBestScreenshot prefers repair, then capture-proof, then validate-pro
     {
       path: "/tmp/repaired.png",
       source: "repair",
+    },
+  );
+
+  assert.deepEqual(
+    selectBestScreenshot({
+      repair: {
+        success: true,
+        quality: { ok: false },
+        screenshot: { path: "/tmp/repaired.png" },
+      },
+      phases: [
+        { id: "capture-proof", success: true, screenshot: { path: "/tmp/capture.png" } },
+      ],
+    }),
+    {
+      path: "/tmp/capture.png",
+      source: "capture-proof",
     },
   );
 
@@ -504,6 +522,38 @@ test("resolveTargetChangelogDocs can target a historical changelog by version", 
   assert.equal(resolved.target.date, "2026-04-21");
   assert.equal(resolved.target.isLatest, false);
   assert.match(resolved.target.jsonPath, /2026-04-21\.json$/);
+});
+
+test("resolveTargetChangelogDocs validates date and version when both are supplied", () => {
+  const pagesDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-pages-date-version-"));
+  const channelDir = path.join(pagesDir, "changelog", "nightly");
+  const historyDir = path.join(channelDir, "history");
+  fs.mkdirSync(historyDir, { recursive: true });
+
+  const latestDoc = {
+    channel: "nightly",
+    date: "2026-04-22",
+    version: "0.1.0-nightly.325.1",
+  };
+  const historyDoc = {
+    channel: "nightly",
+    date: "2026-04-21",
+    version: "0.1.0-nightly.324.1",
+  };
+
+  fs.writeFileSync(path.join(channelDir, "latest.json"), `${JSON.stringify(latestDoc, null, 2)}\n`);
+  fs.writeFileSync(path.join(channelDir, "latest.md"), "# latest\n");
+  fs.writeFileSync(path.join(historyDir, "2026-04-21.json"), `${JSON.stringify(historyDoc, null, 2)}\n`);
+  fs.writeFileSync(path.join(historyDir, "2026-04-21.md"), "# history\n");
+
+  const resolved = resolveTargetChangelogDocs(channelDir, "2026-04-21", "0.1.0-nightly.324.1");
+  assert.equal(resolved.target.version, "0.1.0-nightly.324.1");
+  assert.equal(resolved.target.date, "2026-04-21");
+
+  assert.throws(
+    () => resolveTargetChangelogDocs(channelDir, "2026-04-22", "0.1.0-nightly.324.1"),
+    /does not match requested date 2026-04-22/,
+  );
 });
 
 test("publish script fixture mode keeps partial media success green and writes retry diagnostics", () => {
