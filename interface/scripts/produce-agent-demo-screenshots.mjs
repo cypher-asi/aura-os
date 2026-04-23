@@ -631,37 +631,6 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const notesEditor = page.locator('[data-agent-surface="notes-editor"]').first();
   const requiresSidekick = normalizeArray(options.requiredUiSignals).includes("sidekickVisible");
 
-  const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
-  if (isVisibleBox(textLocatorBox)) {
-    const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
-      minWidth: 960,
-      minHeight: 540,
-    });
-    const coverage = clipCoverageForViewport(viewport, clip);
-    if (coverage === null || coverage >= 0.08) {
-      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
-      return {
-        kind: "body-focus",
-        targets: [],
-        clip,
-      };
-    }
-  }
-
-  const textFocusedBox = await findTextFocusedSurfaceBox(page, focusPhrases);
-  if (isVisibleBox(textFocusedBox)) {
-    const clip = buildClipFromBounds(textFocusedBox, viewport, 28, {
-      minWidth: 960,
-      minHeight: 540,
-    });
-    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
-    return {
-      kind: textFocusedBox.targetName ? "main-panel-focus" : "body-focus",
-      targets: textFocusedBox.targetName ? [textFocusedBox.targetName] : [],
-      clip,
-    };
-  }
-
   if (requiresSidekick) {
     const requiredTargets = [];
     const mainPanelFocus = await findMainPanelProofFocus(page, mainPanel);
@@ -696,6 +665,37 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
         clip,
       };
     }
+  }
+
+  const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
+  if (isVisibleBox(textLocatorBox)) {
+    const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
+      minWidth: 960,
+      minHeight: 540,
+    });
+    const coverage = clipCoverageForViewport(viewport, clip);
+    if (coverage === null || coverage >= 0.08) {
+      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+      return {
+        kind: "body-focus",
+        targets: [],
+        clip,
+      };
+    }
+  }
+
+  const textFocusedBox = await findTextFocusedSurfaceBox(page, focusPhrases);
+  if (isVisibleBox(textFocusedBox)) {
+    const clip = buildClipFromBounds(textFocusedBox, viewport, 28, {
+      minWidth: 960,
+      minHeight: 540,
+    });
+    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+    return {
+      kind: textFocusedBox.targetName ? "main-panel-focus" : "body-focus",
+      targets: textFocusedBox.targetName ? [textFocusedBox.targetName] : [],
+      clip,
+    };
   }
 
   const focusedSurface = await firstVisibleBox([
