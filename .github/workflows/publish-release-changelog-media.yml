@@ -49,8 +49,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-release-changelog-media-${{ inputs.channel }}-${{ inputs.version || inputs.date || github.run_id }}
-  cancel-in-progress: true
+  group: changelog-media-${{ inputs.channel }}
+  cancel-in-progress: false
 
 jobs:
   publish-media:

@@ -44,8 +44,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: reconcile-release-changelog-${{ inputs.release_run_id || inputs.channel }}-${{ github.run_id }}
-  cancel-in-progress: true
+  group: changelog-media-${{ inputs.channel }}
+  cancel-in-progress: false
 
 jobs:
   reconcile:
