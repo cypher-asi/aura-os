@@ -1,3 +1,8 @@
+export const DEFAULT_DEMO_VIEWPORT = {
+  width: Math.max(1600, Number(process.env.AURA_DEMO_SCREENSHOT_VIEWPORT_WIDTH) || 3200),
+  height: Math.max(900, Number(process.env.AURA_DEMO_SCREENSHOT_VIEWPORT_HEIGHT) || 1800),
+};
+
 function createFeedbackItem({
   id,
   title,
@@ -852,10 +857,7 @@ function createProfile({
     authMode: "bootstrapped-demo-session",
     dataMode: "seeded-api-routes",
     entryPath,
-    viewport: {
-      width: 1600,
-      height: 1000,
-    },
+    viewport: { ...DEFAULT_DEMO_VIEWPORT },
     session: createSession(),
     seed: createCommonSeed(),
     steps,

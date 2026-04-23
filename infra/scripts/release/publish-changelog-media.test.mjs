@@ -342,8 +342,8 @@ test("composeBrandedScreenshotCard keeps output as a valid branded PNG", () => {
   const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
   const { PNG } = requireFromInterface("pngjs");
   const output = PNG.sync.read(fs.readFileSync(outputPath));
-  assert.equal(output.width, 320);
-  assert.equal(output.height, 213);
+  assert.equal(output.width, 3840);
+  assert.equal(output.height, 2160);
   assert.equal(fs.statSync(outputPath).size > 0, true);
 });
 
@@ -378,6 +378,31 @@ test("composeBrandedScreenshotCard lets widescreen screenshots dominate the canv
   const screenshotPath = path.join(rootDir, "screenshot.png");
   const outputPath = path.join(rootDir, "branded.png");
   writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+  writeSolidPng(screenshotPath, 2560, 1440, [240, 32, 32, 255]);
+
+  composeBrandedScreenshotCard({
+    repoDir: repoRoot,
+    backgroundPath,
+    screenshotPath,
+    outputPath,
+  });
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
+
+  assert.ok(redBounds);
+  assert.ok(redBounds.width >= 2500, `expected screenshot footprint to stay wide, got ${redBounds.width}px`);
+  assert.ok(redBounds.height >= 1400, `expected screenshot footprint to stay tall enough for dense UI, got ${redBounds.height}px`);
+});
+
+test("composeBrandedScreenshotCard does not upscale screenshots past their native resolution", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-no-upscale-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
   writeSolidPng(screenshotPath, 160, 90, [240, 32, 32, 255]);
 
   composeBrandedScreenshotCard({
@@ -393,7 +418,8 @@ test("composeBrandedScreenshotCard lets widescreen screenshots dominate the canv
   const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
 
   assert.ok(redBounds);
-  assert.ok(redBounds.width >= 250, `expected screenshot footprint to stay wide, got ${redBounds.width}px`);
+  assert.equal(redBounds.width, 160);
+  assert.equal(redBounds.height, 90);
 });
 
 test("composeBrandedScreenshotCard keeps a safety inset so product edges are not clipped by the frame", () => {

@@ -291,6 +291,27 @@ function getOpenAIImageSize() {
   return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_SIZE, "1536x1024");
 }
 
+function parseCanvasSize(value, fallback) {
+  const normalized = normalizeEnvChoice(value, "");
+  const matched = normalized.match(/^(\d{2,5})x(\d{2,5})$/i);
+  if (!matched) {
+    return fallback;
+  }
+  const width = Number(matched[1]);
+  const height = Number(matched[2]);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 256 || height < 256) {
+    return fallback;
+  }
+  return { width, height };
+}
+
+function getOutputCardSize() {
+  return parseCanvasSize(
+    process.env.AURA_CHANGELOG_MEDIA_OUTPUT_SIZE,
+    { width: 3840, height: 2160 },
+  );
+}
+
 function getOpenAIJudgeModel() {
   return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_JUDGE_MODEL, "gpt-4.1-mini");
 }
@@ -418,6 +439,30 @@ function drawRoundedRect(image, x, y, width, height, radius, rgba) {
 function drawRoundedImage(dest, source, x, y, width, height, radius) {
   const targetWidth = Math.max(1, Math.floor(width));
   const targetHeight = Math.max(1, Math.floor(height));
+  const scaleX = source.width / targetWidth;
+  const scaleY = source.height / targetHeight;
+  const directCopy = source.width === targetWidth && source.height === targetHeight;
+
+  const sample = (sourceX, sourceY) => {
+    const clampedX = Math.max(0, Math.min(source.width - 1, sourceX));
+    const clampedY = Math.max(0, Math.min(source.height - 1, sourceY));
+    const x0 = Math.floor(clampedX);
+    const y0 = Math.floor(clampedY);
+    const x1 = Math.min(source.width - 1, x0 + 1);
+    const y1 = Math.min(source.height - 1, y0 + 1);
+    const fx = clampedX - x0;
+    const fy = clampedY - y0;
+    const topLeft = ((y0 * source.width) + x0) * 4;
+    const topRight = ((y0 * source.width) + x1) * 4;
+    const bottomLeft = ((y1 * source.width) + x0) * 4;
+    const bottomRight = ((y1 * source.width) + x1) * 4;
+    return [0, 1, 2, 3].map((channel) => {
+      const top = (source.data[topLeft + channel] * (1 - fx)) + (source.data[topRight + channel] * fx);
+      const bottom = (source.data[bottomLeft + channel] * (1 - fx)) + (source.data[bottomRight + channel] * fx);
+      return Math.round((top * (1 - fy)) + (bottom * fy));
+    });
+  };
+
   for (let targetY = 0; targetY < targetHeight; targetY += 1) {
     for (let targetX = 0; targetX < targetWidth; targetX += 1) {
       const destX = Math.floor(x + targetX);
@@ -425,15 +470,18 @@ function drawRoundedImage(dest, source, x, y, width, height, radius) {
       if (!roundedRectContains(x, y, targetWidth, targetHeight, radius, destX, destY)) {
         continue;
       }
-      const srcX = Math.min(source.width - 1, Math.floor((targetX / targetWidth) * source.width));
-      const srcY = Math.min(source.height - 1, Math.floor((targetY / targetHeight) * source.height));
-      const srcIndex = ((srcY * source.width) + srcX) * 4;
-      blendPixel(dest, destX, destY, [
-        source.data[srcIndex],
-        source.data[srcIndex + 1],
-        source.data[srcIndex + 2],
-        source.data[srcIndex + 3],
-      ]);
+      const rgba = directCopy
+        ? (() => {
+          const srcIndex = ((targetY * source.width) + targetX) * 4;
+          return [
+            source.data[srcIndex],
+            source.data[srcIndex + 1],
+            source.data[srcIndex + 2],
+            source.data[srcIndex + 3],
+          ];
+        })()
+        : sample(((targetX + 0.5) * scaleX) - 0.5, ((targetY + 0.5) * scaleY) - 0.5);
+      blendPixel(dest, destX, destY, rgba);
     }
   }
 }
@@ -462,43 +510,49 @@ function drawFrameBorder(image, x, y, width, height, radius, rgba) {
 
 function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath, outputPath }) {
   const PNG = loadPng(repoDir);
-  const background = PNG.sync.read(fs.readFileSync(backgroundPath));
+  const backgroundSource = PNG.sync.read(fs.readFileSync(backgroundPath));
   const screenshot = PNG.sync.read(fs.readFileSync(screenshotPath));
+  const outputSize = getOutputCardSize();
+  const background = new PNG({ width: outputSize.width, height: outputSize.height });
+  drawRoundedImage(background, backgroundSource, 0, 0, outputSize.width, outputSize.height, 0);
   const screenshotAspect = screenshot.width / Math.max(1, screenshot.height);
-  const maxCardWidth = Math.min(Math.round(background.width * 0.93), 1440);
-  const maxCardHeight = Math.min(Math.round(background.height * 0.8), 860);
-  let cardWidth = maxCardWidth;
-  let cardHeight = Math.round(cardWidth / screenshotAspect);
-  if (cardHeight > maxCardHeight) {
-    cardHeight = maxCardHeight;
-    cardWidth = Math.round(cardHeight * screenshotAspect);
-  }
+  const maxCardWidth = Math.round(background.width * 0.94);
+  const maxCardHeight = Math.round(background.height * 0.86);
+  const screenshotInset = Math.max(24, Math.min(42, Math.round(Math.min(background.width, background.height) * 0.012)));
+  const maxScreenshotWidth = Math.max(1, maxCardWidth - (screenshotInset * 2));
+  const maxScreenshotHeight = Math.max(1, maxCardHeight - (screenshotInset * 2));
+  const screenshotScale = Math.min(
+    1,
+    maxScreenshotWidth / Math.max(1, screenshot.width),
+    maxScreenshotHeight / Math.max(1, screenshot.height),
+  );
+  const screenshotWidth = Math.max(1, Math.round(screenshot.width * screenshotScale));
+  const screenshotHeight = Math.max(1, Math.round(screenshotWidth / screenshotAspect));
+  const cardWidth = screenshotWidth + (screenshotInset * 2);
+  const cardHeight = screenshotHeight + (screenshotInset * 2);
   const cardX = Math.round((background.width - cardWidth) / 2);
   const cardY = Math.round((background.height - cardHeight) / 2) + Math.round(background.height * 0.02);
-  const outerRadius = 28;
-  const screenshotInset = Math.max(12, Math.min(18, Math.round(Math.min(cardWidth, cardHeight) * 0.018)));
+  const outerRadius = Math.max(30, Math.min(44, Math.round(Math.min(cardWidth, cardHeight) * 0.022)));
   const screenshotX = cardX + screenshotInset;
   const screenshotY = cardY + screenshotInset;
-  const screenshotWidth = Math.max(1, cardWidth - (screenshotInset * 2));
-  const screenshotHeight = Math.max(1, cardHeight - (screenshotInset * 2));
   const screenshotRadius = Math.max(18, outerRadius - 8);
 
-  drawRoundedRect(background, cardX - 34, cardY - 34, cardWidth + 68, cardHeight + 72, 44, [1, 8, 20, 138]);
-  drawRoundedRect(background, cardX - 20, cardY - 20, cardWidth + 40, cardHeight + 42, 36, [0, 190, 255, 24]);
-  drawRoundedRect(background, cardX - 12, cardY - 12, cardWidth + 24, cardHeight + 24, 32, [255, 255, 255, 20]);
-  drawRoundedRect(background, cardX - 6, cardY - 6, cardWidth + 12, cardHeight + 12, 30, [2, 6, 15, 218]);
+  drawRoundedRect(background, cardX - 68, cardY - 68, cardWidth + 136, cardHeight + 144, outerRadius + 20, [1, 8, 20, 138]);
+  drawRoundedRect(background, cardX - 40, cardY - 40, cardWidth + 80, cardHeight + 84, outerRadius + 12, [0, 190, 255, 24]);
+  drawRoundedRect(background, cardX - 20, cardY - 20, cardWidth + 40, cardHeight + 40, outerRadius + 6, [255, 255, 255, 20]);
+  drawRoundedRect(background, cardX - 10, cardY - 10, cardWidth + 20, cardHeight + 20, outerRadius + 2, [2, 6, 15, 218]);
   drawRoundedRect(background, cardX, cardY, cardWidth, cardHeight, outerRadius, [4, 9, 18, 246]);
-  drawRoundedRect(background, screenshotX - 1, screenshotY - 1, screenshotWidth + 2, screenshotHeight + 2, screenshotRadius + 1, [120, 228, 255, 42]);
+  drawRoundedRect(background, screenshotX - 2, screenshotY - 2, screenshotWidth + 4, screenshotHeight + 4, screenshotRadius + 2, [120, 228, 255, 42]);
   drawRoundedImage(background, screenshot, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius);
   drawFrameBorder(background, screenshotX, screenshotY, screenshotWidth, screenshotHeight, screenshotRadius, [115, 226, 255, 88]);
 
   // Deterministic Aura accent marks. These keep branding consistent without asking
   // the image model to render text or recreate product UI.
-  const accentY = Math.max(34, cardY - 54);
+  const accentY = Math.max(48, cardY - 88);
   for (let index = 0; index < 3; index += 1) {
-    drawRoundedRect(background, cardX + (index * 22), accentY, 12, 12, 6, index === 0 ? [0, 229, 185, 220] : [90, 205, 255, 160]);
+    drawRoundedRect(background, cardX + (index * 34), accentY, 18, 18, 9, index === 0 ? [0, 229, 185, 220] : [90, 205, 255, 160]);
   }
-  drawRoundedRect(background, cardX + 82, accentY + 4, 160, 4, 2, [130, 230, 255, 85]);
+  drawRoundedRect(background, cardX + 126, accentY + 7, 240, 6, 3, [130, 230, 255, 85]);
 
   ensureDir(path.dirname(outputPath));
   fs.writeFileSync(outputPath, PNG.sync.write(background));

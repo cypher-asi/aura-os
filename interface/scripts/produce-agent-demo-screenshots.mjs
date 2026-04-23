@@ -10,6 +10,7 @@ import { loadDemoScreenshotChangelog } from "./lib/demo-screenshot-changelog.mjs
 import { buildDemoAgentBrief } from "./lib/demo-agent-brief.mjs";
 import {
   applyDemoSeedPatch,
+  DEFAULT_DEMO_VIEWPORT,
   getDemoScreenshotProfile,
 } from "./lib/demo-screenshot-seeds.mjs";
 import { applyDemoSeedPlanToBrief, buildDemoSeedPlan } from "./lib/demo-seed-planner.mjs";
@@ -328,6 +329,21 @@ function clipCoverageForViewport(viewport, clip) {
   return (clip.width * clip.height) / viewportArea;
 }
 
+function getLargeProofCropSize(viewport) {
+  const preferredWidth = Math.min(
+    viewport.width,
+    Math.max(1440, Math.min(1920, Math.round(viewport.width * 0.5))),
+  );
+  const preferredHeight = Math.round(preferredWidth / TARGET_SCREENSHOT_ASPECT_RATIO);
+  return {
+    width: preferredWidth,
+    height: Math.min(
+      viewport.height,
+      Math.max(810, Math.min(1080, preferredHeight)),
+    ),
+  };
+}
+
 function buildClipFromBounds(bounds, viewport, padding = 24, options = {}) {
   if (!bounds) {
     return null;
@@ -402,7 +418,7 @@ async function unionClip(page, locators, padding = 24) {
     return null;
   }
 
-  const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
+  const viewport = page.viewportSize() ?? DEFAULT_DEMO_VIEWPORT;
   return buildClipFromBounds(unionBounds(boxes), viewport, padding);
 }
 
@@ -603,7 +619,8 @@ function shouldIncludeCompanionSurface(primaryBox, companionBox, viewport) {
 }
 
 async function captureProofScreenshot(page, outputPath = null, focusPhrases = [], options = {}) {
-  const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
+  const viewport = page.viewportSize() ?? DEFAULT_DEMO_VIEWPORT;
+  const largeProofCrop = getLargeProofCropSize(viewport);
   const dialogShot = await firstVisibleBox([
     { kind: "dialog", locator: page.getByRole("dialog"), padding: 24 },
     { kind: "agent-editor", locator: page.locator('[data-agent-surface="agent-editor"]'), padding: 24 },
@@ -670,8 +687,8 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
   if (isVisibleBox(textLocatorBox)) {
     const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
-      minWidth: 960,
-      minHeight: 540,
+      minWidth: largeProofCrop.width,
+      minHeight: largeProofCrop.height,
     });
     const coverage = clipCoverageForViewport(viewport, clip);
     if (coverage === null || coverage >= 0.08) {
@@ -687,8 +704,8 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const textFocusedBox = await findTextFocusedSurfaceBox(page, focusPhrases);
   if (isVisibleBox(textFocusedBox)) {
     const clip = buildClipFromBounds(textFocusedBox, viewport, 28, {
-      minWidth: 960,
-      minHeight: 540,
+      minWidth: largeProofCrop.width,
+      minHeight: largeProofCrop.height,
     });
     await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
@@ -1911,7 +1928,7 @@ async function assessProofState(page, phase, screenshotPath, {
   ) && surfaceMatched && proofRequirementsOk && requiredUiStateOk && forbiddenPhraseMatches.length === 0;
   const quality = assessDemoScreenshotQuality({
     phaseId: phase.id,
-    viewport: page.viewportSize() ?? { width: 1600, height: 1000 },
+    viewport: page.viewportSize() ?? DEFAULT_DEMO_VIEWPORT,
     screenshot,
     visibleText,
     validationMatches,
@@ -2512,7 +2529,7 @@ const stagehandLogs = [];
 const phases = buildPhasePlan(seededBrief);
 const stagehand = await buildStagehand(
   provider,
-  seededProfile.viewport ?? { width: 1600, height: 1000 },
+  seededProfile.viewport ?? DEFAULT_DEMO_VIEWPORT,
   cacheDir,
   (logLine) => {
     stagehandLogs.push(normalizeStagehandLogLine(logLine));
@@ -2525,7 +2542,7 @@ try {
   browser = await chromium.connectOverCDP(stagehand.connectURL());
   const context = browser.contexts()[0] ?? await browser.newContext({ viewport: seededProfile.viewport });
   const page = await context.newPage();
-  const viewport = seededProfile.viewport ?? { width: 1600, height: 1000 };
+  const viewport = seededProfile.viewport ?? DEFAULT_DEMO_VIEWPORT;
   await page.setViewportSize(viewport);
 
   page.on("console", (message) => {

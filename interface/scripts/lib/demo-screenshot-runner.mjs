@@ -2,6 +2,7 @@ import { chromium } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { installBootAuth, installSeedRoutes } from "./demo-browser-seed.mjs";
+import { DEFAULT_DEMO_VIEWPORT } from "./demo-screenshot-seeds.mjs";
 
 function parsePattern(pattern) {
   if (!pattern) return /.*/;
@@ -83,7 +84,7 @@ async function screenshotRegion(page, screenshot, outputPath) {
     height: Math.max(...boxes.map((box) => box.y + box.height)) - Math.min(...boxes.map((box) => box.y)),
   };
   const padding = expandPadding(screenshot.padding);
-  const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
+  const viewport = page.viewportSize() ?? DEFAULT_DEMO_VIEWPORT;
   const paddedClip = {
     x: Math.max(0, clip.x - padding.left),
     y: Math.max(0, clip.y - padding.top),
@@ -198,7 +199,7 @@ export async function captureSeededScreenshots({
   provider = "auto",
 }) {
   await fs.mkdir(outputDir, { recursive: true });
-  const viewport = profile.viewport ?? { width: 1600, height: 1000 };
+  const viewport = profile.viewport ?? DEFAULT_DEMO_VIEWPORT;
   const connection = provider === "browserbase" || (provider === "auto" && process.env.BROWSERBASE_API_KEY)
     ? await connectBrowserbase()
     : await connectLocal(viewport);
