@@ -2,20 +2,20 @@
   {
     "date": "2026-04-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.346.1",
-    "title": "Autonomous recovery, Debug app overhaul, and a calmer chat stream",
-    "intro": "A dense day across the stack: the dev loop learned to recover from rate limits and truncation failures on its own, the Debug app was rebuilt around projects with a proper sidekick, and the chat surface stopped jittering mid-stream. Desktop reliability, login polish, and the changelog media pipeline all got meaningful attention too.",
+    "version": "0.1.0-nightly.348.1",
+    "title": "Autonomous recovery, a rebuilt Debug workspace, and resilient release media",
+    "intro": "Today's nightly lands a deep rework of the Debug app around a project-first nav and sidekick inspector, a new autonomous-recovery pipeline that splits oversized tasks and survives provider rate limits, and a substantially hardened changelog media pipeline. Along the way, chat streaming, the login screen, and the Windows auto-updater all got meaningful reliability fixes.",
     "entryCount": 6,
     "highlights": [
-      "Dev loop auto-decomposes oversized tasks and honours provider Retry-After",
-      "Debug app rebuilt with project-first nav and a live sidekick",
+      "Debug app rebuilt around project-first nav and a sidekick inspector",
+      "Dev loop now auto-decomposes oversized tasks and honors provider Retry-After",
       "Windows auto-updater reliably hands off to NSIS",
-      "Logout no longer lands on a black-screen redirect loop",
-      "Chat streaming indicator pinned so content stops jittering"
+      "Logout no longer strands users on a black-screen redirect loop",
+      "Changelog media pipeline hardened with adaptive retries and OpenAI polish gate"
     ],
-    "rawCommitCount": 78,
-    "generatedAt": "2026-04-23T03:55:36.833Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.346.1",
+    "rawCommitCount": 82,
+    "generatedAt": "2026-04-23T05:01:20.513Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.348.1",
     "path": "history/2026-04-22.json"
   },
   {
