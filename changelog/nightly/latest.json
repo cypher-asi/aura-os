@@ -3247,7 +3247,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3284,7 +3284,9 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ]
+          ],
+          "updatedAt": "2026-04-23T01:57:29.949Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-debug-app-reorganized-around-projects-plus-chat-and-tool-output-"
         }
       },
       {
@@ -3345,7 +3347,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3361,7 +3363,9 @@
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
-          ]
+          ],
+          "updatedAt": "2026-04-23T02:01:53.714Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-stronger-borders-on-run-and-task-output-blocks"
         }
       },
       {
@@ -3415,7 +3419,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3430,7 +3434,9 @@
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ]
+          ],
+          "updatedAt": "2026-04-23T02:06:07.309Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-unified-chat-border-inside-sidekick-and-preview-overlays"
         }
       },
       {
@@ -3551,7 +3557,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "failed",
           "score": 5,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3590,7 +3596,9 @@
             "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
             "interface/src/hooks/use-cooldown-status.test.ts",
             "interface/src/hooks/use-cooldown-status.ts"
-          ]
+          ],
+          "updatedAt": "2026-04-23T02:10:16.875Z",
+          "error": "Error: Screenshot capture did not produce a passing summary for entry-autonomous-recovery-pipeline-windows-updater-fix-and-a-new-login"
         }
       }
     ],
