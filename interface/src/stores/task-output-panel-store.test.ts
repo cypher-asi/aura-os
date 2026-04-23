@@ -152,6 +152,47 @@ describe("task-output-panel-store", () => {
         "first reason",
       );
     });
+
+    it("stores a provider failure context on the entry", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore.getState().failTask("t1", "stream terminated", {
+        providerRequestId: "req_01ABC",
+        model: "claude-sonnet-4",
+        sseErrorType: "api_error",
+        messageId: "msg_01",
+      });
+      const entry = useTaskOutputPanelStore.getState().tasks[0];
+      expect(entry.failureContext?.providerRequestId).toBe("req_01ABC");
+      expect(entry.failureContext?.model).toBe("claude-sonnet-4");
+      expect(entry.failureContext?.sseErrorType).toBe("api_error");
+      expect(entry.failureContext?.messageId).toBe("msg_01");
+    });
+
+    it("collapses an all-empty provider context to undefined", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore.getState().failTask("t1", "stream terminated", {
+        providerRequestId: "   ",
+        model: "",
+        sseErrorType: undefined,
+      });
+      expect(
+        useTaskOutputPanelStore.getState().tasks[0].failureContext,
+      ).toBeUndefined();
+    });
+
+    it("does not clobber an existing provider context with undefined", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore.getState().failTask("t1", "first reason", {
+        providerRequestId: "req_first",
+      });
+      // Second failure (e.g. a synthesized event) has no context —
+      // the earlier live context should win rather than be dropped.
+      useTaskOutputPanelStore.getState().failTask("t1", "first reason");
+      expect(
+        useTaskOutputPanelStore.getState().tasks[0].failureContext
+          ?.providerRequestId,
+      ).toBe("req_first");
+    });
   });
 
   describe("dismissTask", () => {

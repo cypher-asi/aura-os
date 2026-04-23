@@ -9,6 +9,24 @@ const PERSIST_DEBOUNCE_MS = 150;
 
 export type PanelTaskStatus = "active" | "completed" | "failed" | "interrupted";
 
+/**
+ * Structured provider context extracted from a `task_failed` event's
+ * sibling fields (or parsed from the reason string by the server's
+ * `extract_task_failure_context`). Rendered by the UI as a compact
+ * `req=… · model=… · type=…` label below the failure reason so
+ * operators can correlate with provider/router logs without parsing
+ * the reason string.
+ *
+ * All fields are optional; an entry with none of them is equivalent to
+ * `undefined` on the panel entry and suppresses the label entirely.
+ */
+export interface PanelTaskFailureContext {
+  providerRequestId?: string;
+  model?: string;
+  sseErrorType?: string;
+  messageId?: string;
+}
+
 export interface PanelTaskEntry {
   taskId: string;
   title: string;
@@ -24,6 +42,46 @@ export interface PanelTaskEntry {
    * a completion-gate rejection apart from a real crash.
    */
   failureReason?: string;
+  /**
+   * Structured provider context. See {@link PanelTaskFailureContext}.
+   * Only populated on the live WS path (today); reload path leaves it
+   * undefined because the server persists only the reason string into
+   * `execution_notes` — future work could restore it from a structured
+   * column.
+   */
+  failureContext?: PanelTaskFailureContext;
+}
+
+/**
+ * Normalise a {@link PanelTaskFailureContext} candidate from either a
+ * live `failTask` call or a restored localStorage blob:
+ *   - trim strings
+ *   - drop empty strings
+ *   - return `undefined` when no field is populated (keeps the entry
+ *     shape minimal so rows without provider context don't trip the
+ *     "render the label" check below)
+ */
+function sanitizeFailureContext(
+  ctx: PanelTaskFailureContext | undefined | null,
+): PanelTaskFailureContext | undefined {
+  if (!ctx) return undefined;
+  const pick = (v: unknown): string | undefined =>
+    typeof v === "string" && v.trim().length > 0 ? v.trim() : undefined;
+  const next: PanelTaskFailureContext = {
+    providerRequestId: pick((ctx as PanelTaskFailureContext).providerRequestId),
+    model: pick((ctx as PanelTaskFailureContext).model),
+    sseErrorType: pick((ctx as PanelTaskFailureContext).sseErrorType),
+    messageId: pick((ctx as PanelTaskFailureContext).messageId),
+  };
+  if (
+    !next.providerRequestId &&
+    !next.model &&
+    !next.sseErrorType &&
+    !next.messageId
+  ) {
+    return undefined;
+  }
+  return next;
 }
 
 function loadPersistedTasks(): PanelTaskEntry[] {
@@ -48,6 +106,7 @@ function loadPersistedTasks(): PanelTaskEntry[] {
             typeof t.failureReason === "string" && t.failureReason.length > 0
               ? t.failureReason
               : undefined,
+          failureContext: sanitizeFailureContext(t.failureContext),
         }));
     }
   } catch { /* ignore */ }
@@ -95,8 +154,17 @@ interface TaskOutputPanelState {
    * `null` / `undefined` leaves any previously-captured reason
    * untouched, so a synthetic `task_failed` with no reason field can't
    * wipe out a reason an earlier event already recorded.
+   *
+   * `context` carries the structured provider fields forwarded by the
+   * server on the `task_failed` event. Passing `undefined` leaves any
+   * previously-captured context untouched; passing an object with at
+   * least one populated field replaces the existing context.
    */
-  failTask: (taskId: string, reason?: string | null) => void;
+  failTask: (
+    taskId: string,
+    reason?: string | null,
+    context?: PanelTaskFailureContext,
+  ) => void;
   dismissTask: (taskId: string) => void;
   clearCompleted: () => void;
   markAllCompleted: () => void;
@@ -189,11 +257,12 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
     }));
   },
 
-  failTask: (taskId, reason) => {
+  failTask: (taskId, reason, context) => {
     const trimmed =
       typeof reason === "string" && reason.trim().length > 0
         ? reason.trim()
         : null;
+    const nextContext = sanitizeFailureContext(context);
     set((s) => ({
       tasks: s.tasks.map((t) =>
         t.taskId === taskId
@@ -202,6 +271,7 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
               status: "failed" as const,
               updatedAt: Date.now(),
               failureReason: trimmed ?? t.failureReason,
+              failureContext: nextContext ?? t.failureContext,
             }
           : t,
       ),

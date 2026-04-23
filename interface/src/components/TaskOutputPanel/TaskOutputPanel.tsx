@@ -307,6 +307,7 @@ export function RunSidekickPane() {
                   title={entry.title}
                   status={entry.status}
                   failureReason={entry.failureReason}
+                  failureContext={entry.failureContext}
                 />
               ),
             )

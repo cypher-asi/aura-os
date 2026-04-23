@@ -182,4 +182,63 @@ describe("CompletedTaskOutput", () => {
 
     expect(screen.queryByText("should not appear")).not.toBeInTheDocument();
   });
+
+  it("renders a compact provider context label when failureContext is present", () => {
+    render(
+      <CompletedTaskOutput
+        taskId="task-1"
+        projectId="proj-1"
+        title="My task"
+        status="failed"
+        failureReason="stream terminated"
+        failureContext={{
+          providerRequestId: "req_01ABC",
+          model: "claude-sonnet-4",
+          sseErrorType: "api_error",
+          messageId: "msg_01",
+        }}
+      />,
+    );
+    expandRow();
+
+    const label = screen.getByTestId("task-failure-context");
+    expect(label).toHaveTextContent("req=req_01ABC · claude-sonnet-4 · api_error");
+    // message_id is intentionally excluded from the compact label (it's
+    // an internal provider id; request_id is the operator-facing one).
+    expect(label).not.toHaveTextContent("msg_01");
+  });
+
+  it("omits the provider context label when no fields are populated", () => {
+    render(
+      <CompletedTaskOutput
+        taskId="task-1"
+        projectId="proj-1"
+        title="My task"
+        status="failed"
+        failureReason="stream terminated"
+        failureContext={{}}
+      />,
+    );
+    expandRow();
+
+    expect(screen.queryByTestId("task-failure-context")).not.toBeInTheDocument();
+  });
+
+  it("renders a partial provider context label when only one field is set", () => {
+    render(
+      <CompletedTaskOutput
+        taskId="task-1"
+        projectId="proj-1"
+        title="My task"
+        status="failed"
+        failureReason="stream terminated"
+        failureContext={{ providerRequestId: "req_only" }}
+      />,
+    );
+    expandRow();
+
+    expect(screen.getByTestId("task-failure-context")).toHaveTextContent(
+      "req=req_only",
+    );
+  });
 });

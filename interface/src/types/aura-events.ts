@@ -297,6 +297,23 @@ export type AuraEvent = AuraEventBase & (
       duration_ms?: number;
       phase?: string;
       build_fix_attempts?: number;
+      /**
+       * Structured provider context plumbed from aura-harness
+       * `StreamAccumulator::into_response` through the server's
+       * `extract_task_failure_context` helper. Rendered as a compact
+       * `req=… · model=… · sse_error_type=…` label underneath the
+       * failure reason so operators can correlate with provider/router
+       * logs without parsing the reason string.
+       *
+       * All four fields are optional; a task_failed event with none of
+       * them (e.g. a synthesized "Automaton finished without emitting
+       * task_completed") renders just the reason, preserving the
+       * existing UX for failures that don't have an upstream context.
+       */
+      provider_request_id?: string;
+      model?: string;
+      sse_error_type?: string;
+      message_id?: string;
     } }
   | { type: EventType.TaskRetrying; content: {
       task_id: string;
@@ -335,7 +352,25 @@ export type AuraEvent = AuraEventBase & (
       n_test_steps: number;
       n_format_steps: number;
       n_lint_steps: number;
+      /**
+       * Cumulative telemetry: distinct `write_file` / `edit_file`
+       * tool calls the harness emitted with a missing or empty
+       * `path` input over the life of this task, de-duplicated
+       * across event phases. Not the gate signal — runs that misfire
+       * but then recover by re-issuing the call with a real path
+       * still bump this counter, so it's meant for "how often does
+       * the automaton misfire" analytics rather than pass/fail logic.
+       */
       n_empty_path_writes: number;
+      /**
+       * Gate signal: empty-path misfires that were still
+       * unreconciled at `task_done` time. Zero means the automaton
+       * either never misfired or always recovered by re-issuing the
+       * call with a real path. The server rejects the completion
+       * iff this is non-zero. Optional on the wire so older servers
+       * without the outstanding-writes tracker still parse cleanly.
+       */
+      n_outstanding_empty_path_writes?: number;
       recovery_checkpoint: string;
     } }
 
