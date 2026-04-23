@@ -199,6 +199,7 @@ test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
       proofSurface: "Feedback board thread view",
       captureHint: "Open a feedback thread and keep the comments column visible.",
       visibleProof: ["Feedback", "Comments"],
+      presentationMode: "branded_card",
     },
   });
 
@@ -208,6 +209,24 @@ test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
   assert.match(prompt, /Visible proof to keep on screen: Feedback; Comments/);
   assert.match(prompt, /Capture guidance: Open a feedback thread and keep the comments column visible\./);
   assert.match(prompt, /leave the clearest proof visible/);
+});
+
+test("buildEntryPrompt uses contextual proof guidance for micro-ui entries", () => {
+  const prompt = buildEntryPrompt({
+    title: "GPT-5.5 in the model picker",
+    summary: "The chat composer now includes GPT-5.5 in the model dropdown.",
+    items: [{ text: "Open the model picker and keep GPT-5.5 visible." }],
+    media: {
+      presentationMode: "raw_contextual",
+      proofSurface: "Chat model picker",
+      captureHint: "Keep the composer and picker visible in one frame.",
+      visibleProof: ["GPT-5.5", "Model picker"],
+    },
+  });
+
+  assert.match(prompt, /Capture mode: raw contextual proof screenshot\./);
+  assert.match(prompt, /zoom the real app UI before capture/i);
+  assert.match(prompt, /Avoid menu-only or widget-only crops/);
 });
 
 test("buildEntryPrompt adds targeted retry guidance for failed media slots", () => {

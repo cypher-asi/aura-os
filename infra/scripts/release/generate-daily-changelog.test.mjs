@@ -301,6 +301,7 @@ test("mergeMediaDecision lets Anthropic inference override the heuristic and pre
     confidence: "high",
     category: "product_surface",
     rationale: "The feature adds a visible option to the chat model picker.",
+    presentationMode: "raw_contextual",
     proofSurface: "Chat model picker",
     captureHint: "Open the chat model picker and keep GPT-5.5 visible.",
     visibleProof: ["GPT-5.5", "Model picker"],
@@ -310,6 +311,7 @@ test("mergeMediaDecision lets Anthropic inference override the heuristic and pre
   assert.equal(merged.status, "pending");
   assert.equal(merged.inferenceSource, "anthropic");
   assert.equal(merged.inferenceCategory, "product_surface");
+  assert.equal(merged.presentationMode, "raw_contextual");
   assert.equal(merged.proofSurface, "Chat model picker");
   assert.equal(merged.captureHint, "Open the chat model picker and keep GPT-5.5 visible.");
   assert.deepEqual(merged.visibleProof, ["GPT-5.5", "Model picker"]);
@@ -359,6 +361,7 @@ test("annotateRenderedEntriesWithMedia accepts injected Anthropic media decision
         confidence: "high",
         category: "release_infra",
         rationale: "Release hardening is tooling, not a product screenshot target.",
+        presentationMode: "none",
         proofSurface: "",
         captureHint: "",
         visibleProof: [],
@@ -368,6 +371,7 @@ test("annotateRenderedEntriesWithMedia accepts injected Anthropic media decision
         confidence: "high",
         category: "product_surface",
         rationale: "GPT-5.5 is a visible model-picker option.",
+        presentationMode: "raw_contextual",
         proofSurface: "Chat model picker",
         captureHint: "Open the chat model picker and keep GPT-5.5 visible.",
         visibleProof: ["GPT-5.5", "Model"],
@@ -377,9 +381,33 @@ test("annotateRenderedEntriesWithMedia accepts injected Anthropic media decision
 
   assert.equal(annotated.entries[0].media.requested, false);
   assert.equal(annotated.entries[0].media.inferenceCategory, "release_infra");
+  assert.equal(annotated.entries[0].media.presentationMode, "none");
   assert.equal(annotated.entries[1].media.requested, true);
+  assert.equal(annotated.entries[1].media.presentationMode, "raw_contextual");
   assert.equal(annotated.entries[1].media.proofSurface, "Chat model picker");
   assert.deepEqual(annotated.entries[1].media.visibleProof, ["GPT-5.5", "Model"]);
+});
+
+test("inferEntryMediaHeuristic defaults micro-ui stories to raw contextual screenshots", () => {
+  const media = inferEntryMediaHeuristic(
+    {
+      batch_id: "entry-1",
+      title: "GPT-5.5 in the model picker",
+      summary: "The chat composer now includes GPT-5.5 in the model dropdown.",
+      items: [
+        {
+          text: "Open the chat model picker and verify GPT-5.5 is selectable.",
+          commit_shas: ["abc1234"],
+        },
+      ],
+    },
+    new Map([
+      ["abc1234", { files: ["interface/src/components/ChatInputBar/ChatInputBar.tsx"] }],
+    ]),
+  );
+
+  assert.equal(media.requested, true);
+  assert.equal(media.presentationMode, "raw_contextual");
 });
 
 test("buildMediaPlaceholderBlock emits hidden markers only for requested slots", () => {

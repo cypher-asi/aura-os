@@ -1208,6 +1208,8 @@ async function generateAnthropicBrief({ prompt, changelogDoc, changedFiles, apps
           "Infer the target app and proof screen primarily from the changed-file evidence, not just the story text.",
           "This capture system is desktop-only. Do not propose mobile viewport or mobile-shell flows.",
           "The runner disables direct goto navigation. Plan around visible app controls, tabs, launchers, and labeled rows instead of URL jumps.",
+          "For tiny UI changes like menus, pickers, selectors, settings rows, or small dialogs, prefer a contextual proof screen that keeps the parent surface visible instead of an isolated widget crop.",
+          "If the proof text would otherwise be too small, prefer zooming the real UI state before capture over losing context.",
           "Return JSON only with keys: title, story, targetAppId, confidence, rationale, successChecklist, setupPlan, systemPrompt, setupInstruction, openAppInstruction, proofInstruction, validationSignals, proofRequirements, requiredUiSignals, forbiddenPhrases, validationInstruction, interactionInstruction, desktopOnly.",
           "Only use a targetAppId from the supplied app catalog, or null if uncertain.",
           "Favor the clearest user-visible proof screen over generic app overviews.",

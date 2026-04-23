@@ -344,6 +344,74 @@ function getLargeProofCropSize(viewport) {
   };
 }
 
+async function findUiSignalProofClip(page, viewport, requiredUiSignals = []) {
+  const normalizedSignals = normalizeArray(requiredUiSignals);
+  const needsModelPicker = normalizedSignals.includes("modelPickerVisible");
+  const needsChatComposer = normalizedSignals.includes("chatComposerVisible");
+
+  if (needsModelPicker) {
+    const modelPicker = page.locator('[data-agent-surface="model-picker"]').first();
+    const modelTrigger = page.locator('[data-agent-action="open-model-picker"]').first();
+    const chatInputBar = page.locator('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"]').first();
+    const [pickerBox, triggerBox, chatInputBarBox] = await Promise.all([
+      modelPicker.boundingBox().catch(() => null),
+      modelTrigger.boundingBox().catch(() => null),
+      chatInputBar.boundingBox().catch(() => null),
+    ]);
+
+    if (isVisibleBox(pickerBox) && isVisibleBox(triggerBox) && isVisibleBox(chatInputBarBox)) {
+      const pickerCluster = unionBounds([pickerBox, triggerBox]);
+      const leftInset = Math.min(420, Math.max(260, chatInputBarBox.width * 0.36));
+      const bounds = {
+        x: Math.max(chatInputBarBox.x, pickerCluster.x - leftInset),
+        y: Math.max(0, pickerCluster.y - 56),
+        width: Math.min(
+          viewport.width,
+          (chatInputBarBox.x + chatInputBarBox.width + 24),
+        ) - Math.max(chatInputBarBox.x, pickerCluster.x - leftInset),
+        height: Math.min(
+          viewport.height,
+          (chatInputBarBox.y + chatInputBarBox.height + 44),
+        ) - Math.max(0, pickerCluster.y - 56),
+      };
+      const clip = buildClipFromBounds(bounds, viewport, 0, {
+        minWidth: Math.min(viewport.width, 1120),
+        minHeight: Math.min(viewport.height, 640),
+      });
+      return {
+        kind: "surface-union",
+        targets: ["chat-input-bar", "model-picker"],
+        clip,
+      };
+    }
+
+    return null;
+  }
+
+  if (needsChatComposer) {
+    const chatInputBar = page.locator('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"]').first();
+    const chatInputBarBox = await chatInputBar.boundingBox().catch(() => null);
+    if (isVisibleBox(chatInputBarBox)) {
+      const clip = buildClipFromBounds(chatInputBarBox, viewport, {
+        top: 80,
+        right: 24,
+        bottom: 40,
+        left: 24,
+      }, {
+        minWidth: Math.min(viewport.width, 1240),
+        minHeight: Math.min(viewport.height, 700),
+      });
+      return {
+        kind: "surface-union",
+        targets: ["chat-input-bar"],
+        clip,
+      };
+    }
+  }
+
+  return null;
+}
+
 function buildClipFromBounds(bounds, viewport, padding = 24, options = {}) {
   if (!bounds) {
     return null;
@@ -684,6 +752,12 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
     }
   }
 
+  const uiSignalProof = await findUiSignalProofClip(page, viewport, options.requiredUiSignals);
+  if (uiSignalProof?.clip) {
+    await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: uiSignalProof.clip });
+    return uiSignalProof;
+  }
+
   const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
   if (isVisibleBox(textLocatorBox)) {
     const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
@@ -846,6 +920,8 @@ function resolveScreenshotTargetLocators(page, screenshot) {
   addTarget("agent-list", page.locator('[data-agent-surface="agent-list"]'));
   addTarget("agent-chat-panel", page.locator('[data-agent-surface="agent-chat-panel"]'));
   addTarget("agent-detail-panel", page.locator('[data-agent-surface="agent-detail-panel"]'));
+  addTarget("chat-input-bar", page.locator('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"]'));
+  addTarget("model-picker", page.locator('[data-agent-surface="model-picker"]'));
   addTarget("main-panel", page.locator(MAIN_PANEL_SELECTOR));
   addTarget("sidekick-header", page.locator(SIDEKICK_HEADER_SELECTOR));
   addTarget("sidekick-panel", page.locator(SIDEKICK_PANEL_SELECTOR));
@@ -880,6 +956,7 @@ function buildPhasePlan(brief) {
   const validationSignals = Array.isArray(brief.validationSignals) ? brief.validationSignals : [];
   const proofRequirements = Array.isArray(brief.proofRequirements) ? brief.proofRequirements : [];
   const requiredUiSignals = Array.isArray(brief.requiredUiSignals) ? brief.requiredUiSignals : [];
+  const setupRequiredUiSignals = requiredUiSignals.filter((signal) => signal !== "modelPickerVisible");
   const forbiddenPhrases = Array.isArray(brief.forbiddenPhrases) ? brief.forbiddenPhrases : [];
   const minSignalMatches = proofRequirements.length > 0
     ? (validationSignals.length > 0 ? 1 : 0)
@@ -903,8 +980,8 @@ function buildPhasePlan(brief) {
         ...(Array.isArray(brief.validationSignals) ? brief.validationSignals.slice(0, 2) : []),
       ]),
       minSignalMatches: 1,
-      proofRequirements,
-      requiredUiSignals,
+      proofRequirements: [],
+      requiredUiSignals: setupRequiredUiSignals,
       forbiddenPhrases,
       expectedRoute,
       expectedAppId: brief.targetAppId || null,
@@ -984,6 +1061,103 @@ async function maybeClick(locator) {
   }
   await locator.first().click({ force: true });
   return true;
+}
+
+async function collectVisibleModelOptionLabels(page) {
+  const modelPicker = page.locator('[data-agent-surface="model-picker"]').first();
+  const optionLocator = modelPicker.locator('button, [role="menuitem"], [role="option"]');
+  const count = await optionLocator.count().catch(() => 0);
+  const labels = [];
+  for (let index = 0; index < Math.min(count, 24); index += 1) {
+    const option = optionLocator.nth(index);
+    const visible = await option.isVisible().catch(() => false);
+    if (!visible) {
+      continue;
+    }
+    const label = clipText(await option.innerText().catch(() => ""), 120)
+      .replace(/\s+/g, " ")
+      .trim();
+    if (label) {
+      labels.push(label);
+    }
+  }
+  return labels;
+}
+
+async function ensureModelPickerVisible(page, requiredPhrases = []) {
+  const trigger = page.locator('[data-agent-action="open-model-picker"]').first();
+  const menu = page.locator('[data-agent-surface="model-picker"]').first();
+  if (!await maybeVisible(trigger)) {
+    return false;
+  }
+
+  const normalizedRequiredPhrases = normalizeArray(requiredPhrases)
+    .map((phrase) => normalizeTextForMatch(phrase))
+    .filter(Boolean);
+
+  const menuContainsRequiredPhrase = async () => {
+    const labels = await collectVisibleModelOptionLabels(page);
+    if (!labels.length) {
+      return false;
+    }
+    if (!normalizedRequiredPhrases.length) {
+      return true;
+    }
+    const normalizedLabels = labels.map((label) => normalizeTextForMatch(label));
+    return normalizedRequiredPhrases.some((phrase) =>
+      normalizedLabels.some((label) => label.includes(phrase)));
+  };
+
+  const expandIfNeeded = async () => {
+    const showAllButton = page.getByRole("button", { name: /show all models/i }).first();
+    if (await maybeVisible(showAllButton)) {
+      await showAllButton.click({ force: true });
+      await waitForUiCheckpoint(page);
+    }
+  };
+
+  const triggerExpanded = async () =>
+    String(await trigger.getAttribute("aria-expanded").catch(() => "") || "").toLowerCase() === "true";
+
+  if (!await triggerExpanded()) {
+    await trigger.click({ force: true });
+    await waitForUiCheckpoint(page);
+  }
+
+  await expandIfNeeded();
+
+  let menuVisible = await maybeVisible(menu);
+  let phraseVisible = await menuContainsRequiredPhrase();
+
+  if (!menuVisible || (normalizedRequiredPhrases.length > 0 && !phraseVisible)) {
+    await trigger.click({ force: true }).catch(() => {});
+    await waitForUiCheckpoint(page);
+    if (!await triggerExpanded()) {
+      await trigger.click({ force: true }).catch(() => {});
+      await waitForUiCheckpoint(page);
+    }
+    await expandIfNeeded();
+    menuVisible = await maybeVisible(menu);
+    phraseVisible = await menuContainsRequiredPhrase();
+  }
+
+  return menuVisible && (normalizedRequiredPhrases.length === 0 || phraseVisible);
+}
+
+async function ensureRequiredUiSignalsVisible(page, phase) {
+  const requiredUiSignals = normalizeArray(phase?.requiredUiSignals);
+  if (!requiredUiSignals.includes("modelPickerVisible")) {
+    return;
+  }
+
+  const requiredPhrases = normalizeArray(
+    Array.isArray(phase?.proofRequirements)
+      ? phase.proofRequirements.flatMap((entry) => entry?.anyOf ?? [])
+      : [],
+    12,
+  );
+
+  await ensureModelPickerVisible(page, requiredPhrases);
 }
 
 async function collectBootstrapAssessment(page) {
@@ -1284,6 +1458,11 @@ async function collectPageUiSignals(page) {
     const visibleVersionedOptionCount = visibleInteractiveTexts.filter((text) =>
       /[A-Za-z]/.test(text) && /\d/.test(text)
     ).length;
+    const modelPickerExpanded = Array.from(document.querySelectorAll('[data-agent-action="open-model-picker"]'))
+      .some((node) => isVisible(node) && String(node.getAttribute("aria-expanded") || "").toLowerCase() === "true");
+    const visibleModelPickerOptionCount = Array.from(
+      document.querySelectorAll('[data-agent-surface="model-picker"] button, [data-agent-surface="model-picker"] [role="menuitem"], [data-agent-surface="model-picker"] [role="option"]'),
+    ).filter((node) => isVisible(node)).length;
     const mobileLayoutSelectors = [
       '[aria-label="Feedback filters"]',
       '[aria-label="Feed filters"]',
@@ -1345,9 +1524,8 @@ async function collectPageUiSignals(page) {
       feedbackThreadVisible: isVisible('[data-agent-surface="feedback-thread"]'),
       notesEditorVisible: isVisible('[data-agent-surface="notes-editor"]'),
       chatComposerVisible: isVisible('[data-agent-surface="chat-input-bar"], [data-testid="chat-input-bar"], textarea[placeholder="What do you want to create?"]'),
-      modelPickerVisible: isVisible('[data-agent-surface="model-picker"]')
-        || visibleInteractiveTexts.some((text) => /show all models/i.test(text))
-        || visibleVersionedOptionCount >= 3,
+      modelPickerVisible: modelPickerExpanded
+        && (isVisible('[data-agent-surface="model-picker"]') || visibleModelPickerOptionCount > 0 || visibleVersionedOptionCount >= 3),
       sidekickVisible: isVisible('[data-agent-surface="sidekick-panel"], [aria-label="Sidekick panel"]'),
     };
   }).catch(() => ({
@@ -1884,6 +2062,7 @@ async function assessProofState(page, phase, screenshotPath, {
   stagehandLogs = [],
   stagehandLogCursor = 0,
 } = {}) {
+  await ensureRequiredUiSignalsVisible(page, phase);
   const focusPhrases = normalizeArray([
     ...(Array.isArray(phase.proofRequirements) ? phase.proofRequirements.flatMap((entry) => entry?.anyOf ?? []) : []),
     ...(Array.isArray(phase.validationSignals) ? phase.validationSignals : []),

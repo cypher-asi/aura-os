@@ -236,6 +236,10 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
   const uiFacingRatio = files.length > 0 ? uiFacingFileCount / files.length : 0;
   const hasSpecificUiSurfaceKeyword = /(feedback|agent|chat|notes|editor|panel|board|thread|modal|launcher|screen|window|settings|feed|timeline|preview|toolbar|sidekick|debug app|task panel|message bubble)/.test(textHaystack);
   const hasGenericUiKeyword = /(desktop|app|tab|skill|model)/.test(textHaystack);
+  const hasMicroUiKeyword = /(picker|dropdown|selector|menu|option|toggle|switch|checkbox|radio|chip|popover|tooltip|dialog|modal|composer|input bar|permission|permissions)/.test(textHaystack)
+    || files.some((file) => /(ChatInputBar|Dropdown|Selector|Modal|Popover|Tooltip|Permission|Settings)/i.test(file));
+  const hasLargeSurfaceKeyword = /(board|thread|feed|timeline|panel|screen|window|launcher|preview|sidekick|editor|notes|debug app|task panel|message bubble)/.test(textHaystack)
+    || files.some((file) => /(MainPanel|Sidekick|Timeline|Feed|Board|Editor|Window|Screen|Preview)/i.test(file));
   const hasUiSurfaceKeyword = hasSpecificUiSurfaceKeyword || hasGenericUiKeyword;
   const hasHeadlineStrongInfraKeyword = /(runtime config|harness|plumbing|pipeline|recovery|heuristic|analyzer|domain event|broadcast|ingestion|preflight|kill switch|retry budget|task state|server handler)/.test(headlineHaystack);
   const hasWeakInfraKeyword = /(config|environment|env\b|flag|toggle|token|secret)/.test(textHaystack);
@@ -307,6 +311,16 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
   const slug = slugify(entry?.title || batchId || "entry");
   const slotId = `${batchId || "entry"}-${slug || "media"}`;
   const alt = `${sanitizeText(entry?.title || "Changelog entry")} screenshot`;
+  const presentationMode = normalizeMediaPresentationMode(
+    requested
+      ? (
+        hasMicroUiKeyword && !hasLargeSurfaceKeyword
+          ? "raw_contextual"
+          : "branded_card"
+      )
+      : "none",
+    { requested },
+  );
 
   return {
     requested,
@@ -319,6 +333,7 @@ function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryB
     slotId,
     slug,
     alt,
+    presentationMode,
     files: files.slice(0, 24),
   };
 }
@@ -329,6 +344,17 @@ function normalizeVisibleProof(values, limit = 6) {
       .map((value) => sanitizeText(value))
       .filter((value) => value.length >= 2 && value.length <= 80),
   ).slice(0, limit);
+}
+
+function normalizeMediaPresentationMode(value, { requested = false, fallback = requested ? "branded_card" : "none" } = {}) {
+  const normalized = sanitizeText(value).toLowerCase();
+  if (!requested) {
+    return "none";
+  }
+  if (normalized === "raw_contextual" || normalized === "branded_card") {
+    return normalized;
+  }
+  return fallback === "raw_contextual" ? "raw_contextual" : "branded_card";
 }
 
 function mapConfidenceScore(confidence, requested) {
@@ -347,6 +373,9 @@ function buildMediaInferenceTool(batchIds) {
       "Decide which changelog entries deserve screenshot media.",
       "Only request media when a single static screenshot can clearly prove a user-visible product surface.",
       "Reject build, CI, release, changelog tooling, backend-only work, tests, refactors, subtle token swaps, and non-visual reliability fixes.",
+      "When media is requested, also decide whether the output should stay a raw contextual proof screenshot or can become a branded card.",
+      "Use raw_contextual for tiny UI, menus, pickers, selectors, settings rows, text-heavy widgets, and other proofs where the real screenshot pixels must stay untouched.",
+      "Use branded_card for larger surfaces like boards, feeds, timelines, full panels, pages, and broader product views.",
       "When media is requested, provide one concrete proof surface, one capture hint, and short visible proof phrases that should still be visible in the final published image.",
     ].join(" "),
     strict: true,
@@ -387,6 +416,10 @@ function buildMediaInferenceTool(batchIds) {
               rationale: {
                 type: "string",
               },
+              presentation: {
+                type: "string",
+                enum: ["none", "raw_contextual", "branded_card"],
+              },
               proof_surface: {
                 type: ["string", "null"],
               },
@@ -406,6 +439,7 @@ function buildMediaInferenceTool(batchIds) {
               "confidence",
               "category",
               "rationale",
+              "presentation",
               "proof_surface",
               "capture_hint",
               "visible_proof",
@@ -435,11 +469,13 @@ function validateMediaInferenceInput(input, batchIds) {
         throw new Error(`duplicate media inference batch_id: ${batchId}`);
       }
       seen.add(batchId);
+      const requested = Boolean(entry?.requested);
       return [batchId, {
-        requested: Boolean(entry?.requested),
+        requested,
         confidence: sanitizeText(entry?.confidence || "low").toLowerCase(),
         category: sanitizeText(entry?.category || "refactor_misc"),
         rationale: sanitizeText(entry?.rationale),
+        presentationMode: normalizeMediaPresentationMode(entry?.presentation, { requested }),
         proofSurface: sanitizeText(entry?.proof_surface),
         captureHint: sanitizeText(entry?.capture_hint),
         visibleProof: normalizeVisibleProof(entry?.visible_proof),
@@ -504,6 +540,10 @@ async function inferMediaEntriesWithAnthropic(rendered, rawCommits) {
     "Request media only when one desktop screenshot can clearly prove a user-visible product surface or durable visible state.",
     "Reject release/build/CI/changelog/media tooling, backend-only work, tests, refactors, merge noise, and reliability changes that would look identical in a static screenshot.",
     "Reject subtle token swaps, small spacing tweaks, and purely comparative visual cleanups unless the changed state is obvious in one screenshot without a before/after.",
+    "When media is requested, choose a presentation mode:",
+    "- raw_contextual: proof-first native screenshot for dropdowns, menus, pickers, selectors, settings rows, chips, dialogs, or other text-heavy micro-UI where the screenshot pixels must stay untouched.",
+    "- branded_card: broader product surfaces like boards, feeds, panels, pages, timelines, or multi-element views where a larger framed card still proves the change.",
+    "If the change is not clearly provable in one static screenshot, set requested=false and presentation=none.",
     "For requested entries, define one concrete proof surface, one capture hint, and 1 to 4 visible proof phrases or labels that should still be visible in the final published image.",
     "If the visible proof would likely be too subtle or too transient for a static screenshot, set requested=false.",
     `Call the ${tool.name} tool exactly once.`,
@@ -564,6 +604,13 @@ function mergeMediaDecision(entry, heuristic, decision) {
     inferenceSource: decision ? "anthropic" : "heuristic",
     inferenceCategory: sanitizeText(decision?.category || ""),
     inferenceConfidence: sanitizeText(decision?.confidence || ""),
+    presentationMode: normalizeMediaPresentationMode(
+      decision?.presentationMode || heuristic.presentationMode,
+      {
+        requested,
+        fallback: requested ? (heuristic.presentationMode || "branded_card") : "none",
+      },
+    ),
     proofSurface: sanitizeText(decision?.proofSurface || ""),
     captureHint: sanitizeText(decision?.captureHint || ""),
     visibleProof: normalizeVisibleProof(decision?.visibleProof),
@@ -672,6 +719,7 @@ function preserveExistingPublishedMedia(rendered, existingDocs = []) {
           ...inferredMedia,
           requested: true,
           status: "published",
+          presentationMode: sanitizeText(previous.media.presentationMode || inferredMedia?.presentationMode || ""),
           slotId: sanitizeText(previous.media.slotId || inferredMedia?.slotId),
           slug: sanitizeText(previous.media.slug || inferredMedia?.slug),
           alt: sanitizeText(previous.media.alt || inferredMedia?.alt),

@@ -188,21 +188,38 @@ function buildEntryPrompt(entry) {
   const bullets = (Array.isArray(entry?.items) ? entry.items : [])
     .map((item) => sanitizeText(item?.text))
     .filter(Boolean);
+  const presentationMode = sanitizeText(entry?.media?.presentationMode).toLowerCase();
   const proofSurface = sanitizeText(entry?.media?.proofSurface);
   const captureHint = sanitizeText(entry?.media?.captureHint);
   const visibleProof = Array.isArray(entry?.media?.visibleProof)
     ? entry.media.visibleProof.map((value) => sanitizeText(value)).filter(Boolean).slice(0, 6)
     : [];
   const retryGuidance = buildRetryCorrectionGuidance(entry?.media);
+  const presentationGuidance = presentationMode === "raw_contextual"
+    ? [
+        "Capture mode: raw contextual proof screenshot.",
+        "Keep the real product surface intact and anchored to its surrounding UI; do not chase a poster shot.",
+        "Keep the parent control and enough surrounding context visible in the same frame so the proof is clearly attached to the product.",
+        "If the proof text would be too small, zoom the real app UI before capture instead of aggressively cropping or isolating a floating widget.",
+        "Avoid menu-only or widget-only crops that lose context.",
+      ]
+    : presentationMode === "branded_card"
+      ? [
+          "Capture mode: branded card candidate.",
+          "Favor the clearest broader desktop surface that will still read well after Aura branding frames it.",
+          "Keep the key proof surface centered, stable, and large enough that the feature remains obvious after composition.",
+        ]
+      : [];
   const storyParts = [
     sanitizeText(entry?.title),
     sanitizeText(entry?.summary),
     bullets.length ? `Key details: ${bullets.join(" ")}` : "",
+    ...presentationGuidance,
     proofSurface ? `Expected proof surface: ${proofSurface}.` : "",
     visibleProof.length ? `Visible proof to keep on screen: ${visibleProof.join("; ")}.` : "",
     captureHint ? `Capture guidance: ${captureHint}` : "",
     retryGuidance,
-    "Open the most relevant product surface for this changelog entry and leave the clearest proof visible for a polished desktop screenshot.",
+    "Open the most relevant product surface for this changelog entry and leave the clearest proof visible for the final changelog screenshot.",
     "Avoid placeholder routes, empty states, settings-only screens, and generic landing views.",
   ].filter(Boolean);
 
@@ -326,6 +343,10 @@ function getOpenAIJudgeModel() {
 
 function getOpenAIApiKey() {
   return sanitizeText(process.env.OPENAI_API_KEY);
+}
+
+function shouldUseBrandedPolish(entry) {
+  return sanitizeText(entry?.media?.presentationMode).toLowerCase() !== "raw_contextual";
 }
 
 function buildOpenAIError(message, code = "OPENAI_POLISH_FAILED", details = {}) {
@@ -760,6 +781,7 @@ function buildMediaMetadata(entry, assetPath, selectedScreenshot, summary) {
     alt: entry.media.alt,
     status: "published",
     assetPath,
+    presentationMode: sanitizeText(entry?.media?.presentationMode || ""),
     screenshotSource: selectedScreenshot.source,
     originalScreenshotSource: selectedScreenshot.originalScreenshotSource || selectedScreenshot.source,
     polishProvider: selectedScreenshot.polishProvider || "",
@@ -1253,28 +1275,35 @@ async function publishEntryMedia({
     throw new Error(`No publishable screenshot was produced for ${entry.media.slotId}`);
   }
   let polishedScreenshot;
-  try {
-    polishedScreenshot = await polishSelectedScreenshot({
-      repoDir,
-      entry,
-      summary,
-      selectedScreenshot,
-      slotId: entry.media.slotId,
-    });
-  } catch (error) {
-    if (!shouldFallbackToRawProof(error)) {
-      throw error;
-    }
+  if (!shouldUseBrandedPolish(entry)) {
     polishedScreenshot = {
       ...selectedScreenshot,
-      polishProvider: "openai",
-      polishModel: "",
-      polishJudgeModel: sanitizeText(error?.polishJudge?.model || getOpenAIJudgeModel()),
-      polishScore: error?.polishJudge?.score ?? null,
-      polishJudge: error?.polishJudge || null,
-      polishFallbackReason: "openai_polish_quality_gate",
       originalScreenshotSource: selectedScreenshot.source,
     };
+  } else {
+    try {
+      polishedScreenshot = await polishSelectedScreenshot({
+        repoDir,
+        entry,
+        summary,
+        selectedScreenshot,
+        slotId: entry.media.slotId,
+      });
+    } catch (error) {
+      if (!shouldFallbackToRawProof(error)) {
+        throw error;
+      }
+      polishedScreenshot = {
+        ...selectedScreenshot,
+        polishProvider: "openai",
+        polishModel: "",
+        polishJudgeModel: sanitizeText(error?.polishJudge?.model || getOpenAIJudgeModel()),
+        polishScore: error?.polishJudge?.score ?? null,
+        polishJudge: error?.polishJudge || null,
+        polishFallbackReason: "openai_polish_quality_gate",
+        originalScreenshotSource: selectedScreenshot.source,
+      };
+    }
   }
 
   const assetPath = resolveAssetPath({
