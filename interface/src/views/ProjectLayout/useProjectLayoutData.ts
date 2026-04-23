@@ -185,7 +185,12 @@ export function useProjectLayoutData(): ProjectLayoutData {
   useEffect(() => {
     if (!projectId) return;
     if (!initialTasks.length) return;
-    const updates: Array<{ taskId: string; status: PanelTaskStatus; title?: string }> = [];
+    const updates: Array<{
+      taskId: string;
+      status: PanelTaskStatus;
+      title?: string;
+      executionNotes?: string | null;
+    }> = [];
     for (const task of initialTasks) {
       if (!task.task_id) continue;
       let next: PanelTaskStatus;
@@ -206,7 +211,16 @@ export function useProjectLayoutData(): ProjectLayoutData {
           next = "interrupted";
           break;
       }
-      updates.push({ taskId: task.task_id, status: next, title: task.title });
+      // Carry `execution_notes` only for failed tasks so the sidekick
+      // Run pane can display the persisted failure reason after a
+      // reload, without polluting completed rows with whatever
+      // descriptive notes the agent may have left behind.
+      updates.push({
+        taskId: task.task_id,
+        status: next,
+        title: task.title,
+        executionNotes: next === "failed" ? task.execution_notes : undefined,
+      });
     }
     reconcilePanelStatuses(updates);
   }, [projectId, initialTasks, reconcilePanelStatuses]);

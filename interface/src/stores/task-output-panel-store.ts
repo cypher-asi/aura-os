@@ -16,6 +16,14 @@ export interface PanelTaskEntry {
   projectId: string;
   agentInstanceId?: string;
   updatedAt: number;
+  /**
+   * Human-readable reason the task failed. Populated from either the
+   * `task_failed` event's `reason` field (live path) or the persisted
+   * `tasks.execution_notes` column surfaced through `reconcileStatuses`
+   * (reload path). Displayed in the sidekick Run pane so users can tell
+   * a completion-gate rejection apart from a real crash.
+   */
+  failureReason?: string;
 }
 
 function loadPersistedTasks(): PanelTaskEntry[] {
@@ -32,7 +40,15 @@ function loadPersistedTasks(): PanelTaskEntry[] {
       // "Interrupted" forever when the server never reported a final
       // status through the panel (e.g. because the task completed
       // while the UI was closed).
-      return parsed.filter((t) => t.taskId && t.projectId);
+      return parsed
+        .filter((t) => t.taskId && t.projectId)
+        .map((t) => ({
+          ...t,
+          failureReason:
+            typeof t.failureReason === "string" && t.failureReason.length > 0
+              ? t.failureReason
+              : undefined,
+        }));
     }
   } catch { /* ignore */ }
   return [];
@@ -73,7 +89,14 @@ interface TaskOutputPanelState {
    */
   hydrateActiveTask: (taskId: string, projectId: string, agentInstanceId?: string) => void;
   completeTask: (taskId: string) => void;
-  failTask: (taskId: string) => void;
+  /**
+   * Mark a task as failed. When `reason` is a non-empty string it is
+   * stored on the entry and survives localStorage persistence. Passing
+   * `null` / `undefined` leaves any previously-captured reason
+   * untouched, so a synthetic `task_failed` with no reason field can't
+   * wipe out a reason an earlier event already recorded.
+   */
+  failTask: (taskId: string, reason?: string | null) => void;
   dismissTask: (taskId: string) => void;
   clearCompleted: () => void;
   markAllCompleted: () => void;
@@ -88,7 +111,18 @@ interface TaskOutputPanelState {
    * too so rehydrated rows show a proper label once `listTasks` arrives.
    */
   reconcileStatuses: (
-    updates: Array<{ taskId: string; status: PanelTaskStatus; title?: string }>,
+    updates: Array<{
+      taskId: string;
+      status: PanelTaskStatus;
+      title?: string;
+      /**
+       * `tasks.execution_notes` from the server. Only consumed when the
+       * reconciled status is `"failed"` and the panel entry doesn't
+       * already have a `failureReason` (so a live `task_failed` reason
+       * that arrived over the WS wins over a stale DB value).
+       */
+      executionNotes?: string | null;
+    }>,
   ) => void;
 }
 
@@ -155,10 +189,21 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
     }));
   },
 
-  failTask: (taskId) => {
+  failTask: (taskId, reason) => {
+    const trimmed =
+      typeof reason === "string" && reason.trim().length > 0
+        ? reason.trim()
+        : null;
     set((s) => ({
       tasks: s.tasks.map((t) =>
-        t.taskId === taskId ? { ...t, status: "failed" as const, updatedAt: Date.now() } : t,
+        t.taskId === taskId
+          ? {
+              ...t,
+              status: "failed" as const,
+              updatedAt: Date.now(),
+              failureReason: trimmed ?? t.failureReason,
+            }
+          : t,
       ),
     }));
   },
@@ -200,7 +245,13 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
   reconcileStatuses: (updates) => {
     if (updates.length === 0) return;
     const updateMap = new Map(
-      updates.map((u) => [u.taskId, { status: u.status, title: u.title }] as const),
+      updates.map(
+        (u) =>
+          [
+            u.taskId,
+            { status: u.status, title: u.title, executionNotes: u.executionNotes },
+          ] as const,
+      ),
     );
     set((s) => {
       let changed = false;
@@ -213,13 +264,28 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
             : t.title;
         const statusChanged = update.status !== t.status;
         const titleChanged = nextTitle !== t.title;
-        if (!statusChanged && !titleChanged) return t;
+        // Reload-safe path: if the server says this task ended in
+        // `failed` and carries a non-empty `execution_notes`, copy it
+        // onto the panel entry — but only if we don't already have a
+        // live `failureReason` from the WS (which is fresher than DB).
+        const trimmedNotes =
+          typeof update.executionNotes === "string" &&
+          update.executionNotes.trim().length > 0
+            ? update.executionNotes.trim()
+            : null;
+        const nextFailureReason =
+          update.status === "failed" && trimmedNotes && !t.failureReason
+            ? trimmedNotes
+            : t.failureReason;
+        const failureReasonChanged = nextFailureReason !== t.failureReason;
+        if (!statusChanged && !titleChanged && !failureReasonChanged) return t;
         changed = true;
         return {
           ...t,
           status: update.status,
           title: nextTitle,
           updatedAt: Date.now(),
+          failureReason: nextFailureReason,
         };
       });
       return changed ? { tasks: nextTasks } : s;

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, X as XIcon, AlertTriangle, CircleDashed, ChevronRight } from "lucide-react";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
 import { useTaskOutputView } from "../../hooks/use-task-output-view";
+import { extractErrorMessage } from "../../utils/extract-error-message";
 import { MessageBubble } from "../MessageBubble";
 import { LLMOutput } from "../LLMOutput";
 import styles from "./TaskOutputPanel.module.css";
@@ -11,9 +12,10 @@ interface CompletedTaskOutputProps {
   projectId: string;
   title: string;
   status: PanelTaskStatus;
+  failureReason?: string | null;
 }
 
-export function CompletedTaskOutput({ taskId, projectId, title, status }: CompletedTaskOutputProps) {
+export function CompletedTaskOutput({ taskId, projectId, title, status, failureReason }: CompletedTaskOutputProps) {
   const dismissTask = useTaskOutputPanelStore((s) => s.dismissTask);
   // `CompletedTaskOutput` only renders for non-active rows, so every
   // mount is a terminal view from the hook's perspective.
@@ -75,27 +77,38 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
         </span>
       </button>
       {!collapsed && (
-        hasStructuredContent ? (
-          <div className={styles.taskBody}>
-            {events.map((evt) => (
-              <MessageBubble key={evt.id} message={evt} />
-            ))}
-          </div>
-        ) : fallbackText ? (
-          <div className={styles.taskBody}>
-            <LLMOutput content={fallbackText} />
-          </div>
-        ) : (
-          <div className={styles.taskBodyEmpty}>
-            {status === "failed"
-              ? "Task failed without producing output."
-              : status === "interrupted"
-                ? "Run was interrupted before completing."
-                : hasAnyContent
-                  ? "No text output captured for this run."
-                  : "No output captured for this run."}
-          </div>
-        )
+        <>
+          {status === "failed" && failureReason && (
+            <div className={styles.failReasonBanner}>
+              {extractErrorMessage(failureReason)}
+            </div>
+          )}
+          {hasStructuredContent ? (
+            <div className={styles.taskBody}>
+              {events.map((evt) => (
+                <MessageBubble key={evt.id} message={evt} />
+              ))}
+            </div>
+          ) : fallbackText ? (
+            <div className={styles.taskBody}>
+              <LLMOutput content={fallbackText} />
+            </div>
+          ) : status === "failed" && failureReason ? (
+            // The failure reason itself is the body; no need to also
+            // show the generic "Task failed without producing output."
+            null
+          ) : (
+            <div className={styles.taskBodyEmpty}>
+              {status === "failed"
+                ? "Task failed without producing output."
+                : status === "interrupted"
+                  ? "Run was interrupted before completing."
+                  : hasAnyContent
+                    ? "No text output captured for this run."
+                    : "No output captured for this run."}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

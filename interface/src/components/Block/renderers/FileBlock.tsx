@@ -125,9 +125,28 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
   // While a write/edit is still streaming and the path has not arrived yet,
   // fall back to the tool's phase label ("Writing code...") instead of a bare
   // ellipsis so the row reads as a live action rather than malformed UI.
+  //
+  // When the call ends in an error without ever producing a path — e.g.
+  // the LLM's tool block was abandoned mid-stream by a transient
+  // provider 5xx so `resolveAbandonedPendingToolCalls` flipped it —
+  // replace the generic "Untitled file" shell with an action-specific
+  // failure title like "Write failed" so the card is self-describing
+  // before the user expands it. The red `inlineError` row below still
+  // carries the actual upstream reason.
+  const failedTitle = isDelete
+    ? "Delete failed"
+    : isEdit
+      ? "Edit failed"
+      : isWrite
+        ? "Write failed"
+        : isRead
+          ? "Read failed"
+          : "Tool call failed";
   const fallbackTitle = entry.pending
     ? (TOOL_PHASE_LABELS[entry.name] ?? "Working...")
-    : "Untitled file";
+    : entry.isError
+      ? failedTitle
+      : "Untitled file";
   const fileName = hasPath
     ? (path.split(/[/\\]/).pop() || path)
     : fallbackTitle;

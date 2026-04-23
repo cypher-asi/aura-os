@@ -17,6 +17,7 @@ import {
   handleToolCallSnapshot,
   handleToolResult,
   handleAssistantTurnBoundary,
+  resolveAbandonedPendingToolCalls,
   finalizeStream,
 } from "../hooks/stream/handlers";
 import { useTaskOutputPanelStore } from "./task-output-panel-store";
@@ -290,13 +291,92 @@ function handleTaskFailed(e: AuraEventOfType<EventType.TaskFailed>): void {
   if (!taskId) return;
   const { refs, setters, abortRef } = contextForTask(taskId);
   mergeBufferedOutput(taskId, refs.streamBuffer.current, e.project_id);
+  // Mirror the fallback chain in `useTaskStatus`: some synthetic /
+  // legacy failure payloads use `error` or `message` instead of the
+  // canonical `reason` field. Without these fallbacks the sidekick
+  // panel would show a red badge with no explanation.
+  const raw = e.content as unknown as Record<string, unknown>;
+  const reason =
+    (typeof raw.reason === "string" && raw.reason) ||
+    (typeof raw.error === "string" && raw.error) ||
+    (typeof raw.message === "string" && raw.message) ||
+    null;
   finalizeStream(refs, setters, abortRef, isStreamingByTask.get(taskId) ?? false, {
     reason: "failed",
-    message: e.content.reason ?? undefined,
+    message: reason ?? undefined,
   });
   isStreamingByTask.delete(taskId);
-  useTaskOutputPanelStore.getState().failTask(taskId);
+  useTaskOutputPanelStore.getState().failTask(taskId, reason);
   snapshotTaskTurns(taskId, e.project_id);
+}
+
+/**
+ * Append an in-stream error card when the server's Definition-of-Done
+ * gate rejects a `task_completed`. Without this, a run whose tool uses
+ * all succeeded would silently flip to "failed" with no visible cause.
+ *
+ * We reuse the existing tool-result machinery so the entry renders with
+ * the same red styling as git failure rows - the gate decision sits
+ * between the last tool use and the terminal `task_failed` event in the
+ * timeline, which is exactly where a user would look for an explanation.
+ */
+function handleTaskCompletionGateEvent(
+  e: AuraEventOfType<EventType.TaskCompletionGate>,
+): void {
+  const taskId = e.content.task_id;
+  if (!taskId) return;
+  if (e.content.passed) return;
+  const { refs, setters } = contextForTask(taskId);
+  const id = crypto.randomUUID();
+  const reason =
+    (typeof e.content.failure_reason === "string" && e.content.failure_reason) ||
+    "Completion-validation gate rejected this task";
+  const evidence = [
+    `files ${e.content.n_files_changed}`,
+    `build ${e.content.n_build_steps}`,
+    `test ${e.content.n_test_steps}`,
+    `fmt ${e.content.n_format_steps}`,
+    `lint ${e.content.n_lint_steps}`,
+    e.content.has_rust_change
+      ? "rust"
+      : e.content.has_source_change
+        ? "source"
+        : "docs",
+  ].join(" · ");
+  handleToolCallStarted(refs, setters, { id, name: "completion_gate_rejected" });
+  handleToolResult(refs, setters, {
+    id,
+    name: "completion_gate_rejected",
+    result: `${reason}\n${evidence}`,
+    is_error: true,
+  });
+}
+
+/**
+ * Resolve stale pending tool-call cards when the dev loop retries a
+ * task after a transient infra failure. Without this, every attempt's
+ * `tool_use_start` stacks a fresh "Writing code…" card while the
+ * previous attempt's card is stuck in the pending state forever —
+ * exactly the "it just keeps saying writing code, but doesn't provide
+ * any more details" pattern users saw during `Internal server error`
+ * retry storms.
+ *
+ * We mark the old cards as errored with the retry reason so the panel
+ * shows a red "Interrupted by upstream error" row, then the new
+ * attempt's tool_use_start events continue to land normally and render
+ * below it.
+ */
+function handleTaskRetryingEvent(
+  e: AuraEventOfType<EventType.TaskRetrying>,
+): void {
+  const taskId = e.content.task_id;
+  if (!taskId) return;
+  const { refs, setters } = contextForTask(taskId);
+  resolveAbandonedPendingToolCalls(
+    refs,
+    setters,
+    e.content.reason ?? "retrying after upstream error",
+  );
 }
 
 function handleLoopEnd(): void {
@@ -339,6 +419,8 @@ export function bootstrapTaskStreamSubscriptions(): void {
     subscribe(EventType.GitPushed, handleGitPushedEvent),
     subscribe(EventType.GitPushFailed, handleGitPushFailedEvent),
     subscribe(EventType.TaskCompleted, handleTaskCompleted),
+    subscribe(EventType.TaskCompletionGate, handleTaskCompletionGateEvent),
+    subscribe(EventType.TaskRetrying, handleTaskRetryingEvent),
     subscribe(EventType.TaskFailed, handleTaskFailed),
     subscribe(EventType.LoopStopped, handleLoopEnd),
     subscribe(EventType.LoopFinished, handleLoopEnd),

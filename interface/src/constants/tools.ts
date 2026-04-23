@@ -29,6 +29,7 @@ export const TOOL_LABELS: Record<string, string> = {
   get_task_context: "Load context",
   git_commit: "Commit code",
   git_push: "Push code",
+  completion_gate_rejected: "Completion gate rejected",
   create_project: "Create project",
   list_projects: "List projects",
   import_project: "Import project",

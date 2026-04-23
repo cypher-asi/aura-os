@@ -124,6 +124,34 @@ describe("task-output-panel-store", () => {
       useTaskOutputPanelStore.getState().failTask("t1");
       expect(useTaskOutputPanelStore.getState().tasks[0].status).toBe("failed");
     });
+
+    it("stores a non-empty failure reason on the entry", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore
+        .getState()
+        .failTask("t1", "Automaton emitted empty-path writes");
+      expect(useTaskOutputPanelStore.getState().tasks[0].failureReason).toBe(
+        "Automaton emitted empty-path writes",
+      );
+    });
+
+    it("trims whitespace on the stored failure reason", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore.getState().failTask("t1", "  build failed  ");
+      expect(useTaskOutputPanelStore.getState().tasks[0].failureReason).toBe(
+        "build failed",
+      );
+    });
+
+    it("does not clobber an existing reason with null / empty", () => {
+      useTaskOutputPanelStore.getState().addTask("t1", "p1", "Task");
+      useTaskOutputPanelStore.getState().failTask("t1", "first reason");
+      useTaskOutputPanelStore.getState().failTask("t1", null);
+      useTaskOutputPanelStore.getState().failTask("t1", "   ");
+      expect(useTaskOutputPanelStore.getState().tasks[0].failureReason).toBe(
+        "first reason",
+      );
+    });
   });
 
   describe("dismissTask", () => {
@@ -285,5 +313,75 @@ describe("task-output-panel-store rehydration", () => {
     const byId = Object.fromEntries(tasks.map((t) => [t.taskId, t]));
     expect(byId.t1.status).toBe("completed");
     expect(byId.t2.status).toBe("active");
+  });
+
+  it("reconcileStatuses copies executionNotes onto failed rows when no live reason exists", async () => {
+    const mod = await import("./task-output-panel-store");
+    mod.useTaskOutputPanelStore.setState({
+      tasks: [
+        {
+          taskId: "t1",
+          title: "Active when closed",
+          status: "active",
+          projectId: "p1",
+          updatedAt: 1,
+        },
+      ],
+    });
+
+    mod.useTaskOutputPanelStore.getState().reconcileStatuses([
+      { taskId: "t1", status: "failed", executionNotes: "gate: missing build step" },
+    ]);
+
+    const entry = mod.useTaskOutputPanelStore.getState().tasks[0];
+    expect(entry.status).toBe("failed");
+    expect(entry.failureReason).toBe("gate: missing build step");
+  });
+
+  it("reconcileStatuses preserves a live failureReason over executionNotes", async () => {
+    const mod = await import("./task-output-panel-store");
+    mod.useTaskOutputPanelStore.setState({
+      tasks: [
+        {
+          taskId: "t1",
+          title: "Already failed",
+          status: "failed",
+          projectId: "p1",
+          updatedAt: 1,
+          failureReason: "live WS reason",
+        },
+      ],
+    });
+
+    mod.useTaskOutputPanelStore.getState().reconcileStatuses([
+      { taskId: "t1", status: "failed", executionNotes: "stale DB reason" },
+    ]);
+
+    expect(mod.useTaskOutputPanelStore.getState().tasks[0].failureReason).toBe(
+      "live WS reason",
+    );
+  });
+
+  it("reconcileStatuses ignores executionNotes on non-failed statuses", async () => {
+    const mod = await import("./task-output-panel-store");
+    mod.useTaskOutputPanelStore.setState({
+      tasks: [
+        {
+          taskId: "t1",
+          title: "Active when closed",
+          status: "active",
+          projectId: "p1",
+          updatedAt: 1,
+        },
+      ],
+    });
+
+    mod.useTaskOutputPanelStore.getState().reconcileStatuses([
+      { taskId: "t1", status: "completed", executionNotes: "note" },
+    ]);
+
+    expect(
+      mod.useTaskOutputPanelStore.getState().tasks[0].failureReason,
+    ).toBeUndefined();
   });
 });
