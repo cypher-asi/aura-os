@@ -567,6 +567,65 @@ fn probe_http_ok(base_url: &str, path: &str) -> bool {
     response.starts_with("HTTP/1.1 200") || response.starts_with("HTTP/1.0 200")
 }
 
+/// Parsed CLI arguments for the desktop binary.
+///
+/// We intentionally avoid `clap` here: the desktop process is also launched
+/// by installers / updaters that may pass platform-specific argv we don't
+/// control, so unknown args must be tolerated rather than rejected.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct DesktopCliArgs {
+    external_harness: bool,
+}
+
+fn parse_cli_args_from<I, S>(iter: I) -> DesktopCliArgs
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let mut args = DesktopCliArgs::default();
+    for arg in iter {
+        match arg.as_ref() {
+            "--external-harness" => args.external_harness = true,
+            _ => {}
+        }
+    }
+    args
+}
+
+fn parse_cli_args() -> DesktopCliArgs {
+    parse_cli_args_from(std::env::args().skip(1))
+}
+
+/// Validate that an external harness is actually reachable before we let the
+/// desktop shell boot with bundled-sidecar autospawn disabled. If the env
+/// isn't set or the harness isn't up, exit fast with a clear message instead
+/// of silently coming up and surfacing as a 20-second tool-callback timeout
+/// the first time an agent tries to act.
+fn enforce_external_harness_or_exit() {
+    let Some(url) = env_string("LOCAL_HARNESS_URL").map(|v| v.trim_end_matches('/').to_string())
+    else {
+        eprintln!(
+            "--external-harness requires LOCAL_HARNESS_URL to be set to the URL of the running \
+             external harness (e.g. http://127.0.0.1:3404)."
+        );
+        std::process::exit(2);
+    };
+
+    if !probe_http_ok(&url, "/health") {
+        eprintln!(
+            "--external-harness was passed but LOCAL_HARNESS_URL ({url}) is not reachable at \
+             /health. Start the external harness first, then rerun."
+        );
+        std::process::exit(2);
+    }
+
+    std::env::set_var("AURA_DESKTOP_EXTERNAL_HARNESS", "1");
+    info!(
+        url = %url,
+        "using external harness; bundled local harness sidecar autospawn disabled"
+    );
+}
+
 fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     let explicit_harness_url =
         env_string("LOCAL_HARNESS_URL").map(|value| value.trim_end_matches('/').to_string());
@@ -1433,7 +1492,7 @@ mod tests {
     use super::{
         append_query_param, apply_restore_route, build_frontend_dev_server_candidate,
         build_frontend_dev_server_config, build_initialization_script, harness_binary_name,
-        interface_dir_candidates, is_local_bind_host, parse_host_port,
+        interface_dir_candidates, is_local_bind_host, parse_cli_args_from, parse_host_port,
         resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
         stage_bundled_harness_binary, wait_for_frontend_dev_server_with_probe,
         BootstrappedAuthLiterals,
@@ -1441,6 +1500,24 @@ mod tests {
     use std::cell::Cell;
     use std::path::{Path, PathBuf};
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn parse_cli_args_defaults_to_no_external_harness() {
+        let args = parse_cli_args_from(Vec::<String>::new());
+        assert!(!args.external_harness);
+    }
+
+    #[test]
+    fn parse_cli_args_detects_external_harness_flag() {
+        let args = parse_cli_args_from(["--external-harness"]);
+        assert!(args.external_harness);
+    }
+
+    #[test]
+    fn parse_cli_args_tolerates_unknown_flags() {
+        let args = parse_cli_args_from(["--some-installer-arg", "--external-harness", "ignored"]);
+        assert!(args.external_harness);
+    }
 
     #[test]
     #[cfg(target_os = "windows")]
@@ -2321,7 +2398,13 @@ fn main() {
     let route_state = RouteState::load(data_dir);
     install_panic_hook(data_dir);
     install_native_crash_handler(data_dir);
-    let managed_local_harness = maybe_spawn_local_harness_sidecar(data_dir);
+    let cli = parse_cli_args();
+    let managed_local_harness = if cli.external_harness {
+        enforce_external_harness_or_exit();
+        None
+    } else {
+        maybe_spawn_local_harness_sidecar(data_dir)
+    };
     let bootstrapped_auth = load_bootstrapped_auth_literals(&store_path);
     let (std_listener, server_port, url) = bind_listener();
 

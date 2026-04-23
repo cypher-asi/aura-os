@@ -314,6 +314,118 @@ fn recovery_checkpoint_marks_commit_created_when_push_fails() {
 }
 
 #[test]
+fn classify_stream_terminated_internal_as_provider_internal_error() {
+    // Axis 1 lives-or-dies on this exact reason string from the user
+    // bug report: the task failed with the wording emitted by the
+    // harness when an LLM request hits a provider-side 5xx or the
+    // streamed response is aborted mid-frame. If this assertion ever
+    // regresses, the dev loop will go back to treating it as fatal
+    // and the original `1.1 Create zero-core crate with newtype IDs`
+    // failure resurfaces.
+    for reason in [
+        "LLM error: stream terminated with error: Internal server error",
+        "LLM error: HTTP 500 from provider",
+        "upstream returned 502 Bad Gateway",
+        "connection reset by peer while streaming",
+    ] {
+        assert!(
+            aura_os_server::phase7_test_support::is_provider_internal_error(reason),
+            "{reason:?} must classify as ProviderInternalError so Axis 3's \
+             jittered escalation path runs instead of terminating the task",
+        );
+    }
+
+    // Sanity-check that truly unrelated failures still do *not* go
+    // down the provider-internal-error path — otherwise a broken
+    // classifier could absorb rate limits or truncation into the
+    // retry bucket and silently burn cooldown budget.
+    for reason in [
+        "task reached implementation phase but no file operations completed — needs decomposition",
+        "HTTP 429 too many requests",
+    ] {
+        assert!(
+            !aura_os_server::phase7_test_support::is_provider_internal_error(reason),
+            "{reason:?} is not a 5xx/stream-abort and must stay on its own \
+             failure path",
+        );
+    }
+}
+
+#[test]
+fn looks_like_unclassified_transient_detects_retry_miss_candidates() {
+    // Axis 4: when the classifier returns `None` but the text reads
+    // like a transient network blip, the dev loop emits
+    // `debug.retry_miss` so `aura-run-heuristics` can flag the gap.
+    // These are reasons the heuristic *should* catch.
+    for reason in [
+        "dns lookup failed for api.example.com",
+        "tls handshake failure while streaming response",
+        "socket hang up",
+    ] {
+        assert!(
+            aura_os_server::phase7_test_support::looks_like_unclassified_transient(reason),
+            "{reason:?} looks transient but isn't classified — dev loop \
+             must emit debug.retry_miss so the gap is visible in bundles",
+        );
+    }
+
+    // And things that shouldn't trip the detector — either because
+    // the classifier already owns them (so `looks_like_unclassified_
+    // transient_for_tests` short-circuits on the `is_none()` guard)
+    // or because they genuinely aren't transient.
+    for reason in [
+        "LLM error: stream terminated with error: Internal server error",
+        "task reached implementation phase but no file operations completed — needs decomposition",
+    ] {
+        assert!(
+            !aura_os_server::phase7_test_support::looks_like_unclassified_transient(reason),
+            "{reason:?} is either already classified or not transient — \
+             must not produce a spurious debug.retry_miss",
+        );
+    }
+}
+
+#[test]
+fn completion_gate_failure_routes_tracked_transient_reason_to_retry() {
+    // Phase 7b regression for the `1.1 Create zero-core crate with
+    // newtype IDs` failure. When the harness emits a spurious
+    // `task_completed` after a mid-stream provider 5xx, the completion
+    // validation gate rejects it with its own synthesised reason ("no
+    // output, file changes, or verification evidence"). That reason
+    // does NOT contain any 5xx / stream-abort marker, so on its own
+    // the infra classifier would return `None` and the retry ladder
+    // would be skipped entirely.
+    //
+    // The fix is to capture any preceding `error` event that
+    // classifies as a provider-internal failure into
+    // `last_transient_reason` and hand THAT to the classifier when
+    // the gate fires. This test pins the contract the forwarder's
+    // completion-gate branch relies on:
+    //
+    //   * the gate's own reason does not classify as infra-transient,
+    //   * the tracked breadcrumb does,
+    //
+    // so the selection rule "prefer breadcrumb, fall back to gate"
+    // is guaranteed to flip the retry ladder on when both are
+    // available.
+    let gate_reason =
+        "Automaton reported task_completed without output, file changes, or verification evidence";
+    let transient_reason = "LLM error: stream terminated with error: Internal server error";
+
+    assert!(
+        !aura_os_server::phase7_test_support::is_provider_internal_error(gate_reason),
+        "gate reason must NOT look like an infra transient on its own — \
+         otherwise the fix is load-bearing on the classifier rather than \
+         on the `last_transient_reason` breadcrumb",
+    );
+    assert!(
+        aura_os_server::phase7_test_support::is_provider_internal_error(transient_reason),
+        "pre-completion `error` reason must classify as ProviderInternalError \
+         so the gate-failure branch's retry ladder fires on a tracked breadcrumb",
+    );
+}
+
+#[test]
 fn preflight_decomposition_flags_full_implementation_description() {
     let hit = aura_os_server::phase7_test_support::preflight_decomposition_reason(
         "Implement NeuralKey",

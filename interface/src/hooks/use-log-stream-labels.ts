@@ -33,6 +33,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.TasksBecameReady]: "Task",
   [EventType.FollowUpTaskCreated]: "Task",
   [EventType.FileOpsApplied]: "Files",
+  [EventType.TaskCompletionGate]: "Task",
   [EventType.LoopStarted]: "Loop",
   [EventType.LoopPaused]: "Loop",
   [EventType.LoopResumed]: "Loop",

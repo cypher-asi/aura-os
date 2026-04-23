@@ -136,6 +136,16 @@ On Windows PowerShell:
 
 This starts Vite first, waits for `@vite/client`, then launches `aura-os-desktop` against the live frontend URL so CSS and TypeScript edits update in the native shell without rebuilding. Plain debug runs now also try to start and attach a local Vite server automatically, but this script is still the clearest way to keep the desktop shell and frontend pinned to the same dev URL.
 
+#### Use an external harness
+
+To run the desktop shell against a separately-running harness (for example, a sibling `aura-harness` checkout you started yourself), set `LOCAL_HARNESS_URL` to that harness URL and pass `--external-harness`:
+
+```bash
+LOCAL_HARNESS_URL=http://127.0.0.1:3404 cargo run -p aura-os-desktop -- --external-harness
+```
+
+With `--external-harness` the desktop binary refuses to start if `LOCAL_HARNESS_URL` is unset or `/health` is unreachable, and will not spawn the bundled local harness sidecar. The runtime config surfaces this as `AURA_DESKTOP_EXTERNAL_HARNESS=1` so the UI can reflect that the harness is externally managed.
+
 ### Run mobile web
 
 For all mobile browser testing, use the shared mobile dev runner from the repo root:

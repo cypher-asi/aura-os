@@ -130,4 +130,56 @@ describe("CompletedTaskOutput", () => {
 
     expect(screen.getByText("Task failed without producing output.")).toBeInTheDocument();
   });
+
+  it("renders the failure reason banner when one is available", () => {
+    render(
+      <CompletedTaskOutput
+        taskId="task-1"
+        projectId="proj-1"
+        title="My task"
+        status="failed"
+        failureReason="Task modified source code but no build step was run"
+      />,
+    );
+    expandRow();
+
+    expect(
+      screen.getByText("Task modified source code but no build step was run"),
+    ).toBeInTheDocument();
+    // The generic fallback copy should not render once a reason exists -
+    // the banner is the explanation.
+    expect(
+      screen.queryByText("Task failed without producing output."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("extracts the inner message from JSON-wrapped failure reasons", () => {
+    render(
+      <CompletedTaskOutput
+        taskId="task-1"
+        projectId="proj-1"
+        title="My task"
+        status="failed"
+        failureReason={'ApiError: {"message": "overloaded_error"}'}
+      />,
+    );
+    expandRow();
+
+    expect(screen.getByText("overloaded_error")).toBeInTheDocument();
+  });
+
+  it("ignores a failureReason on non-failed rows", () => {
+    render(
+      <CompletedTaskOutput
+        taskId="task-1"
+        projectId="proj-1"
+        title="My task"
+        status="completed"
+        failureReason="should not appear"
+      />,
+    );
+    expandRow();
+
+    expect(screen.queryByText("should not appear")).not.toBeInTheDocument();
+  });
 });

@@ -757,6 +757,54 @@ function resolvePendingToolCalls(
   resolvePendingToolCallsInEvents(setters, resolution);
 }
 
+/**
+ * Resolve every currently-pending tool call as errored WITHOUT flushing
+ * the stream buffer or appending an assistant event. Intended for
+ * non-terminal mid-turn failures — e.g. a `task_retrying` event arrives
+ * because the harness's LLM stream died with a transient 5xx and the
+ * dev loop is restarting the automaton. The old pending `write_file` /
+ * `edit_file` cards would otherwise sit showing "Writing code…" forever
+ * while fresh tool calls pile up below them on the retry attempt, which
+ * is the UX the user flagged as "it just keeps saying writing code".
+ *
+ * The caller owns whether the stream is still live — we deliberately
+ * avoid touching `setIsStreaming`, `setIsWriting`, or `streamBuffer`
+ * so a follow-up turn can resume cleanly. Also updates the saved
+ * events list via {@link resolvePendingToolCallsInEvents} so cards
+ * that were already snapshotted by a prior `AssistantMessageEnd` get
+ * the same treatment and don't stay stuck in the pending state.
+ */
+export function resolveAbandonedPendingToolCalls(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  reason: string,
+): void {
+  const trimmed = reason.trim();
+  const result = trimmed
+    ? `Interrupted by upstream error: ${trimmed}`
+    : "Interrupted by upstream error before result was received";
+  const resolution: PendingToolResolution = { isError: true, result };
+  const hasPending = refs.toolCalls.current.some((tc) => tc.pending);
+  if (hasPending) {
+    refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
+      tc.pending
+        ? {
+            ...tc,
+            pending: false,
+            started: false,
+            isError: true,
+            result,
+          }
+        : tc,
+    );
+    // Mirror the live ref update into the active view so the
+    // currently-visible card flips immediately instead of waiting for
+    // the next snapshot boundary.
+    setters.setActiveToolCalls([...refs.toolCalls.current]);
+  }
+  resolvePendingToolCallsInEvents(setters, resolution);
+}
+
 function getPendingToolResolution(
   reason: FinalizeStreamReason,
   message?: string,

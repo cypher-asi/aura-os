@@ -77,6 +77,15 @@ export enum EventType {
   TasksBecameReady      = "tasks_became_ready",
   FollowUpTaskCreated   = "follow_up_task_created",
   FileOpsApplied        = "file_ops_applied",
+  /**
+   * Audit event emitted by the server's Definition-of-Done gate after a
+   * `task_completed` is inspected (see `completion_validation_failure_reason`
+   * in `aura-os-server/src/handlers/dev_loop.rs`). `passed === false`
+   * indicates the server rewrote the event into `task_failed` because the
+   * run lacked required evidence (empty-path writes, no build, no test,
+   * etc.). Carries `failure_reason` + the gate report counters.
+   */
+  TaskCompletionGate    = "task_completion_gate",
 
   // Loop lifecycle
   LoopStarted           = "loop_started",
@@ -293,6 +302,13 @@ export type AuraEvent = AuraEventBase & (
       task_id: string;
       attempt: number;
       reason?: string;
+      /**
+       * Axis 5 resume preamble ("[aura-retry attempt=N] …") built by the
+       * dev loop. Kept optional on the wire so older servers still
+       * parse cleanly; handlers that surface it to users should fall
+       * back to a generic string when absent.
+       */
+      preamble?: string;
     } }
   | { type: EventType.TaskBecameReady; content: { task_id: string } }
   | { type: EventType.TasksBecameReady; content: {
@@ -306,6 +322,21 @@ export type AuraEvent = AuraEventBase & (
       files: { op: string; path: string }[];
       files_written?: number;
       files_deleted?: number;
+    } }
+  | { type: EventType.TaskCompletionGate; content: {
+      task_id: string;
+      passed: boolean;
+      failure_reason?: string;
+      had_live_output: boolean;
+      n_files_changed: number;
+      has_source_change: boolean;
+      has_rust_change: boolean;
+      n_build_steps: number;
+      n_test_steps: number;
+      n_format_steps: number;
+      n_lint_steps: number;
+      n_empty_path_writes: number;
+      recovery_checkpoint: string;
     } }
 
   // ── Loop lifecycle ─────────────────────────────────────────

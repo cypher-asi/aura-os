@@ -197,6 +197,13 @@ enum FailureClass {
 enum InfraFailureClass {
     ProviderRateLimited,
     ProviderOverloaded,
+    /// Upstream LLM / proxy returned a transient 5xx (500/502/503/504),
+    /// or the streaming connection aborted mid-response without a
+    /// terminal event. Distinct from [`ProviderOverloaded`] (429/529)
+    /// because the typical clear time is much shorter — provider
+    /// internal errors usually resolve within seconds, while rate-limit
+    /// windows are on the order of a minute.
+    ProviderInternalError,
     TransportTimeout,
     /// Pre-commit git operation timeout (`git add` / `git commit`). The
     /// task's work is not yet persisted anywhere, so we reset the task
@@ -283,6 +290,25 @@ pub(crate) fn classify_failure_for_reconciler(reason: &str) -> crate::reconciler
     }
 }
 
+/// True when `reason` classifies as a provider-side transient 5xx /
+/// stream-terminator error (Axis 1). Exposed through
+/// [`crate::phase7_test_support`] so the integration tests in
+/// `autonomous_recovery_replay.rs` can pin the exact strings that
+/// must now survive round-tripping through the retry path without
+/// needing access to the internal `InfraFailureClass` enum.
+pub(crate) fn is_provider_internal_error_for_tests(reason: &str) -> bool {
+    classify_infra_failure(reason) == Some(InfraFailureClass::ProviderInternalError)
+}
+
+/// True when `reason` is treated as a transient-looking failure by
+/// [`looks_like_unclassified_transient`] despite
+/// [`classify_infra_failure`] returning `None`. The dev loop emits
+/// `debug.retry_miss` for exactly this condition so
+/// `aura-run-heuristics::unclassified_retry_miss` can surface it.
+pub(crate) fn looks_like_unclassified_transient_for_tests(reason: &str) -> bool {
+    classify_infra_failure(reason).is_none() && looks_like_unclassified_transient(reason)
+}
+
 fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
     let lower = reason.to_ascii_lowercase();
     // Check `git push` first so it is routed to the non-fatal
@@ -320,6 +346,29 @@ fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
     {
         return Some(InfraFailureClass::ProviderOverloaded);
     }
+    // Transient upstream 5xx from the LLM provider / proxy. Includes
+    // mid-stream aborts surfaced by aura-reasoner as "stream terminated
+    // with error: …" (see `aura-harness/crates/aura-reasoner/src/types/
+    // streaming.rs`), which the harness wraps as "LLM error: …" before
+    // the task_failed event carries the string here. Matched against
+    // the lowercased reason so both the bare HTTP status codes and the
+    // prose forms classify the same way.
+    let has_5xx_status = lower.contains("500")
+        || lower.contains("502")
+        || lower.contains("503")
+        || lower.contains("504");
+    let has_5xx_prose = lower.contains("internal server error")
+        || lower.contains("bad gateway")
+        || lower.contains("service unavailable")
+        || lower.contains("gateway timeout");
+    let has_stream_abort = lower.contains("stream terminated")
+        || lower.contains("stream closed prematurely")
+        || lower.contains("connection reset")
+        || lower.contains("broken pipe")
+        || lower.contains("connection closed unexpectedly");
+    if has_5xx_status || has_5xx_prose || has_stream_abort {
+        return Some(InfraFailureClass::ProviderInternalError);
+    }
     if lower.contains("timed out") || lower.contains("timeout") {
         return Some(InfraFailureClass::TransportTimeout);
     }
@@ -330,6 +379,10 @@ fn infra_cooldown_for(class: InfraFailureClass) -> Duration {
     match class {
         InfraFailureClass::ProviderRateLimited => Duration::from_secs(60),
         InfraFailureClass::ProviderOverloaded => Duration::from_secs(30),
+        // Provider 5xx / stream aborts typically clear faster than
+        // rate-limit windows — keep the base cooldown short so a
+        // single blip doesn't stall the loop for a minute.
+        InfraFailureClass::ProviderInternalError => Duration::from_secs(10),
         InfraFailureClass::TransportTimeout => Duration::from_secs(20),
         InfraFailureClass::GitTimeout => Duration::from_secs(15),
         // `GitPushTimeout` never takes the pause-and-restart path, so
@@ -339,10 +392,63 @@ fn infra_cooldown_for(class: InfraFailureClass) -> Duration {
     }
 }
 
+/// Heuristic: does `reason` *look* like a transient infra failure
+/// even though [`classify_infra_failure`] returned `None`?
+///
+/// We use this for the `debug.retry_miss` telemetry — not to retry a
+/// task silently, but to surface "the classifier is probably missing
+/// this pattern" to whoever reads the run log bundle or an
+/// `aura-run-heuristics` report. False positives here are cheap (a
+/// few extra log lines); false negatives let classifier gaps hide,
+/// which is exactly the class of problem Axis 4 exists to spot.
+///
+/// Deliberately uses a DIFFERENT word list than `classify_infra_failure`
+/// so the two can't get out of sync silently — each new pattern we add
+/// here should prompt a follow-up to decide whether it deserves its
+/// own `InfraFailureClass`.
+fn looks_like_unclassified_transient(reason: &str) -> bool {
+    let lower = reason.to_lowercase();
+    // Cheap list of words that generally imply "the provider / network
+    // layer had a transient issue", ordered roughly by frequency in the
+    // wild. If classify_infra_failure already matched these, the
+    // outer `if let ...Some(infra_failure)` branch ran and this
+    // helper is never called — so a match here means the classifier
+    // has a gap.
+    const HINTS: &[&str] = &[
+        "econnreset",
+        "socket hang up",
+        "socket closed",
+        "unexpected end of stream",
+        "body stream",
+        "deserialize",
+        "parse error",
+        "decode error",
+        "tls handshake",
+        "handshake failure",
+        "dns",
+        "name resolution",
+        "connection refused",
+        "network is unreachable",
+        "temporary failure",
+        "upstream disconnect",
+        "upstream connect error",
+        "stream reset",
+        "rst_stream",
+        "read econnaborted",
+        "tokio::time::error::elapsed",
+        "provider error",
+        "anthropic",
+        "openai",
+        "proxy error",
+    ];
+    HINTS.iter().any(|h| lower.contains(h))
+}
+
 fn infra_failure_label(class: InfraFailureClass) -> &'static str {
     match class {
         InfraFailureClass::ProviderRateLimited => "provider_rate_limited",
         InfraFailureClass::ProviderOverloaded => "provider_overloaded",
+        InfraFailureClass::ProviderInternalError => "provider_internal_error",
         InfraFailureClass::TransportTimeout => "transport_timeout",
         InfraFailureClass::GitTimeout => "git_timeout",
         InfraFailureClass::GitPushTimeout => "git_push_timeout",
@@ -354,6 +460,77 @@ struct ProjectCooldown {
     until: Instant,
     class: InfraFailureClass,
     reason: String,
+    /// How many times in a row this project has hit this same failure
+    /// class without a successful reset in between. Used to escalate
+    /// the cooldown on repeated hits — a single 5xx gets the base 10s,
+    /// the fourth in a row gets something closer to a minute. Reset
+    /// to zero whenever `clear_project_cooldown` fires (i.e. a task
+    /// actually made forward progress) or when the class changes.
+    consecutive_count: u32,
+}
+
+/// Maximum per-class escalation multiplier. The effective cooldown is
+/// `base * min(2^(count-1), ESCALATION_CAP)`, then capped by
+/// `PROVIDER_BACKOFF_MAX_SECS`. 8x keeps escalation monotonic across
+/// the first four hits and then flattens, which is plenty of runway
+/// inside the 120-second ceiling and avoids starving the loop if a
+/// provider is flapping but usually recovers.
+const ESCALATION_CAP: u32 = 8;
+
+/// Upper bound on jitter as a percentage of the pre-jitter cooldown.
+/// ±20% is enough to de-synchronize retries across a fleet of loops
+/// without making the post-jitter floor so small that we slam the
+/// provider within a couple of seconds of the last failure.
+const JITTER_PCT: u32 = 20;
+
+/// Apply ±`JITTER_PCT`% jitter to `base`. Uses the current instant's
+/// subsecond nanos as a pseudo-random source — not cryptographically
+/// random, just enough entropy to keep separate loops from lock-stepping
+/// into the same backoff window. Avoids pulling in the `rand` crate
+/// for a ~2-line need.
+///
+/// The returned duration is guaranteed to lie in
+/// `[base * (1 - JITTER_PCT/100), base * (1 + JITTER_PCT/100)]` and is
+/// never zero unless `base` itself was zero.
+fn apply_jitter(base: Duration) -> Duration {
+    if base.is_zero() {
+        return base;
+    }
+    let base_ms = base.as_millis() as u64;
+    let pct = u64::from(JITTER_PCT);
+    let span_ms = base_ms.saturating_mul(pct) / 100;
+    if span_ms == 0 {
+        return base;
+    }
+    // Use Instant's subsec_nanos plus the base's nanos as a cheap
+    // mixing function. Different projects hitting cooldowns within
+    // the same millisecond will still see different jitter because
+    // their `base_ms` differs (class-dependent) and the instant ticks
+    // on every call.
+    let seed = Instant::now().elapsed().subsec_nanos() as u64
+        ^ base.subsec_nanos() as u64
+        ^ base_ms;
+    let offset_ms = seed % (2 * span_ms + 1);
+    let jittered_ms = base_ms.saturating_sub(span_ms).saturating_add(offset_ms);
+    Duration::from_millis(jittered_ms.max(1))
+}
+
+/// Multiply `base` by `min(2^(count.saturating_sub(1)), ESCALATION_CAP)`.
+/// `count = 0` or `1` leaves the cooldown unchanged; each additional
+/// consecutive failure doubles it until the escalation cap, after
+/// which further hits hold steady at `base * ESCALATION_CAP`. The
+/// result is clamped to [`PROVIDER_BACKOFF_MAX_SECS`] here so callers
+/// don't have to repeat the check.
+fn escalate(base: Duration, count: u32) -> Duration {
+    let factor = if count <= 1 {
+        1u32
+    } else {
+        let shift = (count - 1).min(31);
+        (1u32 << shift).min(ESCALATION_CAP)
+    };
+    let scaled = base.saturating_mul(factor);
+    let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
+    scaled.min(cap)
 }
 
 fn project_cooldowns() -> &'static std::sync::Mutex<HashMap<String, ProjectCooldown>> {
@@ -388,28 +565,58 @@ fn register_project_cooldown_with_hint(
     let key = project_id.to_string();
     let default = infra_cooldown_for(class);
     let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
-    let requested = hint.map(|h| h.min(cap).max(default)).unwrap_or(default);
     let mut guard = match project_cooldowns().lock() {
         Ok(g) => g,
         Err(poisoned) => poisoned.into_inner(),
     };
+    // Per-class consecutive-failure counter: keeps escalating the
+    // cooldown while the same class keeps firing, resets when the
+    // class changes (new failure mode = new retry budget) or when
+    // `clear_project_cooldown` runs after a successful iteration.
+    // Reading the existing entry here before computing the effective
+    // cooldown lets the escalation factor hit the first repeat — a
+    // single 5xx gets 10s, the second in a row gets 20s, etc.
+    let prior_count = guard
+        .get(&key)
+        .filter(|c| c.class == class)
+        .map(|c| c.consecutive_count)
+        .unwrap_or(0);
+    let next_count = prior_count.saturating_add(1);
+    let escalated_default = escalate(default, next_count);
+    // A provider-supplied hint still wins when it's longer than our
+    // escalated default — respecting `Retry-After` is more important
+    // than our heuristic. When it's shorter, we hold the floor at
+    // `escalated_default` so repeated short hints don't keep slamming
+    // the provider every few seconds.
+    let requested = hint
+        .map(|h| h.min(cap).max(escalated_default))
+        .unwrap_or(escalated_default);
+    // Apply ±20% jitter AFTER escalation so the randomization scales
+    // with the size of the window, keeping the ratio consistent.
+    let jittered = apply_jitter(requested).min(cap);
     if let Some(existing) = guard.get_mut(&key) {
+        // Longest-window-wins semantics preserved: if a larger hint
+        // already landed and the remaining window is wider than what
+        // we just computed, keep the existing `until` but refresh the
+        // reason/class/count so the next failure builds on this chain.
         let remaining = existing.until.saturating_duration_since(Instant::now());
-        if remaining >= requested {
+        if remaining >= jittered {
             existing.reason = reason.to_string();
             existing.class = class;
+            existing.consecutive_count = next_count;
             return remaining;
         }
     }
     guard.insert(
         key,
         ProjectCooldown {
-            until: Instant::now() + requested,
+            until: Instant::now() + jittered,
             class,
             reason: reason.to_string(),
+            consecutive_count: next_count,
         },
     );
-    requested
+    jittered
 }
 
 fn active_project_cooldown(project_id: ProjectId) -> Option<(Duration, InfraFailureClass, String)> {
@@ -682,6 +889,118 @@ fn current_remediation_count(task_id: &str) -> u32 {
         Err(poisoned) => poisoned.into_inner(),
     };
     *guard.get(task_id).unwrap_or(&0)
+}
+
+// ==========================================================================
+// Axis 5 — Stateful resume preamble on retried tasks
+// ==========================================================================
+//
+// When the dev loop restarts a task via `restart_with_infra_backoff` after a
+// transient failure (5xx, stream abort, provider overload, …), the harness
+// today starts the task from scratch with no knowledge that this is attempt
+// N. The agent happily redoes any setup/search work it had already done,
+// which both wastes provider tokens and pushes the task back into the same
+// context-window shape that triggered the failure in the first place.
+//
+// The helpers below maintain an in-memory attempt counter and produce a
+// short, stable "resume preamble" string that downstream consumers (UI and
+// run bundles, via `task_retrying` / `debug.retry_preamble`) can surface to
+// the LLM on the next turn.
+//
+// The counter lives alongside `remediation_retry_counts` and follows the same
+// reset-on-process-restart policy: a stale attempt count shouldn't keep
+// burning tokens on preamble injection for a task the operator is retrying
+// by hand.
+
+/// Module-local retry counter for infra-backoff restarts, keyed by task id.
+/// Distinct from `remediation_retry_counts` because the two mechanisms have
+/// independent budgets — remediation is a Phase 3 decision about task shape,
+/// while these attempts are provider/network retries that should keep going
+/// as long as the provider is actually transient.
+fn retry_attempt_counts() -> &'static std::sync::Mutex<std::collections::HashMap<String, u32>> {
+    static COUNTS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, u32>>> =
+        std::sync::OnceLock::new();
+    COUNTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Bump the retry-attempt counter for `task_id` and return the new count.
+/// The first restart returns `1`; each subsequent restart returns `n + 1`.
+fn bump_retry_attempt(task_id: &str) -> u32 {
+    let mut guard = match retry_attempt_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let entry = guard.entry(task_id.to_string()).or_insert(0);
+    *entry = entry.saturating_add(1);
+    *entry
+}
+
+/// Forget the retry-attempt counter for `task_id`. Called on terminal
+/// states (`task_completed` / unrecoverable `task_failed`) so a subsequent
+/// manual re-run of the same task starts from `1` instead of inheriting a
+/// stale count from an earlier incident.
+fn clear_retry_attempt(task_id: &str) {
+    let mut guard = match retry_attempt_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    guard.remove(task_id);
+}
+
+/// Number of characters of the previous failure reason to include in the
+/// preamble. Long enough to carry the HTTP status + human-readable prose
+/// (e.g. "LLM error: stream terminated with error: Internal server error")
+/// without dragging in multi-kilobyte provider body dumps that would blow
+/// out the prompt budget on every retry.
+const RETRY_PREAMBLE_REASON_BUDGET: usize = 240;
+
+/// Build the stable, human-readable resume preamble surfaced on the
+/// `task_retrying` event when the dev loop restarts a task after a transient
+/// failure. Shape is deliberately fixed so the UI and any future harness
+/// consumer can parse / pattern-match it reliably.
+///
+/// Format:
+/// ```text
+/// [aura-retry attempt=3] Previous attempt failed with: <reason-trimmed>.
+/// Continue from where you left off; avoid re-running work that already
+/// succeeded.
+/// ```
+///
+/// Contract:
+/// * `attempt` is 1-based (the first *restart* is attempt 2, so
+///   `build_retry_preamble(2, ..)` is the shortest preamble ever produced).
+///   Callers must not pass `0`; the function saturates to `1` in that case
+///   so the output still parses cleanly.
+/// * `previous_reason` is trimmed of surrounding whitespace and truncated
+///   to [`RETRY_PREAMBLE_REASON_BUDGET`] chars with a `…` marker. Newlines
+///   inside the reason are collapsed to single spaces so the preamble
+///   stays on a predictable two-line shape.
+fn build_retry_preamble(attempt: u32, previous_reason: &str) -> String {
+    let attempt = attempt.max(1);
+    let collapsed: String = previous_reason
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
+    let trimmed = collapsed.trim();
+    // Byte-length check before we walk chars for a clean UTF-8 truncation.
+    let short = if trimmed.len() <= RETRY_PREAMBLE_REASON_BUDGET {
+        trimmed.to_string()
+    } else {
+        let mut out = String::with_capacity(RETRY_PREAMBLE_REASON_BUDGET + 1);
+        for ch in trimmed.chars() {
+            if out.len() + ch.len_utf8() > RETRY_PREAMBLE_REASON_BUDGET {
+                break;
+            }
+            out.push(ch);
+        }
+        out.push('…');
+        out
+    };
+    format!(
+        "[aura-retry attempt={attempt}] Previous attempt failed with: {short}. \
+         Continue from where you left off; avoid re-running work that already \
+         succeeded."
+    )
 }
 
 /// Hard ceiling on any single provider-backoff duration. Provider
@@ -1854,6 +2173,22 @@ struct TransientRetryContext {
     restart_budget: Option<u32>,
 }
 
+/// Restart budget for user-initiated single-task runs
+/// (`POST /api/projects/:project_id/tasks/:task_id/run`).
+///
+/// The dev loop itself uses `None` (unlimited) because its scheduler
+/// will pick the task up again on the next iteration. Single-task runs
+/// are one-shot from the user's perspective, so the budget caps how
+/// many infra-level restarts a single click can schedule.
+///
+/// 3 was chosen to give a ~30-60s healing window when combined with
+/// the existing `ProviderInternalError` cooldown (10s base with
+/// escalation via `escalate_by_count` up to ~40s). A budget of 1 (the
+/// previous value) meant a single mid-stream provider 500 terminally
+/// failed the retry even though `classify_infra_failure` had
+/// identified the error as transient.
+const SINGLE_TASK_RESTART_BUDGET: u32 = 3;
+
 fn take_retry_context(retry: &mut Option<TransientRetryContext>) -> Option<TransientRetryContext> {
     let ctx = retry.as_mut()?;
     match ctx.restart_budget.as_mut() {
@@ -2153,6 +2488,15 @@ async fn try_restart_automaton(
     reason: &str,
     ctx: &TransientRetryContext,
 ) -> Result<tokio::sync::broadcast::Sender<serde_json::Value>, String> {
+    // Axis 5: record this restart as a retry attempt so UI and run bundles
+    // can see the ladder of transient failures instead of a single opaque
+    // `task_retrying` event. `bump_retry_attempt` returns 1 on the *first*
+    // restart; the 0th attempt is the original run that just failed, so
+    // the value surfaced on the event is `attempt + 1` to read naturally
+    // as "now starting attempt N".
+    let restart_count = bump_retry_attempt(task_id);
+    let attempt_number = restart_count.saturating_add(1);
+    let preamble = build_retry_preamble(attempt_number, reason);
     emit_domain_event(
         app_broadcast,
         "task_retrying",
@@ -2161,6 +2505,8 @@ async fn try_restart_automaton(
         serde_json::json!({
             "task_id": task_id.to_string(),
             "reason": reason,
+            "attempt": attempt_number,
+            "preamble": preamble,
         }),
     );
     let (automaton_id, event_stream_url) =
@@ -2192,6 +2538,118 @@ async fn try_restart_automaton(
     .await
     .map_err(|e| format!("event stream reconnect failed: {e}"))?;
     Ok(tx)
+}
+
+/// Outcome of [`attempt_infra_retry`]. Callers branch on this instead of
+/// each duplicating the `classify_infra_failure` → `take_retry_context`
+/// → `reset_task_for_infra_retry` → `restart_with_infra_backoff` ladder.
+enum InfraRetryOutcome {
+    /// The reason classified as transient, a retry context was available,
+    /// and the automaton restarted successfully. The caller should swap
+    /// its broadcast receiver for `new_rx` and `continue` its event loop.
+    Retried {
+        new_rx: tokio::sync::broadcast::Receiver<serde_json::Value>,
+    },
+    /// Either the reason didn't classify as an infra transient, or the
+    /// retry budget was already exhausted. Caller should fall through to
+    /// its own terminal-failure handling without bridging through
+    /// `ready`.
+    NotClassified,
+    /// The reason classified and a budget slot was consumed, but the
+    /// reset (`reset_task_for_infra_retry`) or the restart
+    /// (`restart_with_infra_backoff`) itself failed. `task_reset_to_ready`
+    /// is `true` when the task was successfully flipped to `ready` before
+    /// the failure, so the caller must bridge `ready → in_progress →
+    /// failed` before persisting the terminal transition (aura-storage
+    /// rejects a direct `ready → failed`).
+    RetryFailed { task_reset_to_ready: bool },
+}
+
+/// Shared helper implementing the infra-transient retry ladder: classify
+/// the reason, consume one restart budget slot, log a `debug.retry`
+/// event, reset the task to `ready`, and trigger
+/// `restart_with_infra_backoff`.
+///
+/// Used by both the `task_failed` arm and the `task_completed`
+/// completion-validation-failure arm of the forwarder. The latter
+/// previously bypassed this ladder entirely, which reintroduced the
+/// `1.1 Create zero-core crate with newtype IDs` failure on every
+/// provider 5xx even though the classifier correctly recognised the
+/// error as transient (see the regression pinned by
+/// `classify_stream_terminated_internal_as_provider_internal_error` in
+/// `tests/autonomous_recovery_replay.rs`).
+#[allow(clippy::too_many_arguments)]
+async fn attempt_infra_retry(
+    app_broadcast: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    automaton_registry: &AutomatonRegistry,
+    task_service: &TaskService,
+    loop_log: &crate::loop_log::LoopLogWriter,
+    retry: &mut Option<TransientRetryContext>,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    task_id: &str,
+    reason: &str,
+    retry_after_hint: Option<Duration>,
+) -> InfraRetryOutcome {
+    let Some(infra_failure) = classify_infra_failure(reason) else {
+        return InfraRetryOutcome::NotClassified;
+    };
+    let Some(ctx) = take_retry_context(retry) else {
+        return InfraRetryOutcome::NotClassified;
+    };
+    let hint_ms = retry_after_hint.map(|d| d.as_millis() as u64);
+    loop_log
+        .on_json_event(
+            project_id,
+            agent_instance_id,
+            &serde_json::json!({
+                "type": "debug.retry",
+                "task_id": task_id,
+                "reason": reason,
+                "class": infra_failure_label(infra_failure),
+                "retry_after_ms": hint_ms,
+            }),
+        )
+        .await;
+    match reset_task_for_infra_retry(task_service, project_id, task_id).await {
+        Ok(()) => match restart_with_infra_backoff(
+            app_broadcast,
+            automaton_registry,
+            project_id,
+            agent_instance_id,
+            task_id,
+            reason,
+            Some(infra_failure),
+            retry_after_hint,
+            &ctx,
+        )
+        .await
+        {
+            Ok(new_tx) => InfraRetryOutcome::Retried {
+                new_rx: new_tx.subscribe(),
+            },
+            Err(restart_err) => {
+                warn!(
+                    task_id = %task_id,
+                    %restart_err,
+                    "Infra retry could not restart automaton"
+                );
+                InfraRetryOutcome::RetryFailed {
+                    task_reset_to_ready: true,
+                }
+            }
+        },
+        Err(reset_err) => {
+            warn!(
+                task_id = %task_id,
+                %reset_err,
+                "Infra retry classification matched, but task reset failed"
+            );
+            InfraRetryOutcome::RetryFailed {
+                task_reset_to_ready: false,
+            }
+        }
+    }
 }
 
 /// Forward automaton events from the harness WebSocket to the app's global
@@ -2252,6 +2710,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         let mut terminal_seen = false;
         // Retry context is consumed according to its local restart budget.
         let mut retry = retry;
+        // Last transient-looking failure observed during this turn (an
+        // `error` event or `task_failed` whose reason classified as
+        // `InfraFailureClass::*`). Captured so that if the harness later
+        // emits a spurious `task_completed` for the same turn — which
+        // happens after some provider 5xx / mid-stream aborts — the
+        // completion-validation gate can recover the *real* infra
+        // diagnosis instead of falling back on its own "no output, no
+        // file changes" synthesis and terminating a retryable failure.
+        // Cleared on `task_started` so each turn starts fresh.
+        let mut last_transient_reason: Option<String> = None;
         // Phase 6 — Closed-loop heuristics. Lazily bound on the first
         // forwarded event so we can stamp the actual `run_id` into
         // every `heuristic_finding` payload instead of a placeholder.
@@ -2334,6 +2802,11 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     // streaming events (text_delta, etc.) that don't carry
                     // task_id in their payload still get stamped correctly.
                     if event_type == "task_started" {
+                        // New turn — any transient-diagnosis breadcrumb
+                        // from a prior attempt must be dropped so it
+                        // cannot leak into a later turn's completion-gate
+                        // decision on a different task.
+                        last_transient_reason = None;
                         if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
                             current_task_id = Some(tid.to_owned());
                             if let (Some(session_id), Ok(task_id)) =
@@ -2639,6 +3112,15 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     let mapped_type = match event_type {
                         "task_completed" => {
                             terminal_seen = true;
+                            // Axis 5: a successful completion ends the retry
+                            // ladder for this task, so the in-memory counter
+                            // must be dropped. A future manual re-run of the
+                            // same task id (operator pressing "retry") will
+                            // then start the ladder over from attempt 1
+                            // instead of inheriting this run's count.
+                            if let Some(ref tid) = current_task_id {
+                                clear_retry_attempt(tid);
+                            }
                             // Clear the registry's active task pointer so
                             // `GET /loop/status` stops reporting the task
                             // as "live" immediately after completion.
@@ -2728,6 +3210,80 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     );
                                 }
                                 if let Some(reason) = gate_reason {
+                                    // Phase 7b — route completion-gate
+                                    // failures through the same infra
+                                    // retry ladder as a real `task_failed`
+                                    // event. The gate's own reason ("no
+                                    // output, no file changes, no
+                                    // verification evidence") never
+                                    // classifies as an infra transient on
+                                    // its own, so we first consult any
+                                    // `last_transient_reason` captured
+                                    // from a preceding `error` event —
+                                    // that's the real diagnosis (e.g.
+                                    // "LLM error: stream terminated with
+                                    // error: Internal server error") and
+                                    // is what `classify_infra_failure`
+                                    // will recognise as
+                                    // `ProviderInternalError`. Falls back
+                                    // to the gate reason so a non-infra
+                                    // gate failure still follows the
+                                    // classifier's normal `NotClassified`
+                                    // path into terminal handling.
+                                    let retry_reason = last_transient_reason
+                                        .clone()
+                                        .unwrap_or_else(|| reason.to_string());
+                                    let mut gate_retry_reset = false;
+                                    let outcome = attempt_infra_retry(
+                                        &app_broadcast,
+                                        &automaton_registry,
+                                        task_service.as_ref(),
+                                        loop_log.as_ref(),
+                                        &mut retry,
+                                        project_id,
+                                        agent_instance_id,
+                                        tid,
+                                        &retry_reason,
+                                        None,
+                                    )
+                                    .await;
+                                    match outcome {
+                                        InfraRetryOutcome::Retried { new_rx } => {
+                                            // Retry ladder owns the
+                                            // terminal state now: swap
+                                            // the receiver, clear
+                                            // per-turn state, and
+                                            // restart the outer event
+                                            // loop without emitting a
+                                            // rollback, persisting
+                                            // failure metadata, or
+                                            // transitioning the task.
+                                            rx = new_rx;
+                                            terminal_seen = false;
+                                            session_status = "completed";
+                                            current_task_id = None;
+                                            last_synced_task_id = None;
+                                            last_transient_reason = None;
+                                            sync_registry_task_id(
+                                                automaton_registry.clone(),
+                                                agent_instance_id,
+                                                None,
+                                            )
+                                            .await;
+                                            continue;
+                                        }
+                                        InfraRetryOutcome::NotClassified => {
+                                            // Non-infra gate failure —
+                                            // fall through to the
+                                            // existing terminal handling
+                                            // below.
+                                        }
+                                        InfraRetryOutcome::RetryFailed {
+                                            task_reset_to_ready,
+                                        } => {
+                                            gate_retry_reset = task_reset_to_ready;
+                                        }
+                                    }
                                     session_status = "failed";
                                     // Surface the rollback on the task
                                     // card so users never see a
@@ -2773,6 +3329,27 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                 %error,
                                                 "Failed to persist completion-validation failure metadata"
                                             );
+                                        }
+                                        // When the retry ladder moved the
+                                        // task to `ready` before the
+                                        // restart failed, aura-storage
+                                        // rejects a direct `ready →
+                                        // failed` transition. Bridge
+                                        // through `in_progress` first so
+                                        // the row actually lands in
+                                        // `failed` instead of getting
+                                        // stuck in `ready` with no
+                                        // terminal badge.
+                                        if gate_retry_reset {
+                                            let bridge = aura_os_storage::TransitionTaskRequest {
+                                                status: "in_progress".to_string(),
+                                            };
+                                            if let Err(error) = storage_client
+                                                .transition_task(tid, jwt, &bridge)
+                                                .await
+                                            {
+                                                warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before completion-gate terminal failure");
+                                            }
                                         }
                                         let req = aura_os_storage::TransitionTaskRequest {
                                             status: "failed".to_string(),
@@ -2904,10 +3481,49 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // (producing the `Invalid status transition`
                             // warnings seen in the logs).
                             let mut task_reset_to_ready = false;
+                            let classified_infra = failure_reason
+                                .as_deref()
+                                .and_then(classify_infra_failure);
+                            // `debug.retry_miss` fires when the reason
+                            // text looks transient (per
+                            // `looks_like_unclassified_transient`) but
+                            // the classifier didn't pick it up. The
+                            // event goes into `retries.jsonl` inside
+                            // the run bundle so `aura-run-heuristics`
+                            // can surface "we might be missing a
+                            // classifier pattern" reports without the
+                            // server having to decide policy up-front.
+                            // Deliberately does NOT trigger a retry —
+                            // this is pure observability.
+                            if classified_infra.is_none() {
+                                if let (Some(tid), Some(reason)) =
+                                    (tid.as_ref(), failure_reason.as_ref())
+                                {
+                                    if looks_like_unclassified_transient(reason) {
+                                        loop_log
+                                            .on_json_event(
+                                                project_id,
+                                                agent_instance_id,
+                                                &serde_json::json!({
+                                                    "type": "debug.retry_miss",
+                                                    "task_id": tid,
+                                                    "reason": reason,
+                                                    "hint": "looks_like_unclassified_transient",
+                                                }),
+                                            )
+                                            .await;
+                                        warn!(
+                                            task_id = %tid,
+                                            %reason,
+                                            "Unclassified but transient-looking task_failed; emitted debug.retry_miss"
+                                        );
+                                    }
+                                }
+                            }
                             if let (Some(tid), Some(reason), Some(infra_failure)) = (
                                 tid.as_ref(),
                                 failure_reason.as_ref(),
-                                failure_reason.as_deref().and_then(classify_infra_failure),
+                                classified_infra,
                             ) {
                                 if let Some(ctx) = take_retry_context(&mut retry) {
                                     // Provider-supplied Retry-After hint,
@@ -2993,6 +3609,17 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             }
                             session_status = "failed";
                             terminal_seen = true;
+                            // Axis 5: this task_failed reached the terminal
+                            // branch — either the failure wasn't classified
+                            // as transient, or the restart itself errored
+                            // (see the `Err(restart_err)` arms above). Either
+                            // way the task is no longer being retried by
+                            // aura-os, so clear the attempt counter to avoid
+                            // inflating the attempt number on a future
+                            // manual retry of the same task id.
+                            if let Some(ref tid) = tid {
+                                clear_retry_attempt(tid);
+                            }
                             // Clear the registry's active task pointer so
                             // `GET /loop/status` stops reporting the task
                             // as "live" immediately after failure.
@@ -3251,6 +3878,15 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             let reason = extract_failure_reason(&event)
                                 .unwrap_or_else(|| "Automaton reported an error".to_string());
                             let retry_after_hint = extract_retry_after(&event);
+                            // Breadcrumb for the completion-gate path: if
+                            // this error looks like an infra transient and
+                            // the harness later emits a spurious
+                            // `task_completed`, we want to recover this
+                            // reason rather than classify the gate's
+                            // "no output, no file changes" synthesis.
+                            if classify_infra_failure(&reason).is_some() {
+                                last_transient_reason = Some(reason.clone());
+                            }
                             session_status = "failed";
                             if let Some(tid) = current_task_id.clone() {
                                 if let Some(ctx) = take_retry_context(&mut retry) {
@@ -4742,15 +5378,20 @@ pub(crate) async fn run_single_task(
             usage_reporting,
             router_url: state.agent_runtime.router_url.clone(),
             http_client: state.agent_runtime.http_client.clone(),
-            // Allow one automatic restart of the automaton on infra-transient
-            // failures (stream closed without terminal event, or `error`
-            // event with no accompanying `task_failed`). We intentionally do
-            // not retry harness-reported `task_failed`, since the harness
-            // already runs its own build/test fix loop inside the task.
+            // Allow a small number of automatic restarts of the automaton
+            // on infra-transient failures (stream closed without terminal
+            // event, `error` event with no accompanying `task_failed`, and
+            // upstream provider 500s classified as
+            // `InfraFailureClass::ProviderInternalError`). The budget is
+            // `SINGLE_TASK_RESTART_BUDGET`; see its docs for rationale.
+            //
+            // We intentionally do not retry harness-reported `task_failed`
+            // with a non-infra reason, since the harness already runs
+            // its own build/test fix loop inside the task.
             retry: Some(TransientRetryContext {
                 automaton_client: automaton_client.clone(),
                 start_params,
-                restart_budget: Some(1),
+                restart_budget: Some(SINGLE_TASK_RESTART_BUDGET),
             }),
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             loop_log: state.loop_log.clone(),
@@ -5362,35 +6003,79 @@ mod tests {
 
     #[test]
     fn project_cooldown_hint_raises_but_never_lowers_default() {
+        // Apply a ±`JITTER_PCT`% tolerance to every comparison — the
+        // cooldown path applies jitter post-escalation to de-correlate
+        // retries, so exact equality no longer holds.
+        fn within_jitter(actual: Duration, target: Duration) -> bool {
+            let target_ms = target.as_millis() as i64;
+            let actual_ms = actual.as_millis() as i64;
+            let tolerance_ms = target_ms * i64::from(JITTER_PCT) / 100 + 2;
+            (actual_ms - target_ms).abs() <= tolerance_ms
+        }
+
+        // Use a fresh `ProjectId` per subtest — `clear_project_cooldown`
+        // only evicts an entry whose window has already expired (its
+        // production contract), so reusing one id across the three
+        // subtests would let the consecutive-failure counter carry
+        // over and escalate every subsequent registration. Each
+        // subtest below is conceptually independent.
+
+        // Hint shorter than the class default is floored to the default
+        // (minus jitter). Allow a 20% margin on the base so a
+        // downward-jittered result still passes.
         let project_id = ProjectId::new();
-        // Hint shorter than the class default is floored to the default.
         let short = register_project_cooldown_with_hint(
             project_id,
             InfraFailureClass::ProviderRateLimited,
             "short hint",
             Some(Duration::from_secs(1)),
         );
-        assert!(short >= infra_cooldown_for(InfraFailureClass::ProviderRateLimited));
+        let base = infra_cooldown_for(InfraFailureClass::ProviderRateLimited);
+        let min_allowed =
+            base.saturating_sub(Duration::from_millis(base.as_millis() as u64 * 20 / 100));
+        assert!(
+            short >= min_allowed,
+            "expected short ≥ {min_allowed:?} (base minus jitter), got {short:?}"
+        );
         clear_project_cooldown(project_id);
 
-        // Hint longer than the class default wins, up to the cap.
+        // Hint longer than the class default wins, up to the cap, within
+        // the ±JITTER_PCT tolerance.
+        let project_id = ProjectId::new();
         let long = register_project_cooldown_with_hint(
             project_id,
             InfraFailureClass::ProviderRateLimited,
             "long hint",
             Some(Duration::from_secs(90)),
         );
-        assert_eq!(long, Duration::from_secs(90));
+        assert!(
+            within_jitter(long, Duration::from_secs(90)),
+            "expected ~90s ±20%, got {long:?}"
+        );
         clear_project_cooldown(project_id);
 
-        // Hint above the ceiling is clamped.
+        // Hint above the ceiling is clamped. The cap is enforced AFTER
+        // jitter so results can never exceed it; the lower bound allows
+        // for the downward jitter half of the window.
+        let project_id = ProjectId::new();
         let capped = register_project_cooldown_with_hint(
             project_id,
             InfraFailureClass::ProviderRateLimited,
             "huge hint",
             Some(Duration::from_secs(10_000)),
         );
-        assert_eq!(capped, Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS));
+        assert!(
+            capped <= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS),
+            "cooldown {capped:?} exceeded cap"
+        );
+        assert!(
+            capped
+                >= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS)
+                    .saturating_sub(Duration::from_secs(
+                        PROVIDER_BACKOFF_MAX_SECS * u64::from(JITTER_PCT) / 100 + 1,
+                    )),
+            "cooldown {capped:?} too far below cap"
+        );
         clear_project_cooldown(project_id);
     }
 
@@ -5415,6 +6100,163 @@ mod tests {
         assert_eq!(
             classify_infra_failure("syntax error in generated code"),
             None
+        );
+    }
+
+    #[test]
+    fn classify_infra_failure_detects_provider_internal_errors() {
+        // The exact string this user saw: the harness wraps the
+        // aura-reasoner stream-terminator as `LLM error: …`, so the
+        // dev loop observes it verbatim inside the `task_failed`
+        // event's reason field. Must classify as
+        // `ProviderInternalError` so the auto-retry path fires.
+        assert_eq!(
+            classify_infra_failure(
+                "LLM error: stream terminated with error: Internal server error"
+            ),
+            Some(InfraFailureClass::ProviderInternalError)
+        );
+        // Status-only variants cover the case where the classifier
+        // is fed the raw HTTP error without prose.
+        for reason in [
+            "HTTP 500 from upstream",
+            "upstream returned 502 Bad Gateway",
+            "Received 503 Service Unavailable",
+            "504 Gateway Timeout from Anthropic proxy",
+        ] {
+            assert_eq!(
+                classify_infra_failure(reason),
+                Some(InfraFailureClass::ProviderInternalError),
+                "expected ProviderInternalError for: {reason}"
+            );
+        }
+        // Prose-only variants (no status code) must classify too —
+        // some proxies elide the numeric status.
+        for reason in [
+            "Internal Server Error",
+            "bad gateway",
+            "service unavailable, try again",
+            "gateway timeout while reading response",
+        ] {
+            assert_eq!(
+                classify_infra_failure(reason),
+                Some(InfraFailureClass::ProviderInternalError),
+                "expected ProviderInternalError for: {reason}"
+            );
+        }
+        // Stream-abort variants — reasoner can surface the
+        // underlying socket error without a status code when the
+        // response body closes mid-flight.
+        for reason in [
+            "stream terminated unexpectedly",
+            "stream closed prematurely",
+            "connection reset by peer",
+            "broken pipe while reading SSE body",
+            "connection closed unexpectedly",
+        ] {
+            assert_eq!(
+                classify_infra_failure(reason),
+                Some(InfraFailureClass::ProviderInternalError),
+                "expected ProviderInternalError for: {reason}"
+            );
+        }
+    }
+
+    #[test]
+    fn classify_infra_failure_provider_internal_is_case_insensitive() {
+        assert_eq!(
+            classify_infra_failure("LLM ERROR: STREAM TERMINATED WITH ERROR: INTERNAL SERVER ERROR"),
+            Some(InfraFailureClass::ProviderInternalError)
+        );
+        assert_eq!(
+            classify_infra_failure("Connection Reset"),
+            Some(InfraFailureClass::ProviderInternalError)
+        );
+    }
+
+    #[test]
+    fn classify_infra_failure_rate_limit_takes_precedence_over_5xx() {
+        // When a reason happens to contain both a rate-limit marker
+        // and a 5xx-like status (unusual but possible if a proxy
+        // stuffs the 429 into a 502 envelope), the rate-limit class
+        // must win — its cooldown is longer and the retry hint is
+        // where the useful `Retry-After` lives.
+        assert_eq!(
+            classify_infra_failure("HTTP 502 but upstream says 429 Too Many Requests"),
+            Some(InfraFailureClass::ProviderRateLimited)
+        );
+    }
+
+    /// Regression for the `1.1 Create zero-core crate with newtype IDs`
+    /// failure: when the harness emits a spurious `task_completed`
+    /// after a provider 5xx / mid-stream abort, the completion
+    /// validation gate rejects it with a synthesized "no output, no
+    /// file changes, no verification evidence" reason that does NOT
+    /// classify as an infra transient. Without the
+    /// `last_transient_reason` breadcrumb the retry ladder would then
+    /// be skipped entirely and the task would go terminal even though
+    /// `classify_infra_failure` correctly recognises the underlying
+    /// 5xx. This test pins the selection rule used by the gate-failure
+    /// branch: prefer the tracked transient reason over the gate's
+    /// own text.
+    #[test]
+    fn completion_gate_retry_prefers_tracked_transient_reason() {
+        let gate_reason =
+            "Automaton reported task_completed without output, file changes, or verification evidence";
+        // No breadcrumb → classifier has nothing infra to grab onto
+        // and the gate's own reason stays `None` (non-transient).
+        assert_eq!(classify_infra_failure(gate_reason), None);
+
+        // Exact reason string surfaced by aura-reasoner when an LLM
+        // stream aborts mid-frame. This is what a preceding `error`
+        // event captures into `last_transient_reason`.
+        let transient_reason = "LLM error: stream terminated with error: Internal server error";
+        assert_eq!(
+            classify_infra_failure(transient_reason),
+            Some(InfraFailureClass::ProviderInternalError),
+        );
+
+        // Gate-failure branch's selection: prefer tracked breadcrumb,
+        // fall back to the gate reason. Mirrors the inline `match` in
+        // `forward_automaton_events`' completion-gate arm.
+        fn select<'a>(gate_reason: &'a str, last_transient_reason: Option<&'a str>) -> &'a str {
+            last_transient_reason.unwrap_or(gate_reason)
+        }
+        assert_eq!(
+            classify_infra_failure(select(gate_reason, Some(transient_reason))),
+            Some(InfraFailureClass::ProviderInternalError),
+            "with breadcrumb, gate-failure must route through ProviderInternalError retry path",
+        );
+        assert_eq!(
+            classify_infra_failure(select(gate_reason, None)),
+            None,
+            "without breadcrumb, gate-failure falls through to NotClassified terminal path",
+        );
+    }
+
+    #[test]
+    fn provider_internal_error_has_short_cooldown() {
+        // 5xx / stream aborts typically clear within seconds, so the
+        // base cooldown stays short — much shorter than rate-limit
+        // windows. Regression test for tuning.
+        assert_eq!(
+            infra_cooldown_for(InfraFailureClass::ProviderInternalError),
+            Duration::from_secs(10)
+        );
+        assert!(
+            infra_cooldown_for(InfraFailureClass::ProviderInternalError)
+                < infra_cooldown_for(InfraFailureClass::ProviderRateLimited)
+        );
+    }
+
+    #[test]
+    fn provider_internal_error_has_stable_label() {
+        // The label is written verbatim into `retries.jsonl` and
+        // `loop_paused` events; keep the snake_case form stable so
+        // downstream consumers can match on it.
+        assert_eq!(
+            infra_failure_label(InfraFailureClass::ProviderInternalError),
+            "provider_internal_error"
         );
     }
 
@@ -5474,6 +6316,46 @@ mod tests {
         assert!(take_retry_context(&mut retry).is_none());
     }
 
+    /// The single-task retry flow pins its restart budget to a value
+    /// greater than 1 so a single transient provider 500 (classified
+    /// as `ProviderInternalError`) does not terminally fail a user's
+    /// "Retry" click. See `SINGLE_TASK_RESTART_BUDGET` for rationale.
+    #[test]
+    fn single_task_restart_budget_allows_more_than_one_retry() {
+        assert!(
+            SINGLE_TASK_RESTART_BUDGET >= 2,
+            "single-task retry must survive at least one mid-stream provider blip; got {}",
+            SINGLE_TASK_RESTART_BUDGET
+        );
+        let start_params = AutomatonStartParams {
+            project_id: ProjectId::new().to_string(),
+            auth_token: None,
+            model: None,
+            workspace_root: None,
+            task_id: None,
+            git_repo_url: None,
+            git_branch: None,
+            installed_tools: None,
+            installed_integrations: None,
+        };
+        let client = std::sync::Arc::new(aura_os_link::AutomatonClient::new("http://127.0.0.1:1"));
+        let mut retry = Some(TransientRetryContext {
+            automaton_client: client,
+            start_params,
+            restart_budget: Some(SINGLE_TASK_RESTART_BUDGET),
+        });
+        for _ in 0..SINGLE_TASK_RESTART_BUDGET {
+            assert!(
+                take_retry_context(&mut retry).is_some(),
+                "restart budget exhausted before allowance"
+            );
+        }
+        assert!(
+            take_retry_context(&mut retry).is_none(),
+            "restart budget must be bounded"
+        );
+    }
+
     #[test]
     fn project_cooldown_prefers_longer_existing_window() {
         let project_id = ProjectId::new();
@@ -5483,6 +6365,139 @@ mod tests {
         assert!(second >= first.saturating_sub(Duration::from_secs(1)));
         let active = active_project_cooldown(project_id).expect("cooldown should be active");
         assert_eq!(active.1, InfraFailureClass::GitTimeout);
+        clear_project_cooldown(project_id);
+    }
+
+    /// `apply_jitter` keeps results inside the declared ±JITTER_PCT band
+    /// across many samples. The PRNG source is the system clock's
+    /// subsecond nanos — good enough to de-synchronize retries across
+    /// a fleet but not cryptographically random — so we verify the
+    /// *bounds*, not a uniform distribution.
+    #[test]
+    fn apply_jitter_stays_within_declared_band() {
+        let base = Duration::from_secs(30);
+        let band_ms = base.as_millis() as u64 * u64::from(JITTER_PCT) / 100;
+        let lo = base.as_millis() as u64 - band_ms;
+        let hi = base.as_millis() as u64 + band_ms;
+        for _ in 0..256 {
+            let jittered = apply_jitter(base).as_millis() as u64;
+            assert!(
+                jittered >= lo,
+                "jittered {jittered}ms fell below {lo}ms for base {base:?}"
+            );
+            assert!(
+                jittered <= hi,
+                "jittered {jittered}ms exceeded {hi}ms for base {base:?}"
+            );
+        }
+    }
+
+    /// Edge cases — zero in, zero out (no escalation of nothing), and
+    /// very small bases don't underflow to 0ms.
+    #[test]
+    fn apply_jitter_handles_zero_and_tiny_bases() {
+        assert_eq!(apply_jitter(Duration::ZERO), Duration::ZERO);
+        for _ in 0..32 {
+            let j = apply_jitter(Duration::from_millis(1));
+            assert!(!j.is_zero(), "1ms base must never jitter down to zero");
+        }
+    }
+
+    /// `escalate` doubles with each consecutive hit up to
+    /// `ESCALATION_CAP`, then flattens. Counts of 0 and 1 are identity.
+    #[test]
+    fn escalate_doubles_up_to_cap() {
+        let base = Duration::from_secs(10);
+        assert_eq!(escalate(base, 0), base);
+        assert_eq!(escalate(base, 1), base);
+        assert_eq!(escalate(base, 2), Duration::from_secs(20));
+        assert_eq!(escalate(base, 3), Duration::from_secs(40));
+        assert_eq!(escalate(base, 4), Duration::from_secs(80));
+        // Count=5 would give 16x = 160s but ESCALATION_CAP (8) caps it
+        // at 80s, and then PROVIDER_BACKOFF_MAX_SECS caps that below
+        // the ceiling. Both invariants checked.
+        let capped = escalate(base, 5);
+        assert!(capped <= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS));
+        assert!(capped >= Duration::from_secs(80));
+        // Count high enough to saturate never panics.
+        let _ = escalate(base, u32::MAX);
+    }
+
+    /// The cooldown registration path escalates in real time: each
+    /// consecutive hit of the same class produces a strictly longer
+    /// (pre-jitter) window than the prior one, up to the cap. We check
+    /// monotonicity with a generous tolerance because jitter can push
+    /// a later sample slightly below an earlier one in rare cases.
+    #[test]
+    fn register_project_cooldown_escalates_on_consecutive_failures() {
+        let project_id = ProjectId::new();
+        let base = infra_cooldown_for(InfraFailureClass::ProviderInternalError);
+        let tolerance = Duration::from_millis(base.as_millis() as u64 * 40 / 100);
+
+        let first = register_project_cooldown(
+            project_id,
+            InfraFailureClass::ProviderInternalError,
+            "first 5xx",
+        );
+        // Force the existing entry to expire so the next registration
+        // doesn't see `remaining >= requested` and return the old
+        // window. Without this the longest-window-wins path hides the
+        // escalation effect in a quick test.
+        {
+            let mut g = project_cooldowns().lock().unwrap();
+            if let Some(c) = g.get_mut(&project_id.to_string()) {
+                c.until = Instant::now();
+            }
+        }
+        let second = register_project_cooldown(
+            project_id,
+            InfraFailureClass::ProviderInternalError,
+            "second 5xx",
+        );
+        // Second registration should be at least 2x base minus jitter.
+        let expected_second = escalate(base, 2);
+        assert!(
+            second + tolerance >= expected_second,
+            "second {second:?} should be near {expected_second:?}"
+        );
+        assert!(
+            second + tolerance >= first,
+            "escalation never decreases (second {second:?} vs first {first:?})"
+        );
+        clear_project_cooldown(project_id);
+    }
+
+    /// A different failure class resets the consecutive counter — the
+    /// underlying assumption is that classes are independent problems,
+    /// so four 5xx's shouldn't punish a subsequent git timeout.
+    #[test]
+    fn consecutive_counter_resets_when_class_changes() {
+        let project_id = ProjectId::new();
+        // Build up a short streak of internal errors.
+        for _ in 0..3 {
+            register_project_cooldown(
+                project_id,
+                InfraFailureClass::ProviderInternalError,
+                "5xx",
+            );
+            // Expire the window so the next call doesn't short-circuit
+            // on the longer-remaining-wins branch.
+            let mut g = project_cooldowns().lock().unwrap();
+            if let Some(c) = g.get_mut(&project_id.to_string()) {
+                c.until = Instant::now();
+            }
+        }
+        // Now a DIFFERENT class fires. Its cooldown should sit near
+        // that class's base (not escalated from the prior streak).
+        let git = register_project_cooldown(project_id, InfraFailureClass::GitTimeout, "git");
+        let git_base = infra_cooldown_for(InfraFailureClass::GitTimeout);
+        // +20% jitter allowed + 1 unit escalation (count starts at 1).
+        let max_allowed =
+            git_base + Duration::from_millis(git_base.as_millis() as u64 * 25 / 100);
+        assert!(
+            git <= max_allowed,
+            "git cooldown {git:?} was higher than single-hit bound {max_allowed:?}; counter did not reset on class change"
+        );
         clear_project_cooldown(project_id);
     }
 
@@ -6043,6 +7058,78 @@ mod tests {
         // would short-circuit before bumping again. Verify the reader
         // reflects the final value.
         assert_eq!(current_remediation_count(&tid), MAX_RETRIES_PER_TASK);
+    }
+
+    #[test]
+    fn retry_attempt_counter_bumps_and_clears() {
+        use super::{bump_retry_attempt, clear_retry_attempt};
+        // Unique id so the shared counter doesn't collide with
+        // parallel tests.
+        let tid = format!("test-retry-{}", aura_os_core::TaskId::new());
+        assert_eq!(bump_retry_attempt(&tid), 1);
+        assert_eq!(bump_retry_attempt(&tid), 2);
+        assert_eq!(bump_retry_attempt(&tid), 3);
+        clear_retry_attempt(&tid);
+        // After clearing, the next bump resets to 1 so a fresh
+        // manual retry of the same task id starts the ladder over
+        // instead of inheriting the stale count.
+        assert_eq!(bump_retry_attempt(&tid), 1);
+        clear_retry_attempt(&tid);
+    }
+
+    #[test]
+    fn retry_preamble_fixed_shape_and_attempt_number() {
+        use super::build_retry_preamble;
+        let p = build_retry_preamble(2, "LLM error: stream terminated with error: 500");
+        assert!(p.starts_with("[aura-retry attempt=2]"), "got {p:?}");
+        assert!(p.contains("stream terminated"), "got {p:?}");
+        assert!(
+            p.contains("Continue from where you left off"),
+            "preamble must carry the resume instruction: {p:?}"
+        );
+    }
+
+    #[test]
+    fn retry_preamble_truncates_long_reasons_with_ellipsis() {
+        use super::{build_retry_preamble, RETRY_PREAMBLE_REASON_BUDGET};
+        let long = "a".repeat(RETRY_PREAMBLE_REASON_BUDGET + 500);
+        let p = build_retry_preamble(3, &long);
+        assert!(
+            p.contains('…'),
+            "long reason must be marked with ellipsis: {p:?}"
+        );
+        // Ensure we never carry the whole oversized blob forward —
+        // the budget exists specifically so the preamble can't blow
+        // up the next turn's prompt.
+        let body = p.split(": ").nth(2).unwrap_or("");
+        assert!(
+            body.len() <= RETRY_PREAMBLE_REASON_BUDGET + "…".len() + 100,
+            "preamble body ({} bytes) should be bounded by the budget: {p:?}",
+            body.len(),
+        );
+    }
+
+    #[test]
+    fn retry_preamble_collapses_control_chars() {
+        use super::build_retry_preamble;
+        let raw = "line one\nline two\r\nline three";
+        let p = build_retry_preamble(2, raw);
+        assert!(
+            !p.contains('\n') && !p.contains('\r'),
+            "preamble must flatten newlines so the two-line shape stays stable: {p:?}"
+        );
+        assert!(p.contains("line one"), "got {p:?}");
+        assert!(p.contains("line three"), "got {p:?}");
+    }
+
+    #[test]
+    fn retry_preamble_clamps_zero_attempt_to_one() {
+        use super::build_retry_preamble;
+        // Callers must not pass 0 but the function must still produce
+        // parseable output — regressing this would break UI parsing
+        // that expects a numeric attempt.
+        let p = build_retry_preamble(0, "boom");
+        assert!(p.starts_with("[aura-retry attempt=1]"), "got {p:?}");
     }
 
     /// `resolve_start_conflict` decides whether to stop-and-retry or adopt

@@ -28,6 +28,7 @@ const ALL_ENGINE_EVENT_TYPES: EventType[] = [
   EventType.LoopFinished, EventType.LoopIterationSummary,
   EventType.TaskStarted, EventType.TaskCompleted, EventType.TaskFailed,
   EventType.TaskRetrying, EventType.TaskBecameReady, EventType.TasksBecameReady,
+  EventType.TaskCompletionGate,
   EventType.FileOpsApplied, EventType.FollowUpTaskCreated,
   EventType.SessionRolledOver, EventType.LogLine,
   EventType.SpecGenStarted, EventType.SpecGenProgress,

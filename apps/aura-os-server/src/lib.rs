@@ -139,6 +139,23 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::is_git_push_timeout_failure_for_tests(reason)
     }
 
+    /// True when `reason` is classified as a transient provider
+    /// internal error (5xx / stream aborted) — the class added in
+    /// Axis 1 so the `LLM error: stream terminated with error:
+    /// Internal server error` pattern routes through the retry path
+    /// instead of being treated as terminal.
+    pub fn is_provider_internal_error(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_provider_internal_error_for_tests(reason)
+    }
+
+    /// True when `reason` text *looks* transient but the classifier
+    /// didn't match it — the `debug.retry_miss` trigger condition from
+    /// Axis 4. Used by integration tests to pin the exact coverage
+    /// surface of `looks_like_unclassified_transient`.
+    pub fn looks_like_unclassified_transient(reason: &str) -> bool {
+        crate::handlers::dev_loop::looks_like_unclassified_transient_for_tests(reason)
+    }
+
     /// Run the Definition-of-Done gate against a synthetic task-output
     /// summary. Returns the rejection reason when the completion would
     /// be rewritten to `task_failed`, `None` when the completion would

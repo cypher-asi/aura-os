@@ -8,16 +8,9 @@ import { Avatar } from "../Avatar";
 import { useAvatarState } from "../../hooks/use-avatar-state";
 import { useProjectActions } from "../../stores/project-action-store";
 import { toBullets, formatTokens, formatRelativeTime } from "../../utils/format";
+import { extractErrorMessage } from "../../utils/extract-error-message";
 import type { Task, AgentInstance } from "../../types";
 import styles from "../Preview/Preview.module.css";
-
-function extractErrorMessage(raw: string): string {
-  const jsonMatch = raw.match(/"message"\s*:\s*"([^"]+)"/);
-  if (jsonMatch) return jsonMatch[1];
-  const prefixMatch = raw.match(/^[\w\s]+error:\s*(.+)/i);
-  if (prefixMatch) return prefixMatch[1];
-  return raw;
-}
 
 function formatElapsed(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
