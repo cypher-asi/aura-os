@@ -2,18 +2,19 @@
   {
     "date": "2026-04-23",
     "channel": "nightly",
-    "version": "0.1.0-nightly.354.1",
-    "title": "Hardening the nightly release pipeline and changelog media",
-    "intro": "Today was a release-infrastructure day. The nightly pipeline picked up a more resilient asset-prune path, a new gh-pages recovery workflow, and a history-aware sync job, while the branded changelog media renderer was reworked to let real product screenshots dominate the frame without being clipped.",
-    "entryCount": 1,
+    "version": "0.1.0-nightly.355.1",
+    "title": "GPT-5.5 pricing lands and nightly release pipeline gets sturdier",
+    "intro": "Today's nightly brings the GPT-5.5 family into Aura's chat and cost accounting, on top of a substantial hardening pass across the release pipeline — dated changelog history, safer nightly asset pruning, a gh-pages recovery path, and cleaner changelog media framing.",
+    "entryCount": 2,
     "highlights": [
-      "Nightly asset prune now survives missing and flaky GitHub API responses",
-      "New gh-pages republish and history-sync workflows",
-      "Changelog media frames product screenshots at their true aspect ratio"
+      "GPT-5.5 available in chat with full pricing support",
+      "Nightly asset prune tolerates missing releases",
+      "New gh-pages republish recovery workflow",
+      "Changelog media preserves screenshot aspect and framing"
     ],
-    "rawCommitCount": 6,
-    "generatedAt": "2026-04-23T18:18:15.210Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.354.1",
+    "rawCommitCount": 7,
+    "generatedAt": "2026-04-23T18:55:13.426Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.355.1",
     "path": "history/2026-04-23.json"
   },
   {

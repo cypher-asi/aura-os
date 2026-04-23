@@ -1,25 +1,37 @@
-# Hardening the nightly release pipeline and changelog media
+# GPT-5.5 pricing lands and nightly release pipeline gets sturdier
 
 - Date: `2026-04-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.354.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.354.1
+- Version: `0.1.0-nightly.355.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.355.1
 
-Today was a release-infrastructure day. The nightly pipeline picked up a more resilient asset-prune path, a new gh-pages recovery workflow, and a history-aware sync job, while the branded changelog media renderer was reworked to let real product screenshots dominate the frame without being clipped.
+Today's nightly brings the GPT-5.5 family into Aura's chat and cost accounting, on top of a substantial hardening pass across the release pipeline — dated changelog history, safer nightly asset pruning, a gh-pages recovery path, and cleaner changelog media framing.
 
-## 9:17 AM — Resilient nightly prune and changelog history sync
+## 9:17 AM — Nightly release pipeline hardening and changelog media overhaul
 
-The nightly release workflow was refactored around reusable, retry-aware scripts, and a new job keeps dated history entries in sync with the latest changelog media.
+A broad reliability pass on the nightly release workflow, a new gh-pages recovery path, and sharper changelog media rendering.
 
-- Moved nightly release-asset pruning into a dedicated retry-aware script and taught it to shrug off assets that have already disappeared (HTTP 404) instead of failing the whole run. (`a7eb25a`, `ac61ac3`)
-- Added a Sync Release Changelog Media History workflow that mirrors freshly published media from latest.json into the matching dated history entry on gh-pages, with a step summary reporting how many slots were updated. (`a7eb25a`, `d81834c`)
-- Added a manual Republish GitHub Pages workflow and extended the gh-pages commit helper with an allow-empty mode so Pages can be forcibly re-pushed when a deploy is lost without changing content. (`ca9eaa8`)
-- Taught the changelog media publisher to resolve the dated history mirror for the latest release, so history entries stay in lockstep with the most recent published media instead of drifting. (`d81834c`)
-- Reworked the branded screenshot card to preserve the real screenshot's aspect ratio, let widescreen captures fill more of the canvas, add a safety inset so product edges aren't clipped by the frame, and bumped the default OpenAI image quality to high. (`2217600`, `43ac905`)
+- Nightly asset pruning moved into a dedicated retry-aware script that tolerates missing releases and 404s on already-deleted assets, replacing the inline workflow step that would fail on transient GitHub API errors. (`a7eb25a`, `ac61ac3`)
+- Added a Sync Release Changelog Media History workflow plus a script that mirrors newly published media into dated history entries, so older changelog pages stop drifting from latest. (`a7eb25a`, `d81834c`)
+- New Republish GitHub Pages workflow can force a fresh gh-pages push — including an allow-empty commit path — giving operators a one-click recovery when Pages gets stuck. (`ca9eaa8`)
+- Changelog media now renders screenshots at their true aspect ratio with a larger card footprint, a safety inset that prevents edge clipping, a quieter central background, and higher OpenAI image quality by default. (`2217600`, `43ac905`)
+
+## 11:43 AM — GPT-5.5 model support in chat and pricing
+
+The GPT-5.5 family is now selectable in the chat input and fully wired into Aura's per-token fee schedule.
+
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-gpt-5-5-model-support-in-chat-and-pricing","slug":"gpt-5-5-model-support-in-chat-and-pricing","alt":"GPT-5.5 model support in chat and pricing screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-gpt-5-5-model-support-in-chat-and-pricing -->
+
+- GPT-5.5 is now exposed in the chat input bar and model constants, making it selectable alongside the existing Claude lineup. (`d9d82e9`)
+- Server-side fee schedule was restructured to carry explicit input, output, cache-write, and cache-read rates per model, and now covers gpt-5.5, gpt-5.4, gpt-5.4-mini, and gpt-5.4-nano in addition to the Claude 4 family. (`d9d82e9`)
+- Benchmark pricing tooling was updated in lockstep so cost reporting recognizes the new GPT-5 tier instead of falling back to default rates. (`d9d82e9`)
 
 ## Highlights
 
-- Nightly asset prune now survives missing and flaky GitHub API responses
-- New gh-pages republish and history-sync workflows
-- Changelog media frames product screenshots at their true aspect ratio
+- GPT-5.5 available in chat with full pricing support
+- Nightly asset prune tolerates missing releases
+- New gh-pages republish recovery workflow
+- Changelog media preserves screenshot aspect and framing
 
