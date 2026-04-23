@@ -3776,7 +3776,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3814,7 +3814,16 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.348.1/entry-debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 80,
+          "updatedAt": "2026-04-23T05:11:35.950Z",
+          "storyTitle": "Debug app: project-first nav with sidekick inspector and run detail view"
         }
       },
       {
@@ -3909,7 +3918,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3925,7 +3934,16 @@
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.348.1/entry-darker-block-border-on-run-and-task-output-sections.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 75,
+          "updatedAt": "2026-04-23T05:14:17.765Z",
+          "storyTitle": "Darker block border on run and task output sections"
         }
       },
       {
@@ -3945,7 +3963,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3960,7 +3978,16 @@
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.348.1/entry-chat-border-token-propagated-into-sidekick-and-preview-overlays.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 80,
+          "updatedAt": "2026-04-23T05:15:49.081Z",
+          "storyTitle": "Chat border token propagated into Sidekick and Preview Overlay surfaces"
         }
       },
       {
@@ -4112,7 +4139,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 5,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -4151,7 +4178,16 @@
             "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
             "interface/src/hooks/use-cooldown-status.test.ts",
             "interface/src/hooks/use-cooldown-status.ts"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.348.1/entry-rate-limit-aware-dev-loop-resilient-updates-and-hardened-release.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 75,
+          "updatedAt": "2026-04-23T05:17:30.972Z",
+          "storyTitle": "Debug app – Running Now panel with in-progress run detail"
         }
       }
     ],
