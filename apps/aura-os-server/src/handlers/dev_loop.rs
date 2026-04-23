@@ -270,6 +270,25 @@ pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
     classify_failure(reason) == FailureClass::Truncation
 }
 
+/// True when `reason` classifies as a provider-side transient 5xx /
+/// stream-terminator error (Axis 1). Exposed through
+/// [`crate::phase7_test_support`] so the integration tests in
+/// `autonomous_recovery_replay.rs` can pin the exact strings that
+/// must now survive round-tripping through the retry path without
+/// needing access to the internal `InfraFailureClass` enum.
+pub(crate) fn is_provider_internal_error_for_tests(reason: &str) -> bool {
+    classify_infra_failure(reason) == Some(InfraFailureClass::ProviderInternalError)
+}
+
+/// True when `reason` is treated as a transient-looking failure by
+/// [`looks_like_unclassified_transient`] despite
+/// [`classify_infra_failure`] returning `None`. The dev loop emits
+/// `debug.retry_miss` for exactly this condition so
+/// `aura-run-heuristics::unclassified_retry_miss` can surface it.
+pub(crate) fn looks_like_unclassified_transient_for_tests(reason: &str) -> bool {
+    classify_infra_failure(reason).is_none() && looks_like_unclassified_transient(reason)
+}
+
 fn classify_infra_failure(reason: &str) -> Option<InfraFailureClass> {
     let lower = reason.to_ascii_lowercase();
     // Check `git push` first so it is routed to the non-fatal
@@ -351,6 +370,58 @@ fn infra_cooldown_for(class: InfraFailureClass) -> Duration {
         // match remains exhaustive without implying a real backoff.
         InfraFailureClass::GitPushTimeout => Duration::from_secs(0),
     }
+}
+
+/// Heuristic: does `reason` *look* like a transient infra failure
+/// even though [`classify_infra_failure`] returned `None`?
+///
+/// We use this for the `debug.retry_miss` telemetry — not to retry a
+/// task silently, but to surface "the classifier is probably missing
+/// this pattern" to whoever reads the run log bundle or an
+/// `aura-run-heuristics` report. False positives here are cheap (a
+/// few extra log lines); false negatives let classifier gaps hide,
+/// which is exactly the class of problem Axis 4 exists to spot.
+///
+/// Deliberately uses a DIFFERENT word list than `classify_infra_failure`
+/// so the two can't get out of sync silently — each new pattern we add
+/// here should prompt a follow-up to decide whether it deserves its
+/// own `InfraFailureClass`.
+fn looks_like_unclassified_transient(reason: &str) -> bool {
+    let lower = reason.to_lowercase();
+    // Cheap list of words that generally imply "the provider / network
+    // layer had a transient issue", ordered roughly by frequency in the
+    // wild. If classify_infra_failure already matched these, the
+    // outer `if let ...Some(infra_failure)` branch ran and this
+    // helper is never called — so a match here means the classifier
+    // has a gap.
+    const HINTS: &[&str] = &[
+        "econnreset",
+        "socket hang up",
+        "socket closed",
+        "unexpected end of stream",
+        "body stream",
+        "deserialize",
+        "parse error",
+        "decode error",
+        "tls handshake",
+        "handshake failure",
+        "dns",
+        "name resolution",
+        "connection refused",
+        "network is unreachable",
+        "temporary failure",
+        "upstream disconnect",
+        "upstream connect error",
+        "stream reset",
+        "rst_stream",
+        "read econnaborted",
+        "tokio::time::error::elapsed",
+        "provider error",
+        "anthropic",
+        "openai",
+        "proxy error",
+    ];
+    HINTS.iter().any(|h| lower.contains(h))
 }
 
 fn infra_failure_label(class: InfraFailureClass) -> &'static str {
@@ -3020,10 +3091,49 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // (producing the `Invalid status transition`
                             // warnings seen in the logs).
                             let mut task_reset_to_ready = false;
+                            let classified_infra = failure_reason
+                                .as_deref()
+                                .and_then(classify_infra_failure);
+                            // `debug.retry_miss` fires when the reason
+                            // text looks transient (per
+                            // `looks_like_unclassified_transient`) but
+                            // the classifier didn't pick it up. The
+                            // event goes into `retries.jsonl` inside
+                            // the run bundle so `aura-run-heuristics`
+                            // can surface "we might be missing a
+                            // classifier pattern" reports without the
+                            // server having to decide policy up-front.
+                            // Deliberately does NOT trigger a retry —
+                            // this is pure observability.
+                            if classified_infra.is_none() {
+                                if let (Some(tid), Some(reason)) =
+                                    (tid.as_ref(), failure_reason.as_ref())
+                                {
+                                    if looks_like_unclassified_transient(reason) {
+                                        loop_log
+                                            .on_json_event(
+                                                project_id,
+                                                agent_instance_id,
+                                                &serde_json::json!({
+                                                    "type": "debug.retry_miss",
+                                                    "task_id": tid,
+                                                    "reason": reason,
+                                                    "hint": "looks_like_unclassified_transient",
+                                                }),
+                                            )
+                                            .await;
+                                        warn!(
+                                            task_id = %tid,
+                                            %reason,
+                                            "Unclassified but transient-looking task_failed; emitted debug.retry_miss"
+                                        );
+                                    }
+                                }
+                            }
                             if let (Some(tid), Some(reason), Some(infra_failure)) = (
                                 tid.as_ref(),
                                 failure_reason.as_ref(),
-                                failure_reason.as_deref().and_then(classify_infra_failure),
+                                classified_infra,
                             ) {
                                 if let Some(ctx) = take_retry_context(&mut retry) {
                                     // Provider-supplied Retry-After hint,
