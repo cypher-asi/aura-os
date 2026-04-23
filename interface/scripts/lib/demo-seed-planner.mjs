@@ -1121,6 +1121,10 @@ function deriveSeedPlanValidationSignals(seedPlan) {
 
 function deriveSeedPlanProofRequirements(seedPlan) {
   const explicit = normalizeProofRequirements(seedPlan?.instructionPatch?.proofRequirements, 8);
+  if (explicit.length > 0) {
+    return explicit;
+  }
+
   const derived = (Array.isArray(seedPlan?.seededEntities) ? seedPlan.seededEntities : [])
     .map((entity) => {
       const label = extractSeedEntityLabel(entity);

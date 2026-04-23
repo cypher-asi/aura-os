@@ -599,7 +599,7 @@ function shouldIncludeCompanionSurface(primaryBox, companionBox, viewport) {
   return coverage === null || coverage <= 0.82;
 }
 
-async function captureProofScreenshot(page, outputPath = null, focusPhrases = []) {
+async function captureProofScreenshot(page, outputPath = null, focusPhrases = [], options = {}) {
   const viewport = page.viewportSize() ?? { width: 1600, height: 1000 };
   const dialogShot = await firstVisibleBox([
     { kind: "dialog", locator: page.getByRole("dialog"), padding: 24 },
@@ -626,15 +626,52 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const agentChatPanel = page.locator('[data-agent-surface="agent-chat-panel"]').first();
   const agentDetailPanel = page.locator('[data-agent-surface="agent-detail-panel"]').first();
   const notesEditor = page.locator('[data-agent-surface="notes-editor"]').first();
+  const requiresSidekick = normalizeArray(options.requiredUiSignals).includes("sidekickVisible");
+
+  if (requiresSidekick) {
+    const requiredTargets = [];
+    const mainPanelShot = await firstVisibleBox([{ kind: "main-panel", locator: mainPanel, padding: 24 }]);
+    const sidekickHeaderShot = await firstVisibleBox([{ kind: "sidekick-header", locator: sidekickHeader, padding: 24 }]);
+    const sidekickPanelShot = await firstVisibleBox([{ kind: "sidekick-panel", locator: sidekickPanel, padding: 24 }]);
+
+    if (mainPanelShot) {
+      requiredTargets.push({
+        locator: mainPanelShot.locator,
+        targetName: "main-panel",
+      });
+    }
+    if (sidekickHeaderShot) {
+      requiredTargets.push({
+        locator: sidekickHeaderShot.locator,
+        targetName: "sidekick-header",
+      });
+    }
+    if (sidekickPanelShot) {
+      requiredTargets.push({
+        locator: sidekickPanelShot.locator,
+        targetName: "sidekick-panel",
+      });
+    }
+
+    if (sidekickPanelShot && requiredTargets.length > 0) {
+      const clip = await unionClip(page, requiredTargets.map((target) => target.locator), 24);
+      await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
+      return {
+        kind: "surface-union",
+        targets: requiredTargets.map((target) => target.targetName),
+        clip,
+      };
+    }
+  }
 
   const textLocatorBox = await findTextLocatorFocusBox(page, focusPhrases);
   if (isVisibleBox(textLocatorBox)) {
     const clip = buildClipFromBounds(textLocatorBox, viewport, 36, {
-      minWidth: 560,
-      minHeight: 315,
+      minWidth: 960,
+      minHeight: 540,
     });
     const coverage = clipCoverageForViewport(viewport, clip);
-    if (coverage === null || coverage >= 0.16) {
+    if (coverage === null || coverage >= 0.08) {
       await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
       return {
         kind: "body-focus",
@@ -647,8 +684,8 @@ async function captureProofScreenshot(page, outputPath = null, focusPhrases = []
   const textFocusedBox = await findTextFocusedSurfaceBox(page, focusPhrases);
   if (isVisibleBox(textFocusedBox)) {
     const clip = buildClipFromBounds(textFocusedBox, viewport, 28, {
-      minWidth: 560,
-      minHeight: 315,
+      minWidth: 960,
+      minHeight: 540,
     });
     await page.screenshot({ ...(outputPath ? { path: outputPath } : {}), clip: clip ?? undefined });
     return {
@@ -1140,8 +1177,8 @@ function hasExpectedRoute(currentUrl, expectedRoute) {
 
 async function collectPageUiSignals(page) {
   return page.evaluate(() => {
-    const isVisible = (selector) => {
-      const node = document.querySelector(selector);
+    const isVisible = (target) => {
+      const node = typeof target === "string" ? document.querySelector(target) : target;
       if (!node) return false;
       const style = window.getComputedStyle(node);
       const rect = node.getBoundingClientRect();
@@ -1983,7 +2020,9 @@ async function runAgentPhase({ agent, page, phase, phasesDir, excludedAgentTools
       ...(Array.isArray(phase.proofRequirements) ? phase.proofRequirements.flatMap((entry) => entry?.anyOf ?? []) : []),
       ...(Array.isArray(phase.validationSignals) ? phase.validationSignals : []),
     ], 12);
-    const screenshot = await captureProofScreenshot(page, screenshotPath, focusPhrases);
+    const screenshot = await captureProofScreenshot(page, screenshotPath, focusPhrases, {
+      requiredUiSignals: phase.requiredUiSignals,
+    });
     const currentUrl = page.url();
     const visibleText = await collectProofVisibleText(page, screenshot);
     const validationMatches = collectValidationSignalMatches(visibleText, phase.validationSignals);

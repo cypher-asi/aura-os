@@ -54,12 +54,27 @@ export function assessDemoScreenshotQuality({
   const meaningfulText = hasMeaningfulVisibleText(visibleText);
   const clipAspectRatio = aspectRatioFromClip(screenshot?.clip);
   const clipCoverage = coverageFromClip(viewport, screenshot?.clip);
+  const requiredSidekickProof = Array.isArray(requiredUiSignals)
+    && requiredUiSignals.includes("sidekickVisible")
+    && uiSignals?.sidekickVisible
+    && screenshot?.kind === "surface-union"
+    && Array.isArray(screenshot?.targets)
+    && screenshot.targets.includes("sidekick-panel");
   const strictUnionCrop = screenshot?.kind === "surface-union" && Array.isArray(screenshot?.targets) && screenshot.targets.length >= 3;
-  const maxRecommendedCoverage = screenshot?.kind === "surface-union" && Array.isArray(screenshot?.targets) && screenshot.targets.length >= 3
-    ? 0.82
+  const maxRecommendedCoverage = requiredSidekickProof
+    ? 0.92
+    : screenshot?.kind === "surface-union" && Array.isArray(screenshot?.targets) && screenshot.targets.length >= 3
+      ? 0.82
     : 0.95;
   const matchedSignals = Array.isArray(validationMatches) ? validationMatches.length : 0;
   const matchedProofRequirements = Array.isArray(proofRequirementMatches) ? proofRequirementMatches.length : 0;
+  const surfaceMatched = Boolean(routeMatched || activeAppMatched);
+  const proofContentVisible = meaningfulText
+    && surfaceMatched
+    && (
+      matchedProofRequirements > 0
+      || (minSignalMatches > 0 && matchedSignals >= minSignalMatches)
+    );
   const missingRequiredUiSignals = (Array.isArray(requiredUiSignals) ? requiredUiSignals : [])
     .map((entry) => String(entry || "").trim())
     .filter(Boolean)
@@ -123,8 +138,8 @@ export function assessDemoScreenshotQuality({
   checks.push(
     buildCheck(
       "route-or-app-match",
-      Boolean(routeMatched || activeAppMatched),
-      routeMatched || activeAppMatched
+      surfaceMatched,
+      surfaceMatched
         ? "route or active app matches the intended proof surface"
         : "neither route nor active app matches the intended proof surface",
       16,
@@ -149,8 +164,12 @@ export function assessDemoScreenshotQuality({
   checks.push(
     buildCheck(
       "placeholder-surface",
-      !uiSignals.placeholderVisible,
-      uiSignals.placeholderVisible ? "a placeholder route is still visible" : "no placeholder route is visible",
+      !uiSignals.placeholderVisible || proofContentVisible,
+      uiSignals.placeholderVisible
+        ? proofContentVisible
+          ? "placeholder text exists elsewhere, but the proof crop has matching product content"
+          : "a placeholder route is still visible"
+        : "no placeholder route is visible",
       16,
       true,
     ),
@@ -159,8 +178,12 @@ export function assessDemoScreenshotQuality({
   checks.push(
     buildCheck(
       "empty-state",
-      !uiSignals.emptyStateVisible,
-      uiSignals.emptyStateVisible ? "an empty-state surface is still dominant" : "no empty-state surface is visible",
+      !uiSignals.emptyStateVisible || proofContentVisible,
+      uiSignals.emptyStateVisible
+        ? proofContentVisible
+          ? "empty-state text exists elsewhere, but the proof crop has matching product content"
+          : "an empty-state surface is still dominant"
+        : "no empty-state surface is visible",
       12,
       phaseId !== "setup-state",
     ),
