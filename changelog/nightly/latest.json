@@ -3456,7 +3456,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3494,7 +3494,11 @@
             "interface/src/apps/debug/components/DebugSidekickContent/TasksTab.tsx",
             "interface/src/apps/debug/components/DebugSidekickContent/index.ts",
             "interface/src/apps/debug/components/DebugSidekickTaskbar/DebugSidekickTaskbar.tsx"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.345.1/entry-debug-app-gets-a-sidekick-driven-inspector-and-chat-learns-the-a.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-23T02:59:09.949Z",
+          "storyTitle": "Debug app: sidekick-driven inspector with tabbed Run detail view"
         }
       },
       {
@@ -3554,7 +3558,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 6,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3570,7 +3574,11 @@
           "files": [
             "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
             "interface/src/components/Preview/Preview.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.345.1/entry-run-timeline-and-task-output-borders-match-the-chat-surface.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-23T03:01:07.622Z",
+          "storyTitle": "Run Timeline & Task Output Borders — Process Sidekick Event Timeline"
         }
       },
       {
@@ -3624,7 +3632,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3639,7 +3647,11 @@
           "files": [
             "interface/src/components/PreviewOverlay/PreviewOverlay.module.css",
             "interface/src/components/Sidekick/Sidekick.module.css"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.345.1/entry-sidekick-and-preview-overlays-adopt-the-chat-border-token.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-23T03:01:55.763Z",
+          "storyTitle": "Sidekick and Preview Overlay adopt the chat border token"
         }
       },
       {
@@ -3794,7 +3806,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 5,
           "reason": "Entry looks like a user-visible product change and should receive changelog media.",
           "reasons": [
@@ -3833,7 +3845,11 @@
             "interface/src/components/TaskOutputSection/TaskOutputSection.tsx",
             "interface/src/hooks/use-cooldown-status.test.ts",
             "interface/src/hooks/use-cooldown-status.ts"
-          ]
+          ],
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.345.1/entry-autonomy-reliability-and-release-polish-land-together.png",
+          "screenshotSource": "capture-proof",
+          "updatedAt": "2026-04-23T03:02:51.859Z",
+          "storyTitle": "Debug app — Running Now list with live run awareness and persistence"
         }
       }
     ],
