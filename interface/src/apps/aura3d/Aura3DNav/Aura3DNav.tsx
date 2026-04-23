@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, ImageIcon, ChevronDown } from "lucide-react";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { LeftMenuTree, buildLeftMenuEntries } from "../../../features/left-menu";
 import { EmptyState } from "../../../components/EmptyState";
 import styles from "./Aura3DNav.module.css";
 
@@ -15,6 +16,7 @@ export function Aura3DNav() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(["images"]));
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -36,6 +38,37 @@ export function Aura3DNav() {
   }, [menuOpen]);
 
   const selectedProject = projects.find((p) => p.project_id === selectedProjectId);
+
+  const explorerData = useMemo(() => {
+    if (images.length === 0) return [];
+    return [
+      {
+        id: "images",
+        label: `Images (${images.length})`,
+        children: images.map((img) => ({
+          id: img.id,
+          label: img.prompt.length > 30 ? img.prompt.slice(0, 30) + "..." : img.prompt,
+        })),
+      },
+    ];
+  }, [images]);
+
+  const entries = useMemo(
+    () =>
+      buildLeftMenuEntries(explorerData, {
+        expandedIds,
+        selectedNodeId: selectedImageId,
+        onGroupActivate: (id) =>
+          setExpandedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          }),
+        onItemSelect: (id) => selectImage(id),
+      }),
+    [explorerData, expandedIds, selectedImageId, selectImage],
+  );
 
   return (
     <div className={styles.root}>
@@ -83,29 +116,10 @@ export function Aura3DNav() {
           </EmptyState>
         </div>
       ) : (
-        <>
-          <div className={styles.sectionHeader}>Images</div>
-          <div className={styles.list}>
-            {images.map((image) => (
-              <button
-                key={image.id}
-                type="button"
-                className={`${styles.item} ${image.id === selectedImageId ? styles.itemActive : ""}`}
-                onClick={() => selectImage(image.id)}
-              >
-                <img
-                  src={image.imageUrl}
-                  alt={image.prompt}
-                  className={styles.thumb}
-                />
-                <div className={styles.itemInfo}>
-                  <span className={styles.itemName}>{image.prompt}</span>
-                  <span className={styles.itemMeta}>{image.model}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </>
+        <LeftMenuTree
+          ariaLabel="Assets"
+          entries={entries}
+        />
       )}
     </div>
   );

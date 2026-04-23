@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+export type Aura3DTab = "image" | "3d";
+
 export interface GeneratedImage {
   id: string;
   prompt: string;
@@ -26,6 +28,10 @@ export const STYLE_LOCK_SUFFIX =
   ", standalone product only, 3/4 angle view, single object centered, fully in frame with no cropping, no other objects or elements in frame, jet black background with subtle vignette, photorealistic, high-poly, textured 3D sculpture, subject pops from background, cinematic depth, isolated product presentation";
 
 interface Aura3DState {
+  // Tab
+  activeTab: Aura3DTab;
+  setActiveTab: (tab: Aura3DTab) => void;
+
   // Project
   selectedProjectId: string | null;
   setSelectedProjectId: (id: string | null) => void;
@@ -85,6 +91,9 @@ interface Aura3DState {
 }
 
 export const useAura3DStore = create<Aura3DState>()((set) => ({
+  activeTab: "image",
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
   selectedProjectId: null,
   setSelectedProjectId: (id) => set({ selectedProjectId: id, images: [], models: [] }),
 

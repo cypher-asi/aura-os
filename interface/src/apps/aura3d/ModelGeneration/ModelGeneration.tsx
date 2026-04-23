@@ -83,7 +83,7 @@ export function ModelGeneration() {
     return (
       <div className={styles.root}>
         <EmptyState icon={<Box size={32} />}>
-          Generate an image above, then convert it to a 3D model.
+          Generate an image, then convert it to a 3D model.
         </EmptyState>
       </div>
     );
@@ -92,7 +92,6 @@ export function ModelGeneration() {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <span className={styles.sectionTitle}>3D Model</span>
         {current3DModel && (
           <div className={styles.viewerControls}>
             <Toggle checked={showGrid} onChange={toggleGrid} size="sm" />

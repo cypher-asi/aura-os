@@ -95,9 +95,6 @@ export function ImageGeneration() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
-        <span className={styles.sectionTitle}>Image</span>
-      </div>
       <div className={styles.previewArea}>
         <ImagePreview
           imageUrl={currentImage?.imageUrl}

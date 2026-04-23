@@ -8,6 +8,7 @@ describe("aura3d-store", () => {
 
   it("initialises with correct defaults", () => {
     const state = useAura3DStore.getState();
+    expect(state.activeTab).toBe("image");
     expect(state.selectedProjectId).toBeNull();
     expect(state.imaginePrompt).toBe("");
     expect(state.imagineModel).toBe("gpt-image-1");
