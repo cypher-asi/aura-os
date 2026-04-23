@@ -11,8 +11,8 @@ Today's nightly lands a deep rework of the Debug app around a project-first nav 
 
 The Debug surface moved from a bespoke run-centric layout to the shared project tree with a sidekick-driven inspector, plus fixes that unblock real debugging sessions across chat, feed, and tool output.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec","slug":"debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec","alt":"Debug app rebuilt around project-first nav and a sidekick inspector screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec","slug":"debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec","alt":"Debug app rebuilt around project-first nav and a sidekick inspector screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.348.1/entry-debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec.png","screenshotSource":"openai-polish","originalScreenshotSource":"capture-proof","polishProvider":"openai","polishModel":"gpt-image-2","polishJudgeModel":"gpt-4.1-mini","polishScore":80,"updatedAt":"2026-04-23T05:11:35.950Z","storyTitle":"Debug app: project-first nav with sidekick inspector and run detail view"} -->
+![Debug app rebuilt around project-first nav and a sidekick inspector screenshot](../../assets/changelog/nightly/0.1.0-nightly.348.1/entry-debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-debug-app-rebuilt-around-project-first-nav-and-a-sidekick-inspec -->
 
 - Rebuilt Debug navigation on the shared LeftMenuTree so every project shows up at the top level, and moved the run toolbar, counters, and entry inspector into a new sidekick with Run/Events/LLM/Iterations/Blockers/Retries/Stats/Tasks tabs driven by a debug-sidekick-store. A portal-backed filter menu and JSONL envelope unwrapping fix dropdown clipping and the long-standing 'unknown' type/timestamp rows. (`8e7e4f0`, `1b769a8`)
@@ -37,8 +37,8 @@ When a task fails with a truncation or no-file-ops reason, the dev loop now cons
 
 A small visual adjustment pulled the run event timeline and task output blocks back in line with the standard block outline.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-darker-block-border-on-run-and-task-output-sections","slug":"darker-block-border-on-run-and-task-output-sections","alt":"Darker block border on run and task output sections screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-darker-block-border-on-run-and-task-output-sections","slug":"darker-block-border-on-run-and-task-output-sections","alt":"Darker block border on run and task output sections screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.348.1/entry-darker-block-border-on-run-and-task-output-sections.png","screenshotSource":"openai-polish","originalScreenshotSource":"capture-proof","polishProvider":"openai","polishModel":"gpt-image-2","polishJudgeModel":"gpt-4.1-mini","polishScore":75,"updatedAt":"2026-04-23T05:14:17.765Z","storyTitle":"Darker block border on run and task output sections"} -->
+![Darker block border on run and task output sections screenshot](../../assets/changelog/nightly/0.1.0-nightly.348.1/entry-darker-block-border-on-run-and-task-output-sections.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-darker-block-border-on-run-and-task-output-sections -->
 
 - Swapped --color-border-light for the standard --color-border token on Process run timeline rows and the task live/build output blocks so they match the .block primitive outline. (`b2f25e4`)
@@ -47,8 +47,8 @@ A small visual adjustment pulled the run event timeline and task output blocks b
 
 Extended the chat panel's darker border token into neighboring surfaces so sidekick and preview content shares the same subtle outline.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-chat-border-token-propagated-into-sidekick-and-preview-overlays","slug":"chat-border-token-propagated-into-sidekick-and-preview-overlays","alt":"Chat border token propagated into sidekick and preview overlays screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-chat-border-token-propagated-into-sidekick-and-preview-overlays","slug":"chat-border-token-propagated-into-sidekick-and-preview-overlays","alt":"Chat border token propagated into sidekick and preview overlays screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.348.1/entry-chat-border-token-propagated-into-sidekick-and-preview-overlays.png","screenshotSource":"openai-polish","originalScreenshotSource":"capture-proof","polishProvider":"openai","polishModel":"gpt-image-2","polishJudgeModel":"gpt-4.1-mini","polishScore":80,"updatedAt":"2026-04-23T05:15:49.081Z","storyTitle":"Chat border token propagated into Sidekick and Preview Overlay surfaces"} -->
+![Chat border token propagated into sidekick and preview overlays screenshot](../../assets/changelog/nightly/0.1.0-nightly.348.1/entry-chat-border-token-propagated-into-sidekick-and-preview-overlays.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-chat-border-token-propagated-into-sidekick-and-preview-overlays -->
 
 - Propagated the chat's --color-border override (#17171a) into the sidekick body and preview overlay so tables, blocks, tools, and output sections render with the same outline as the main LLM chat. (`cc9a050`)
@@ -57,8 +57,8 @@ Extended the chat panel's darker border token into neighboring surfaces so sidek
 
 A large batch landing the rest of the autonomous-recovery pipeline, a rebuilt login and streaming experience, a Windows updater that actually installs, and a thoroughly reworked changelog media pipeline.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-rate-limit-aware-dev-loop-resilient-updates-and-hardened-release","slug":"rate-limit-aware-dev-loop-resilient-updates-and-hardened-release","alt":"Rate-limit-aware dev loop, resilient updates, and hardened release media screenshot"} -->
-<!-- AURA_CHANGELOG_MEDIA:PENDING -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-rate-limit-aware-dev-loop-resilient-updates-and-hardened-release","slug":"rate-limit-aware-dev-loop-resilient-updates-and-hardened-release","alt":"Rate-limit-aware dev loop, resilient updates, and hardened release media screenshot","status":"published","assetPath":"assets/changelog/nightly/0.1.0-nightly.348.1/entry-rate-limit-aware-dev-loop-resilient-updates-and-hardened-release.png","screenshotSource":"openai-polish","originalScreenshotSource":"capture-proof","polishProvider":"openai","polishModel":"gpt-image-2","polishJudgeModel":"gpt-4.1-mini","polishScore":75,"updatedAt":"2026-04-23T05:17:30.972Z","storyTitle":"Debug app – Running Now panel with in-progress run detail"} -->
+![Rate-limit-aware dev loop, resilient updates, and hardened release media screenshot](../../assets/changelog/nightly/0.1.0-nightly.348.1/entry-rate-limit-aware-dev-loop-resilient-updates-and-hardened-release.png)
 <!-- AURA_CHANGELOG_MEDIA:END entry-rate-limit-aware-dev-loop-resilient-updates-and-hardened-release -->
 
 - Closed the autonomous-recovery loop with preflight decomposition of oversized task specs at ingestion, a LiveAnalyzer that re-runs heuristics every 50 events or 30s and broadcasts findings mid-run, and a replay integration test plus golden-output fixture that pin the classify -> heuristics -> decompose decision chain. (`4f8e0a6`, `097b5a5`, `6de6a5e`)
