@@ -85,6 +85,8 @@ async fn execute_single_automaton(
             git_branch: None,
             installed_tools: None,
             installed_integrations: None,
+            prior_failure: None,
+            work_log: Vec::new(),
         },
         2,
     )

@@ -40,6 +40,22 @@ pub struct AutomatonStartParams {
     pub installed_tools: Option<Vec<InstalledTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_integrations: Option<Vec<InstalledIntegration>>,
+    /// Retry-warm-up: the reason text persisted on the previous
+    /// attempt's `task_failed` record. Forwarded verbatim to the
+    /// harness as `prior_failure`; the `task-run` automaton folds it
+    /// into `TaskInfo::execution_notes` so the retry prompt differs
+    /// from the initial one. Skipped on the wire when `None` so
+    /// pre-C1 harnesses (which don't know about this field) still
+    /// accept the payload.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prior_failure: Option<String>,
+    /// Retry-warm-up: recent work-log entries the server wants the
+    /// agent to re-see on this attempt. Forwarded to the harness as
+    /// `work_log`; threaded straight into `AgenticTaskParams
+    /// ::work_log`. Skipped on the wire when empty so pre-C1
+    /// harnesses see the old payload shape.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub work_log: Vec<String>,
 }
 
 #[derive(Debug, thiserror::Error)]

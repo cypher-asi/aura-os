@@ -4407,6 +4407,12 @@ pub(crate) async fn start_loop(
         git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
         installed_tools,
         installed_integrations,
+        // Dev-loop mode: the harness derives its own retry-warm-up
+        // context from `STATE_FAILURE_REASONS` and the in-loop work
+        // log; the server side does not pre-populate these. Only
+        // `run_single_task` plumbs real values here.
+        prior_failure: None,
+        work_log: Vec::new(),
     };
 
     let (automaton_id, adopted, event_stream_url) = match automaton_client
@@ -5228,6 +5234,37 @@ pub(crate) async fn run_single_task(
         }
         None => None,
     };
+    // Warm-up context for single-task retries: read the reason
+    // persisted on the previous attempt's `task_failed` (stored in
+    // `execution_notes` by `persist_task_failure_reason`) and forward
+    // it to the harness as `prior_failure`. The `task-run` automaton
+    // (Commit C1) folds it into `TaskInfo::execution_notes` so the
+    // retry prompt differs from the initial one.
+    //
+    // First attempts typically have empty `execution_notes`; we treat
+    // that as "no warm-up needed" so the field is dropped on the wire
+    // (`AutomatonStartParams` skips `None`). Storage errors are
+    // logged and ignored — failing to warm up is worse than failing
+    // the retry outright.
+    //
+    // `work_log` is not persisted server-side today; we leave it
+    // empty so the wire shape stays compatible and older harnesses
+    // (pre-C1) simply ignore both fields.
+    let prior_failure = match (state.storage_client.as_ref(), jwt.as_deref()) {
+        (Some(storage_client), Some(jwt)) => {
+            match storage_client.get_task(&task_id.to_string(), jwt).await {
+                Ok(task) => task.execution_notes.filter(|s| !s.trim().is_empty()),
+                Err(error) => {
+                    warn!(
+                        %task_id, %error,
+                        "Failed to fetch task for prior_failure warm-up; retry will use a cold prompt"
+                    );
+                    None
+                }
+            }
+        }
+        _ => None,
+    };
     let start_params = AutomatonStartParams {
         project_id: project_id.to_string(),
         auth_token: jwt,
@@ -5238,6 +5275,8 @@ pub(crate) async fn run_single_task(
         git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
         installed_tools,
         installed_integrations,
+        prior_failure,
+        work_log: Vec::new(),
     };
     let result = automaton_client
         .start(start_params.clone())
@@ -6304,6 +6343,8 @@ mod tests {
             git_branch: None,
             installed_tools: None,
             installed_integrations: None,
+            prior_failure: None,
+            work_log: Vec::new(),
         };
         let client = std::sync::Arc::new(aura_os_link::AutomatonClient::new("http://127.0.0.1:1"));
         let mut retry = Some(TransientRetryContext {
@@ -6337,6 +6378,8 @@ mod tests {
             git_branch: None,
             installed_tools: None,
             installed_integrations: None,
+            prior_failure: None,
+            work_log: Vec::new(),
         };
         let client = std::sync::Arc::new(aura_os_link::AutomatonClient::new("http://127.0.0.1:1"));
         let mut retry = Some(TransientRetryContext {
