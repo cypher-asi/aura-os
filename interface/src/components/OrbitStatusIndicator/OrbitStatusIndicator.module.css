@@ -37,6 +37,15 @@
   box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
 }
 
+/* Orbit is reachable but the capacity guard has observed a
+ * `remote_storage_exhausted` push failure for this project. Amber so
+ * the user can tell at a glance that orbit is degraded (retries are
+ * in cooldown) without confusing it with a full disconnect. */
+.dot[data-status="degraded"] {
+  background: #f59e0b;
+  box-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+}
+
 .statusCard {
   position: absolute;
   bottom: calc(100% + 6px);

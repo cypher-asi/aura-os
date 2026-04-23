@@ -83,3 +83,74 @@ open https://YOUR-SERVICE.onrender.com
 ## Troubleshooting
 
 - `external tool callback unreachable: http://127.0.0.1:<port>/api/agent_tools/...` — the server is handing remote harnesses a loopback URL because neither `VITE_API_URL` nor the optional `AURA_SERVER_BASE_URL` override is set. Set `VITE_API_URL` to the service's public https URL (e.g. `https://YOUR-SERVICE.onrender.com`) and redeploy; this also fixes the frontend bundle in the same build.
+
+## Orbit ENOSPC runbook
+
+Symptom: users see repeated push failures whose reason text contains
+
+```
+remote: fatal: write error: No space left on device
+error: remote unpack failed: index-pack abnormal exit
+error: RPC failed; curl 18 transfer closed with outstanding read data remaining
+```
+
+This is orbit (`ORBIT_BASE_URL`, typically `https://orbit-sfvu.onrender.com`)
+reporting that its local filesystem is full. The aura-os-server classifies
+this as `remote_storage_exhausted` (see `classify_push_failure` in
+`apps/aura-os-server/src/handlers/dev_loop.rs`) and, starting with the orbit
+capacity guard:
+
+1. Trips `OrbitCapacityGuard` for the configured `ORBIT_BASE_URL` so
+   retries are annotated with a cooldown window instead of silently piling
+   more `tmp_pack_*` objects onto orbit's already-full rootfs.
+2. Emits a `push_deferred` + `project_push_stuck` event carrying
+   `class: "remote_storage_exhausted"`, a remediation string, and
+   `retry_after_secs`. The UI renders a dedicated "Orbit out of disk"
+   status (amber dot on the Orbit indicator, banner on the project
+   header, and a class-specific row on the task card).
+
+### Diagnosis
+
+```bash
+# 1. Confirm the orbit service is live (health endpoint is unauth'd).
+curl -s -o /dev/null -w "%{http_code}\n" "$ORBIT_BASE_URL/health"
+# Expect 2xx; a timeout or 5xx suggests orbit itself is down, not ENOSPC.
+
+# 2. Inspect orbit's disk usage through the Render dashboard
+#    (Service → Metrics → Disk). Note that Render surfaces the
+#    *persistent disk* only; pack indexing happens on the ephemeral
+#    rootfs so 0% persistent disk usage does NOT mean orbit has space.
+
+# 3. Shell into the orbit service (Render → Shell) and run:
+df -h /                          # ephemeral rootfs usage
+du -sh /path/to/orbit/repos/*    # per-repo size
+find /path/to/orbit/repos -type d -name 'tmp_pack_*' | xargs -r du -sh
+```
+
+### Operator action (on the orbit Render service)
+
+1. Remove stale quarantine / `tmp_pack_*` directories left behind by
+   earlier failed pushes:
+
+   ```bash
+   find /path/to/orbit/repos -type d \
+     \( -name 'tmp_pack_*' -o -path '*/objects/incoming-*' \) \
+     -mmin +10 -print -exec rm -rf {} +
+   ```
+
+2. Run `git gc --prune=now` inside affected repos to drop unreferenced
+   loose objects.
+3. If disk usage stays high, upgrade the Render plan — the ephemeral
+   rootfs scales with instance tier.
+
+Once space is freed, the *next* successful push from aura-os
+automatically clears the guard (`git_pushed` handler calls
+`OrbitCapacityGuard::clear`) and restores the Orbit indicator to
+green.
+
+### Cooldown tuning
+
+The guard's window is controlled by `AURA_ORBIT_ENOSPC_COOLDOWN_SECS`
+on the aura-os-server side (default 900s / 15 minutes). Setting it to
+`0` disables the cooldown entirely — use only for integration tests
+that need to hammer orbit on purpose.

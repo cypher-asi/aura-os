@@ -172,18 +172,35 @@ function handleGitPushed(event: AuraEvent, u: OutputUpdate): void {
 function handleGitPushFailed(event: AuraEvent, u: OutputUpdate): void {
   const c = event.content as AuraEventContent<EventType.GitPushFailed>;
   if (!c.task_id) return;
+  const rawClass = (c as { class?: string }).class;
   appendGitStep(c.task_id, {
     kind: "push_failed",
     commitSha: c.commit_sha,
     reason: c.reason,
     repo: c.repo,
     branch: c.branch,
+    class: rawClass,
     timestamp: Date.now(),
   }, u);
 }
 
 function handlePushDeferred(event: AuraEvent, u: OutputUpdate): void {
   const c = event.content as AuraEventContent<EventType.PushDeferred>;
+  // A `remote_storage_exhausted` classification is promoted to a
+  // project-level banner on the FIRST event (not the standard 3-streak)
+  // because retrying in cooldown actively makes the orbit ENOSPC worse.
+  // The server also emits `project_push_stuck` for the same event, so
+  // both the task-card row and the banner land from one trip.
+  const projectId = event.project_id;
+  if (projectId && c.class === "remote_storage_exhausted") {
+    useEventStore.getState().setPushStuck(projectId, {
+      threshold: 1,
+      reason: c.reason,
+      class: c.class,
+      remediation: c.remediation ?? undefined,
+      retryAfterSecs: c.retry_after_secs ?? undefined,
+    });
+  }
   if (!c.task_id) return;
   appendGitStep(
     c.task_id,
@@ -191,6 +208,9 @@ function handlePushDeferred(event: AuraEvent, u: OutputUpdate): void {
       kind: "push_deferred",
       commitSha: c.commit_sha ?? undefined,
       reason: c.reason,
+      class: c.class,
+      remediation: c.remediation ?? undefined,
+      retryAfterSecs: c.retry_after_secs ?? undefined,
       timestamp: Date.now(),
     },
     u,
@@ -208,6 +228,8 @@ function handleProjectPushStuck(event: AuraEvent, u: OutputUpdate): void {
     threshold: c.threshold ?? 3,
     reason: c.reason,
     class: c.class,
+    remediation: c.remediation ?? undefined,
+    retryAfterSecs: c.retry_after_secs ?? undefined,
   });
 }
 

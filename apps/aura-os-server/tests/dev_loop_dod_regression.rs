@@ -427,6 +427,26 @@ fn classify_push_failure_routes_timeout_storage_and_generic_reasons() {
 }
 
 #[test]
+fn classify_push_failure_recognises_real_orbit_enospc_reason() {
+    // The user-visible reason string the harness actually emits when
+    // orbit hits ENOSPC. Captured verbatim from a live incident so the
+    // orbit capacity guard never silently drops classification for the
+    // one pattern it is specifically built to handle.
+    let reason = "Commit+push failed: remote storage exhausted on git push; \
+                  free space on the remote or switch remotes. server reported: \
+                  remote: fatal: write error: No space left on device \
+                  error: remote unpack failed: index-pack abnormal exit \
+                  error: RPC failed; curl 18 transfer closed with outstanding \
+                  read data remaining Everything up-to-date";
+    assert_eq!(
+        tsp::classify_push_failure(reason),
+        Some("remote_storage_exhausted"),
+        "live orbit ENOSPC reason must classify as remote_storage_exhausted so \
+         the OrbitCapacityGuard trips on it"
+    );
+}
+
+#[test]
 fn consecutive_push_failures_emit_project_push_stuck_exactly_once() {
     // Bump well past the threshold; exactly one emission should land,
     // regardless of how many failures we pile on in the same streak.

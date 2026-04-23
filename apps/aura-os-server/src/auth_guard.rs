@@ -490,6 +490,9 @@ mod tests {
             swarm_base_url: None,
             task_output_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             orbit_client: None,
+            orbit_capacity_guard: std::sync::Arc::new(
+                crate::orbit_guard::OrbitCapacityGuard::new(),
+            ),
             validation_cache: cache,
             agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
             agent_runtime,

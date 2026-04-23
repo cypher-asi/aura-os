@@ -467,6 +467,14 @@ pub struct AppState {
     pub task_output_cache: TaskOutputCache,
     /// Optional Orbit client for repo operations. `None` when `ORBIT_BASE_URL` is not set.
     pub orbit_client: Option<Arc<aura_os_network::OrbitClient>>,
+    /// Process-wide cooldown tracking for orbit "remote storage
+    /// exhausted" push failures. Tripped by the dev-loop event
+    /// forwarder when `classify_push_failure` returns
+    /// `RemoteStorageExhausted` so subsequent push failures inside the
+    /// cooldown window carry a `retry_after_secs` hint instead of
+    /// silently thrashing orbit's rootfs with more `tmp_pack_*` objects.
+    /// See [`crate::orbit_guard`] for details.
+    pub orbit_capacity_guard: Arc<crate::orbit_guard::OrbitCapacityGuard>,
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
     /// Per-(JWT,agent_id) cache of matched project-agent bindings.

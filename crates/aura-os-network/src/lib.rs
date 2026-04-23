@@ -5,7 +5,7 @@ pub mod types;
 
 pub use client::NetworkClient;
 pub use error::NetworkError;
-pub use orbit::{OrbitClient, OrbitError};
+pub use orbit::{OrbitClient, OrbitDiscovery, OrbitError};
 pub use types::{
     CreateAgentRequest, CreateInviteRequest, CreateOrgRequest, CreateProjectRequest, FollowRequest,
     LeaderboardEntry, MemberUsageStats, NetworkAgent, NetworkComment, NetworkFeedEvent,

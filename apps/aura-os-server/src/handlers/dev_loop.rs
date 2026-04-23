@@ -532,6 +532,31 @@ pub(crate) fn push_failure_label(class: PushFailureClass) -> &'static str {
     }
 }
 
+/// Resolve the orbit `base_url` key used by [`crate::orbit_guard::OrbitCapacityGuard`].
+///
+/// The guard is keyed per orbit host so multi-orbit deployments don't
+/// penalise one orbit for another's ENOSPC. In the common single-orbit
+/// deployment the key is simply the configured `ORBIT_BASE_URL`.
+/// Returns `None` when orbit is not configured at all, in which case
+/// the guard is a no-op.
+pub(crate) fn orbit_base_url_for_guard() -> Option<String> {
+    std::env::var("ORBIT_BASE_URL")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// Human-readable remediation hint attached to `push_deferred`
+/// payloads so the UI can render actionable guidance instead of
+/// just the raw `remote: fatal: write error: No space left on
+/// device` error. Mirrored in the `docs/render-deployment.md`
+/// ENOSPC runbook.
+const ORBIT_REMOTE_STORAGE_EXHAUSTED_REMEDIATION: &str =
+    "Orbit is out of disk. Free space on the orbit host (clear \
+     `tmp_pack_*` / `quarantine` objects, run `git gc`) or upgrade \
+     the Render plan, then push again. Aura OS will keep retrying \
+     automatically once the cooldown expires.";
+
 /// Dev-loop invariant helper: should a task that hit a push-layer
 /// failure still transition to `done`?
 ///
@@ -2593,6 +2618,13 @@ struct ForwardParams {
     /// bundle (see `crate::loop_log`). Always wired so the Debug app
     /// and the `aura-run-analyze` CLI can replay any run.
     loop_log: std::sync::Arc<crate::loop_log::LoopLogWriter>,
+    /// Process-wide cooldown gate for orbit "remote storage exhausted"
+    /// failures. The forwarder trips this on every
+    /// `RemoteStorageExhausted` classification and consults it on every
+    /// push-class failure so the emitted `push_deferred` event can
+    /// carry `retry_after_secs` / remediation context instead of the
+    /// user seeing the same naked ENOSPC error on every retry.
+    orbit_capacity_guard: std::sync::Arc<crate::orbit_guard::OrbitCapacityGuard>,
 }
 
 /// RAII guard that flips the shared `alive` flag to `false` when the
@@ -3120,6 +3152,7 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
         retry,
         alive,
         loop_log,
+        orbit_capacity_guard,
     } = params;
 
     let rx = automaton_events_tx.subscribe();
@@ -3453,9 +3486,16 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     // per-project push-failure streak so
                                     // a later `project_push_stuck`
                                     // advisory is only ever emitted when
-                                    // pushes are ACTUALLY stuck.
+                                    // pushes are ACTUALLY stuck. It also
+                                    // clears any orbit ENOSPC cooldown
+                                    // so the next push isn't gated on a
+                                    // stale disk-full record that orbit
+                                    // has since recovered from.
                                     if event_type == "git_pushed" {
                                         reset_project_push_failures(project_id);
+                                        if let Some(base_url) = orbit_base_url_for_guard() {
+                                            orbit_capacity_guard.clear(&base_url).await;
+                                        }
                                     }
                                 }
                                 "format_verification_skipped"
@@ -3958,6 +3998,45 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             }
                                         }
                                         let commit_sha = latest_git_commit_sha(&cached.git_steps);
+
+                                        // Orbit capacity guard: trip on
+                                        // ENOSPC so subsequent push
+                                        // failures in the cooldown
+                                        // window can carry
+                                        // `retry_after_secs` and so the
+                                        // UI can render a dedicated
+                                        // remediation banner instead of
+                                        // the generic push-stuck one.
+                                        let orbit_key = orbit_base_url_for_guard();
+                                        if matches!(
+                                            push_class,
+                                            PushFailureClass::RemoteStorageExhausted
+                                        ) {
+                                            if let Some(ref base) = orbit_key {
+                                                orbit_capacity_guard.trip(base).await;
+                                                warn!(
+                                                    orbit_base_url = %base,
+                                                    cooldown_secs = orbit_capacity_guard.cooldown().as_secs(),
+                                                    %reason,
+                                                    "Orbit reported ENOSPC; tripping capacity guard to defer retries"
+                                                );
+                                            }
+                                        }
+                                        let cooldown_remaining = match orbit_key.as_deref() {
+                                            Some(base) => {
+                                                orbit_capacity_guard.cooldown_remaining(base).await
+                                            }
+                                            None => None,
+                                        };
+                                        let retry_after_secs =
+                                            cooldown_remaining.map(|d| d.as_secs());
+                                        let remediation = match push_class {
+                                            PushFailureClass::RemoteStorageExhausted => {
+                                                Some(ORBIT_REMOTE_STORAGE_EXHAUSTED_REMEDIATION)
+                                            }
+                                            _ => None,
+                                        };
+
                                         // Legacy `git_push_failed` event preserved
                                         // for existing UI consumers; `push_deferred`
                                         // is the new invariant-correct carrier.
@@ -3984,13 +4063,37 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                 "reason": reason,
                                                 "class": push_failure_label(push_class),
                                                 "commit_sha": commit_sha,
+                                                "remediation": remediation,
+                                                "retry_after_secs": retry_after_secs,
                                             }),
                                         );
-                                        if bump_project_push_failures(project_id) {
+                                        // RemoteStorageExhausted is
+                                        // promoted straight to a
+                                        // `project_push_stuck` banner
+                                        // on the first occurrence
+                                        // because retrying inside the
+                                        // cooldown window is *actively
+                                        // harmful* (each retry leaves
+                                        // another `tmp_pack_*` behind
+                                        // on orbit's already-full
+                                        // rootfs). Waiting for the
+                                        // default 3-failure streak
+                                        // would make the problem
+                                        // worse before surfacing.
+                                        let hit_stuck_threshold =
+                                            bump_project_push_failures(project_id);
+                                        let should_emit_stuck = hit_stuck_threshold
+                                            || matches!(
+                                                push_class,
+                                                PushFailureClass::RemoteStorageExhausted,
+                                            );
+                                        if should_emit_stuck {
                                             warn!(
                                                 project_id = %project_id,
+                                                class = push_failure_label(push_class),
                                                 threshold = CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD,
-                                                "Project has hit the consecutive-push-failure threshold; emitting one-shot project_push_stuck advisory"
+                                                ?retry_after_secs,
+                                                "Emitting project_push_stuck advisory"
                                             );
                                             emit_domain_event(
                                                 &app_broadcast,
@@ -4002,6 +4105,8 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                     "threshold": CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD,
                                                     "class": push_failure_label(push_class),
                                                     "reason": reason,
+                                                    "remediation": remediation,
+                                                    "retry_after_secs": retry_after_secs,
                                                 }),
                                             );
                                         }
@@ -5318,6 +5423,7 @@ pub(crate) async fn start_loop(
         }),
         alive: forwarder_alive.clone(),
         loop_log: state.loop_log.clone(),
+        orbit_capacity_guard: state.orbit_capacity_guard.clone(),
     });
 
     emit_domain_event(
@@ -5946,6 +6052,7 @@ pub(crate) async fn run_single_task(
             }),
             alive: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             loop_log: state.loop_log.clone(),
+            orbit_capacity_guard: state.orbit_capacity_guard.clone(),
         });
     } else {
         warn!(

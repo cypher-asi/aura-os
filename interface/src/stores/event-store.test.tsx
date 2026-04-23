@@ -150,6 +150,60 @@ describe("event-store", () => {
     expect(gitSteps[0].commitSha).toBe("abc1234567890");
   });
 
+  it("push_deferred with remote_storage_exhausted threads class + remediation + retry_after_secs", () => {
+    simulateEvent({
+      type: "push_deferred",
+      project_id: "proj-ex-1",
+      task_id: "t-ex-1",
+      reason: "remote storage exhausted on git push",
+      commit_sha: "cafebabecafebabe",
+      class: "remote_storage_exhausted",
+      remediation: "Free disk on orbit, then retry.",
+      retry_after_secs: 900,
+    });
+    const step = getTaskOutput("t-ex-1").gitSteps[0];
+    expect(step.kind).toBe("push_deferred");
+    expect(step.class).toBe("remote_storage_exhausted");
+    expect(step.remediation).toBe("Free disk on orbit, then retry.");
+    expect(step.retryAfterSecs).toBe(900);
+  });
+
+  it("push_deferred with remote_storage_exhausted promotes to project_push_stuck on first event", () => {
+    // Without the orbit capacity guard promotion, the per-project
+    // banner would only appear after 3 back-to-back failures. ENOSPC
+    // is different: each retry makes it worse, so the client has to
+    // show the banner immediately off the FIRST `push_deferred` that
+    // carries `class: "remote_storage_exhausted"`.
+    expect(useEventStore.getState().pushStuckByProject["proj-ex-2"]).toBeUndefined();
+    simulateEvent({
+      type: "push_deferred",
+      project_id: "proj-ex-2",
+      task_id: "t-ex-2",
+      reason: "remote storage exhausted on git push",
+      class: "remote_storage_exhausted",
+      remediation: "Free disk on orbit, then retry.",
+      retry_after_secs: 600,
+    });
+    const flag = useEventStore.getState().pushStuckByProject["proj-ex-2"];
+    expect(flag).toBeDefined();
+    expect(flag!.class).toBe("remote_storage_exhausted");
+    expect(flag!.threshold).toBe(1);
+    expect(flag!.remediation).toBe("Free disk on orbit, then retry.");
+    expect(flag!.retryAfterSecs).toBe(600);
+    expect(flag!.dismissed).toBe(false);
+  });
+
+  it("push_deferred with a non-storage class does NOT promote to banner", () => {
+    simulateEvent({
+      type: "push_deferred",
+      project_id: "proj-ex-3",
+      task_id: "t-ex-3",
+      reason: "transient network blip",
+      class: "transport_timeout",
+    });
+    expect(useEventStore.getState().pushStuckByProject["proj-ex-3"]).toBeUndefined();
+  });
+
   it("project_push_stuck event flips a per-project banner flag", () => {
     expect(useEventStore.getState().pushStuckByProject["proj-ps-1"]).toBeUndefined();
     simulateEvent({

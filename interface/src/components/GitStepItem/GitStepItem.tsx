@@ -2,6 +2,18 @@ import { Check, CloudOff, GitCommitHorizontal, RotateCcw, Upload, XCircle } from
 import type { GitStep } from "../../stores/event-store/index";
 import styles from "../Preview/Preview.module.css";
 
+/**
+ * Render a cooldown in a compact human form: `45s`, `3m`, `12m`.
+ *
+ * Rounds down so the label never *overstates* the remaining time; a
+ * cooldown of 59s renders as `0m` is useless, so we bottom out at the
+ * second granularity below one minute.
+ */
+function formatCooldown(secs: number): string {
+  if (secs < 60) return `${Math.max(1, Math.floor(secs))}s`;
+  return `${Math.floor(secs / 60)}m`;
+}
+
 function getGitStepLabel(step: GitStep): string {
   if (step.kind === "committed") {
     const sha = step.commitSha ? step.commitSha.slice(0, 7) : "unknown";
@@ -22,6 +34,19 @@ function getGitStepLabel(step: GitStep): string {
     return step.reason ?? "Push failed";
   }
   if (step.kind === "push_deferred") {
+    // `remote_storage_exhausted` gets a dedicated, actionable message
+    // because the raw `remote: No space left on device` string is
+    // alarming and doesn't tell the user what to do. The rest of the
+    // classes fall through to the generic "Push deferred: <reason>".
+    if (step.class === "remote_storage_exhausted") {
+      const prefix = step.commitSha
+        ? `Push deferred for ${step.commitSha.slice(0, 7)}`
+        : "Push deferred";
+      const retry = step.retryAfterSecs
+        ? ` (retrying in ~${formatCooldown(step.retryAfterSecs)})`
+        : "";
+      return `${prefix}: Orbit is out of disk space${retry}`;
+    }
     const reason = step.reason ?? "remote unavailable";
     if (step.commitSha) {
       return `Push deferred for ${step.commitSha.slice(0, 7)}: ${reason}`;

@@ -354,6 +354,11 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     if orbit_client.is_none() {
         info!("Orbit integration disabled (ORBIT_BASE_URL not set)");
     }
+    let orbit_capacity_guard = Arc::new(crate::orbit_guard::OrbitCapacityGuard::from_env());
+    info!(
+        cooldown_secs = orbit_capacity_guard.cooldown().as_secs(),
+        "Orbit capacity guard armed (trips on remote_storage_exhausted; tunable via AURA_ORBIT_ENOSPC_COOLDOWN_SECS)"
+    );
 
     ensure_local_harness_running();
 
@@ -494,6 +499,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         swarm_base_url: env_opt("SWARM_BASE_URL"),
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client,
+        orbit_capacity_guard,
         validation_cache,
         agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
         agent_runtime,

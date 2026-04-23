@@ -41,6 +41,14 @@ export interface GitStep {
   repo?: string;
   branch?: string;
   commits?: { sha: string; message: string }[];
+  /** Server classifier for `push_failed` / `push_deferred` rows so the
+   *  UI can route `remote_storage_exhausted` to a dedicated message
+   *  instead of showing the raw `No space left on device` error. */
+  class?: string;
+  /** Remediation hint provided by the backend (see `orbit_guard`). */
+  remediation?: string;
+  /** When orbit is in cooldown, seconds until retries resume. */
+  retryAfterSecs?: number;
   timestamp: number;
 }
 
@@ -59,12 +67,18 @@ export interface TaskOutputEntry {
  * push clears it, or the user dismisses it for the current session.
  */
 export interface PushStuckInfo {
-  /** Classified failure reason (e.g. emote_rejected\). */
+  /** Classified failure reason (e.g. `remote_rejected`). */
   reason?: string;
-  /** Backend failure class label when present (e.g. \	ransport_timeout\). */
+  /** Backend failure class label when present
+   *  (e.g. `transport_timeout`, `remote_storage_exhausted`). */
   class?: string;
   /** Streak threshold the backend observed when emitting the advisory. */
   threshold: number;
+  /** Operator-facing remediation hint when the backend knows what to
+   *  do (currently populated for `remote_storage_exhausted`). */
+  remediation?: string;
+  /** Seconds until the orbit capacity guard releases retries. */
+  retryAfterSecs?: number;
   /** Set after the user dismisses the banner for the current session. */
   dismissed: boolean;
   /** ms-epoch of the most recent advisory for this project. */
@@ -157,6 +171,8 @@ export const useEventStore = create<EventState>()((set, get) => ({
           threshold: info.threshold,
           reason: info.reason,
           class: info.class,
+          remediation: info.remediation,
+          retryAfterSecs: info.retryAfterSecs,
           dismissed: info.dismissed ?? state.pushStuckByProject[projectId]?.dismissed ?? false,
           lastAt: info.lastAt ?? Date.now(),
         },

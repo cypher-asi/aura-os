@@ -348,6 +348,7 @@ mod tests {
                 swarm_base_url: None,
                 task_output_cache: Arc::new(Mutex::new(HashMap::new())),
                 orbit_client: None,
+                orbit_capacity_guard: Arc::new(crate::orbit_guard::OrbitCapacityGuard::new()),
                 validation_cache: Arc::new(dashmap::DashMap::new()),
                 agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
                 agent_runtime,

@@ -489,10 +489,18 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.PushDeferred; content: {
       task_id?: string;
       reason: string;
-      /** Failure classifier, e.g. 
-emote_rejected, 	ransport_timeout. */
+      /** Failure classifier, e.g. `remote_rejected`, `transport_timeout`,
+       *  `remote_storage_exhausted`. */
       class?: string;
       commit_sha?: string | null;
+      /** Operator-facing remediation hint populated for classes the
+       *  server knows how to talk about (currently only
+       *  `remote_storage_exhausted`). */
+      remediation?: string | null;
+      /** Seconds until the orbit capacity guard will let retries
+       *  resume. Populated when orbit is in cooldown after an
+       *  ENOSPC trip; otherwise absent / null. */
+      retry_after_secs?: number | null;
     } }
   | { type: EventType.ProjectPushStuck; content: {
       task_id?: string;
@@ -501,6 +509,12 @@ emote_rejected, 	ransport_timeout. */
       /** Last observed failure classifier. */
       class?: string;
       reason: string;
+      /** Operator-facing remediation hint, mirrors the `push_deferred`
+       *  payload so the banner can render actionable guidance. */
+      remediation?: string | null;
+      /** Seconds until the orbit capacity guard will let retries
+       *  resume (for `remote_storage_exhausted` only). */
+      retry_after_secs?: number | null;
     } }
 
   // ── Harness protocol (canonical types from aura-protocol) ────

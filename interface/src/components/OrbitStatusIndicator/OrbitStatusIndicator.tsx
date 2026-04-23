@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { FolderGit2 } from "lucide-react"
 import type { Project } from "../../types"
+import { usePushStuck } from "../../stores/event-store/event-store"
 import styles from "./OrbitStatusIndicator.module.css"
 
 interface OrbitStatusIndicatorProps {
@@ -17,6 +18,14 @@ function resolveOrbitUrl(project: Project): string | null {
   return `${owner}/${repo}`
 }
 
+/** Mirror of `GitStepItem`'s cooldown formatter; kept local so this
+ *  component doesn't pull the rest of the git-step rendering surface
+ *  in. If a third call site appears, lift both to a shared util. */
+function formatCooldown(secs: number): string {
+  if (secs < 60) return `${Math.max(1, Math.floor(secs))}s`
+  return `${Math.floor(secs / 60)}m`
+}
+
 export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -25,6 +34,22 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
   const repoLabel = project && isConnected
     ? `${project.orbit_owner}/${project.orbit_repo}`
     : null
+
+  // Surface the orbit capacity-guard state so the indicator can flip
+  // to a dedicated "degraded / out-of-disk" status when aura-os-server
+  // has observed a `remote_storage_exhausted` push failure for this
+  // project. Stuck state that is NOT storage-exhausted (e.g. transient
+  // transport timeouts) keeps the indicator green; the banner elsewhere
+  // still surfaces it, so we don't misleadingly flag orbit as down for
+  // unrelated push flakes.
+  const pushStuck = usePushStuck(project?.project_id)
+  const orbitOutOfDisk =
+    !!pushStuck && !pushStuck.dismissed && pushStuck.class === "remote_storage_exhausted"
+  const status: "connected" | "disconnected" | "degraded" = !isConnected
+    ? "disconnected"
+    : orbitOutOfDisk
+      ? "degraded"
+      : "connected"
 
   useEffect(() => {
     if (!open) return
@@ -50,7 +75,7 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
       onMouseLeave={handleMouseLeave}
     >
       <span className={styles.indicator}>
-        <span className={styles.dot} data-status={isConnected ? "connected" : "disconnected"} />
+        <span className={styles.dot} data-status={status} />
         <FolderGit2 size={11} />
       </span>
 
@@ -72,6 +97,18 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
             <div className={styles.statusRow}>
               <span className={styles.statusLabel}>Git URL</span>
               <span className={styles.statusValue}>{project.git_repo_url}</span>
+            </div>
+          )}
+          {orbitOutOfDisk && (
+            <div className={styles.statusRow}>
+              <span className={styles.statusLabel}>Status</span>
+              <span className={styles.statusValue}>
+                Orbit out of disk
+                {pushStuck?.retryAfterSecs
+                  ? ` (retry in ~${formatCooldown(pushStuck.retryAfterSecs)})`
+                  : ""}
+                {pushStuck?.remediation ? `. ${pushStuck.remediation}` : ""}
+              </span>
             </div>
           )}
         </div>
