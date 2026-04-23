@@ -151,6 +151,42 @@ function writeSolidPng(filePath, width, height, rgba) {
   fs.writeFileSync(filePath, PNG.sync.write(image));
 }
 
+function findColorBounds(image, predicate) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const index = ((y * image.width) + x) * 4;
+      const rgba = [
+        image.data[index],
+        image.data[index + 1],
+        image.data[index + 2],
+        image.data[index + 3],
+      ];
+      if (!predicate(rgba)) {
+        continue;
+      }
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  if (!Number.isFinite(minX)) {
+    return null;
+  }
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: (maxX - minX) + 1,
+    height: (maxY - minY) + 1,
+  };
+}
+
 test("buildEntryPrompt turns a changelog entry into a capture brief", () => {
   const prompt = buildEntryPrompt({
     title: "Feedback board and comments stay visible",
@@ -301,6 +337,55 @@ test("composeBrandedScreenshotCard keeps output as a valid branded PNG", () => {
   assert.equal(output.width, 320);
   assert.equal(output.height, 213);
   assert.equal(fs.statSync(outputPath).size > 0, true);
+});
+
+test("composeBrandedScreenshotCard preserves screenshot aspect ratio instead of forcing 16:9", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-aspect-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+  writeSolidPng(screenshotPath, 120, 120, [240, 32, 32, 255]);
+
+  composeBrandedScreenshotCard({
+    repoDir: repoRoot,
+    backgroundPath,
+    screenshotPath,
+    outputPath,
+  });
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
+
+  assert.ok(redBounds);
+  const renderedAspect = redBounds.width / Math.max(1, redBounds.height);
+  assert.ok(Math.abs(renderedAspect - 1) < 0.08, `expected near-square screenshot, got aspect ${renderedAspect}`);
+});
+
+test("composeBrandedScreenshotCard lets widescreen screenshots dominate the canvas", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-footprint-"));
+  const backgroundPath = path.join(rootDir, "background.png");
+  const screenshotPath = path.join(rootDir, "screenshot.png");
+  const outputPath = path.join(rootDir, "branded.png");
+  writeSolidPng(backgroundPath, 320, 213, [3, 8, 22, 255]);
+  writeSolidPng(screenshotPath, 160, 90, [240, 32, 32, 255]);
+
+  composeBrandedScreenshotCard({
+    repoDir: repoRoot,
+    backgroundPath,
+    screenshotPath,
+    outputPath,
+  });
+
+  const requireFromInterface = createRequire(path.join(repoRoot, "interface", "package.json"));
+  const { PNG } = requireFromInterface("pngjs");
+  const output = PNG.sync.read(fs.readFileSync(outputPath));
+  const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
+
+  assert.ok(redBounds);
+  assert.ok(redBounds.width >= 285, `expected screenshot footprint to stay wide, got ${redBounds.width}px`);
 });
 
 test("replaceChangelogMediaBlock swaps the placeholder body while preserving the slot", () => {

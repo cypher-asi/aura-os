@@ -244,6 +244,7 @@ function buildOpenAIPolishPrompt(entry, summary) {
     "The input image is a real Aura product screenshot and must be used only as visual context for palette and mood.",
     "Do not recreate, redraw, imitate, or include product UI, app chrome, readable UI text, fake screenshots, devices, people, logos, or watermarks in the generated background.",
     "Leave the composition suitable for a real screenshot to be overlaid in the center by our deterministic renderer.",
+    "Keep the central field dark, quiet, and low-contrast so the real screenshot can remain the dominant element. Push any energy, grids, and orbital details toward the outer edges.",
     "Visual direction: deep black graphite base, subtle cyan/teal energy, soft glass glow, restrained grid or orbital lines, modern high-trust AI product launch feel.",
     `Changelog title: ${title}`,
     story ? `Story context: ${story}` : "",
@@ -270,7 +271,7 @@ function getOpenAIImageModel() {
 }
 
 function getOpenAIImageQuality() {
-  return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_QUALITY, "medium");
+  return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_IMAGE_QUALITY, "high");
 }
 
 function getOpenAIImageSize() {
@@ -450,22 +451,29 @@ function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath,
   const PNG = loadPng(repoDir);
   const background = PNG.sync.read(fs.readFileSync(backgroundPath));
   const screenshot = PNG.sync.read(fs.readFileSync(screenshotPath));
-  const cardWidth = Math.min(Math.round(background.width * 0.82), 1260);
-  const cardHeight = Math.round(cardWidth * 9 / 16);
+  const screenshotAspect = screenshot.width / Math.max(1, screenshot.height);
+  const maxCardWidth = Math.min(Math.round(background.width * 0.93), 1440);
+  const maxCardHeight = Math.min(Math.round(background.height * 0.8), 860);
+  let cardWidth = maxCardWidth;
+  let cardHeight = Math.round(cardWidth / screenshotAspect);
+  if (cardHeight > maxCardHeight) {
+    cardHeight = maxCardHeight;
+    cardWidth = Math.round(cardHeight * screenshotAspect);
+  }
   const cardX = Math.round((background.width - cardWidth) / 2);
-  const cardY = Math.round((background.height - cardHeight) / 2) + Math.round(background.height * 0.03);
+  const cardY = Math.round((background.height - cardHeight) / 2) + Math.round(background.height * 0.02);
   const radius = 28;
 
-  drawRoundedRect(background, cardX - 44, cardY - 42, cardWidth + 88, cardHeight + 92, 46, [1, 8, 20, 150]);
-  drawRoundedRect(background, cardX - 28, cardY - 27, cardWidth + 56, cardHeight + 57, 38, [0, 190, 255, 28]);
-  drawRoundedRect(background, cardX - 18, cardY - 18, cardWidth + 36, cardHeight + 36, 34, [255, 255, 255, 22]);
-  drawRoundedRect(background, cardX - 10, cardY - 10, cardWidth + 20, cardHeight + 20, 32, [2, 6, 15, 210]);
+  drawRoundedRect(background, cardX - 34, cardY - 34, cardWidth + 68, cardHeight + 72, 44, [1, 8, 20, 138]);
+  drawRoundedRect(background, cardX - 20, cardY - 20, cardWidth + 40, cardHeight + 42, 36, [0, 190, 255, 24]);
+  drawRoundedRect(background, cardX - 12, cardY - 12, cardWidth + 24, cardHeight + 24, 32, [255, 255, 255, 20]);
+  drawRoundedRect(background, cardX - 6, cardY - 6, cardWidth + 12, cardHeight + 12, 30, [2, 6, 15, 218]);
   drawRoundedImage(background, screenshot, cardX, cardY, cardWidth, cardHeight, radius);
-  drawFrameBorder(background, cardX, cardY, cardWidth, cardHeight, radius, [115, 226, 255, 95]);
+  drawFrameBorder(background, cardX, cardY, cardWidth, cardHeight, radius, [115, 226, 255, 88]);
 
   // Deterministic Aura accent marks. These keep branding consistent without asking
   // the image model to render text or recreate product UI.
-  const accentY = Math.max(36, cardY - 72);
+  const accentY = Math.max(34, cardY - 54);
   for (let index = 0; index < 3; index += 1) {
     drawRoundedRect(background, cardX + (index * 22), accentY, 12, 12, 6, index === 0 ? [0, 229, 185, 220] : [90, 205, 255, 160]);
   }
