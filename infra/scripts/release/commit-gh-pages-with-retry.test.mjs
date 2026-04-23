@@ -66,3 +66,43 @@ test("rebases and pushes generated gh-pages changes when the remote moved first"
     "png\n",
   );
 });
+
+test("creates an allow-empty gh-pages republish commit when requested", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "aura-gh-pages-empty-"));
+  const remote = path.join(root, "remote.git");
+  const seed = path.join(root, "seed");
+  const worker = path.join(root, "worker");
+  const inspect = path.join(root, "inspect");
+
+  await git(root, ["init", "--bare", remote]);
+  await git(root, ["clone", remote, seed]);
+  await configureGit(seed);
+  await git(seed, ["checkout", "-b", "gh-pages"]);
+  await mkdir(path.join(seed, "changelog", "nightly"), { recursive: true });
+  await writeFile(path.join(seed, "changelog", "nightly", "latest.md"), "Initial changelog\n");
+  await git(seed, ["add", "changelog/nightly/latest.md"]);
+  await git(seed, ["commit", "-m", "Seed gh-pages"]);
+  await git(seed, ["push", "-u", "origin", "gh-pages"]);
+  await git(remote, ["symbolic-ref", "HEAD", "refs/heads/gh-pages"]);
+
+  await git(root, ["clone", remote, worker]);
+
+  await execFile("bash", [
+    scriptPath.pathname,
+    worker,
+    "Republish gh-pages",
+  ], {
+    env: {
+      ...process.env,
+      GH_PAGES_ALLOW_EMPTY: "1",
+    },
+  });
+
+  await git(root, ["clone", remote, inspect]);
+  const { stdout } = await git(inspect, ["log", "--oneline", "-n", "2"]);
+  assert.match(stdout, /Republish gh-pages/);
+  assert.equal(
+    await readFile(path.join(inspect, "changelog", "nightly", "latest.md"), "utf8"),
+    "Initial changelog\n",
+  );
+});

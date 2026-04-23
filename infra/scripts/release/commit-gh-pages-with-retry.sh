@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 3 ]]; then
-  echo "Usage: $0 <pages-dir> <commit-message> <path> [path ...]" >&2
+if [[ $# -lt 2 ]]; then
+  echo "Usage: $0 <pages-dir> <commit-message> [path ...]" >&2
   exit 2
 fi
 
@@ -10,6 +10,17 @@ pages_dir="$1"
 shift
 commit_message="$1"
 shift
+allow_empty="${GH_PAGES_ALLOW_EMPTY:-0}"
+allow_empty_normalized="$(printf '%s' "$allow_empty" | tr '[:upper:]' '[:lower:]')"
+
+case "$allow_empty_normalized" in
+  1|true|yes|on)
+    allow_empty=1
+    ;;
+  *)
+    allow_empty=0
+    ;;
+esac
 
 cd "$pages_dir"
 
@@ -25,11 +36,16 @@ for path in "$@"; do
 done
 
 if git diff --cached --quiet; then
-  echo "No gh-pages changes to push."
-  exit 0
-fi
+  if [[ "$allow_empty" != "1" ]]; then
+    echo "No gh-pages changes to push."
+    exit 0
+  fi
 
-git commit -m "$commit_message"
+  echo "No staged gh-pages changes; creating allow-empty commit to republish."
+  git commit --allow-empty -m "$commit_message"
+else
+  git commit -m "$commit_message"
+fi
 
 for attempt in 1 2 3; do
   if git push; then

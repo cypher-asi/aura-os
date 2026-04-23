@@ -1,0 +1,60 @@
+name: Republish GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Optional note for why Pages is being republished"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: republish-gh-pages
+  cancel-in-progress: false
+
+jobs:
+  republish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          path: workflow
+
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Republish current gh-pages content
+        env:
+          GH_PAGES_ALLOW_EMPTY: "1"
+          INPUT_REASON: ${{ inputs.reason }}
+        shell: bash
+        run: |
+          message="Republish gh-pages"
+          if [[ -n "$INPUT_REASON" ]]; then
+            message="${message}: ${INPUT_REASON}"
+          fi
+
+          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "$message"
+
+      - name: Attach republish summary
+        shell: bash
+        run: |
+          {
+            echo "## GitHub Pages Republish"
+            echo
+            echo "- Triggered a fresh gh-pages branch push without changing content."
+            if [[ -n "${{ inputs.reason }}" ]]; then
+              echo "- Reason: ${{ inputs.reason }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
