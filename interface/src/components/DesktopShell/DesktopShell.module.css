@@ -28,6 +28,8 @@
   display: flex;
   overflow: hidden;
   background: var(--color-bg);
+  margin: 0 5px;
+  border-radius: 8px;
 }
 
 :global([data-desktop-mode]) .desktopContent {
