@@ -308,6 +308,13 @@ pub struct CachedTaskOutput {
     pub live_output: String,
     pub build_steps: Vec<serde_json::Value>,
     pub test_steps: Vec<serde_json::Value>,
+    /// Evidence of `cargo fmt --check` / `prettier --check` / equivalent
+    /// being exercised during the task. Part of the Definition-of-Done gate
+    /// the dev loop enforces before marking a task as done.
+    pub format_steps: Vec<serde_json::Value>,
+    /// Evidence of `cargo clippy -D warnings` / `eslint` / equivalent being
+    /// exercised during the task. Part of the Definition-of-Done gate.
+    pub lint_steps: Vec<serde_json::Value>,
     pub total_input_tokens: u64,
     pub total_output_tokens: u64,
     pub total_cache_creation_input_tokens: u64,

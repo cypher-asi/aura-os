@@ -29,10 +29,16 @@ use crate::state::{
     ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
 };
 
+/// One of the four Definition-of-Done verification step categories the dev
+/// loop recognises. `classify_run_command_steps` maps shell commands to
+/// these categories; the event forwarder then buckets the event into the
+/// matching field on [`CachedTaskOutput`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum VerificationStepKind {
     Build,
     Test,
+    Format,
+    Lint,
 }
 
 /// Resolve the effective git clone URL for a project. If `git_repo_url` is set,
@@ -338,15 +344,56 @@ fn loop_status_details(
     (state.to_string(), None, None, None)
 }
 
+/// Determine whether a cached task output represents genuine, verified work.
+///
+/// This is the **Definition-of-Done gate** that sits between the harness
+/// emitting `task_completed` and the server transitioning the task to
+/// `done` in storage. It rejects completions that either show no activity
+/// at all, or show code changes without accompanying build/test evidence.
+///
+/// Layered checks, returning the first failure reason found:
+///
+/// 1. **Baseline activity check** — rejects runs that produced no live
+///    output, no file changes, and no verification steps. Catches
+///    automatons that claim success after doing literally nothing.
+/// 2. **Code-change evidence check** — if the task modified files, the
+///    run must include at least one build step *and* at least one test
+///    step. Catches "I'm done" claims where the agent edited code but
+///    never compiled or ran the suite. This is the core of the
+///    Definition of Done: a code change without `cargo build` + `cargo
+///    test` (or equivalent) evidence cannot be marked done.
+///
+/// `format_steps` / `lint_steps` are tracked for observability but are
+/// not yet gate-blocking — too many legitimate tasks (docs, schema,
+/// chores) have no lint surface, and we don't want to false-fail them.
+/// The fields are surfaced in telemetry so the gate can be tightened
+/// once the harness reliably emits fmt/clippy evidence.
 fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'static str> {
     let has_output = !cached.live_output.trim().is_empty();
     let has_file_changes = !cached.files_changed.is_empty();
-    let has_verification = !cached.build_steps.is_empty() || !cached.test_steps.is_empty();
-    if has_output || has_file_changes || has_verification {
-        None
-    } else {
-        Some("Automaton reported task_completed without output, file changes, or verification evidence")
+    let has_build = !cached.build_steps.is_empty();
+    let has_test = !cached.test_steps.is_empty();
+    let has_verification = has_build || has_test;
+
+    if !has_output && !has_file_changes && !has_verification {
+        return Some(
+            "Automaton reported task_completed without output, file changes, or verification evidence",
+        );
     }
+
+    if has_file_changes && !has_build {
+        return Some(
+            "Task modified code but no build/compile step was run (Definition of Done: cargo build or equivalent must pass before task_done)",
+        );
+    }
+
+    if has_file_changes && !has_test {
+        return Some(
+            "Task modified code but no test step was run (Definition of Done: cargo test or equivalent must pass before task_done)",
+        );
+    }
+
+    None
 }
 
 fn clear_project_cooldown(project_id: ProjectId) {
@@ -903,6 +950,38 @@ fn classify_run_command_steps(
         "tox",
         "rspec",
     ];
+    // Format-check commands: anything that verifies code style without
+    // rewriting files. Evidence of one of these being run satisfies the
+    // `fmt` leg of the Definition-of-Done gate.
+    let format_markers = [
+        "cargo fmt",
+        "rustfmt",
+        "prettier --check",
+        "prettier -c",
+        "npm run format",
+        "pnpm run format",
+        "yarn run format",
+        "ruff format --check",
+        "black --check",
+        "gofmt -l",
+        "dprint check",
+    ];
+    // Lint commands. Substring-based — tolerates flag suffixes like
+    // `-- -D warnings` or `--all-targets`.
+    let lint_markers = [
+        "cargo clippy",
+        "eslint",
+        "npm run lint",
+        "pnpm run lint",
+        "yarn run lint",
+        "bun run lint",
+        "ruff check",
+        "pylint",
+        "mypy",
+        "golangci-lint",
+        "swiftlint",
+        "ktlint",
+    ];
 
     let mut kinds = Vec::new();
     if build_markers
@@ -916,6 +995,18 @@ fn classify_run_command_steps(
         .any(|marker| normalized.contains(marker))
     {
         kinds.push(VerificationStepKind::Test);
+    }
+    if format_markers
+        .iter()
+        .any(|marker| normalized.contains(marker))
+    {
+        kinds.push(VerificationStepKind::Format);
+    }
+    if lint_markers
+        .iter()
+        .any(|marker| normalized.contains(marker))
+    {
+        kinds.push(VerificationStepKind::Lint);
     }
     kinds
 }
@@ -1974,6 +2065,20 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 | "test_fix_attempt" => {
                                     entry.test_steps.push(event.clone());
                                 }
+                                "format_verification_skipped"
+                                | "format_verification_started"
+                                | "format_verification_passed"
+                                | "format_verification_failed"
+                                | "format_fix_attempt" => {
+                                    entry.format_steps.push(event.clone());
+                                }
+                                "lint_verification_skipped"
+                                | "lint_verification_started"
+                                | "lint_verification_passed"
+                                | "lint_verification_failed"
+                                | "lint_fix_attempt" => {
+                                    entry.lint_steps.push(event.clone());
+                                }
                                 "token_usage" => {
                                     if !entry.saw_rich_usage {
                                         if let Some((input_tokens, output_tokens)) =
@@ -1994,6 +2099,12 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                             }
                                             VerificationStepKind::Test => {
                                                 entry.test_steps.push(event.clone())
+                                            }
+                                            VerificationStepKind::Format => {
+                                                entry.format_steps.push(event.clone())
+                                            }
+                                            VerificationStepKind::Lint => {
+                                                entry.lint_steps.push(event.clone())
                                             }
                                         }
                                     }
@@ -4200,6 +4311,75 @@ mod tests {
     }
 
     #[test]
+    fn classifies_cargo_fmt_and_clippy_as_format_and_lint() {
+        let fmt_event = serde_json::json!({
+            "name": "run_command",
+            "input": { "command": "cargo fmt --all -- --check" }
+        });
+        let clippy_event = serde_json::json!({
+            "name": "run_command",
+            "input": {
+                "program": "cargo",
+                "args": ["clippy", "--all-targets", "--", "-D", "warnings"]
+            }
+        });
+
+        assert_eq!(
+            classify_run_command_steps("tool_call_snapshot", &fmt_event),
+            vec![VerificationStepKind::Format]
+        );
+        assert_eq!(
+            classify_run_command_steps("tool_call_completed", &clippy_event),
+            vec![VerificationStepKind::Lint]
+        );
+    }
+
+    #[test]
+    fn classifies_js_lint_and_prettier_check() {
+        let eslint_event = serde_json::json!({
+            "name": "run_command",
+            "input": { "command": "npx eslint src --max-warnings=0" }
+        });
+        let prettier_event = serde_json::json!({
+            "name": "run_command",
+            "input": { "command": "npx prettier --check src" }
+        });
+
+        assert_eq!(
+            classify_run_command_steps("tool_call_snapshot", &eslint_event),
+            vec![VerificationStepKind::Lint]
+        );
+        assert_eq!(
+            classify_run_command_steps("tool_call_snapshot", &prettier_event),
+            vec![VerificationStepKind::Format]
+        );
+    }
+
+    #[test]
+    fn cargo_check_does_not_collide_with_clippy() {
+        // `cargo check` should be Build; `cargo clippy` should be Lint.
+        // The substring matcher must not confuse them because they share
+        // the `cargo c` prefix.
+        let check_event = serde_json::json!({
+            "name": "run_command",
+            "input": { "command": "cargo check --workspace" }
+        });
+        let clippy_event = serde_json::json!({
+            "name": "run_command",
+            "input": { "command": "cargo clippy --workspace" }
+        });
+
+        assert_eq!(
+            classify_run_command_steps("tool_call_snapshot", &check_event),
+            vec![VerificationStepKind::Build]
+        );
+        assert_eq!(
+            classify_run_command_steps("tool_call_snapshot", &clippy_event),
+            vec![VerificationStepKind::Lint]
+        );
+    }
+
+    #[test]
     fn ignores_non_command_events_for_verification_steps() {
         let event = serde_json::json!({
             "name": "run_command",
@@ -4647,6 +4827,73 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(completion_validation_failure_reason(&with_output), None);
+    }
+
+    fn modify_summary(path: &str) -> StorageTaskFileChangeSummary {
+        StorageTaskFileChangeSummary {
+            op: "modify".into(),
+            path: path.into(),
+            lines_added: 0,
+            lines_removed: 0,
+        }
+    }
+
+    #[test]
+    fn completion_validation_blocks_code_changes_without_build() {
+        // Modifying code without any build/compile step violates the
+        // Definition of Done: the agent cannot prove the change
+        // compiles.
+        let cached = CachedTaskOutput {
+            live_output: "edited files".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            ..Default::default()
+        };
+        let reason = completion_validation_failure_reason(&cached).expect("gate should fire");
+        assert!(
+            reason.contains("no build/compile step"),
+            "expected build-step reason, got: {reason}"
+        );
+    }
+
+    #[test]
+    fn completion_validation_blocks_code_changes_without_tests() {
+        // Build evidence is present but no test step — still must fail
+        // per Definition of Done.
+        let cached = CachedTaskOutput {
+            live_output: "compiled".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            ..Default::default()
+        };
+        let reason = completion_validation_failure_reason(&cached).expect("gate should fire");
+        assert!(
+            reason.contains("no test step"),
+            "expected test-step reason, got: {reason}"
+        );
+    }
+
+    #[test]
+    fn completion_validation_passes_code_changes_with_build_and_test() {
+        let cached = CachedTaskOutput {
+            live_output: "all green".into(),
+            files_changed: vec![modify_summary("src/lib.rs")],
+            build_steps: vec![serde_json::json!({"type": "build_verification_passed"})],
+            test_steps: vec![serde_json::json!({"type": "test_verification_passed"})],
+            ..Default::default()
+        };
+        assert_eq!(completion_validation_failure_reason(&cached), None);
+    }
+
+    #[test]
+    fn completion_validation_allows_output_only_tasks() {
+        // Analysis / status / review tasks that produce no code change
+        // still complete on the loose baseline check. We deliberately
+        // do not block them for lacking build/test evidence.
+        let cached = CachedTaskOutput {
+            live_output: "Summary: nothing to change.".into(),
+            ..Default::default()
+        };
+        assert_eq!(completion_validation_failure_reason(&cached), None);
     }
 
     #[test]

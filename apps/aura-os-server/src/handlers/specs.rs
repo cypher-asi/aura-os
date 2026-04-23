@@ -427,7 +427,10 @@ async fn open_spec_gen_session(
         .commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: format!(
-                "Generate specs for project {project_id}. Inspect the project first, then create one or more concrete specs using the available project spec tools. Do not stop until the specs have been created."
+                "Generate specs for project {project_id}. Inspect the project first, then create one or more concrete specs using the available project spec tools. \
+                 Every spec MUST end with a `## Definition of Done` section listing the exact build, test, format, and lint commands that must pass before any task derived from the spec can be marked done, plus 3\u{2013}7 observable acceptance criteria. \
+                 If you implement a type that is defined by an external spec or RFC, cite the authoritative source (URL or section number) in the spec itself — do not guess sizes, field layouts, or constants. \
+                 Do not stop until the specs have been created."
             ),
             tool_hints: None,
             attachments: None,
