@@ -1,0 +1,1 @@
+export { GenerateTab } from "./GenerateTab";
