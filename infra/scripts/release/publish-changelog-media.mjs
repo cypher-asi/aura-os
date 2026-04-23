@@ -312,6 +312,14 @@ function getOutputCardSize() {
   );
 }
 
+function getMaxBrandedScreenshotUpscale() {
+  const candidate = Number(process.env.AURA_CHANGELOG_MEDIA_MAX_SCREENSHOT_UPSCALE || 2);
+  if (!Number.isFinite(candidate) || candidate < 1) {
+    return 1;
+  }
+  return Math.min(candidate, 3);
+}
+
 function getOpenAIJudgeModel() {
   return normalizeEnvChoice(process.env.AURA_CHANGELOG_MEDIA_OPENAI_JUDGE_MODEL, "gpt-4.1-mini");
 }
@@ -516,13 +524,13 @@ function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath,
   const background = new PNG({ width: outputSize.width, height: outputSize.height });
   drawRoundedImage(background, backgroundSource, 0, 0, outputSize.width, outputSize.height, 0);
   const screenshotAspect = screenshot.width / Math.max(1, screenshot.height);
-  const maxCardWidth = Math.round(background.width * 0.94);
-  const maxCardHeight = Math.round(background.height * 0.86);
-  const screenshotInset = Math.max(24, Math.min(42, Math.round(Math.min(background.width, background.height) * 0.012)));
+  const maxCardWidth = Math.round(background.width * 0.965);
+  const maxCardHeight = Math.round(background.height * 0.91);
+  const screenshotInset = Math.max(20, Math.min(32, Math.round(Math.min(background.width, background.height) * 0.009)));
   const maxScreenshotWidth = Math.max(1, maxCardWidth - (screenshotInset * 2));
   const maxScreenshotHeight = Math.max(1, maxCardHeight - (screenshotInset * 2));
   const screenshotScale = Math.min(
-    1,
+    getMaxBrandedScreenshotUpscale(),
     maxScreenshotWidth / Math.max(1, screenshot.width),
     maxScreenshotHeight / Math.max(1, screenshot.height),
   );
@@ -531,7 +539,7 @@ function composeBrandedScreenshotCard({ repoDir, backgroundPath, screenshotPath,
   const cardWidth = screenshotWidth + (screenshotInset * 2);
   const cardHeight = screenshotHeight + (screenshotInset * 2);
   const cardX = Math.round((background.width - cardWidth) / 2);
-  const cardY = Math.round((background.height - cardHeight) / 2) + Math.round(background.height * 0.02);
+  const cardY = Math.round((background.height - cardHeight) / 2) + Math.round(background.height * 0.01);
   const outerRadius = Math.max(30, Math.min(44, Math.round(Math.min(cardWidth, cardHeight) * 0.022)));
   const screenshotX = cardX + screenshotInset;
   const screenshotY = cardY + screenshotInset;

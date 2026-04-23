@@ -332,14 +332,14 @@ function clipCoverageForViewport(viewport, clip) {
 function getLargeProofCropSize(viewport) {
   const preferredWidth = Math.min(
     viewport.width,
-    Math.max(1440, Math.min(1920, Math.round(viewport.width * 0.5))),
+    Math.max(1360, Math.min(1600, Math.round(viewport.width * 0.44))),
   );
   const preferredHeight = Math.round(preferredWidth / TARGET_SCREENSHOT_ASPECT_RATIO);
   return {
     width: preferredWidth,
     height: Math.min(
       viewport.height,
-      Math.max(810, Math.min(1080, preferredHeight)),
+      Math.max(760, Math.min(900, preferredHeight)),
     ),
   };
 }

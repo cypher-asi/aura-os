@@ -397,8 +397,8 @@ test("composeBrandedScreenshotCard lets widescreen screenshots dominate the canv
   assert.ok(redBounds.height >= 1400, `expected screenshot footprint to stay tall enough for dense UI, got ${redBounds.height}px`);
 });
 
-test("composeBrandedScreenshotCard does not upscale screenshots past their native resolution", () => {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-no-upscale-"));
+test("composeBrandedScreenshotCard safely enlarges the proof image inside the branded card", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-safe-upscale-"));
   const backgroundPath = path.join(rootDir, "background.png");
   const screenshotPath = path.join(rootDir, "screenshot.png");
   const outputPath = path.join(rootDir, "branded.png");
@@ -418,8 +418,10 @@ test("composeBrandedScreenshotCard does not upscale screenshots past their nativ
   const redBounds = findColorBounds(output, ([r, g, b, a]) => a > 0 && r >= 220 && g <= 80 && b <= 80);
 
   assert.ok(redBounds);
-  assert.equal(redBounds.width, 160);
-  assert.equal(redBounds.height, 90);
+  assert.ok(redBounds.width > 160, `expected screenshot to grow inside the card, got ${redBounds.width}px`);
+  assert.ok(redBounds.height > 90, `expected screenshot to grow inside the card, got ${redBounds.height}px`);
+  assert.ok(redBounds.width <= 320, `expected screenshot upscale to stay bounded, got ${redBounds.width}px`);
+  assert.ok(redBounds.height <= 180, `expected screenshot upscale to stay bounded, got ${redBounds.height}px`);
 });
 
 test("composeBrandedScreenshotCard keeps a safety inset so product edges are not clipped by the frame", () => {
