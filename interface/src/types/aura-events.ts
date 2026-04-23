@@ -302,6 +302,13 @@ export type AuraEvent = AuraEventBase & (
       task_id: string;
       attempt: number;
       reason?: string;
+      /**
+       * Axis 5 resume preamble ("[aura-retry attempt=N] …") built by the
+       * dev loop. Kept optional on the wire so older servers still
+       * parse cleanly; handlers that surface it to users should fall
+       * back to a generic string when absent.
+       */
+      preamble?: string;
     } }
   | { type: EventType.TaskBecameReady; content: { task_id: string } }
   | { type: EventType.TasksBecameReady; content: {

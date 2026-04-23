@@ -871,6 +871,118 @@ fn current_remediation_count(task_id: &str) -> u32 {
     *guard.get(task_id).unwrap_or(&0)
 }
 
+// ==========================================================================
+// Axis 5 — Stateful resume preamble on retried tasks
+// ==========================================================================
+//
+// When the dev loop restarts a task via `restart_with_infra_backoff` after a
+// transient failure (5xx, stream abort, provider overload, …), the harness
+// today starts the task from scratch with no knowledge that this is attempt
+// N. The agent happily redoes any setup/search work it had already done,
+// which both wastes provider tokens and pushes the task back into the same
+// context-window shape that triggered the failure in the first place.
+//
+// The helpers below maintain an in-memory attempt counter and produce a
+// short, stable "resume preamble" string that downstream consumers (UI and
+// run bundles, via `task_retrying` / `debug.retry_preamble`) can surface to
+// the LLM on the next turn.
+//
+// The counter lives alongside `remediation_retry_counts` and follows the same
+// reset-on-process-restart policy: a stale attempt count shouldn't keep
+// burning tokens on preamble injection for a task the operator is retrying
+// by hand.
+
+/// Module-local retry counter for infra-backoff restarts, keyed by task id.
+/// Distinct from `remediation_retry_counts` because the two mechanisms have
+/// independent budgets — remediation is a Phase 3 decision about task shape,
+/// while these attempts are provider/network retries that should keep going
+/// as long as the provider is actually transient.
+fn retry_attempt_counts() -> &'static std::sync::Mutex<std::collections::HashMap<String, u32>> {
+    static COUNTS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, u32>>> =
+        std::sync::OnceLock::new();
+    COUNTS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Bump the retry-attempt counter for `task_id` and return the new count.
+/// The first restart returns `1`; each subsequent restart returns `n + 1`.
+fn bump_retry_attempt(task_id: &str) -> u32 {
+    let mut guard = match retry_attempt_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    let entry = guard.entry(task_id.to_string()).or_insert(0);
+    *entry = entry.saturating_add(1);
+    *entry
+}
+
+/// Forget the retry-attempt counter for `task_id`. Called on terminal
+/// states (`task_completed` / unrecoverable `task_failed`) so a subsequent
+/// manual re-run of the same task starts from `1` instead of inheriting a
+/// stale count from an earlier incident.
+fn clear_retry_attempt(task_id: &str) {
+    let mut guard = match retry_attempt_counts().lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    guard.remove(task_id);
+}
+
+/// Number of characters of the previous failure reason to include in the
+/// preamble. Long enough to carry the HTTP status + human-readable prose
+/// (e.g. "LLM error: stream terminated with error: Internal server error")
+/// without dragging in multi-kilobyte provider body dumps that would blow
+/// out the prompt budget on every retry.
+const RETRY_PREAMBLE_REASON_BUDGET: usize = 240;
+
+/// Build the stable, human-readable resume preamble surfaced on the
+/// `task_retrying` event when the dev loop restarts a task after a transient
+/// failure. Shape is deliberately fixed so the UI and any future harness
+/// consumer can parse / pattern-match it reliably.
+///
+/// Format:
+/// ```text
+/// [aura-retry attempt=3] Previous attempt failed with: <reason-trimmed>.
+/// Continue from where you left off; avoid re-running work that already
+/// succeeded.
+/// ```
+///
+/// Contract:
+/// * `attempt` is 1-based (the first *restart* is attempt 2, so
+///   `build_retry_preamble(2, ..)` is the shortest preamble ever produced).
+///   Callers must not pass `0`; the function saturates to `1` in that case
+///   so the output still parses cleanly.
+/// * `previous_reason` is trimmed of surrounding whitespace and truncated
+///   to [`RETRY_PREAMBLE_REASON_BUDGET`] chars with a `…` marker. Newlines
+///   inside the reason are collapsed to single spaces so the preamble
+///   stays on a predictable two-line shape.
+fn build_retry_preamble(attempt: u32, previous_reason: &str) -> String {
+    let attempt = attempt.max(1);
+    let collapsed: String = previous_reason
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
+    let trimmed = collapsed.trim();
+    // Byte-length check before we walk chars for a clean UTF-8 truncation.
+    let short = if trimmed.len() <= RETRY_PREAMBLE_REASON_BUDGET {
+        trimmed.to_string()
+    } else {
+        let mut out = String::with_capacity(RETRY_PREAMBLE_REASON_BUDGET + 1);
+        for ch in trimmed.chars() {
+            if out.len() + ch.len_utf8() > RETRY_PREAMBLE_REASON_BUDGET {
+                break;
+            }
+            out.push(ch);
+        }
+        out.push('…');
+        out
+    };
+    format!(
+        "[aura-retry attempt={attempt}] Previous attempt failed with: {short}. \
+         Continue from where you left off; avoid re-running work that already \
+         succeeded."
+    )
+}
+
 /// Hard ceiling on any single provider-backoff duration. Provider
 /// `Retry-After` hints longer than this are clamped so a pathological
 /// response can't park the loop for an hour.
@@ -2340,6 +2452,15 @@ async fn try_restart_automaton(
     reason: &str,
     ctx: &TransientRetryContext,
 ) -> Result<tokio::sync::broadcast::Sender<serde_json::Value>, String> {
+    // Axis 5: record this restart as a retry attempt so UI and run bundles
+    // can see the ladder of transient failures instead of a single opaque
+    // `task_retrying` event. `bump_retry_attempt` returns 1 on the *first*
+    // restart; the 0th attempt is the original run that just failed, so
+    // the value surfaced on the event is `attempt + 1` to read naturally
+    // as "now starting attempt N".
+    let restart_count = bump_retry_attempt(task_id);
+    let attempt_number = restart_count.saturating_add(1);
+    let preamble = build_retry_preamble(attempt_number, reason);
     emit_domain_event(
         app_broadcast,
         "task_retrying",
@@ -2348,6 +2469,8 @@ async fn try_restart_automaton(
         serde_json::json!({
             "task_id": task_id.to_string(),
             "reason": reason,
+            "attempt": attempt_number,
+            "preamble": preamble,
         }),
     );
     let (automaton_id, event_stream_url) =
@@ -2826,6 +2949,15 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     let mapped_type = match event_type {
                         "task_completed" => {
                             terminal_seen = true;
+                            // Axis 5: a successful completion ends the retry
+                            // ladder for this task, so the in-memory counter
+                            // must be dropped. A future manual re-run of the
+                            // same task id (operator pressing "retry") will
+                            // then start the ladder over from attempt 1
+                            // instead of inheriting this run's count.
+                            if let Some(ref tid) = current_task_id {
+                                clear_retry_attempt(tid);
+                            }
                             // Clear the registry's active task pointer so
                             // `GET /loop/status` stops reporting the task
                             // as "live" immediately after completion.
@@ -3219,6 +3351,17 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             }
                             session_status = "failed";
                             terminal_seen = true;
+                            // Axis 5: this task_failed reached the terminal
+                            // branch — either the failure wasn't classified
+                            // as transient, or the restart itself errored
+                            // (see the `Err(restart_err)` arms above). Either
+                            // way the task is no longer being retried by
+                            // aura-os, so clear the attempt counter to avoid
+                            // inflating the attempt number on a future
+                            // manual retry of the same task id.
+                            if let Some(ref tid) = tid {
+                                clear_retry_attempt(tid);
+                            }
                             // Clear the registry's active task pointer so
                             // `GET /loop/status` stops reporting the task
                             // as "live" immediately after failure.
@@ -6556,6 +6699,78 @@ mod tests {
         // would short-circuit before bumping again. Verify the reader
         // reflects the final value.
         assert_eq!(current_remediation_count(&tid), MAX_RETRIES_PER_TASK);
+    }
+
+    #[test]
+    fn retry_attempt_counter_bumps_and_clears() {
+        use super::{bump_retry_attempt, clear_retry_attempt};
+        // Unique id so the shared counter doesn't collide with
+        // parallel tests.
+        let tid = format!("test-retry-{}", aura_os_core::TaskId::new());
+        assert_eq!(bump_retry_attempt(&tid), 1);
+        assert_eq!(bump_retry_attempt(&tid), 2);
+        assert_eq!(bump_retry_attempt(&tid), 3);
+        clear_retry_attempt(&tid);
+        // After clearing, the next bump resets to 1 so a fresh
+        // manual retry of the same task id starts the ladder over
+        // instead of inheriting the stale count.
+        assert_eq!(bump_retry_attempt(&tid), 1);
+        clear_retry_attempt(&tid);
+    }
+
+    #[test]
+    fn retry_preamble_fixed_shape_and_attempt_number() {
+        use super::build_retry_preamble;
+        let p = build_retry_preamble(2, "LLM error: stream terminated with error: 500");
+        assert!(p.starts_with("[aura-retry attempt=2]"), "got {p:?}");
+        assert!(p.contains("stream terminated"), "got {p:?}");
+        assert!(
+            p.contains("Continue from where you left off"),
+            "preamble must carry the resume instruction: {p:?}"
+        );
+    }
+
+    #[test]
+    fn retry_preamble_truncates_long_reasons_with_ellipsis() {
+        use super::{build_retry_preamble, RETRY_PREAMBLE_REASON_BUDGET};
+        let long = "a".repeat(RETRY_PREAMBLE_REASON_BUDGET + 500);
+        let p = build_retry_preamble(3, &long);
+        assert!(
+            p.contains('…'),
+            "long reason must be marked with ellipsis: {p:?}"
+        );
+        // Ensure we never carry the whole oversized blob forward —
+        // the budget exists specifically so the preamble can't blow
+        // up the next turn's prompt.
+        let body = p.split(": ").nth(2).unwrap_or("");
+        assert!(
+            body.len() <= RETRY_PREAMBLE_REASON_BUDGET + "…".len() + 100,
+            "preamble body ({} bytes) should be bounded by the budget: {p:?}",
+            body.len(),
+        );
+    }
+
+    #[test]
+    fn retry_preamble_collapses_control_chars() {
+        use super::build_retry_preamble;
+        let raw = "line one\nline two\r\nline three";
+        let p = build_retry_preamble(2, raw);
+        assert!(
+            !p.contains('\n') && !p.contains('\r'),
+            "preamble must flatten newlines so the two-line shape stays stable: {p:?}"
+        );
+        assert!(p.contains("line one"), "got {p:?}");
+        assert!(p.contains("line three"), "got {p:?}");
+    }
+
+    #[test]
+    fn retry_preamble_clamps_zero_attempt_to_one() {
+        use super::build_retry_preamble;
+        // Callers must not pass 0 but the function must still produce
+        // parseable output — regressing this would break UI parsing
+        // that expects a numeric attempt.
+        let p = build_retry_preamble(0, "boom");
+        assert!(p.starts_with("[aura-retry attempt=1]"), "got {p:?}");
     }
 
     /// `resolve_start_conflict` decides whether to stop-and-retry or adopt
