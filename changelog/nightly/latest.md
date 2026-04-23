@@ -1,23 +1,23 @@
-# Nightly release pipeline hardening and changelog history sync
+# Nightly release pipeline gets a safety net
 
 - Date: `2026-04-23`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.351.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.351.1
+- Version: `0.1.0-nightly.352.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.352.1
 
-Today's nightly is an infrastructure-focused release. The work centered on making the nightly publishing pipeline more resilient — safer asset pruning on GitHub, and a new sync path that keeps dated changelog history entries in step with the latest published media.
+Today was a focused release-infrastructure day. The nightly pipeline picked up retry-aware asset pruning, a dedicated workflow to keep dated changelog history in sync with the latest entry, and a manual recovery path for republishing GitHub Pages when things go sideways.
 
-## 9:17 AM — Resilient nightly asset prune and changelog history mirroring
+## 9:17 AM — Hardened nightly pruning and changelog history sync
 
-The nightly release pipeline gained a retry-aware asset pruner and a dedicated workflow that keeps dated changelog history entries aligned with the latest published media.
+The nightly release workflow moved pruning into a dedicated retry-aware script, gained a new job that mirrors changelog media into dated history entries, and added a manual gh-pages republish path for recovery.
 
-- Extracted the nightly release asset prune step into a standalone script with retry logic and graceful handling of assets that 404 mid-delete, so a transient GitHub API blip or a race with a prior cleanup no longer fails the nightly workflow. (`a7eb25a`, `ac61ac3`)
-- Added a new Sync Release Changelog Media History workflow that runs after changelog publish jobs and propagates latest media into the gh-pages dated history entries, committing back only when slots actually changed. (`a7eb25a`)
-- Taught the changelog media publisher to resolve the latest release against its dated history mirror (by version, then date) so screenshots and media attach to the correct historical entry instead of only latest.json. (`d81834c`)
+- Nightly asset pruning was extracted into a reusable script with retries and graceful handling of assets that have already disappeared (HTTP 404), so transient GitHub API hiccups no longer fail the release job. (`a7eb25a`, `ac61ac3`)
+- A new Sync Release Changelog Media History workflow runs after each changelog publish to copy media into the matching dated history entry on gh-pages, and the publish script now resolves the latest release to its dated history mirror so updates land in both places. (`a7eb25a`, `d81834c`)
+- Added a manually triggered Republish GitHub Pages workflow, backed by an allow-empty commit mode in the gh-pages push helper, giving operators a clean way to force a Pages rebuild with an optional reason note. (`ca9eaa8`)
 
 ## Highlights
 
-- Dated changelog history stays in sync with the latest release media
-- Nightly asset prune now retries and tolerates already-deleted assets
-- New workflow mirrors changelog media into gh-pages history automatically
+- Retry-aware nightly asset pruning tolerates vanished assets
+- Dated changelog history now mirrors the latest release automatically
+- New one-click workflow to republish GitHub Pages for recovery
 
