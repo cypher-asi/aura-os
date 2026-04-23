@@ -19,6 +19,7 @@
   background: color-mix(in srgb, var(--color-bg) 90%, transparent) !important;
   backdrop-filter: blur(40px) saturate(1.4);
   -webkit-backdrop-filter: blur(40px) saturate(1.4);
+  border: 1px solid var(--color-border);
 }
 
 .desktopContent {
