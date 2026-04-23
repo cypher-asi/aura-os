@@ -1,9 +1,19 @@
-import { useState, useMemo, useEffect, useLayoutEffect, useCallback, type RefObject } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef, type RefObject } from "react";
 
 interface OverflowResult<T> {
   visibleItems: readonly T[];
   overflowItems: readonly T[];
 }
+
+// When the container width is sitting right on the boundary where one
+// extra tab would just barely fit, integer-floor measurement jitter
+// (sub-pixel clientWidth / offsetWidth changes, painting rounding,
+// scrollbar reserve differences) can flip `maxVisible` back and forth
+// every resize-observer tick. We require this many extra pixels of
+// headroom *beyond* the raw threshold before we move an item from
+// overflow back into the visible set. Going the other direction –
+// hiding a tab because it no longer fits – is always immediate.
+const EXPAND_HYSTERESIS_PX = 4;
 
 /**
  * Dynamically splits `items` into visible / overflow buckets based on how
@@ -19,6 +29,18 @@ export function useOverflowTabs<T>(
   alwaysShowMore = false,
 ): OverflowResult<T> {
   const [maxVisible, setMaxVisible] = useState(items.length);
+  // Latest-committed maxVisible, read during measurement so hysteresis
+  // can compare the newly-computed `n` against what we're currently
+  // showing without relying on stale closure state.
+  const maxVisibleRef = useRef(items.length);
+
+  const applyMaxVisible = useCallback((next: number) => {
+    setMaxVisible((prev) => {
+      if (prev === next) return prev;
+      maxVisibleRef.current = next;
+      return next;
+    });
+  }, []);
 
   const measure = useCallback(() => {
     const container = containerRef.current;
@@ -42,23 +64,39 @@ export function useOverflowTabs<T>(
 
     const moreSlot = btnW + containerGap;
 
+    const computeN = (forTabs: number) =>
+      Math.max(1, Math.floor((forTabs + tabGap) / slot));
+
+    let n: number;
     if (alwaysShowMore) {
-      const forTabs = totalAvailable - moreSlot;
-      const n = Math.max(1, Math.floor((forTabs + tabGap) / slot));
-      setMaxVisible(Math.min(n, items.length));
-      return;
+      n = computeN(totalAvailable - moreSlot);
+    } else {
+      const allW = items.length * btnW + (items.length - 1) * tabGap;
+      if (allW <= totalAvailable) {
+        n = items.length;
+      } else {
+        n = computeN(totalAvailable - moreSlot);
+      }
+    }
+    n = Math.min(n, items.length);
+
+    const current = maxVisibleRef.current;
+    if (n > current) {
+      // Expanding: require a little extra slack past the raw threshold
+      // before bringing a previously-overflowed tab back in. Without
+      // this, sub-pixel measurement jitter flips maxVisible by one
+      // every resize tick, which is exactly what produces the
+      // "duplicate icon blinking next to the More button" flicker at
+      // the Debug sidekick width.
+      const thresholdForN = n * btnW + (n - 1) * tabGap;
+      const budget = alwaysShowMore ? totalAvailable - moreSlot : totalAvailable;
+      if (budget - thresholdForN < EXPAND_HYSTERESIS_PX) {
+        n = current;
+      }
     }
 
-    const allW = items.length * btnW + (items.length - 1) * tabGap;
-    if (allW <= totalAvailable) {
-      setMaxVisible(items.length);
-      return;
-    }
-
-    const forTabs = totalAvailable - moreSlot;
-    const n = Math.max(1, Math.floor((forTabs + tabGap) / slot));
-    setMaxVisible(Math.min(n, items.length));
-  }, [containerRef, items.length, alwaysShowMore]);
+    applyMaxVisible(n);
+  }, [containerRef, items.length, alwaysShowMore, applyMaxVisible]);
 
   useLayoutEffect(measure, [measure]);
 

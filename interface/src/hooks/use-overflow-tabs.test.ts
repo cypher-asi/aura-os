@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { useOverflowTabs } from "./use-overflow-tabs";
 
 class MockResizeObserver {
@@ -7,6 +7,42 @@ class MockResizeObserver {
   disconnect() {}
 }
 globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+
+// Shared accessor so a test can replace the default mock with a version
+// that captures the ResizeObserver callback, letting us simulate a
+// container width change after mount.
+function installCapturingResizeObserver(): {
+  trigger: () => void;
+  restore: () => void;
+} {
+  let captured: (() => void) | null = null;
+  class CapturingRO {
+    constructor(cb: () => void) {
+      captured = cb;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  const previous = globalThis.ResizeObserver;
+  globalThis.ResizeObserver = CapturingRO as unknown as typeof ResizeObserver;
+
+  const previousRaf = globalThis.requestAnimationFrame;
+  const previousCaf = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) =>
+    setTimeout(() => cb(performance.now()), 0) as unknown as number) as typeof requestAnimationFrame;
+  globalThis.cancelAnimationFrame = ((id: number) =>
+    clearTimeout(id)) as typeof cancelAnimationFrame;
+
+  return {
+    trigger: () => captured?.(),
+    restore: () => {
+      globalThis.ResizeObserver = previous;
+      globalThis.requestAnimationFrame = previousRaf;
+      globalThis.cancelAnimationFrame = previousCaf;
+    },
+  };
+}
 
 function makeContainerRef(overrides?: {
   containerWidth?: number;
@@ -119,5 +155,53 @@ describe("useOverflowTabs", () => {
     const { result } = renderHook(() => useOverflowTabs(ref, items));
 
     expect(result.current.visibleItems.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not flip an overflowed tab back into view from sub-pixel jitter", async () => {
+    // Regression test for the Debug sidekick "logs icon doubled + blinking"
+    // bug: at the width where the last tab just barely fits, integer-floor
+    // measurement noise used to flip maxVisible between N-1 and N on every
+    // ResizeObserver tick, rendering the 8th icon next to the More button
+    // for 150 ms of exit animation each time.
+    const items = ["a", "b", "c", "d", "e", "f", "g", "h"];
+    // Math:
+    //   btnW=40, tabGap=4, containerGap=8 → slot=44, moreSlot=48.
+    //   Width to fit N tabs + more = N*40 + (N-1)*4 + 48
+    //   N=7 → 356, N=8 → 396. Start at N=7 comfortably.
+    const ref = makeContainerRef({
+      containerWidth: 360,
+      buttonWidth: 40,
+      tabGap: 4,
+      containerGap: 8,
+    });
+
+    const capture = installCapturingResizeObserver();
+
+    try {
+      const { result } = renderHook(() => useOverflowTabs(ref, items, true));
+      expect(result.current.visibleItems).toHaveLength(7);
+
+      // Grow the container by just barely enough that the raw floor
+      // computation would pick N=8 but with only 3 px of slack past
+      // the threshold – below the hysteresis budget. The 8th tab
+      // should stay in overflow rather than oscillate back.
+      (ref.current as unknown as { clientWidth: number }).clientWidth = 399;
+      await act(async () => {
+        capture.trigger();
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      });
+      expect(result.current.visibleItems).toHaveLength(7);
+
+      // Once there's enough slack past the threshold, the 8th tab is
+      // allowed back in.
+      (ref.current as unknown as { clientWidth: number }).clientWidth = 420;
+      await act(async () => {
+        capture.trigger();
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      });
+      expect(result.current.visibleItems).toHaveLength(8);
+    } finally {
+      capture.restore();
+    }
   });
 });

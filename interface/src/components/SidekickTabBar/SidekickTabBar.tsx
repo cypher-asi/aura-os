@@ -50,29 +50,60 @@ export function SidekickTabBar({
     reserveMore,
   );
 
-  const showMoreButton = overflowItems.length > 0 || hasActions;
+  const hasMenuContent = overflowItems.length > 0 || hasActions;
+  // When the More slot was reserved by measurement we keep the button
+  // painted even if the menu is currently empty. Otherwise toggling the
+  // button between "rendered" and "not rendered" as tabs cross the
+  // overflow threshold would change the tab bar's effective width,
+  // which feeds the ResizeObserver and makes the last tab oscillate
+  // between "visible" and "in overflow" — producing the visible
+  // duplicate-icon blink at the boundary.
+  const renderMoreSlot = hasMenuContent || reserveMore;
 
   const [enteringIds, setEnteringIds] = useState<Set<string>>(new Set());
   const [exitingTabs, setExitingTabs] = useState<readonly TabItem[]>([]);
   const prevVisibleIdsRef = useRef<string[] | null>(null);
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Tracks the last time each id first entered the visible set. If a
+  // tab leaves the visible set within `FLICKER_SUPPRESS_MS` of entering
+  // we skip its exit animation – this prevents any residual boundary
+  // jitter from rendering a visible duplicate of the icon beside the
+  // "More" button.
+  const enteredAtRef = useRef<Map<string, number>>(new Map());
+  const FLICKER_SUPPRESS_MS = 200;
 
   useEffect(() => {
     const currentIds = visibleItems.map((t) => t.id);
     const prevIds = prevVisibleIdsRef.current;
     prevVisibleIdsRef.current = currentIds;
-    if (!prevIds) return;
+    if (!prevIds) {
+      const now = Date.now();
+      for (const id of currentIds) enteredAtRef.current.set(id, now);
+      return;
+    }
 
     const added = currentIds.filter((id) => !prevIds.includes(id));
-    if (added.length > 0) setEnteringIds(new Set(added));
+    if (added.length > 0) {
+      setEnteringIds(new Set(added));
+      const now = Date.now();
+      for (const id of added) enteredAtRef.current.set(id, now);
+    }
 
     const removed = tabs.filter(
       (t) => prevIds.includes(t.id) && !currentIds.includes(t.id),
     );
     if (removed.length > 0) {
-      clearTimeout(exitTimerRef.current);
-      setExitingTabs(removed);
-      exitTimerRef.current = setTimeout(() => setExitingTabs([]), 150);
+      const now = Date.now();
+      const stable = removed.filter((t) => {
+        const enteredAt = enteredAtRef.current.get(t.id);
+        enteredAtRef.current.delete(t.id);
+        return enteredAt === undefined || now - enteredAt >= FLICKER_SUPPRESS_MS;
+      });
+      if (stable.length > 0) {
+        clearTimeout(exitTimerRef.current);
+        setExitingTabs(stable);
+        exitTimerRef.current = setTimeout(() => setExitingTabs([]), 150);
+      }
     }
   }, [visibleItems, tabs]);
 
@@ -156,19 +187,30 @@ export function SidekickTabBar({
           </span>
         ))}
       </div>
-      {showMoreButton && (
-        <div ref={moreBtnRef} className={styles.moreButtonWrap}>
+      {renderMoreSlot && (
+        <div
+          ref={moreBtnRef}
+          className={styles.moreButtonWrap}
+          style={hasMenuContent ? undefined : { visibility: "hidden" }}
+          aria-hidden={hasMenuContent ? undefined : true}
+        >
           <Button
             variant="ghost"
             size="sm"
             iconOnly
             icon={<MoreHorizontal size={16} />}
-            onClick={() => setMoreOpen((v) => !v)}
+            onClick={() => {
+              if (!hasMenuContent) return;
+              setMoreOpen((v) => !v);
+            }}
             title="More actions"
             aria-label="More actions"
             selected={activeInOverflow}
+            tabIndex={hasMenuContent ? undefined : -1}
+            disabled={!hasMenuContent}
           />
           {moreOpen &&
+            hasMenuContent &&
             menuRect &&
             createPortal(
               <div
