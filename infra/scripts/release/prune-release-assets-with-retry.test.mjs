@@ -48,8 +48,8 @@ if [[ "$1" == "--paginate" ]]; then
   fi
 fi
 
-if [[ "$1" == "-X" && "$2" == "DELETE" ]]; then
-  endpoint="$3"
+if [[ "$1" == "--silent" && "$2" == "-X" && "$3" == "DELETE" ]]; then
+  endpoint="$4"
   count="$(grep -c "^$endpoint$" "$attempt_file" || true)"
   printf '%s\\n' "$endpoint" >> "$attempt_file"
   if [[ "$endpoint" == "repos/cypher-asi/aura-os/releases/assets/asset-a" && "$count" -eq 0 ]]; then
@@ -98,7 +98,7 @@ if [[ "$1" == "--paginate" ]]; then
   printf 'asset-gone\\n'
   exit 0
 fi
-if [[ "$1" == "-X" && "$2" == "DELETE" ]]; then
+if [[ "$1" == "--silent" && "$2" == "-X" && "$3" == "DELETE" ]]; then
   echo 'gh: Not Found (HTTP 404)' >&2
   exit 1
 fi

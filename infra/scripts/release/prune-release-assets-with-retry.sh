@@ -36,6 +36,31 @@ gh_api_with_retry() {
   done
 }
 
+delete_release_asset() {
+  local asset_id="$1"
+  local endpoint="repos/${repo}/releases/assets/${asset_id}"
+  local attempt output
+
+  for (( attempt = 1; attempt <= max_attempts; attempt += 1 )); do
+    if output="$(gh api --silent -X DELETE "$endpoint" 2>&1)"; then
+      return 0
+    fi
+
+    if grep -Eqi 'HTTP 404|Not Found' <<<"$output"; then
+      echo "Release asset ${asset_id} already disappeared; continuing." >&2
+      return 0
+    fi
+
+    if ! is_retryable_error "$output" || [[ "$attempt" -ge "$max_attempts" ]]; then
+      printf '%s\n' "$output" >&2
+      return 1
+    fi
+
+    echo "Transient GitHub API failure while deleting release asset ${asset_id} (attempt ${attempt}/${max_attempts}). Retrying in ${retry_delay}s." >&2
+    sleep "$retry_delay"
+  done
+}
+
 release_id="$(gh api "repos/${repo}/releases/tags/${tag}" --jq '.id' 2>/dev/null || true)"
 if [[ -z "$release_id" ]]; then
   echo "No existing ${tag} release found; nothing to prune."
@@ -45,19 +70,5 @@ fi
 asset_ids="$(gh_api_with_retry --paginate "repos/${repo}/releases/${release_id}/assets" --jq '.[].id')"
 while read -r asset_id; do
   [[ -n "$asset_id" ]] || continue
-
-  if output="$(gh api -X DELETE "repos/${repo}/releases/assets/${asset_id}" 2>&1)"; then
-    continue
-  fi
-
-  if grep -Eqi 'HTTP 404' <<<"$output"; then
-    echo "Release asset ${asset_id} already disappeared; continuing." >&2
-    continue
-  fi
-
-  delete_args=(-X DELETE "repos/${repo}/releases/assets/${asset_id}")
-  if ! gh_api_with_retry "${delete_args[@]}" >/dev/null; then
-    printf '%s\n' "$output" >&2
-    exit 1
-  fi
+  delete_release_asset "$asset_id"
 done <<<"$asset_ids"
