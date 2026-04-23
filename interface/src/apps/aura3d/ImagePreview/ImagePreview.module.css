@@ -3,8 +3,8 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 200px;
-  max-height: 400px;
+  min-height: 120px;
+  max-height: 240px;
   background: #0a0a0a;
   border-radius: 8px;
   overflow: hidden;
@@ -12,7 +12,7 @@
 
 .image {
   max-width: 100%;
-  max-height: 400px;
+  max-height: 240px;
   object-fit: contain;
   border-radius: 4px;
 }
@@ -58,4 +58,45 @@
 .emptyText {
   font-size: 13px;
   color: var(--color-text-muted);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: background 120ms;
+  z-index: 1;
+}
+
+.lightboxClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lightboxImage {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
 }

@@ -1,4 +1,5 @@
-import { ImageIcon } from "lucide-react";
+import { useState } from "react";
+import { ImageIcon, X } from "lucide-react";
 import { Spinner } from "@cypher-asi/zui";
 import styles from "./ImagePreview.module.css";
 
@@ -18,6 +19,7 @@ export function ImagePreview({
   progressMessage,
 }: ImagePreviewProps) {
   const displayUrl = partialData || imageUrl;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (isLoading && !displayUrl) {
     return (
@@ -44,17 +46,39 @@ export function ImagePreview({
   }
 
   return (
-    <div className={styles.root}>
-      <img
-        src={displayUrl}
-        alt="Generated asset"
-        className={`${styles.image} ${partialData && isLoading ? styles.imagePartial : ""}`}
-      />
-      {isLoading && (
-        <div className={styles.overlay}>
-          <Spinner size="sm" />
+    <>
+      <div className={styles.root}>
+        <img
+          src={displayUrl}
+          alt="Generated asset"
+          className={`${styles.image} ${partialData && isLoading ? styles.imagePartial : ""}`}
+          onClick={() => !isLoading && setLightboxOpen(true)}
+          style={{ cursor: isLoading ? "default" : "pointer" }}
+        />
+        {isLoading && (
+          <div className={styles.overlay}>
+            <Spinner size="sm" />
+          </div>
+        )}
+      </div>
+      {lightboxOpen && displayUrl && (
+        <div className={styles.lightbox} onClick={() => setLightboxOpen(false)}>
+          <button
+            type="button"
+            className={styles.lightboxClose}
+            onClick={() => setLightboxOpen(false)}
+            aria-label="Close preview"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={displayUrl}
+            alt="Generated asset full view"
+            className={styles.lightboxImage}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
-    </div>
+    </>
   );
 }

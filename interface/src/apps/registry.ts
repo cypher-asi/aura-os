@@ -399,7 +399,6 @@ export const apps: AuraApp[] = [
             agentKeywords: ["3d", "model", "image", "generate", "imagine", "tokenize", "asset", "glb"],
             icon: Box,
             basePath: "/3d",
-            searchPlaceholder: "Search assets",
             routes: aura3dRoutes,
           },
           loadAura3DApp,
