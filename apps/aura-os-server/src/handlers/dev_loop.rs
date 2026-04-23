@@ -369,6 +369,77 @@ struct ProjectCooldown {
     until: Instant,
     class: InfraFailureClass,
     reason: String,
+    /// How many times in a row this project has hit this same failure
+    /// class without a successful reset in between. Used to escalate
+    /// the cooldown on repeated hits — a single 5xx gets the base 10s,
+    /// the fourth in a row gets something closer to a minute. Reset
+    /// to zero whenever `clear_project_cooldown` fires (i.e. a task
+    /// actually made forward progress) or when the class changes.
+    consecutive_count: u32,
+}
+
+/// Maximum per-class escalation multiplier. The effective cooldown is
+/// `base * min(2^(count-1), ESCALATION_CAP)`, then capped by
+/// `PROVIDER_BACKOFF_MAX_SECS`. 8x keeps escalation monotonic across
+/// the first four hits and then flattens, which is plenty of runway
+/// inside the 120-second ceiling and avoids starving the loop if a
+/// provider is flapping but usually recovers.
+const ESCALATION_CAP: u32 = 8;
+
+/// Upper bound on jitter as a percentage of the pre-jitter cooldown.
+/// ±20% is enough to de-synchronize retries across a fleet of loops
+/// without making the post-jitter floor so small that we slam the
+/// provider within a couple of seconds of the last failure.
+const JITTER_PCT: u32 = 20;
+
+/// Apply ±`JITTER_PCT`% jitter to `base`. Uses the current instant's
+/// subsecond nanos as a pseudo-random source — not cryptographically
+/// random, just enough entropy to keep separate loops from lock-stepping
+/// into the same backoff window. Avoids pulling in the `rand` crate
+/// for a ~2-line need.
+///
+/// The returned duration is guaranteed to lie in
+/// `[base * (1 - JITTER_PCT/100), base * (1 + JITTER_PCT/100)]` and is
+/// never zero unless `base` itself was zero.
+fn apply_jitter(base: Duration) -> Duration {
+    if base.is_zero() {
+        return base;
+    }
+    let base_ms = base.as_millis() as u64;
+    let pct = u64::from(JITTER_PCT);
+    let span_ms = base_ms.saturating_mul(pct) / 100;
+    if span_ms == 0 {
+        return base;
+    }
+    // Use Instant's subsec_nanos plus the base's nanos as a cheap
+    // mixing function. Different projects hitting cooldowns within
+    // the same millisecond will still see different jitter because
+    // their `base_ms` differs (class-dependent) and the instant ticks
+    // on every call.
+    let seed = Instant::now().elapsed().subsec_nanos() as u64
+        ^ base.subsec_nanos() as u64
+        ^ base_ms;
+    let offset_ms = seed % (2 * span_ms + 1);
+    let jittered_ms = base_ms.saturating_sub(span_ms).saturating_add(offset_ms);
+    Duration::from_millis(jittered_ms.max(1))
+}
+
+/// Multiply `base` by `min(2^(count.saturating_sub(1)), ESCALATION_CAP)`.
+/// `count = 0` or `1` leaves the cooldown unchanged; each additional
+/// consecutive failure doubles it until the escalation cap, after
+/// which further hits hold steady at `base * ESCALATION_CAP`. The
+/// result is clamped to [`PROVIDER_BACKOFF_MAX_SECS`] here so callers
+/// don't have to repeat the check.
+fn escalate(base: Duration, count: u32) -> Duration {
+    let factor = if count <= 1 {
+        1u32
+    } else {
+        let shift = (count - 1).min(31);
+        (1u32 << shift).min(ESCALATION_CAP)
+    };
+    let scaled = base.saturating_mul(factor);
+    let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
+    scaled.min(cap)
 }
 
 fn project_cooldowns() -> &'static std::sync::Mutex<HashMap<String, ProjectCooldown>> {
@@ -403,28 +474,58 @@ fn register_project_cooldown_with_hint(
     let key = project_id.to_string();
     let default = infra_cooldown_for(class);
     let cap = Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS);
-    let requested = hint.map(|h| h.min(cap).max(default)).unwrap_or(default);
     let mut guard = match project_cooldowns().lock() {
         Ok(g) => g,
         Err(poisoned) => poisoned.into_inner(),
     };
+    // Per-class consecutive-failure counter: keeps escalating the
+    // cooldown while the same class keeps firing, resets when the
+    // class changes (new failure mode = new retry budget) or when
+    // `clear_project_cooldown` runs after a successful iteration.
+    // Reading the existing entry here before computing the effective
+    // cooldown lets the escalation factor hit the first repeat — a
+    // single 5xx gets 10s, the second in a row gets 20s, etc.
+    let prior_count = guard
+        .get(&key)
+        .filter(|c| c.class == class)
+        .map(|c| c.consecutive_count)
+        .unwrap_or(0);
+    let next_count = prior_count.saturating_add(1);
+    let escalated_default = escalate(default, next_count);
+    // A provider-supplied hint still wins when it's longer than our
+    // escalated default — respecting `Retry-After` is more important
+    // than our heuristic. When it's shorter, we hold the floor at
+    // `escalated_default` so repeated short hints don't keep slamming
+    // the provider every few seconds.
+    let requested = hint
+        .map(|h| h.min(cap).max(escalated_default))
+        .unwrap_or(escalated_default);
+    // Apply ±20% jitter AFTER escalation so the randomization scales
+    // with the size of the window, keeping the ratio consistent.
+    let jittered = apply_jitter(requested).min(cap);
     if let Some(existing) = guard.get_mut(&key) {
+        // Longest-window-wins semantics preserved: if a larger hint
+        // already landed and the remaining window is wider than what
+        // we just computed, keep the existing `until` but refresh the
+        // reason/class/count so the next failure builds on this chain.
         let remaining = existing.until.saturating_duration_since(Instant::now());
-        if remaining >= requested {
+        if remaining >= jittered {
             existing.reason = reason.to_string();
             existing.class = class;
+            existing.consecutive_count = next_count;
             return remaining;
         }
     }
     guard.insert(
         key,
         ProjectCooldown {
-            until: Instant::now() + requested,
+            until: Instant::now() + jittered,
             class,
             reason: reason.to_string(),
+            consecutive_count: next_count,
         },
     );
-    requested
+    jittered
 }
 
 fn active_project_cooldown(project_id: ProjectId) -> Option<(Duration, InfraFailureClass, String)> {
@@ -5377,35 +5478,79 @@ mod tests {
 
     #[test]
     fn project_cooldown_hint_raises_but_never_lowers_default() {
+        // Apply a ±`JITTER_PCT`% tolerance to every comparison — the
+        // cooldown path applies jitter post-escalation to de-correlate
+        // retries, so exact equality no longer holds.
+        fn within_jitter(actual: Duration, target: Duration) -> bool {
+            let target_ms = target.as_millis() as i64;
+            let actual_ms = actual.as_millis() as i64;
+            let tolerance_ms = target_ms * i64::from(JITTER_PCT) / 100 + 2;
+            (actual_ms - target_ms).abs() <= tolerance_ms
+        }
+
+        // Use a fresh `ProjectId` per subtest — `clear_project_cooldown`
+        // only evicts an entry whose window has already expired (its
+        // production contract), so reusing one id across the three
+        // subtests would let the consecutive-failure counter carry
+        // over and escalate every subsequent registration. Each
+        // subtest below is conceptually independent.
+
+        // Hint shorter than the class default is floored to the default
+        // (minus jitter). Allow a 20% margin on the base so a
+        // downward-jittered result still passes.
         let project_id = ProjectId::new();
-        // Hint shorter than the class default is floored to the default.
         let short = register_project_cooldown_with_hint(
             project_id,
             InfraFailureClass::ProviderRateLimited,
             "short hint",
             Some(Duration::from_secs(1)),
         );
-        assert!(short >= infra_cooldown_for(InfraFailureClass::ProviderRateLimited));
+        let base = infra_cooldown_for(InfraFailureClass::ProviderRateLimited);
+        let min_allowed =
+            base.saturating_sub(Duration::from_millis(base.as_millis() as u64 * 20 / 100));
+        assert!(
+            short >= min_allowed,
+            "expected short ≥ {min_allowed:?} (base minus jitter), got {short:?}"
+        );
         clear_project_cooldown(project_id);
 
-        // Hint longer than the class default wins, up to the cap.
+        // Hint longer than the class default wins, up to the cap, within
+        // the ±JITTER_PCT tolerance.
+        let project_id = ProjectId::new();
         let long = register_project_cooldown_with_hint(
             project_id,
             InfraFailureClass::ProviderRateLimited,
             "long hint",
             Some(Duration::from_secs(90)),
         );
-        assert_eq!(long, Duration::from_secs(90));
+        assert!(
+            within_jitter(long, Duration::from_secs(90)),
+            "expected ~90s ±20%, got {long:?}"
+        );
         clear_project_cooldown(project_id);
 
-        // Hint above the ceiling is clamped.
+        // Hint above the ceiling is clamped. The cap is enforced AFTER
+        // jitter so results can never exceed it; the lower bound allows
+        // for the downward jitter half of the window.
+        let project_id = ProjectId::new();
         let capped = register_project_cooldown_with_hint(
             project_id,
             InfraFailureClass::ProviderRateLimited,
             "huge hint",
             Some(Duration::from_secs(10_000)),
         );
-        assert_eq!(capped, Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS));
+        assert!(
+            capped <= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS),
+            "cooldown {capped:?} exceeded cap"
+        );
+        assert!(
+            capped
+                >= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS)
+                    .saturating_sub(Duration::from_secs(
+                        PROVIDER_BACKOFF_MAX_SECS * u64::from(JITTER_PCT) / 100 + 1,
+                    )),
+            "cooldown {capped:?} too far below cap"
+        );
         clear_project_cooldown(project_id);
     }
 
@@ -5608,6 +5753,139 @@ mod tests {
         assert!(second >= first.saturating_sub(Duration::from_secs(1)));
         let active = active_project_cooldown(project_id).expect("cooldown should be active");
         assert_eq!(active.1, InfraFailureClass::GitTimeout);
+        clear_project_cooldown(project_id);
+    }
+
+    /// `apply_jitter` keeps results inside the declared ±JITTER_PCT band
+    /// across many samples. The PRNG source is the system clock's
+    /// subsecond nanos — good enough to de-synchronize retries across
+    /// a fleet but not cryptographically random — so we verify the
+    /// *bounds*, not a uniform distribution.
+    #[test]
+    fn apply_jitter_stays_within_declared_band() {
+        let base = Duration::from_secs(30);
+        let band_ms = base.as_millis() as u64 * u64::from(JITTER_PCT) / 100;
+        let lo = base.as_millis() as u64 - band_ms;
+        let hi = base.as_millis() as u64 + band_ms;
+        for _ in 0..256 {
+            let jittered = apply_jitter(base).as_millis() as u64;
+            assert!(
+                jittered >= lo,
+                "jittered {jittered}ms fell below {lo}ms for base {base:?}"
+            );
+            assert!(
+                jittered <= hi,
+                "jittered {jittered}ms exceeded {hi}ms for base {base:?}"
+            );
+        }
+    }
+
+    /// Edge cases — zero in, zero out (no escalation of nothing), and
+    /// very small bases don't underflow to 0ms.
+    #[test]
+    fn apply_jitter_handles_zero_and_tiny_bases() {
+        assert_eq!(apply_jitter(Duration::ZERO), Duration::ZERO);
+        for _ in 0..32 {
+            let j = apply_jitter(Duration::from_millis(1));
+            assert!(!j.is_zero(), "1ms base must never jitter down to zero");
+        }
+    }
+
+    /// `escalate` doubles with each consecutive hit up to
+    /// `ESCALATION_CAP`, then flattens. Counts of 0 and 1 are identity.
+    #[test]
+    fn escalate_doubles_up_to_cap() {
+        let base = Duration::from_secs(10);
+        assert_eq!(escalate(base, 0), base);
+        assert_eq!(escalate(base, 1), base);
+        assert_eq!(escalate(base, 2), Duration::from_secs(20));
+        assert_eq!(escalate(base, 3), Duration::from_secs(40));
+        assert_eq!(escalate(base, 4), Duration::from_secs(80));
+        // Count=5 would give 16x = 160s but ESCALATION_CAP (8) caps it
+        // at 80s, and then PROVIDER_BACKOFF_MAX_SECS caps that below
+        // the ceiling. Both invariants checked.
+        let capped = escalate(base, 5);
+        assert!(capped <= Duration::from_secs(PROVIDER_BACKOFF_MAX_SECS));
+        assert!(capped >= Duration::from_secs(80));
+        // Count high enough to saturate never panics.
+        let _ = escalate(base, u32::MAX);
+    }
+
+    /// The cooldown registration path escalates in real time: each
+    /// consecutive hit of the same class produces a strictly longer
+    /// (pre-jitter) window than the prior one, up to the cap. We check
+    /// monotonicity with a generous tolerance because jitter can push
+    /// a later sample slightly below an earlier one in rare cases.
+    #[test]
+    fn register_project_cooldown_escalates_on_consecutive_failures() {
+        let project_id = ProjectId::new();
+        let base = infra_cooldown_for(InfraFailureClass::ProviderInternalError);
+        let tolerance = Duration::from_millis(base.as_millis() as u64 * 40 / 100);
+
+        let first = register_project_cooldown(
+            project_id,
+            InfraFailureClass::ProviderInternalError,
+            "first 5xx",
+        );
+        // Force the existing entry to expire so the next registration
+        // doesn't see `remaining >= requested` and return the old
+        // window. Without this the longest-window-wins path hides the
+        // escalation effect in a quick test.
+        {
+            let mut g = project_cooldowns().lock().unwrap();
+            if let Some(c) = g.get_mut(&project_id.to_string()) {
+                c.until = Instant::now();
+            }
+        }
+        let second = register_project_cooldown(
+            project_id,
+            InfraFailureClass::ProviderInternalError,
+            "second 5xx",
+        );
+        // Second registration should be at least 2x base minus jitter.
+        let expected_second = escalate(base, 2);
+        assert!(
+            second + tolerance >= expected_second,
+            "second {second:?} should be near {expected_second:?}"
+        );
+        assert!(
+            second + tolerance >= first,
+            "escalation never decreases (second {second:?} vs first {first:?})"
+        );
+        clear_project_cooldown(project_id);
+    }
+
+    /// A different failure class resets the consecutive counter — the
+    /// underlying assumption is that classes are independent problems,
+    /// so four 5xx's shouldn't punish a subsequent git timeout.
+    #[test]
+    fn consecutive_counter_resets_when_class_changes() {
+        let project_id = ProjectId::new();
+        // Build up a short streak of internal errors.
+        for _ in 0..3 {
+            register_project_cooldown(
+                project_id,
+                InfraFailureClass::ProviderInternalError,
+                "5xx",
+            );
+            // Expire the window so the next call doesn't short-circuit
+            // on the longer-remaining-wins branch.
+            let mut g = project_cooldowns().lock().unwrap();
+            if let Some(c) = g.get_mut(&project_id.to_string()) {
+                c.until = Instant::now();
+            }
+        }
+        // Now a DIFFERENT class fires. Its cooldown should sit near
+        // that class's base (not escalated from the prior streak).
+        let git = register_project_cooldown(project_id, InfraFailureClass::GitTimeout, "git");
+        let git_base = infra_cooldown_for(InfraFailureClass::GitTimeout);
+        // +20% jitter allowed + 1 unit escalation (count starts at 1).
+        let max_allowed =
+            git_base + Duration::from_millis(git_base.as_millis() as u64 * 25 / 100);
+        assert!(
+            git <= max_allowed,
+            "git cooldown {git:?} was higher than single-hit bound {max_allowed:?}; counter did not reset on class change"
+        );
         clear_project_cooldown(project_id);
     }
 
