@@ -361,7 +361,29 @@ pub struct CachedTaskOutput {
     /// as benign recovery history and the verification-step checks
     /// handle the real writes.
     pub empty_path_writes: u32,
+    /// Per-tool-call failure history accumulated from `tool_call_failed`
+    /// domain events during the task. Consulted by the Definition-of-Done
+    /// gate (see `completion_validation_failure_reason`) so a generic
+    /// "no build step" rejection can be upgraded to a specific diagnostic
+    /// when the real cause is a kernel policy denial (e.g. `run_command`
+    /// being blocked when the harness sidecar wasn't started with
+    /// `AURA_AUTONOMOUS_DEV_LOOP=1` / `AURA_ALLOW_RUN_COMMAND=1`).
+    ///
+    /// Populated by the event-handler loop; stays empty on runtimes that
+    /// don't yet emit `tool_call_failed`, leaving the generic DoD reasons
+    /// as the default.
+    pub tool_call_failures: Vec<ToolCallFailureEntry>,
 }
+
+/// One entry in [`CachedTaskOutput::tool_call_failures`]: the tool that
+/// the harness attempted to invoke and the failure reason reported by
+/// the runtime (policy denial string, adapter error, etc.).
+#[derive(Clone, Debug, Default)]
+pub struct ToolCallFailureEntry {
+    pub tool_name: String,
+    pub reason: String,
+}
+
 pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
 
 /// Simple time-based cache for billing credit checks.

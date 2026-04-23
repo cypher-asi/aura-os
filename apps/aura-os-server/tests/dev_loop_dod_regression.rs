@@ -458,3 +458,73 @@ fn reset_rearms_project_push_stuck_for_next_streak() {
         "reset_project_push_failures must re-arm the one-shot guard"
     );
 }
+
+// ---------------------------------------------------------------------------
+// DoD gate: specific diagnostic for kernel-policy-denied `run_command`.
+// See `fix(dev-loop): specific diagnostic when run_command denied by
+// kernel policy` -- when the harness sidecar launches without
+// `AURA_AUTONOMOUS_DEV_LOOP=1` / `AURA_ALLOW_RUN_COMMAND=1` every shell
+// invocation fails with `Tool 'run_command' is not allowed`. The gate
+// should surface that root cause instead of the misleading "no build
+// step was run" message.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn gate_emits_policy_denial_diagnostic_when_run_command_denied() {
+    // Rust source change, no build steps (because every `run_command`
+    // was denied), and a tool_call_failures entry with the real reason.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["apps/aura-os-server/src/lib.rs"],
+        0, // build steps
+        0, // test steps
+        0, // format steps
+        0, // lint steps
+        0, // empty-path writes
+        &[(
+            "run_command",
+            "Tool 'run_command' is not allowed by the active policy",
+        )],
+    )
+    .expect("gate should fire when no build step ran");
+
+    assert!(
+        reason.contains("run_command is denied by kernel policy"),
+        "expected kernel-policy-denial diagnostic, got: {reason}"
+    );
+    assert!(
+        reason.contains("AURA_AUTONOMOUS_DEV_LOOP=1")
+            && reason.contains("AURA_ALLOW_RUN_COMMAND=1"),
+        "diagnostic must name both permissive env vars so the operator knows the fix, got: {reason}"
+    );
+    assert!(
+        !reason.contains("no build/compile step was run"),
+        "policy-denial diagnostic must replace the generic no-build message, got: {reason}"
+    );
+}
+
+#[test]
+fn gate_emits_generic_no_build_when_no_policy_denial() {
+    // Same synthetic run, but no tool_call_failures history: falls
+    // through to the generic "no build" DoD message.
+    let reason = tsp::completion_validation_reason_with_tool_call_failures(
+        "edited one Rust file",
+        &["apps/aura-os-server/src/lib.rs"],
+        0,
+        0,
+        0,
+        0,
+        0,
+        &[],
+    )
+    .expect("gate should still fire on a Rust edit with no build step");
+
+    assert!(
+        reason.contains("no build/compile step was run"),
+        "expected generic no-build message when policy denial is absent, got: {reason}"
+    );
+    assert!(
+        !reason.contains("run_command is denied by kernel policy"),
+        "policy-denial diagnostic must not fire without a matching tool_call_failures entry, got: {reason}"
+    );
+}

@@ -205,6 +205,38 @@ pub mod phase7_test_support {
         )
     }
 
+    /// Like [`completion_validation_reason_with_empty_path_writes`] but
+    /// additionally supplies a `tool_call_failures` history. Each tuple
+    /// is `(tool_name, reason)` and is appended to the synthetic cached
+    /// output's `tool_call_failures` vec before the gate runs. Used to
+    /// cover the run_command-policy-denial upgrade path: if the gate
+    /// would otherwise have emitted the generic "no build step" error
+    /// and the history contains a `run_command` entry whose reason
+    /// contains "is not allowed", the gate upgrades the message to a
+    /// kernel-policy-denial diagnostic instead.
+    #[allow(clippy::too_many_arguments)]
+    pub fn completion_validation_reason_with_tool_call_failures(
+        live_output: &str,
+        files_changed: &[&str],
+        n_build_steps: usize,
+        n_test_steps: usize,
+        n_format_steps: usize,
+        n_lint_steps: usize,
+        n_empty_path_writes: u32,
+        tool_call_failures: &[(&str, &str)],
+    ) -> Option<String> {
+        crate::handlers::dev_loop::completion_validation_failure_reason_with_tool_call_failures_for_tests(
+            live_output,
+            files_changed,
+            n_build_steps,
+            n_test_steps,
+            n_format_steps,
+            n_lint_steps,
+            n_empty_path_writes,
+            tool_call_failures,
+        )
+    }
+
     /// True when the harness streamed a `write_file` / `edit_file`
     /// `tool_call_completed` event with a missing or empty `path`.
     /// Those events cannot land on disk and contribute to the

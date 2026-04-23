@@ -29,6 +29,7 @@ use crate::handlers::agents::workspace_tools::{
 use crate::persistence;
 use crate::state::{
     ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
+    ToolCallFailureEntry,
 };
 use crate::sync_state::{derive_sync_state_from_checkpoints, TaskSyncCheckpoint, TaskSyncState};
 
@@ -975,6 +976,25 @@ fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'s
     let paths = classify_changed_paths(&cached.files_changed);
 
     if paths.has_source && !has_build {
+        // If the automaton never got to run a build step because
+        // `run_command` itself was denied by the kernel tool-policy
+        // gate, surface the real cause instead of the generic "no
+        // build" message. Defense-in-depth against regressions of
+        // `feat(desktop): spawn autonomous harness sidecar with
+        // permissive policy` (commit a41c273b) -- if the sidecar
+        // launches without `AURA_AUTONOMOUS_DEV_LOOP=1` /
+        // `AURA_ALLOW_RUN_COMMAND=1`, every shell invocation fails
+        // with `Tool 'run_command' is not allowed` and the DoD
+        // rejection would otherwise blame the automaton.
+        if cached
+            .tool_call_failures
+            .iter()
+            .any(|f| f.tool_name == "run_command" && f.reason.contains("is not allowed"))
+        {
+            return Some(
+                "run_command is denied by kernel policy -- ensure AURA_AUTONOMOUS_DEV_LOOP=1 or AURA_ALLOW_RUN_COMMAND=1 on the harness sidecar",
+            );
+        }
         return Some(
             "Task modified source code but no build/compile step was run (Definition of Done: cargo build or equivalent must pass before task_done)",
         );
@@ -1305,6 +1325,29 @@ pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_te
     n_lint_steps: usize,
     n_empty_path_writes: u32,
 ) -> Option<String> {
+    completion_validation_failure_reason_with_tool_call_failures_for_tests(
+        live_output,
+        files_changed,
+        n_build_steps,
+        n_test_steps,
+        n_format_steps,
+        n_lint_steps,
+        n_empty_path_writes,
+        &[],
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn completion_validation_failure_reason_with_tool_call_failures_for_tests(
+    live_output: &str,
+    files_changed: &[&str],
+    n_build_steps: usize,
+    n_test_steps: usize,
+    n_format_steps: usize,
+    n_lint_steps: usize,
+    n_empty_path_writes: u32,
+    tool_call_failures: &[(&str, &str)],
+) -> Option<String> {
     let mut cached = CachedTaskOutput {
         live_output: live_output.to_string(),
         files_changed: files_changed
@@ -1317,6 +1360,13 @@ pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_te
             })
             .collect(),
         empty_path_writes: n_empty_path_writes,
+        tool_call_failures: tool_call_failures
+            .iter()
+            .map(|(tool_name, reason)| ToolCallFailureEntry {
+                tool_name: (*tool_name).to_string(),
+                reason: (*reason).to_string(),
+            })
+            .collect(),
         ..Default::default()
     };
     cached.build_steps =
@@ -3421,6 +3471,38 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 | "lint_verification_failed"
                                 | "lint_fix_attempt" => {
                                     entry.lint_steps.push(event.clone());
+                                }
+                                "tool_call_failed" => {
+                                    // Record the failed tool call so the
+                                    // Definition-of-Done gate can
+                                    // distinguish kernel-policy denials
+                                    // (e.g. `run_command` blocked because
+                                    // the harness sidecar wasn't started
+                                    // with `AURA_AUTONOMOUS_DEV_LOOP=1` /
+                                    // `AURA_ALLOW_RUN_COMMAND=1`) from
+                                    // genuine "automaton never ran a
+                                    // build" failures. The harness side
+                                    // doesn't yet emit this event; until
+                                    // it does, the vec stays empty and
+                                    // the generic DoD rejection reasons
+                                    // remain the default.
+                                    let tool_name = event
+                                        .get("tool_name")
+                                        .and_then(|v| v.as_str())
+                                        .or_else(|| event.get("name").and_then(|v| v.as_str()))
+                                        .or_else(|| event.get("tool").and_then(|v| v.as_str()))
+                                        .unwrap_or("")
+                                        .to_string();
+                                    let reason = event
+                                        .get("reason")
+                                        .and_then(|v| v.as_str())
+                                        .or_else(|| event.get("error").and_then(|v| v.as_str()))
+                                        .or_else(|| event.get("message").and_then(|v| v.as_str()))
+                                        .unwrap_or("")
+                                        .to_string();
+                                    entry
+                                        .tool_call_failures
+                                        .push(ToolCallFailureEntry { tool_name, reason });
                                 }
                                 "token_usage" => {
                                     if !entry.saw_rich_usage {
