@@ -19,6 +19,7 @@
   background: color-mix(in srgb, var(--color-bg) 90%, transparent) !important;
   backdrop-filter: blur(40px) saturate(1.4);
   -webkit-backdrop-filter: blur(40px) saturate(1.4);
+  border-bottom: none;
 }
 
 .desktopContent {
@@ -40,6 +41,22 @@
   display: flex;
   overflow: hidden;
   background: var(--color-bg);
+}
+
+/*
+ * In desktop mode the Desktop app's MainPanel is an invisible
+ * marquee/context-menu surface layered over the wallpaper-backed
+ * BackgroundLayer. The opaque `background: var(--color-bg)` above
+ * would paint a solid rectangle over the wallpaper, so clear it
+ * (and the inset border that separates the main panel from the
+ * sidekick) when the shell is in desktop mode.
+ */
+.desktopShell[data-desktop-mode] .mainPanelHost {
+  background: transparent;
+}
+
+.desktopShell[data-desktop-mode] .mainPanelHostWithSidekick {
+  box-shadow: none;
 }
 
 .mainPanelHostWithSidekick {
