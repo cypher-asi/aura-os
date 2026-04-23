@@ -1,81 +1,87 @@
-# Autonomous recovery, debug app overhaul, and a smoother chat stream
+# Autonomous recovery, streaming polish, and a reworked Debug app
 
 - Date: `2026-04-22`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.344.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.344.1
+- Version: `0.1.0-nightly.345.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.345.1
 
-A heavy day for Aura's internals: the dev loop learned to recognise provider rate limits and recover from them, oversized tasks now get decomposed before they can fail, and a new heuristics pipeline drives automatic remediation. On the surface, the Debug app was rebuilt around projects and a sidekick-driven inspector, the live chat stream got calmer and more legible, and the Windows auto-updater now hands off to NSIS reliably.
+A heavy day for Aura's autonomy story: the dev loop learned to decompose oversized tasks, survive provider rate limits, and gate completion on real build/test evidence. Alongside that, the Debug app was rebuilt around a project-first nav and sidekick inspector, the chat stream stopped jittering under the cursor, and Windows auto-updates now hand off cleanly to NSIS.
 
-## 2:06 AM — Debug app reorganized around projects, plus chat and tool-output fixes
+## 2:06 AM — Debug app gets a sidekick-driven inspector and chat learns the agent-busy state
 
-A major rework of the Debug app alongside targeted fixes for agent-busy chat state, ANSI-colored tool output, and smaller UI polish.
+A large interface sweep reshaped the Debug app around a project-first nav with a tabbed sidekick, while chat, feed, and tool output each got targeted fixes.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-debug-app-reorganized-around-projects-plus-chat-and-tool-output-","slug":"debug-app-reorganized-around-projects-plus-chat-and-tool-output-","alt":"Debug app reorganized around projects, plus chat and tool-output fixes screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-debug-app-gets-a-sidekick-driven-inspector-and-chat-learns-the-a","slug":"debug-app-gets-a-sidekick-driven-inspector-and-chat-learns-the-a","alt":"Debug app gets a sidekick-driven inspector and chat learns the agent-busy state screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-debug-app-reorganized-around-projects-plus-chat-and-tool-output- -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-debug-app-gets-a-sidekick-driven-inspector-and-chat-learns-the-a -->
 
-- Rebuilt the Debug app around a project-first left nav and a dedicated sidekick: the run toolbar, counters, and entry inspector moved into tabbed panels (Run, Events, LLM, Iterations, Blockers, Retries, Stats, Tasks), the type-filter dropdown is now portal-backed so it no longer clips, and JSONL rows no longer show 'unknown' for type/timestamp. Follow-ups mounted the sidekick via registry flags, stabilized the run-detail header to a single non-wrapping line, and added Copy All / Copy Filtered / Export buttons at the top of the run view. (`8e7e4f0`, `1b769a8`, `865e7ec`, `586f744`)
-- Chat input now correctly reflects agent-busy state: a new useAgentBusy hook combines SSE streaming and loop-active state so the stop icon appears whenever the agent is busy, /loop/stop is wired up when the automation loop holds the turn, and the server returns a typed 409 agent_busy that renders as a friendly message instead of the raw harness string. (`6dd691e`)
-- Task output from colored CLIs (cargo, rustc, npm) now renders as legible text: the base64 decoder lets ANSI escapes through, strips them from the decoded output, and recurses into additional output fields so previews no longer surface raw base64. (`7822fa1`)
-- Fixed a leaderboard horizontal scrollbar by removing a nested scroll wrapper, softened run/task card borders, and tightened the loop_log counters to stop double-counting mid-stream token frames while adding a first-class narration_deltas signal. (`13e2cae`, `a6f3a4c`, `f5921f6`)
+- Rebuilt the Debug app around the shared project tree: runs, counters, and the entry inspector moved into a new sidekick with Run/Events/LLM/Iterations/Blockers/Retries/Stats/Tasks tabs, the type filter became a portal-backed dropdown, and the run-detail header was stabilized, tightened to a single line, and gained Copy all / Copy filtered / Export actions. (`8e7e4f0`, `1b769a8`, `865e7ec`, `586f744`)
+- Chat input now reflects a unified agent-busy state: a new useAgentBusy hook flips to the stop icon whenever either SSE streaming or the automation loop is holding the turn, /loop/stop is wired up as the cancel path, and the server returns a typed 409 agent_busy instead of the raw harness string. (`6dd691e`)
+- Tool output now renders legibly again: ANSI-colored CLI output from cargo/rustc/npm is decoded instead of showing as base64, and the leaderboard feed panel stopped surfacing a stray horizontal scrollbar. (`7822fa1`, `13e2cae`)
+- Fixed a double-counting bug in loop_log token counters and added a narration_deltas signal so downstream heuristics can flag narration bloat without re-scanning events.jsonl. (`f5921f6`)
 
-## 5:49 PM — Remediation hints on every heuristic finding
+## 5:49 PM — Heuristic findings now carry actionable remediation hints
 
-Run-analysis findings now carry an actionable next-step hint, laying the groundwork for autonomous recovery.
+Every finding from the run-heuristics engine now ships with a concrete next-step hint that downstream tools can act on.
 
-- Each heuristic rule (zero-tool-calls, repeated blockers, task-never-completed, token-hog, and more) now populates a RemediationHint variant such as SplitWriteIntoSkeletonPlusAppends, ReshapeSearchQuery, or ForceToolCallNextTurn, and aura-run-analyze renders it as a compact `fix:` one-liner under each finding. (`6b6d6d9`)
+- Extended Finding with a RemediationHint enum (split-write, reshape-search, force-tool-call, retry-smaller-scope, no-auto-fix) and populated each existing rule with the hint that matches its failure mode; aura-run-analyze renders the hint inline under each finding. (`6b6d6d9`)
 
-## 6:05 PM — Stronger borders on run and task output blocks
+## 6:05 PM — Run timeline and task output borders match the chat surface
 
-Tightened the visual weight of run-timeline and task-output containers to match the standard block outline.
+A small visual follow-up aligning run event rows and task output blocks with the standard block outline.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-stronger-borders-on-run-and-task-output-blocks","slug":"stronger-borders-on-run-and-task-output-blocks","alt":"Stronger borders on run and task output blocks screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-run-timeline-and-task-output-borders-match-the-chat-surface","slug":"run-timeline-and-task-output-borders-match-the-chat-surface","alt":"Run timeline and task output borders match the chat surface screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-stronger-borders-on-run-and-task-output-blocks -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-run-timeline-and-task-output-borders-match-the-chat-surface -->
 
-- Run event timeline rows and task live/build output blocks now use the standard --color-border token instead of the lighter variant, aligning them with the shared .block primitive outline. (`b2f25e4`)
+- Swapped the lighter border token back to the standard --color-border on run event timeline rows and task live/build output blocks so they match the .block primitive outline. (`b2f25e4`)
 
-## 6:13 PM — Automatic task decomposition after truncation failures
+## 6:13 PM — Auto-recovery from truncation failures
 
-The dev loop now acts on remediation hints to split, reshape, or retry failed tasks instead of just retrying blindly.
+After a truncation or no-file-ops failure, the dev loop now consults heuristics and automatically decomposes or reshapes the task instead of simply retrying.
 
-- When a task fails with a truncation or no-file-ops reason, the server loads the run bundle, runs heuristics, and follows the first RemediationHint: SplitWriteIntoSkeletonPlusAppends spawns a skeleton + fill pair, while ReshapeSearchQuery and ForceToolCallNextTurn spawn a single shaped-retry child. The parent transitions to failed, a task_auto_remediated event is broadcast for the UI, MAX_RETRIES_PER_TASK is respected, and AURA_AUTO_DECOMPOSE_DISABLED=1 falls back to the classic retry path. (`79eab49`)
+- On truncation/no-file-ops failures, the dev loop loads the run bundle, runs heuristics, and acts on the first RemediationHint: SplitWrite fans out into skeleton+fill children, ReshapeSearchQuery and ForceToolCallNextTurn each spawn one shaped-retry task, and a task_auto_remediated event is broadcast. Honours MAX_RETRIES_PER_TASK and an AURA_AUTO_DECOMPOSE_DISABLED kill switch. (`79eab49`)
 
-## 6:40 PM — Unified chat border inside sidekick and preview overlays
+## 6:40 PM — Sidekick and preview overlays adopt the chat border token
 
-Propagated the main chat's darker border token into the sidekick body and preview overlay for consistent outlines.
+Propagated the darker chat border token into sidekick and preview surfaces for visual consistency.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-unified-chat-border-inside-sidekick-and-preview-overlays","slug":"unified-chat-border-inside-sidekick-and-preview-overlays","alt":"Unified chat border inside sidekick and preview overlays screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-sidekick-and-preview-overlays-adopt-the-chat-border-token","slug":"sidekick-and-preview-overlays-adopt-the-chat-border-token","alt":"Sidekick and preview overlays adopt the chat border token screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-unified-chat-border-inside-sidekick-and-preview-overlays -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-sidekick-and-preview-overlays-adopt-the-chat-border-token -->
 
-- Pulled the ChatPanel --color-border override (#17171a) up into the sidekick and preview overlay so tables, blocks, tools, and output sections render with the same subtle outline as the LLM chat. (`cc9a050`)
+- Pushed ChatPanel's darker --color-border override into the sidekick body and preview overlay so tables, blocks, tools, and output sections render with the same subtle outline as the main LLM chat. (`cc9a050`)
 
-## 6:45 PM — Autonomous recovery pipeline, Windows updater fix, and a new login screen
+## 6:45 PM — Autonomy, reliability, and release polish land together
 
-The largest batch of the day: preflight task decomposition, live heuristics, provider Retry-After handling, a DoD gate for code tasks, a reliable Windows auto-update handoff, a redesigned login view, and a string of streaming-UI and Debug polish fixes.
+A large afternoon-through-evening batch shipped preflight task decomposition, live heuristics, rate-limit-aware retries, a DoD completion gate, a reworked login and Debug experience, reliable Windows updates, and hardened changelog media orchestration.
 
-<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-autonomous-recovery-pipeline-windows-updater-fix-and-a-new-login","slug":"autonomous-recovery-pipeline-windows-updater-fix-and-a-new-login","alt":"Autonomous recovery pipeline, Windows updater fix, and a new login screen screenshot"} -->
+<!-- AURA_CHANGELOG_MEDIA:BEGIN {"slotId":"entry-autonomy-reliability-and-release-polish-land-together","slug":"autonomy-reliability-and-release-polish-land-together","alt":"Autonomy, reliability, and release polish land together screenshot"} -->
 <!-- AURA_CHANGELOG_MEDIA:PENDING -->
-<!-- AURA_CHANGELOG_MEDIA:END entry-autonomous-recovery-pipeline-windows-updater-fix-and-a-new-login -->
+<!-- AURA_CHANGELOG_MEDIA:END entry-autonomy-reliability-and-release-polish-land-together -->
 
-- The dev loop now catches oversized tasks before they run: detect_preflight_decomposition flags specs whose title or body signals a likely large generation and splits them into [skeleton] + [fill] children at creation time, broadcasting a task_preflight_decomposed event. The skeleton+fill fan-out is shared with the post-failure remediation path, and a new LiveAnalyzer re-runs heuristics every 50 events / 30 seconds / on task_failed during an active run and emits dev_loop_advisory events mid-flight. A replay integration test and a golden test for aura-run-analyze pin the full decision chain. (`4f8e0a6`, `097b5a5`, `6de6a5e`)
-- Rate-limit recovery is now provider-aware and self-healing: a new FailureClass::RateLimited is checked before Truncation, extract_retry_after parses structured fields and free-text hints ('retry after N', 'retry in Ns') out of task_failed events, and project cooldowns raise to max(class default, hint) clamped to 120s. Restart conflicts are resolved the same way start_loop does (stop stale / adopt live), a ready→in_progress→failed bridge fixes an illegal transition, and the UI's TaskOutputSection now renders 'Rate limited by provider — resuming in Ns...' via a new useCooldownStatus hook instead of sitting on 'Waiting for agent output'. A git push timeout after a successful commit is also reclassified as non-fatal and the task moves to done. (`dc50429`, `53dec4d`, `2d0124d`, `a7f8494`, `7a735ec`)
-- Task completion now requires real verification evidence. Any task that modified files must show at least one build and one test step in telemetry, Rust source changes must additionally show cargo fmt and clippy, and docs-only edits pass without build/test. A new task_completion_gate domain event captures the inputs and pass/fail reason for each transition. create_task is also idempotent on (project, spec, normalized title) so rerunning generate-spec → extract-tasks no longer doubles the task list, and task_failed now persists execution_notes even when no session_id has been recorded yet. (`371aacf`, `15c8728`, `8fb8af9`, `f7914db`)
-- Desktop: the Windows auto-updater now takes direct control of the NSIS handoff, staging the verified installer under <data_dir>/runtime/updater, running the shutdown hook to kill sidecars, and spawning setup with DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP so the installer survives Aura's exit. The Updates row in settings splits into a compact inline control and a full-width attention panel for available / downloading / installing / failed states, and the local auto-update smoke test gained a Windows leg. Main-window live resize is now fluid: useAuraCapabilities dedupes through a single useSyncExternalStore snapshot, and the class background brush switched from BLACK_BRUSH to NULL_BRUSH to eliminate black bars chasing the resize edge. Separately, the IDE window webview now receives the auth bootstrap script so API calls stop failing with 'missing authorization token'. (`61300eb`, `88a1fee`, `dd97291`, `9993d15`)
-- Live LLM streaming got a structural rewrite: text deltas strictly append to the timeline tail (arrival order == render order), getStreamSafeContent smooths trailing dangling `*` / `_` markers so raw emphasis no longer flashes under the cursor, and a new isWriting signal drives a ChatStreamingIndicator that's pinned above the input bar instead of jittering the message flow. The indicator is lifted above the input fade, aligned to the text column, and tab overflow in the Debug sidekick no longer flickers a ghost icon next to the More button. (`aabd229`, `c4f512d`, `16f38ac`, `764be8b`)
-- Debug app polish: a new 'Running now' section lists in-progress runs across every project (polling at 3s active / 10s idle), the sidekick Run tab and entry inspector left-align with field labels above, the middle-panel timeline no longer flips channels when sidekick tabs change, and third-column payload JSON is replaced with readable task / tool names. Expand/collapse, last project, and last run now persist across reloads via a new DebugIndexRedirect, Copy All flips to a transient 'Copied' confirmation, and orphan Running bundles are reconciled to Interrupted on server startup and on stop/restart so ghost live runs no longer linger. (`46ae8e9`, `5e25855`, `ea9ab6e`, `4f83bcf`, `3855508`)
-- Tool output renderers got trustworthy: Command and read_file blocks now decode the base64 stdout/stderr envelope and render syntax-highlighted file contents instead of a raw JSON blob, ListBlock extracts rows from the same envelope so list_files / find_files / search_code no longer render '0 items', and GenericToolBlock restores its 10px inset by rendering JSON containers as <div>s so the block reset doesn't strip their padding. Logging out no longer lands on a black-screen redirect loop — a new aura-force-logged-out sentinel survives the desktop init script's auth literals, and local cleanup now runs even if the server logout call throws. (`45e55ba`, `59d2aa6`, `f62eb9d`, `2ab59d4`)
-- The login screen was redesigned around a full-width AURA_visual_loop background video with a translucent glass sign-in card centered above it, titled 'Login with ZERO Pro' and narrowed to 308px. Billing email is now read-only and tied to the ZERO account identity, fixing a regression that booted users into a Free-plan state when the stored value drifted. A stray wrapper in standalone agent chat is now a proper flex-column filler so the transcript scrolls again, and the tasks sidekick no longer blinks between re-renders. (`dacd52e`, `3fdb15e`, `df72d28`, `3969c21`, `04b5496`, `a68d479`, `68ea3aa`, `27d79bd`, `fe06055`)
-- Release infrastructure: the publish-changelog-media workflow now commits successful screenshots before dispatching a retry for the failed ones, a new retry-release-changelog-media workflow picks up the queued plan, and partial-success policy is unified across publish, reconcile, and retry. The changelog media proof capture and seed planner were hardened with tolerant JSON extraction, and candidate inference in generate-daily-changelog was tightened. (`2f96782`, `14a67af`, `9005c60`, `e0b0ade`, `eb42a29`, `027e0e2`)
-- Promoted the darker --color-border token globally so tables, tool rows, message bubbles, preview overlays, task/terminal panels, and sidekick surfaces all share one outline, and dropped now-redundant per-container overrides. Block titles get a bit of trailing padding so long command names no longer ellipsize flush against EXIT badges, and StatCard always shows two decimals for dollar values. (`150f142`, `ed2e669`, `773a3a8`, `070248d`)
+- Completed the autonomous-recovery pipeline: oversized specs are now preemptively split into skeleton+fill children at ingestion, heuristics run live against in-progress bundles and broadcast advisories mid-flight, and a replay integration test plus golden output pin the full classify -> hint -> decompose chain. (`4f8e0a6`, `097b5a5`, `6de6a5e`)
+- Dev loop now survives provider rate limits cleanly: 429/529 failures are classified as RateLimited before Truncation, provider Retry-After is parsed from structured fields or free text and clamped into the project cooldown, restart conflicts are resolved by stop-stale / adopt-live, git push timeouts no longer fail the task, and empty task_completed events are rejected as failures. (`dc50429`, `53dec4d`, `a7f8494`, `2d0124d`)
+- Task completion is now gated on real verification evidence: code-touching tasks must show a build and test step, Rust changes must additionally show fmt and clippy, docs-only edits pass without gates, and a new task_completion_gate event captures the inputs and outcome for audit. (`371aacf`, `15c8728`)
+- Duplicate-task and ghost-run bugs fixed: create_task now dedupes by (project, spec, case-insensitive title), failure reasons are always persisted even without a session_id, and stale Running bundles are reconciled to Interrupted on server boot and on stop/restart so the Debug "Running now" list no longer shows phantoms. (`8fb8af9`, `4f83bcf`, `3855508`)
+- Chat streaming got a major polish pass: text deltas now strictly append to the timeline tail instead of folding back across tool blocks, dangling markdown markers are suppressed mid-stream, and the Cooking/Thinking indicator was pinned above the input bar (aligned to the 680px text column, lifted above the fade gradient) so it no longer jitters message content on every phase change. (`aabd229`, `c4f512d`, `16f38ac`)
+- Fixed a logout loop that left users on a black screen: App.tsx no longer pins showShell from a boot-time snapshot, logout no longer full-reloads into the stale desktop init script, and a sticky aura-force-logged-out sentinel blocks resurrected sessions from IDB/localStorage mirrors. (`2ab59d4`)
+- Tool-call rendering now handles base64 envelopes end-to-end: command, read_file, list_files, find_files, and search_code blocks decode captured stdout/stderr (stripping ANSI), and the generic tool block's JSON viewer renders with its intended 10px inset instead of flushing against the border. (`45e55ba`, `59d2aa6`, `f62eb9d`)
+- Redesigned the login view around a full-screen AURA_visual_loop background with a compact glass sign-in card centered above it, iterated down to a 308px width with a "Login with ZERO Pro" title. (`dacd52e`, `3fdb15e`, `df72d28`, `04b5496`, `3969c21`, `a68d479`)
+- Debug app gained live awareness and persistence: a "Running now" section lists in-progress runs across projects (polled at 3s while active), expand/collapse state and the last project/run are remembered across reloads, Copy All confirms with a transient "Copied" label, and a sidekick tab-overflow oscillation that duplicated the last icon was fixed. (`46ae8e9`, `5e25855`, `ea9ab6e`, `764be8b`)
+- Windows auto-update now hands off to NSIS reliably: Aura stages the verified installer under its data dir, runs trigger_shutdown to release file locks, and spawns setup with DETACHED_PROCESS | CREATE_BREAKAWAY_FROM_JOB so it survives Aura's exit. The Updates settings row also promotes to a full-width panel during downloading/installing, and the auto-update smoke test grew a Windows leg. (`61300eb`)
+- Desktop reliability fixes: window resize no longer leaves black edges on Windows (NULL_BRUSH plus a shared useSyncExternalStore snapshot for useAuraCapabilities collapses per-frame cascades), the IDE window webview now receives the same auth bootstrap as the main shell, and AURA_DESKTOP_EXTERNAL_HARNESS is exposed in runtime config. (`88a1fee`, `dd97291`, `9993d15`)
+- Interface polish: Billing Email is now read-only and tied to the ZERO account to stop edits from dropping orgs to Free; the feed push card falls back to commitIds.length when metadata.commits is absent; standalone agent chat scrolling was restored after the changelog-screenshot wrapper broke the flex chain; sidekick context no longer blinks off during task refreshes; Build/Test Verification renders the real command instead of "Running `undefined`"; and stat-card dollar values always show two decimals. (`68ea3aa`, `070248d`, `27d79bd`, `fe06055`, `f7914db`, `773a3a8`, `ed2e669`)
+- Unified the --color-border token globally so tables, blocks, tool rows, message bubbles, preview overlays, task/terminal panels, and sidekick surfaces all share the same subtle outline as the main chat. (`150f142`)
+- Changelog media publishing was decoupled from the main release workflow and made more resilient: it now runs via explicit dispatch with channel/version/date inputs, publishes successful captures before queuing failures for retry, uses an adaptive retry policy with a unified partial-success gate, tightens demo screenshot quality and candidate inference, and hardens gh-pages commits. (`2f96782`, `14a67af`, `9005c60`, `e0b0ade`, `20b33ed`, `e017f5f`, `bbc82f3`, `d231ae1`, `eb42a29`, `027e0e2`)
+- Dropped an abandoned AURA_NODE_AUTH_TOKEN bearer path between aura-os and the harness; user JWT flow is untouched. (`c205261`)
 
 ## Highlights
 
-- Debug app rebuilt around projects and a sidekick inspector
-- Dev loop auto-decomposes oversized tasks and respects provider Retry-After
-- Windows auto-updater now hands off to NSIS reliably
-- Definition-of-Done gate now requires build+test (and fmt/clippy for Rust)
-- Chat stream renders linearly with a non-jittery phase indicator
+- Debug app rebuilt with project-first nav and sidekick inspector
+- Dev loop auto-decomposes, retries, and honours provider Retry-After
+- Windows auto-updater now reliably hands off to NSIS
+- Logout no longer strands users on a black-screen redirect loop
+- Chat streaming indicator pinned so content stops jittering
+- Definition-of-Done gate requires real build/test evidence
 

@@ -2,20 +2,21 @@
   {
     "date": "2026-04-22",
     "channel": "nightly",
-    "version": "0.1.0-nightly.344.1",
-    "title": "Autonomous recovery, debug app overhaul, and a smoother chat stream",
-    "intro": "A heavy day for Aura's internals: the dev loop learned to recognise provider rate limits and recover from them, oversized tasks now get decomposed before they can fail, and a new heuristics pipeline drives automatic remediation. On the surface, the Debug app was rebuilt around projects and a sidekick-driven inspector, the live chat stream got calmer and more legible, and the Windows auto-updater now hands off to NSIS reliably.",
+    "version": "0.1.0-nightly.345.1",
+    "title": "Autonomous recovery, streaming polish, and a reworked Debug app",
+    "intro": "A heavy day for Aura's autonomy story: the dev loop learned to decompose oversized tasks, survive provider rate limits, and gate completion on real build/test evidence. Alongside that, the Debug app was rebuilt around a project-first nav and sidekick inspector, the chat stream stopped jittering under the cursor, and Windows auto-updates now hand off cleanly to NSIS.",
     "entryCount": 6,
     "highlights": [
-      "Debug app rebuilt around projects and a sidekick inspector",
-      "Dev loop auto-decomposes oversized tasks and respects provider Retry-After",
-      "Windows auto-updater now hands off to NSIS reliably",
-      "Definition-of-Done gate now requires build+test (and fmt/clippy for Rust)",
-      "Chat stream renders linearly with a non-jittery phase indicator"
+      "Debug app rebuilt with project-first nav and sidekick inspector",
+      "Dev loop auto-decomposes, retries, and honours provider Retry-After",
+      "Windows auto-updater now reliably hands off to NSIS",
+      "Logout no longer strands users on a black-screen redirect loop",
+      "Chat streaming indicator pinned so content stops jittering",
+      "Definition-of-Done gate requires real build/test evidence"
     ],
-    "rawCommitCount": 70,
-    "generatedAt": "2026-04-23T01:44:51.527Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.344.1",
+    "rawCommitCount": 75,
+    "generatedAt": "2026-04-23T02:46:51.301Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.345.1",
     "path": "history/2026-04-22.json"
   },
   {
