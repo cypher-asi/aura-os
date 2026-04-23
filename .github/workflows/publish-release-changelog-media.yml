@@ -1,11 +1,6 @@
 name: Publish Release Changelog Media
 
 on:
-  workflow_run:
-    workflows:
-      - Publish Release Changelog
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       preview_url:
@@ -17,6 +12,21 @@ on:
         description: "Changelog channel to publish media for"
         required: true
         default: nightly
+        type: string
+      version:
+        description: "Release version to publish media for"
+        required: false
+        default: ""
+        type: string
+      date:
+        description: "Changelog date to publish media for"
+        required: false
+        default: ""
+        type: string
+      head_sha:
+        description: "Repo commit SHA to use for the media capture logic"
+        required: false
+        default: ""
         type: string
       provider:
         description: "Browser automation provider"
@@ -39,51 +49,26 @@ permissions:
   contents: write
 
 concurrency:
-  group: publish-release-changelog-media-${{ github.event_name }}-${{ github.event.workflow_run.id || github.run_id }}
-  cancel-in-progress: true
+  group: changelog-media-${{ inputs.channel }}
+  cancel-in-progress: false
 
 jobs:
   publish-media:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Download changelog publish metadata from triggering run
-        if: github.event_name == 'workflow_run'
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: changelog-publish-metadata
-          path: changelog-publish-metadata
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-
       - name: Resolve changelog target
         id: target
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
-            if [[ ! -f "$metadata_file" ]]; then
-              echo "ready=false" >> "$GITHUB_OUTPUT"
-              echo "skip_reason=Triggering changelog workflow did not publish metadata. Skipping media publish." >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "channel=$(jq -r '.channel' "$metadata_file")" >> "$GITHUB_OUTPUT"
-            echo "version=$(jq -r '.version' "$metadata_file")" >> "$GITHUB_OUTPUT"
-            echo "date=$(jq -r '.date' "$metadata_file")" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
-            echo "version=" >> "$GITHUB_OUTPUT"
-            echo "date=" >> "$GITHUB_OUTPUT"
+          if [[ -z "${{ inputs.channel }}" ]]; then
+            echo "channel is required" >&2
+            exit 1
           fi
-
-      - name: Skip media publish when changelog metadata is unavailable
-        if: steps.target.outputs.ready != 'true'
-        shell: bash
-        run: |
-          echo "${{ steps.target.outputs.skip_reason }}"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "channel=${{ inputs.channel }}" >> "$GITHUB_OUTPUT"
+          echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "date=${{ inputs.date }}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${{ inputs.head_sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Preflight media configuration
         if: steps.target.outputs.ready == 'true'
@@ -95,6 +80,7 @@ jobs:
           INPUT_PROVIDER: ${{ inputs.provider }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           provider="$INPUT_PROVIDER"
@@ -137,6 +123,11 @@ jobs:
             fi
           fi
 
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "OPENAI_API_KEY is required because changelog screenshots are always transformed into branded OpenAI-polished media before publishing." >&2
+            exit 1
+          fi
+
           echo "Resolved preview URL from ${preview_source}."
           echo "provider=$provider" >> "$GITHUB_OUTPUT"
           echo "url=$preview_url" >> "$GITHUB_OUTPUT"
@@ -144,9 +135,16 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.target.outputs.ready == 'true'
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ steps.target.outputs.head_sha || github.sha }}
           fetch-depth: 0
           path: repo
+
+      - uses: actions/checkout@v4
+        if: steps.target.outputs.ready == 'true'
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          path: workflow
 
       - uses: actions/checkout@v4
         if: steps.target.outputs.ready == 'true'
@@ -219,6 +217,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           ARGS=(
@@ -267,8 +266,10 @@ jobs:
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "workflow_outcome=$(jq -r '.workflowOutcome // \"failure\"' \"$summary_file\")" >> "$GITHUB_OUTPUT"
-          echo "should_fail=$(jq -r '.shouldFailWorkflow // true' \"$summary_file\")" >> "$GITHUB_OUTPUT"
+          workflow_outcome="$(jq -r '.workflowOutcome // "failure"' "$summary_file")"
+          should_fail="$(jq -r 'if has("shouldFailWorkflow") then .shouldFailWorkflow else true end' "$summary_file")"
+          echo "workflow_outcome=$workflow_outcome" >> "$GITHUB_OUTPUT"
+          echo "should_fail=$should_fail" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "retry_file=$retry_file" >> "$GITHUB_OUTPUT"
 
@@ -296,17 +297,15 @@ jobs:
         if: always() && steps.target.outputs.ready == 'true' && steps.summary.outputs.found == 'true'
         shell: bash
         run: |
-          cd pages
           label="${{ steps.target.outputs.version }}"
           if [[ -z "$label" ]]; then
             label="${{ steps.target.outputs.date }}"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "changelog/${{ steps.target.outputs.channel }}"
-          git add "assets/changelog/${{ steps.target.outputs.channel }}" 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Publish ${{ steps.target.outputs.channel }} changelog media for ${label}"
-          git push
+          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Publish ${{ steps.target.outputs.channel }} changelog media for ${label}" \
+            "changelog/${{ steps.target.outputs.channel }}" \
+            "assets/changelog/${{ steps.target.outputs.channel }}"
 
       - name: Queue failed changelog media for retry
         if: always() && steps.target.outputs.ready == 'true' && steps.summary.outputs.found == 'true' && steps.summary.outputs.failed != '0'

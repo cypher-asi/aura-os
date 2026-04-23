@@ -44,8 +44,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: reconcile-release-changelog-${{ inputs.release_run_id || inputs.channel }}-${{ github.run_id }}
-  cancel-in-progress: true
+  group: changelog-media-${{ inputs.channel }}
+  cancel-in-progress: false
 
 jobs:
   reconcile:
@@ -122,6 +122,13 @@ jobs:
           ref: ${{ steps.trigger.outputs.head_sha }}
           fetch-depth: 0
           path: repo
+
+      - uses: actions/checkout@v4
+        if: steps.release-check.outputs.released == 'true'
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          path: workflow
 
       - uses: actions/checkout@v4
         if: steps.release-check.outputs.released == 'true'
@@ -272,6 +279,7 @@ jobs:
           INPUT_PROVIDER: ${{ inputs.provider }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           provider="$INPUT_PROVIDER"
@@ -312,6 +320,11 @@ jobs:
               echo "Browserbase provider requires ${missing[*]}." >&2
               exit 1
             fi
+          fi
+
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "OPENAI_API_KEY is required because changelog screenshots are always transformed into branded OpenAI-polished media before publishing." >&2
+            exit 1
           fi
 
           echo "Resolved preview URL from ${preview_source}."
@@ -374,6 +387,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           ARGS=(
@@ -419,8 +433,10 @@ jobs:
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "workflow_outcome=$(jq -r '.workflowOutcome // \"failure\"' \"$summary_file\")" >> "$GITHUB_OUTPUT"
-          echo "should_fail=$(jq -r '.shouldFailWorkflow // true' \"$summary_file\")" >> "$GITHUB_OUTPUT"
+          workflow_outcome="$(jq -r '.workflowOutcome // "failure"' "$summary_file")"
+          should_fail="$(jq -r 'if has("shouldFailWorkflow") then .shouldFailWorkflow else true end' "$summary_file")"
+          echo "workflow_outcome=$workflow_outcome" >> "$GITHUB_OUTPUT"
+          echo "should_fail=$should_fail" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
 
       - name: Append changelog media diagnostics summary
@@ -453,13 +469,11 @@ jobs:
         if: always() && steps.release-check.outputs.released == 'true' && steps.summary.outputs.found == 'true'
         shell: bash
         run: |
-          cd pages
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "changelog/${{ steps.metadata.outputs.channel }}"
-          git add "assets/changelog/${{ steps.metadata.outputs.channel }}" 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Reconcile ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}"
-          git push
+          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Reconcile ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}" \
+            "changelog/${{ steps.metadata.outputs.channel }}" \
+            "assets/changelog/${{ steps.metadata.outputs.channel }}"
 
       - name: Finalize reconciled changelog media outcome
         if: always() && steps.release-check.outputs.released == 'true'

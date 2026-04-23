@@ -60,7 +60,7 @@ export function ProcessSidekickContent() {
 
   if (!processId) {
     return (
-      <div className={styles.sidekickBody}>
+      <div className={styles.sidekickBody} data-agent-surface="sidekick-panel">
         <EmptyState>Select a process</EmptyState>
       </div>
     );
@@ -68,7 +68,7 @@ export function ProcessSidekickContent() {
 
   if (selectedNode && liveNode) {
     return (
-      <div className={styles.sidekickBody}>
+      <div className={styles.sidekickBody} data-agent-surface="sidekick-panel">
         <div className={styles.sidekickContent}>
           <div className={styles.tabContent}>
             {activeNodeTab === "info" && <NodeInfoTab node={liveNode} />}
@@ -88,7 +88,7 @@ export function ProcessSidekickContent() {
 
   if (previewRun) {
     return (
-      <div className={styles.sidekickBody}>
+      <div className={styles.sidekickBody} data-agent-surface="sidekick-panel">
         <PreviewOverlay title="Run Detail" onClose={closePreview} fullLane>
           <div style={{ margin: "calc(-1 * var(--space-3, 12px)) 0" }}>
             <RunPreviewBody key={previewRun.run_id} run={previewRun} />
@@ -99,7 +99,7 @@ export function ProcessSidekickContent() {
   }
 
   return (
-    <div className={styles.sidekickBody}>
+    <div className={styles.sidekickBody} data-agent-surface="sidekick-panel">
       <div className={styles.sidekickContent}>
         <div className={styles.tabContent}>
           {activeTab === "process" && <ProcessInfoTab />}

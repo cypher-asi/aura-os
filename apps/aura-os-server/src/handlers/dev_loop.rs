@@ -2221,14 +2221,6 @@ fn recovery_checkpoint(cached: &CachedTaskOutput) -> RecoveryCheckpoint {
     RecoveryCheckpoint::NoProgress
 }
 
-fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
-    [
-        ("claude-opus-4-6", 5.0, 25.0),
-        ("claude-sonnet-4-5", 3.0, 15.0),
-        ("claude-haiku-4-5", 0.80, 4.00),
-    ]
-}
-
 #[derive(Clone, Copy, Debug)]
 struct ModelRates {
     input: f64,
@@ -2237,51 +2229,120 @@ struct ModelRates {
     cache_read: f64,
 }
 
+fn default_fee_schedule() -> [(&'static str, ModelRates); 7] {
+    [
+        (
+            "gpt-5.5",
+            ModelRates {
+                input: 5.0,
+                output: 30.0,
+                cache_write: 5.0,
+                cache_read: 0.5,
+            },
+        ),
+        (
+            "gpt-5.4",
+            ModelRates {
+                input: 2.5,
+                output: 15.0,
+                cache_write: 2.5,
+                cache_read: 0.25,
+            },
+        ),
+        (
+            "gpt-5.4-mini",
+            ModelRates {
+                input: 0.75,
+                output: 4.5,
+                cache_write: 0.75,
+                cache_read: 0.075,
+            },
+        ),
+        (
+            "gpt-5.4-nano",
+            ModelRates {
+                input: 0.20,
+                output: 1.25,
+                cache_write: 0.20,
+                cache_read: 0.02,
+            },
+        ),
+        (
+            "claude-opus-4-6",
+            ModelRates {
+                input: 5.0,
+                output: 25.0,
+                cache_write: 6.25,
+                cache_read: 0.5,
+            },
+        ),
+        (
+            "claude-sonnet-4-5",
+            ModelRates {
+                input: 3.0,
+                output: 15.0,
+                cache_write: 3.75,
+                cache_read: 0.3,
+            },
+        ),
+        (
+            "claude-haiku-4-5",
+            ModelRates {
+                input: 0.80,
+                output: 4.00,
+                cache_write: 1.0,
+                cache_read: 0.08,
+            },
+        ),
+    ]
+}
+
 fn lookup_model_rates(model: &str) -> ModelRates {
-    let normalized_model = model.trim().to_ascii_lowercase();
+    let normalized_model = normalize_pricing_model_id(model);
     let mut exact: Vec<_> = default_fee_schedule()
         .into_iter()
-        .filter(|(candidate, _, _)| *candidate == normalized_model)
+        .filter(|(candidate, _)| *candidate == normalized_model)
         .collect();
-    if let Some((_, input, output)) = exact.pop() {
-        return ModelRates {
-            input,
-            output,
-            cache_write: input * 1.25,
-            cache_read: input * 0.10,
-        };
+    if let Some((_, rates)) = exact.pop() {
+        return rates;
     }
 
     let mut partial: Vec<_> = default_fee_schedule()
         .into_iter()
-        .filter(|(candidate, _, _)| {
+        .filter(|(candidate, _)| {
             normalized_model.starts_with(candidate) || candidate.starts_with(&normalized_model)
         })
         .collect();
-    if let Some((_, input, output)) = partial.pop() {
-        return ModelRates {
-            input,
-            output,
-            cache_write: input * 1.25,
-            cache_read: input * 0.10,
-        };
+    if let Some((_, rates)) = partial.pop() {
+        return rates;
     }
 
-    default_fee_schedule()
-        .into_iter()
-        .next()
-        .map(|(_, input, output)| ModelRates {
-            input,
-            output,
-            cache_write: input * 1.25,
-            cache_read: input * 0.10,
-        })
-        .unwrap_or(ModelRates {
-            input: 5.0,
-            output: 25.0,
-            cache_write: 6.25,
-            cache_read: 0.5,
-        })
+    ModelRates {
+        input: 5.0,
+        output: 25.0,
+        cache_write: 6.25,
+        cache_read: 0.5,
+    }
+}
+
+fn normalize_pricing_model_id(model: &str) -> String {
+    let normalized = model.trim().to_ascii_lowercase();
+    if let Some(rest) = normalized.strip_prefix("openai/") {
+        return rest.to_string();
+    }
+
+    for (aura_id, model_id) in [
+        ("aura-gpt-5-5", "gpt-5.5"),
+        ("aura-gpt-5-4", "gpt-5.4"),
+        ("aura-gpt-5-4-mini", "gpt-5.4-mini"),
+        ("aura-gpt-5-4-nano", "gpt-5.4-nano"),
+    ] {
+        if normalized == aura_id {
+            return model_id.to_string();
+        }
+    }
+
+    normalized
 }
 
 fn estimate_usage_cost_usd(
@@ -2303,6 +2364,7 @@ struct UsageReportingContext {
     network_client: Arc<NetworkClient>,
     access_token: String,
     network_user_id: String,
+    zero_pro_user: bool,
     model: String,
     org_id: Option<String>,
 }
@@ -2326,6 +2388,7 @@ async fn report_automaton_usage(
         input_tokens: turn_usage.input_tokens,
         output_tokens: turn_usage.output_tokens,
         estimated_cost_usd,
+        zero_pro_user: usage.zero_pro_user,
         org_id: usage.org_id.clone(),
         agent_id: None,
         project_id: Some(project_id.to_string()),
@@ -2400,6 +2463,7 @@ async fn build_usage_reporting_context(
         network_client,
         access_token: jwt_str.to_string(),
         network_user_id: network_user_id.to_string(),
+        zero_pro_user: cached.session.is_zero_pro,
         model: model.unwrap_or_else(|| "claude-opus-4-6".to_string()),
         org_id,
     })
@@ -6175,6 +6239,13 @@ mod tests {
 
         assert!((exact - versioned).abs() < 1e-9);
         assert!((exact - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_matches_gpt_5_5_rates() {
+        let cost = estimate_usage_cost_usd("aura-gpt-5-5", 1_000_000, 500_000, 0, 1_000_000);
+
+        assert!((cost - 20.5).abs() < 1e-9);
     }
 
     #[test]

@@ -141,6 +141,76 @@ test("assessDemoScreenshotQuality fails when a required UI state or forbidden pl
   assert.ok(report.hardFailures.some((check) => check.name === "forbidden-proof-phrase"));
 });
 
+test("assessDemoScreenshotQuality accepts required sidekick proof when the sidekick signal is visible", () => {
+  const report = assessDemoScreenshotQuality({
+    phaseId: "validate-proof",
+    viewport: { width: 1600, height: 1000 },
+    screenshot: {
+      kind: "surface-union",
+      targets: ["main-panel", "sidekick-header", "sidekick-panel"],
+      clip: { x: 0, y: 50, width: 1600, height: 900 },
+    },
+    visibleText: "Debug Demo Project Copy All Export Copy JSONL Run ID Counters",
+    validationMatches: ["Debug", "Demo Project", "Copy all", "Export", "Copy JSONL"],
+    minSignalMatches: 1,
+    proofRequirements: [
+      { label: "debug run toolbar", anyOf: ["Copy all", "Export"] },
+      { label: "debug sidekick content", anyOf: ["Copy JSONL", "Run ID", "Counters"] },
+      { label: "seeded project", anyOf: ["Demo Project"] },
+    ],
+    proofRequirementMatches: [
+      { label: "debug run toolbar", matchedPhrase: "Copy all" },
+      { label: "debug sidekick content", matchedPhrase: "Copy JSONL" },
+      { label: "seeded project", matchedPhrase: "Demo Project" },
+    ],
+    requiredUiSignals: ["sidekickVisible"],
+    routeMatched: true,
+    activeAppMatched: true,
+    uiSignals: {
+      placeholderVisible: false,
+      emptyStateVisible: false,
+      mobileLayoutVisible: false,
+      errorTextVisible: false,
+      sidekickVisible: true,
+    },
+  });
+
+  assert.equal(report.ok, true);
+  assert.equal(report.derived.missingRequiredUiSignals.length, 0);
+});
+
+test("assessDemoScreenshotQuality tolerates off-crop placeholders when proof content is visible", () => {
+  const report = assessDemoScreenshotQuality({
+    phaseId: "validate-proof",
+    viewport: { width: 1600, height: 1000 },
+    screenshot: {
+      kind: "body-focus",
+      clip: { x: 0, y: 0, width: 960, height: 540 },
+    },
+    visibleText: "Demo Project Demo Process Starter Step Process",
+    validationMatches: ["Demo Process", "Process"],
+    minSignalMatches: 1,
+    proofRequirements: [
+      { label: "seeded process", anyOf: ["Demo Process"] },
+    ],
+    proofRequirementMatches: [
+      { label: "seeded process", matchedPhrase: "Demo Process" },
+    ],
+    routeMatched: true,
+    activeAppMatched: true,
+    uiSignals: {
+      placeholderVisible: true,
+      emptyStateVisible: true,
+      mobileLayoutVisible: false,
+      errorTextVisible: false,
+    },
+  });
+
+  assert.equal(report.ok, true);
+  assert.ok(report.checks.some((check) => check.name === "placeholder-surface" && check.ok));
+  assert.ok(report.checks.some((check) => check.name === "empty-state" && check.ok));
+});
+
 test("assessDemoScreenshotQuality rejects an overly loose multi-panel crop", () => {
   const report = assessDemoScreenshotQuality({
     phaseId: "validate-proof",

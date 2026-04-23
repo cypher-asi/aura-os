@@ -324,6 +324,7 @@ export const ChatInputBar = memo(
     const featuredModelIds = useMemo(
       () =>
         new Set([
+          "aura-gpt-5-5",
           "aura-gpt-5-4",
           "aura-gpt-5-4-mini",
           "aura-claude-opus-4-7",
@@ -454,6 +455,7 @@ export const ChatInputBar = memo(
         aria-hidden={isVisible ? undefined : true}
         data-visible={isVisible ? "true" : "false"}
         data-centered={isCentered ? "true" : "false"}
+        data-agent-surface="chat-input-bar"
       >
         <div
           className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}`}
@@ -511,6 +513,7 @@ export const ChatInputBar = memo(
               onPaste={handlePaste}
               placeholder="What do you want to create?"
               rows={1}
+              data-agent-field="chat-input"
             />
             {isStreaming ? (
               <button
@@ -659,6 +662,9 @@ export const ChatInputBar = memo(
               <button
                 type="button"
                 className={styles.modelButton}
+                data-agent-action="open-model-picker"
+                aria-haspopup={modelsForMode.length > 1 ? "menu" : undefined}
+                aria-expanded={modelsForMode.length > 1 ? modelMenuOpen : undefined}
                 onClick={
                   modelsForMode.length > 1
                     ? () => setModelMenuOpen((v) => !v)
@@ -672,7 +678,7 @@ export const ChatInputBar = memo(
                 {modelsForMode.length > 1 && <ChevronDown size={10} />}
               </button>
               {modelMenuOpen && modelsForMode.length > 1 && (
-                <div className={styles.modelMenu}>
+                <div className={styles.modelMenu} data-agent-surface="model-picker">
                   {shouldUseCondensedAuraMenu && !showAllModels ? (
                     <>
                       {featuredModels.map((m) => (

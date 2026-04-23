@@ -33,12 +33,14 @@ const version = args.version ? String(args.version) : null;
 const releaseUrl = String(args["release-url"] || "");
 const timeZone = String(args.timezone || process.env.CHANGELOG_TIMEZONE || "America/Los_Angeles");
 const repoName = String(args.repo || path.basename(repoDir));
-const promptVersion = 3;
+const promptVersion = 4;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY?.trim() || "";
 const anthropicModel = process.env.CHANGELOG_ANTHROPIC_MODEL?.trim() || "claude-opus-4-7";
 const anthropicMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_MAX_TOKENS || "", 10) || 8192;
 const anthropicRetryMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_RETRY_MAX_TOKENS || "", 10) || 16384;
 const anthropicFinalMaxTokens = Number.parseInt(process.env.CHANGELOG_ANTHROPIC_FINAL_MAX_TOKENS || "", 10) || 24576;
+const mediaInferenceModel = process.env.CHANGELOG_MEDIA_ANTHROPIC_MODEL?.trim() || anthropicModel;
+const mediaInferenceMaxTokens = Number.parseInt(process.env.CHANGELOG_MEDIA_ANTHROPIC_MAX_TOKENS || "", 10) || 4096;
 const STRICT_TOOL_SUPPORTED_MODELS = [
   "claude-opus-4-7",
   "claude-opus-4-6",
@@ -153,6 +155,10 @@ function slugify(value, maxLength = 64) {
     .slice(0, maxLength);
 }
 
+function resolveEntryBatchId(entry, index = 0) {
+  return sanitizeText(entry?.batch_id || entry?.id || `entry-${index + 1}`);
+}
+
 function extractKeywords(value) {
   return unique(
     cleanSubject(value)
@@ -197,7 +203,20 @@ function countMatching(values, predicate) {
   return values.reduce((count, value) => count + (predicate(value) ? 1 : 0), 0);
 }
 
-function inferEntryMedia(entry, commitLookup) {
+function collectEntryCommitShas(entry) {
+  const shas = new Set();
+  for (const item of Array.isArray(entry?.items) ? entry.items : []) {
+    for (const sha of Array.isArray(item?.commit_shas) ? item.commit_shas : []) {
+      const normalized = sanitizeText(sha);
+      if (normalized) {
+        shas.add(normalized);
+      }
+    }
+  }
+  return [...shas];
+}
+
+function inferEntryMediaHeuristic(entry, commitLookup, { batchId = resolveEntryBatchId(entry) } = {}) {
   const files = collectEntryCommitFiles(entry, commitLookup);
   const headlineHaystack = [
     entry?.title,
@@ -285,8 +304,8 @@ function inferEntryMedia(entry, commitLookup) {
       || (hasDesktopShellFile && hasSpecificUiSurfaceKeyword && !hasHeadlineStrongInfraKeyword)
       || (hasUiFacingFile && score >= 5 && (!hasHeadlineStrongInfraKeyword || hasHeadlineUiSurfaceKeyword))
     );
-  const slug = slugify(entry?.title || entry?.batch_id || "entry");
-  const slotId = `${sanitizeText(entry?.batch_id || "entry")}-${slug || "media"}`;
+  const slug = slugify(entry?.title || batchId || "entry");
+  const slotId = `${batchId || "entry"}-${slug || "media"}`;
   const alt = `${sanitizeText(entry?.title || "Changelog entry")} screenshot`;
 
   return {
@@ -304,18 +323,413 @@ function inferEntryMedia(entry, commitLookup) {
   };
 }
 
-function annotateRenderedEntriesWithMedia(rendered, rawCommits) {
-  const commitLookup = new Map((Array.isArray(rawCommits) ? rawCommits : []).map((commit) => [commit.sha, commit]));
+function normalizeVisibleProof(values, limit = 6) {
+  return unique(
+    (Array.isArray(values) ? values : [])
+      .map((value) => sanitizeText(value))
+      .filter((value) => value.length >= 2 && value.length <= 80),
+  ).slice(0, limit);
+}
+
+function mapConfidenceScore(confidence, requested) {
+  const normalized = sanitizeText(confidence).toLowerCase();
+  const base = normalized === "high" ? 8 : normalized === "medium" ? 6 : normalized === "low" ? 4 : 0;
+  if (base === 0) {
+    return requested ? 6 : -4;
+  }
+  return requested ? base : -base;
+}
+
+function buildMediaInferenceTool(batchIds) {
   return {
-    ...rendered,
-    entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry) => ({
-      ...entry,
-      media: inferEntryMedia(entry, commitLookup),
-    })),
+    name: "submit_changelog_media_inference",
+    description: [
+      "Decide which changelog entries deserve screenshot media.",
+      "Only request media when a single static screenshot can clearly prove a user-visible product surface.",
+      "Reject build, CI, release, changelog tooling, backend-only work, tests, refactors, subtle token swaps, and non-visual reliability fixes.",
+      "When media is requested, provide one concrete proof surface, one capture hint, and short visible proof phrases that should still be visible in the final published image.",
+    ].join(" "),
+    strict: true,
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        entries: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              batch_id: {
+                type: "string",
+                enum: batchIds,
+              },
+              requested: {
+                type: "boolean",
+              },
+              confidence: {
+                type: "string",
+                enum: ["high", "medium", "low"],
+              },
+              category: {
+                type: "string",
+                enum: [
+                  "product_surface",
+                  "subtle_visual",
+                  "reliability_nonvisual",
+                  "release_infra",
+                  "backend_only",
+                  "tests",
+                  "refactor_misc",
+                ],
+              },
+              rationale: {
+                type: "string",
+              },
+              proof_surface: {
+                type: ["string", "null"],
+              },
+              capture_hint: {
+                type: ["string", "null"],
+              },
+              visible_proof: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+            },
+            required: [
+              "batch_id",
+              "requested",
+              "confidence",
+              "category",
+              "rationale",
+              "proof_surface",
+              "capture_hint",
+              "visible_proof",
+            ],
+          },
+        },
+      },
+      required: ["entries"],
+    },
   };
 }
 
-function buildMediaPlaceholderBlock(entry) {
+function validateMediaInferenceInput(input, batchIds) {
+  if (!input || typeof input !== "object" || !Array.isArray(input.entries)) {
+    throw new Error("media inference input must contain an entries array");
+  }
+
+  const knownBatchIds = new Set(batchIds);
+  const seen = new Set();
+  return new Map(
+    input.entries.map((entry) => {
+      const batchId = sanitizeText(entry?.batch_id);
+      if (!knownBatchIds.has(batchId)) {
+        throw new Error(`unknown media inference batch_id: ${batchId || "missing"}`);
+      }
+      if (seen.has(batchId)) {
+        throw new Error(`duplicate media inference batch_id: ${batchId}`);
+      }
+      seen.add(batchId);
+      return [batchId, {
+        requested: Boolean(entry?.requested),
+        confidence: sanitizeText(entry?.confidence || "low").toLowerCase(),
+        category: sanitizeText(entry?.category || "refactor_misc"),
+        rationale: sanitizeText(entry?.rationale),
+        proofSurface: sanitizeText(entry?.proof_surface),
+        captureHint: sanitizeText(entry?.capture_hint),
+        visibleProof: normalizeVisibleProof(entry?.visible_proof),
+      }];
+    }),
+  );
+}
+
+function collectEntryPatchExcerpts(entry, commitLookup, maxExcerpts = 3) {
+  return collectEntryCommitShas(entry)
+    .slice(0, maxExcerpts)
+    .map((sha) => {
+      const commit = commitLookup.get(sha);
+      if (!commit) {
+        return null;
+      }
+      return {
+        sha,
+        subject: sanitizeText(commit.subject),
+        excerpt: trimText(collectPatchExcerpt(sha), { maxChars: 2200, maxLines: 48 }),
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildMediaInferenceBundle(rendered, commitLookup) {
+  const entries = Array.isArray(rendered?.entries) ? rendered.entries : [];
+  return entries.map((entry, index) => {
+    const batchId = resolveEntryBatchId(entry, index);
+    const commitShas = collectEntryCommitShas(entry);
+    const commits = commitShas.map((sha) => commitLookup.get(sha)).filter(Boolean);
+    const files = collectEntryCommitFiles(entry, commitLookup);
+    return {
+      batch_id: batchId,
+      title: sanitizeText(entry?.title),
+      summary: sanitizeText(entry?.summary),
+      items: (Array.isArray(entry?.items) ? entry.items : []).map((item) => sanitizeText(item?.text)).filter(Boolean),
+      changed_files: files.slice(0, 24),
+      commit_subjects: commits.map((commit) => sanitizeText(commit.subject)).filter(Boolean),
+      top_areas: summarizeAreas(commits),
+      patch_excerpts: collectEntryPatchExcerpts(entry, commitLookup),
+    };
+  });
+}
+
+async function inferMediaEntriesWithAnthropic(rendered, rawCommits) {
+  if (!anthropicApiKey) {
+    return null;
+  }
+
+  const entries = Array.isArray(rendered?.entries) ? rendered.entries : [];
+  if (entries.length === 0) {
+    return new Map();
+  }
+
+  const batchIds = entries.map((entry, index) => resolveEntryBatchId(entry, index)).filter(Boolean);
+  const commitLookup = new Map((Array.isArray(rawCommits) ? rawCommits : []).map((commit) => [commit.sha, commit]));
+  const tool = buildMediaInferenceTool(batchIds);
+  const systemPrompt = [
+    "You are deciding which Aura changelog entries deserve screenshot media.",
+    "Be conservative.",
+    "Request media only when one desktop screenshot can clearly prove a user-visible product surface or durable visible state.",
+    "Reject release/build/CI/changelog/media tooling, backend-only work, tests, refactors, merge noise, and reliability changes that would look identical in a static screenshot.",
+    "Reject subtle token swaps, small spacing tweaks, and purely comparative visual cleanups unless the changed state is obvious in one screenshot without a before/after.",
+    "For requested entries, define one concrete proof surface, one capture hint, and 1 to 4 visible proof phrases or labels that should still be visible in the final published image.",
+    "If the visible proof would likely be too subtle or too transient for a static screenshot, set requested=false.",
+    `Call the ${tool.name} tool exactly once.`,
+  ].join(" ");
+  const userPrompt = [
+    "Decide screenshot-media candidacy for these Aura changelog entries.",
+    "Use the entry text, changed files, commit subjects, and patch excerpts together.",
+    "A correct 'no' is better than a noisy false-positive screenshot request.",
+    "",
+    JSON.stringify({
+      entries: buildMediaInferenceBundle(rendered, commitLookup),
+    }, null, 2),
+  ].join("\n");
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": anthropicApiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(
+      buildAnthropicRequestBody({
+        model: mediaInferenceModel,
+        maxTokens: mediaInferenceMaxTokens,
+        systemPrompt,
+        tool,
+        userPrompt,
+        retryInstruction: null,
+      }),
+    ),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Anthropic media inference failed (${response.status}): ${await response.text()}`);
+  }
+
+  const json = await response.json();
+  const input = findToolUseInput(json, tool.name);
+  if (!input) {
+    throw new Error("Anthropic media inference did not return a tool result");
+  }
+  return validateMediaInferenceInput(input, batchIds);
+}
+
+function mergeMediaDecision(entry, heuristic, decision) {
+  const requested = typeof decision?.requested === "boolean" ? decision.requested : heuristic.requested;
+  return {
+    ...heuristic,
+    requested,
+    status: requested ? "pending" : "skipped",
+    score: decision ? mapConfidenceScore(decision.confidence, requested) : heuristic.score,
+    reason: decision?.rationale || heuristic.reason,
+    reasons: unique([
+      ...(decision?.rationale ? [decision.rationale] : []),
+      ...(Array.isArray(heuristic.reasons) ? heuristic.reasons : []),
+    ]),
+    inferenceSource: decision ? "anthropic" : "heuristic",
+    inferenceCategory: sanitizeText(decision?.category || ""),
+    inferenceConfidence: sanitizeText(decision?.confidence || ""),
+    proofSurface: sanitizeText(decision?.proofSurface || ""),
+    captureHint: sanitizeText(decision?.captureHint || ""),
+    visibleProof: normalizeVisibleProof(decision?.visibleProof),
+    storyTitle: sanitizeText(entry?.title || ""),
+  };
+}
+
+function isPublishedMedia(media) {
+  return media?.status === "published" && Boolean(sanitizeText(media?.assetPath));
+}
+
+function normalizeTitleTokens(value) {
+  return sanitizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(/\s+/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length >= 3);
+}
+
+function entriesHaveCommitOverlap(entry, previousEntry) {
+  const currentShas = new Set(collectEntryCommitShas(entry));
+  const previousShas = new Set(collectEntryCommitShas(previousEntry));
+  if (currentShas.size === 0 || previousShas.size === 0) {
+    return false;
+  }
+  return [...currentShas].some((sha) => previousShas.has(sha));
+}
+
+function entriesHaveCompatibleTitles(entry, previousEntry) {
+  const currentTitle = sanitizeText(entry?.title).toLowerCase();
+  const previousTitle = sanitizeText(previousEntry?.title).toLowerCase();
+  if (!currentTitle || !previousTitle) {
+    return false;
+  }
+  if (currentTitle.includes(previousTitle) || previousTitle.includes(currentTitle)) {
+    return true;
+  }
+
+  const currentTokens = new Set(normalizeTitleTokens(currentTitle));
+  const previousTokens = new Set(normalizeTitleTokens(previousTitle));
+  if (currentTokens.size === 0 || previousTokens.size === 0) {
+    return false;
+  }
+
+  const overlap = [...currentTokens].filter((token) => previousTokens.has(token)).length;
+  return overlap / Math.min(currentTokens.size, previousTokens.size) >= 0.6;
+}
+
+function canPreservePublishedMediaByBatch(entry, previousEntry) {
+  return entriesHaveCommitOverlap(entry, previousEntry)
+    || entriesHaveCompatibleTitles(entry, previousEntry);
+}
+
+function collectPublishedMedia(existingDocs) {
+  const bySlotId = new Map();
+  const byBatchId = new Map();
+
+  for (const doc of existingDocs.filter(Boolean)) {
+    for (const [index, entry] of (Array.isArray(doc?.rendered?.entries) ? doc.rendered.entries : []).entries()) {
+      if (!isPublishedMedia(entry?.media)) {
+        continue;
+      }
+
+      const record = {
+        batchId: resolveEntryBatchId(entry, index),
+        entry,
+        media: entry.media,
+      };
+      const slotId = sanitizeText(entry.media.slotId);
+      if (slotId && !bySlotId.has(slotId)) {
+        bySlotId.set(slotId, record);
+      }
+      if (record.batchId && !byBatchId.has(record.batchId)) {
+        byBatchId.set(record.batchId, record);
+      }
+    }
+  }
+
+  return { bySlotId, byBatchId };
+}
+
+function preserveExistingPublishedMedia(rendered, existingDocs = []) {
+  const lookup = collectPublishedMedia(existingDocs);
+
+  return {
+    ...rendered,
+    entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry, index) => {
+      const inferredMedia = entry?.media;
+      const slotPrevious = lookup.bySlotId.get(sanitizeText(inferredMedia?.slotId));
+      const batchPrevious = lookup.byBatchId.get(resolveEntryBatchId(entry, index));
+      const previous = slotPrevious
+        || (
+          batchPrevious && canPreservePublishedMediaByBatch(entry, batchPrevious.entry)
+            ? batchPrevious
+            : null
+        );
+
+      if (!previous?.media) {
+        return entry;
+      }
+
+      return {
+        ...entry,
+        media: {
+          ...inferredMedia,
+          requested: true,
+          status: "published",
+          slotId: sanitizeText(previous.media.slotId || inferredMedia?.slotId),
+          slug: sanitizeText(previous.media.slug || inferredMedia?.slug),
+          alt: sanitizeText(previous.media.alt || inferredMedia?.alt),
+          assetPath: sanitizeText(previous.media.assetPath),
+          screenshotSource: sanitizeText(previous.media.screenshotSource || ""),
+          updatedAt: sanitizeText(previous.media.updatedAt || ""),
+          storyTitle: sanitizeText(previous.media.storyTitle || ""),
+          preservedFromSlotId: sanitizeText(previous.media.slotId) === sanitizeText(inferredMedia?.slotId)
+            ? undefined
+            : sanitizeText(previous.media.slotId),
+        },
+      };
+    }),
+  };
+}
+
+async function annotateRenderedEntriesWithMedia(rendered, rawCommits, options = {}) {
+  const commitLookup = new Map((Array.isArray(rawCommits) ? rawCommits : []).map((commit) => [commit.sha, commit]));
+  let inferredByBatchId = null;
+
+  if (options.mediaInferenceByBatchId instanceof Map) {
+    inferredByBatchId = options.mediaInferenceByBatchId;
+  } else if (options.mediaInferenceByBatchId && typeof options.mediaInferenceByBatchId === "object") {
+    inferredByBatchId = new Map(Object.entries(options.mediaInferenceByBatchId));
+  } else if (options.enableAiInference !== false) {
+    try {
+      inferredByBatchId = await inferMediaEntriesWithAnthropic(rendered, rawCommits);
+    } catch (error) {
+      console.warn(`Warning: changelog media inference fell back to heuristics: ${error instanceof Error ? error.message : String(error)}`);
+      inferredByBatchId = null;
+    }
+  }
+
+  return {
+    ...rendered,
+    entries: (Array.isArray(rendered?.entries) ? rendered.entries : []).map((entry, index) => {
+      const batchId = resolveEntryBatchId(entry, index);
+      return {
+        ...entry,
+        batch_id: batchId,
+        media: mergeMediaDecision(
+          entry,
+          inferEntryMediaHeuristic(entry, commitLookup, { batchId }),
+          inferredByBatchId?.get(batchId) || null,
+        ),
+      };
+    }),
+  };
+}
+
+function relativeAssetReference(markdownPath, pagesDir, assetPath) {
+  return path.relative(
+    path.dirname(markdownPath),
+    path.join(pagesDir, assetPath),
+  ).split(path.sep).join("/");
+}
+
+function buildMediaPlaceholderBlock(entry, options = {}) {
   const media = entry?.media;
   if (!media?.requested) {
     return [];
@@ -323,10 +737,22 @@ function buildMediaPlaceholderBlock(entry) {
 
   const metadata = {
     slotId: media.slotId,
-    batchId: entry.batch_id,
+    batchId: resolveEntryBatchId(entry),
     slug: media.slug,
     alt: media.alt,
   };
+
+  if (isPublishedMedia(media)) {
+    const assetRef = options.pagesDir && options.markdownPath
+      ? relativeAssetReference(options.markdownPath, options.pagesDir, media.assetPath)
+      : media.assetPath;
+    return [
+      `<!-- AURA_CHANGELOG_MEDIA:BEGIN ${JSON.stringify({ ...metadata, status: "published", assetPath: media.assetPath })} -->`,
+      `![${media.alt}](${assetRef})`,
+      `<!-- AURA_CHANGELOG_MEDIA:END ${media.slotId} -->`,
+      "",
+    ];
+  }
 
   return [
     `<!-- AURA_CHANGELOG_MEDIA:BEGIN ${JSON.stringify(metadata)} -->`,
@@ -831,6 +1257,7 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
     }
 
     return {
+      batch_id: entry.batch_id,
       time_label: batch.time_label,
       started_at: batch.started_at,
       ended_at: batch.ended_at,
@@ -995,7 +1422,7 @@ async function generateWithAnthropic(bundle, totalCommitCount) {
   throw new Error(lastError || "Anthropic response could not be parsed");
 }
 
-function renderMarkdown(doc) {
+function renderMarkdown(doc, options = {}) {
   const lines = [
     `# ${doc.rendered.title}`,
     "",
@@ -1015,7 +1442,7 @@ function renderMarkdown(doc) {
   for (const entry of doc.rendered.entries) {
     lines.push(`## ${entry.time_label} — ${entry.title}`, "");
     lines.push(entry.summary, "");
-    lines.push(...buildMediaPlaceholderBlock(entry));
+    lines.push(...buildMediaPlaceholderBlock(entry, options));
     for (const item of entry.items) {
       const suffix = item.commit_shas.length ? ` (${item.commit_shas.map((sha) => `\`${sha.slice(0, 7)}\``).join(", ")})` : "";
       lines.push(`- ${item.text}${suffix}`);
@@ -1199,16 +1626,20 @@ async function main() {
     rawCommits: allCommits,
     batchCount: timeBatches.length,
     artifactSummaries,
-    rendered: annotateRenderedEntriesWithMedia(rendered, allCommits),
+    rendered: preserveExistingPublishedMedia(
+      await annotateRenderedEntriesWithMedia(rendered, allCommits),
+      [existingToday, latestExisting],
+    ),
   };
 
   writeJson(todayJsonPath, doc);
   writeJson(latestPath, doc);
 
-  const markdown = renderMarkdown(doc);
+  const todayMarkdown = renderMarkdown(doc, { pagesDir, markdownPath: todayMdPath });
+  const latestMarkdown = renderMarkdown(doc, { pagesDir, markdownPath: latestMdPath });
   fs.mkdirSync(path.dirname(todayMdPath), { recursive: true });
-  fs.writeFileSync(todayMdPath, markdown);
-  fs.writeFileSync(latestMdPath, markdown);
+  fs.writeFileSync(todayMdPath, todayMarkdown);
+  fs.writeFileSync(latestMdPath, latestMarkdown);
 
   const indexEntries = fs.readdirSync(historyDir)
     .filter((name) => name.endsWith(".json"))
@@ -1258,6 +1689,9 @@ export {
   batchCommits,
   buildMediaPlaceholderBlock,
   buildAnthropicRequestBody,
+  inferEntryMediaHeuristic,
+  mergeMediaDecision,
+  preserveExistingPublishedMedia,
   validateRenderedEntry,
 };
 

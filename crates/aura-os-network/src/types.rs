@@ -668,6 +668,7 @@ pub struct ReportUsageRequest {
     pub input_tokens: u64,
     pub output_tokens: u64,
     pub estimated_cost_usd: f64,
+    pub zero_pro_user: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

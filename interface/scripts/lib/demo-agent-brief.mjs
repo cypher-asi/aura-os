@@ -31,6 +31,14 @@ function tokenize(values) {
   );
 }
 
+function normalizeTextForMatch(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function humanizeIdentifier(value) {
   return String(value || "")
     .replace(/\.[^.]+$/, "")
@@ -54,8 +62,11 @@ function looksLikeInternalProofPhrase(value) {
     return true;
   }
 
+  const words = text.split(/\s+/g).filter(Boolean);
+  const looksLikeShortUiLabel = words.length <= 3 && words.some((word) => /^[A-Z][A-Za-z0-9]*$/.test(word));
   if (
-    /(?:store|cache|bootstrap|hydration|handler|handlers|hook|hooks|selector|selectors|state|query|queries|util|utils|runner|stream|event|events|fixture|fixtures|test|tests|spec|specs|module)$/i.test(text)
+    !looksLikeShortUiLabel
+    && /(?:store|cache|bootstrap|hydration|handler|handlers|hook|hooks|selector|selectors|state|query|queries|util|utils|runner|stream|event|events|fixture|fixtures|test|tests|spec|specs|module)$/i.test(text)
   ) {
     return true;
   }
@@ -564,7 +575,13 @@ function buildSetupPlan({ story, targetApp, surfaceHints = [] }) {
   return normalizeArray(setup, 6);
 }
 
-function buildValidationSignals({ story, targetApp, surfaceHints = [], successChecklist = [] }) {
+function buildValidationSignals({
+  story,
+  targetApp,
+  surfaceHints = [],
+  successChecklist = [],
+  changedFileEvidence = null,
+}) {
   const loweredStory = String(story || "").toLowerCase();
   const storySignals = [];
   const isAgentCreationStory = targetApp?.id === "agents" && /\b(create|new)\b/i.test(loweredStory) && /\bagent\b/i.test(loweredStory);
@@ -589,15 +606,23 @@ function buildValidationSignals({ story, targetApp, surfaceHints = [], successCh
     storySignals.push("is ready");
   }
 
+  const groundedProofPhrases = collectGroundedProofPhrases({
+    story,
+    surfaceHints,
+    successChecklist,
+    changedFileEvidence,
+  });
+
   return sanitizeVisibleProofPhrases([
     targetApp?.label,
     ...storySignals,
+    ...groundedProofPhrases,
     ...surfaceHints,
     ...successChecklist
       .flatMap((entry) => String(entry || "").split(/:|;|,|\bor\b/gi))
       .map((entry) => entry.trim())
       .filter((entry) => entry.length >= 4 && entry.length <= 48),
-  ], 8);
+  ], 10);
 }
 
 function normalizeProofRequirements(requirements, limit = 6) {
@@ -630,7 +655,25 @@ function normalizeProofRequirements(requirements, limit = 6) {
     .slice(0, limit);
 }
 
-function buildStoryProofRules({ story, targetApp, surfaceHints = [] }) {
+function mergeProofRequirements(requirements, limit = 6) {
+  const mergedByLabel = new Map();
+  for (const requirement of normalizeProofRequirements(requirements, 40)) {
+    const key = normalizeTextForMatch(requirement.label || requirement.anyOf[0]);
+    if (!key) {
+      continue;
+    }
+    const current = mergedByLabel.get(key);
+    mergedByLabel.set(key, current
+      ? {
+          ...current,
+          anyOf: sanitizeVisibleProofPhrases([...current.anyOf, ...requirement.anyOf], 4),
+        }
+      : requirement);
+  }
+  return Array.from(mergedByLabel.values()).slice(0, limit);
+}
+
+function buildStoryProofRules({ story, targetApp, surfaceHints = [], changedFileEvidence = null }) {
   const loweredStory = String(story || "").toLowerCase();
   const isAgentCreationStory = targetApp?.id === "agents"
     && /\b(create|new)\b/i.test(loweredStory)
@@ -645,6 +688,17 @@ function buildStoryProofRules({ story, targetApp, surfaceHints = [] }) {
     }
     proofRequirements.push({ label, anyOf: normalized });
   };
+  const storyVersionedProofPhrases = collectVersionedStoryPhrases(story, 3);
+  const groundedProofPhrases = collectGroundedProofPhrases({
+    story,
+    surfaceHints,
+    changedFileEvidence,
+  });
+  const namedVersionedProofPhrases = (
+    storyVersionedProofPhrases.length > 0
+      ? storyVersionedProofPhrases
+      : groundedProofPhrases.filter((entry) => /\d/.test(entry))
+  ).slice(0, 3);
 
   if (targetApp?.id === "feedback" && /\bcomment(s)?\b|\bthread\b/i.test(loweredStory)) {
     requiredUiSignals.push("feedbackThreadVisible");
@@ -673,9 +727,46 @@ function buildStoryProofRules({ story, targetApp, surfaceHints = [] }) {
     addRequirement("skills surface", ["Installed", "My Skills", "Available", "Skill Shop"]);
   }
 
+  if (
+    namedVersionedProofPhrases.length > 0
+    && /\b(model|models|picker|dropdown|selector|menu|option)\b/i.test(loweredStory)
+  ) {
+    addRequirement("named model option", namedVersionedProofPhrases);
+  }
+
+  if (targetApp?.id === "process") {
+    const surfaceText = surfaceHints.join(" ").toLowerCase();
+    const wantsRunSurface = /\b(run|runs|timeline|event|events|node|sidekick|preview)\b/i.test(loweredStory)
+      || /\b(event timeline|run preview|process sidekick|node output|process event)\b/i.test(surfaceText);
+    const wantsOutputSurface = /\b(output|outputs|task|tasks|live|build|block|blocks|artifact|artifacts)\b/i.test(loweredStory)
+      || /\b(node output|process event output|run preview)\b/i.test(surfaceText);
+
+    if (wantsRunSurface || wantsOutputSurface) {
+      requiredUiSignals.push("sidekickVisible");
+      addRequirement("process run detail", ["Run Detail", "Node Events", "Events", "Build Output"]);
+      forbiddenPhrases.push("No runs yet");
+      forbiddenPhrases.push("No events for this run");
+    }
+
+    if (wantsOutputSurface) {
+      addRequirement("process output block", ["Output", "Completed Task Output", "Copy output"]);
+      forbiddenPhrases.push("No output persisted for this node");
+    }
+  }
+
   if (isAgentCreationStory) {
     addRequirement("created agent name", ["AtlasDemoAgent"]);
     addRequirement("created agent ready state", ["is ready"]);
+  }
+
+  if (
+    targetApp?.id === "agents"
+    && /\b(model|models|picker|dropdown|selector|menu)\b/i.test(loweredStory)
+  ) {
+    requiredUiSignals.push("chatComposerVisible");
+    if (/\b(picker|dropdown|selector|menu)\b/i.test(loweredStory)) {
+      requiredUiSignals.push("modelPickerVisible");
+    }
   }
 
   if (/\bmodal\b|\bdialog\b/i.test(loweredStory) && !(/\bdelete\b|\bremove\b/i.test(loweredStory) && /\bskill\b/i.test(loweredStory))) {
@@ -701,6 +792,50 @@ function buildValidationInstruction({ story, targetApp, surfaceHints = [], valid
     "Do not switch into mobile mode, do not type hidden URLs, do not use direct URL jumps, and do not wander after the proof becomes visible.",
   ];
   return lines.filter(Boolean).join(" ");
+}
+
+function collectVersionedStoryPhrases(story, limit = 6) {
+  const words = String(story || "").match(/[A-Za-z0-9./-]+/g) ?? [];
+  const matches = [];
+  const qualifiers = new Set(["mini", "nano", "lite", "pro", "max", "preview", "beta", "alpha", "flash", "image", "coder", "codex", "oss"]);
+
+  for (let index = 0; index < words.length; index += 1) {
+    const current = words[index];
+    const previous = words[index - 1] || "";
+    const next = words[index + 1] || "";
+    const hasLettersAndDigits = /[A-Za-z]/.test(current) && /\d/.test(current);
+    const isVersionNumber = /^\d+(?:\.\d+)+(?:-[A-Za-z0-9]+)?$/i.test(current);
+    if (hasLettersAndDigits) {
+      const qualifier = qualifiers.has(next.toLowerCase()) ? ` ${next}` : "";
+      matches.push(`${current}${qualifier}`.trim());
+      continue;
+    }
+    if (isVersionNumber && /^[A-Z][A-Za-z0-9.-]+$/.test(previous)) {
+      const qualifier = qualifiers.has(next.toLowerCase()) ? ` ${next}` : "";
+      matches.push(`${previous} ${current}${qualifier}`.trim());
+    }
+  }
+  return sanitizeVisibleProofPhrases(matches, limit);
+}
+
+function collectGroundedProofPhrases({ story, surfaceHints = [], successChecklist = [], changedFileEvidence = null }) {
+  const normalizedStory = normalizeTextForMatch(story);
+  const evidencePhrases = [
+    ...surfaceHints,
+    ...successChecklist,
+    ...((changedFileEvidence?.files ?? []).flatMap((fileInfo) => fileInfo.uiStrings ?? [])),
+  ];
+  const storyMatchedEvidence = evidencePhrases.filter((phrase) => {
+    const normalizedPhrase = normalizeTextForMatch(phrase);
+    return normalizedPhrase ? normalizedStory.includes(normalizedPhrase) : false;
+  });
+  const versionedEvidence = evidencePhrases.filter((phrase) => /\d/.test(String(phrase || "")));
+
+  return sanitizeVisibleProofPhrases([
+    ...collectVersionedStoryPhrases(story),
+    ...storyMatchedEvidence,
+    ...versionedEvidence,
+  ], 8);
 }
 
 async function analyzeChangedFile(filePath, apps) {
@@ -783,7 +918,7 @@ async function analyzeChangedFile(filePath, apps) {
   return {
     filePath: normalizedPath,
     surfaceLabel,
-    uiStrings: uiStrings.slice(0, 8),
+    uiStrings: uiStrings.slice(0, 16),
     routeHints: routeHints.slice(0, 6),
     dataAgentSurfaces,
     dataAgentActions,
@@ -879,11 +1014,13 @@ function fallbackBrief({ prompt, changelogDoc, changedFiles, apps, changedFileEv
     targetApp,
     surfaceHints,
     successChecklist,
+    changedFileEvidence,
   });
   const proofRules = buildStoryProofRules({
     story,
     targetApp,
     surfaceHints,
+    changedFileEvidence,
   });
   const validationInstruction = buildValidationInstruction({
     story,
@@ -955,7 +1092,10 @@ function validateBrief(candidate, fallback, apps) {
   }
 
   const targetApp = apps.find((app) => app.id === candidate.targetAppId) ?? apps.find((app) => app.id === fallback.targetAppId) ?? null;
-  const successChecklist = normalizeArray(candidate.successChecklist ?? fallback.successChecklist, 5);
+  const successChecklist = normalizeArray([
+    ...(Array.isArray(candidate.successChecklist) ? candidate.successChecklist : []),
+    ...(Array.isArray(fallback.successChecklist) ? fallback.successChecklist : []),
+  ], 5);
   const surfaceHints = buildSurfaceHints(targetApp?.id, fallback.changedFileEvidence);
   const phases = buildPhaseInstructions({
     story: candidate.story || fallback.story,
@@ -964,32 +1104,39 @@ function validateBrief(candidate, fallback, apps) {
     surfaceHints,
     fileEvidence: fallback.scoredApps.find((entry) => entry.appId === targetApp?.id)?.fileMatches ?? [],
   });
-  const setupPlan = normalizeArray(candidate.setupPlan ?? fallback.setupPlan, 6);
-  const validationSignals = sanitizeVisibleProofPhrases(
-    candidate.validationSignals ?? fallback.validationSignals,
-    8,
-  );
+  const setupPlan = normalizeArray([
+    ...(Array.isArray(candidate.setupPlan) ? candidate.setupPlan : []),
+    ...(Array.isArray(fallback.setupPlan) ? fallback.setupPlan : []),
+  ], 6);
+  const validationSignals = sanitizeVisibleProofPhrases([
+    ...(Array.isArray(candidate.validationSignals) ? candidate.validationSignals : []),
+    ...(Array.isArray(fallback.validationSignals) ? fallback.validationSignals : []),
+  ], 10);
   const proofRules = buildStoryProofRules({
     story: candidate.story || fallback.story,
     targetApp,
     surfaceHints,
+    changedFileEvidence: fallback.changedFileEvidence,
   });
-  const proofRequirements = normalizeProofRequirements(
-    candidate.proofRequirements
-    ?? fallback.proofRequirements
-    ?? proofRules.proofRequirements,
-    6,
-  );
+  const proofRequirements = mergeProofRequirements([
+    ...(Array.isArray(candidate.proofRequirements) ? candidate.proofRequirements : []),
+    ...(Array.isArray(fallback.proofRequirements) ? fallback.proofRequirements : []),
+    ...proofRules.proofRequirements,
+  ], 6);
   const requiredUiSignals = normalizeArray(
-    candidate.requiredUiSignals
-    ?? fallback.requiredUiSignals
-    ?? proofRules.requiredUiSignals,
+    [
+      ...(Array.isArray(candidate.requiredUiSignals) ? candidate.requiredUiSignals : []),
+      ...(Array.isArray(fallback.requiredUiSignals) ? fallback.requiredUiSignals : []),
+      ...proofRules.requiredUiSignals,
+    ],
     4,
   );
   const forbiddenPhrases = normalizeArray(
-    candidate.forbiddenPhrases
-    ?? fallback.forbiddenPhrases
-    ?? proofRules.forbiddenPhrases,
+    [
+      ...(Array.isArray(candidate.forbiddenPhrases) ? candidate.forbiddenPhrases : []),
+      ...(Array.isArray(fallback.forbiddenPhrases) ? fallback.forbiddenPhrases : []),
+      ...proofRules.forbiddenPhrases,
+    ],
     6,
   );
 
@@ -1064,6 +1211,7 @@ async function generateAnthropicBrief({ prompt, changelogDoc, changedFiles, apps
           "Return JSON only with keys: title, story, targetAppId, confidence, rationale, successChecklist, setupPlan, systemPrompt, setupInstruction, openAppInstruction, proofInstruction, validationSignals, proofRequirements, requiredUiSignals, forbiddenPhrases, validationInstruction, interactionInstruction, desktopOnly.",
           "Only use a targetAppId from the supplied app catalog, or null if uncertain.",
           "Favor the clearest user-visible proof screen over generic app overviews.",
+          "If the story introduces a named model, menu option, or labeled product choice, include that exact visible label in validationSignals and proofRequirements.",
           "The setupPlan should explain how to reach the proof state without assuming a handcrafted scenario exists.",
           "The validationSignals should be short visible phrases or labels that should be on screen when the proof is correct.",
           "proofRequirements should be a small array of { label, anyOf } groups that must appear inside the proof crop for the screenshot to count as a correct feature proof.",

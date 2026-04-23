@@ -54,8 +54,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: retry-release-changelog-media-${{ inputs.channel }}-${{ inputs.version || inputs.date || github.run_id }}
-  cancel-in-progress: true
+  group: changelog-media-${{ inputs.channel }}
+  cancel-in-progress: false
 
 jobs:
   retry-media:
@@ -70,6 +70,7 @@ jobs:
           INPUT_PROVIDER: ${{ inputs.provider }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           provider="$INPUT_PROVIDER"
@@ -112,6 +113,11 @@ jobs:
             fi
           fi
 
+          if [[ -z "$OPENAI_API_KEY" ]]; then
+            echo "OPENAI_API_KEY is required because changelog screenshots are always transformed into branded OpenAI-polished media before publishing." >&2
+            exit 1
+          fi
+
           repo_ref="${{ inputs.head_sha }}"
           if [[ -z "$repo_ref" ]]; then
             repo_ref="main"
@@ -127,6 +133,12 @@ jobs:
           ref: ${{ steps.preflight.outputs.repo_ref }}
           fetch-depth: 0
           path: repo
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+          path: workflow
 
       - uses: actions/checkout@v4
         with:
@@ -193,6 +205,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           BROWSERBASE_API_KEY: ${{ secrets.BROWSERBASE_API_KEY }}
           BROWSERBASE_PROJECT_ID: ${{ secrets.BROWSERBASE_PROJECT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
           ARGS=(
@@ -239,8 +252,10 @@ jobs:
           echo "failed=$(jq -r '.failed // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "published=$(jq -r '.published // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
           echo "skipped=$(jq -r '.skipped // 0' "$summary_file")" >> "$GITHUB_OUTPUT"
-          echo "workflow_outcome=$(jq -r '.workflowOutcome // \"failure\"' \"$summary_file\")" >> "$GITHUB_OUTPUT"
-          echo "should_fail=$(jq -r '.shouldFailWorkflow // true' \"$summary_file\")" >> "$GITHUB_OUTPUT"
+          workflow_outcome="$(jq -r '.workflowOutcome // "failure"' "$summary_file")"
+          should_fail="$(jq -r 'if has("shouldFailWorkflow") then .shouldFailWorkflow else true end' "$summary_file")"
+          echo "workflow_outcome=$workflow_outcome" >> "$GITHUB_OUTPUT"
+          echo "should_fail=$should_fail" >> "$GITHUB_OUTPUT"
           echo "strict_passed=$(jq -r '.strictRubricPassed // false' "$summary_file")" >> "$GITHUB_OUTPUT"
 
       - name: Append changelog media diagnostics summary
@@ -274,7 +289,6 @@ jobs:
         if: always() && steps.summary.outputs.found == 'true'
         shell: bash
         run: |
-          cd pages
           label="${{ inputs.version }}"
           if [[ -z "$label" ]]; then
             label="${{ inputs.date }}"
@@ -282,12 +296,11 @@ jobs:
           if [[ -z "$label" ]]; then
             label="${{ inputs.channel }}"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "changelog/${{ inputs.channel }}"
-          git add "assets/changelog/${{ inputs.channel }}" 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Retry ${{ inputs.channel }} changelog media for ${label}"
-          git push
+          bash workflow/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Retry ${{ inputs.channel }} changelog media for ${label}" \
+            "changelog/${{ inputs.channel }}" \
+            "assets/changelog/${{ inputs.channel }}"
 
       - name: Finalize retried changelog media outcome
         if: always()

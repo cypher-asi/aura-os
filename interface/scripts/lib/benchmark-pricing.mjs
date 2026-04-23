@@ -80,6 +80,12 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
 };
 
 const OPENAI_MODEL_PRICING_PER_MTOK = {
+  "gpt-5.5": {
+    input: 5,
+    output: 30,
+    cacheWrite: 5,
+    cacheRead: 0.5,
+  },
   "gpt-5.4": {
     input: 2.5,
     output: 15,
@@ -113,7 +119,13 @@ const OPENAI_MODEL_PRICING_PER_MTOK = {
 };
 
 function normalizeModelKey(model) {
-  return typeof model === "string" ? model.trim().toLowerCase() : "";
+  const modelKey = typeof model === "string" ? model.trim().toLowerCase() : "";
+  const unprefixed = modelKey.startsWith("openai/") ? modelKey.slice("openai/".length) : modelKey;
+  const auraGptMatch = unprefixed.match(/^aura-gpt-(\d+)-(\d+)(.*)$/);
+  if (auraGptMatch) {
+    return `gpt-${auraGptMatch[1]}.${auraGptMatch[2]}${auraGptMatch[3]}`;
+  }
+  return unprefixed;
 }
 
 function inferProvider(model, provider) {

@@ -99,6 +99,30 @@ test("buildDemoAgentBrief uses changed file evidence to infer an integrations pr
   }
 });
 
+test("buildDemoAgentBrief adds grounded model-picker proof rules for named model stories", async () => {
+  const previous = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+
+  const brief = await buildDemoAgentBrief({
+    prompt: "GPT-5.5 is now available from the chat input model picker.",
+    changedFiles: [
+      "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+      "interface/src/constants/models.ts",
+    ],
+  });
+
+  assert.equal(brief.generator, "fallback");
+  assert.equal(brief.targetAppId, "agents");
+  assert.ok(brief.validationSignals.includes("GPT-5.5"));
+  assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("GPT-5.5")));
+  assert.ok(brief.requiredUiSignals.includes("chatComposerVisible"));
+  assert.ok(brief.requiredUiSignals.includes("modelPickerVisible"));
+
+  if (previous) {
+    process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
 test("buildDemoAgentBrief adds created-agent proof signals for agent creation stories", async () => {
   const previous = process.env.ANTHROPIC_API_KEY;
   delete process.env.ANTHROPIC_API_KEY;
@@ -188,6 +212,127 @@ test("buildDemoAgentBrief filters implementation-only validation hints from chan
 
   if (previous) {
     process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
+test("buildDemoAgentBrief requires process run output proof for output-block stories", async () => {
+  const previous = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+
+  const brief = await buildDemoAgentBrief({
+    prompt: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+    changedFiles: [
+      "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+      "interface/src/apps/process/components/ProcessEventOutput/ProcessEventOutput.tsx",
+    ],
+  });
+
+  assert.equal(brief.generator, "fallback");
+  assert.equal(brief.targetAppId, "process");
+  assert.ok(brief.requiredUiSignals.includes("sidekickVisible"));
+  assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Node Events")));
+  assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Completed Task Output")));
+  assert.ok(brief.forbiddenPhrases.includes("No output persisted for this node"));
+
+  if (previous) {
+    process.env.ANTHROPIC_API_KEY = previous;
+  }
+});
+
+test("buildDemoAgentBrief keeps deterministic proof rules when Anthropic omits them", async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          title: "Process output borders",
+          story: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+          targetAppId: "process",
+          confidence: "high",
+          validationSignals: ["Demo Process", "Process"],
+          proofRequirements: [],
+          requiredUiSignals: [],
+          forbiddenPhrases: [],
+          desktopOnly: true,
+        }),
+      }],
+    }),
+  });
+
+  try {
+    const brief = await buildDemoAgentBrief({
+      prompt: "Run event timeline rows and task live/build output blocks now use the standard border token.",
+      changedFiles: [
+        "interface/src/apps/process/components/ProcessSidekickContent/EventTimelineItem.tsx",
+      ],
+    });
+
+    assert.equal(brief.targetAppId, "process");
+    assert.equal(brief.generator, "anthropic");
+    assert.ok(brief.requiredUiSignals.includes("sidekickVisible"));
+    assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("Completed Task Output")));
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey) {
+      process.env.ANTHROPIC_API_KEY = previousKey;
+    } else {
+      delete process.env.ANTHROPIC_API_KEY;
+    }
+  }
+});
+
+test("buildDemoAgentBrief keeps fallback proof signals when Anthropic returns empty arrays", async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.ANTHROPIC_API_KEY = "test-key";
+
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          title: "GPT-5.5 picker",
+          story: "GPT-5.5 is now available from the chat input model picker.",
+          targetAppId: "agents",
+          confidence: "high",
+          validationSignals: [],
+          proofRequirements: [],
+          requiredUiSignals: [],
+          forbiddenPhrases: [],
+          desktopOnly: true,
+        }),
+      }],
+    }),
+  });
+
+  try {
+    const brief = await buildDemoAgentBrief({
+      prompt: "GPT-5.5 is now available from the chat input model picker.",
+      changedFiles: [
+        "interface/src/components/ChatInputBar/ChatInputBar.tsx",
+        "interface/src/constants/models.ts",
+      ],
+    });
+
+    assert.equal(brief.targetAppId, "agents");
+    assert.equal(brief.generator, "anthropic");
+    assert.ok(brief.validationSignals.includes("GPT-5.5"));
+    assert.ok(brief.proofRequirements.some((entry) => entry.anyOf.includes("GPT-5.5")));
+    assert.ok(brief.requiredUiSignals.includes("chatComposerVisible"));
+    assert.ok(brief.requiredUiSignals.includes("modelPickerVisible"));
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey) {
+      process.env.ANTHROPIC_API_KEY = previousKey;
+    } else {
+      delete process.env.ANTHROPIC_API_KEY;
+    }
   }
 });
 
