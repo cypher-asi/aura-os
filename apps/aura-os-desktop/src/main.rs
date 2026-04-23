@@ -1821,38 +1821,42 @@ mod tests {
     }
 }
 
-/// Disables the default Win32 background erase on the main window's class so
-/// that growing the window (right / bottom drag-resize) does not paint a
-/// black bar at the newly-exposed edge before the WebView2 swap chain has
-/// caught up with the new size.
+/// Sets the main window class background brush to `BLACK_BRUSH` so that
+/// growing the window (right / bottom drag-resize) paints a black bar at
+/// the newly-exposed edge before the WebView2 swap chain catches up with
+/// the new size, rather than the OS-default white.
 ///
-/// Previously this installed `BLACK_BRUSH`, which was intended to keep the
-/// pre-webview frame black during startup. But during live resize the OS
-/// uses that class brush in `WM_ERASEBKGND` to fill newly-exposed client
-/// area *before* the WebView2 child HWND finishes repainting, producing the
-/// visible "black edge chasing the cursor" effect users reported.
+/// Trade-off vs. `NULL_BRUSH` (hollow brush, "don't erase"):
+/// - `NULL_BRUSH` assumes the WebView2 child HWND already covers the whole
+///   client area and its previous frame can stay on screen. In practice,
+///   during a live drag-resize the WebView2 child lags the OS-level resize
+///   by a few frames, and the uncovered strip is filled by DWM composition
+///   — which renders as bright white. That flash is very jarring against
+///   the app's dark theme.
+/// - `BLACK_BRUSH` makes the OS fill the same uncovered strip with black
+///   during `WM_ERASEBKGND`. A thin black sliver can briefly "chase" the
+///   cursor on the leading edge of a drag-resize, but it blends into the
+///   dark theme and into the WebView's own background color
+///   (`with_background_color((0, 0, 0, 255))` in `create_main_webview`).
 ///
-/// `NULL_BRUSH` / hollow brush tells Windows "do not erase"; the WebView2
-/// child HWND (built with `with_background_color((0, 0, 0, 255))` in
-/// `create_main_webview`) already covers the whole client area and handles
-/// its own background, so the previous frame stays on screen while the
-/// webview resizes instead of flashing black.
+/// Between a visible white flash and a visible black flash we explicitly
+/// choose black.
 ///
 /// Startup behavior is preserved: the main window is created with
 /// `with_visible(false)` and stays hidden until the frontend posts `ready`,
-/// so users never see the un-erased initial frame.
+/// so users never see the pre-webview erase color anyway.
 fn disable_window_background_erase(_window: &tao::window::Window) {
     #[cfg(target_os = "windows")]
     {
         use tao::platform::windows::WindowExtWindows;
         use windows::Win32::Foundation::HWND;
-        use windows::Win32::Graphics::Gdi::{GetStockObject, NULL_BRUSH};
+        use windows::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH};
         use windows::Win32::UI::WindowsAndMessaging::{SetClassLongPtrW, GCL_HBRBACKGROUND};
 
         let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
         unsafe {
-            let hollow = GetStockObject(NULL_BRUSH);
-            SetClassLongPtrW(hwnd, GCL_HBRBACKGROUND, hollow.0 as isize);
+            let black = GetStockObject(BLACK_BRUSH);
+            SetClassLongPtrW(hwnd, GCL_HBRBACKGROUND, black.0 as isize);
         }
     }
 }
