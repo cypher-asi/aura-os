@@ -1380,6 +1380,7 @@ struct UsageReportingContext {
     network_client: Arc<NetworkClient>,
     access_token: String,
     network_user_id: String,
+    zero_pro_user: bool,
     model: String,
     org_id: Option<String>,
 }
@@ -1403,6 +1404,7 @@ async fn report_automaton_usage(
         input_tokens: turn_usage.input_tokens,
         output_tokens: turn_usage.output_tokens,
         estimated_cost_usd,
+        zero_pro_user: usage.zero_pro_user,
         org_id: usage.org_id.clone(),
         agent_id: None,
         project_id: Some(project_id.to_string()),
@@ -1477,6 +1479,7 @@ async fn build_usage_reporting_context(
         network_client,
         access_token: jwt_str.to_string(),
         network_user_id: network_user_id.to_string(),
+        zero_pro_user: cached.session.is_zero_pro,
         model: model.unwrap_or_else(|| "claude-opus-4-6".to_string()),
         org_id,
     })
