@@ -10,7 +10,7 @@
   background: transparent;
   flex-shrink: 0;
   box-sizing: border-box;
-  padding: 4px var(--space-2);
+  padding: 4px 5px;
 }
 
 .left,
