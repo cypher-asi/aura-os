@@ -180,7 +180,7 @@
 .inputRow {
   position: relative;
   display: block;
-  min-height: calc(var(--control-height-sm, 32px) - 2px);
+  min-height: var(--control-height-sm, 32px);
   padding: 0;
 }
 
@@ -193,13 +193,12 @@
   color: var(--color-text);
   font-family: inherit;
   font-size: 13px;
-  line-height: 1.4;
-  box-sizing: border-box;
+  line-height: 1.5;
   /* Leave room at the left/right so typed text never slides under the
      floating attach/send buttons anchored in the bottom corners. */
-  padding: 4px 32px;
+  padding: 6px 32px;
   height: auto;
-  min-height: calc(var(--control-height-sm, 32px) - 2px);
+  min-height: var(--control-height-sm, 32px);
   max-height: min(70vh, 800px);
   outline: none;
   overflow-x: hidden;
