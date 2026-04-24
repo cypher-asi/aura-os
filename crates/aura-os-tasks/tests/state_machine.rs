@@ -13,23 +13,51 @@ mod helpers;
 // 1. Valid and invalid state transitions (pure validation logic)
 // ---------------------------------------------------------------------------
 
+/// `validate_transition` enumerates only the **direct** storage-legal
+/// edges (plus the aura-os-only Backlog/ToDo edges the planner uses
+/// before anything hits storage). Edges that require bridging - such
+/// as `InProgress -> Ready` or `Failed -> InProgress` - are
+/// intentionally rejected here; callers must use
+/// `aura_os_tasks::safe_transition`, which bridges through
+/// intermediate hops. See the doc-comment on `validate_transition`
+/// for why: its prior list included `(InProgress, Ready)` and
+/// `(Failed, InProgress)` which storage then 400'd, and the two
+/// disagreeing state machines caused a protracted whack-a-mole.
 #[test]
 fn valid_transitions_succeed() {
+    // Storage-enforced direct edges (must match
+    // aura-storage/crates/domain/tasks/src/repo.rs::validate_transition).
+    assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::Ready).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::Ready, TaskStatus::InProgress).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Done).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Failed).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Blocked).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Ready).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::Blocked, TaskStatus::Ready).is_ok());
+
+    // aura-os-only Backlog/ToDo edges (not persisted by storage).
     assert!(TaskService::validate_transition(TaskStatus::Backlog, TaskStatus::ToDo).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Backlog, TaskStatus::Pending).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::ToDo, TaskStatus::Pending).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::ToDo, TaskStatus::Backlog).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::ToDo).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::Backlog).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::Ready).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::Ready, TaskStatus::InProgress).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Done).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Failed).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Blocked).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Ready).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Ready).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::Failed, TaskStatus::InProgress).is_ok());
-    assert!(TaskService::validate_transition(TaskStatus::Blocked, TaskStatus::Ready).is_ok());
+}
+
+/// Regression pins for the two edges that used to be in the list but
+/// are **not** storage-legal. Anyone re-adding them to
+/// `validate_transition` will fail this test, because the real fix for
+/// those transitions is a bridge via `safe_transition`.
+#[test]
+fn non_storage_edges_are_rejected_by_direct_validator() {
+    assert!(
+        TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Ready).is_err(),
+        "in_progress -> ready must go through safe_transition (bridge via failed)"
+    );
+    assert!(
+        TaskService::validate_transition(TaskStatus::Failed, TaskStatus::InProgress).is_err(),
+        "failed -> in_progress must go through safe_transition (bridge via ready)"
+    );
 }
 
 /// Auto-promote uses the two-step sequence ToDo -> Pending -> Ready.

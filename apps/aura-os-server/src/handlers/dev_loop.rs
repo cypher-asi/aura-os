@@ -15,7 +15,7 @@ use aura_os_link::{connect_with_retries, AutomatonStartError, AutomatonStartPara
 use aura_os_network::{NetworkClient, ReportUsageRequest};
 use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_storage::StorageTaskFileChangeSummary;
-use aura_os_tasks::TaskService;
+use aura_os_tasks::{safe_transition, TaskService};
 
 use super::projects_helpers::{
     resolve_agent_instance_workspace_path, validate_workspace_is_initialised,
@@ -3941,32 +3941,23 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                                 "Failed to persist completion-validation failure metadata"
                                             );
                                         }
-                                        // When the retry ladder moved the
-                                        // task to `ready` before the
-                                        // restart failed, aura-storage
-                                        // rejects a direct `ready →
-                                        // failed` transition. Bridge
-                                        // through `in_progress` first so
-                                        // the row actually lands in
-                                        // `failed` instead of getting
-                                        // stuck in `ready` with no
-                                        // terminal badge.
-                                        if gate_retry_reset {
-                                            let bridge = aura_os_storage::TransitionTaskRequest {
-                                                status: "in_progress".to_string(),
-                                            };
-                                            if let Err(error) = storage_client
-                                                .transition_task(tid, jwt, &bridge)
-                                                .await
-                                            {
-                                                warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before completion-gate terminal failure");
-                                            }
-                                        }
-                                        let req = aura_os_storage::TransitionTaskRequest {
-                                            status: "failed".to_string(),
-                                        };
+                                        // `safe_transition` reads the
+                                        // current status and bridges
+                                        // through whatever intermediate
+                                        // hops aura-storage requires
+                                        // (e.g. `ready -> in_progress
+                                        // -> failed`, or a no-op if
+                                        // the task is already
+                                        // `failed`). This replaces the
+                                        // old hand-rolled conditional
+                                        // bridge that only fired on the
+                                        // `gate_retry_reset` flag and
+                                        // left other `ready` states
+                                        // 400ing.
+                                        let _ = gate_retry_reset; // retained for future observability; bridge is now status-driven
                                         if let Err(error) =
-                                            storage_client.transition_task(tid, jwt, &req).await
+                                            safe_transition(storage_client, jwt, tid, TaskStatus::Failed)
+                                                .await
                                         {
                                             warn!(task_id = %tid, %error, "Failed to transition invalid completion to Failed (may already be terminal)");
                                         }
@@ -3985,11 +3976,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 } else if let (Some(storage_client), Some(jwt)) =
                                     (storage_client.as_ref(), jwt.as_deref())
                                 {
-                                    let req = aura_os_storage::TransitionTaskRequest {
-                                        status: "done".to_string(),
-                                    };
                                     if let Err(error) =
-                                        storage_client.transition_task(tid, jwt, &req).await
+                                        safe_transition(storage_client, jwt, tid, TaskStatus::Done)
+                                            .await
                                     {
                                         warn!(task_id = %tid, %error, "Failed to transition task to Done (may already be terminal)");
                                     }
@@ -4064,11 +4053,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                         if let (Some(storage_client), Some(jwt)) =
                                             (storage_client.as_ref(), jwt.as_deref())
                                         {
-                                            let req = aura_os_storage::TransitionTaskRequest {
-                                                status: "done".to_string(),
-                                            };
                                             if let Err(error) =
-                                                storage_client.transition_task(tid, jwt, &req).await
+                                                safe_transition(storage_client, jwt, tid, TaskStatus::Done)
+                                                    .await
                                             {
                                                 warn!(
                                                     task_id = %tid,
@@ -4451,31 +4438,20 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                 if let (Some(storage_client), Some(jwt)) =
                                     (storage_client.as_ref(), jwt.as_deref())
                                 {
-                                    // When a prior `reset_task_for_infra_retry`
-                                    // already flipped this task to `ready`
-                                    // and the subsequent restart failed,
-                                    // aura-storage will reject a direct
-                                    // `ready → failed` transition. Bridge
-                                    // through `in_progress` first so the
-                                    // task actually lands in `failed` and
-                                    // the UI reflects the terminal state
-                                    // instead of leaving the row stuck in
-                                    // `ready` with no explanatory badge.
-                                    if task_reset_to_ready {
-                                        let bridge = aura_os_storage::TransitionTaskRequest {
-                                            status: "in_progress".to_string(),
-                                        };
-                                        if let Err(error) =
-                                            storage_client.transition_task(tid, jwt, &bridge).await
-                                        {
-                                            warn!(task_id = %tid, %error, "Failed to bridge ready->in_progress before terminal failure");
-                                        }
-                                    }
-                                    let req = aura_os_storage::TransitionTaskRequest {
-                                        status: "failed".to_string(),
-                                    };
+                                    // `safe_transition` figures out the
+                                    // correct bridge based on current
+                                    // status (e.g. `ready -> in_progress
+                                    // -> failed` when the infra-retry
+                                    // ladder already flipped the task
+                                    // to `ready`). Replaces the old
+                                    // hand-rolled bridge that only
+                                    // fired on `task_reset_to_ready`
+                                    // and left other `ready` states
+                                    // 400ing at storage.
+                                    let _ = task_reset_to_ready; // retained for future observability; bridge is now status-driven
                                     if let Err(error) =
-                                        storage_client.transition_task(tid, jwt, &req).await
+                                        safe_transition(storage_client, jwt, tid, TaskStatus::Failed)
+                                            .await
                                     {
                                         warn!(task_id = %tid, %error, "Failed to transition task to Failed (may already be terminal)");
                                     }
@@ -4538,6 +4514,10 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // "Putting it all together..." indicator.
                             if !terminal_seen {
                                 if let Some(tid) = current_task_id.clone() {
+                                    warn!(
+                                        task_id = %tid,
+                                        "Harness automaton emitted Done without a terminal task_completed/task_failed; synthesising task_failed"
+                                    );
                                     synthesize_task_failed(
                                         &app_broadcast,
                                         storage_client.as_ref(),
@@ -4614,6 +4594,17 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                             // reason.
                             let reason = extract_failure_reason(&event)
                                 .unwrap_or_else(|| "Automaton reported an error".to_string());
+                            // Surface the harness's reason at warn! level so
+                            // the root cause of "automaton died in Xms"
+                            // patterns shows up in the os-server log
+                            // alongside the subsequent task_failed/retry
+                            // activity, rather than being silently folded
+                            // into the DB row's execution_notes.
+                            warn!(
+                                task_id = ?current_task_id,
+                                %reason,
+                                "Harness automaton reported Error event"
+                            );
                             let retry_after_hint = extract_retry_after(&event);
                             // Breadcrumb for the completion-gate path: if
                             // this error looks like an infra transient and
@@ -4978,6 +4969,10 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                     // synthesise a `task_failed` with a real reason.
                     if !terminal_seen {
                         if let Some(tid) = current_task_id.clone() {
+                            warn!(
+                                task_id = %tid,
+                                "Harness automaton event stream closed before a terminal event arrived (no Error/task_failed/task_completed seen); check the harness stdout for `tick failed` / `on_install failed` for the root cause"
+                            );
                             if let Some(ctx) = take_retry_context(&mut retry) {
                                 match restart_with_infra_backoff(
                                     &app_broadcast,
@@ -6271,39 +6266,15 @@ async fn persist_task_failure_reason(
         warn!(%task_id, %error, "Failed to persist task failure reason");
     }
 
-    // Fetch current status so we can honour the aura-storage state
-    // machine: it rejects a direct `ready → failed` (only
-    // `in_progress → failed` is legal), and `→ failed` on an already
-    // terminal task (failed/done). Without this check the fallback
-    // path produced the "Invalid status transition: 'ready' → 'failed'"
-    // warnings seen when the forwarder restart loop exhausted for a
-    // task the infra-retry ladder had just reset to `ready`.
-    let current_status: Option<String> = match storage_client.get_task(task_id, jwt).await {
-        Ok(t) => t.status,
-        Err(error) => {
-            warn!(%task_id, %error, "Failed to read current task status before marking Failed");
-            None
-        }
-    };
-    match current_status.as_deref() {
-        Some("failed") | Some("done") => return,
-        Some("ready") => {
-            let bridge = aura_os_storage::TransitionTaskRequest {
-                status: "in_progress".to_string(),
-            };
-            if let Err(error) = storage_client.transition_task(task_id, jwt, &bridge).await {
-                warn!(%task_id, %error, "Failed to bridge ready->in_progress before connect-failure terminal transition");
-            }
-        }
-        _ => {}
-    }
-
-    let transition = aura_os_storage::TransitionTaskRequest {
-        status: "failed".to_string(),
-    };
-    if let Err(error) = storage_client
-        .transition_task(task_id, jwt, &transition)
-        .await
+    // `safe_transition` honours aura-storage's state machine: idempotent
+    // when already `failed`/`done`, bridges `ready -> in_progress ->
+    // failed` when the infra-retry ladder reset the row, and walks
+    // `pending -> ready -> in_progress -> failed` on the rare freshly-
+    // spawned case. Replaces the old hand-rolled status-ladder that
+    // produced "Invalid status transition: 'X' -> 'failed'" warns every
+    // time a failure mode we hadn't enumerated above came up.
+    if let Err(error) =
+        safe_transition(storage_client, jwt, task_id, TaskStatus::Failed).await
     {
         warn!(
             %task_id, %error,

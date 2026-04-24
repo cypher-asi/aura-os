@@ -58,24 +58,45 @@ impl TaskService {
         crate::storage_task_to_task(st).map_err(TaskError::ParseError)
     }
 
+    /// Checks whether `current -> target` is a **direct** legal edge. This
+    /// mirrors aura-storage's own `validate_transition`
+    /// (`aura-storage/crates/domain/tasks/src/repo.rs`): storage is the
+    /// source of truth and rejects any target we pass to
+    /// `POST /api/tasks/:id/transition` that isn't in this list.
+    ///
+    /// For **non-adjacent** transitions (e.g. `ready -> failed`,
+    /// `in_progress -> ready`, `failed -> in_progress`) prefer
+    /// [`crate::safe_transition`], which reads the current state and
+    /// walks the necessary hop sequence. Extending this list with a
+    /// bridge edge would re-introduce the class of bug where
+    /// aura-os-server validated "OK" and storage then returned 400.
+    ///
+    /// The `Backlog`/`ToDo` edges in aura-os's state machine are
+    /// validated locally but are not persisted by storage (not in the
+    /// `tasks.status` CHECK constraint); callers must translate those
+    /// states before hitting storage.
     pub fn validate_transition(current: TaskStatus, target: TaskStatus) -> Result<(), TaskError> {
         let legal = matches!(
             (current, target),
-            (TaskStatus::Backlog, TaskStatus::ToDo)
+            // Storage-enforced direct edges (must stay in sync with
+            // aura-storage repo.rs::validate_transition).
+            (TaskStatus::Pending, TaskStatus::Ready)
+                | (TaskStatus::Ready, TaskStatus::InProgress)
+                | (TaskStatus::InProgress, TaskStatus::Done)
+                | (TaskStatus::InProgress, TaskStatus::Failed)
+                | (TaskStatus::InProgress, TaskStatus::Blocked)
+                | (TaskStatus::Failed, TaskStatus::Ready)
+                | (TaskStatus::Blocked, TaskStatus::Ready)
+                // aura-os-only edges on Backlog/ToDo. Storage does not
+                // persist these statuses; they only appear in-process
+                // when the planner promotes tasks, before anything
+                // calls storage.transition_task.
+                | (TaskStatus::Backlog, TaskStatus::ToDo)
                 | (TaskStatus::Backlog, TaskStatus::Pending)
                 | (TaskStatus::ToDo, TaskStatus::Pending)
                 | (TaskStatus::ToDo, TaskStatus::Backlog)
                 | (TaskStatus::Pending, TaskStatus::ToDo)
                 | (TaskStatus::Pending, TaskStatus::Backlog)
-                | (TaskStatus::Pending, TaskStatus::Ready)
-                | (TaskStatus::Ready, TaskStatus::InProgress)
-                | (TaskStatus::InProgress, TaskStatus::Done)
-                | (TaskStatus::InProgress, TaskStatus::Failed)
-                | (TaskStatus::InProgress, TaskStatus::Blocked)
-                | (TaskStatus::InProgress, TaskStatus::Ready)
-                | (TaskStatus::Failed, TaskStatus::Ready)
-                | (TaskStatus::Failed, TaskStatus::InProgress)
-                | (TaskStatus::Blocked, TaskStatus::Ready)
         );
         if legal {
             Ok(())
@@ -84,40 +105,39 @@ impl TaskService {
         }
     }
 
-    /// Resets a task to ready so it can be picked up again. Uses two-step transition
-    /// (in_progress → failed → ready) when the task is in progress, because aura-storage
-    /// does not allow a direct in_progress → ready transition.
+    /// Resets a task to ready so it can be picked up again.
+    ///
+    /// Delegates to [`crate::safe_transition`], which bridges through the
+    /// intermediate hops that aura-storage requires (e.g. `in_progress ->
+    /// failed -> ready`; a direct `in_progress -> ready` is a 400).
     pub async fn reset_task_to_ready(
         &self,
-        project_id: &ProjectId,
-        spec_id: &SpecId,
+        _project_id: &ProjectId,
+        _spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        let current = self.get_task(project_id, spec_id, task_id).await?;
-        if current.status == TaskStatus::InProgress {
-            self.transition_task(project_id, spec_id, task_id, TaskStatus::Failed)
-                .await?;
-        }
-        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready)
-            .await
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        crate::safe_transition(storage, &jwt, &task_id.to_string(), TaskStatus::Ready).await
     }
 
-    /// Resets all in-progress tasks to ready (e.g. after restart or loop error). Uses
-    /// two-step transition (in_progress → failed → ready) because aura-storage does
-    /// not allow a direct in_progress → ready transition.
+    /// Resets all in-progress tasks to ready (e.g. after restart or loop error).
+    ///
+    /// Each reset goes through [`crate::safe_transition`] which walks
+    /// `in_progress -> failed -> ready` under storage's rules.
     pub async fn reset_in_progress_tasks(
         &self,
         project_id: &ProjectId,
     ) -> Result<Vec<Task>, TaskError> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
         let all_tasks = self.list_tasks(project_id).await?;
         let mut reset = Vec::new();
         for task in &all_tasks {
             if task.status == TaskStatus::InProgress {
-                self.transition_task(project_id, &task.spec_id, &task.task_id, TaskStatus::Failed)
-                    .await?;
-                let ready_task = self
-                    .transition_task(project_id, &task.spec_id, &task.task_id, TaskStatus::Ready)
-                    .await?;
+                let ready_task =
+                    crate::safe_transition(storage, &jwt, &task.task_id.to_string(), TaskStatus::Ready)
+                        .await?;
                 reset.push(ready_task);
             }
         }
@@ -235,16 +255,18 @@ impl TaskService {
 
     pub async fn retry_task(
         &self,
-        project_id: &ProjectId,
-        spec_id: &SpecId,
+        _project_id: &ProjectId,
+        _spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        let task = self.get_task(project_id, spec_id, task_id).await?;
-        if task.status == TaskStatus::Ready {
-            return Ok(task);
-        }
-        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready)
-            .await
+        // `safe_transition` short-circuits when already at Ready and
+        // correctly bridges `in_progress -> failed -> ready` for the
+        // common case where the automaton died mid-task and left the
+        // row in `in_progress`. A direct `transition_task(Ready)` would
+        // 400 at storage for that state.
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        crate::safe_transition(storage, &jwt, &task_id.to_string(), TaskStatus::Ready).await
     }
 
     // -- Dependency resolution --

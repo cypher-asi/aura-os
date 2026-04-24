@@ -1,8 +1,10 @@
 mod error;
 mod task_service;
+mod transition;
 
 pub use error::TaskError;
 pub use task_service::{AssignTaskParams, CompleteTaskParams};
+pub use transition::{compute_bridge, safe_transition};
 
 use std::collections::HashMap;
 use std::sync::Arc;

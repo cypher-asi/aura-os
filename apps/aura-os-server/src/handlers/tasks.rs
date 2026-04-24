@@ -272,56 +272,32 @@ pub(crate) async fn retry_task(
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
 
-    let current = storage
-        .get_task(&task_id.to_string(), &jwt)
+    // `safe_transition(..., Ready)` handles every source state correctly:
+    //   * `ready`       -> no-op, returns the current task
+    //   * `in_progress` -> bridges via `failed -> ready` (storage rejects
+    //                      a direct `in_progress -> ready` with 400,
+    //                      which is the bug this replaces)
+    //   * `failed`      -> direct `failed -> ready`
+    //   * `blocked`     -> direct `blocked -> ready`
+    //   * `pending`     -> direct `pending -> ready`
+    //   * `done`        -> IllegalTransition (terminal; surface 400)
+    aura_os_tasks::safe_transition(storage, &jwt, &task_id.to_string(), TaskStatus::Ready)
         .await
+        .map(Json)
         .map_err(|e| match &e {
-            aura_os_storage::StorageError::Server { status: 404, .. } => {
-                ApiError::not_found("task not found")
-            }
-            _ => ApiError::internal(format!("fetching task for retry: {e}")),
-        })?;
-    let task = storage_task_to_task(current).map_err(ApiError::internal)?;
-
-    // Idempotent on `ready`. The UI surfaces a "Retry" button for any
-    // task the user perceives as stopped, and the dev-loop frequently
-    // resets tasks to `ready` itself (infra-retry ladder, bridge from
-    // the terminal-failure handler, etc.). Without this short-circuit
-    // the subsequent `validate_transition(Ready, Ready)` rejects the
-    // request as `ready → ready` and the user sees a 400 for a state
-    // that's already "ready to run".
-    if matches!(task.status, TaskStatus::Ready) {
-        return Ok(Json(task));
-    }
-
-    TaskService::validate_transition(task.status, TaskStatus::Ready)
-        .map_err(|e| ApiError::bad_request(format!("validating task retry: {e}")))?;
-
-    storage
-        .transition_task(
-            &task_id.to_string(),
-            &jwt,
-            &aura_os_storage::TransitionTaskRequest {
-                status: "ready".to_string(),
-            },
-        )
-        .await
-        .map_err(|e| match &e {
-            aura_os_storage::StorageError::Server { status: 404, .. } => {
-                ApiError::not_found("task not found")
-            }
-            aura_os_storage::StorageError::Server { status: 400, body } => {
-                ApiError::bad_request(body.clone())
+            aura_os_tasks::TaskError::Storage(aura_os_storage::StorageError::Server {
+                status: 404,
+                ..
+            }) => ApiError::not_found("task not found"),
+            aura_os_tasks::TaskError::Storage(aura_os_storage::StorageError::Server {
+                status: 400,
+                body,
+            }) => ApiError::bad_request(body.clone()),
+            aura_os_tasks::TaskError::IllegalTransition { .. } => {
+                ApiError::bad_request(format!("retrying task: {e}"))
             }
             _ => ApiError::internal(format!("retrying task: {e}")),
-        })?;
-
-    let updated = storage
-        .get_task(&task_id.to_string(), &jwt)
-        .await
-        .map_err(|e| ApiError::internal(format!("fetching retried task: {e}")))?;
-    let task = storage_task_to_task(updated).map_err(ApiError::internal)?;
-    Ok(Json(task))
+        })
 }
 
 #[derive(Serialize)]
@@ -1455,30 +1431,49 @@ mod tests {
         );
     }
 
-    /// Regression for the `ready → ready` 400s: the retry endpoint has to
-    /// short-circuit when the task is already in `Ready`, because the
-    /// underlying state machine rejects that transition. The dev-loop's
-    /// infra-retry ladder can leave a task in `ready` (with the UI still
-    /// showing it as stopped), and hitting `/retry` from the UI in that
-    /// state previously returned a misleading "validating task retry"
-    /// 400. The handler now returns the current task unchanged; this
-    /// test pins the underlying state-machine invariant so the
-    /// short-circuit is understood as required, not decorative.
+    /// Regression for the `/retry` 400s. The retry endpoint delegates to
+    /// `aura_os_tasks::safe_transition(..., Ready)`, which must:
+    ///   * no-op when the task is already `Ready` (infra-retry ladder
+    ///     commonly leaves it there; old code returned 400 for
+    ///     `ready -> ready`),
+    ///   * bridge `InProgress -> Failed -> Ready` (old code hit storage
+    ///     with a direct `in_progress -> ready` and got 400),
+    ///   * accept the straight-through `Failed -> Ready` / `Blocked ->
+    ///     Ready` / `Pending -> Ready` edges.
+    /// This test pins those contracts via the bridge-planner, which is
+    /// the pure function retry_task's correctness hangs on.
     #[test]
-    fn retry_on_already_ready_task_must_short_circuit() {
-        use aura_os_tasks::TaskService;
+    fn retry_bridge_planner_contract() {
+        use aura_os_tasks::compute_bridge;
 
-        assert!(
-            TaskService::validate_transition(TaskStatus::Ready, TaskStatus::Ready).is_err(),
-            "ready -> ready must remain illegal; the retry handler's idempotent short-circuit is the only reason /retry works on a ready task"
+        assert_eq!(
+            compute_bridge(TaskStatus::Ready, TaskStatus::Ready),
+            Some(vec![]),
+            "retry on ready must be a no-op (idempotent)",
+        );
+        assert_eq!(
+            compute_bridge(TaskStatus::InProgress, TaskStatus::Ready),
+            Some(vec![TaskStatus::Failed, TaskStatus::Ready]),
+            "retry on in_progress must bridge via failed (storage rejects direct edge)",
+        );
+        assert_eq!(
+            compute_bridge(TaskStatus::Failed, TaskStatus::Ready),
+            Some(vec![TaskStatus::Ready]),
+            "retry on failed is a direct storage-legal edge",
+        );
+        assert_eq!(
+            compute_bridge(TaskStatus::Blocked, TaskStatus::Ready),
+            Some(vec![TaskStatus::Ready]),
+            "retry on blocked is a direct storage-legal edge",
+        );
+        assert_eq!(
+            compute_bridge(TaskStatus::Pending, TaskStatus::Ready),
+            Some(vec![TaskStatus::Ready]),
+            "retry on pending is a direct storage-legal edge",
         );
         assert!(
-            TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Ready).is_ok(),
-            "failed -> ready must stay legal so the non-idempotent retry path still works"
-        );
-        assert!(
-            TaskService::validate_transition(TaskStatus::Blocked, TaskStatus::Ready).is_ok(),
-            "blocked -> ready must stay legal so retry from the blocked state still works"
+            compute_bridge(TaskStatus::Done, TaskStatus::Ready).is_none(),
+            "retry on done must surface IllegalTransition (done is terminal)",
         );
     }
 }
