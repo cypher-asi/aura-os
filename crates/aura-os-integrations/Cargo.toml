@@ -1,4 +1,4 @@
-[package]
+﻿[package]
 name = "aura-os-integrations"
 version = "0.1.0"
 edition.workspace = true
@@ -8,7 +8,7 @@ repository.workspace = true
 
 [dependencies]
 aura-os-core = { path = "../aura-os-core" }
-aura-os-link = { path = "../aura-os-link" }
+aura-os-harness = { path = "../aura-os-harness" }
 base64 = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }

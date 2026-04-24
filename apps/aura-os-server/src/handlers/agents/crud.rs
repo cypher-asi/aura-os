@@ -529,7 +529,7 @@ async fn provision_swarm_agent(
         });
     }
 
-    let swarm_resp: aura_os_link::CreateAgentResponse = resp.json().await.map_err(|e| {
+    let swarm_resp: aura_os_harness::CreateAgentResponse = resp.json().await.map_err(|e| {
         ApiError::internal(format!(
             "failed to parse swarm gateway agent creation response: {e}"
         ))

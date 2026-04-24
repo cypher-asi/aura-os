@@ -1,8 +1,8 @@
-//! Thin session bridge for opening a harness stream and sending a turn.
+﻿//! Thin session bridge for opening a harness stream and sending a turn.
 
 use tokio::sync::{broadcast, mpsc};
 
-use aura_os_link::{
+use crate::{
     HarnessInbound, HarnessLink, HarnessOutbound, HarnessSession, MessageAttachment, SessionConfig,
     UserMessage,
 };

@@ -18,7 +18,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 
 use aura_os_core::{Agent, AgentId, OrgIntegration, ProjectId};
-use aura_os_link::{
+use aura_os_harness::{
     AssistantMessageEnd, AssistantMessageStart, FilesChanged, HarnessInbound, HarnessOutbound,
     SessionConfig, SessionProviderConfig, SessionReady, SessionUsage, TextDelta, ToolInfo,
     UserMessage,
@@ -311,7 +311,7 @@ async fn send_external_project_agent_event_stream(
             emit_harness_event(
                 &events_tx,
                 &sse_tx,
-                HarnessOutbound::Error(aura_os_link::ErrorMsg {
+                HarnessOutbound::Error(aura_os_harness::ErrorMsg {
                     code: "external_adapter_error".to_string(),
                     message: error.0.error,
                     recoverable: false,
@@ -1932,7 +1932,7 @@ fn codex_agent_message_text(event: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
-fn codex_tool_use_start(event: &Value) -> Option<aura_os_link::ToolUseStart> {
+fn codex_tool_use_start(event: &Value) -> Option<aura_os_harness::ToolUseStart> {
     let item = event.get("item")?;
     if item.get("type") != Some(&Value::String("mcp_tool_call".to_string()))
         || event.get("type") != Some(&Value::String("item.started".to_string()))
@@ -1940,13 +1940,13 @@ fn codex_tool_use_start(event: &Value) -> Option<aura_os_link::ToolUseStart> {
         return None;
     }
 
-    Some(aura_os_link::ToolUseStart {
+    Some(aura_os_harness::ToolUseStart {
         id: item.get("id")?.as_str()?.to_string(),
         name: item.get("tool")?.as_str()?.to_string(),
     })
 }
 
-fn codex_tool_result(event: &Value) -> Option<aura_os_link::ToolResultMsg> {
+fn codex_tool_result(event: &Value) -> Option<aura_os_harness::ToolResultMsg> {
     let item = event.get("item")?;
     if item.get("type") != Some(&Value::String("mcp_tool_call".to_string()))
         || event.get("type") != Some(&Value::String("item.completed".to_string()))
@@ -1969,7 +1969,7 @@ fn codex_tool_result(event: &Value) -> Option<aura_os_link::ToolResultMsg> {
         codex_tool_content_text(item.get("result"))
     };
 
-    Some(aura_os_link::ToolResultMsg {
+    Some(aura_os_harness::ToolResultMsg {
         name: item.get("tool")?.as_str()?.to_string(),
         result,
         is_error,
@@ -2016,7 +2016,7 @@ fn parse_tool_result_json(result: &str) -> Option<Value> {
     serde_json::from_str::<Value>(result).ok()
 }
 
-fn claude_tool_use_starts(event: &Value) -> Vec<aura_os_link::ToolUseStart> {
+fn claude_tool_use_starts(event: &Value) -> Vec<aura_os_harness::ToolUseStart> {
     let Some(content) = event
         .get("message")
         .and_then(|message| message.get("content"))
@@ -2034,7 +2034,7 @@ fn claude_tool_use_starts(event: &Value) -> Vec<aura_os_link::ToolUseStart> {
             if !is_external_tool_name(&normalized) {
                 return None;
             }
-            Some(aura_os_link::ToolUseStart {
+            Some(aura_os_harness::ToolUseStart {
                 id: block.get("id")?.as_str()?.to_string(),
                 name: normalized,
             })
@@ -2073,7 +2073,7 @@ fn claude_tool_call_payload(event: &Value, id: &str, name: &str) -> Option<Value
 fn claude_tool_results(
     event: &Value,
     tool_names_by_id: &HashMap<String, String>,
-) -> Vec<aura_os_link::ToolResultMsg> {
+) -> Vec<aura_os_harness::ToolResultMsg> {
     let Some(content) = event
         .get("message")
         .and_then(|message| message.get("content"))
@@ -2088,7 +2088,7 @@ fn claude_tool_results(
         .filter_map(|block| {
             let tool_use_id = block.get("tool_use_id").and_then(Value::as_str)?;
             let name = tool_names_by_id.get(tool_use_id)?.clone();
-            Some(aura_os_link::ToolResultMsg {
+            Some(aura_os_harness::ToolResultMsg {
                 name,
                 result: claude_tool_result_content(block.get("content")),
                 is_error: block

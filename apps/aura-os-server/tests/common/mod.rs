@@ -16,7 +16,7 @@ use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::*;
-use aura_os_link::{AutomatonClient, HarnessLink, LocalHarness, SwarmHarness};
+use aura_os_harness::{AutomatonClient, HarnessLink, LocalHarness, SwarmHarness};
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;

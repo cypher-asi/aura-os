@@ -524,7 +524,7 @@ pub mod phase7_test_support {
 
 pub mod handlers_test_support {
     use aura_os_core::{AgentId, AgentInstanceId, SessionEvent};
-    use aura_os_link::ConversationMessage;
+    use aura_os_harness::ConversationMessage;
     use aura_os_storage::StorageSessionEvent;
 
     use crate::state::AppState;

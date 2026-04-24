@@ -37,7 +37,7 @@
 //! whether the duplicate originated here or was added by something
 //! downstream of us.
 
-use aura_os_link::InstalledTool;
+use aura_os_harness::InstalledTool;
 use tracing::{info, warn};
 
 /// Tool names the external harness sidecar (`aura_node`) registers
@@ -226,7 +226,7 @@ mod tests {
             description: String::new(),
             input_schema: serde_json::json!({"type": "object"}),
             endpoint: String::new(),
-            auth: aura_os_link::ToolAuth::default(),
+            auth: aura_os_harness::ToolAuth::default(),
             timeout_ms: None,
             namespace: None,
             required_integration: None,

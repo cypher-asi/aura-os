@@ -1,4 +1,4 @@
-[workspace]
+﻿[workspace]
 members = [
     "crates/aura-os-agents",
     "crates/aura-os-auth",
@@ -7,7 +7,6 @@ members = [
     "crates/aura-os-core",
     "crates/aura-os-integrations",
     "crates/aura-os-harness",
-    "crates/aura-os-link",
     "crates/aura-os-network",
     "crates/aura-os-orgs",
     "crates/aura-os-projects",

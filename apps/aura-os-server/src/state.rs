@@ -15,8 +15,8 @@ use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, ZeroAuthSession};
+use aura_os_harness::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 use aura_os_integrations::IntegrationsClient;
-use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 
 use crate::agent_events::AgentEventListener;
 use crate::harness_gateway::HarnessHttpGateway;

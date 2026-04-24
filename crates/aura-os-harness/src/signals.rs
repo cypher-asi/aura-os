@@ -43,18 +43,8 @@ pub enum HarnessSignal {
 
 impl HarnessSignal {
     pub fn from_event(event_type: &str, content: &serde_json::Value) -> Option<Self> {
-        if event_type == "task_sync_checkpoint" {
-            return content.get("checkpoint").and_then(|checkpoint| {
-                Self::from_event_value_with_task_id(checkpoint, task_id(content))
-            });
-        }
-
-        if event_type == "task_checkpoint_state" {
-            return content
-                .get("sync_state")
-                .and_then(|state| state.get("status"))
-                .and_then(|status| status.as_str())
-                .and_then(|status| Self::from_event(status, content));
+        if let Some(signal) = Self::from_wrapped_event(event_type, content) {
+            return Some(signal);
         }
 
         match event_type {
@@ -91,6 +81,20 @@ impl HarnessSignal {
                     .unwrap_or(false),
                 reason: reason(content),
             }),
+            _ => None,
+        }
+    }
+
+    fn from_wrapped_event(event_type: &str, content: &serde_json::Value) -> Option<Self> {
+        match event_type {
+            "task_sync_checkpoint" => content.get("checkpoint").and_then(|checkpoint| {
+                Self::from_event_value_with_task_id(checkpoint, task_id(content))
+            }),
+            "task_checkpoint_state" => content
+                .get("sync_state")
+                .and_then(|state| state.get("status"))
+                .and_then(|status| status.as_str())
+                .and_then(|status| Self::from_event(status, content)),
             _ => None,
         }
     }

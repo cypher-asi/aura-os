@@ -95,11 +95,11 @@ use aura_os_core::{
     AgentId, AgentInstanceId, AgentPermissions, ChatContentBlock, ChatRole, HarnessMode, OrgId,
     ProjectId, SessionEvent, Spec, Task,
 };
-use aura_os_harness::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
-use aura_os_link::{
+use aura_os_harness::{
     ConversationMessage, HarnessInbound, HarnessOutbound, InstalledTool, MessageAttachment,
     SessionConfig, SessionUsage,
 };
+use aura_os_harness::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
 use aura_os_storage::StorageClient;
 
 use crate::dto::{ChatAttachmentDto, SendChatRequest};
@@ -2195,7 +2195,7 @@ async fn get_or_create_delegated_chat_session(
     turn: SessionBridgeTurn,
 ) -> ApiResult<(
     bool,
-    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
+    tokio::sync::broadcast::Receiver<aura_os_harness::HarnessOutbound>,
     tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
 )> {
     {
@@ -2242,7 +2242,7 @@ async fn insert_delegated_chat_session(
     started: SessionBridgeStarted,
 ) -> ApiResult<(
     bool,
-    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
+    tokio::sync::broadcast::Receiver<aura_os_harness::HarnessOutbound>,
     tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
 )> {
     let rx = started.events_rx;

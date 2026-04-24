@@ -8,8 +8,8 @@ use tracing::{info, warn};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
+use aura_os_harness::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 use aura_os_integrations::IntegrationsClient;
-use aura_os_link::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
 
 use crate::agent_events::AgentEventListener;
 use crate::harness_gateway::HarnessHttpGateway;
@@ -379,7 +379,7 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
     };
 
     let harness_base = local_harness_base_url();
-    let automaton_client = Arc::new(aura_os_link::AutomatonClient::new(&harness_base));
+    let automaton_client = Arc::new(aura_os_harness::AutomatonClient::new(&harness_base));
     let harness_http = Arc::new(HarnessHttpGateway::new(harness_base));
 
     // Dev-loop debug bundles are always captured so the Debug app and

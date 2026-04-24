@@ -4,7 +4,7 @@
 //! message format for the `/stream` WebSocket endpoint.
 //!
 //! This crate is consumed by both the harness server (`aura-node`) and
-//! any client implementation (e.g. `aura-os-link`).
+//! any client implementation (e.g. `aura-os-harness`).
 //!
 //! # Agent permissions model
 //!

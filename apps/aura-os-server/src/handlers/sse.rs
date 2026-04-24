@@ -2,7 +2,7 @@ use std::convert::Infallible;
 
 use axum::response::sse::Event;
 
-use aura_os_link::HarnessOutbound;
+use aura_os_harness::HarnessOutbound;
 
 /// Maps a [`HarnessOutbound`] event to an SSE [`Event`].
 ///

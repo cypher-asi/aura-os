@@ -1,7 +1,7 @@
 //! HTTP + WebSocket client for the harness automaton REST API.
 //!
 //! Provides typed methods for starting, stopping, pausing automatons and
-//! subscribing to their event streams — used by `dev_loop.rs` instead of the
+//! subscribing to their event streams -- used by `dev_loop.rs` instead of the
 //! old chat-session-based approach.
 
 use std::sync::Arc;
@@ -12,10 +12,15 @@ use tokio::sync::broadcast;
 use tokio::task::AbortHandle;
 use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tracing::{info, warn};
 
 use crate::runner::automaton_event_kinds::DONE;
+
+mod event_normalization;
+
 use aura_protocol::{InstalledIntegration, InstalledTool};
+use event_normalization::normalize_automaton_event;
 
 /// Handle that keeps the harness WebSocket connection opened by
 /// [`AutomatonClient::connect_event_stream`] alive for as long as it is
@@ -79,14 +84,6 @@ impl std::fmt::Debug for WsReaderHandle {
         f.debug_struct("WsReaderHandle").finish_non_exhaustive()
     }
 }
-
-const GENERIC_MILESTONE_EVENT_TYPES: &[&str] =
-    &["milestone", "sync_milestone", "git_sync_milestone"];
-const GIT_COMMITTED: &str = "git_committed";
-const GIT_COMMIT_FAILED: &str = "git_commit_failed";
-const GIT_PUSHED: &str = "git_pushed";
-const GIT_PUSH_FAILED: &str = "git_push_failed";
-
 #[derive(Debug, Clone, Serialize)]
 pub struct AutomatonStartParams {
     pub project_id: String,
@@ -130,110 +127,6 @@ pub struct AutomatonStartResult {
     pub automaton_id: String,
     #[serde(alias = "ws_url", alias = "stream_url")]
     pub event_stream_url: String,
-}
-
-fn canonical_git_event_type(value: &str) -> Option<&'static str> {
-    match value {
-        GIT_COMMITTED | "git_commit" | "commit" => Some(GIT_COMMITTED),
-        GIT_COMMIT_FAILED | "git_commit_error" | "commit_failed" => Some(GIT_COMMIT_FAILED),
-        GIT_PUSHED | "git_push" | "push" => Some(GIT_PUSHED),
-        GIT_PUSH_FAILED | "git_push_error" | "push_failed" => Some(GIT_PUSH_FAILED),
-        _ => None,
-    }
-}
-
-fn is_git_like_payload(value: &serde_json::Value) -> bool {
-    value.get("commit_sha").is_some()
-        || value.get("branch").is_some()
-        || value.get("remote").is_some()
-        || value.get("push_id").is_some()
-        || value.get("commits").is_some()
-}
-
-fn normalized_milestone_git_event(
-    event: &serde_json::Value,
-) -> Option<(&'static str, serde_json::Value)> {
-    let mut candidates: Vec<serde_json::Value> = vec![event.clone()];
-    for key in ["milestone", "sync", "git", "commit", "push"] {
-        if let Some(value) = event.get(key) {
-            candidates.push(value.clone());
-        }
-    }
-
-    for candidate in &candidates {
-        if let Some(kind) = candidate
-            .get("event_type")
-            .or_else(|| candidate.get("kind"))
-            .or_else(|| candidate.get("type"))
-            .and_then(|v| v.as_str())
-            .and_then(canonical_git_event_type)
-        {
-            return Some((kind, candidate.clone()));
-        }
-    }
-
-    for candidate in candidates {
-        if !candidate.is_object() || !is_git_like_payload(&candidate) {
-            continue;
-        }
-        if candidate.get("reason").is_some() || candidate.get("error").is_some() {
-            if candidate.get("branch").is_some()
-                || candidate.get("remote").is_some()
-                || candidate.get("push_id").is_some()
-            {
-                return Some((GIT_PUSH_FAILED, candidate));
-            }
-            return Some((GIT_COMMIT_FAILED, candidate));
-        }
-        if candidate.get("branch").is_some()
-            || candidate.get("remote").is_some()
-            || candidate.get("push_id").is_some()
-            || candidate.get("commits").is_some()
-        {
-            return Some((GIT_PUSHED, candidate));
-        }
-        if candidate.get("commit_sha").is_some() {
-            return Some((GIT_COMMITTED, candidate));
-        }
-    }
-
-    None
-}
-
-fn copy_if_missing(target: &mut serde_json::Value, source: &serde_json::Value, key: &str) {
-    if target.get(key).is_none() {
-        if let Some(value) = source.get(key) {
-            target[key] = value.clone();
-        }
-    }
-}
-
-fn normalize_automaton_event(mut event: serde_json::Value) -> serde_json::Value {
-    let Some(event_type) = event.get("type").and_then(|t| t.as_str()) else {
-        return event;
-    };
-    if !GENERIC_MILESTONE_EVENT_TYPES.contains(&event_type) {
-        return event;
-    }
-    let Some((canonical_type, payload)) = normalized_milestone_git_event(&event) else {
-        return event;
-    };
-
-    event["type"] = serde_json::Value::String(canonical_type.to_string());
-    for key in [
-        "commit_sha",
-        "branch",
-        "remote",
-        "reason",
-        "error",
-        "summary",
-        "push_id",
-        "commit_ids",
-        "commits",
-    ] {
-        copy_if_missing(&mut event, &payload, key);
-    }
-    event
 }
 
 /// Client for the harness automaton REST + WebSocket API.
@@ -391,7 +284,7 @@ impl AutomatonClient {
     /// Resolve the WebSocket URL for the automaton event stream.
     ///
     /// When `event_stream_url` is provided (from the harness start response),
-    /// it is used — either directly if already absolute, or prefixed with the
+    /// it is used -- either directly if already absolute, or prefixed with the
     /// gateway WS base when relative.  This mirrors how `SwarmHarness` handles
     /// the `ws_url` returned by session creation and is required because the
     /// swarm gateway only routes WebSocket upgrades on paths it knows about.
@@ -454,219 +347,121 @@ impl AutomatonClient {
         .map_err(|_| anyhow::anyhow!("timed out connecting to automaton event stream: {url}"))??;
         info!(automaton_id, "Connected to automaton event stream");
 
-        let (broadcast_tx, _) = broadcast::channel(4096);
-        let tx = broadcast_tx.clone();
-        let aid = automaton_id.to_string();
-
         let (_write, mut read) = ws_stream.split();
-
-        // Liveness probe: wait briefly for the first frame to detect connections
-        // that the harness resets immediately after the upgrade handshake (e.g.
-        // because the automaton already finished before we connected).
-        let mut buffered_event: Option<serde_json::Value> = None;
-        let probe = tokio::time::timeout(Duration::from_millis(200), read.next()).await;
-        match probe {
-            Ok(Some(Err(e))) => {
-                return Err(anyhow::anyhow!(
-                    "automaton event stream died immediately after connect: {e}"
-                ));
-            }
-            Ok(None) => {
-                return Err(anyhow::anyhow!(
-                    "automaton event stream closed immediately after connect"
-                ));
-            }
-            Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text)))) => {
-                if let Ok(event) = serde_json::from_str::<serde_json::Value>(&text) {
-                    buffered_event = Some(normalize_automaton_event(event));
-                }
-            }
-            Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Close(_)))) => {
-                return Err(anyhow::anyhow!(
-                    "automaton event stream sent close frame immediately after connect"
-                ));
-            }
-            Ok(Some(Ok(_))) => {}
-            Err(_) => {}
-        }
-
-        let reader = tokio::spawn(async move {
-            // Keep the writer half owned by the reader task so the TCP
-            // connection stays open for the harness to send on. When
-            // the reader task is aborted (via `WsReaderHandle::cancel`
-            // or `Drop`) tokio drops both halves, which closes TCP and
-            // lets the harness release its `ws_slots` permit.
-            let _keep_write = _write;
-            if let Some(event) = buffered_event {
-                let is_done = event.get("type").and_then(|t| t.as_str()) == Some(DONE);
-                let _ = tx.send(event);
-                if is_done {
-                    info!(automaton_id = %aid, "Automaton event stream ended");
-                    return;
-                }
-            }
-            while let Some(msg_result) = read.next().await {
-                match msg_result {
-                    Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
-                        match serde_json::from_str::<serde_json::Value>(&text) {
-                            Ok(event) => {
-                                let event = normalize_automaton_event(event);
-                                let is_done =
-                                    event.get("type").and_then(|t| t.as_str()) == Some(DONE);
-                                let _ = tx.send(event);
-                                if is_done {
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                warn!(error = %e, "Failed to parse automaton event");
-                            }
-                        }
-                    }
-                    Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => break,
-                    Err(e) => {
-                        warn!(error = %e, automaton_id = %aid, "Automaton event stream error");
-                        break;
-                    }
-                    _ => continue,
-                }
-            }
-            info!(automaton_id = %aid, "Automaton event stream ended");
-        });
+        let buffered_event = probe_initial_event(&mut read).await?;
+        let (broadcast_tx, _) = broadcast::channel(4096);
+        let reader = spawn_automaton_reader(
+            automaton_id.to_string(),
+            _write,
+            read,
+            broadcast_tx.clone(),
+            buffered_event,
+        );
 
         let handle = WsReaderHandle::new(reader.abort_handle());
         Ok((broadcast_tx, handle))
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{normalize_automaton_event, AutomatonStartResult, WsReaderHandle};
-    use std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    };
-
-    /// Spawns a task that never completes on its own, returns a
-    /// [`WsReaderHandle`] wired to its `AbortHandle`, and an
-    /// [`Arc<AtomicBool>`] that flips to `true` if the task runs its
-    /// `Drop` guard (i.e. was aborted). Lets the tests assert
-    /// aborted-vs-still-running without racing a time-based sleep.
-    async fn spawn_cancel_probe() -> (WsReaderHandle, Arc<AtomicBool>) {
-        struct AbortFlag(Arc<AtomicBool>);
-        impl Drop for AbortFlag {
-            fn drop(&mut self) {
-                self.0.store(true, Ordering::SeqCst);
-            }
-        }
-
-        let flag = Arc::new(AtomicBool::new(false));
-        let task_flag = flag.clone();
-        let task = tokio::spawn(async move {
-            let _guard = AbortFlag(task_flag);
-            // Hold until aborted.
-            loop {
-                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
-            }
-        });
-        // Yield so the task is actually scheduled before we return.
-        tokio::task::yield_now().await;
-        (WsReaderHandle::new(task.abort_handle()), flag)
-    }
-
-    #[tokio::test]
-    async fn ws_reader_handle_cancel_aborts_spawned_task() {
-        let (handle, flag) = spawn_cancel_probe().await;
-        assert!(!flag.load(Ordering::SeqCst));
-        handle.cancel();
-        // Give tokio a chance to run the abort.
-        for _ in 0..10 {
-            if flag.load(Ordering::SeqCst) {
-                break;
-            }
-            tokio::task::yield_now().await;
-        }
-        assert!(
-            flag.load(Ordering::SeqCst),
-            "cancel() should have aborted the spawned reader task"
-        );
-    }
-
-    #[tokio::test]
-    async fn ws_reader_handle_drop_aborts_spawned_task() {
-        let (handle, flag) = spawn_cancel_probe().await;
-        assert!(!flag.load(Ordering::SeqCst));
-        drop(handle);
-        for _ in 0..10 {
-            if flag.load(Ordering::SeqCst) {
-                break;
-            }
-            tokio::task::yield_now().await;
-        }
-        assert!(
-            flag.load(Ordering::SeqCst),
-            "dropping the last WsReaderHandle should abort the spawned reader task"
-        );
-    }
-
-    #[tokio::test]
-    async fn ws_reader_handle_clone_keeps_task_alive_until_last_drop() {
-        let (handle, flag) = spawn_cancel_probe().await;
-        let clone = handle.clone();
-        drop(handle);
-        // The clone still holds the Arc — the inner `AbortHandle`
-        // must not have been dropped yet, so the task keeps running.
-        tokio::task::yield_now().await;
-        tokio::task::yield_now().await;
-        assert!(
-            !flag.load(Ordering::SeqCst),
-            "cloned WsReaderHandle must keep the reader alive when other clones drop"
-        );
-        drop(clone);
-        for _ in 0..10 {
-            if flag.load(Ordering::SeqCst) {
-                break;
-            }
-            tokio::task::yield_now().await;
-        }
-        assert!(
-            flag.load(Ordering::SeqCst),
-            "dropping the last clone should abort the spawned reader task"
-        );
-    }
-
-    #[test]
-    fn automaton_start_result_accepts_ws_url_alias() {
-        let result: AutomatonStartResult = serde_json::from_value(serde_json::json!({
-            "id": "auto-123",
-            "ws_url": "/stream/automaton/auto-123",
-        }))
-        .expect("start result should deserialize");
-
-        assert_eq!(result.automaton_id, "auto-123");
-        assert_eq!(result.event_stream_url, "/stream/automaton/auto-123");
-    }
-
-    #[test]
-    fn normalize_automaton_event_promotes_git_sync_milestones() {
-        let event = normalize_automaton_event(serde_json::json!({
-            "type": "sync_milestone",
-            "summary": "Committed and pushed",
-            "milestone": {
-                "kind": "git_pushed",
-                "commit_sha": "abc12345",
-                "branch": "main",
-                "remote": "origin",
-                "push_id": "push-1",
-                "commits": ["abc12345"],
-            }
-        }));
-
-        assert_eq!(event["type"], "git_pushed");
-        assert_eq!(event["commit_sha"], "abc12345");
-        assert_eq!(event["branch"], "main");
-        assert_eq!(event["remote"], "origin");
-        assert_eq!(event["push_id"], "push-1");
-        assert_eq!(event["summary"], "Committed and pushed");
+async fn probe_initial_event<R>(read: &mut R) -> anyhow::Result<Option<serde_json::Value>>
+where
+    R: futures_util::Stream<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>>
+        + Unpin,
+{
+    let probe = tokio::time::timeout(Duration::from_millis(200), read.next()).await;
+    match probe {
+        Ok(Some(Err(e))) => Err(anyhow::anyhow!(
+            "automaton event stream died immediately after connect: {e}"
+        )),
+        Ok(None) => Err(anyhow::anyhow!(
+            "automaton event stream closed immediately after connect"
+        )),
+        Ok(Some(Ok(WsMessage::Text(text)))) => Ok(parse_automaton_event(&text)),
+        Ok(Some(Ok(WsMessage::Close(_)))) => Err(anyhow::anyhow!(
+            "automaton event stream sent close frame immediately after connect"
+        )),
+        Ok(Some(Ok(_))) | Err(_) => Ok(None),
     }
 }
+
+fn spawn_automaton_reader<W, R>(
+    automaton_id: String,
+    write: W,
+    mut read: R,
+    tx: broadcast::Sender<serde_json::Value>,
+    buffered_event: Option<serde_json::Value>,
+) -> tokio::task::JoinHandle<()>
+where
+    W: Send + 'static,
+    R: futures_util::Stream<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>>
+        + Unpin
+        + Send
+        + 'static,
+{
+    tokio::spawn(async move {
+        let _keep_write = write;
+        if send_buffered_event(&automaton_id, &tx, buffered_event) {
+            return;
+        }
+        while let Some(msg_result) = read.next().await {
+            if should_stop_reader(&automaton_id, &tx, msg_result) {
+                break;
+            }
+        }
+        info!(automaton_id = %automaton_id, "Automaton event stream ended");
+    })
+}
+
+fn send_buffered_event(
+    automaton_id: &str,
+    tx: &broadcast::Sender<serde_json::Value>,
+    event: Option<serde_json::Value>,
+) -> bool {
+    let Some(event) = event else {
+        return false;
+    };
+    let is_done = event.get("type").and_then(|t| t.as_str()) == Some(DONE);
+    let _ = tx.send(event);
+    if is_done {
+        info!(%automaton_id, "Automaton event stream ended");
+    }
+    is_done
+}
+
+fn should_stop_reader(
+    automaton_id: &str,
+    tx: &broadcast::Sender<serde_json::Value>,
+    msg_result: Result<WsMessage, tokio_tungstenite::tungstenite::Error>,
+) -> bool {
+    match msg_result {
+        Ok(WsMessage::Text(text)) => parse_and_send_event(tx, &text),
+        Ok(WsMessage::Close(_)) => true,
+        Err(e) => {
+            warn!(error = %e, %automaton_id, "Automaton event stream error");
+            true
+        }
+        _ => false,
+    }
+}
+
+fn parse_and_send_event(tx: &broadcast::Sender<serde_json::Value>, text: &str) -> bool {
+    let Some(event) = parse_automaton_event(text) else {
+        return false;
+    };
+    let is_done = event.get("type").and_then(|t| t.as_str()) == Some(DONE);
+    let _ = tx.send(event);
+    is_done
+}
+
+fn parse_automaton_event(text: &str) -> Option<serde_json::Value> {
+    match serde_json::from_str::<serde_json::Value>(text) {
+        Ok(event) => Some(normalize_automaton_event(event)),
+        Err(e) => {
+            warn!(error = %e, "Failed to parse automaton event");
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

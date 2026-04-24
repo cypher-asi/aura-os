@@ -16,7 +16,7 @@ use serde_json::Value;
 use tracing::warn;
 
 use aura_os_core::{Agent, OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_link::{
+use aura_os_harness::{
     InstalledIntegration, InstalledTool, InstalledToolRuntimeIntegration, ToolAuth,
 };
 
@@ -408,7 +408,7 @@ async fn discovered_trusted_mcp_tool_catalog(
                         timeout_ms: Some(30_000),
                         namespace: Some("aura_trusted_mcp".to_string()),
                         required_integration: Some(
-                            aura_os_link::InstalledToolIntegrationRequirement {
+                            aura_os_harness::InstalledToolIntegrationRequirement {
                                 integration_id: Some(integration.integration_id.clone()),
                                 provider: Some(integration.provider.clone()),
                                 kind: Some("mcp_server".to_string()),
@@ -669,8 +669,8 @@ mod tests {
     use std::sync::{Arc, OnceLock};
 
     use aura_os_core::{OrgId, OrgIntegrationKind};
+    use aura_os_harness::ToolAuth;
     use aura_os_integrations::IntegrationsClient;
-    use aura_os_link::ToolAuth;
     use aura_os_orgs::IntegrationSecretUpdate;
     use axum::extract::Path;
     use axum::http::{header, HeaderMap, StatusCode};
@@ -726,7 +726,9 @@ mod tests {
         assert!(matches!(brave.auth, ToolAuth::Bearer { .. }));
         assert!(matches!(
             brave.runtime_execution,
-            Some(aura_os_link::InstalledToolRuntimeExecution::AppProvider(_))
+            Some(aura_os_harness::InstalledToolRuntimeExecution::AppProvider(
+                _
+            ))
         ));
         assert_eq!(
             brave

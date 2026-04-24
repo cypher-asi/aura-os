@@ -125,7 +125,7 @@ async fn resolve_session_from_jwt(
         Ok(pair) => Ok(pair),
         Err(err) if err.0 == StatusCode::UNAUTHORIZED => Err(err),
         Err(err) => {
-            // zOS unreachable — try stale cache entry as fallback
+            // zOS unreachable -- try stale cache entry as fallback
             if let Some(entry) = state.validation_cache.get(jwt) {
                 warn!(
                     user_id = %entry.session.user_id,
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn extract_token_empty_bearer_value() {
         let req = request_with_auth_header("Bearer ");
-        // "Bearer " with trailing space — strip_prefix("Bearer ") returns ""
+        // "Bearer " with trailing space -- strip_prefix("Bearer ") returns ""
         assert_eq!(extract_request_token(&req).unwrap(), "");
     }
 
@@ -418,8 +418,8 @@ mod tests {
                 0.8,
                 200_000,
             )),
-            local_harness: Arc::new(aura_os_link::LocalHarness::from_env()),
-            swarm_harness: Arc::new(aura_os_link::SwarmHarness::from_env()),
+            local_harness: Arc::new(aura_os_harness::LocalHarness::from_env()),
+            swarm_harness: Arc::new(aura_os_harness::SwarmHarness::from_env()),
             harness_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
             browser_manager: Arc::new(aura_os_browser::BrowserManager::new(
@@ -433,15 +433,15 @@ mod tests {
             require_zero_pro: false,
             chat_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             credit_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
-            automaton_client: Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999")),
+            automaton_client: Arc::new(aura_os_harness::AutomatonClient::new(
+                "http://localhost:9999",
+            )),
             harness_http: Arc::new(crate::HarnessHttpGateway::new("http://localhost:9999")),
             automaton_registry: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             swarm_base_url: None,
             task_output_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             orbit_client: None,
-            orbit_capacity_guard: std::sync::Arc::new(
-                crate::orbit_guard::OrbitCapacityGuard::new(),
-            ),
+            orbit_capacity_guard: std::sync::Arc::new(crate::orbit_guard::OrbitCapacityGuard::new()),
             validation_cache: cache,
             agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
             router_url,

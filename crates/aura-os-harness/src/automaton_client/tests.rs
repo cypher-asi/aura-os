@@ -1,0 +1,128 @@
+use super::{normalize_automaton_event, AutomatonStartResult, WsReaderHandle};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
+/// Spawns a task that never completes on its own, returns a
+/// [`WsReaderHandle`] wired to its `AbortHandle`, and an
+/// [`Arc<AtomicBool>`] that flips to `true` if the task runs its
+/// `Drop` guard (i.e. was aborted). Lets the tests assert
+/// aborted-vs-still-running without racing a time-based sleep.
+async fn spawn_cancel_probe() -> (WsReaderHandle, Arc<AtomicBool>) {
+    struct AbortFlag(Arc<AtomicBool>);
+    impl Drop for AbortFlag {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    let flag = Arc::new(AtomicBool::new(false));
+    let task_flag = flag.clone();
+    let task = tokio::spawn(async move {
+        let _guard = AbortFlag(task_flag);
+        // Hold until aborted.
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        }
+    });
+    // Yield so the task is actually scheduled before we return.
+    tokio::task::yield_now().await;
+    (WsReaderHandle::new(task.abort_handle()), flag)
+}
+
+#[tokio::test]
+async fn ws_reader_handle_cancel_aborts_spawned_task() {
+    let (handle, flag) = spawn_cancel_probe().await;
+    assert!(!flag.load(Ordering::SeqCst));
+    handle.cancel();
+    // Give tokio a chance to run the abort.
+    for _ in 0..10 {
+        if flag.load(Ordering::SeqCst) {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert!(
+        flag.load(Ordering::SeqCst),
+        "cancel() should have aborted the spawned reader task"
+    );
+}
+
+#[tokio::test]
+async fn ws_reader_handle_drop_aborts_spawned_task() {
+    let (handle, flag) = spawn_cancel_probe().await;
+    assert!(!flag.load(Ordering::SeqCst));
+    drop(handle);
+    for _ in 0..10 {
+        if flag.load(Ordering::SeqCst) {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert!(
+        flag.load(Ordering::SeqCst),
+        "dropping the last WsReaderHandle should abort the spawned reader task"
+    );
+}
+
+#[tokio::test]
+async fn ws_reader_handle_clone_keeps_task_alive_until_last_drop() {
+    let (handle, flag) = spawn_cancel_probe().await;
+    let clone = handle.clone();
+    drop(handle);
+    // The clone still holds the Arc -- the inner `AbortHandle`
+    // must not have been dropped yet, so the task keeps running.
+    tokio::task::yield_now().await;
+    tokio::task::yield_now().await;
+    assert!(
+        !flag.load(Ordering::SeqCst),
+        "cloned WsReaderHandle must keep the reader alive when other clones drop"
+    );
+    drop(clone);
+    for _ in 0..10 {
+        if flag.load(Ordering::SeqCst) {
+            break;
+        }
+        tokio::task::yield_now().await;
+    }
+    assert!(
+        flag.load(Ordering::SeqCst),
+        "dropping the last clone should abort the spawned reader task"
+    );
+}
+
+#[test]
+fn automaton_start_result_accepts_ws_url_alias() {
+    let result: AutomatonStartResult = serde_json::from_value(serde_json::json!({
+        "id": "auto-123",
+        "ws_url": "/stream/automaton/auto-123",
+    }))
+    .expect("start result should deserialize");
+
+    assert_eq!(result.automaton_id, "auto-123");
+    assert_eq!(result.event_stream_url, "/stream/automaton/auto-123");
+}
+
+#[test]
+fn normalize_automaton_event_promotes_git_sync_milestones() {
+    let event = normalize_automaton_event(serde_json::json!({
+        "type": "sync_milestone",
+        "summary": "Committed and pushed",
+        "milestone": {
+            "kind": "git_pushed",
+            "commit_sha": "abc12345",
+            "branch": "main",
+            "remote": "origin",
+            "push_id": "push-1",
+            "commits": ["abc12345"],
+        }
+    }));
+
+    assert_eq!(event["type"], "git_pushed");
+    assert_eq!(event["commit_sha"], "abc12345");
+    assert_eq!(event["branch"], "main");
+    assert_eq!(event["remote"], "origin");
+    assert_eq!(event["push_id"], "push-1");
+    assert_eq!(event["summary"], "Committed and pushed");
+}

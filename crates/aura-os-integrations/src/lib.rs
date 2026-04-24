@@ -19,7 +19,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
-use aura_os_link::{
+use aura_os_harness::{
     InstalledIntegration, InstalledTool, InstalledToolIntegrationRequirement,
     InstalledToolRuntimeAuth, InstalledToolRuntimeExecution, InstalledToolRuntimeIntegration,
     InstalledToolRuntimeProviderExecution, ToolAuth,

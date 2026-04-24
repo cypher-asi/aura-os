@@ -507,9 +507,8 @@ For the current release-build plan and workflow map, see:
 | **aura-os-agents** | Agent templates, instances, and runtime management |
 | **aura-os-sessions** | Session lifecycle, context usage, and storage integration |
 | **aura-os-tasks** | Task state machine, lifecycle transitions, and locking |
-| **aura-os-link** | Harness abstraction: WebSocket bridge, automaton client, local/swarm harness |
+| **aura-os-harness** | Harness abstraction: WebSocket bridge, automaton client, local/swarm harness |
 | **aura-os-terminal** | PTY-based terminal for agent command execution |
-| **aura-os-process** | Process canvas: executor, store, and scheduler for orchestration graphs |
 
 ### Interface
 
@@ -540,9 +539,8 @@ aura-os/
     aura-os-agents/            # Agent lifecycle
     aura-os-sessions/          # Session and context rotation
     aura-os-tasks/             # Task state machine
-    aura-os-link/              # Harness / workspace bridge
+    aura-os-harness/           # Harness / workspace bridge
     aura-os-terminal/          # Terminal emulation
-    aura-os-process/           # Process orchestration
   interface/                   # React + TypeScript SPA
     src/
       api/                     # API client and SSE streams

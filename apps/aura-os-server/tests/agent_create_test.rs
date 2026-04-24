@@ -836,7 +836,7 @@ fn update_agent_request_skips_none_vm_id() {
 #[test]
 fn swarm_create_agent_response_deserializes_pod_id() {
     let json = r#"{"agent_id":"a1","status":"running","pod_id":"pod-1"}"#;
-    let resp: aura_os_link::CreateAgentResponse = serde_json::from_str(json).unwrap();
+    let resp: aura_os_harness::CreateAgentResponse = serde_json::from_str(json).unwrap();
     assert_eq!(resp.agent_id, "a1");
     assert_eq!(resp.status, "running");
     assert_eq!(resp.pod_id.as_deref(), Some("pod-1"));
@@ -845,7 +845,7 @@ fn swarm_create_agent_response_deserializes_pod_id() {
 #[test]
 fn swarm_create_agent_response_without_pod_id() {
     let json = r#"{"agent_id":"a1","status":"running"}"#;
-    let resp: aura_os_link::CreateAgentResponse = serde_json::from_str(json).unwrap();
+    let resp: aura_os_harness::CreateAgentResponse = serde_json::from_str(json).unwrap();
     assert_eq!(resp.agent_id, "a1");
     assert_eq!(resp.pod_id, None);
 }

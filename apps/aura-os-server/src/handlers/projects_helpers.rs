@@ -1,4 +1,4 @@
-use std::path::{Component, Path as FsPath, PathBuf};
+﻿use std::path::{Component, Path as FsPath, PathBuf};
 
 use base64::Engine;
 use chrono::{DateTime, Utc};
@@ -6,7 +6,7 @@ use serde::Deserialize;
 use tracing::warn;
 
 use aura_os_core::{AgentInstanceId, HarnessMode, OrgId, Project, ProjectId, ProjectStatus};
-use aura_os_link::SessionConfig;
+use aura_os_harness::SessionConfig;
 use aura_os_network::NetworkProject;
 use aura_os_projects::CreateProjectInput;
 
@@ -140,7 +140,7 @@ pub(crate) enum WorkspacePreflightError {
     /// The path exists but is not a directory.
     NotADirectory,
     /// The directory exists but is effectively empty (no files other
-    /// than `.git` metadata) — a strong signal the repo was never
+    /// than `.git` metadata) -- a strong signal the repo was never
     /// cloned / bootstrapped.
     Empty,
     /// The directory has content but no `.git` marker (file or dir) at
@@ -200,8 +200,8 @@ pub(crate) fn validate_workspace_is_initialised(
 
     let mut has_git_marker = false;
     let mut has_non_git_entry = false;
-    let entries =
-        std::fs::read_dir(workspace_root).map_err(|e| WorkspacePreflightError::Io(e.to_string()))?;
+    let entries = std::fs::read_dir(workspace_root)
+        .map_err(|e| WorkspacePreflightError::Io(e.to_string()))?;
     for entry in entries {
         let entry = entry.map_err(|e| WorkspacePreflightError::Io(e.to_string()))?;
         let name = entry.file_name();
@@ -582,10 +582,7 @@ mod tests {
         let temp_dir = tempfile::tempdir().expect("temp dir");
         std::fs::create_dir(temp_dir.path().join(".git")).expect("mkdir .git");
         std::fs::write(temp_dir.path().join("Cargo.toml"), b"[workspace]\n").expect("write");
-        assert_eq!(
-            validate_workspace_is_initialised(temp_dir.path()),
-            Ok(())
-        );
+        assert_eq!(validate_workspace_is_initialised(temp_dir.path()), Ok(()));
     }
 
     #[test]
@@ -597,10 +594,7 @@ mod tests {
         )
         .expect("write gitdir file");
         std::fs::write(temp_dir.path().join("src.txt"), b"content").expect("write");
-        assert_eq!(
-            validate_workspace_is_initialised(temp_dir.path()),
-            Ok(())
-        );
+        assert_eq!(validate_workspace_is_initialised(temp_dir.path()), Ok(()));
     }
 
     #[test]

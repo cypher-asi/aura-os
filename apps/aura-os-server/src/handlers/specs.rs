@@ -12,7 +12,7 @@ use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec, SpecId};
-use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
+use aura_os_harness::{HarnessInbound, HarnessOutbound, UserMessage};
 
 use super::projects_helpers::{project_tool_session_config, resolve_project_tool_workspace_path};
 use super::spec_disk::{mirror_spec_to_disk, remove_spec_from_disk};
@@ -483,7 +483,7 @@ async fn open_spec_gen_session(
     harness_mode: HarnessMode,
     agent_instance_id: Option<AgentInstanceId>,
     jwt: &str,
-) -> ApiResult<aura_os_link::HarnessSession> {
+) -> ApiResult<aura_os_harness::HarnessSession> {
     super::billing::require_credits(state, jwt).await?;
 
     let harness = state.harness_for(harness_mode);

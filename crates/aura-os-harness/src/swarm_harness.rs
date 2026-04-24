@@ -120,6 +120,108 @@ impl SwarmHarness {
         }
         headers
     }
+
+    async fn create_or_get_agent(
+        &self,
+        base_url: &str,
+        config: &SessionConfig,
+        headers: HeaderMap,
+        token: Option<&str>,
+    ) -> anyhow::Result<String> {
+        let agent_body = self.create_agent_body(config);
+        let response = self
+            .client
+            .post(format!("{base_url}/v1/agents"))
+            .headers(headers)
+            .json(&agent_body)
+            .send()
+            .await
+            .context("swarm create agent request failed")?;
+        let agent_resp = parse_create_agent_response(response).await?;
+        if !matches!(agent_resp.status.as_str(), "running" | "idle") {
+            self.wait_for_agent_ready(&agent_resp.agent_id, token)
+                .await
+                .context("swarm agent readiness check failed")?;
+        }
+        info!(agent_id = %agent_resp.agent_id, "Swarm agent ready");
+        Ok(agent_resp.agent_id)
+    }
+
+    fn create_agent_body(&self, config: &SessionConfig) -> serde_json::Value {
+        let agent_display_name = config
+            .agent_name
+            .as_deref()
+            .or(config.agent_id.as_deref())
+            .unwrap_or("default");
+        let mut agent_body = serde_json::json!({ "name": agent_display_name });
+        if let Some(ref aid) = config.agent_id {
+            agent_body["agent_id"] = serde_json::Value::String(aid.clone());
+        }
+        agent_body
+    }
+
+    async fn create_session(
+        &self,
+        base_url: &str,
+        agent_id: &str,
+        headers: HeaderMap,
+        config: &SessionConfig,
+    ) -> anyhow::Result<CreateSessionResponse> {
+        let response = self
+            .client
+            .post(format!("{base_url}/v1/agents/{agent_id}/sessions"))
+            .headers(headers)
+            .json(&build_remote_handshake(config))
+            .send()
+            .await
+            .context("swarm create session request failed")?;
+        parse_create_session_response(response).await
+    }
+
+    async fn remember_session_token(&self, session_id: &str, token: Option<&str>) {
+        if let Some(t) = token {
+            self.session_tokens
+                .lock()
+                .await
+                .insert(session_id.to_string(), t.to_string());
+        }
+    }
+
+    async fn open_session_socket(
+        &self,
+        session_resp: CreateSessionResponse,
+        config: &SessionConfig,
+        token: Option<&str>,
+    ) -> anyhow::Result<HarnessSession> {
+        let ws_url = format!(
+            "{}/{}",
+            self.ws_base_url()?,
+            session_resp.ws_url.trim_start_matches('/')
+        );
+        let mut ws_request = ws_url
+            .into_client_request()
+            .context("swarm websocket request build failed")?;
+        if let Some(t) = token {
+            ws_request.headers_mut().insert(
+                "Authorization",
+                format!("Bearer {t}").parse().map_err(|e| {
+                    anyhow::anyhow!("swarm websocket auth header build failed: {e}")
+                })?,
+            );
+        }
+
+        let (ws_stream, _) = tokio_tungstenite::connect_async(ws_request)
+            .await
+            .context("swarm websocket connect failed")?;
+        let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
+        send_session_init(&commands_tx, config)?;
+        Ok(HarnessSession {
+            session_id: session_resp.session_id,
+            events_tx,
+            raw_events_tx,
+            commands_tx,
+        })
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -141,139 +243,67 @@ struct CreateSessionResponse {
     ws_url: String,
 }
 
+async fn parse_create_agent_response(
+    response: reqwest::Response,
+) -> anyhow::Result<CreateAgentResponse> {
+    let status = response.status();
+    let body = response.text().await?;
+    if !status.is_success() {
+        anyhow::bail!("swarm create agent failed with {}: {}", status, body);
+    }
+    let agent_resp: CreateAgentResponse = serde_json::from_str(&body)?;
+    if !matches!(agent_resp.status.as_str(), "running" | "idle") {
+        info!(
+            agent_id = %agent_resp.agent_id,
+            status = %agent_resp.status,
+            "Agent not ready, waiting for provisioning..."
+        );
+    }
+    Ok(agent_resp)
+}
+
+async fn parse_create_session_response(
+    response: reqwest::Response,
+) -> anyhow::Result<CreateSessionResponse> {
+    let status = response.status();
+    let body = response.text().await?;
+    if !status.is_success() {
+        anyhow::bail!("swarm create session failed with {}: {}", status, body);
+    }
+    serde_json::from_str(&body).map_err(Into::into)
+}
+
+fn send_session_init(
+    commands_tx: &tokio::sync::mpsc::UnboundedSender<InboundMessage>,
+    config: &SessionConfig,
+) -> anyhow::Result<()> {
+    commands_tx
+        .send(InboundMessage::SessionInit(Box::new(build_session_init(
+            config,
+        ))))
+        .context("swarm session_init send failed")
+}
+
 #[async_trait]
 impl HarnessLink for SwarmHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
         let base_url = self.configured_base_url()?.to_string();
         let token = config.token.as_deref().or(self.auth_token.as_deref());
         let headers = self.bearer_headers(token);
-
-        // 1. Create agent (idempotent when agent_id is supplied for ID parity).
-        //    Use the explicit agent_name when provided; fall back to agent_id
-        //    so existing callers that only set agent_id keep working.
-        let agent_display_name = config
-            .agent_name
-            .as_deref()
-            .or(config.agent_id.as_deref())
-            .unwrap_or("default");
-        let mut agent_body = serde_json::json!({
-            "name": agent_display_name,
-        });
-        if let Some(ref aid) = config.agent_id {
-            agent_body["agent_id"] = serde_json::Value::String(aid.clone());
-        }
-
-        let agent_response = self
-            .client
-            .post(format!("{base_url}/v1/agents"))
-            .headers(headers.clone())
-            .json(&agent_body)
-            .send()
-            .await
-            .context("swarm create agent request failed")?;
-        let agent_status = agent_response.status();
-        let agent_body_text = agent_response.text().await?;
-        if !agent_status.is_success() {
-            anyhow::bail!(
-                "swarm create agent failed with {}: {}",
-                agent_status,
-                agent_body_text
-            );
-        }
-        let agent_resp: CreateAgentResponse = serde_json::from_str(&agent_body_text)?;
-        let agent_id = &agent_resp.agent_id;
-
-        // 2. Wait for agent to reach a runnable state before creating session
-        let is_ready = matches!(agent_resp.status.as_str(), "running" | "idle");
-
-        if !is_ready {
-            info!(
-                agent_id = %agent_id,
-                status = %agent_resp.status,
-                "Agent not ready, waiting for provisioning..."
-            );
-            self.wait_for_agent_ready(agent_id, token)
-                .await
-                .context("swarm agent readiness check failed")?;
-        }
-
-        info!(agent_id = %agent_id, "Swarm agent ready");
-
-        // 3. Create session (config envelope matches gateway contract).
-        //    The HTTP bootstrap only needs the subset of SessionConfig that
-        //    the gateway uses to allocate a container; the full SessionInit
-        //    is sent over the WebSocket below via `build_session_init`.
-        let session_body = build_remote_handshake(&config);
-
-        let session_response = self
-            .client
-            .post(format!("{base_url}/v1/agents/{agent_id}/sessions"))
-            .headers(headers.clone())
-            .json(&session_body)
-            .send()
-            .await
-            .context("swarm create session request failed")?;
-        let session_status = session_response.status();
-        let session_body_text = session_response.text().await?;
-        if !session_status.is_success() {
-            anyhow::bail!(
-                "swarm create session failed with {}: {}",
-                session_status,
-                session_body_text
-            );
-        }
-        let session_resp: CreateSessionResponse = serde_json::from_str(&session_body_text)?;
-        if let Some(t) = token {
-            self.session_tokens
-                .lock()
-                .await
-                .insert(session_resp.session_id.clone(), t.to_string());
-        }
-
+        let agent_id = self
+            .create_or_get_agent(&base_url, &config, headers.clone(), token)
+            .await?;
+        let session_resp = self
+            .create_session(&base_url, &agent_id, headers, &config)
+            .await?;
+        self.remember_session_token(&session_resp.session_id, token)
+            .await;
         info!(
             session_id = %session_resp.session_id,
             agent_id = %agent_id,
             "Swarm session created"
         );
-
-        // 4. Open WebSocket with bearer auth on the upgrade request
-        let ws_url = format!(
-            "{}/{}",
-            self.ws_base_url()?,
-            session_resp.ws_url.trim_start_matches('/')
-        );
-
-        let mut ws_request = ws_url
-            .into_client_request()
-            .context("swarm websocket request build failed")?;
-        if let Some(t) = token {
-            ws_request.headers_mut().insert(
-                "Authorization",
-                format!("Bearer {t}").parse().map_err(|e| {
-                    anyhow::anyhow!("swarm websocket auth header build failed: {e}")
-                })?,
-            );
-        }
-
-        let (ws_stream, _) = tokio_tungstenite::connect_async(ws_request)
-            .await
-            .context("swarm websocket connect failed")?;
-
-        // 5. Spawn bridge and send session_init (required by harness protocol)
-        let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
-
-        commands_tx
-            .send(InboundMessage::SessionInit(Box::new(build_session_init(
-                &config,
-            ))))
-            .context("swarm session_init send failed")?;
-
-        Ok(HarnessSession {
-            session_id: session_resp.session_id,
-            events_tx,
-            raw_events_tx,
-            commands_tx,
-        })
+        self.open_session_socket(session_resp, &config, token).await
     }
 
     async fn close_session(&self, session_id: &str) -> anyhow::Result<()> {
