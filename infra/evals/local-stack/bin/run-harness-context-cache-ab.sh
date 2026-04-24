@@ -76,6 +76,9 @@ mkdir -p "$cache_off_data_dir" "$(dirname "$cache_off_log")"
   export AURA_LLM_ROUTING="$AURA_STACK_HARNESS_LLM_ROUTING"
   export ENABLE_CMD_TOOLS="$AURA_STACK_HARNESS_ENABLE_CMD_TOOLS"
   export ALLOWED_COMMANDS="$AURA_STACK_HARNESS_ALLOWED_COMMANDS"
+  if [[ "$AURA_STACK_HARNESS_ALLOW_SHELL" == "true" ]]; then
+    export AURA_ALLOW_SHELL="1"
+  fi
   export RUST_LOG="$AURA_STACK_HARNESS_LOG_LEVEL"
   export AURA_DISABLE_PROMPT_CACHING=1
   exec cargo run -- run --ui none

@@ -146,6 +146,14 @@ LOCAL_HARNESS_URL=http://127.0.0.1:3404 cargo run -p aura-os-desktop -- --extern
 
 With `--external-harness` the desktop binary refuses to start if `LOCAL_HARNESS_URL` is unset or `/health` is unreachable, and will not spawn the bundled local harness sidecar. The runtime config surfaces this as `AURA_DESKTOP_EXTERNAL_HARNESS=1` so the UI can reflect that the harness is externally managed.
 
+When using an external harness, start it with `AURA_ALLOW_SHELL=1` so the autonomous dev loop can invoke `run_command({ command: "cargo check ..." })`. The bundled local sidecar already sets this for you; external deployments need it explicitly. Example:
+
+```bash
+AURA_ALLOW_SHELL=1 cargo run -p aura-node -- --bind 127.0.0.1:3404
+```
+
+Without `AURA_ALLOW_SHELL=1` the harness will reject every `run_command` call with `'shell_script' requires allow_shell=true`, the Definition-of-Done gate will treat the resulting non-zero exit as a build failure, and `task_done` calls from the automaton will be blocked. `AURA_ALLOW_SHELL=1` opens the shell path; `ToolConfig::allowed_shell_scripts` remains empty by default, which now follows the "empty allowlist = any script allowed" convention shared with `command_allowlist` / `binary_allowlist`. Populate `allowed_shell_scripts` explicitly if you need to pin a specific set of scripts.
+
 ### Run mobile web
 
 For all mobile browser testing, use the shared mobile dev runner from the repo root:

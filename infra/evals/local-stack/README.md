@@ -160,7 +160,18 @@ defaults to enabling them with a configurable allowlist:
 ```bash
 AURA_STACK_HARNESS_ENABLE_CMD_TOOLS=true
 AURA_STACK_HARNESS_ALLOWED_COMMANDS=npm,node,npx,pnpm,bun,cargo,python,python3,pytest,go,git
+AURA_STACK_HARNESS_ALLOW_SHELL=true
 ```
+
+`AURA_STACK_HARNESS_ALLOW_SHELL` propagates to the harness as
+`AURA_ALLOW_SHELL=1`. It is required for the autonomous dev loop:
+the agent emits `run_command({ command: "cargo check ..." })` and
+the harness aliases that to the `shell_script` path, which only
+executes when `allow_shell` is true. The companion
+`ToolConfig::allowed_shell_scripts` list stays empty by default,
+which now means "any script allowed" (matching the empty-allowlist
+convention shared with `command_allowlist` / `binary_allowlist`);
+populate it only if you need to pin a specific set of scripts.
 
 ## Bring the stack up
 
