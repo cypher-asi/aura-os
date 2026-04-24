@@ -482,12 +482,28 @@ pub mod phase7_test_support {
     ) -> serde_json::Value {
         let sync_state = crate::sync_state::derive_sync_state(git_steps);
         let recovery_point = crate::sync_state::derive_recovery_point(&sync_state);
-        let failure = match failure_class {
-            "none" => crate::reconciler::FailureClass::None,
-            "truncation" => crate::reconciler::FailureClass::Truncation,
-            "rate_limited" => crate::reconciler::FailureClass::RateLimited,
-            "push_timeout" => crate::reconciler::FailureClass::PushTimeout,
-            _ => crate::reconciler::FailureClass::Other,
+        let failure_signal = match failure_class {
+            "none" => None,
+            "truncation" => Some(aura_os_harness::signals::HarnessSignal::TaskFailed {
+                task_id: None,
+                reason: Some("truncation".to_string()),
+                failure: aura_os_harness::signals::HarnessFailureKind::Truncation,
+            }),
+            "rate_limited" => Some(aura_os_harness::signals::HarnessSignal::TaskFailed {
+                task_id: None,
+                reason: Some("rate_limited".to_string()),
+                failure: aura_os_harness::signals::HarnessFailureKind::RateLimited,
+            }),
+            "push_timeout" => Some(aura_os_harness::signals::HarnessSignal::GitPushFailed {
+                task_id: None,
+                commit_sha: None,
+                reason: Some("git push timeout".to_string()),
+            }),
+            _ => Some(aura_os_harness::signals::HarnessSignal::TaskFailed {
+                task_id: None,
+                reason: Some("other".to_string()),
+                failure: aura_os_harness::signals::HarnessFailureKind::Other,
+            }),
         };
         let effective_max = if max_retries == 0 {
             crate::reconciler::DEFAULT_MAX_RETRIES_PER_TASK
@@ -498,7 +514,7 @@ pub mod phase7_test_support {
         inputs.recovery_point = recovery_point.as_ref();
         inputs.retry_count = retry_count;
         inputs.max_retries = effective_max;
-        inputs.failure_class = failure;
+        inputs.latest_signal = failure_signal.as_ref();
         inputs.has_live_automaton = has_live_automaton;
         inputs.auto_decompose_disabled = auto_decompose_disabled;
         crate::reconciler::decide_reconcile_action(&inputs).to_json()

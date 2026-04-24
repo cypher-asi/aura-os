@@ -18,16 +18,6 @@ pub(crate) fn auto_decompose_disabled() -> bool {
         .unwrap_or(false)
 }
 
-pub(crate) fn classify_failure_for_reconciler(reason: &str) -> crate::reconciler::FailureClass {
-    if is_truncation_failure_for_tests(reason) {
-        crate::reconciler::FailureClass::Truncation
-    } else if is_rate_limited_failure_for_tests(reason) {
-        crate::reconciler::FailureClass::RateLimited
-    } else {
-        crate::reconciler::FailureClass::Other
-    }
-}
-
 pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
     let reason = reason.to_ascii_lowercase();
     reason.contains("truncat")

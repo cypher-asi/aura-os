@@ -1,0 +1,191 @@
+use axum::extract::{Path, Query, State};
+use axum::Json;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::time::Duration;
+
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SpecId, Task};
+use aura_os_harness::{HarnessInbound, HarnessOutbound, UserMessage};
+
+use super::common::storage_task_to_task;
+use crate::error::{ApiError, ApiResult};
+use crate::handlers::projects_helpers::project_tool_session_config;
+use crate::state::{AppState, AuthJwt};
+
+const TASK_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
+const TASK_RESULT_POLL_TIMEOUT: Duration = Duration::from_secs(5);
+
+#[derive(Debug, Deserialize, Default)]
+pub(crate) struct TaskQueryParams {
+    pub agent_instance_id: Option<AgentInstanceId>,
+}
+
+async fn load_extracted_tasks(
+    state: &AppState,
+    project_id: &ProjectId,
+    jwt: &str,
+) -> ApiResult<Vec<Task>> {
+    let storage = state.require_storage_client()?;
+    let started_at = tokio::time::Instant::now();
+    let mut tasks: Vec<Task> = loop {
+        let storage_tasks = storage
+            .list_tasks(&project_id.to_string(), jwt)
+            .await
+            .map_err(|e| ApiError::internal(format!("listing tasks: {e}")))?;
+        let tasks: Vec<Task> = storage_tasks
+            .into_iter()
+            .filter_map(|s| storage_task_to_task(s).ok())
+            .collect();
+        if !tasks.is_empty() || started_at.elapsed() >= TASK_RESULT_POLL_TIMEOUT {
+            break tasks;
+        }
+        tokio::time::sleep(TASK_RESULT_POLL_INTERVAL).await;
+    };
+    tasks.sort_by_key(|t| t.order_index);
+    Ok(tasks)
+}
+
+fn tasks_changed_since(before: &[Task], after: &[Task]) -> bool {
+    if before.len() != after.len() {
+        return true;
+    }
+
+    let before_versions: HashMap<_, _> = before
+        .iter()
+        .map(|task| (task.task_id, task.updated_at))
+        .collect();
+
+    after.iter().any(|task| {
+        before_versions
+            .get(&task.task_id)
+            .is_none_or(|updated_at| *updated_at != task.updated_at)
+    })
+}
+
+pub(crate) async fn list_tasks(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(project_id): Path<ProjectId>,
+) -> ApiResult<Json<Vec<Task>>> {
+    let storage = state.require_storage_client()?;
+    let storage_tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
+        .map_err(|e| ApiError::internal(format!("listing tasks: {e}")))?;
+    let mut tasks: Vec<Task> = storage_tasks
+        .into_iter()
+        .filter_map(|s| storage_task_to_task(s).ok())
+        .collect();
+    tasks.sort_by_key(|t| t.order_index);
+    Ok(Json(tasks))
+}
+
+pub(crate) async fn list_tasks_by_spec(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
+) -> ApiResult<Json<Vec<Task>>> {
+    let storage = state.require_storage_client()?;
+    let storage_tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
+        .map_err(|e| ApiError::internal(format!("listing tasks by spec: {e}")))?;
+    let mut tasks: Vec<Task> = storage_tasks
+        .into_iter()
+        .filter_map(|s| storage_task_to_task(s).ok())
+        .filter(|t| t.spec_id == spec_id)
+        .collect();
+    tasks.sort_by_key(|t| t.order_index);
+    Ok(Json(tasks))
+}
+
+pub(crate) async fn get_task(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path((_project_id, task_id)): Path<(ProjectId, aura_os_core::TaskId)>,
+) -> ApiResult<Json<Task>> {
+    let storage = state.require_storage_client()?;
+    let storage_task =
+        storage
+            .get_task(&task_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_os_storage::StorageError::Server { status: 404, .. } => {
+                    ApiError::not_found("task not found")
+                }
+                _ => ApiError::internal(format!("fetching task: {e}")),
+            })?;
+    Ok(Json(
+        storage_task_to_task(storage_task).map_err(ApiError::internal)?,
+    ))
+}
+
+pub(crate) async fn extract_tasks(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    Path(project_id): Path<ProjectId>,
+    Query(params): Query<TaskQueryParams>,
+) -> ApiResult<Json<Vec<Task>>> {
+    let baseline_tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
+    let harness_mode = if let Some(aiid) = params.agent_instance_id {
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &aiid)
+            .await
+            .map_err(|e| match e {
+                aura_os_agents::AgentError::NotFound => {
+                    ApiError::not_found(format!("agent instance {aiid} not found"))
+                }
+                other => ApiError::internal(format!("looking up agent instance {aiid}: {other}")),
+            })?
+            .harness_mode()
+    } else {
+        HarnessMode::Local
+    };
+    let harness = state.harness_for(harness_mode);
+    let session_config = project_tool_session_config(
+        &state,
+        &project_id,
+        "task-extract",
+        harness_mode,
+        params.agent_instance_id,
+        &jwt,
+    )
+    .await;
+    let session = harness
+        .open_session(session_config)
+        .await
+        .map_err(|e| ApiError::internal(format!("opening task extraction session: {e}")))?;
+
+    session
+        .commands_tx
+        .send(HarnessInbound::UserMessage(UserMessage {
+            content: format!(
+                "Extract tasks for project {project_id}. Review the existing specs, then create or update the project's tasks until the task list is populated. This workflow is only for planning, not execution: do not run commands, do not execute tasks, do not transition task states, and do not mark tasks done/failed/blocked. Never call the `extract_tasks` tool from inside this workflow because that would recursively restart task extraction. Use the spec and task CRUD/listing tools directly instead."
+            ),
+            tool_hints: None,
+            attachments: None,
+        }))
+        .map_err(|e| ApiError::internal(format!("sending task extract command: {e}")))?;
+
+    let mut rx = session.events_tx.subscribe();
+    while let Ok(event) = rx.recv().await {
+        match event {
+            HarnessOutbound::AssistantMessageEnd(_) => {
+                return Ok(Json(load_extracted_tasks(&state, &project_id, &jwt).await?));
+            }
+            HarnessOutbound::Error(err) => {
+                let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
+                if tasks_changed_since(&baseline_tasks, &tasks) {
+                    return Ok(Json(tasks));
+                }
+                return Err(ApiError::internal(err.message));
+            }
+            _ => continue,
+        }
+    }
+
+    Err(ApiError::internal(
+        "task extraction stream ended without result",
+    ))
+}

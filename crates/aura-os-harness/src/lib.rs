@@ -7,6 +7,7 @@
 
 pub mod client;
 pub mod session;
+pub mod signals;
 
 pub use aura_os_link::{
     automaton_event_kinds, build_remote_handshake, build_session_init, collect_automaton_events,
@@ -29,3 +30,4 @@ pub use client::{
     HarnessTxKind, SubmitTxResponse,
 };
 pub use session::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
+pub use signals::{HarnessFailureKind, HarnessSignal};
