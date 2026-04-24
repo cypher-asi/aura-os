@@ -101,12 +101,19 @@ function renderTextLines({ lines, x, y, lineHeight, attributes }) {
 export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = {}) {
   const screenshotWidth = screenshotDimensions.width;
   const screenshotHeight = screenshotDimensions.height;
-  const horizontalPad = clamp(Math.round(screenshotWidth * 0.14), 160, 320);
-  const topPad = Math.max(
-    clamp(Math.round(screenshotHeight * 0.2), 180, 280),
-    Math.round(headerHeight || 0),
-  );
-  const bottomPad = clamp(Math.round(screenshotHeight * 0.12), 110, 200);
+  const hasHeader = Number(headerHeight || 0) > 0;
+  const horizontalPad = hasHeader
+    ? clamp(Math.round(screenshotWidth * 0.14), 160, 320)
+    : clamp(Math.round(screenshotWidth * 0.04), 96, 180);
+  const topPad = hasHeader
+    ? Math.max(
+      clamp(Math.round(screenshotHeight * 0.2), 180, 280),
+      Math.round(headerHeight || 0),
+    )
+    : clamp(Math.round(screenshotHeight * 0.04), 72, 120);
+  const bottomPad = hasHeader
+    ? clamp(Math.round(screenshotHeight * 0.12), 110, 200)
+    : clamp(Math.round(screenshotHeight * 0.04), 72, 120);
   const contentWidth = screenshotWidth + (horizontalPad * 2);
   const contentHeight = screenshotHeight + topPad + bottomPad;
   const canvasWidth = Math.ceil(Math.max(contentWidth, contentHeight * (16 / 9)));
@@ -136,6 +143,7 @@ export function createBrandedMediaSvg({
   outputPath,
   title,
   subtitle = "Aura changelog proof",
+  includeHeader = false,
 } = {}) {
   if (!screenshotPath) {
     throw new Error("screenshotPath is required.");
@@ -145,25 +153,29 @@ export function createBrandedMediaSvg({
   }
 
   const dimensions = readPngDimensionsFromFile(screenshotPath);
-  const baseCanvas = calculateBrandedCanvas(dimensions);
+  const baseCanvas = calculateBrandedCanvas(dimensions, { headerHeight: includeHeader ? undefined : 0 });
   const titleFontSize = clamp(Math.round(baseCanvas.width * 0.032), 48, 76);
   const subtitleFontSize = clamp(Math.round(baseCanvas.width * 0.019), 30, 42);
   const titleLineHeight = Math.round(titleFontSize * 1.08);
   const subtitleLineHeight = Math.round(subtitleFontSize * 1.24);
-  const titleLines = wrapTextForSvg(title || "Aura product update", {
-    fontSize: titleFontSize,
-    maxWidth: dimensions.width,
-    maxLines: 2,
-  });
-  const subtitleLines = wrapTextForSvg(subtitle, {
-    fontSize: subtitleFontSize,
-    maxWidth: dimensions.width,
-    maxLines: 2,
-  });
-  const headerHeight = (titleLines.length * titleLineHeight)
+  const titleLines = includeHeader
+    ? wrapTextForSvg(title || "Aura product update", {
+      fontSize: titleFontSize,
+      maxWidth: dimensions.width,
+      maxLines: 2,
+    })
+    : [];
+  const subtitleLines = includeHeader
+    ? wrapTextForSvg(subtitle, {
+      fontSize: subtitleFontSize,
+      maxWidth: dimensions.width,
+      maxLines: 2,
+    })
+    : [];
+  const headerHeight = includeHeader ? (titleLines.length * titleLineHeight)
     + (subtitleLines.length ? Math.round(subtitleFontSize * 0.7) : 0)
     + (subtitleLines.length * subtitleLineHeight)
-    + 70;
+    + 70 : 0;
   const canvas = calculateBrandedCanvas(dimensions, { headerHeight });
   const dataUri = `data:image/png;base64,${fs.readFileSync(screenshotPath).toString("base64")}`;
   const safeTitle = escapeXml(title || "Aura product update");
@@ -198,20 +210,20 @@ export function createBrandedMediaSvg({
   <rect width="100%" height="100%" fill="url(#aura-bg)"/>
   <rect width="100%" height="100%" fill="url(#aura-glow)"/>
   <rect width="100%" height="100%" fill="url(#aura-corner)"/>
-${renderTextLines({
+${includeHeader ? renderTextLines({
     lines: titleLines,
     x: canvas.title.x,
     y: titleY,
     lineHeight: titleLineHeight,
     attributes: `fill="#ffffff" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${titleFontSize}" font-weight="760"`,
-  })}
-${renderTextLines({
+  }) : ""}
+${includeHeader ? renderTextLines({
     lines: subtitleLines,
     x: canvas.title.x,
     y: subtitleY,
     lineHeight: subtitleLineHeight,
     attributes: `fill="#f1f5f9" opacity="0.96" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${subtitleFontSize}" font-weight="620"`,
-  })}
+  }) : ""}
   <g filter="url(#card-shadow)">
     <rect x="${canvas.screenshot.x - 1}" y="${canvas.screenshot.y - 1}" width="${canvas.screenshot.width + 2}" height="${canvas.screenshot.height + 2}" rx="${radius + 1}" fill="#ffffff" opacity="0.16"/>
     <image href="${dataUri}" x="${canvas.screenshot.x}" y="${canvas.screenshot.y}" width="${canvas.screenshot.width}" height="${canvas.screenshot.height}" preserveAspectRatio="none" clip-path="inset(0 round ${radius}px)"/>
@@ -308,8 +320,8 @@ export async function createBrandingFocusScreenshot({
   outputPath,
   minWidth = 1920,
   minHeight = 1080,
-  maxWidth = 3840,
-  maxHeight = 2160,
+  maxWidth = 7680,
+  maxHeight = 4320,
   background = { r: 5, g: 7, b: 10, alpha: 1 },
 } = {}) {
   if (!screenshotPath) {
@@ -320,12 +332,11 @@ export async function createBrandingFocusScreenshot({
   }
 
   const sharp = (await import("sharp")).default;
-  const trimmed = await sharp(screenshotPath)
-    .trim({ background, threshold: 20 })
+  const source = await sharp(screenshotPath)
     .png()
     .toBuffer({ resolveWithObject: true });
-  const width = trimmed.info.width || minWidth;
-  const height = trimmed.info.height || minHeight;
+  const width = source.info.width || minWidth;
+  const height = source.info.height || minHeight;
   const targetRatio = 16 / 9;
   let targetWidth = Math.max(width, minWidth, Math.ceil(height * targetRatio));
   let targetHeight = Math.max(height, minHeight, Math.ceil(targetWidth / targetRatio));
@@ -339,7 +350,7 @@ export async function createBrandingFocusScreenshot({
   const top = Math.floor((targetHeight - height) / 2);
   const bottom = targetHeight - height - top;
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  const extended = await sharp(trimmed.data)
+  const extended = await sharp(source.data)
     .extend({ top, bottom, left, right, background })
     .png()
     .toBuffer();

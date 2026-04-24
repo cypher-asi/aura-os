@@ -50,6 +50,8 @@ test("buildMediaPlannerPrompt keeps Browser Use behind a conservative Anthropic 
   assert.match(prompt, /Every changelog entry must appear exactly once/);
   assert.match(prompt, /mixes a visible desktop product feature/);
   assert.match(prompt, /default\/empty state/);
+  assert.match(prompt, /seedPlan/);
+  assert.match(prompt, /proof-data-populated/);
   assert.match(prompt, /Browser Use should receive fewer, better candidates/);
   assert.match(prompt, /publicCaption/);
   assert.doesNotMatch(prompt, /Browserbase|Stagehand|Playwright/);
@@ -116,6 +118,8 @@ test("normalizeMediaPlan keeps only high-confidence capture candidates and prese
 
   assert.equal(plan.candidates.length, 1);
   assert.equal(plan.candidates[0].entryId, "strong");
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("proof-data-populated"));
+  assert.ok(plan.candidates[0].seedPlan.capabilities.includes("app:agents"));
   assert.equal(plan.skipped[0].category, "mobile-only");
   assert.ok(plan.skipped.some((entry) => entry.entryId === "second-strong" && entry.category === "candidate-limit"));
   assert.ok(plan.skipped.some((entry) => entry.entryId === "low" && entry.category === "too-ambiguous"));

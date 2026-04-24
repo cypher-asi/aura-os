@@ -12,6 +12,7 @@ import {
   extractChangelogMediaEntries,
   planChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-planner.mjs";
+import { normalizeCaptureSeedPlan } from "./lib/changelog-media-seed-plan.mjs";
 import { resolveDemoRepoPath } from "./lib/demo-repo-paths.mjs";
 import { loadLocalEnv } from "./lib/load-local-env.mjs";
 import {
@@ -565,11 +566,14 @@ export async function runChangelogMediaEvaluation({
     const candidateDir = path.join(outputDir, `candidate-${index + 1}-${safeName(candidate.entryId || candidate.title)}`);
     fs.mkdirSync(candidateDir, { recursive: true });
     const story = candidate.proofGoal || candidate.title;
+    const seedPlan = normalizeCaptureSeedPlan(candidate.seedPlan, candidate);
+    writeJson(path.join(candidateDir, "capture-seed-plan.json"), seedPlan);
     const contract = await buildAuraNavigationContract({
       prompt: story,
       changedFiles: candidate.changedFiles,
       commitLog,
     });
+    contract.captureSeedPlan = seedPlan;
     writeJson(path.join(candidateDir, "navigation-contract.json"), contract);
 
     const blockers = [];
@@ -682,6 +686,7 @@ export async function runChangelogMediaEvaluation({
         outputPath: path.join(candidateDir, "high-resolution-proof.png"),
         viewport: contract.desktopCapturePolicy.viewport,
         story: [candidate.title, candidate.proofGoal, candidate.publicCaption].filter(Boolean).join("\n"),
+        seedPlan,
       })
       : null;
     if (highResolutionCapture) {
@@ -766,6 +771,7 @@ export async function runChangelogMediaEvaluation({
       result: proofResult,
       browserUseResult: result,
       highResolutionCapture,
+      seedPlan,
       desktopEvaluation,
       qualityGate,
       visionGate,

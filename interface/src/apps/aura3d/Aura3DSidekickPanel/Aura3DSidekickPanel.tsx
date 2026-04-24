@@ -17,7 +17,7 @@ function ImagesPanel() {
   }
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} data-agent-surface="aura3d-image-gallery" data-agent-proof="generated-image-gallery">
       <h4 className={styles.heading}>Images</h4>
       <div className={styles.grid}>
         {images.map((img) => (
@@ -51,7 +51,7 @@ function ModelsPanel() {
   }
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} data-agent-surface="aura3d-model-gallery" data-agent-proof="generated-model-gallery">
       <h4 className={styles.heading}>3D Models</h4>
       <div className={styles.grid}>
         {models.map((model) => {

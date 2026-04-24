@@ -1,3 +1,5 @@
+import { normalizeCaptureSeedPlan } from "./changelog-media-seed-plan.mjs";
+
 const DEFAULT_MAX_CANDIDATES = 3;
 const DEFAULT_ENTRY_CHUNK_SIZE = 20;
 const MAX_PROMPT_CHARS = 52000;
@@ -38,6 +40,18 @@ export const CHANGELOG_MEDIA_PLAN_TOOL = {
             publicCaption: { type: ["string", "null"] },
             confidence: { type: "number", minimum: 0, maximum: 1 },
             changedFiles: { type: "array", items: { type: "string" } },
+            seedPlan: {
+              type: ["object", "null"],
+              additionalProperties: false,
+              required: ["capabilities", "requiredState", "readinessSignals"],
+              properties: {
+                mode: { type: ["string", "null"] },
+                capabilities: { type: "array", items: { type: "string" } },
+                requiredState: { type: "array", items: { type: "string" } },
+                readinessSignals: { type: "array", items: { type: "string" } },
+                notes: { type: ["string", "null"] },
+              },
+            },
           },
         },
       },
@@ -157,6 +171,8 @@ export function buildMediaPlannerPrompt({
     "- Prefer high-confidence product features that can be located from the generated sitemap and changed files.",
     "- Do not invent routes or product states that are not supported by the sitemap or commit context.",
     "- Candidates must include a targetAppId and targetPath from the sitemap. If no sitemap target exists, skip the entry.",
+    "- Candidates should include a seedPlan that describes generic capture-state capabilities, not a one-off script. Prefer capabilities like app:<id>, project-selected, proof-data-populated, asset-gallery-populated, agent-chat-ready, run-history-populated.",
+    "- The seedPlan must describe the state/data needed before capture so the browser does not land on empty/default UI.",
     "- Browser Use should receive fewer, better candidates. Be conservative.",
     "- For each candidate, write publicCaption as a customer-facing changelog sentence. Do not use internal instructions like capture, open, show, screenshot, proof, or Browser Use.",
     "",
@@ -199,6 +215,7 @@ export function normalizeMediaPlan(plan, { maxCandidates = DEFAULT_MAX_CANDIDATE
       publicCaption: normalizeString(candidate.publicCaption) || null,
       confidence: clampConfidence(candidate.confidence),
       changedFiles: unique(candidate.changedFiles || []),
+      seedPlan: normalizeCaptureSeedPlan(candidate.seedPlan, candidate),
     }))
     .filter((candidate) => candidate.title && candidate.reason);
 

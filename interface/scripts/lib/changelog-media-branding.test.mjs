@@ -80,17 +80,39 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   assert.equal(asset.embeddedScreenshot.scale, 1);
   assert.equal(asset.embeddedScreenshot.renderedWidth, 1920);
   assert.equal(asset.embeddedScreenshot.renderedHeight, 1080);
-  assert.ok(asset.layout.titleLines > 0 && asset.layout.titleLines <= asset.layout.maxTitleLines);
-  assert.equal(asset.layout.subtitleLines, 1);
+  assert.equal(asset.layout.titleLines, 0);
+  assert.equal(asset.layout.subtitleLines, 0);
   assert.ok(Math.abs(asset.layout.aspectRatio - (16 / 9)) < 0.02);
   assert.equal(assessBrandedMediaAsset(asset).ok, true);
 
   const svg = fs.readFileSync(outputPath, "utf8");
   assert.doesNotMatch(svg, /AURA CHANGELOG/);
   assert.match(svg, /data:image\/png;base64,/);
+  assert.doesNotMatch(svg, /<tspan x="/);
+  assert.doesNotMatch(svg, /#6ee7f9|#7dd3fc|#60a5fa|#00ff00|green/i);
+  assert.ok(asset.layout.screenshot.width / asset.dimensions.width > 0.86);
+  assert.ok(asset.layout.screenshot.height / asset.dimensions.height > 0.86);
+});
+
+test("createBrandedMediaSvg can render a bounded header when explicitly requested", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
+  const screenshotPath = path.join(tempDir, "screenshot.png");
+  const outputPath = path.join(tempDir, "branded.svg");
+  writePng(screenshotPath, 1920, 1080);
+
+  const asset = createBrandedMediaSvg({
+    screenshotPath,
+    outputPath,
+    title: "GPT-5.5 available in the chat model picker",
+    subtitle: "Open the picker and show the model option.",
+    includeHeader: true,
+  });
+
+  assert.ok(asset.layout.titleLines > 0 && asset.layout.titleLines <= asset.layout.maxTitleLines);
+  assert.equal(asset.layout.subtitleLines, 1);
+  const svg = fs.readFileSync(outputPath, "utf8");
   assert.match(svg, /GPT-5.5 available/);
   assert.match(svg, /<tspan x="/);
-  assert.doesNotMatch(svg, /#6ee7f9|#7dd3fc|#60a5fa|#00ff00|green/i);
   assert.match(svg, /fill="#ffffff".*font-weight="760"/);
   assert.match(svg, /fill="#f1f5f9" opacity="0.96".*font-weight="620"/);
 });
@@ -161,10 +183,9 @@ test("assessBrandedMediaAsset rejects low-resolution embedded proof", () => {
 
   assert.equal(report.ok, false);
   assert.ok(report.concerns.some((concern) => concern.includes("below production readability minimum")));
-  assert.ok(report.concerns.some((concern) => concern.includes("too small")));
 });
 
-test("createBrandingFocusScreenshot caps oversized proof captures to production 4K", async () => {
+test("createBrandingFocusScreenshot preserves high-resolution proof captures up to production 8K", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
   const screenshotPath = path.join(tempDir, "oversized.png");
   const outputPath = path.join(tempDir, "focus.png");
@@ -176,8 +197,8 @@ test("createBrandingFocusScreenshot caps oversized proof captures to production 
   });
 
   assert.equal(fs.existsSync(outputPath), true);
-  assert.equal(focus.dimensions.width, 3840);
-  assert.equal(focus.dimensions.height, 2160);
+  assert.equal(focus.dimensions.width, 7680);
+  assert.equal(focus.dimensions.height, 4320);
   assert.equal(focus.crop.resizedFrom.width, 7680);
   assert.equal(focus.crop.resizedFrom.height, 4320);
 });

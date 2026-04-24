@@ -197,7 +197,7 @@ async function selectProofClip(page, story, proofAction = null) {
         text: visibleRects.map((rect) => rect.text || "").filter(Boolean).join(" ").slice(0, 500),
       };
     }
-    function expandToPresentationClip(rect, { minWidth = 1920, minHeight = 1080, maxWidth = null, maxHeight = null } = {}) {
+    function expandToPresentationClip(rect, { minWidth = 1920, minHeight = 1080, maxWidth = null, maxHeight = null, alignTop = false } = {}) {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       const targetRatio = 16 / 9;
@@ -220,7 +220,7 @@ async function selectProofClip(page, story, proofAction = null) {
       width = Math.min(width, viewportWidth);
       height = Math.min(height, viewportHeight);
       let x = rect.x + (rect.width / 2) - (width / 2);
-      let y = rect.y + (rect.height / 2) - (height / 2);
+      let y = alignTop ? rect.y - padding : rect.y + (rect.height / 2) - (height / 2);
       x = Math.max(0, Math.min(x, viewportWidth - width));
       y = Math.max(0, Math.min(y, viewportHeight - height));
       return {
@@ -245,12 +245,19 @@ async function selectProofClip(page, story, proofAction = null) {
       const haystack = `${surface.selector} ${surface.semanticText || ""} ${rect.text || ""}`.toLowerCase();
       const tokenScore = tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
       const visibleTextBonus = rect.text ? 0.5 : 0;
-      const proofBonus = surface.hasProofSignal ? 2 : 0;
+      const proofBonus = surface.directProofSignal ? 8 : surface.hasProofSignal ? 3 : 0;
       const semanticBonus = surface.semanticText ? 1 : 0;
       const mainPanelPenalty = surface.name === "main-panel" ? -0.5 : 0;
       const viewportArea = Math.max(1, window.innerWidth * window.innerHeight);
       const areaRatio = (rect.width * rect.height) / viewportArea;
       return tokenScore + visibleTextBonus + proofBonus + semanticBonus + mainPanelPenalty - (areaRatio * 4);
+    }
+
+    function contextRectForProofElement(element) {
+      if (!element.getAttribute("data-agent-proof")) return null;
+      const context = element.parentElement?.closest("[data-agent-surface]:not([data-agent-proof])");
+      if (!context || !isVisible(context)) return null;
+      return rectForElement(context, `[data-agent-surface="${CSS.escape(context.getAttribute("data-agent-surface") || "proof-context")}"]`);
     }
 
     const proofSurfaces = Array.from(document.querySelectorAll("[data-agent-surface]"))
@@ -261,7 +268,9 @@ async function selectProofClip(page, story, proofAction = null) {
           selector: `[data-agent-surface="${CSS.escape(surface)}"]`,
           name: surface,
           semanticText: dataAgentKeywords(element),
+          directProofSignal: Boolean(element.getAttribute("data-agent-proof")),
           hasProofSignal: Boolean(element.querySelector("[data-agent-proof]") || element.getAttribute("data-agent-proof")),
+          contextRect: contextRectForProofElement(element),
         };
       });
     const semanticProofElements = Array.from(document.querySelectorAll("body *"))
@@ -283,7 +292,7 @@ async function selectProofClip(page, story, proofAction = null) {
       })
       .filter((entry) => (
         entry.tokenScore > 0
-        && entry.text.length > 0
+        && entry.text.length >= 12
         && entry.area >= 8000
         && entry.area <= entry.viewportArea * 0.72
       ));
@@ -296,13 +305,19 @@ async function selectProofClip(page, story, proofAction = null) {
       if (actionName) {
         included.push(rectFor(`[data-agent-action="${CSS.escape(actionName)}"]`, { required: false }));
       }
+      if (surface.directProofSignal) {
+        included.push(surface.contextRect);
+      }
       const combined = union(included) || rect;
       ranked.push({
         surface,
         rect: combined,
         score: scoreSurface(surface, combined),
-        minWidth: 1920,
-        minHeight: 1080,
+        minWidth: surface.directProofSignal ? 1280 : 1920,
+        minHeight: surface.directProofSignal ? 720 : 1080,
+        maxWidth: null,
+        maxHeight: null,
+        alignTop: surface.directProofSignal,
       });
     }
     if (actionName) {
@@ -351,6 +366,9 @@ async function selectProofClip(page, story, proofAction = null) {
       return expandToPresentationClip(best.rect, {
         minWidth: best.minWidth || 1920,
         minHeight: best.minHeight || 1080,
+        maxWidth: best.maxWidth || null,
+        maxHeight: best.maxHeight || null,
+        alignTop: best.alignTop || false,
       });
     }
     return {
@@ -373,6 +391,7 @@ export async function captureHighResolutionAuraProof({
   outputPath,
   viewport = DEFAULT_HIGH_RES_CAPTURE_VIEWPORT,
   story = "",
+  seedPlan = null,
   waitAfterResetMs = 700,
   playwright = null,
 } = {}) {
@@ -427,13 +446,14 @@ export async function captureHighResolutionAuraProof({
       { timeout: 20_000 },
     );
     const bridgeResult = await page.evaluate(
-      ({ appId, path: routePath }) => window.__AURA_CAPTURE_BRIDGE__.resetShell({
+      ({ appId, path: routePath, seed }) => window.__AURA_CAPTURE_BRIDGE__.resetShell({
         targetAppId: appId,
         targetPath: routePath,
+        seedPlan: seed,
         sidekickCollapsed: false,
         timeoutMs: 10_000,
       }),
-      { appId: targetAppId, path: resolvedTargetPath },
+      { appId: targetAppId, path: resolvedTargetPath, seed: seedPlan },
     );
     await page.waitForTimeout(waitAfterResetMs);
     await page.waitForSelector("[data-agent-surface], [data-agent-action]", { state: "visible", timeout: 5000 }).catch(() => null);

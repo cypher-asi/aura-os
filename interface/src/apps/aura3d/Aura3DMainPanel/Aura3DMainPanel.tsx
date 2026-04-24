@@ -36,7 +36,7 @@ export function Aura3DMainPanel({ children: _children }: { children?: ReactNode 
             </button>
           </div>
         )}
-        <div className={styles.tabContent}>
+        <div className={styles.tabContent} data-agent-surface="aura3d-main-panel">
           {activeTab === "image" && <ImageGeneration />}
           {activeTab === "3d" && <ModelGeneration />}
         </div>
