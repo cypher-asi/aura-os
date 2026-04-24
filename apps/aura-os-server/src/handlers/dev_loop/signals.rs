@@ -20,11 +20,29 @@ pub(crate) fn auto_decompose_disabled() -> bool {
 
 pub(crate) fn is_truncation_failure_for_tests(reason: &str) -> bool {
     let reason = reason.to_ascii_lowercase();
-    reason.contains("truncat")
-        || reason.contains("max_tokens")
-        || reason.contains("maximum tokens")
-        || reason.contains("needsdecomposition")
-        || reason.contains("no file")
+    !is_completion_contract_failure_reason(&reason)
+        && (reason.contains("truncat")
+            || reason.contains("max_tokens")
+            || reason.contains("maximum tokens")
+            || reason.contains("needsdecomposition")
+            || reason.contains("needs decomposition"))
+}
+
+pub(crate) fn is_completion_contract_failure_for_tests(reason: &str) -> bool {
+    is_completion_contract_failure_reason(&reason.to_ascii_lowercase())
+}
+
+fn is_completion_contract_failure_reason(reason: &str) -> bool {
+    let mentions_task_done =
+        reason.contains("task_done") || reason.contains("completing this task");
+    let mentions_missing_edits = reason.contains("not made any file changes")
+        || reason.contains("no file changes")
+        || reason.contains("no files changed")
+        || reason.contains("no file edited")
+        || reason.contains("no file edits");
+    let mentions_no_change_escape_hatch = reason.contains("no_changes_needed");
+
+    mentions_task_done && (mentions_missing_edits || mentions_no_change_escape_hatch)
 }
 
 pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
@@ -179,6 +197,37 @@ pub(crate) fn successful_write_event_path_for_tests(
         _ => return None,
     };
     path_from_input(event).map(|path| (path, op))
+}
+
+pub(crate) fn task_done_declares_no_changes_needed_for_tests(
+    event_type: &str,
+    event: &serde_json::Value,
+) -> bool {
+    event_type == "tool_call_completed"
+        && event.get("is_error").and_then(|v| v.as_bool()) != Some(true)
+        && event.get("name").and_then(|value| value.as_str()) == Some("task_done")
+        && event
+            .get("input")
+            .and_then(|input| input.get("no_changes_needed"))
+            .and_then(|value| value.as_bool())
+            == Some(true)
+}
+
+pub(crate) fn task_done_missing_file_changes_reason_for_tests(
+    event_type: &str,
+    event: &serde_json::Value,
+    files_changed: &[&str],
+) -> Option<&'static str> {
+    if event_type != "tool_call_completed"
+        || event.get("is_error").and_then(|v| v.as_bool()) == Some(true)
+        || event.get("name").and_then(|value| value.as_str()) != Some("task_done")
+        || !files_changed.is_empty()
+        || task_done_declares_no_changes_needed_for_tests(event_type, event)
+    {
+        return None;
+    }
+
+    Some("task_done_without_file_changes")
 }
 
 fn path_from_input(event: &serde_json::Value) -> Option<String> {

@@ -30,6 +30,7 @@ impl TerminalReason {
             Self::RateLimited => "rate_limited",
             Self::CommitFailed => "commit_failed",
             Self::DecomposeDisabled => "decompose_disabled",
+            Self::CompletionContract => "completion_contract",
         }
     }
 }

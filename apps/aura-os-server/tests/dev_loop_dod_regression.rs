@@ -204,6 +204,100 @@ fn successful_write_event_path_skips_errored_or_empty_events() {
     assert!(tsp::successful_write_event_path("tool_call_completed", &wrong_tool).is_none());
 }
 
+// ---------------------------------------------------------------------------
+// task_done no-change contract
+// ---------------------------------------------------------------------------
+
+#[test]
+fn task_done_accepts_explicit_no_changes_needed_without_file_evidence() {
+    let ev = json!({
+        "name": "task_done",
+        "input": {
+            "no_changes_needed": true,
+            "notes": "The requested implementation was already present and covered by tests."
+        }
+    });
+
+    assert!(tsp::task_done_declares_no_changes_needed(
+        "tool_call_completed",
+        &ev
+    ));
+    assert_eq!(
+        tsp::task_done_missing_file_changes_reason("tool_call_completed", &ev, &[]),
+        None,
+        "explicit no_changes_needed is the required success path for already-complete implementation tasks"
+    );
+}
+
+#[test]
+fn task_done_requires_file_evidence_when_no_changes_needed_is_absent() {
+    let ev = json!({
+        "name": "task_done",
+        "input": {
+            "notes": "Implementation complete"
+        }
+    });
+
+    assert!(!tsp::task_done_declares_no_changes_needed(
+        "tool_call_completed",
+        &ev
+    ));
+    assert_eq!(
+        tsp::task_done_missing_file_changes_reason("tool_call_completed", &ev, &[]),
+        Some("task_done_without_file_changes"),
+        "implementation completions still require write/edit/delete evidence unless they opt into no_changes_needed"
+    );
+}
+
+#[test]
+fn task_done_with_file_evidence_does_not_need_no_changes_flag() {
+    let ev = json!({
+        "name": "task_done",
+        "input": {
+            "notes": "Implementation complete"
+        }
+    });
+
+    assert_eq!(
+        tsp::task_done_missing_file_changes_reason(
+            "tool_call_completed",
+            &ev,
+            &["crates/zero-network/src/program.rs"]
+        ),
+        None
+    );
+}
+
+#[test]
+fn task_done_no_change_contract_ignores_errored_or_unrelated_events() {
+    let errored = json!({
+        "name": "task_done",
+        "is_error": true,
+        "input": { "no_changes_needed": true }
+    });
+    assert!(!tsp::task_done_declares_no_changes_needed(
+        "tool_call_completed",
+        &errored
+    ));
+    assert_eq!(
+        tsp::task_done_missing_file_changes_reason("tool_call_completed", &errored, &[]),
+        None
+    );
+
+    let unrelated = json!({
+        "name": "run_command",
+        "input": { "cmd": "cargo test" }
+    });
+    assert_eq!(
+        tsp::task_done_missing_file_changes_reason("tool_call_completed", &unrelated, &[]),
+        None
+    );
+    assert_eq!(
+        tsp::task_done_missing_file_changes_reason("tool_call_started", &unrelated, &[]),
+        None
+    );
+}
+
 #[test]
 fn completion_gate_accepts_harness_terminal_state_despite_empty_path_write_history() {
     // Empty-path writes remain useful diagnostic history, but the harness
@@ -673,13 +767,47 @@ fn dod_classifier_is_inert_because_harness_owns_remediation() {
 }
 
 #[test]
+fn task_done_no_file_reason_is_completion_contract_not_truncation() {
+    let reason = "ERROR: You are completing this task but have not made any file changes \
+                  (write_file, edit_file, or delete_file). Implementation tasks must produce \
+                  file changes. If this task genuinely requires no file changes, call \
+                  task_done again with \"no_changes_needed\": true and explain why in the \
+                  notes field.";
+
+    assert!(
+        tsp::is_completion_contract_failure(reason),
+        "task_done no-file failures should be labeled as completion-contract errors"
+    );
+    assert!(
+        !tsp::is_truncation_failure(reason),
+        "task_done no-file failures must not trigger truncation decomposition"
+    );
+}
+
+#[test]
+fn completion_contract_failure_reconciles_to_terminal_reason() {
+    let decision = tsp::reconcile_decision(&[], "completion_contract", 0, 3, false, false);
+
+    assert_eq!(
+        decision,
+        json!({
+            "action": "mark_terminal",
+            "reason": "completion_contract",
+        }),
+        "missing file-edit evidence is an agent/tool contract failure, not a decomposition candidate"
+    );
+}
+
+#[test]
 fn dod_followup_prompt_and_retry_budget_are_retired() {
-    assert!(tsp::build_dod_followup_prompt(
-        "missing_test",
-        1,
-        "Task modified source code but no test step was run"
-    )
-    .is_none());
+    assert!(
+        tsp::build_dod_followup_prompt(
+            "missing_test",
+            1,
+            "Task modified source code but no test step was run"
+        )
+        .is_none()
+    );
     assert_eq!(
         tsp::max_dod_retries_per_task(),
         0,

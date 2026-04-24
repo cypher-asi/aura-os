@@ -6,6 +6,7 @@ pub enum HarnessFailureKind {
     Truncation,
     RateLimited,
     PushTimeout,
+    CompletionContract,
     Other,
 }
 
@@ -158,12 +159,13 @@ pub fn classify_failure(reason: Option<&str>) -> HarnessFailureKind {
         return HarnessFailureKind::Other;
     };
     let reason = reason.to_ascii_lowercase();
-    if reason.contains("truncat")
+    if is_completion_contract_failure(&reason) {
+        HarnessFailureKind::CompletionContract
+    } else if reason.contains("truncat")
         || reason.contains("max_tokens")
         || reason.contains("maximum tokens")
         || reason.contains("needsdecomposition")
         || reason.contains("needs decomposition")
-        || reason.contains("no file")
     {
         HarnessFailureKind::Truncation
     } else if reason.contains("rate limit")
@@ -178,6 +180,19 @@ pub fn classify_failure(reason: Option<&str>) -> HarnessFailureKind {
     } else {
         HarnessFailureKind::Other
     }
+}
+
+fn is_completion_contract_failure(reason: &str) -> bool {
+    let mentions_task_done =
+        reason.contains("task_done") || reason.contains("completing this task");
+    let mentions_missing_edits = reason.contains("not made any file changes")
+        || reason.contains("no file changes")
+        || reason.contains("no files changed")
+        || reason.contains("no file edited")
+        || reason.contains("no file edits");
+    let mentions_no_change_escape_hatch = reason.contains("no_changes_needed");
+
+    mentions_task_done && (mentions_missing_edits || mentions_no_change_escape_hatch)
 }
 
 fn is_push_timeout(reason: &str) -> bool {
@@ -233,6 +248,38 @@ mod tests {
 
         assert_eq!(signal.task_id(), Some("task-1"));
         assert_eq!(signal.failure_kind(), Some(HarnessFailureKind::Truncation));
+    }
+
+    #[test]
+    fn classifies_task_done_without_file_edits_as_completion_contract() {
+        let reason = "ERROR: You are completing this task but have not made any file changes \
+                      (write_file, edit_file, or delete_file). Implementation tasks must produce \
+                      file changes. If this task genuinely requires no file changes, call \
+                      task_done again with \"no_changes_needed\": true and explain why in the \
+                      notes field.";
+        let signal = HarnessSignal::from_event(
+            "task_failed",
+            &serde_json::json!({
+                "task_id": "task-1",
+                "reason": reason,
+            }),
+        )
+        .expect("signal");
+
+        assert_eq!(
+            signal.failure_kind(),
+            Some(HarnessFailureKind::CompletionContract)
+        );
+    }
+
+    #[test]
+    fn completion_contract_does_not_swallow_plain_truncation() {
+        assert_eq!(
+            classify_failure(Some(
+                "response truncated because no file context was available"
+            )),
+            HarnessFailureKind::Truncation
+        );
     }
 
     #[test]

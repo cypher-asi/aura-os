@@ -56,6 +56,7 @@ pub enum TerminalReason {
     RateLimited,
     CommitFailed,
     DecomposeDisabled,
+    CompletionContract,
 }
 
 pub fn decide_reconcile_action(inputs: &ReconcileInputs<'_>) -> ReconcileAction {
@@ -102,6 +103,9 @@ pub fn decide_reconcile_action(inputs: &ReconcileInputs<'_>) -> ReconcileAction 
                 budget_exhausted()
             }
         }
+        HarnessFailureKind::CompletionContract => ReconcileAction::MarkTerminal {
+            reason: TerminalReason::CompletionContract,
+        },
         HarnessFailureKind::PushTimeout | HarnessFailureKind::Other => {
             if inputs.retry_budget_remaining() {
                 ReconcileAction::RetryTask

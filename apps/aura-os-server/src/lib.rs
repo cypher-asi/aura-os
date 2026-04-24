@@ -25,8 +25,8 @@ pub(crate) mod sync_state;
 
 pub use app_builder::build_app_state;
 pub use harness_client::{
-    bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,
-    HarnessTxKind, SubmitTxResponse,
+    GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult, HarnessTxKind,
+    SubmitTxResponse, bearer_headers,
 };
 pub use harness_gateway::HarnessHttpGateway;
 pub use router::{build_local_api_cors_layer, create_router_with_interface};
@@ -126,6 +126,13 @@ pub mod phase7_test_support {
     /// crashes, rate limits — returns `false`.
     pub fn is_truncation_failure(reason: &str) -> bool {
         crate::handlers::dev_loop::is_truncation_failure_for_tests(reason)
+    }
+
+    /// True when the harness/task tool rejected `task_done` because an
+    /// implementation task completed without write/edit/delete evidence and
+    /// without the explicit `no_changes_needed` escape hatch.
+    pub fn is_completion_contract_failure(reason: &str) -> bool {
+        crate::handlers::dev_loop::is_completion_contract_failure_for_tests(reason)
     }
 
     /// True when `reason` looks like a provider rate-limit or overload
@@ -306,6 +313,29 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::successful_write_event_path_for_tests(event_type, event)
     }
 
+    /// True when a successful `task_done` tool completion explicitly declares
+    /// that no file edits were required for the task.
+    pub fn task_done_declares_no_changes_needed(
+        event_type: &str,
+        event: &serde_json::Value,
+    ) -> bool {
+        crate::handlers::dev_loop::task_done_declares_no_changes_needed_for_tests(event_type, event)
+    }
+
+    /// Returns a stable diagnostic label when a successful `task_done` call
+    /// lacks both file-change evidence and `no_changes_needed: true`.
+    pub fn task_done_missing_file_changes_reason(
+        event_type: &str,
+        event: &serde_json::Value,
+        files_changed: &[&str],
+    ) -> Option<&'static str> {
+        crate::handlers::dev_loop::task_done_missing_file_changes_reason_for_tests(
+            event_type,
+            event,
+            files_changed,
+        )
+    }
+
     /// Preflight a local workspace directory the way the dev-loop would
     /// when starting a task. Returns `Ok(())` if the workspace is
     /// usable (or eligible for auto-clone via `git_repo_url`), and the
@@ -477,6 +507,11 @@ pub mod phase7_test_support {
                 task_id: None,
                 reason: Some("rate_limited".to_string()),
                 failure: aura_os_harness::signals::HarnessFailureKind::RateLimited,
+            }),
+            "completion_contract" => Some(aura_os_harness::signals::HarnessSignal::TaskFailed {
+                task_id: None,
+                reason: Some("task_done_without_file_changes".to_string()),
+                failure: aura_os_harness::signals::HarnessFailureKind::CompletionContract,
             }),
             "push_timeout" => Some(aura_os_harness::signals::HarnessSignal::GitPushFailed {
                 task_id: None,
