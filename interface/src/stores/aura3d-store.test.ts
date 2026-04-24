@@ -10,6 +10,7 @@ describe("aura3d-store", () => {
     const state = useAura3DStore.getState();
     expect(state.activeTab).toBe("image");
     expect(state.selectedProjectId).toBeNull();
+    expect(state.isLoadingArtifacts).toBe(false);
     expect(state.imaginePrompt).toBe("");
     expect(state.imagineModel).toBe("gpt-image-1");
     expect(state.isGeneratingImage).toBe(false);
