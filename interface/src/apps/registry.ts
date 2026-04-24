@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { RouteObject } from "react-router-dom";
 import {
+  Box,
   Brain,
   Bug,
   Check,
@@ -32,6 +33,7 @@ import { feedbackRoutes } from "./feedback/routes";
 import { integrationsRoutes } from "./integrations/routes";
 import { debugRoutes } from "./debug/routes";
 import { profileRoutes } from "./profile/routes";
+import { aura3dRoutes } from "./aura3d/routes";
 import { desktopRoutes } from "./desktop/routes";
 
 type AppModuleLoader = () => Promise<AuraAppModule>;
@@ -175,6 +177,8 @@ const loadNotesApp = () =>
   import("./notes/NotesApp").then((module) => module.NotesApp);
 const loadProfileApp = () =>
   import("./profile/ProfileApp").then((module) => module.ProfileApp);
+const loadAura3DApp = () =>
+  import("./aura3d/Aura3DApp").then((module) => module.Aura3DApp);
 const loadDesktopApp = () =>
   import("./desktop/DesktopApp/index").then((module) => module.DesktopApp);
 
@@ -380,6 +384,23 @@ export const apps: AuraApp[] = [
     },
     loadProfileApp,
     {
+      hasSidekickPanel: true,
+      hasSidekickTaskbar: true,
+    },
+  ),
+  createAppDefinition(
+    {
+      id: "aura3d",
+      label: "AURA 3D",
+      agentDescription: "3D asset creation studio with image generation, 3D model creation, and tokenization.",
+      agentKeywords: ["3d", "model", "image", "generate", "imagine", "tokenize", "asset", "glb"],
+      icon: Box,
+      basePath: "/3d",
+      routes: aura3dRoutes,
+    },
+    loadAura3DApp,
+    {
+      hasResponsiveControls: true,
       hasSidekickPanel: true,
       hasSidekickTaskbar: true,
     },

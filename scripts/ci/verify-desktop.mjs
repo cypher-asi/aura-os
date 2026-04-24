@@ -16,6 +16,9 @@ const binaryPath =
 
 assertDesktopRuntime({ requireHarness: true });
 
+run("node", ["--check", "infra/scripts/release/desktop-local-auto-update-smoke.mjs"], {
+  cwd: repoRoot,
+});
 run("npm", ["ci"], { cwd: interfaceDir });
 run("node", ["infra/scripts/release/prepare-desktop-sidecar.mjs"], { cwd: repoRoot });
 run("npm", ["run", "build"], { cwd: interfaceDir });

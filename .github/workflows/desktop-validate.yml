@@ -14,6 +14,8 @@ on:
       - apps/aura-os-server/**
       - interface/**
       - infra/scripts/release/desktop-ci-smoke.mjs
+      - infra/scripts/release/desktop-local-auto-update-smoke.mjs
+      - scripts/ci/verify-desktop.mjs
       - Cargo.lock
       - Cargo.toml
   workflow_dispatch:
