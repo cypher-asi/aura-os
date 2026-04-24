@@ -101,9 +101,9 @@ function renderTextLines({ lines, x, y, lineHeight, attributes }) {
 export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = {}) {
   const screenshotWidth = screenshotDimensions.width;
   const screenshotHeight = screenshotDimensions.height;
-  const horizontalPad = clamp(Math.round(screenshotWidth * 0.16), 180, 360);
+  const horizontalPad = clamp(Math.round(screenshotWidth * 0.14), 160, 320);
   const topPad = Math.max(
-    clamp(Math.round(screenshotHeight * 0.22), 180, 300),
+    clamp(Math.round(screenshotHeight * 0.2), 180, 280),
     Math.round(headerHeight || 0),
   );
   const bottomPad = clamp(Math.round(screenshotHeight * 0.12), 110, 200);
@@ -126,11 +126,7 @@ export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = 
     },
     title: {
       x: screenshotX,
-      y: Math.max(96, contentTop + 118),
-    },
-    label: {
-      x: screenshotX,
-      y: Math.max(38, contentTop + 34),
+      y: Math.max(72, contentTop + 74),
     },
   };
 }
@@ -140,7 +136,6 @@ export function createBrandedMediaSvg({
   outputPath,
   title,
   subtitle = "Aura changelog proof",
-  label = "Aura",
 } = {}) {
   if (!screenshotPath) {
     throw new Error("screenshotPath is required.");
@@ -151,12 +146,10 @@ export function createBrandedMediaSvg({
 
   const dimensions = readPngDimensionsFromFile(screenshotPath);
   const baseCanvas = calculateBrandedCanvas(dimensions);
-  const labelFontSize = clamp(Math.round(baseCanvas.width * 0.018), 22, 34);
-  const titleFontSize = clamp(Math.round(baseCanvas.width * 0.026), 34, 56);
-  const subtitleFontSize = clamp(Math.round(baseCanvas.width * 0.014), 18, 26);
-  const titleLineHeight = Math.round(titleFontSize * 1.12);
-  const subtitleLineHeight = Math.round(subtitleFontSize * 1.36);
-  const labelTitleGap = clamp(Math.round(baseCanvas.width * 0.012), 28, 52);
+  const titleFontSize = clamp(Math.round(baseCanvas.width * 0.032), 48, 76);
+  const subtitleFontSize = clamp(Math.round(baseCanvas.width * 0.019), 30, 42);
+  const titleLineHeight = Math.round(titleFontSize * 1.08);
+  const subtitleLineHeight = Math.round(subtitleFontSize * 1.24);
   const titleLines = wrapTextForSvg(title || "Aura product update", {
     fontSize: titleFontSize,
     maxWidth: dimensions.width,
@@ -167,39 +160,35 @@ export function createBrandedMediaSvg({
     maxWidth: dimensions.width,
     maxLines: 2,
   });
-  const headerHeight = labelFontSize
-    + labelTitleGap
-    + (titleLines.length * titleLineHeight)
-    + (subtitleLines.length ? Math.round(subtitleFontSize * 0.95) : 0)
+  const headerHeight = (titleLines.length * titleLineHeight)
+    + (subtitleLines.length ? Math.round(subtitleFontSize * 0.7) : 0)
     + (subtitleLines.length * subtitleLineHeight)
-    + 52;
+    + 70;
   const canvas = calculateBrandedCanvas(dimensions, { headerHeight });
   const dataUri = `data:image/png;base64,${fs.readFileSync(screenshotPath).toString("base64")}`;
   const safeTitle = escapeXml(title || "Aura product update");
-  const safeLabel = escapeXml(label);
   const radius = clamp(Math.round(dimensions.width * 0.018), 18, 32);
   const shadowOffset = clamp(Math.round(dimensions.height * 0.04), 24, 56);
-  const labelText = `${safeLabel.toUpperCase()} CHANGELOG`;
-  const titleY = canvas.label.y + labelFontSize + labelTitleGap;
+  const titleY = canvas.title.y;
   const subtitleY = titleY
     + (Math.max(1, titleLines.length) * titleLineHeight)
-    + Math.round(subtitleFontSize * 1.2);
+    + Math.round(subtitleFontSize * 0.95);
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" role="img" aria-label="${safeTitle}">
   <defs>
     <linearGradient id="aura-bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#05070c"/>
-      <stop offset="0.46" stop-color="#111827"/>
-      <stop offset="1" stop-color="#070a12"/>
+      <stop offset="0.5" stop-color="#101827"/>
+      <stop offset="1" stop-color="#050812"/>
     </linearGradient>
-    <radialGradient id="aura-glow" cx="52%" cy="0%" r="72%">
-      <stop offset="0" stop-color="#7dd3fc" stop-opacity="0.18"/>
-      <stop offset="0.42" stop-color="#60a5fa" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#070a12" stop-opacity="0"/>
+    <radialGradient id="aura-glow" cx="50%" cy="0%" r="68%">
+      <stop offset="0" stop-color="#e2e8f0" stop-opacity="0.10"/>
+      <stop offset="0.44" stop-color="#64748b" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#050812" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="aura-corner" cx="84%" cy="20%" r="54%">
-      <stop offset="0" stop-color="#334155" stop-opacity="0.22"/>
+      <stop offset="0" stop-color="#475569" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#020617" stop-opacity="0"/>
     </radialGradient>
     <filter id="card-shadow" x="-8%" y="-8%" width="116%" height="124%">
@@ -209,20 +198,19 @@ export function createBrandedMediaSvg({
   <rect width="100%" height="100%" fill="url(#aura-bg)"/>
   <rect width="100%" height="100%" fill="url(#aura-glow)"/>
   <rect width="100%" height="100%" fill="url(#aura-corner)"/>
-  <text x="${canvas.label.x}" y="${canvas.label.y}" fill="#9aa8bd" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${labelFontSize}" font-weight="750" letter-spacing="5.5">${labelText}</text>
 ${renderTextLines({
     lines: titleLines,
     x: canvas.title.x,
     y: titleY,
     lineHeight: titleLineHeight,
-    attributes: `fill="#f8fafc" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${titleFontSize}" font-weight="650"`,
+    attributes: `fill="#ffffff" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${titleFontSize}" font-weight="760"`,
   })}
 ${renderTextLines({
     lines: subtitleLines,
     x: canvas.title.x,
     y: subtitleY,
     lineHeight: subtitleLineHeight,
-    attributes: `fill="#cbd5e1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${subtitleFontSize}" font-weight="500"`,
+    attributes: `fill="#f1f5f9" opacity="0.96" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${subtitleFontSize}" font-weight="620"`,
   })}
   <g filter="url(#card-shadow)">
     <rect x="${canvas.screenshot.x - 1}" y="${canvas.screenshot.y - 1}" width="${canvas.screenshot.width + 2}" height="${canvas.screenshot.height + 2}" rx="${radius + 1}" fill="#ffffff" opacity="0.16"/>
@@ -243,7 +231,7 @@ ${renderTextLines({
     },
     layout: {
       aspectRatio: canvas.width / canvas.height,
-      labelLines: 1,
+      labelLines: 0,
       titleLines: titleLines.length,
       subtitleLines: subtitleLines.length,
       maxTitleLines: 2,

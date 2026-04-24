@@ -86,12 +86,13 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   assert.equal(assessBrandedMediaAsset(asset).ok, true);
 
   const svg = fs.readFileSync(outputPath, "utf8");
-  assert.match(svg, /AURA CHANGELOG/);
+  assert.doesNotMatch(svg, /AURA CHANGELOG/);
   assert.match(svg, /data:image\/png;base64,/);
   assert.match(svg, /GPT-5.5 available/);
   assert.match(svg, /<tspan x="/);
-  assert.doesNotMatch(svg, /#6ee7f9|#00ff00|green/i);
-  assert.match(svg, /#7dd3fc/);
+  assert.doesNotMatch(svg, /#6ee7f9|#7dd3fc|#60a5fa|#00ff00|green/i);
+  assert.match(svg, /fill="#ffffff".*font-weight="760"/);
+  assert.match(svg, /fill="#f1f5f9" opacity="0.96".*font-weight="620"/);
 });
 
 test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
