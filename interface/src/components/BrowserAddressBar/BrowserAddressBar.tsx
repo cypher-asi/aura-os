@@ -28,26 +28,41 @@ export interface BrowserAddressBarProps {
   onSelectDetected?: (url: string) => void;
 }
 
+function duckDuckGoSearchUrl(query: string): string {
+  return `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+}
+
 function normalizeBrowserUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
+  const hasWhitespace = /\s/.test(trimmed);
   const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed);
-  const candidate = hasScheme
-    ? trimmed
-    : /^(localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[^\]]+\]|[^/\s]+\:\d+)(?:[/?#]|$)/.test(trimmed)
-      ? `http://${trimmed}`
-      : trimmed.includes(".")
-        ? `https://${trimmed}`
-        : null;
 
-  if (!candidate) return null;
-
-  try {
-    return new URL(candidate).toString();
-  } catch {
-    return null;
+  let candidate: string | null = null;
+  if (hasScheme) {
+    candidate = trimmed;
+  } else if (!hasWhitespace) {
+    if (
+      /^(localhost|\d{1,3}(?:\.\d{1,3}){3}|\[[^\]]+\]|[^/\s]+:\d+)(?:[/?#]|$)/.test(
+        trimmed,
+      )
+    ) {
+      candidate = `http://${trimmed}`;
+    } else if (trimmed.includes(".")) {
+      candidate = `https://${trimmed}`;
+    }
   }
+
+  if (candidate) {
+    try {
+      return new URL(candidate).toString();
+    } catch {
+      // fall through to search fallback
+    }
+  }
+
+  return duckDuckGoSearchUrl(trimmed);
 }
 
 export function BrowserAddressBar({

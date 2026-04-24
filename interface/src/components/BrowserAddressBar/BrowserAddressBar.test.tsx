@@ -21,6 +21,39 @@ describe("BrowserAddressBar", () => {
     expect(onSubmit).toHaveBeenCalledWith("https://www.google.com/");
   });
 
+  it("falls back to a DuckDuckGo search for multi-word queries", () => {
+    const onSubmit = vi.fn();
+    render(<BrowserAddressBar value="" onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("URL");
+    fireEvent.change(input, { target: { value: "how to code rust" } });
+    fireEvent.submit(input);
+    expect(onSubmit).toHaveBeenCalledWith(
+      "https://duckduckgo.com/?q=how%20to%20code%20rust",
+    );
+  });
+
+  it("falls back to a DuckDuckGo search for a single bare word", () => {
+    const onSubmit = vi.fn();
+    render(<BrowserAddressBar value="" onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("URL");
+    fireEvent.change(input, { target: { value: "rustacean" } });
+    fireEvent.submit(input);
+    expect(onSubmit).toHaveBeenCalledWith(
+      "https://duckduckgo.com/?q=rustacean",
+    );
+  });
+
+  it("falls back to search when a dotted input contains whitespace", () => {
+    const onSubmit = vi.fn();
+    render(<BrowserAddressBar value="" onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("URL");
+    fireEvent.change(input, { target: { value: "hello world.com" } });
+    fireEvent.submit(input);
+    expect(onSubmit).toHaveBeenCalledWith(
+      "https://duckduckgo.com/?q=hello%20world.com",
+    );
+  });
+
   it("pins the current URL when the pin button is clicked", () => {
     const onPin = vi.fn();
     render(
