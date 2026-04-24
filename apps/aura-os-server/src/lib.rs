@@ -178,10 +178,10 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::should_restart_on_error_event_for_tests(reason)
     }
 
-    /// Run the Definition-of-Done gate against a synthetic task-output
-    /// summary. Returns the rejection reason when the completion would
-    /// be rewritten to `task_failed`, `None` when the completion would
-    /// be accepted.
+    /// Compatibility shim for the former server-side Definition-of-Done
+    /// gate. The harness is now authoritative for completion semantics,
+    /// so aura-os always accepts harness terminal events and only records
+    /// verification evidence for display.
     pub fn completion_validation_reason(
         live_output: &str,
         files_changed: &[&str],
@@ -200,13 +200,9 @@ pub mod phase7_test_support {
         )
     }
 
-    /// Like [`completion_validation_reason`] but additionally exercises
-    /// the empty-path-write short-circuit: `n_empty_path_writes` is the
-    /// number of `write_file` / `edit_file` tool calls the harness
-    /// emitted with a missing/empty `path`. The gate only fails on
-    /// non-zero counts when the agent *never* recovered (i.e.
-    /// `files_changed` is empty). If real file changes landed, the
-    /// empty-path events are treated as benign misfire history.
+    /// Compatibility shim for callers that still pass empty-path-write
+    /// counters. The harness owns task completion, so these counters are
+    /// diagnostic history only.
     pub fn completion_validation_reason_with_empty_path_writes(
         live_output: &str,
         files_changed: &[&str],
@@ -227,15 +223,9 @@ pub mod phase7_test_support {
         )
     }
 
-    /// Like [`completion_validation_reason_with_empty_path_writes`] but
-    /// additionally supplies a `tool_call_failures` history. Each tuple
-    /// is `(tool_name, reason)` and is appended to the synthetic cached
-    /// output's `tool_call_failures` vec before the gate runs. Used to
-    /// cover the run_command-policy-denial upgrade path: if the gate
-    /// would otherwise have emitted the generic "no build step" error
-    /// and the history contains a `run_command` entry whose reason
-    /// contains "is not allowed", the gate upgrades the message to a
-    /// kernel-policy-denial diagnostic instead.
+    /// Compatibility shim for callers that still pass tool-call failures.
+    /// Harness policy failures remain harness-owned task failures; aura-os
+    /// should not reinterpret them as server-side DoD failures.
     #[allow(clippy::too_many_arguments)]
     pub fn completion_validation_reason_with_tool_call_failures(
         live_output: &str,
@@ -284,8 +274,8 @@ pub mod phase7_test_support {
 
     /// True when the harness streamed a `write_file` / `edit_file`
     /// `tool_call_completed` event with a missing or empty `path`.
-    /// Those events cannot land on disk and contribute to the
-    /// `empty_path_writes` counter the DoD gate consults.
+    /// Those events cannot land on disk and are retained as diagnostic
+    /// history; the harness owns any resulting completion decision.
     ///
     /// Started/snapshot events are intentionally ignored so a single
     /// malformed call is only counted once.
@@ -299,7 +289,7 @@ pub mod phase7_test_support {
     /// `op` is one of `"create" | "modify" | "delete"` (aligned with
     /// `StorageTaskFileChangeSummary::op`).
     ///
-    /// This is the fallback signal the DoD gate uses to populate
+    /// This is the fallback signal aura-os uses to populate
     /// `files_changed` when the upstream `assistant_message_end` did
     /// not carry a `files_changed` payload.
     pub fn successful_write_event_path(
@@ -382,29 +372,14 @@ pub mod phase7_test_support {
         crate::handlers::dev_loop::classify_push_failure_for_tests(reason)
     }
 
-    /// Test-only: classify a Definition-of-Done gate failure reason
-    /// into a stable `remediation_kind` label
-    /// (`"missing_build" | "missing_test" | "missing_fmt" | "missing_lint"`),
-    /// or `None` when the reason is not retryable via a single
-    /// verification-command follow-up (unrecovered empty-path writes,
-    /// baseline "no activity", kernel-policy denials).
-    ///
-    /// Mirrors the classifier the dev loop consults inside
-    /// `attempt_dod_retry` so a regression in the pattern-matching
-    /// surface is caught without standing up a live automaton.
+    /// Compatibility shim for the retired aura-os DoD retry classifier.
+    /// Always returns `None`; the harness owns retry/remediation policy.
     pub fn classify_dod_remediation_kind(reason: &str) -> Option<&'static str> {
         crate::handlers::dev_loop::classify_dod_remediation_kind_for_tests(reason)
     }
 
-    /// Test-only: build the exact follow-up prompt string the DoD retry
-    /// path writes into `execution_notes` for a given
-    /// `remediation_kind` label. Returns `None` for unknown labels so
-    /// a typo in the test is surfaced immediately.
-    ///
-    /// The output format is a deliberately-stable single paragraph
-    /// starting with `[aura-dod-retry attempt=N]` and ending with the
-    /// canonical verification command; downstream consumers
-    /// (UI, run-bundle viewers) may pattern-match on the marker.
+    /// Compatibility shim for the retired aura-os DoD retry prompt.
+    /// Always returns `None`; the harness owns follow-up prompts.
     pub fn build_dod_followup_prompt(
         kind_label: &str,
         attempt: u32,
@@ -417,9 +392,9 @@ pub mod phase7_test_support {
         )
     }
 
-    /// Test-only: the per-task upper bound on Definition-of-Done retry
-    /// attempts. Surfaced so regressions can pin the constant without
-    /// hard-coding the numeric literal.
+    /// Test-only: the retired aura-os Definition-of-Done retry budget.
+    /// Returns zero because retry/remediation policy now lives in the
+    /// harness.
     #[must_use]
     pub const fn max_dod_retries_per_task() -> u32 {
         crate::handlers::dev_loop::max_dod_retries_per_task_for_tests()

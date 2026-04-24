@@ -213,6 +213,8 @@ pub(crate) fn derive_checkpoint_summary(
             || !test_steps.is_empty()
             || !git_steps.is_empty(),
         files_changed: files_changed_count > 0,
+        // Display-only summary of harness-reported verification evidence.
+        // The harness, not aura-os, decides whether the task satisfied DoD.
         verification_passed: !build_steps.is_empty() && !test_steps.is_empty(),
         commit_created: sync_state.last_commit_sha.is_some(),
         push_confirmed: sync_state.status == TaskSyncStatus::Pushed,

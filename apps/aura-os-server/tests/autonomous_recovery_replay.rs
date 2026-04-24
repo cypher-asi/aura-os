@@ -280,7 +280,7 @@ fn heuristics_surface_split_write_for_blocked_path() {
 }
 
 #[test]
-fn completion_validation_rejects_unverified_source_changes() {
+fn completion_validation_defers_unverified_source_changes_to_harness() {
     let reason = aura_os_server::phase7_test_support::completion_validation_reason(
         "edited source",
         &["src/lib.rs"],
@@ -288,11 +288,10 @@ fn completion_validation_rejects_unverified_source_changes() {
         0,
         0,
         0,
-    )
-    .expect("source changes without verification should be rejected");
+    );
     assert!(
-        reason.contains("no build/compile step"),
-        "expected build-step rejection, got {reason:?}",
+        reason.is_none(),
+        "aura-os should not reject source changes using local verification counters",
     );
 }
 

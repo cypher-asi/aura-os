@@ -4,7 +4,7 @@ use crate::handlers::projects_helpers::validate_workspace_is_initialised;
 
 pub(crate) const CONSECUTIVE_PUSH_FAILURES_STUCK_THRESHOLD: u32 = 3;
 const TOOL_CALL_RETRY_BUDGET: u32 = 8;
-const MAX_DOD_RETRIES_PER_TASK: u32 = 2;
+const MAX_DOD_RETRIES_PER_TASK: u32 = 0;
 
 pub(crate) fn auto_decompose_disabled() -> bool {
     std::env::var("AURA_AUTO_DECOMPOSE_DISABLED")
@@ -93,102 +93,42 @@ pub(crate) fn should_restart_on_error_event_for_tests(reason: &str) -> bool {
 }
 
 pub(crate) fn completion_validation_failure_reason_for_tests(
-    live_output: &str,
-    files_changed: &[&str],
-    n_build_steps: usize,
-    n_test_steps: usize,
-    n_format_steps: usize,
-    n_lint_steps: usize,
+    _live_output: &str,
+    _files_changed: &[&str],
+    _n_build_steps: usize,
+    _n_test_steps: usize,
+    _n_format_steps: usize,
+    _n_lint_steps: usize,
 ) -> Option<String> {
-    completion_validation_failure_reason_with_empty_path_writes_for_tests(
-        live_output,
-        files_changed,
-        n_build_steps,
-        n_test_steps,
-        n_format_steps,
-        n_lint_steps,
-        0,
-    )
-}
-
-pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_tests(
-    live_output: &str,
-    files_changed: &[&str],
-    n_build_steps: usize,
-    n_test_steps: usize,
-    n_format_steps: usize,
-    n_lint_steps: usize,
-    n_empty_path_writes: u32,
-) -> Option<String> {
-    if live_output.trim().is_empty() {
-        return Some("no output observed".to_string());
-    }
-    if files_changed.is_empty() {
-        return Some(
-            if n_empty_path_writes > 0 {
-                "file write tool calls had empty paths and no valid file changes were observed"
-            } else {
-                "no files changed"
-            }
-            .to_string(),
-        );
-    }
-    if n_build_steps == 0 {
-        return Some("Task modified source code but no build/compile step was run".to_string());
-    }
-    if n_test_steps == 0 {
-        return Some("Task modified source code but no test step was run".to_string());
-    }
-    if n_format_steps == 0 {
-        return Some("Task modified source code but no format check was run".to_string());
-    }
-    if n_lint_steps == 0 {
-        return Some("Task modified source code but no lint check was run".to_string());
-    }
     None
 }
 
-fn is_run_command_policy_denial_reason(reason: &str) -> bool {
-    let reason = reason.to_ascii_lowercase();
-    reason.contains("run_command is denied by kernel policy")
-        || reason.contains("not allowed")
-        || reason.contains("active policy")
-        || reason.contains("allow_shell")
-        || reason.contains("binary_allowlist")
-}
-
-fn run_command_policy_denial_message() -> String {
-    "run_command is denied by harness command policy; verification commands cannot run. Check the external harness /health response for run_command_enabled=true, shell_enabled=true, and a non-empty binary_allowlist, then restart the harness before retrying.".to_string()
+pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_tests(
+    _live_output: &str,
+    _files_changed: &[&str],
+    _n_build_steps: usize,
+    _n_test_steps: usize,
+    _n_format_steps: usize,
+    _n_lint_steps: usize,
+    _n_empty_path_writes: u32,
+) -> Option<String> {
+    // The harness owns Definition-of-Done and decides whether a task is
+    // complete. aura-os only records and displays the evidence it receives.
+    None
 }
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn completion_validation_failure_reason_with_tool_call_failures_for_tests(
-    live_output: &str,
-    files_changed: &[&str],
-    n_build_steps: usize,
-    n_test_steps: usize,
-    n_format_steps: usize,
-    n_lint_steps: usize,
-    n_empty_path_writes: u32,
-    tool_call_failures: &[(&str, &str)],
+    _live_output: &str,
+    _files_changed: &[&str],
+    _n_build_steps: usize,
+    _n_test_steps: usize,
+    _n_format_steps: usize,
+    _n_lint_steps: usize,
+    _n_empty_path_writes: u32,
+    _tool_call_failures: &[(&str, &str)],
 ) -> Option<String> {
-    let run_command_denied = tool_call_failures.iter().any(|(name, reason)| {
-        *name == "run_command" && is_run_command_policy_denial_reason(reason)
-    });
-    if run_command_denied
-        && (n_build_steps == 0 || n_test_steps == 0 || n_format_steps == 0 || n_lint_steps == 0)
-    {
-        return Some(run_command_policy_denial_message());
-    }
-    completion_validation_failure_reason_with_empty_path_writes_for_tests(
-        live_output,
-        files_changed,
-        n_build_steps,
-        n_test_steps,
-        n_format_steps,
-        n_lint_steps,
-        n_empty_path_writes,
-    )
+    None
 }
 
 pub(crate) fn tool_call_failed_should_retry_for_tests(reason: &str, prior_count: u32) -> bool {
@@ -336,21 +276,8 @@ pub(crate) fn classify_push_failure_for_tests(reason: &str) -> Option<&'static s
 }
 
 pub(crate) fn classify_dod_remediation_kind_for_tests(reason: &str) -> Option<&'static str> {
-    let reason = reason.to_ascii_lowercase();
-    if is_run_command_policy_denial_reason(&reason) {
-        return None;
-    }
-    if reason.contains("build") {
-        Some("missing_build")
-    } else if reason.contains("test") {
-        Some("missing_test")
-    } else if reason.contains("format") || reason.contains("fmt") {
-        Some("missing_fmt")
-    } else if reason.contains("lint") || reason.contains("clippy") {
-        Some("missing_lint")
-    } else {
-        None
-    }
+    let _ = reason;
+    None
 }
 
 pub(crate) fn build_dod_followup_prompt_for_tests(
@@ -358,28 +285,8 @@ pub(crate) fn build_dod_followup_prompt_for_tests(
     attempt: u32,
     previous_reason: &str,
 ) -> Option<String> {
-    let axis = match kind_label {
-        "missing_build" => "build step",
-        "missing_test" => "test step",
-        "missing_fmt" => "format check",
-        "missing_lint" => "lint check",
-        _ => return None,
-    };
-    let reason = truncate_reason(previous_reason);
-    Some(format!(
-        "[aura-dod-retry attempt={attempt} axis={kind_label}] Previous completion was rejected: {reason}. Use run_command to perform the missing {axis}, then fix any failures before finishing."
-    ))
-}
-
-fn truncate_reason(reason: &str) -> String {
-    const MAX_CHARS: usize = 240;
-    let mut chars = reason.chars();
-    let truncated: String = chars.by_ref().take(MAX_CHARS).collect();
-    if chars.next().is_some() {
-        format!("{truncated}…")
-    } else {
-        truncated
-    }
+    let _ = (kind_label, attempt, previous_reason);
+    None
 }
 
 pub(crate) const fn max_dod_retries_per_task_for_tests() -> u32 {

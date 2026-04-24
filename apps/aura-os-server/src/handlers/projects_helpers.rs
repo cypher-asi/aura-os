@@ -176,8 +176,8 @@ impl WorkspacePreflightError {
 
 /// Preflight check run before an automaton is spawned against a
 /// workspace. Rejects empty / uninitialised directories so the agent
-/// does not flail producing `Untitled file` writes and later fail the
-/// DoD gate with no useful diagnosis.
+/// does not flail producing `Untitled file` writes with no useful
+/// diagnosis.
 ///
 /// A workspace passes when all of the following hold:
 /// 1. the path exists and is a directory,

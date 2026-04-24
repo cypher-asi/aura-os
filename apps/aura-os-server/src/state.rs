@@ -232,12 +232,12 @@ pub struct CachedTaskOutput {
     pub git_steps: Vec<serde_json::Value>,
     pub sync_checkpoints: Vec<TaskSyncCheckpoint>,
     pub sync_state: Option<TaskSyncState>,
-    /// Evidence of `cargo fmt --check` / `prettier --check` / equivalent
-    /// being exercised during the task. Part of the Definition-of-Done gate
-    /// the dev loop enforces before marking a task as done.
+    /// Harness-reported evidence of `cargo fmt --check` / `prettier --check`
+    /// / equivalent being exercised during the task. aura-os stores this for
+    /// display; the harness owns whether it satisfies Definition-of-Done.
     pub format_steps: Vec<serde_json::Value>,
-    /// Evidence of `cargo clippy -D warnings` / `eslint` / equivalent being
-    /// exercised during the task. Part of the Definition-of-Done gate.
+    /// Harness-reported evidence of `cargo clippy -D warnings` / `eslint` /
+    /// equivalent being exercised during the task. Stored for display only.
     pub lint_steps: Vec<serde_json::Value>,
     pub total_input_tokens: u64,
     pub total_output_tokens: u64,
@@ -257,8 +257,8 @@ pub struct CachedTaskOutput {
     ///    `tool_call_completed` events with a non-empty `input.path`.
     ///    This fallback exists because some runtime adapters emit
     ///    `AssistantMessageEnd` with `FilesChanged::default()` (empty),
-    ///    which would otherwise leave the DoD gate believing zero
-    ///    files changed even when writes landed on disk.
+    ///    which would otherwise leave the UI showing zero files changed even
+    ///    when writes landed on disk.
     pub files_changed: Vec<StorageTaskFileChangeSummary>,
     pub session_id: Option<String>,
     pub agent_instance_id: Option<String>,
@@ -275,32 +275,25 @@ pub struct CachedTaskOutput {
     /// call are deliberately ignored so a single misfire is counted
     /// exactly once.
     ///
-    /// The completion gate rejects turns that produced at least one
-    /// *and* never followed up with a successful file change. When
-    /// `files_changed` is non-empty the empty-path events are treated
-    /// as benign recovery history and the verification-step checks
-    /// handle the real writes.
+    /// The harness owns completion semantics; aura-os keeps this count as
+    /// diagnostic history alongside recovered file changes.
     pub empty_path_writes: u32,
     /// Per-tool-call failure history accumulated from `tool_call_failed`
-    /// domain events during the task. Consulted by the Definition-of-Done
-    /// gate (see `completion_validation_failure_reason`) so a generic
-    /// "no build step" rejection can be upgraded to a specific diagnostic
-    /// when the real cause is a kernel policy denial (e.g. `run_command`
-    /// being blocked because the external harness command policy is disabled
-    /// or missing its binary allowlist).
+    /// domain events during the task. Stored so the UI and persisted task
+    /// output can explain harness/runtime failures without aura-os
+    /// reclassifying them as Definition-of-Done failures.
     ///
     /// Populated by the event-handler loop; stays empty on runtimes that
-    /// don't yet emit `tool_call_failed`, leaving the generic DoD reasons
-    /// as the default.
+    /// don't yet emit `tool_call_failed`.
     pub tool_call_failures: Vec<ToolCallFailureEntry>,
     /// Pending `tool_call_snapshot` inputs keyed by `tool_use_id`,
     /// consumed when the paired `tool_result` arrives.
     ///
-    /// Acts as the version-skew fallback for the DoD gate: harness
+    /// Acts as the version-skew fallback for file-change display: harness
     /// versions that pre-date the `tool_call_completed` emission still
     /// only send `tool_call_snapshot` (carries the input) and
     /// `tool_result` (carries the error flag). Joining them by id gives
-    /// the gate the same `(path, op, is_error)` signal that a native
+    /// aura-os the same `(path, op, is_error)` signal that a native
     /// `tool_call_completed` would.
     ///
     /// Entries are removed when the matching `tool_result` is
@@ -311,7 +304,7 @@ pub struct CachedTaskOutput {
 }
 
 /// Cached `(name, input)` pair from a `tool_call_snapshot` event,
-/// awaiting the paired `tool_result` so the DoD gate can recover the
+/// awaiting the paired `tool_result` so aura-os can recover the
 /// file-change path on harness versions that don't emit the
 /// authoritative `tool_call_completed` frame.
 #[derive(Clone, Debug, Default)]

@@ -8,13 +8,13 @@
 //!    missing/empty/non-git directory must fail fast with a
 //!    remediation hint *unless* a `git_repo_url` is configured, in
 //!    which case the automaton is expected to clone into it.
-//! 2. **Empty-path write rejection** — a `write_file` / `edit_file`
+//! 2. **Empty-path write tracking** — a `write_file` / `edit_file`
 //!    tool call with a blank or missing `path` is classified as an
-//!    empty-path write, and any non-zero count forces the DoD gate to
-//!    reject `task_completed` with the dedicated error string.
-//! 3. **Missing verification evidence** — a run that edited source but
-//!    never issued build/test/fmt/clippy commands is rejected by the
-//!    DoD gate even if every other field is plausible.
+//!    empty-path write for diagnostics, without letting aura-os reject
+//!    a harness terminal event.
+//! 3. **Harness-owned verification** — a run that edited source but
+//!    lacks local build/test/fmt/clippy counters is still accepted by
+//!    aura-os; the harness owns Definition-of-Done.
 //!
 //! The intent is explicitly *replay*-style: we don't spin up a live
 //! server, task service, or automaton. We exercise the public
@@ -205,11 +205,10 @@ fn successful_write_event_path_skips_errored_or_empty_events() {
 }
 
 #[test]
-fn completion_gate_rejects_unrecovered_empty_path_write() {
-    // Empty-path writes with no recovery (files_changed is empty) are
-    // the unambiguous misfire case: the automaton emitted bogus
-    // write_file calls and never produced a real write before
-    // task_done. The gate must reject so the dev loop retries.
+fn completion_gate_accepts_harness_terminal_state_despite_empty_path_write_history() {
+    // Empty-path writes remain useful diagnostic history, but the harness
+    // owns whether the task is complete. aura-os must not reject a harness
+    // terminal event based on its own DoD interpretation.
     let reason = tsp::completion_validation_reason_with_empty_path_writes(
         "never wrote anything real",
         /* files_changed */ &[],
@@ -218,11 +217,10 @@ fn completion_gate_rejects_unrecovered_empty_path_write() {
         /* fmt */ 1,
         /* clippy */ 1,
         /* empty-path writes */ 1,
-    )
-    .expect("unrecovered empty-path write must fail the DoD gate");
+    );
     assert!(
-        reason.contains("empty") || reason.contains("path"),
-        "rejection reason must name the empty-path failure mode, got: {reason}"
+        reason.is_none(),
+        "aura-os must defer completion semantics to the harness, got rejection: {reason:?}"
     );
 }
 
@@ -231,9 +229,8 @@ fn completion_gate_accepts_empty_path_write_when_recovered() {
     // Task 2.4 regression: the automaton emitted a handful of
     // empty-path write_file calls, the harness surfaced the error
     // inline, and the automaton recovered with a real-path write
-    // that did land on disk. The gate must treat the empty-path
-    // events as benign history and let the run through — the
-    // verification-step checks still enforce DoD on the real writes.
+    // that did land on disk. The history is display-only in aura-os;
+    // the harness determines whether the recovery satisfied DoD.
     let reason = tsp::completion_validation_reason_with_empty_path_writes(
         "implementation complete after a misfire",
         &["crates/zero-program/src/lib.rs"],
@@ -245,7 +242,7 @@ fn completion_gate_accepts_empty_path_write_when_recovered() {
     );
     assert!(
         reason.is_none(),
-        "recovered empty-path writes must not fail the gate, got rejection: {reason:?}"
+        "aura-os must not fail recovered empty-path history, got rejection: {reason:?}"
     );
 }
 
@@ -271,7 +268,7 @@ fn completion_gate_accepts_fully_evidenced_run_with_no_empty_path_writes() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn completion_gate_rejects_source_edit_without_build_or_test_or_lint() {
+fn completion_gate_accepts_source_edit_without_local_verification_evidence() {
     let reason = tsp::completion_validation_reason(
         "implementation complete",
         &["crates/zero-program/src/lib.rs"],
@@ -279,11 +276,11 @@ fn completion_gate_rejects_source_edit_without_build_or_test_or_lint() {
         0,
         0,
         0,
-    )
-    .expect("edited source with no verification must be rejected");
-    // We don't pin the exact wording — just that the gate flagged
-    // something actionable rather than silently passing.
-    assert!(!reason.is_empty());
+    );
+    assert!(
+        reason.is_none(),
+        "aura-os must not reject source edits based on local verification counters"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -318,7 +315,7 @@ fn gate_pass_with_push_timeout_keeps_task_done() {
     );
     assert!(
         done,
-        "a task that passed the DoD gate must stay `done` even if git push timed out"
+        "a harness-completed task must stay `done` even if git push timed out"
     );
 }
 
@@ -337,7 +334,7 @@ fn gate_pass_with_remote_storage_exhausted_keeps_task_done() {
     );
     assert!(
         done,
-        "a task that passed the DoD gate must stay `done` even when the remote is out of storage"
+        "a harness-completed task must stay `done` even when the remote is out of storage"
     );
 }
 
@@ -356,16 +353,15 @@ fn gate_pass_with_generic_push_failed_keeps_task_done() {
     );
     assert!(
         done,
-        "a task that passed the DoD gate must stay `done` under any generic push failure"
+        "a harness-completed task must stay `done` under any generic push failure"
     );
 }
 
 #[test]
-fn gate_fail_with_push_timeout_still_falls_through_to_failed() {
-    // No verification evidence AND no files_changed â the gate must
-    // reject, and a push timeout on top of that must NOT silently
-    // bypass the gate. The helper must return false so the handler
-    // takes the normal `task_failed` terminal path.
+fn harness_completion_with_commit_survives_push_timeout_even_without_local_evidence() {
+    // The harness owns completion and the commit is the recovery anchor.
+    // aura-os must not demote the task because its local verification
+    // counters are empty.
     let git_steps = committed_git_steps();
     let done = tsp::should_task_complete_despite_push_failure(
         "",  /* live_output */
@@ -378,8 +374,8 @@ fn gate_fail_with_push_timeout_still_falls_through_to_failed() {
         "timeout",
     );
     assert!(
-        !done,
-        "when the completion gate itself fails, a push failure must not promote the task to `done`"
+        done,
+        "a committed harness completion must stay done even when aura-os has no local DoD evidence"
     );
 }
 
@@ -480,50 +476,11 @@ fn reset_rearms_project_push_stuck_for_next_streak() {
 }
 
 // ---------------------------------------------------------------------------
-// DoD gate: specific diagnostic for kernel-policy-denied `run_command`.
-// `run_command` is on for the standard external harness runtime, so this
-// fires only when the effective command policy is disabled or
-// misconfigured. The gate should surface that root cause instead of the
-// misleading "no build step was run" message.
+// Harness-owned Definition-of-Done
 // ---------------------------------------------------------------------------
 
 #[test]
-fn gate_emits_policy_denial_diagnostic_when_run_command_denied() {
-    // Rust source change, no build steps (because every `run_command`
-    // was denied), and a tool_call_failures entry with the real reason.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["apps/aura-os-server/src/lib.rs"],
-        0, // build steps
-        0, // test steps
-        0, // format steps
-        0, // lint steps
-        0, // empty-path writes
-        &[(
-            "run_command",
-            "Tool 'run_command' is not allowed by the active policy",
-        )],
-    )
-    .expect("gate should fire when no build step ran");
-
-    assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "expected harness-command-policy diagnostic, got: {reason}"
-    );
-    assert!(
-        reason.contains("/health") && reason.contains("run_command_enabled=true"),
-        "diagnostic must point at the external harness health policy, got: {reason}"
-    );
-    assert!(
-        !reason.contains("no build/compile step was run"),
-        "policy-denial diagnostic must replace the generic no-build message, got: {reason}"
-    );
-}
-
-#[test]
-fn gate_emits_generic_no_build_when_no_policy_denial() {
-    // Same synthetic run, but no tool_call_failures history: falls
-    // through to the generic "no build" DoD message.
+fn tool_call_failures_are_diagnostic_history_not_aura_os_dod_failures() {
     let reason = tsp::completion_validation_reason_with_tool_call_failures(
         "edited one Rust file",
         &["apps/aura-os-server/src/lib.rs"],
@@ -531,270 +488,16 @@ fn gate_emits_generic_no_build_when_no_policy_denial() {
         0,
         0,
         0,
-        0,
-        &[],
-    )
-    .expect("gate should still fire on a Rust edit with no build step");
-
-    assert!(
-        reason.contains("no build/compile step was run"),
-        "expected generic no-build message when policy denial is absent, got: {reason}"
-    );
-    assert!(
-        !reason.contains("run_command is denied by harness command policy"),
-        "policy-denial diagnostic must not fire without a matching tool_call_failures entry, got: {reason}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// DoD gate: command-policy-denial diagnostic must cover ALL four DoD axes
-// (build, test, fmt, lint), not just missing-build. Motivating incident:
-// task 1.0 "Initialise Rust workspace" (409fa99a-274b-4cea-88ef-23cbc506ce93)
-// where `run_command` was denied with the newer `requires allow_shell=true`
-// string, `build_steps` was nonzero (auto-triggered signal), and the gate
-// rejected at `!has_test`. The DoD retry tier then treated the generic
-// "no test step was run" message as retryable and burned two retries
-// against a wall no reprompt could move.
-// ---------------------------------------------------------------------------
-
-#[test]
-fn gate_emits_policy_denial_for_missing_test_when_run_command_denied() {
-    // Build=1 but test=0 with a run_command denial. The incident path:
-    // the harness surfaced auto-triggered build evidence so the gate
-    // sailed past `!has_build`, then rejected at `!has_test`. The
-    // upgrade must still fire because the *underlying* cause is the
-    // same harness lock-down, not a forgetful agent.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["apps/aura-os-server/src/lib.rs"],
-        /* build */ 1,
-        /* test */ 0,
-        /* fmt */ 0,
-        /* lint */ 0,
         0,
         &[(
             "run_command",
             "Tool 'run_command' is not allowed by the active policy",
         )],
-    )
-    .expect("gate should fire when test axis is missing");
+    );
 
     assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "expected harness-command-policy diagnostic at the test axis, got: {reason}"
-    );
-    assert!(
-        !reason.contains("no test step was run"),
-        "policy-denial must replace the generic no-test message, got: {reason}"
-    );
-}
-
-#[test]
-fn gate_emits_policy_denial_for_missing_fmt_when_run_command_denied() {
-    // Rust change, build + test satisfied, fmt axis missing. The
-    // pre-fix gate would have emitted the generic no-fmt message and
-    // the retry tier would have classified it as `missing_fmt` and
-    // retried — uselessly, because run_command is denied.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["apps/aura-os-server/src/lib.rs"],
-        /* build */ 1,
-        /* test */ 1,
-        /* fmt */ 0,
-        /* lint */ 1,
-        0,
-        &[(
-            "run_command",
-            "Tool 'run_command' is not allowed by the active policy",
-        )],
-    )
-    .expect("gate should fire when fmt axis is missing");
-
-    assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "expected harness-command-policy diagnostic at the fmt axis, got: {reason}"
-    );
-    assert!(
-        !reason.contains("no format check was run"),
-        "policy-denial must replace the generic no-fmt message, got: {reason}"
-    );
-}
-
-#[test]
-fn gate_emits_policy_denial_for_missing_lint_when_run_command_denied() {
-    // Rust change, all axes but lint satisfied. Same reasoning as the
-    // fmt case above.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["apps/aura-os-server/src/lib.rs"],
-        /* build */ 1,
-        /* test */ 1,
-        /* fmt */ 1,
-        /* lint */ 0,
-        0,
-        &[(
-            "run_command",
-            "Tool 'run_command' is not allowed by the active policy",
-        )],
-    )
-    .expect("gate should fire when lint axis is missing");
-
-    assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "expected harness-command-policy diagnostic at the lint axis, got: {reason}"
-    );
-    assert!(
-        !reason.contains("no lint check was run"),
-        "policy-denial must replace the generic no-lint message, got: {reason}"
-    );
-}
-
-#[test]
-fn gate_recognises_requires_allow_shell_as_policy_denial() {
-    // The exact denial string the harness emitted during task 1.0
-    // "Initialise Rust workspace" — captured verbatim so a future
-    // change to the denial wording here is caught immediately.
-    // The pre-fix gate's substring match ("is not allowed") missed
-    // this entirely and let the generic no-test message through.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["zero-sdk/src/lib.rs"],
-        /* build */ 4,
-        /* test */ 0,
-        /* fmt */ 0,
-        /* lint */ 0,
-        0,
-        &[(
-            "run_command",
-            "'shell_script' requires allow_shell=true (per-call or in ToolConfig)",
-        )],
-    )
-    .expect("gate should fire — build satisfied but test axis still missing");
-
-    assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "requires-allow_shell denial must still surface the policy-denial diagnostic, got: {reason}"
-    );
-}
-
-#[test]
-fn gate_recognises_binary_allowlist_denial_as_policy_denial() {
-    // The exact denial string the harness emits when
-    // `enable_commands: true` but `ToolConfig::binary_allowlist` is
-    // empty — the fail-closed path added in `aura-tools` (see
-    // `check_binary_allowlist` in
-    // `aura-harness/crates/aura-tools/src/fs_tools/cmd/mod.rs`). The
-    // pre-fix gate's substring match didn't cover `binary_allowlist`,
-    // so this denial masqueraded as a generic "no build step was run"
-    // failure and the DoD retry tier burned attempts on it.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["zero-identity/src/lib.rs"],
-        /* build */ 0,
-        /* test */ 0,
-        /* fmt */ 0,
-        /* lint */ 0,
-        0,
-        &[(
-            "run_command",
-            "forbidden: command execution requires a non-empty \
-             binary_allowlist; configure ToolConfig::binary_allowlist",
-        )],
-    )
-    .expect("gate should fire — binary_allowlist denial blocks every axis");
-
-    assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "binary_allowlist denial must surface the policy-denial diagnostic, got: {reason}"
-    );
-    assert!(
-        reason.contains("binary_allowlist") && reason.contains("/health"),
-        "policy-denial diagnostic must mention the health-reported binary_allowlist, got: {reason}"
-    );
-}
-
-#[test]
-fn gate_recognises_binary_allowlist_denial_at_test_axis() {
-    // Same denial but the build axis happens to be satisfied (e.g.
-    // harness-emitted auto-triggered build evidence). Gate must still
-    // route through the policy-denial path rather than falling into
-    // the missing-test generic message.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["zero-identity/src/lib.rs"],
-        /* build */ 1,
-        /* test */ 0,
-        /* fmt */ 0,
-        /* lint */ 0,
-        0,
-        &[(
-            "run_command",
-            "forbidden: command execution requires a non-empty \
-             binary_allowlist; configure ToolConfig::binary_allowlist",
-        )],
-    )
-    .expect("gate should fire — test axis still missing");
-
-    assert!(
-        reason.contains("run_command is denied by harness command policy"),
-        "binary_allowlist denial at test axis must surface the policy-denial diagnostic, got: {reason}"
-    );
-}
-
-#[test]
-fn dod_classifier_rejects_binary_allowlist_policy_denial() {
-    // Complements `dod_classifier_rejects_policy_denial_triggered_at_
-    // non_build_axis` for the binary_allowlist flavour: another turn
-    // cannot fix an empty allowlist, so the DoD retry classifier must
-    // refuse to classify this reason and let the task fail terminally
-    // with the actionable diagnostic.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["zero-identity/src/lib.rs"],
-        /* build */ 0,
-        /* test */ 0,
-        /* fmt */ 0,
-        /* lint */ 0,
-        0,
-        &[(
-            "run_command",
-            "forbidden: command execution requires a non-empty \
-             binary_allowlist; configure ToolConfig::binary_allowlist",
-        )],
-    )
-    .expect("policy-denied run must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&reason),
-        None,
-        "binary_allowlist policy-denial reason must not classify as DoD \
-         remediation; got: {reason}"
-    );
-}
-
-#[test]
-fn dod_classifier_rejects_policy_denial_triggered_at_non_build_axis() {
-    // End-to-end pin: when the gate emits the policy-denial reason
-    // because the *test* axis failed (not just build), the DoD retry
-    // classifier must still return None so the retry tier doesn't
-    // burn attempts against the lock-down.
-    let reason = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["zero-sdk/src/lib.rs"],
-        /* build */ 1,
-        /* test */ 0,
-        /* fmt */ 0,
-        /* lint */ 0,
-        0,
-        &[(
-            "run_command",
-            "'shell_script' requires allow_shell=true (per-call or in ToolConfig)",
-        )],
-    )
-    .expect("policy-denied test-axis failure must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&reason),
-        None,
-        "policy-denial reason (test axis) must not classify as DoD remediation; got: {reason}"
+        reason.is_none(),
+        "aura-os must not convert harness tool failures into server-owned DoD rejection"
     );
 }
 
@@ -917,286 +620,37 @@ fn push_timeout_reason_is_eligible_for_tool_call_retry() {
 }
 
 // ---------------------------------------------------------------------------
-// DoD remediation retry — classifier + follow-up prompt
-//
-// Pins the behaviour introduced after task 4.5 ("Implement incoming
-// message handler", id a96689c0-a0e1-472b-a9e8-288402854f9a) failed
-// because the agent emitted `task_done` without running `cargo build`.
-// The gate correctly rejected the completion, but there was no retry
-// tier between the infra-transient ladder and terminal failure, so the
-// task transitioned straight to `failed` despite the fix being a
-// single verification command away. The DoD retry tier closes that gap
-// by re-engaging the agent with a targeted follow-up prompt.
+// Retired aura-os DoD remediation retry surface
 // ---------------------------------------------------------------------------
 
 #[test]
-fn dod_classifier_maps_missing_build_reason() {
-    // Exact reason string the gate emits for a source change without
-    // a build step. The 4.5 regression depended on this bucket.
-    let reason = tsp::completion_validation_reason(
-        "implementation complete",
-        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
-        /* build */ 0,
-        /* test */ 1,
-        /* fmt */ 1,
-        /* clippy */ 1,
-    )
-    .expect("source change without build must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&reason),
-        Some("missing_build"),
-        "a `no build step` reason must map to missing_build; got: {reason}"
-    );
-}
-
-#[test]
-fn dod_classifier_maps_missing_test_reason() {
-    let reason = tsp::completion_validation_reason(
-        "implementation complete",
-        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
-        1,
-        0,
-        1,
-        1,
-    )
-    .expect("source change without test must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&reason),
-        Some("missing_test"),
-        "a `no test step` reason must map to missing_test; got: {reason}"
-    );
-}
-
-#[test]
-fn dod_classifier_maps_missing_fmt_and_lint_reasons() {
-    let no_fmt = tsp::completion_validation_reason(
-        "implementation complete",
-        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
-        1,
-        1,
-        0,
-        1,
-    )
-    .expect("Rust edit without fmt must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&no_fmt),
-        Some("missing_fmt"),
-    );
-
-    let no_lint = tsp::completion_validation_reason(
-        "implementation complete",
-        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
-        1,
-        1,
-        1,
-        0,
-    )
-    .expect("Rust edit without clippy must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&no_lint),
-        Some("missing_lint"),
-    );
-}
-
-#[test]
-fn dod_classifier_rejects_non_remediable_reasons() {
-    // Unrecovered empty-path writes and baseline "no activity"
-    // failures are structural — another turn with the same agent
-    // won't fix them. They must fall through to terminal handling,
-    // not bounce through the DoD retry tier.
-    let empty_path = tsp::completion_validation_reason_with_empty_path_writes(
-        "",
-        &[],
-        1,
-        1,
-        1,
-        1,
-        /* empty-path writes */ 2,
-    )
-    .expect("unrecovered empty-path writes must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&empty_path),
-        None,
-        "empty-path-write reasons must not classify as DoD remediation; got: {empty_path}"
-    );
-
-    let baseline = tsp::completion_validation_reason("", &[], 0, 0, 0, 0)
-        .expect("baseline no-activity must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&baseline),
-        None,
-        "baseline activity reasons must not classify as DoD remediation; got: {baseline}"
-    );
-
-    // The `run_command` command-policy-denial upgrade is also not
-    // retryable: another turn hits the same policy wall.
-    let policy = tsp::completion_validation_reason_with_tool_call_failures(
-        "edited one Rust file",
-        &["apps/aura-os-server/src/lib.rs"],
-        0,
-        0,
-        0,
-        0,
-        0,
-        &[(
-            "run_command",
-            "Tool 'run_command' is not allowed by the active policy",
-        )],
-    )
-    .expect("policy-denied run must fail the gate");
-    assert_eq!(
-        tsp::classify_dod_remediation_kind(&policy),
-        None,
-        "policy-denial reasons must not classify as DoD remediation; got: {policy}"
-    );
-}
-
-#[test]
-fn dod_followup_prompt_echoes_gate_reason_verbatim() {
-    // The gate's own reason string is the authoritative piece of
-    // feedback: it already names the canonical command ("cargo build
-    // or equivalent must pass" on the Rust path, etc.) and was written
-    // by the gate author with language neutrality in mind. The retry
-    // follow-up must carry that text forward so the agent sees the
-    // exact rejection it has to address.
-    let reason = tsp::completion_validation_reason(
-        "implementation complete",
-        &["crates/zero-sdk/src/messaging/direct/handler.rs"],
-        0,
-        1,
-        1,
-        1,
-    )
-    .expect("source change without build must fail the gate");
-    let prompt = tsp::build_dod_followup_prompt("missing_build", 1, &reason)
-        .expect("known kind must return a prompt");
-    // Pick a distinctive substring from the reason so a cosmetic
-    // tweak to the prompt scaffolding doesn't silently drop the
-    // passthrough.
-    let needle = "no build/compile step was run";
-    assert!(
-        prompt.contains(needle),
-        "prompt must echo the gate reason substring `{needle}`; got: {prompt}"
-    );
-}
-
-#[test]
-fn dod_followup_prompt_does_not_hardcode_cargo_for_non_rust_reasons() {
-    // A TypeScript-only edit produces a gate reason that says "cargo
-    // build or equivalent must pass" — still Rust-scented on the
-    // "equivalent" clause, but not an instruction to run cargo in a
-    // TS workspace. The retry prompt must not promote that hint into
-    // a directive: we want the scaffolding text itself to stay
-    // language-neutral and let the agent pick the workspace's real
-    // command (pnpm, npm, make, etc.).
-    //
-    // Pass a previous reason that does NOT mention cargo at all to
-    // simulate a future gate iteration with a fully language-neutral
-    // message, and assert the scaffolding adds no cargo command of
-    // its own.
-    let prompt = tsp::build_dod_followup_prompt(
-        "missing_build",
-        1,
+fn dod_classifier_is_inert_because_harness_owns_remediation() {
+    for reason in [
         "Task modified source code but no build/compile step was run",
-    )
-    .expect("known kind must return a prompt");
-    // The scaffolding is allowed to list cargo as *one example* among
-    // several tool chains, but must not tell the agent to run a
-    // specific cargo command verbatim. Any of the canonical cargo
-    // invocations appearing as a standalone directive would be a
-    // regression.
-    for forbidden in [
-        "cargo build --workspace --all-targets",
-        "cargo test --workspace --all-features",
-        "cargo fmt --all -- --check",
-        "cargo clippy --workspace --all-targets -- -D warnings",
+        "Task modified source code but no test step was run",
+        "Task modified source code but no format check was run",
+        "Task modified source code but no lint check was run",
+        "run_command is denied by harness command policy",
     ] {
-        assert!(
-            !prompt.contains(forbidden),
-            "prompt must not inject the cargo command `{forbidden}` when the gate reason \
-             doesn't; got: {prompt}"
-        );
-    }
-    // Positive assertion: the prompt should still tell the agent to
-    // use `run_command` to re-run the missing step, just without
-    // prescribing the binary.
-    assert!(
-        prompt.contains("run_command"),
-        "prompt must instruct the agent to invoke the verification step via run_command; got: {prompt}"
-    );
-}
-
-#[test]
-fn dod_followup_prompt_names_the_missing_axis_in_prose() {
-    // Each remediation kind must surface the axis label in prose so
-    // UI consumers and the agent can tell at a glance which gate
-    // check failed without having to parse the full reason. The axis
-    // label is also encoded in the `[aura-dod-retry attempt=N axis=...]`
-    // marker for machine consumption.
-    let expectations = [
-        ("missing_build", "build step"),
-        ("missing_test", "test step"),
-        ("missing_fmt", "format check"),
-        ("missing_lint", "lint check"),
-    ];
-    for (kind, axis) in expectations {
-        let prompt = tsp::build_dod_followup_prompt(kind, 2, "previous gate reason")
-            .expect("known kind must return a prompt");
-        assert!(
-            prompt.contains(axis),
-            "prompt for {kind} must name the axis `{axis}` in prose; got: {prompt}"
-        );
-        let marker = format!("[aura-dod-retry attempt=2 axis={kind}]");
-        assert!(
-            prompt.contains(&marker),
-            "prompt must carry the stable marker `{marker}`; got: {prompt}"
+        assert_eq!(
+            tsp::classify_dod_remediation_kind(reason),
+            None,
+            "aura-os must not classify harness DoD remediation reason: {reason}"
         );
     }
 }
 
 #[test]
-fn dod_followup_prompt_truncates_oversized_previous_reason() {
-    // A pathological previous reason (e.g. a provider error dump)
-    // must not bloat the prompt beyond a handful of lines. The
-    // implementation caps the included reason and appends an ellipsis
-    // so the prompt stays predictable across retries.
-    let huge = "x".repeat(4096);
-    let prompt = tsp::build_dod_followup_prompt("missing_build", 2, &huge)
-        .expect("known kind must return a prompt");
-    assert!(
-        prompt.contains("…"),
-        "oversized previous reason must be truncated with an ellipsis; got: {prompt}"
-    );
-    // Defensive upper bound: prompt stays well below 1 KB so it
-    // doesn't eat the next turn's context budget. 900 is generous
-    // given the fixed scaffolding is ~300 chars plus the 240-char
-    // reason budget.
-    assert!(
-        prompt.len() < 900,
-        "prompt must stay compact after truncation; got {} bytes",
-        prompt.len()
-    );
-}
-
-#[test]
-fn dod_followup_prompt_rejects_unknown_kind_label() {
-    // A typo in the kind label must surface as `None` instead of
-    // silently producing a misleading prompt — the retry path relies
-    // on the classifier returning a known variant.
-    assert!(tsp::build_dod_followup_prompt("missing_foo", 1, "whatever").is_none());
-}
-
-#[test]
-fn dod_retry_budget_is_positive_and_bounded() {
-    // Pins the budget so an accidental zeroing silently disables the
-    // whole retry tier, and so a runaway bump above 8 is caught too.
-    let budget = tsp::max_dod_retries_per_task();
-    assert!(
-        budget > 0,
-        "MAX_DOD_RETRIES_PER_TASK must be positive or the whole tier is dead"
-    );
-    assert!(
-        budget <= 8,
-        "MAX_DOD_RETRIES_PER_TASK must stay bounded to avoid runaway token spend; got {budget}"
+fn dod_followup_prompt_and_retry_budget_are_retired() {
+    assert!(tsp::build_dod_followup_prompt(
+        "missing_test",
+        1,
+        "Task modified source code but no test step was run"
+    )
+    .is_none());
+    assert_eq!(
+        tsp::max_dod_retries_per_task(),
+        0,
+        "aura-os must not retry harness-owned DoD failures"
     );
 }
