@@ -17,6 +17,7 @@ export type AuthTab = "signin" | "register";
 
 export const AUTH_TABS = [
   { id: "signin", label: "Sign In" },
+  { id: "register", label: "Create Account" },
 ];
 
 export const HOST_BADGE_VARIANT: Record<
@@ -161,10 +162,6 @@ export function useLoginForm() {
         setError("Name is required");
         return;
       }
-      if (!inviteCode.trim()) {
-        setError("Invite code is required");
-        return;
-      }
     }
 
     setLoading(true);
@@ -172,7 +169,24 @@ export function useLoginForm() {
       if (activeTab === "signin") {
         await login(email, password);
       } else {
-        await register(email, password, name.trim(), inviteCode.trim());
+        const trimmedCode = inviteCode.trim();
+        let finalCode = trimmedCode;
+        let inviterUserId: string | undefined;
+
+        if (trimmedCode) {
+          // Validate the user-entered invite code
+          const result = await authApi.validateInviteCode(trimmedCode);
+          if (!result.valid) {
+            setError("Invalid invite code");
+            return;
+          }
+          inviterUserId = result.inviterUserId;
+        } else {
+          // Use default invite code when none provided
+          finalCode = import.meta.env.VITE_DEFAULT_INVITE_CODE ?? "domw-jh4cz8";
+        }
+
+        await register(email, password, name.trim(), finalCode, inviterUserId);
       }
       await refreshStatus();
       navigate(from, { replace: true });

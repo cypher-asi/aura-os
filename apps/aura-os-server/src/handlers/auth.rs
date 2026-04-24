@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use base64::Engine;
@@ -102,6 +102,39 @@ pub(crate) async fn register(
     );
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+pub(crate) async fn validate_invite_code(
+    Path(code): Path<String>,
+) -> ApiResult<Json<serde_json::Value>> {
+    // Sanitize: invite codes are alphanumeric + hyphens only (e.g. "domw-jh4cz8")
+    if code.is_empty() || code.len() > 50 || !code.chars().all(|c| c.is_alphanumeric() || c == '-') {
+        return Ok(Json(serde_json::json!({ "valid": false })));
+    }
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("https://zosapi.zero.tech/api/invite/{code}/validate"))
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite validation failed: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Ok(Json(serde_json::json!({ "valid": false })));
+    }
+
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("invite response parse failed: {e}")))?;
+
+    // Normalize: zos-api currently returns a plain boolean.
+    // Wrap it so the frontend always receives { valid, inviterUserId? }.
+    if body.is_boolean() {
+        return Ok(Json(serde_json::json!({ "valid": body.as_bool().unwrap_or(false) })));
+    }
+
+    Ok(Json(body))
 }
 
 pub(crate) async fn import_access_token(

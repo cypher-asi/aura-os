@@ -34,7 +34,4 @@ pub(super) fn protected_auth_routes() -> Router<AppState> {
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
-    // Access code endpoints disabled for launch — Zero Pro is the only entry path.
-    // .route("/api/auth/redeem-access-code", post(auth::redeem_access_code))
-    // .route("/api/auth/access-codes", get(auth::get_access_code))
 }
