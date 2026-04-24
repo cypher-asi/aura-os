@@ -55,5 +55,9 @@
 .body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3) 0;
+  /* Bottom padding matches the desktop shell's fade gradient
+     (`--sidekick-fade-height` in DesktopShell.module.css) so trailing
+     live-output indicators (e.g. `CookingIndicator` at the end of a
+     streaming run) stay above the fade instead of overlapping it. */
+  padding: var(--space-3) 0 var(--sidekick-fade-height, 72px);
 }

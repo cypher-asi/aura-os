@@ -100,6 +100,11 @@
      that the old MutationObserver + rAF + scrollIntoView pattern caused. */
   overflow-anchor: auto;
   scrollbar-width: none;
+  /* Reserve room for the pinned `CookingIndicator` strip (see
+     `.pinnedStreamingIndicator` below) so the last streamed rows never
+     scroll underneath the shimmering phase label. Matches indicator
+     height (~40px) + its `bottom: var(--space-3)` offset. */
+  padding-bottom: calc(var(--space-6) + var(--space-4) + var(--space-3));
 }
 
 .content::-webkit-scrollbar {

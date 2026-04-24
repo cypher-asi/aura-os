@@ -73,7 +73,11 @@
      old MutationObserver + rAF + scrollTop pattern caused. Tail-growth
      pinning happens in TaskOutputSection via a commit-phase useLayoutEffect. */
   overflow-anchor: auto;
-  padding: var(--space-3) 0;
+  /* Bottom padding matches the desktop shell's fade gradient
+     (`--sidekick-fade-height` in DesktopShell.module.css) so the trailing
+     inline `CookingIndicator` in Live Output keeps clearance above the
+     fade and doesn't visually collide with the last event row. */
+  padding: var(--space-3) 0 var(--sidekick-fade-height, 72px);
 }
 
 .taskMeta {
