@@ -15,6 +15,7 @@ pub mod orbit_guard;
 pub mod loop_log;
 
 pub(crate) mod orchestration_store;
+#[allow(dead_code)]
 pub(crate) mod persistence;
 pub(crate) mod process_automaton;
 pub(crate) mod reconciler;

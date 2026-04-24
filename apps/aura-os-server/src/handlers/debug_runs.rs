@@ -83,7 +83,7 @@ pub(crate) async fn list_runs(
 ) -> ApiResult<Json<DebugRunsResponse>> {
     let mut runs = state.loop_log.list_runs(project_id).await;
     if let Some(spec_id) = query.spec_id {
-        runs.retain(|run| run.spec_ids.iter().any(|id| *id == spec_id));
+        runs.retain(|run| run.spec_ids.contains(&spec_id));
     }
     Ok(Json(DebugRunsResponse { runs }))
 }

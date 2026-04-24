@@ -327,6 +327,12 @@ impl AuthService {
     }
 }
 
+impl Default for AuthService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn build_display_name(profile: &Option<ZosProfileSummary>, primary_zid: &Option<String>) -> String {
     if let Some(p) = profile {
         let first = p.first_name.as_deref().unwrap_or("");

@@ -1065,7 +1065,7 @@ pub(crate) async fn add_comment(
     }
     let mut file = load_comments(&note_abs).await?;
     let comment = NoteComment {
-        id: format!("cm_{}", uuid::Uuid::new_v4().as_simple().to_string()),
+        id: format!("cm_{}", uuid::Uuid::new_v4().as_simple()),
         author_id: session.user_id.clone(),
         author_name: req
             .author_name

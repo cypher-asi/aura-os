@@ -58,7 +58,7 @@ fn tasks_changed_since(before: &[Task], after: &[Task]) -> bool {
     after.iter().any(|task| {
         before_versions
             .get(&task.task_id)
-            .is_none_or(|updated_at| *updated_at != task.updated_at)
+            .map_or(true, |updated_at| *updated_at != task.updated_at)
     })
 }
 

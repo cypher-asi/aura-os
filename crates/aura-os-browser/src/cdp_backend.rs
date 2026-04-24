@@ -896,6 +896,9 @@ fn map_mouse_button(btn: MouseButton) -> CdpMouseButton {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{LazyLock, Mutex};
+
+    static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     #[test]
     fn mouse_button_maps_all_variants() {
@@ -938,6 +941,7 @@ mod tests {
 
     #[test]
     fn config_from_env_respects_booleans() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::set_var("BROWSER_DISABLE_SANDBOX", "1");
         let cfg = CdpBackendConfig::from_env();
         assert!(cfg.disable_sandbox);
@@ -949,6 +953,7 @@ mod tests {
 
     #[test]
     fn config_from_env_default_is_safe() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         env::remove_var("BROWSER_DISABLE_SANDBOX");
         env::remove_var("BROWSER_EXECUTABLE_PATH");
         env::remove_var("BROWSER_USER_DATA_DIR");
@@ -963,6 +968,7 @@ mod tests {
 
     #[test]
     fn config_from_env_prefers_explicit_executable_path() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let explicit = std::env::temp_dir().join("aura-browser-explicit.exe");
         env::set_var("BROWSER_EXECUTABLE_PATH", &explicit);
         let cfg = CdpBackendConfig::from_env();

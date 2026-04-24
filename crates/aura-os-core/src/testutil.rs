@@ -148,3 +148,9 @@ impl TestProject {
         self.dir.path()
     }
 }
+
+impl Default for TestProject {
+    fn default() -> Self {
+        Self::new()
+    }
+}

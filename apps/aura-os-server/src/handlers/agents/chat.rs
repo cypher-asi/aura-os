@@ -1868,7 +1868,7 @@ async fn load_latest_agent_events_from_storage_result(
         );
         return Ok(Vec::new());
     }
-    let sessions_outcome = fetch_all_sessions(storage, &jwt, &matching).await;
+    let sessions_outcome = fetch_all_sessions(storage, jwt, &matching).await;
     info!(
         %agent_id,
         matched_agents = matching.len(),
@@ -1917,7 +1917,7 @@ async fn load_project_session_history(
         return Ok(Vec::new());
     };
     let sessions = storage
-        .list_sessions(&agent_instance_id.to_string(), &jwt)
+        .list_sessions(&agent_instance_id.to_string(), jwt)
         .await?;
     let sessions_total = sessions.len();
     if sessions.is_empty() {
@@ -2347,6 +2347,7 @@ fn dto_attachments_to_protocol(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn open_harness_chat_stream(
     state: &AppState,
     session_key: &str,
@@ -2429,7 +2430,7 @@ async fn open_harness_chat_stream(
     if is_new {
         let progress_event = Event::default()
             .event("progress")
-            .json_data(&serde_json::json!({"type":"progress","stage":"connecting"}))
+            .json_data(serde_json::json!({"type":"progress","stage":"connecting"}))
             .unwrap();
         prefix.push(Ok(progress_event));
     }

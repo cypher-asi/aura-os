@@ -830,6 +830,7 @@ async fn run_external_adapter_prompt(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn stream_codex_project_turn(
     state: &AppState,
     _agent: &Agent,
@@ -1050,6 +1051,7 @@ async fn stream_codex_project_turn(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn stream_claude_project_turn(
     state: &AppState,
     integration: Option<&ResolvedIntegration>,
@@ -1670,11 +1672,10 @@ fn parse_claude_output(stdout: &str, fallback_model: Option<String>) -> ApiResul
             .and_then(|event| event.get("message"))
             .and_then(|message| message.get("model"))
             .and_then(Value::as_str)
-            .or_else(|| {
-                init.and_then(|event| event.get("model"))
-                    .and_then(Value::as_str)
-            })
-            .or_else(|| fallback_model.as_deref())
+            .or(init
+                .and_then(|event| event.get("model"))
+                .and_then(Value::as_str))
+            .or(fallback_model.as_deref())
             .unwrap_or(""),
     );
 
@@ -1911,7 +1912,7 @@ fn usage_number(usage: &Value, key: &str) -> u64 {
 fn sanitize_model(model: &str) -> String {
     model
         .trim()
-        .replace(|c: char| c == '\u{1b}', "")
+        .replace('\u{1b}', "")
         .split('[')
         .next()
         .unwrap_or(model)

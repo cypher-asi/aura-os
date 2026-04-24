@@ -79,7 +79,7 @@ fn recommended_action_from_state(
 }
 
 fn signal_targets(signal: &HarnessSignal, task_id: &str) -> bool {
-    signal.task_id().is_none_or(|id| id == task_id)
+    signal.task_id().map_or(true, |id| id == task_id)
 }
 
 fn signals_from_event(event: &aura_os_storage::StorageSessionEvent) -> Vec<HarnessSignal> {

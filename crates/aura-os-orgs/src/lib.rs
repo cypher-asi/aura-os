@@ -135,6 +135,7 @@ impl OrgService {
         Ok(Some(integration))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn upsert_integration(
         &self,
         org_id: &OrgId,
@@ -369,7 +370,7 @@ mod tests {
 
         let retained = sample_integration(org_id, "retained", false);
         service
-            .sync_integrations_shadow(&org_id, &[retained.clone()])
+            .sync_integrations_shadow(&org_id, std::slice::from_ref(&retained))
             .unwrap();
 
         assert_eq!(

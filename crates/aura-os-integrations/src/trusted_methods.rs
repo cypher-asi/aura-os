@@ -53,18 +53,13 @@ pub struct TrustedIntegrationArgBinding {
     pub default_value: Option<Value>,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TrustedIntegrationSuccessGuard {
+    #[default]
     None,
     SlackOk,
     GraphqlErrors,
-}
-
-impl Default for TrustedIntegrationSuccessGuard {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

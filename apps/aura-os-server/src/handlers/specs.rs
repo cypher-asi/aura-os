@@ -85,7 +85,7 @@ fn specs_changed_since(before: &[Spec], after: &[Spec]) -> bool {
     after.iter().any(|spec| {
         before_versions
             .get(&spec.spec_id)
-            .is_none_or(|updated_at| *updated_at != spec.updated_at)
+            .map_or(true, |updated_at| *updated_at != spec.updated_at)
     })
 }
 

@@ -12,6 +12,7 @@ pub(crate) mod follows;
 pub(crate) mod generation;
 pub(crate) mod harness_proxy;
 pub(crate) mod leaderboard;
+#[allow(dead_code)]
 pub(crate) mod live_heuristics;
 pub(crate) mod log;
 pub(crate) mod marketplace;

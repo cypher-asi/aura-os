@@ -2,7 +2,7 @@ mod common;
 
 #[cfg(unix)]
 use std::sync::Arc;
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -15,7 +15,8 @@ use tower::ServiceExt;
 
 use common::*;
 
-static HARNESS_URL_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+static HARNESS_URL_ENV_LOCK: LazyLock<tokio::sync::Mutex<()>> =
+    LazyLock::new(|| tokio::sync::Mutex::new(()));
 
 /// Start a lightweight mock harness that echoes back request info as JSON.
 async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>) {
@@ -94,7 +95,7 @@ async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>) {
 
 #[tokio::test]
 async fn proxy_forwards_get_facts() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -120,7 +121,7 @@ async fn proxy_forwards_get_facts() {
 
 #[tokio::test]
 async fn proxy_forwards_post_with_body() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -146,7 +147,7 @@ async fn proxy_forwards_post_with_body() {
 
 #[tokio::test]
 async fn proxy_forwards_delete() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -172,7 +173,7 @@ async fn proxy_forwards_delete() {
 
 #[tokio::test]
 async fn proxy_forwards_skills_list() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -190,7 +191,7 @@ async fn proxy_forwards_skills_list() {
 
 #[tokio::test]
 async fn proxy_forwards_skill_activate() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -280,7 +281,7 @@ async fn proxy_forwards_agent_skill_uninstall() {
 
 #[tokio::test]
 async fn proxy_forwards_procedures_by_skill() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -399,7 +400,7 @@ async fn start_recording_mock_harness() -> (String, Arc<Mutex<Vec<(String, Strin
 #[cfg(unix)]
 #[tokio::test]
 async fn create_skill_registers_with_harness_and_installs_for_agent() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, calls) = start_recording_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -484,7 +485,7 @@ async fn create_skill_registers_with_harness_and_installs_for_agent() {
 #[cfg(unix)]
 #[tokio::test]
 async fn create_skill_without_agent_id_still_registers_catalog() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, calls) = start_recording_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -541,7 +542,7 @@ async fn create_skill_without_agent_id_still_registers_catalog() {
 #[cfg(unix)]
 #[tokio::test]
 async fn create_skill_marker_survives_harness_overwrite() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
 
     let home_dir = tempfile::tempdir().unwrap();
     unsafe {
@@ -588,7 +589,7 @@ async fn create_skill_marker_survives_harness_overwrite() {
 #[cfg(unix)]
 #[tokio::test]
 async fn list_my_skills_returns_only_user_created_entries() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _calls) = start_recording_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -660,7 +661,7 @@ async fn list_my_skills_returns_only_user_created_entries() {
 #[cfg(unix)]
 #[tokio::test]
 async fn delete_my_skill_removes_user_created_and_refuses_shop_skill() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     let (mock_url, _calls) = start_recording_mock_harness().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", &mock_url);
@@ -853,7 +854,7 @@ fn persist_test_agent(state: &aura_os_server::AppState, name: &str) -> aura_os_c
 #[cfg(unix)]
 #[tokio::test]
 async fn delete_my_skill_blocked_when_installed_on_any_agent() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
 
     let installs: Arc<Mutex<std::collections::HashMap<String, Vec<String>>>> =
         Arc::new(Mutex::new(std::collections::HashMap::new()));
@@ -934,7 +935,7 @@ async fn delete_my_skill_blocked_when_installed_on_any_agent() {
 #[cfg(unix)]
 #[tokio::test]
 async fn delete_my_skill_proceeds_when_not_installed_anywhere() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
 
     let installs: Arc<Mutex<std::collections::HashMap<String, Vec<String>>>> =
         Arc::new(Mutex::new(std::collections::HashMap::new()));
@@ -984,7 +985,7 @@ async fn delete_my_skill_proceeds_when_not_installed_anywhere() {
 #[cfg(unix)]
 #[tokio::test]
 async fn list_skills_filters_entries_missing_on_disk() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
 
     let home_dir = tempfile::tempdir().unwrap();
     unsafe {
@@ -1037,7 +1038,7 @@ async fn list_skills_filters_entries_missing_on_disk() {
 
 #[tokio::test]
 async fn delete_my_skill_rejects_invalid_name() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     // The invalid-name guard runs before any filesystem or harness access,
     // so a bogus LOCAL_HARNESS_URL is sufficient here and avoids pulling
     // in the unix-gated mock harness helper.
@@ -1056,7 +1057,7 @@ async fn delete_my_skill_rejects_invalid_name() {
 
 #[tokio::test]
 async fn proxy_returns_502_on_connection_failure() {
-    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
+    let _guard = HARNESS_URL_ENV_LOCK.lock().await;
     unsafe {
         std::env::set_var("LOCAL_HARNESS_URL", "http://127.0.0.1:1");
     }

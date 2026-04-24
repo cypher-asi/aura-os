@@ -599,7 +599,6 @@ async fn load_integration_secret(
                 "failed to load canonical aura-integrations secret"
             ),
         }
-        return None;
     }
     state
         .org_service
@@ -797,21 +796,16 @@ mod tests {
     async fn installed_workspace_app_tools_include_discovered_trusted_mcp_tools() {
         let _script_lock = trusted_mcp_script_test_lock().lock().await;
         let script_dir = tempfile::tempdir().unwrap();
-        let script_path = script_dir.path().join("trusted-mcp-mock.sh");
+        let script_path = script_dir.path().join("trusted-mcp-mock.js");
+        let response = r#"[{"originalName":"search_docs","description":"Search docs","inputSchema":{"type":"object","properties":{"query":{"type":"string"}}}}]"#;
         std::fs::write(
             &script_path,
-            r#"#!/bin/sh
-printf '%s' '[{"originalName":"search_docs","description":"Search docs","inputSchema":{"type":"object","properties":{"query":{"type":"string"}}}}]'
-"#,
+            format!(
+                "process.stdin.on('data', () => {{}});\nprocess.stdin.on('end', () => process.stdout.write({}));\nprocess.stdin.resume();\n",
+                serde_json::to_string(response).unwrap()
+            ),
         )
         .unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&script_path, perms).unwrap();
-        }
         crate::handlers::trusted_mcp::set_script_override_for_tests(script_path);
 
         let store_dir = tempfile::tempdir().unwrap();

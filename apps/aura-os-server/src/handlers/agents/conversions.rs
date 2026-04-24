@@ -107,7 +107,7 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
     let listing_status = net
         .listing_status
         .as_deref()
-        .and_then(|raw| AgentListingStatus::from_str(raw).ok())
+        .and_then(|raw| raw.parse::<AgentListingStatus>().ok())
         .or_else(|| listing_status_from_tags(&tags))
         .unwrap_or_default();
 
@@ -167,7 +167,7 @@ fn listing_status_from_tags(tags: &[String]) -> Option<AgentListingStatus> {
     for tag in tags {
         if let Some(raw) = tag.strip_prefix(aura_os_core::listing_status::LISTING_STATUS_TAG_PREFIX)
         {
-            if let Ok(parsed) = AgentListingStatus::from_str(raw) {
+            if let Ok(parsed) = raw.parse::<AgentListingStatus>() {
                 return Some(parsed);
             }
         }
@@ -982,7 +982,12 @@ mod tests {
         assert!(history.is_empty());
     }
 
-    fn raw_event(id: &str, ts: &str, event_type: &str, content: serde_json::Value) -> StorageSessionEvent {
+    fn raw_event(
+        id: &str,
+        ts: &str,
+        event_type: &str,
+        content: serde_json::Value,
+    ) -> StorageSessionEvent {
         StorageSessionEvent {
             id: id.to_string(),
             session_id: Some("session-1".to_string()),
@@ -1038,7 +1043,10 @@ mod tests {
         assert_eq!(assistant.role, ChatRole::Assistant);
         assert_eq!(assistant.content, "Hello, world");
         assert_eq!(assistant.in_flight, Some(true));
-        let blocks = assistant.content_blocks.as_ref().expect("text block flushed");
+        let blocks = assistant
+            .content_blocks
+            .as_ref()
+            .expect("text block flushed");
         assert_eq!(blocks.len(), 1);
         assert!(matches!(&blocks[0], ChatContentBlock::Text { text } if text == "Hello, world"));
     }
@@ -1109,7 +1117,11 @@ mod tests {
             other => panic!("expected tool_use, got {:?}", other),
         }
         match &blocks[2] {
-            ChatContentBlock::ToolResult { tool_use_id, content, is_error } => {
+            ChatContentBlock::ToolResult {
+                tool_use_id,
+                content,
+                is_error,
+            } => {
                 assert_eq!(tool_use_id, "tool-1");
                 assert_eq!(content, "spec-123");
                 assert_eq!(*is_error, Some(false));

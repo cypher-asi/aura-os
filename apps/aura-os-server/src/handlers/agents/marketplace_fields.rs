@@ -59,7 +59,7 @@ pub(crate) fn normalize_marketplace_fields(
 }
 
 fn normalize_listing_status(raw: &str) -> ApiResult<String> {
-    AgentListingStatus::from_str(raw)
+    raw.parse::<AgentListingStatus>()
         .map(|status| status.as_str().to_string())
         .map_err(|_| {
             ApiError::bad_request(format!(
@@ -97,9 +97,7 @@ pub(crate) fn merge_marketplace_tags(
     tags: Option<Vec<String>>,
     fields: &MarketplaceFields,
 ) -> Option<Vec<String>> {
-    let Some(mut merged) = tags else {
-        return None;
-    };
+    let mut merged = tags?;
     merged.retain(|t| !is_marketplace_tag(t));
     if let Some(status) = fields.listing_status.as_deref() {
         merged.push(format!("{LISTING_STATUS_TAG_PREFIX}{status}"));

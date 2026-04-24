@@ -675,9 +675,8 @@ where
 {
     let mut args = DesktopCliArgs::default();
     for arg in iter {
-        match arg.as_ref() {
-            "--external-harness" => args.external_harness = true,
-            _ => {}
+        if arg.as_ref() == "--external-harness" {
+            args.external_harness = true;
         }
     }
     args
@@ -720,9 +719,7 @@ enum ExternalHarnessPolicy {
 /// [`ExternalHarnessPolicy`]. Split out from
 /// [`enforce_external_harness_or_exit`] so unit tests can pin the
 /// decision matrix without spinning up a real harness.
-fn classify_external_harness_policy(
-    response: Option<&serde_json::Value>,
-) -> ExternalHarnessPolicy {
+fn classify_external_harness_policy(response: Option<&serde_json::Value>) -> ExternalHarnessPolicy {
     let Some(json) = response else {
         return ExternalHarnessPolicy::UnparseableResponse;
     };
@@ -2422,6 +2419,7 @@ fn install_macos_app_menu() {
 #[cfg(not(target_os = "macos"))]
 fn install_macos_app_menu() {}
 
+#[allow(clippy::too_many_arguments)]
 fn handle_window_command(
     main_window: &tao::window::Window,
     ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
@@ -2463,6 +2461,7 @@ fn handle_window_command(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn open_ide_window_with_fallback(
     event_target: &tao::event_loop::EventLoopWindowTarget<UserEvent>,
     base_url: &str,
@@ -2505,6 +2504,7 @@ fn open_ide_window_with_fallback(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_user_event(
     user_event: UserEvent,
     main_window: &tao::window::Window,
@@ -2608,6 +2608,7 @@ fn handle_user_event(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_event_loop(
     event_loop: tao::event_loop::EventLoop<UserEvent>,
     window: tao::window::Window,

@@ -43,7 +43,7 @@ pub const EXPERTISE_TAG_PREFIX: &str = "expertise:";
 /// Matching is case-sensitive — unknown casings are rejected so the server
 /// does not silently accept `UI-UX` and then fail to match UI filters.
 pub fn is_valid_slug(slug: &str) -> bool {
-    ALLOWED_SLUGS.iter().any(|allowed| *allowed == slug)
+    ALLOWED_SLUGS.contains(&slug)
 }
 
 /// Validate every slug in `slugs` against [`ALLOWED_SLUGS`].

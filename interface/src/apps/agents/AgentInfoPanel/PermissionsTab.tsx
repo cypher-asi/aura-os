@@ -155,15 +155,13 @@ const SOURCE_GROUP_LABELS: Record<
   string
 > = {
   workspace: "Workspace tools",
-  cross_agent: "Cross-agent tools",
   integration: "Integrations",
 };
 
 /**
- * Group diagnostic rows for display. Cross-agent rows are bucketed by
- * their `capability_origin` (falling back to "Cross-agent tools" for the
- * unconditional CEO manifest, which has no origin); workspace /
- * integration rows fall into their source group.
+ * Group diagnostic rows for display. Current server diagnostics only emit
+ * workspace and integration sources; legacy cross-agent dispatcher rows were
+ * removed with the harness migration.
  */
 function groupDiagnosticRows(
   rows: InstalledToolDiagnosticRow[],
@@ -173,14 +171,8 @@ function groupDiagnosticRows(
     { key: string; label: string; rows: InstalledToolDiagnosticRow[] }
   >();
   for (const row of rows) {
-    const groupKey =
-      row.source === "cross_agent" && row.capability_origin
-        ? `cap:${row.capability_origin}`
-        : `src:${row.source}`;
-    const label =
-      row.source === "cross_agent" && row.capability_origin
-        ? `Capability: ${row.capability_origin}`
-        : SOURCE_GROUP_LABELS[row.source];
+    const groupKey = `src:${row.source}`;
+    const label = SOURCE_GROUP_LABELS[row.source];
     let entry = groups.get(groupKey);
     if (!entry) {
       entry = { key: groupKey, label, rows: [] };

@@ -1201,8 +1201,8 @@ mod tests {
     }
 
     #[test]
-    fn aura_harness_rejects_org_integration_auth() {
-        let error = build_runtime_config(
+    fn aura_harness_accepts_org_integration_auth() {
+        let config = build_runtime_config(
             Some("aura_harness".to_string()),
             Some("local_host".to_string()),
             Some("org_integration".to_string()),
@@ -1210,9 +1210,10 @@ mod tests {
             Some("claude-opus-4-6".to_string()),
             Some("local".to_string()),
         )
-        .expect_err("aura_harness org integration should fail");
+        .expect("aura_harness org integration should be allowed");
 
-        assert!(format!("{error:?}").contains("does not support auth source"));
+        assert_eq!(config.auth_source, "org_integration");
+        assert_eq!(config.integration_id.as_deref(), Some("int-anthropic"));
     }
 
     #[test]

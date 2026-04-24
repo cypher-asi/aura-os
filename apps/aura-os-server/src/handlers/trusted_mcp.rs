@@ -144,6 +144,7 @@ async fn run_bridge_command_with_script<T: serde::de::DeserializeOwned>(
         .shutdown()
         .await
         .map_err(|error| format!("closing trusted MCP bridge stdin failed: {error}"))?;
+    drop(stdin);
 
     let output = tokio::time::timeout(SCRIPT_TIMEOUT, child.wait_with_output())
         .await
@@ -219,23 +220,15 @@ mod tests {
 
     fn write_mock_script(response: &str) -> PathBuf {
         let dir = tempdir().unwrap();
-        let script_path = dir.path().join("trusted-mcp-mock.sh");
+        let script_path = dir.path().join("trusted-mcp-mock.js");
         std::fs::write(
             &script_path,
             format!(
-                r#"#!/bin/sh
-printf '%s' '{response}'
-"#
+                "process.stdin.on('data', () => {{}});\nprocess.stdin.on('end', () => process.stdout.write({}));\nprocess.stdin.resume();\n",
+                serde_json::to_string(response).unwrap()
             ),
         )
         .unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&script_path).unwrap().permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&script_path, perms).unwrap();
-        }
         std::mem::forget(dir);
         script_path
     }

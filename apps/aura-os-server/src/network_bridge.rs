@@ -67,6 +67,7 @@ fn get_cached_jwt(cache: &ValidationCache) -> Option<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
     use crate::state::CachedSession;

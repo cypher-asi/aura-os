@@ -6,6 +6,7 @@
 //! and network client treat the typed field as the source of truth.
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// Whether an agent is publicly listed for hire on the marketplace.
 ///
@@ -26,18 +27,22 @@ pub enum AgentListingStatus {
 /// have not yet been backfilled with typed fields.
 pub const LISTING_STATUS_TAG_PREFIX: &str = "listing_status:";
 
-impl AgentListingStatus {
+impl FromStr for AgentListingStatus {
+    type Err = String;
+
     /// Parse a marketplace listing status from a string. Accepts
     /// `"closed"` and `"hireable"` case-insensitively, surrounding
     /// whitespace is trimmed.
-    pub fn from_str(value: &str) -> Result<Self, String> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.trim().to_ascii_lowercase().as_str() {
             "closed" => Ok(Self::Closed),
             "hireable" => Ok(Self::Hireable),
             other => Err(format!("unknown listing_status: {other}")),
         }
     }
+}
 
+impl AgentListingStatus {
     /// Canonical lowercase string representation. Matches the serde form.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -59,11 +64,11 @@ mod tests {
     #[test]
     fn from_str_accepts_canonical_lowercase() {
         assert_eq!(
-            AgentListingStatus::from_str("closed").unwrap(),
+            "closed".parse::<AgentListingStatus>().unwrap(),
             AgentListingStatus::Closed
         );
         assert_eq!(
-            AgentListingStatus::from_str("hireable").unwrap(),
+            "hireable".parse::<AgentListingStatus>().unwrap(),
             AgentListingStatus::Hireable
         );
     }
@@ -71,18 +76,20 @@ mod tests {
     #[test]
     fn from_str_is_case_insensitive_and_trims_whitespace() {
         assert_eq!(
-            AgentListingStatus::from_str("  Closed  ").unwrap(),
+            "  Closed  ".parse::<AgentListingStatus>().unwrap(),
             AgentListingStatus::Closed
         );
         assert_eq!(
-            AgentListingStatus::from_str("HIREABLE").unwrap(),
+            "HIREABLE".parse::<AgentListingStatus>().unwrap(),
             AgentListingStatus::Hireable
         );
     }
 
     #[test]
     fn from_str_rejects_unknown_values() {
-        let err = AgentListingStatus::from_str("pending").expect_err("unknown value must fail");
+        let err = "pending"
+            .parse::<AgentListingStatus>()
+            .expect_err("unknown value must fail");
         assert!(err.contains("pending"), "error was: {err}");
     }
 
@@ -90,7 +97,7 @@ mod tests {
     fn as_str_roundtrips_through_from_str() {
         for status in [AgentListingStatus::Closed, AgentListingStatus::Hireable] {
             assert_eq!(
-                AgentListingStatus::from_str(status.as_str()).unwrap(),
+                status.as_str().parse::<AgentListingStatus>().unwrap(),
                 status
             );
         }

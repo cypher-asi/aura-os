@@ -39,8 +39,7 @@ pub(crate) async fn list_marketplace_agents(
     let limit = query
         .limit
         .unwrap_or(DEFAULT_PAGE_LIMIT)
-        .min(MAX_PAGE_LIMIT)
-        .max(1);
+        .clamp(1, MAX_PAGE_LIMIT);
     let offset = query.offset.unwrap_or(0);
 
     let source_agents = load_hireable_agents(&state, &jwt).await?;

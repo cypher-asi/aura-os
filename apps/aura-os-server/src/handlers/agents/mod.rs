@@ -26,8 +26,8 @@ pub(crate) use instances::{
 };
 pub(crate) use runtime::test_agent_runtime;
 pub(crate) use sessions::{
-    delete_session, generate_session_summary, get_agent_context_usage, get_instance_context_usage,
-    get_session, list_project_sessions, list_session_events, list_session_tasks, list_sessions,
+    delete_session, get_agent_context_usage, get_instance_context_usage, get_session,
+    list_project_sessions, list_session_events, list_session_tasks, list_sessions,
     summarize_session,
 };
 

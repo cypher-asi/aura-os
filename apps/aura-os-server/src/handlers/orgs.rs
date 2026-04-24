@@ -417,11 +417,6 @@ pub(crate) async fn create_integration(
         }
         return Ok((StatusCode::CREATED, Json(integration)));
     }
-    if req.api_key.is_some() {
-        return Err(ApiError::service_unavailable(
-            "aura-integrations is required for storing integration secrets",
-        ));
-    }
     // Local-only mode: no network client for role verification
     validate_org_integration_config(&req.kind, &req.provider, req.provider_config.as_ref())?;
     let integration = state
@@ -469,11 +464,6 @@ pub(crate) async fn update_integration(
             );
         }
         return Ok(Json(integration));
-    }
-    if req.api_key.is_some() {
-        return Err(ApiError::service_unavailable(
-            "aura-integrations is required for storing integration secrets",
-        ));
     }
     // Local-only mode: no network client for role verification
     let existing = state

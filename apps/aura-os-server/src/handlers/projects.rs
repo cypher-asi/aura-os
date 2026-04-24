@@ -20,7 +20,7 @@ pub(crate) async fn list_all_projects_from_network(
     jwt: &str,
 ) -> ApiResult<Vec<Project>> {
     let client = state.require_network_client()?;
-    let orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
+    let orgs = client.list_orgs(jwt).await.map_err(map_network_error)?;
 
     // Fan out one `list_projects_by_org` call per org in parallel.
     // The sequential version used to dominate chat setup latency for
@@ -88,7 +88,7 @@ async fn create_project_impl(
             orbit_repo: req.orbit_repo.clone(),
         };
         let net_project = client
-            .create_project(&jwt, &net_req)
+            .create_project(jwt, &net_req)
             .await
             .map_err(map_network_error)?;
 
@@ -98,7 +98,7 @@ async fn create_project_impl(
                 net_project.id
             ))
         })?;
-        let local_shadow = build_local_shadow(project_id, &req);
+        let local_shadow = build_local_shadow(project_id, req);
         let project = normalize_project_workspace(
             state,
             &project_from_network(&net_project, Some(&local_shadow))?,
@@ -106,7 +106,7 @@ async fn create_project_impl(
         ensure_local_shadow(state, &project);
         project
     } else {
-        let input = to_project_input(&req);
+        let input = to_project_input(req);
         let project = state
             .project_service
             .create_project(input)

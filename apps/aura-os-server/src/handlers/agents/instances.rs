@@ -29,7 +29,7 @@ fn build_general_agent(user_id: &str, project: Option<&aura_os_core::Project>) -
     Agent {
         agent_id: AgentId::new(),
         user_id: user_id.to_string(),
-        org_id: project.map(|entry| entry.org_id.clone()),
+        org_id: project.map(|entry| entry.org_id),
         name: GENERAL_AGENT_NAME.to_string(),
         role: "general".to_string(),
         personality: String::new(),
@@ -492,7 +492,7 @@ mod tests {
     fn repairs_empty_name_on_general_agent_and_persists_shadow() {
         let (service, _dir) = make_service();
         let agent = make_agent("", vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()]);
-        let agent_id = agent.agent_id.clone();
+        let agent_id = agent.agent_id;
         service.save_agent_shadow(&agent).unwrap();
 
         let repaired = repair_agent_name_if_missing(&service, Some(agent)).expect("repaired agent");
@@ -506,7 +506,7 @@ mod tests {
     fn repairs_whitespace_only_name_on_general_agent() {
         let (service, _dir) = make_service();
         let agent = make_agent("   ", vec![PROJECT_LOCAL_GENERAL_AGENT_TAG.to_string()]);
-        let agent_id = agent.agent_id.clone();
+        let agent_id = agent.agent_id;
         service.save_agent_shadow(&agent).unwrap();
 
         let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
@@ -520,7 +520,7 @@ mod tests {
     fn preserves_existing_name() {
         let (service, _dir) = make_service();
         let agent = make_agent("My Named Agent", Vec::new());
-        let agent_id = agent.agent_id.clone();
+        let agent_id = agent.agent_id;
         service.save_agent_shadow(&agent).unwrap();
 
         let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
@@ -538,7 +538,7 @@ mod tests {
         // name is the placeholder) takes over from there.
         let (service, _dir) = make_service();
         let agent = make_agent("", Vec::new());
-        let agent_id = agent.agent_id.clone();
+        let agent_id = agent.agent_id;
         service.save_agent_shadow(&agent).unwrap();
 
         let repaired = repair_agent_name_if_missing(&service, Some(agent)).unwrap();
@@ -571,7 +571,7 @@ mod tests {
     fn repair_runs_on_agent_whose_stored_json_had_no_name_key() {
         let (service, _dir) = make_service();
         let original = make_agent("placeholder", Vec::new());
-        let agent_id = original.agent_id.clone();
+        let agent_id = original.agent_id;
 
         let mut value = serde_json::to_value(&original).unwrap();
         value

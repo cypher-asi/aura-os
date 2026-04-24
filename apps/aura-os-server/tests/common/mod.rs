@@ -388,6 +388,7 @@ pub fn json_request(method: &str, uri: &str, body: Option<Value>) -> Request<Bod
     }
 }
 
+#[allow(dead_code)]
 pub async fn response_json(response: axum::http::Response<Body>) -> Value {
     let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
         .await

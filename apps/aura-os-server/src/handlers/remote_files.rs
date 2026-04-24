@@ -24,7 +24,7 @@ async fn resolve_remote_context(
 ) -> Result<(String, String), (axum::http::StatusCode, Json<ApiError>)> {
     let network = state.require_network_client()?;
     let net_agent = network
-        .get_agent(agent_id, &jwt)
+        .get_agent(agent_id, jwt)
         .await
         .map_err(map_network_error)?;
 

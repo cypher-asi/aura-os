@@ -262,9 +262,28 @@ mod tests {
         (url, client)
     }
 
+    fn with_existing_account(app: Router) -> Router {
+        app.route(
+            "/v1/accounts/me",
+            get(|| async {
+                Json(serde_json::json!({
+                    "user_id": "u-123",
+                    "balance_cents": 50000,
+                    "balance_formatted": "$500.00",
+                    "lifetime_purchased_cents": 50000,
+                    "lifetime_granted_cents": 0,
+                    "lifetime_used_cents": 0,
+                    "plan": "pro",
+                    "auto_refill_enabled": false,
+                    "created_at": "2026-01-15T12:00:00Z"
+                }))
+            }),
+        )
+    }
+
     #[tokio::test]
     async fn test_get_balance_success() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/balance",
             get(|| async {
                 Json(serde_json::json!({
@@ -273,7 +292,7 @@ mod tests {
                     "balance_formatted": "$500.00"
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let bal = client.get_balance("tok").await.unwrap();
         assert_eq!(bal.balance_cents, 50000);
@@ -284,10 +303,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_balance_unauthorized() {
         use axum::http::StatusCode;
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/balance",
             get(|| async { (StatusCode::UNAUTHORIZED, "unauthorized") }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let err = client.get_balance("bad-tok").await.unwrap_err();
         match err {
@@ -298,7 +317,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_purchase_success() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/purchase",
             post(|| async {
                 Json(serde_json::json!({
@@ -306,7 +325,7 @@ mod tests {
                     "session_id": "sess_1"
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let resp = client.create_purchase("tok", 10.0).await.unwrap();
         assert_eq!(resp.checkout_url, "https://checkout.example.com/sess_1");
@@ -316,10 +335,10 @@ mod tests {
     #[tokio::test]
     async fn test_create_purchase_invalid_amount() {
         use axum::http::StatusCode;
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/purchase",
             post(|| async { (StatusCode::BAD_REQUEST, "invalid amount") }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let err = client.create_purchase("tok", -5.0).await.unwrap_err();
         match err {
@@ -330,7 +349,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_transactions_success() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/transactions",
             get(|| async {
                 Json(serde_json::json!({
@@ -347,7 +366,7 @@ mod tests {
                     "has_more": true
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let resp = client.get_transactions("tok").await.unwrap();
         assert_eq!(resp.transactions.len(), 1);
@@ -358,7 +377,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_transactions_empty() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/transactions",
             get(|| async {
                 Json(serde_json::json!({
@@ -366,7 +385,7 @@ mod tests {
                     "has_more": false
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let resp = client.get_transactions("tok").await.unwrap();
         assert!(resp.transactions.is_empty());
@@ -486,7 +505,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ensure_has_credits_sufficient() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/balance",
             get(|| async {
                 Json(serde_json::json!({
@@ -495,7 +514,7 @@ mod tests {
                     "balance_formatted": "$50.00"
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let cents = client.ensure_has_credits("tok").await.unwrap();
         assert_eq!(cents, 5000);
@@ -503,7 +522,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ensure_has_credits_zero() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/balance",
             get(|| async {
                 Json(serde_json::json!({
@@ -512,7 +531,7 @@ mod tests {
                     "balance_formatted": "$0.00"
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let err = client.ensure_has_credits("tok").await.unwrap_err();
         match err {
@@ -525,7 +544,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ensure_has_credits_negative() {
-        let app = Router::new().route(
+        let app = with_existing_account(Router::new().route(
             "/v1/credits/balance",
             get(|| async {
                 Json(serde_json::json!({
@@ -534,7 +553,7 @@ mod tests {
                     "balance_formatted": "-$2.00"
                 }))
             }),
-        );
+        ));
         let (_url, client) = start_server(app).await;
         let err = client.ensure_has_credits("tok").await.unwrap_err();
         match err {

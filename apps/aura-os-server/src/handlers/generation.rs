@@ -31,13 +31,13 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
     match event_type {
         "start" => Event::default()
             .event("generation_start")
-            .json_data(&json!({ "mode": mode, "ts": data }))
+            .json_data(json!({ "mode": mode, "ts": data }))
             .unwrap_or_else(|_| Event::default().data("{}")),
         "progress" => {
             let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_progress")
-                .json_data(&json!({
+                .json_data(json!({
                     "percent": parsed.get("percent").and_then(|v| v.as_f64()).unwrap_or(0.0),
                     "message": parsed.get("message").and_then(|v| v.as_str()).unwrap_or(""),
                 }))
@@ -47,7 +47,7 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
             let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_partial_image")
-                .json_data(&json!({
+                .json_data(json!({
                     "data": parsed.get("data").and_then(|v| v.as_str()).unwrap_or(""),
                 }))
                 .unwrap_or_else(|_| Event::default().data("{}"))
@@ -66,7 +66,7 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
             let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_progress")
-                .json_data(&json!({
+                .json_data(json!({
                     "percent": 5,
                     "message": format!(
                         "Task submitted: {}",
@@ -79,7 +79,7 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
             let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_error")
-                .json_data(&json!({
+                .json_data(json!({
                     "code": parsed
                         .get("code")
                         .and_then(|v| v.as_str())
@@ -188,7 +188,7 @@ async fn proxy_sse_stream(
                     Some(Err(e)) => {
                         let evt = Event::default()
                             .event("generation_error")
-                            .json_data(&json!({
+                            .json_data(json!({
                                 "code": "STREAM_ERROR",
                                 "message": format!("Stream error: {e}"),
                             }))
@@ -215,7 +215,7 @@ async fn proxy_sse_stream(
 
                         let done_evt = Event::default()
                             .event("done")
-                            .json_data(&json!({}))
+                            .json_data(json!({}))
                             .unwrap_or_else(|_| Event::default().data("{}"));
                         return Some((
                             Ok::<_, Infallible>(done_evt),

@@ -38,7 +38,9 @@ pub(crate) fn is_rate_limited_failure_for_tests(reason: &str) -> bool {
 
 pub(crate) fn is_git_push_timeout_failure_for_tests(reason: &str) -> bool {
     let reason = reason.to_ascii_lowercase();
-    reason.contains("git") && reason.contains("push") && reason.contains("timeout")
+    reason.contains("git")
+        && reason.contains("push")
+        && (reason.contains("timeout") || reason.contains("timed out"))
 }
 
 pub(crate) fn is_provider_internal_error_for_tests(reason: &str) -> bool {
@@ -49,6 +51,7 @@ pub(crate) fn is_provider_internal_error_for_tests(reason: &str) -> bool {
         || reason.contains(" 503")
         || reason.contains(" 504")
         || reason.contains("stream terminated")
+        || reason.contains("connection reset by peer")
 }
 
 pub(crate) fn looks_like_unclassified_transient_for_tests(reason: &str) -> bool {
@@ -58,6 +61,9 @@ pub(crate) fn looks_like_unclassified_transient_for_tests(reason: &str) -> bool 
         "temporar",
         "connection reset",
         "econnreset",
+        "dns lookup failed",
+        "tls handshake",
+        "socket hang up",
         "unavailable",
         "try again",
     ]
@@ -70,14 +76,19 @@ pub(crate) fn looks_like_unclassified_transient_for_tests(reason: &str) -> bool 
 pub(crate) fn is_agent_stuck_terminal_signal_for_tests(reason: &str) -> bool {
     let reason = reason.to_ascii_lowercase();
     reason.contains("appears stuck")
+        || reason.contains("agent is stuck")
         || reason.contains("consecutive error")
+        || reason.contains("consecutive failure")
+        || reason.contains("all tool calls have returned errors")
         || reason.contains("prevent waste")
+        || reason.contains("conserve budget")
 }
 
 pub(crate) fn should_restart_on_error_event_for_tests(reason: &str) -> bool {
     !is_agent_stuck_terminal_signal_for_tests(reason)
         && (is_rate_limited_failure_for_tests(reason)
             || is_provider_internal_error_for_tests(reason)
+            || is_git_push_timeout_failure_for_tests(reason)
             || looks_like_unclassified_transient_for_tests(reason))
 }
 
@@ -123,18 +134,31 @@ pub(crate) fn completion_validation_failure_reason_with_empty_path_writes_for_te
         );
     }
     if n_build_steps == 0 {
-        return Some("missing build verification step".to_string());
+        return Some("Task modified source code but no build/compile step was run".to_string());
     }
     if n_test_steps == 0 {
-        return Some("missing test verification step".to_string());
+        return Some("Task modified source code but no test step was run".to_string());
     }
     if n_format_steps == 0 {
-        return Some("missing format verification step".to_string());
+        return Some("Task modified source code but no format check was run".to_string());
     }
     if n_lint_steps == 0 {
-        return Some("missing lint verification step".to_string());
+        return Some("Task modified source code but no lint check was run".to_string());
     }
     None
+}
+
+fn is_run_command_policy_denial_reason(reason: &str) -> bool {
+    let reason = reason.to_ascii_lowercase();
+    reason.contains("run_command is denied by kernel policy")
+        || reason.contains("not allowed")
+        || reason.contains("active policy")
+        || reason.contains("allow_shell")
+        || reason.contains("binary_allowlist")
+}
+
+fn run_command_policy_denial_message() -> String {
+    "run_command is denied by kernel policy; verification commands cannot run. Check AURA_STRICT_MODE=1, ENABLE_CMD_TOOLS=false, AURA_ALLOWED_COMMANDS, or ToolConfig::binary_allowlist before retrying.".to_string()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -148,12 +172,13 @@ pub(crate) fn completion_validation_failure_reason_with_tool_call_failures_for_t
     n_empty_path_writes: u32,
     tool_call_failures: &[(&str, &str)],
 ) -> Option<String> {
-    if tool_call_failures.iter().any(|(name, reason)| {
-        *name == "run_command"
-            && reason.to_ascii_lowercase().contains("not allowed")
-            && n_build_steps == 0
-    }) {
-        return Some("run_command denied by policy; build verification cannot run".to_string());
+    let run_command_denied = tool_call_failures.iter().any(|(name, reason)| {
+        *name == "run_command" && is_run_command_policy_denial_reason(reason)
+    });
+    if run_command_denied
+        && (n_build_steps == 0 || n_test_steps == 0 || n_format_steps == 0 || n_lint_steps == 0)
+    {
+        return Some(run_command_policy_denial_message());
     }
     completion_validation_failure_reason_with_empty_path_writes_for_tests(
         live_output,
@@ -199,7 +224,7 @@ pub(crate) fn successful_write_event_path_for_tests(
     }
     let name = event.get("name").and_then(|value| value.as_str())?;
     let op = match name {
-        "write_file" => "create",
+        "write_file" => "modify",
         "edit_file" => "modify",
         "delete_file" => "delete",
         _ => return None,
@@ -300,18 +325,21 @@ pub(crate) fn classify_push_failure_for_tests(reason: &str) -> Option<&'static s
     if !(reason.contains("push") || reason.contains("remote")) {
         return None;
     }
-    if reason.contains("timeout") {
-        Some("timeout")
+    if reason.contains("timeout") || reason.contains("timed out") {
+        Some("push_timeout")
     } else if reason.contains("no space") || reason.contains("storage") || reason.contains("quota")
     {
         Some("remote_storage_exhausted")
     } else {
-        Some("generic")
+        Some("push_failed")
     }
 }
 
 pub(crate) fn classify_dod_remediation_kind_for_tests(reason: &str) -> Option<&'static str> {
     let reason = reason.to_ascii_lowercase();
+    if is_run_command_policy_denial_reason(&reason) {
+        return None;
+    }
     if reason.contains("build") {
         Some("missing_build")
     } else if reason.contains("test") {
@@ -330,16 +358,28 @@ pub(crate) fn build_dod_followup_prompt_for_tests(
     attempt: u32,
     previous_reason: &str,
 ) -> Option<String> {
-    let command = match kind_label {
-        "missing_build" => "run the project build command",
-        "missing_test" => "run the project test command",
-        "missing_fmt" => "run the formatter check",
-        "missing_lint" => "run the lint check",
+    let axis = match kind_label {
+        "missing_build" => "build step",
+        "missing_test" => "test step",
+        "missing_fmt" => "format check",
+        "missing_lint" => "lint check",
         _ => return None,
     };
+    let reason = truncate_reason(previous_reason);
     Some(format!(
-        "[aura-dod-retry attempt={attempt}] Previous completion was rejected: {previous_reason}. Please {command} and fix any failures before finishing."
+        "[aura-dod-retry attempt={attempt} axis={kind_label}] Previous completion was rejected: {reason}. Use run_command to perform the missing {axis}, then fix any failures before finishing."
     ))
+}
+
+fn truncate_reason(reason: &str) -> String {
+    const MAX_CHARS: usize = 240;
+    let mut chars = reason.chars();
+    let truncated: String = chars.by_ref().take(MAX_CHARS).collect();
+    if chars.next().is_some() {
+        format!("{truncated}…")
+    } else {
+        truncated
+    }
 }
 
 pub(crate) const fn max_dod_retries_per_task_for_tests() -> u32 {

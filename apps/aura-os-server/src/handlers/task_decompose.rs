@@ -56,12 +56,12 @@ pub(crate) struct DecompositionSignal {
 pub(crate) enum DecompositionContext {
     /// Phase 3: the parent task actually ran and the harness reported a
     /// truncation / no-file-ops failure.
+    #[allow(dead_code)]
     PostFailure {
         /// Reason text that will be surfaced to the agent in the
         /// skeleton and fill prompts. Phase 3 always passes a fixed
         /// "truncated run" sentence; this field is kept for symmetry
         /// and future extensibility.
-        #[allow(dead_code)]
         reason: String,
     },
     /// Phase 5: the parent task was just created and matched one of the

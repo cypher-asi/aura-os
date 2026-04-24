@@ -411,10 +411,7 @@ pub(crate) async fn get_agent_context_usage(
                 continue;
             }
         };
-        if let Some(candidate) = sessions
-            .into_iter()
-            .max_by_key(|s| storage_session_sort_key(s))
-        {
+        if let Some(candidate) = sessions.into_iter().max_by_key(storage_session_sort_key) {
             latest = match latest {
                 Some(existing)
                     if storage_session_sort_key(&existing)
@@ -453,9 +450,7 @@ pub(crate) async fn get_instance_context_usage(
         .await
         .map_err(map_storage_error)?;
 
-    let latest = sessions
-        .into_iter()
-        .max_by_key(|s| storage_session_sort_key(s));
+    let latest = sessions.into_iter().max_by_key(storage_session_sort_key);
 
     let usage = match latest {
         Some(session) => latest_context_usage_for_session(storage, &jwt, &session)

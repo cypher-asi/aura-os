@@ -37,12 +37,13 @@ fn network_agent_json(machine_type: &str, vm_id: Option<&str>) -> Value {
 
 fn create_agent_body(machine_type: &str) -> Value {
     serde_json::json!({
-        "name": "Test Agent",
+        "name": "test-agent",
         "role": "developer",
         "personality": "helpful",
         "system_prompt": "You are a test agent.",
         "skills": [],
         "machine_type": machine_type,
+        "permissions": {},
     })
 }
 

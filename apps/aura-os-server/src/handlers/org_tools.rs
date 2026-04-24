@@ -218,11 +218,12 @@ async fn dispatch_app_provider_tool(
                 "unknown notion app tool `{other}`"
             ))),
         },
-        AppProviderKind::BraveSearch => match tool_name {
-            other => Err(ApiError::not_found(format!(
+        AppProviderKind::BraveSearch => {
+            let other = tool_name;
+            Err(ApiError::not_found(format!(
                 "unknown brave search app tool `{other}`"
-            ))),
-        },
+            )))
+        }
         AppProviderKind::Freepik => match tool_name {
             "freepik_list_icons" => freepik_list_icons(state, org_id, args).await,
             "freepik_improve_prompt" => freepik_improve_prompt(state, org_id, args).await,
@@ -230,11 +231,12 @@ async fn dispatch_app_provider_tool(
                 "unknown freepik app tool `{other}`"
             ))),
         },
-        AppProviderKind::Buffer => match tool_name {
-            other => Err(ApiError::not_found(format!(
+        AppProviderKind::Buffer => {
+            let other = tool_name;
+            Err(ApiError::not_found(format!(
                 "unknown buffer app tool `{other}`"
-            ))),
-        },
+            )))
+        }
         AppProviderKind::Apify => match tool_name {
             "apify_list_actors" => apify_list_actors(state, org_id, args).await,
             "apify_run_actor" => apify_run_actor(state, org_id, args).await,
@@ -256,11 +258,12 @@ async fn dispatch_app_provider_tool(
                 "unknown mailchimp app tool `{other}`"
             ))),
         },
-        AppProviderKind::Resend => match tool_name {
-            other => Err(ApiError::not_found(format!(
+        AppProviderKind::Resend => {
+            let other = tool_name;
+            Err(ApiError::not_found(format!(
                 "unknown resend app tool `{other}`"
-            ))),
-        },
+            )))
+        }
     }
 }
 
