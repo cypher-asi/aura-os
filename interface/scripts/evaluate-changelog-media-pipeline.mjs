@@ -32,7 +32,7 @@ import {
 } from "./lib/changelog-media-branding.mjs";
 import {
   assessChangelogMediaQuality,
-  judgeChangelogMediaWithAnthropic,
+  judgeChangelogMediaWithOpenAI,
 } from "./lib/changelog-media-quality.mjs";
 import {
   captureHighResolutionAuraProof,
@@ -111,6 +111,10 @@ function isOpusQualityModel(model) {
   return /^claude[-_]opus(?:[-_.]|$)/i.test(String(model || "").trim());
 }
 
+function isOpenAIQualityVisionModel(model) {
+  return /^gpt[-_](?:5|4\.1|4o)(?:[-_.]|$)/i.test(String(model || "").trim());
+}
+
 export function assessMediaModelQuality({
   anthropicModel,
   browserUseModel,
@@ -135,8 +139,8 @@ export function assessMediaModelQuality({
     checks.push({
       name: "vision-judge-model",
       model: visionJudgeModel,
-      ok: isOpusQualityModel(visionJudgeModel),
-      reason: "Raw and branded media vision review must use an Opus-tier model.",
+      ok: isOpenAIQualityVisionModel(visionJudgeModel),
+      reason: "Raw and branded media vision review must use a current OpenAI vision-capable GPT model.",
     });
   }
   const concerns = checks
@@ -475,12 +479,12 @@ export async function runChangelogMediaEvaluation({
   enableRecording = false,
   strictCapture = false,
   visionJudge = true,
-  visionJudgeModel = anthropicModel,
+  visionJudgeModel = "gpt-5.2",
   preflightCaptureAuthImpl = preflightCaptureAuth,
   requestCaptureSessionImpl = requestCaptureSession,
   runBrowserUseTaskImpl = runBrowserUseTask,
   runHighResolutionCaptureImpl = captureHighResolutionAuraProof,
-  visionJudgeImpl = judgeChangelogMediaWithAnthropic,
+  visionJudgeImpl = null,
   resolveCaptureApiBaseUrlImpl = resolveCaptureApiBaseUrl,
 } = {}) {
   const resolvedChangelogFile = resolveInputPath(changelogFile);
@@ -501,6 +505,8 @@ export async function runChangelogMediaEvaluation({
   if (!apiKey) {
     throw new Error("ANTHROPIC_API_KEY is required for media plan evaluation.");
   }
+  const visionApiKey = String(process.env.OPENAI_API_KEY || process.env.AURA_CHANGELOG_MEDIA_OPENAI_API_KEY || "").trim();
+  const resolvedVisionJudgeImpl = visionJudgeImpl || judgeChangelogMediaWithOpenAI;
   const modelQualityGate = assessMediaModelQuality({
     anthropicModel,
     browserUseModel,
@@ -569,6 +575,7 @@ export async function runChangelogMediaEvaluation({
     const blockers = [];
     if (!runBrowserUse) blockers.push("Browser Use execution disabled by --plan-only.");
     if (!browserUseKeyAvailable) blockers.push("BROWSER_USE_API_KEY is not available.");
+    if (visionJudge && !visionApiKey) blockers.push("OPENAI_API_KEY is not available for media vision review.");
     if (runBrowserUse && !modelQualityGate.ok) {
       blockers.push(...modelQualityGate.concerns);
     }
@@ -707,8 +714,8 @@ export async function runChangelogMediaEvaluation({
       stage: "raw",
     });
     const visionGate = qualityGate.ok && visionJudge
-      ? await visionJudgeImpl({
-        apiKey,
+      ? await resolvedVisionJudgeImpl({
+        apiKey: visionApiKey,
         model: visionJudgeModel,
         imagePath: proofResult.screenshot?.path,
         candidate,
@@ -732,8 +739,8 @@ export async function runChangelogMediaEvaluation({
         screenshot: proofResult.screenshot,
       });
     const brandedVisionGate = branding.status === "created" && branding.asset?.path && visionJudge
-      ? await visionJudgeImpl({
-        apiKey,
+      ? await resolvedVisionJudgeImpl({
+        apiKey: visionApiKey,
         model: visionJudgeModel,
         imagePath: branding.asset.preview?.path || branding.asset.path,
         candidate,
@@ -784,6 +791,7 @@ export async function runChangelogMediaEvaluation({
     models: {
       anthropic: anthropicModel,
       browserUse: browserUseModel,
+      visionProvider: "openai",
       visionJudge: visionJudgeModel,
     },
     modelQualityGate,
@@ -794,6 +802,7 @@ export async function runChangelogMediaEvaluation({
     },
     env: {
       anthropicAvailable: true,
+      openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim() || process.env.AURA_CHANGELOG_MEDIA_OPENAI_API_KEY?.trim()),
       browserUseAvailable: browserUseKeyAvailable,
       captureAuthAvailable,
     },
@@ -883,7 +892,7 @@ export async function main(argv = process.argv.slice(2)) {
     enableRecording: isEnabled(args["enable-recording"] || process.env.BROWSER_USE_ENABLE_RECORDING),
     strictCapture: isEnabled(args.strict),
     visionJudge: !isDisabled(args["vision-judge"] ?? process.env.CHANGELOG_MEDIA_VISION_JUDGE ?? "true"),
-    visionJudgeModel: String(args["vision-judge-model"] || process.env.CHANGELOG_MEDIA_VISION_JUDGE_MODEL || args["anthropic-model"] || process.env.CHANGELOG_MEDIA_ANTHROPIC_MODEL || "claude-opus-4-7").trim(),
+    visionJudgeModel: String(args["vision-judge-model"] || process.env.CHANGELOG_MEDIA_OPENAI_VISION_MODEL || "gpt-5.2").trim(),
   });
   console.log(JSON.stringify({
     ok: true,

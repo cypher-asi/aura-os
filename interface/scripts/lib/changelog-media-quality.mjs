@@ -17,32 +17,28 @@ export const PRODUCTION_MEDIA_QUALITY_POLICY = Object.freeze({
   minRawVisionScore: 0.75,
   minBrandedVisionScore: 0.75,
 });
-const VISION_QUALITY_TOOL = {
-  name: "submit_changelog_media_quality",
-  description: "Submit a strict quality judgment for an Aura changelog media image.",
-  input_schema: {
-    type: "object",
-    additionalProperties: false,
-    required: ["pass", "score", "reasons", "visibleProof", "rejectionCategory"],
-    properties: {
-      pass: { type: "boolean" },
-      score: { type: "number", minimum: 0, maximum: 1 },
-      reasons: { type: "array", items: { type: "string" } },
-      visibleProof: { type: "array", items: { type: "string" } },
-      rejectionCategory: {
-        type: ["string", "null"],
-        enum: [
-          "wrong-screen",
-          "login-or-auth",
-          "mobile-layout",
-          "loading-or-empty",
-          "unreadable",
-          "clipped",
-          "not-visual",
-          "other",
-          null,
-        ],
-      },
+const OPENAI_VISION_QUALITY_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["pass", "score", "reasons", "visibleProof", "rejectionCategory"],
+  properties: {
+    pass: { type: "boolean" },
+    score: { type: "number", minimum: 0, maximum: 1 },
+    reasons: { type: "array", items: { type: "string" } },
+    visibleProof: { type: "array", items: { type: "string" } },
+    rejectionCategory: {
+      type: ["string", "null"],
+      enum: [
+        "wrong-screen",
+        "login-or-auth",
+        "mobile-layout",
+        "loading-or-empty",
+        "unreadable",
+        "clipped",
+        "not-visual",
+        "other",
+        null,
+      ],
     },
   },
 };
@@ -278,18 +274,80 @@ function mediaTypeForImagePath(imagePath) {
   return "image/png";
 }
 
-function parseVisionToolResponse(payload) {
-  const toolUse = (Array.isArray(payload?.content) ? payload.content : [])
-    .find((entry) => entry?.type === "tool_use" && entry?.name === VISION_QUALITY_TOOL.name);
-  if (toolUse?.input && typeof toolUse.input === "object") {
-    return toolUse.input;
+function parseOpenAITextResponse(payload) {
+  if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
+    return payload.output_text.trim();
   }
-  return null;
+  const output = Array.isArray(payload?.output) ? payload.output : [];
+  for (const item of output) {
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const part of content) {
+      if (typeof part?.text === "string" && part.text.trim()) return part.text.trim();
+      if (typeof part?.output_text === "string" && part.output_text.trim()) return part.output_text.trim();
+    }
+  }
+  return "";
 }
 
-export async function judgeChangelogMediaWithAnthropic({
+function parseOpenAIVisionResponse(payload) {
+  const text = parseOpenAITextResponse(payload);
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function evaluateVisionJudgment(judgment, { stage = "raw" } = {}) {
+  const reasons = Array.isArray(judgment?.reasons)
+    ? judgment.reasons.map((entry) => String(entry || "").trim()).filter(Boolean)
+    : [];
+  const visibleProof = Array.isArray(judgment?.visibleProof)
+    ? judgment.visibleProof.map((entry) => String(entry || "").trim()).filter(Boolean)
+    : [];
+  const score = Number(judgment?.score);
+  const minimumScore = stage === "raw"
+    ? PRODUCTION_MEDIA_QUALITY_POLICY.minRawVisionScore
+    : PRODUCTION_MEDIA_QUALITY_POLICY.minBrandedVisionScore;
+  const rejectionCategory = judgment?.rejectionCategory ?? null;
+  const ok = Boolean(
+    judgment?.pass === true
+      && score >= minimumScore
+      && visibleProof.length > 0
+      && rejectionCategory === null,
+  );
+  const concerns = [];
+  if (judgment?.pass !== true) concerns.push("Vision judge rejected the image.");
+  if (!Number.isFinite(score) || score < minimumScore) {
+    concerns.push(`Vision judge score is too low (${Number.isFinite(score) ? score : "missing"}; minimum ${minimumScore}).`);
+  }
+  if (visibleProof.length === 0) concerns.push("Vision judge did not provide visible proof.");
+  if (rejectionCategory !== null) concerns.push(`Vision judge reported rejection category: ${rejectionCategory}.`);
+
+  return {
+    ok,
+    status: ok ? "accepted" : "rejected",
+    concerns,
+    judgment: {
+      pass: judgment?.pass === true,
+      score: Number.isFinite(score) ? score : null,
+      reasons,
+      visibleProof,
+      rejectionCategory,
+    },
+  };
+}
+
+export async function judgeChangelogMediaWithOpenAI({
   apiKey,
-  model = "claude-opus-4-7",
+  model = "gpt-5.2",
   imagePath,
   candidate,
   stage = "raw",
@@ -299,7 +357,7 @@ export async function judgeChangelogMediaWithAnthropic({
     return {
       ok: false,
       status: "failed",
-      concerns: ["ANTHROPIC_API_KEY is required for the vision quality judge."],
+      concerns: ["OPENAI_API_KEY is required for the vision quality judge."],
       judgment: null,
     };
   }
@@ -312,37 +370,39 @@ export async function judgeChangelogMediaWithAnthropic({
     };
   }
 
-  const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
+  const mediaType = mediaTypeForImagePath(imagePath);
+  const imageUrl = `data:${mediaType};base64,${fs.readFileSync(imagePath).toString("base64")}`;
+  const response = await fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model,
-      max_tokens: 900,
-      tools: [VISION_QUALITY_TOOL],
-      tool_choice: { type: "tool", name: VISION_QUALITY_TOOL.name },
-      messages: [
+      input: [
         {
           role: "user",
           content: [
             {
-              type: "text",
+              type: "input_text",
               text: buildVisionJudgePrompt({ candidate, stage }),
             },
             {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaTypeForImagePath(imagePath),
-                data: fs.readFileSync(imagePath).toString("base64"),
-              },
+              type: "input_image",
+              image_url: imageUrl,
             },
           ],
         },
       ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "changelog_media_quality",
+          strict: true,
+          schema: OPENAI_VISION_QUALITY_SCHEMA,
+        },
+      },
     }),
   });
 
@@ -351,7 +411,7 @@ export async function judgeChangelogMediaWithAnthropic({
     return {
       ok: false,
       status: "failed",
-      concerns: [`Anthropic vision quality judge failed with HTTP ${response.status}: ${body.slice(0, 300)}`],
+      concerns: [`OpenAI vision quality judge failed with HTTP ${response.status}: ${body.slice(0, 300)}`],
       judgment: null,
     };
   }
@@ -363,56 +423,20 @@ export async function judgeChangelogMediaWithAnthropic({
     return {
       ok: false,
       status: "failed",
-      concerns: ["Anthropic vision quality judge returned invalid JSON."],
+      concerns: ["OpenAI vision quality judge returned invalid JSON."],
       judgment: null,
     };
   }
 
-  const judgment = parseVisionToolResponse(payload);
+  const judgment = parseOpenAIVisionResponse(payload);
   if (!judgment) {
     return {
       ok: false,
       status: "failed",
-      concerns: ["Anthropic vision quality judge did not return a tool judgment."],
+      concerns: ["OpenAI vision quality judge did not return a JSON judgment."],
       judgment: null,
     };
   }
 
-  const reasons = Array.isArray(judgment.reasons)
-    ? judgment.reasons.map((entry) => String(entry || "").trim()).filter(Boolean)
-    : [];
-  const visibleProof = Array.isArray(judgment.visibleProof)
-    ? judgment.visibleProof.map((entry) => String(entry || "").trim()).filter(Boolean)
-    : [];
-  const score = Number(judgment.score);
-  const minimumScore = stage === "raw"
-    ? PRODUCTION_MEDIA_QUALITY_POLICY.minRawVisionScore
-    : PRODUCTION_MEDIA_QUALITY_POLICY.minBrandedVisionScore;
-  const rejectionCategory = judgment.rejectionCategory ?? null;
-  const ok = Boolean(
-    judgment.pass === true
-      && score >= minimumScore
-      && visibleProof.length > 0
-      && rejectionCategory === null,
-  );
-  const concerns = [];
-  if (judgment.pass !== true) concerns.push("Vision judge rejected the image.");
-  if (!Number.isFinite(score) || score < minimumScore) {
-    concerns.push(`Vision judge score is too low (${Number.isFinite(score) ? score : "missing"}; minimum ${minimumScore}).`);
-  }
-  if (visibleProof.length === 0) concerns.push("Vision judge did not provide visible proof.");
-  if (rejectionCategory !== null) concerns.push(`Vision judge reported rejection category: ${rejectionCategory}.`);
-
-  return {
-    ok,
-    status: ok ? "accepted" : "rejected",
-    concerns,
-    judgment: {
-      pass: judgment.pass === true,
-      score: Number.isFinite(score) ? score : null,
-      reasons,
-      visibleProof,
-      rejectionCategory,
-    },
-  };
+  return evaluateVisionJudgment(judgment, { stage });
 }

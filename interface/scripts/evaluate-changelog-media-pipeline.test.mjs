@@ -374,9 +374,11 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
   writeStructuredPng(screenshotPath, 1920, 1080);
 
   const previousAnthropic = process.env.ANTHROPIC_API_KEY;
+  const previousOpenAI = process.env.OPENAI_API_KEY;
   const previousBrowserUse = process.env.BROWSER_USE_API_KEY;
   const previousCaptureSecret = process.env.AURA_CHANGELOG_CAPTURE_SECRET;
   process.env.ANTHROPIC_API_KEY = "test-key";
+  process.env.OPENAI_API_KEY = "openai-test-key";
   process.env.BROWSER_USE_API_KEY = "browser-use-test-key";
   process.env.AURA_CHANGELOG_CAPTURE_SECRET = "capture-secret-with-enough-entropy";
   let capturedBrowserUseArgs = null;
@@ -523,6 +525,8 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
     globalThis.fetch = originalFetch;
     if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
     else process.env.ANTHROPIC_API_KEY = previousAnthropic;
+    if (previousOpenAI === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenAI;
     if (previousBrowserUse === undefined) delete process.env.BROWSER_USE_API_KEY;
     else process.env.BROWSER_USE_API_KEY = previousBrowserUse;
     if (previousCaptureSecret === undefined) delete process.env.AURA_CHANGELOG_CAPTURE_SECRET;

@@ -139,6 +139,7 @@ jobs:
         if: steps.target.outputs.skip != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           BROWSER_USE_API_KEY: ${{ secrets.BROWSER_USE_API_KEY }}
           AURA_CHANGELOG_CAPTURE_SECRET: ${{ secrets.AURA_CHANGELOG_CAPTURE_SECRET }}
           AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
@@ -146,6 +147,7 @@ jobs:
         run: |
           missing=()
           [[ -n "$ANTHROPIC_API_KEY" ]] || missing+=("ANTHROPIC_API_KEY")
+          [[ -n "$OPENAI_API_KEY" ]] || missing+=("OPENAI_API_KEY")
           [[ -n "$BROWSER_USE_API_KEY" ]] || missing+=("BROWSER_USE_API_KEY")
           [[ -n "$AURA_CHANGELOG_CAPTURE_SECRET" ]] || missing+=("AURA_CHANGELOG_CAPTURE_SECRET")
           [[ -n "$AURA_DEMO_SCREENSHOT_BASE_URL" ]] || missing+=("AURA_DEMO_SCREENSHOT_BASE_URL")
@@ -158,12 +160,13 @@ jobs:
         if: steps.target.outputs.skip != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           BROWSER_USE_API_KEY: ${{ secrets.BROWSER_USE_API_KEY }}
           AURA_CHANGELOG_CAPTURE_SECRET: ${{ secrets.AURA_CHANGELOG_CAPTURE_SECRET }}
           AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
           AURA_DEMO_SCREENSHOT_API_URL: ${{ vars.AURA_DEMO_SCREENSHOT_API_URL || secrets.AURA_DEMO_SCREENSHOT_API_URL }}
           CHANGELOG_MEDIA_ANTHROPIC_MODEL: ${{ vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-opus-4-7' }}
-          CHANGELOG_MEDIA_VISION_JUDGE_MODEL: ${{ vars.CHANGELOG_MEDIA_VISION_JUDGE_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-opus-4-7' }}
+          CHANGELOG_MEDIA_OPENAI_VISION_MODEL: ${{ vars.CHANGELOG_MEDIA_OPENAI_VISION_MODEL || 'gpt-5.2' }}
           CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
           BROWSER_USE_MODEL: ${{ vars.BROWSER_USE_MODEL || 'claude-opus-4.6' }}
           BROWSER_USE_MAX_COST_USD: ${{ vars.BROWSER_USE_MAX_COST_USD || '5' }}

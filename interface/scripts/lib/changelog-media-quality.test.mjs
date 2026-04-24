@@ -9,7 +9,7 @@ import { PNG } from "pngjs";
 import {
   assessChangelogMediaQuality,
   buildVisionJudgePrompt,
-  judgeChangelogMediaWithAnthropic,
+  judgeChangelogMediaWithOpenAI,
   measurePngQuality,
 } from "./changelog-media-quality.mjs";
 
@@ -194,14 +194,15 @@ test("buildVisionJudgePrompt defines an independent strict review", () => {
   assert.match(prompt, /Return strict JSON/);
 });
 
-test("judgeChangelogMediaWithAnthropic requires strict vision proof", async () => {
+test("judgeChangelogMediaWithOpenAI uses Responses image input and strict JSON schema", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
   const screenshotPath = path.join(tempDir, "desktop.png");
   writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
 
   let requestBody = null;
-  const report = await judgeChangelogMediaWithAnthropic({
+  const report = await judgeChangelogMediaWithOpenAI({
     apiKey: "test-key",
+    model: "gpt-5.2",
     imagePath: screenshotPath,
     candidate: {
       entryId: "entry-1",
@@ -215,17 +216,20 @@ test("judgeChangelogMediaWithAnthropic requires strict vision proof", async () =
         status: 200,
         async text() {
           return JSON.stringify({
-            content: [
+            output: [
               {
-                type: "tool_use",
-                name: "submit_changelog_media_quality",
-                input: {
-                  pass: true,
-                  score: 0.91,
-                  reasons: ["The model picker is visible and readable."],
-                  visibleProof: ["GPT-5.5 is visible in the model picker."],
-                  rejectionCategory: null,
-                },
+                content: [
+                  {
+                    type: "output_text",
+                    text: JSON.stringify({
+                      pass: true,
+                      score: 0.92,
+                      reasons: ["The product UI is crisp and relevant."],
+                      visibleProof: ["GPT-5.5 is visible in the model picker."],
+                      rejectionCategory: null,
+                    }),
+                  },
+                ],
               },
             ],
           });
@@ -236,18 +240,20 @@ test("judgeChangelogMediaWithAnthropic requires strict vision proof", async () =
 
   assert.equal(report.ok, true);
   assert.equal(report.status, "accepted");
-  assert.equal(report.judgment.score, 0.91);
-  assert.equal(requestBody.tool_choice.name, "submit_changelog_media_quality");
-  assert.equal(requestBody.messages[0].content[1].type, "image");
-  assert.equal(requestBody.messages[0].content[1].source.media_type, "image/png");
+  assert.equal(report.judgment.score, 0.92);
+  assert.equal(requestBody.model, "gpt-5.2");
+  assert.equal(requestBody.input[0].content[0].type, "input_text");
+  assert.equal(requestBody.input[0].content[1].type, "input_image");
+  assert.match(requestBody.input[0].content[1].image_url, /^data:image\/png;base64,/);
+  assert.equal(requestBody.text.format.type, "json_schema");
 });
 
-test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async () => {
+test("judgeChangelogMediaWithOpenAI rejects marginal vision scores", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
   const screenshotPath = path.join(tempDir, "desktop.png");
   writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
 
-  const report = await judgeChangelogMediaWithAnthropic({
+  const report = await judgeChangelogMediaWithOpenAI({
     apiKey: "test-key",
     imagePath: screenshotPath,
     candidate: {
@@ -261,17 +267,18 @@ test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async ()
       status: 200,
       async text() {
         return JSON.stringify({
-          content: [
+          output: [
             {
-              type: "tool_use",
-              name: "submit_changelog_media_quality",
-              input: {
-                pass: true,
-                score: 0.7,
-                reasons: ["The correct screen is visible, but text is soft."],
-                visibleProof: ["GPT-5.5 is present."],
-                rejectionCategory: null,
-              },
+              content: [{
+                type: "output_text",
+                text: JSON.stringify({
+                  pass: true,
+                  score: 0.7,
+                  reasons: ["The correct screen is visible, but text is soft."],
+                  visibleProof: ["GPT-5.5 is present."],
+                  rejectionCategory: null,
+                }),
+              }],
             },
           ],
         });
@@ -284,12 +291,12 @@ test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async ()
   assert.ok(report.concerns.some((concern) => concern.includes("minimum 0.75")));
 });
 
-test("judgeChangelogMediaWithAnthropic rejects images with a rejection category even when scored high", async () => {
+test("judgeChangelogMediaWithOpenAI rejects images with a rejection category even when scored high", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
   const screenshotPath = path.join(tempDir, "desktop.png");
   writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
 
-  const report = await judgeChangelogMediaWithAnthropic({
+  const report = await judgeChangelogMediaWithOpenAI({
     apiKey: "test-key",
     imagePath: screenshotPath,
     stage: "raw",
@@ -298,17 +305,18 @@ test("judgeChangelogMediaWithAnthropic rejects images with a rejection category 
       status: 200,
       async text() {
         return JSON.stringify({
-          content: [
+          output: [
             {
-              type: "tool_use",
-              name: "submit_changelog_media_quality",
-              input: {
-                pass: true,
-                score: 0.93,
-                reasons: ["A product screen is visible but it is the wrong area."],
-                visibleProof: ["Unrelated screen is visible."],
-                rejectionCategory: "wrong-screen",
-              },
+              content: [{
+                type: "output_text",
+                text: JSON.stringify({
+                  pass: true,
+                  score: 0.93,
+                  reasons: ["A product screen is visible but it is the wrong area."],
+                  visibleProof: ["Unrelated screen is visible."],
+                  rejectionCategory: "wrong-screen",
+                }),
+              }],
             },
           ],
         });
