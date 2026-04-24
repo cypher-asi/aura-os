@@ -36,7 +36,7 @@ export function ImagePreview({
 
   if (!displayUrl) {
     return (
-      <div className={styles.root}>
+      <div className={`${styles.root} ${styles.rootEmpty}`}>
         <div className={styles.emptyState}>
           <ImageIcon size={32} className={styles.emptyIcon} />
           <span className={styles.emptyText}>Your generated image will appear here</span>

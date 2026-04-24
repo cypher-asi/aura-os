@@ -1,6 +1,6 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Grid3x3, Triangle, Paintbrush } from "lucide-react";
-import { Button, Spinner, Toggle } from "@cypher-asi/zui";
+import { Button, Spinner } from "@cypher-asi/zui";
 import { useAura3DStore } from "../../../stores/aura3d-store";
 import { generate3dStream } from "../../../api/streams";
 import { EventType } from "../../../types/aura-events";
@@ -8,12 +8,37 @@ import { EmptyState } from "../../../components/EmptyState";
 import { WebGLViewer } from "../WebGLViewer";
 import styles from "./ModelGeneration.module.css";
 
+const PROGRESS_MESSAGES = [
+  "Generating 3D model...",
+  "Still cooking...",
+  "Almost there...",
+  "Putting on the finishing touches...",
+];
+const PROGRESS_INTERVAL_MS = 25_000;
+
+function useProgressMessage(isGenerating: boolean): string {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setIndex((i) => Math.min(i + 1, PROGRESS_MESSAGES.length - 1));
+    }, PROGRESS_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [isGenerating]);
+
+  return PROGRESS_MESSAGES[index];
+}
+
 export function ModelGeneration() {
+  const selectedProjectId = useAura3DStore((s) => s.selectedProjectId);
   const generateSourceImage = useAura3DStore((s) => s.generateSourceImage);
   const isGenerating3D = useAura3DStore((s) => s.isGenerating3D);
-  const generate3DProgress = useAura3DStore((s) => s.generate3DProgress);
-  const generate3DProgressMessage = useAura3DStore((s) => s.generate3DProgressMessage);
   const current3DModel = useAura3DStore((s) => s.current3DModel);
+  const progressMessage = useProgressMessage(isGenerating3D);
 
   const showGrid = useAura3DStore((s) => s.showGrid);
   const showWireframe = useAura3DStore((s) => s.showWireframe);
@@ -76,8 +101,10 @@ export function ModelGeneration() {
         },
       },
       controller.signal,
+      selectedProjectId ?? undefined,
+      generateSourceImage.artifactId,
     );
-  }, [generateSourceImage, setGenerating3D, set3DProgress, complete3DGeneration, setError]);
+  }, [generateSourceImage, selectedProjectId, setGenerating3D, set3DProgress, complete3DGeneration, setError]);
 
   if (!generateSourceImage && !current3DModel) {
     return (
@@ -91,23 +118,41 @@ export function ModelGeneration() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
-        {current3DModel && (
+      {current3DModel && (
+        <div className={styles.header}>
           <div className={styles.viewerControls}>
-            <Toggle checked={showGrid} onChange={toggleGrid} size="sm" />
-            <Grid3x3 size={12} className={styles.controlIcon} />
-            <Toggle checked={showWireframe} onChange={toggleWireframe} size="sm" />
-            <Triangle size={12} className={styles.controlIcon} />
-            <Toggle checked={showTexture} onChange={toggleTexture} size="sm" />
-            <Paintbrush size={12} className={styles.controlIcon} />
+            <button
+              type="button"
+              className={`${styles.controlButton} ${showGrid ? styles.controlButtonActive : ""}`}
+              onClick={toggleGrid}
+              title="Toggle grid"
+            >
+              <Grid3x3 size={14} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.controlButton} ${showWireframe ? styles.controlButtonActive : ""}`}
+              onClick={toggleWireframe}
+              title="Toggle wireframe"
+            >
+              <Triangle size={14} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.controlButton} ${showTexture ? styles.controlButtonActive : ""}`}
+              onClick={toggleTexture}
+              title="Toggle textures"
+            >
+              <Paintbrush size={14} />
+            </button>
             {current3DModel.polyCount != null && (
               <span className={styles.polyCount}>
                 {current3DModel.polyCount.toLocaleString()} polys
               </span>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <div className={styles.viewerArea}>
         {current3DModel ? (
           <WebGLViewer
@@ -126,21 +171,25 @@ export function ModelGeneration() {
           </div>
         ) : null}
       </div>
-      <div className={styles.actionBar}>
-        <Button
-          variant="primary"
-          onClick={handleGenerate3D}
-          disabled={!generateSourceImage || isGenerating3D}
-        >
-          {isGenerating3D ? (
-            <>
-              <Spinner size="sm" />
-              <span>{generate3DProgressMessage || `${generate3DProgress}%`}</span>
-            </>
-          ) : (
-            "Generate 3D"
-          )}
-        </Button>
+      <div className={styles.footer}>
+        {!current3DModel && (
+          <div className={styles.actionBar}>
+            <Button
+              variant="primary"
+              onClick={handleGenerate3D}
+              disabled={!generateSourceImage || !selectedProjectId || isGenerating3D}
+            >
+              {isGenerating3D ? (
+                <>
+                  <Spinner size="sm" />
+                  <span>{progressMessage}</span>
+                </>
+              ) : (
+                "Generate 3D"
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

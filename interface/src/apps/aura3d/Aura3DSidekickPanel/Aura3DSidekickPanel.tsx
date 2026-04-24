@@ -17,8 +17,10 @@ function ImagesPanel() {
   }
 
   return (
-    <div className={styles.grid}>
-      {images.map((img) => (
+    <div className={styles.panel}>
+      <h4 className={styles.heading}>Images</h4>
+      <div className={styles.grid}>
+        {images.map((img) => (
         <button
           key={img.id}
           type="button"
@@ -29,11 +31,13 @@ function ImagesPanel() {
           <img src={img.imageUrl} alt={img.prompt} className={styles.thumbImage} />
         </button>
       ))}
+      </div>
     </div>
   );
 }
 
 function ModelsPanel() {
+  const images = useAura3DStore((s) => s.images);
   const models = useAura3DStore((s) => s.models);
   const selectedModelId = useAura3DStore((s) => s.selectedModelId);
   const selectModel = useAura3DStore((s) => s.selectModel);
@@ -47,25 +51,30 @@ function ModelsPanel() {
   }
 
   return (
-    <div className={styles.list}>
-      {models.map((model) => (
-        <button
-          key={model.id}
-          type="button"
-          className={`${styles.modelItem} ${model.id === selectedModelId ? styles.modelItemSelected : ""}`}
-          onClick={() => selectModel(model.id)}
-        >
-          <Box size={16} className={styles.modelIcon} />
-          <div className={styles.modelInfo}>
-            <span className={styles.modelLabel}>3D Model</span>
-            {model.polyCount != null && (
-              <span className={styles.modelMeta}>
-                {model.polyCount.toLocaleString()} polys
-              </span>
+    <div className={styles.panel}>
+      <h4 className={styles.heading}>3D Models</h4>
+      <div className={styles.grid}>
+        {models.map((model) => {
+        const sourceImage = images.find((img) => img.id === model.sourceImageId);
+        return (
+          <button
+            key={model.id}
+            type="button"
+            className={`${styles.thumb} ${model.id === selectedModelId ? styles.thumbSelected : ""}`}
+            onClick={() => selectModel(model.id)}
+            title={model.polyCount != null ? `${model.polyCount.toLocaleString()} polys` : "3D Model"}
+          >
+            {sourceImage ? (
+              <img src={sourceImage.imageUrl} alt="3D Model" className={styles.thumbImage} />
+            ) : (
+              <div className={styles.modelThumbPlaceholder}>
+                <Box size={24} />
+              </div>
             )}
-          </div>
-        </button>
-      ))}
+          </button>
+        );
+      })}
+      </div>
     </div>
   );
 }

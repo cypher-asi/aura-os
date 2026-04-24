@@ -23,11 +23,30 @@
 .viewerControls {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
-.controlIcon {
+.controlButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.controlButton:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.controlButtonActive {
+  color: var(--color-accent, #4aeaa8);
 }
 
 .polyCount {
@@ -52,16 +71,22 @@
 }
 
 .sourceImage {
-  max-width: 200px;
-  max-height: 200px;
+  max-width: 100%;
+  max-height: 360px;
   object-fit: contain;
   border-radius: 8px;
-  opacity: 0.6;
+}
+
+.footer {
+  flex-shrink: 0;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
 }
 
 .actionBar {
   display: flex;
   justify-content: center;
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--color-border);
 }
