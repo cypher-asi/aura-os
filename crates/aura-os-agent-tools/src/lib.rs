@@ -22,7 +22,7 @@ pub mod tools;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
-use aura_os_agent_runtime::tools::{AgentTool, CapabilityRequirement, Surface, ToolRegistry};
+use aura_os_agent_runtime::tools::{AgentTool, CapabilityRequirement, ToolRegistry};
 use aura_os_core::{AgentPermissions, Capability, ToolDomain};
 
 /// Build the canonical [`ToolRegistry`] containing every
@@ -36,10 +36,14 @@ use aura_os_core::{AgentPermissions, Capability, ToolDomain};
 ///
 /// There used to be two entry points here — `build_tier1_registry`
 /// and `build_all_tools_registry` — with the tier-1 slice serving as
-/// the CEO preset's narrow allowlist. The surface-vs-OnDemand split
-/// is now declared per-tool via [`AgentTool::surface`], so a single
-/// registry + a capability/surface filter ([`session::build_session_tool_names`])
-/// replaces the two-builder pattern.
+/// the CEO preset's narrow allowlist. That two-builder pattern was
+/// replaced by a single registry + capability filter
+/// ([`session::build_session_tool_names`]). The per-tool
+/// `Surface::OnDemand` split that followed is also gone: every tool
+/// whose `required_capabilities()` an agent satisfies now ships in
+/// its session by default, so the LLM never has to ask for a domain
+/// to be promoted before calling a tool it already has permission
+/// for.
 #[must_use]
 pub fn build_registry() -> ToolRegistry {
     let mut registry = ToolRegistry::new();
@@ -75,21 +79,27 @@ pub fn build_registry() -> ToolRegistry {
 
     registry.register(Arc::new(tools::system_tools::GetCurrentTimeTool));
 
-    // Meta-tool: promotes `Surface::OnDemand` domains into the live
-    // session's tool surface.
+    // Meta-tool preserved for backwards compatibility: older system
+    // prompts may still instruct the LLM to call `load_domain_tools`
+    // before using domain-scoped tools. Every tool the agent has
+    // capabilities for already ships in the session payload, so the
+    // tool now returns a no-op status message instead of signalling
+    // a promotion step.
     registry.register(Arc::new(tier::LoadDomainToolsTool));
 
     // `list_agent_instances` was previously tier-2 (hidden from the
     // CEO until `load_domain_tools` was called), which produced the
     // reported bug where the CEO could not see its own project
-    // agents. It's `Surface::Always` now so it ships on every turn
-    // for any bundle that satisfies its `ReadProjectFromArg`
-    // requirement (including the CEO preset via
-    // `Capability::ReadAllProjects`).
+    // agents. It ships on every turn for any bundle that satisfies
+    // its `ReadProjectFromArg` requirement (including the CEO preset
+    // via `Capability::ReadAllProjects`).
     registry.register(Arc::new(tools::agent_tools::ListAgentInstancesTool));
 
-    // --- Surface::OnDemand tools below: shipped only when the LLM
-    // promotes their `ToolDomain` via `load_domain_tools`. ---
+    // --- Domain-scoped tools. These used to be `Surface::OnDemand`
+    // and required the LLM to promote their `ToolDomain` via
+    // `load_domain_tools`; the surface gate has since been removed,
+    // so they ship whenever the agent's capabilities satisfy them
+    // just like every other tool. ---
 
     registry.register(Arc::new(tools::spec_tools::ListSpecsTool));
     registry.register(Arc::new(tools::spec_tools::GetSpecTool));
@@ -459,31 +469,32 @@ fn holds(
 }
 
 /// Names of tools a session should ship for an agent with the given
-/// `permissions` and the given set of currently-loaded on-demand
-/// `loaded_domains`.
+/// `permissions`.
 ///
-/// A tool is included iff:
-/// 1. its `required_capabilities()` are satisfied by `permissions`
-///    ([`permissions_satisfy_requirements`]), *and*
-/// 2. its `surface()` is [`Surface::Always`] OR its `domain()` is in
-///    `loaded_domains` (the LLM has promoted that domain this session
-///    via `load_domain_tools`).
+/// A tool is included iff its `required_capabilities()` are satisfied
+/// by `permissions` ([`permissions_satisfy_requirements`]). There is
+/// no secondary surface / on-demand gate: every capable tool ships in
+/// the default session payload so the LLM never has to ask for a
+/// domain to be promoted before calling a tool it already has
+/// permission for.
 ///
 /// This is the unified replacement for the old pair
 /// `build_time_cross_agent_tool_names` (non-CEO branch) +
 /// `ceo_tier1_tool_names` (CEO branch). Both preset and non-preset
 /// bundles now follow exactly the same code path — what differs is
 /// the capabilities they carry.
+///
+/// `_loaded_domains` is kept in the signature for source-compat with
+/// callers that still pass the domain slice through; it is ignored.
 #[must_use]
 pub fn build_session_tool_names(
     permissions: &AgentPermissions,
-    loaded_domains: &[ToolDomain],
+    _loaded_domains: &[ToolDomain],
 ) -> Vec<String> {
     let mut names: Vec<String> = SHARED_ALL_TOOLS
         .list_tools()
         .into_iter()
         .filter(|tool| permissions_satisfy_requirements(permissions, tool.required_capabilities()))
-        .filter(|tool| tool.surface() == Surface::Always || loaded_domains.contains(&tool.domain()))
         .map(|t| t.name().to_string())
         .collect();
     names.sort();
@@ -492,9 +503,8 @@ pub fn build_session_tool_names(
 
 /// Build-time approximation kept for source-compat with existing
 /// callers (e.g. the installed-tools diagnostic). Equivalent to
-/// [`build_session_tool_names`] called with an empty
-/// `loaded_domains` — the set of tools a fresh session would ship
-/// before the LLM promoted any domain.
+/// [`build_session_tool_names`] — every capable tool ships by
+/// default, with no domain-promotion step.
 #[must_use]
 pub fn build_time_cross_agent_tool_names(permissions: &AgentPermissions) -> Vec<String> {
     build_session_tool_names(permissions, &[])

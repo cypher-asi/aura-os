@@ -11,13 +11,13 @@
 //!   which iterated the *full* registry and filtered by capabilities
 //!   with a carve-out `is_ceo_preset()` short-circuit.
 //!
-//! The unified filter here applies to *every* bundle:
-//!
-//! 1. Tool's `required_capabilities()` must be satisfied by the
-//!    bundle — see [`crate::permissions_satisfy_requirements`].
-//! 2. Tool's `surface()` must be [`Surface::Always`] OR its
-//!    `domain()` must be in the session's currently-loaded on-demand
-//!    domain set (populated by the `load_domain_tools` meta-tool).
+//! The unified filter here applies to *every* bundle: a tool ships
+//! iff its `required_capabilities()` are satisfied by the bundle —
+//! see [`crate::permissions_satisfy_requirements`]. The secondary
+//! `Surface::OnDemand` gate that used to require the LLM to call the
+//! `load_domain_tools` meta-tool first has been removed, so every
+//! tool the agent has permission for ships in the default session
+//! payload.
 //!
 //! The CEO preset holds the wildcard
 //! [`Capability::ReadAllProjects`] / [`Capability::WriteAllProjects`]
@@ -37,29 +37,31 @@ use crate::ceo::AGENT_TOOL_PATH_PREFIX;
 const SYNTHETIC_SPAWN_AGENT: &str = "spawn_agent";
 
 /// Assemble the `InstalledTool` list to ship into a harness session
-/// for an agent with the given `permissions`, honouring any
-/// on-demand `loaded_domains` the LLM has promoted this session.
+/// for an agent with the given `permissions`.
 ///
 /// Every registry tool that passes [`crate::permissions_satisfy_requirements`]
-/// *and* either ships with `Surface::Always` or belongs to a loaded
-/// domain is included. Tool descriptions and JSON schemas are stamped
-/// from the canonical [`crate::tool_metadata_map`] so the harness LLM
-/// sees the real definition — the historical "empty schema" bug that
-/// made the LLM silently refuse to call tools is impossible here.
+/// is included — there is no surface / on-demand gate. Tool
+/// descriptions and JSON schemas are stamped from the canonical
+/// [`crate::tool_metadata_map`] so the harness LLM sees the real
+/// definition — the historical "empty schema" bug that made the LLM
+/// silently refuse to call tools is impossible here.
 ///
 /// `spawn_agent` is a synthetic name handled by a bespoke dispatcher
 /// branch (not a registry [`AgentTool`]). It is appended when the
 /// bundle carries [`Capability::SpawnAgent`] so the LLM menu mirrors
 /// what the agent could actually invoke.
+///
+/// `_loaded_domains` is kept in the signature for source-compat with
+/// callers that still pass the domain slice through; it is ignored.
 #[must_use]
 pub fn build_session_tools(
     permissions: &AgentPermissions,
-    loaded_domains: &[ToolDomain],
+    _loaded_domains: &[ToolDomain],
 ) -> Vec<InstalledTool> {
     let metadata = crate::tool_metadata_map();
     let metadata = &*metadata;
 
-    let mut names = crate::build_session_tool_names(permissions, loaded_domains);
+    let mut names = crate::build_session_tool_names(permissions, &[]);
 
     if permissions.capabilities.contains(&Capability::SpawnAgent)
         && !names.iter().any(|n| n == SYNTHETIC_SPAWN_AGENT)
@@ -105,11 +107,13 @@ mod tests {
     }
 
     #[test]
-    fn ceo_preset_ships_tier1_plus_promoted_list_agent_instances() {
-        // The CEO preset now ships every `Surface::Always` tool whose
-        // capabilities it satisfies. The historical tier-1 slice is
-        // still the backbone, plus `list_agent_instances` — promoted
-        // to `Surface::Always` as part of the reported CEO-bug fix.
+    fn ceo_preset_ships_every_capable_tool() {
+        // The CEO preset now ships every tool whose capabilities it
+        // satisfies, regardless of the legacy surface/on-demand
+        // classification. The historical tier-1 backbone is still
+        // present; previously-OnDemand project tools (e.g.
+        // `list_specs`) ship in the same payload now that the
+        // surface gate has been removed.
         let tools = build_session_tools(&AgentPermissions::ceo_preset(), &[]);
         let names = tool_names(&tools);
         for required in [
@@ -124,6 +128,10 @@ mod tests {
             "list_projects",
             "get_project",
             "get_credit_balance",
+            // previously `Surface::OnDemand` — must now ship by default
+            "list_specs",
+            "get_spec",
+            "list_tasks",
             // synthetic — must surface whenever SpawnAgent cap is held
             "spawn_agent",
         ] {
@@ -135,21 +143,24 @@ mod tests {
     }
 
     #[test]
-    fn ceo_preset_withholds_on_demand_until_domain_loaded() {
-        // Surface::OnDemand tools must NOT ship in a fresh session.
+    fn ceo_preset_ships_previously_on_demand_tools_without_promotion() {
+        // Regression guard: the surface gate has been removed, so
+        // passing an empty `loaded_domains` slice must still surface
+        // every domain-scoped tool the CEO has capabilities for.
         let without = build_session_tools(&AgentPermissions::ceo_preset(), &[]);
         let without_names = tool_names(&without);
         assert!(
-            !without_names.contains(&"list_specs"),
-            "fresh CEO session must not carry on-demand `list_specs` until loaded"
+            without_names.contains(&"list_specs"),
+            "fresh CEO session must carry `list_specs` without any domain promotion"
         );
 
-        // Promoting the `Spec` domain must add the spec tools.
+        // Passing a non-empty `loaded_domains` slice must be a no-op
+        // — the tool list is identical.
         let with = build_session_tools(&AgentPermissions::ceo_preset(), &[ToolDomain::Spec]);
         let with_names = tool_names(&with);
-        assert!(
-            with_names.contains(&"list_specs"),
-            "promoting Spec domain must expose `list_specs`; got {with_names:?}"
+        assert_eq!(
+            without_names, with_names,
+            "loaded_domains must not influence the session tool list"
         );
     }
 

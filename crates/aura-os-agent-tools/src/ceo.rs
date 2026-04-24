@@ -88,8 +88,7 @@ pub fn ceo_classify_intent(message: &str) -> Vec<aura_os_core::ToolDomain> {
 ///
 /// Thin wrapper around [`crate::session::build_session_tools`] — the
 /// single unified entry point for assembling an `InstalledTool` list
-/// from a capability bundle plus the session's currently-loaded
-/// on-demand `ToolDomain`s. CEO and non-CEO bundles now flow through
+/// from a capability bundle. CEO and non-CEO bundles flow through
 /// exactly the same filter; what differs is the capabilities they
 /// carry (the CEO preset holds the wildcard
 /// [`Capability::ReadAllProjects`] / [`Capability::WriteAllProjects`]
@@ -111,10 +110,10 @@ pub fn build_cross_agent_tools(permissions: &AgentPermissions) -> Vec<InstalledT
 /// [`build_cross_agent_tools`] that ran an intent classifier over the
 /// user's message and narrowed a ~55-tool CEO manifest down to tier-1
 /// plus any tier-2 domains the classifier matched. Per-turn narrowing
-/// has been removed — the declarative `AgentTool::surface` method is
-/// the canonical source for "what ships by default". The `message`
-/// parameter is retained so call sites don't have to churn; it is
-/// ignored.
+/// has been removed — every tool whose `required_capabilities()` the
+/// agent satisfies ships in the default session payload. The
+/// `message` parameter is retained so call sites don't have to churn;
+/// it is ignored.
 #[must_use]
 pub fn build_cross_agent_tools_for_message(
     permissions: &AgentPermissions,
@@ -301,14 +300,12 @@ mod tests {
     }
 
     #[test]
-    fn read_project_exposes_always_surface_read_tools_only() {
+    fn read_project_exposes_every_read_tool_no_write_tools() {
         // A non-CEO agent granted `ReadProject` on a specific project
-        // should see the `Surface::Always` read tools from the
-        // aura-native manifest and nothing from the write half. Tools
-        // whose `surface()` is `Surface::OnDemand` only appear after
-        // the LLM promotes their domain via `load_domain_tools`, so
-        // the assertion is filtered on `Surface::Always`.
-        use aura_os_agent_runtime::tools::Surface;
+        // now sees every read tool from the aura-native manifest,
+        // regardless of the tool's legacy surface classification.
+        // Write-side tools must still be withheld because the bundle
+        // does not carry `WriteProject`.
         let perms = AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::ReadProject {
@@ -327,10 +324,10 @@ mod tests {
             let is_write = reqs
                 .iter()
                 .any(|r| matches!(r, CapabilityRequirement::WriteProjectFromArg(_)));
-            if is_read && !is_write && tool.surface() == Surface::Always {
+            if is_read && !is_write {
                 assert!(
                     names.contains(&tool.name()),
-                    "expected always-surface read tool `{}` for ReadProject grant; got {names:?}",
+                    "expected read tool `{}` for ReadProject grant; got {names:?}",
                     tool.name()
                 );
             }
@@ -345,12 +342,12 @@ mod tests {
     }
 
     #[test]
-    fn write_project_exposes_always_surface_project_tools() {
-        // `WriteProject` implies `ReadProject`. Only `Surface::Always`
-        // project tools ship on a fresh session; on-demand write tools
-        // (e.g. `delete_agent_instance`, `update_agent_instance`)
-        // require the LLM to first invoke `load_domain_tools`.
-        use aura_os_agent_runtime::tools::Surface;
+    fn write_project_exposes_every_project_tool() {
+        // `WriteProject` implies `ReadProject`. With the surface gate
+        // removed, every project-scoped tool whose capabilities this
+        // bundle satisfies must ship in the default session — there
+        // is no longer a separate on-demand tier that requires
+        // `load_domain_tools` promotion.
         let perms = AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::WriteProject {
@@ -369,10 +366,10 @@ mod tests {
                         | CapabilityRequirement::WriteProjectFromArg(_)
                 )
             });
-            if is_project_scoped && tool.surface() == Surface::Always {
+            if is_project_scoped {
                 assert!(
                     names.contains(&tool.name()),
-                    "expected always-surface project tool `{}` for WriteProject grant; got {names:?}",
+                    "expected project tool `{}` for WriteProject grant; got {names:?}",
                     tool.name()
                 );
             }
@@ -494,41 +491,35 @@ mod tests {
     fn installed_tools_for_readproject_carry_schemas() {
         // The capability-gated aura-native branch must deliver real
         // schemas, otherwise project-scoped agents would hit the same
-        // "LLM can't call this" problem as the CEO did. `list_specs`
-        // is now `Surface::OnDemand`, so the schema assertion runs
-        // against the domain-loaded session. `get_project` is
-        // `Surface::Always` so it serves as the schema check for the
-        // fresh-session path.
+        // "LLM can't call this" problem as the CEO did. Both
+        // `get_project` (previously always-on) and `list_specs`
+        // (previously on-demand) now ship in the default session
+        // payload, so the assertion runs once against the fresh
+        // session for both tools.
         let perms = AgentPermissions {
             scope: AgentScope::default(),
             capabilities: vec![Capability::ReadProject {
                 id: "proj-1".to_string(),
             }],
         };
-        let always_tools = build_cross_agent_tools(&perms);
-        let get_project = always_tools
-            .iter()
-            .find(|t| t.name == "get_project")
-            .expect("ReadProject should emit get_project on a fresh session");
-        assert!(!get_project.description.is_empty());
-        assert!(get_project
-            .input_schema
-            .get("properties")
-            .and_then(|v| v.as_object())
-            .is_some_and(|p| !p.is_empty()));
-
-        let on_demand_tools =
-            crate::session::build_session_tools(&perms, &[aura_os_core::ToolDomain::Spec]);
-        let list_specs = on_demand_tools
-            .iter()
-            .find(|t| t.name == "list_specs")
-            .expect("promoting Spec domain should expose list_specs");
-        assert!(!list_specs.description.is_empty());
-        assert!(list_specs
-            .input_schema
-            .get("properties")
-            .and_then(|v| v.as_object())
-            .is_some_and(|p| !p.is_empty()));
+        let tools = build_cross_agent_tools(&perms);
+        for name in ["get_project", "list_specs"] {
+            let tool = tools
+                .iter()
+                .find(|t| t.name == name)
+                .unwrap_or_else(|| panic!("ReadProject should emit `{name}` on a fresh session"));
+            assert!(
+                !tool.description.is_empty(),
+                "`{name}` must ship a non-empty description"
+            );
+            assert!(
+                tool.input_schema
+                    .get("properties")
+                    .and_then(|v| v.as_object())
+                    .is_some_and(|p| !p.is_empty()),
+                "`{name}` must ship a non-empty properties schema"
+            );
+        }
     }
 
     #[test]

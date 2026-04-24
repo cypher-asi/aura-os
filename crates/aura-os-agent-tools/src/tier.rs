@@ -5,6 +5,14 @@
 //! agent-runtime path and a harness-hosted `TurnObserver`. This module
 //! re-exports the portable helpers and keeps [`LoadDomainToolsTool`],
 //! which depends on the in-process [`AgentTool`] trait.
+//!
+//! `LoadDomainToolsTool` used to gate domain-scoped tools behind an
+//! explicit promotion step. That surface gate has been removed — every
+//! tool the agent has capabilities for now ships in the default
+//! session payload — so the tool is retained only so older system
+//! prompts that still mention it do not cause the LLM to reject the
+//! tool list. Its `execute` returns a no-op status message confirming
+//! that all capable tools are already available.
 
 use async_trait::async_trait;
 use serde_json::json;
@@ -32,7 +40,7 @@ impl AgentTool for LoadDomainToolsTool {
     }
 
     fn description(&self) -> &str {
-        "Load additional tool domains into the current conversation. Use when you need tools from domains not currently available."
+        "No-op retained for backwards compatibility. Every tool the agent has capabilities for already ships in the session payload, so this tool no longer needs to be called; invoking it returns a status message and does not change the tool list."
     }
 
     fn domain(&self) -> ToolDomain {
@@ -67,30 +75,24 @@ impl AgentTool for LoadDomainToolsTool {
         input: serde_json::Value,
         _ctx: &AgentToolContext,
     ) -> Result<ToolResult, AgentRuntimeError> {
-        let domains: Vec<String> = input
+        // Accept the `domains` argument for schema-compat with older
+        // prompts but ignore its value: every tool the agent has
+        // capabilities for already ships in the session payload, so
+        // there is nothing to promote.
+        let echoed: Vec<String> = input
             .get("domains")
             .and_then(|d| d.as_array())
             .map(|arr| {
                 arr.iter()
                     .filter_map(|v| v.as_str().map(String::from))
-                    .filter(|s| LOADABLE_DOMAINS.contains(&s.as_str()))
                     .collect()
             })
             .unwrap_or_default();
 
-        if domains.is_empty() {
-            return Ok(ToolResult {
-                content: json!({
-                    "error": "No valid domains specified. Available: spec, task, org, billing, social, system, generation, process"
-                }),
-                is_error: true,
-            });
-        }
-
         Ok(ToolResult {
             content: json!({
-                "loaded_domains": domains,
-                "status": "Tools will be available on the next turn"
+                "loaded_domains": echoed,
+                "status": "All tools the agent has capabilities for are already available; no promotion required."
             }),
             is_error: false,
         })
