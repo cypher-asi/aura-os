@@ -19,6 +19,7 @@ import {
   evaluateWorkflowOutcome,
   isBrowserbaseConcurrencyError,
   isBrowserbaseQuotaError,
+  mergeFailedMedia,
   mergePublishedMedia,
   normalizeOpenAIJudgeScore,
   parseArgs,
@@ -285,6 +286,47 @@ test("mergePublishedMedia clears stale retry failure metadata", () => {
       updatedAt: "2026-04-22T00:00:00.000Z",
     },
   );
+});
+
+test("mergeFailedMedia clears stale renderable media metadata", () => {
+  const failed = mergeFailedMedia(
+    {
+      requested: true,
+      status: "published",
+      slotId: "entry-1-aura-3d",
+      slug: "aura-3d",
+      alt: "AURA 3D screenshot",
+      assetPath: "assets/changelog/nightly/old/bad-placeholder.png",
+      screenshotSource: "openai-polish",
+      originalScreenshotSource: "capture-proof",
+      polishProvider: "openai",
+      polishModel: "gpt-image-2",
+      polishJudgeModel: "gpt-4.1-mini",
+      polishScore: 92,
+      polishFallbackReason: "",
+    },
+    {
+      status: "failed",
+      updatedAt: "2026-04-24T04:30:00.000Z",
+      error: "Screenshot capture did not produce a passing summary",
+      failureClass: "quality_gate",
+      retryInstruction: "Retry correction pass: capture the real proof state.",
+    },
+  );
+
+  assert.equal(failed.status, "failed");
+  assert.equal(failed.requested, true);
+  assert.equal(failed.slotId, "entry-1-aura-3d");
+  assert.equal(failed.alt, "AURA 3D screenshot");
+  assert.equal(failed.failureClass, "quality_gate");
+  assert.equal("assetPath" in failed, false);
+  assert.equal("screenshotSource" in failed, false);
+  assert.equal("originalScreenshotSource" in failed, false);
+  assert.equal("polishProvider" in failed, false);
+  assert.equal("polishModel" in failed, false);
+  assert.equal("polishJudgeModel" in failed, false);
+  assert.equal("polishScore" in failed, false);
+  assert.equal("polishFallbackReason" in failed, false);
 });
 
 test("selectBestScreenshot prefers repair, then capture-proof, then validate-proof", () => {

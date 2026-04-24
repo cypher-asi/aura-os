@@ -1184,6 +1184,23 @@ function mergePublishedMedia(media, metadata) {
   return next;
 }
 
+function mergeFailedMedia(media, metadata) {
+  const next = {
+    ...media,
+    ...metadata,
+  };
+
+  delete next.assetPath;
+  delete next.screenshotSource;
+  delete next.originalScreenshotSource;
+  delete next.polishProvider;
+  delete next.polishModel;
+  delete next.polishJudgeModel;
+  delete next.polishScore;
+  delete next.polishFallbackReason;
+  return next;
+}
+
 function buildMediaBlock(metadata, bodyLines = []) {
   return [
     `${MEDIA_BEGIN_PREFIX}${JSON.stringify(metadata)} -->`,
@@ -1938,25 +1955,22 @@ async function main() {
         failureClass,
         error: String(error),
       });
-      targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) => ({
-        ...media,
+      const failureMetadata = {
         status: "failed",
         updatedAt: new Date().toISOString(),
         error: String(error),
         failureClass,
         retryInstruction,
-      }));
+      };
+      targetDoc = updateEntryMedia(targetDoc, entry.media.slotId, (media) =>
+        mergeFailedMedia(media, failureMetadata)
+      );
       if (changelogDocs.target.isLatest) {
         latestDoc = targetDoc;
       } else if (isSameReleaseDoc(latestDoc, targetDoc)) {
-        latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) => ({
-          ...media,
-          status: "failed",
-          updatedAt: new Date().toISOString(),
-          error: String(error),
-          failureClass,
-          retryInstruction,
-        }));
+        latestDoc = updateEntryMedia(latestDoc, entry.media.slotId, (media) =>
+          mergeFailedMedia(media, failureMetadata)
+        );
       }
       results.push({
         slotId: entry.media.slotId,
@@ -2024,6 +2038,7 @@ export {
   isBrowserbaseQuotaError,
   isEnabled,
   loadFixtureCaptureResults,
+  mergeFailedMedia,
   mergePublishedMedia,
   normalizeOpenAIJudgeScore,
   parseArgs,
