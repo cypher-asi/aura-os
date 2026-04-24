@@ -2,23 +2,22 @@
 
 - Date: `2026-04-24`
 - Channel: `nightly`
-- Version: `0.1.0-nightly.366.1`
-- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.366.1
+- Version: `0.1.0-nightly.367.1`
+- Release: https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.367.1
 
-Today's nightly is a single large refactor: the old Playwright- and Browserbase-driven demo screenshot pipeline has been retired in favor of a leaner Browser Use planning flow, and a new capture-auth path lands in the server and interface to support it. Net result is a significant code reduction (~20k lines removed) and a cleaner foundation for automated changelog media.
+Today's nightly retires the old screenshot-publishing machinery and replaces it with a leaner Browser Use–driven capture flow, complete with a dedicated capture login path, quality and branding gates, and support for split frontend/API hosts.
 
-## 2:34 AM — Browser Use replaces the legacy changelog media pipeline
+## 2:34 AM — Browser Use replaces the legacy changelog screenshot pipeline
 
-The Playwright- and Browserbase-based demo screenshot system is removed and replaced with an Anthropic-planned, Browser Use-driven capture flow, along with a new authenticated capture entry point in the app and server.
+The old Browserbase/Playwright demo-screenshot stack was torn out and replaced with a Browser Use planning flow, a dedicated capture-login surface, and new gates that decide when a shot is publishable.
 
-- Removed the old changelog media publishing stack, including the publish/retry/sync GitHub workflows and the large demo-screenshot toolchain (publish-changelog-media, demo-seed-planner, demo-agent-brief, demo-browser-seed, produce-agent-demo-screenshots), trimming roughly 20k lines across ~68 files. (`888afbe`)
-- Introduced a Browser Use-based planning pipeline: new scripts for plan-changelog-media, a changelog-media-planner library, a Browser Use trial runner, and a pipeline evaluator, wired to new BROWSER_USE_API_KEY/BROWSER_USE_MODEL env vars with Anthropic driving candidate selection before capture. (`888afbe`)
-- Added a dedicated capture-auth path on the server (capture_auth.rs plus tests and router wiring) and a new CaptureLoginView in the interface, gated by an AURA_CHANGELOG_CAPTURE_SECRET, so automated changelog capture can sign in without touching normal user auth. (`888afbe`)
-- Refreshed supporting docs and tooling: added a Browser Use plan doc and an Aura navigation contract/sitemap generator for the interface, while removing the demo-screenshot-pipeline doc and associated navigation-lessons fixtures. (`888afbe`)
+- Retired the demo-screenshot publishing stack — including the publish, retry, and history-sync workflows plus ~20k lines of seed, planner, and screenshot-runner code — in favor of an Anthropic-planned, Browser Use–driven capture flow with a new server-side capture auth guard and CaptureLoginView. (`888afbe`)
+- Added quality and branding gates to the changelog media pipeline: an Anthropic vision judge plus structural checks decide whether a screenshot passes proof, and only then is a branded SVG wrapper generated around the native-resolution product shot. (`ff509bb`)
+- Fixed capture login for deployments where the frontend and aura-os-server live on different hosts by moving /capture-login onto a query-param entry in App.tsx and threading a new AURA_DEMO_SCREENSHOT_API_URL through the Browser Use trial and preflight. (`e7b602e`)
 
 ## Highlights
 
-- Retired the legacy demo-screenshot and changelog-media pipeline
-- New Browser Use planning flow for changelog visuals
-- Added a dedicated capture-auth path and CaptureLoginView
+- Legacy demo-screenshot pipeline removed in favor of Browser Use planning
+- New quality and branding gates guard published changelog media
+- Capture login flow now works across split frontend and API hosts
 

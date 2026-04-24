@@ -3,19 +3,21 @@
   "promptVersion": 4,
   "generator": "anthropic",
   "generationError": null,
-  "generatedAt": "2026-04-24T09:49:02.547Z",
+  "generatedAt": "2026-04-24T10:14:18.563Z",
   "repo": "aura-os",
   "channel": "nightly",
-  "version": "0.1.0-nightly.366.1",
+  "version": "0.1.0-nightly.367.1",
   "date": "2026-04-24",
-  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.366.1",
-  "lastIncludedSha": "888afbe54b40663a072507842a7e01418d213479",
-  "previousProcessedSha": "dabcfa78aedd841b554473fa4c9cc52419044c1c",
+  "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.367.1",
+  "lastIncludedSha": "e7b602e4d46a22e9500212977b09f33b0506b409",
+  "previousProcessedSha": "888afbe54b40663a072507842a7e01418d213479",
   "commitShas": [
-    "888afbe54b40663a072507842a7e01418d213479"
+    "888afbe54b40663a072507842a7e01418d213479",
+    "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
+    "e7b602e4d46a22e9500212977b09f33b0506b409"
   ],
-  "rawCommitCount": 1,
-  "filteredCommitCount": 1,
+  "rawCommitCount": 3,
+  "filteredCommitCount": 3,
   "rawCommits": [
     {
       "sha": "888afbe54b40663a072507842a7e01418d213479",
@@ -151,6 +153,98 @@
         "Release Infrastructure",
         "Docs"
       ]
+    },
+    {
+      "sha": "ff509bbaad88ca49ca6db28c3f157cb409d71a38",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T05:51:53-04:00",
+      "subject": "Add changelog media quality and branding gates",
+      "body": "",
+      "parents": [
+        "888afbe54b40663a072507842a7e01418d213479"
+      ],
+      "files": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib/changelog-media-branding.mjs",
+        "interface/scripts/lib/changelog-media-branding.test.mjs",
+        "interface/scripts/lib/changelog-media-quality.mjs",
+        "interface/scripts/lib/changelog-media-quality.test.mjs"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 1022,
+        "deletions": 22
+      },
+      "committedAtMs": 1777024313000,
+      "cleanSubject": "Add changelog media quality and branding gates",
+      "keywords": [
+        "changelog",
+        "media",
+        "quality",
+        "branding",
+        "gates"
+      ],
+      "fileGroups": [
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/scripts/lib"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other"
+      ]
+    },
+    {
+      "sha": "e7b602e4d46a22e9500212977b09f33b0506b409",
+      "author": {
+        "name": "shahroz-wilder",
+        "email": "shrozali@outlook.com"
+      },
+      "committedAt": "2026-04-24T06:00:29-04:00",
+      "subject": "Fix split-host changelog capture entry",
+      "body": "",
+      "parents": [
+        "ff509bbaad88ca49ca6db28c3f157cb409d71a38"
+      ],
+      "files": [
+        ".env.example",
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/changelog-media-browser-use-trial.test.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/src/App.tsx"
+      ],
+      "stats": {
+        "fileCount": 6,
+        "insertions": 103,
+        "deletions": 50
+      },
+      "committedAtMs": 1777024829000,
+      "cleanSubject": "Fix split-host changelog capture entry",
+      "keywords": [
+        "split",
+        "host",
+        "changelog",
+        "capture",
+        "entry"
+      ],
+      "fileGroups": [
+        ".env.example",
+        "interface/scripts/changelog-media-browser-use-trial.mjs",
+        "interface/scripts/changelog-media-browser-use-trial.test.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.mjs",
+        "interface/scripts/evaluate-changelog-media-pipeline.test.mjs",
+        "interface/src/App.tsx"
+      ],
+      "primaryArea": "Other",
+      "areas": [
+        "Other",
+        "Interface"
+      ]
     }
   ],
   "batchCount": 1,
@@ -162,36 +256,36 @@
       "artifactCount": 0,
       "artifacts": [
         {
-          "sizeBytes": 11438442
+          "sizeBytes": 11438498
         }
       ]
     },
     {
       "file": "release-summary-linux-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.366.1",
+      "version": "0.1.0-nightly.367.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_amd64.deb",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_amd64.deb",
           "platform": "linux",
           "kind": "deb",
-          "sizeBytes": 35312888
+          "sizeBytes": 35312808
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_amd64.deb.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_amd64.deb.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 452
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_x86_64.AppImage",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_x86_64.AppImage",
           "platform": "linux",
           "kind": "appimage",
-          "sizeBytes": 102500856
+          "sizeBytes": 102509048
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_x86_64.AppImage.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_x86_64.AppImage.sig",
           "platform": "linux",
           "kind": "signature",
           "sizeBytes": 460
@@ -201,29 +295,29 @@
     {
       "file": "release-summary-macos-aarch64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.366.1",
+      "version": "0.1.0-nightly.367.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.366.1_aarch64.dmg",
+          "name": "Aura_0.1.0-nightly.367.1_aarch64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 31708107
+          "sizeBytes": 31709979
         },
         {
-          "name": "Aura_0.1.0-nightly.366.1_aarch64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.367.1_aarch64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 440
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_aarch64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_aarch64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 31521796
+          "sizeBytes": 31522885
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_aarch64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_aarch64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -233,29 +327,29 @@
     {
       "file": "release-summary-macos-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.366.1",
+      "version": "0.1.0-nightly.367.1",
       "artifactCount": 4,
       "artifacts": [
         {
-          "name": "Aura_0.1.0-nightly.366.1_x64.dmg",
+          "name": "Aura_0.1.0-nightly.367.1_x64.dmg",
           "platform": "macos",
           "kind": "dmg",
-          "sizeBytes": 33307473
+          "sizeBytes": 33308543
         },
         {
-          "name": "Aura_0.1.0-nightly.366.1_x64.dmg.sig",
+          "name": "Aura_0.1.0-nightly.367.1_x64.dmg.sig",
           "platform": "macos",
           "kind": "signature",
           "sizeBytes": 436
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_x86_64.app.tar.gz",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_x86_64.app.tar.gz",
           "platform": "macos",
           "kind": "updater_bundle",
-          "sizeBytes": 33139299
+          "sizeBytes": 33143468
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_x86_64.app.tar.gz.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_x86_64.app.tar.gz.sig",
           "platform": "other",
           "kind": "signature",
           "sizeBytes": 464
@@ -265,17 +359,17 @@
     {
       "file": "release-summary-windows-x86_64.json",
       "channel": "nightly",
-      "version": "0.1.0-nightly.366.1",
+      "version": "0.1.0-nightly.367.1",
       "artifactCount": 2,
       "artifacts": [
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_x64-setup.exe",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_x64-setup.exe",
           "platform": "windows",
           "kind": "installer",
-          "sizeBytes": 23869677
+          "sizeBytes": 23867998
         },
         {
-          "name": "aura-os-desktop_0.1.0-nightly.366.1_x64-setup.exe.sig",
+          "name": "aura-os-desktop_0.1.0-nightly.367.1_x64-setup.exe.sig",
           "platform": "windows",
           "kind": "signature",
           "sizeBytes": 460
@@ -285,41 +379,34 @@
   ],
   "rendered": {
     "title": "Changelog media pipeline rebuilt around Browser Use",
-    "intro": "Today's nightly is a single large refactor: the old Playwright- and Browserbase-driven demo screenshot pipeline has been retired in favor of a leaner Browser Use planning flow, and a new capture-auth path lands in the server and interface to support it. Net result is a significant code reduction (~20k lines removed) and a cleaner foundation for automated changelog media.",
+    "intro": "Today's nightly retires the old screenshot-publishing machinery and replaces it with a leaner Browser Use–driven capture flow, complete with a dedicated capture login path, quality and branding gates, and support for split frontend/API hosts.",
     "entries": [
       {
         "batch_id": "entry-1",
         "time_label": "2:34 AM",
         "started_at": "2026-04-24T09:34:25.000Z",
-        "ended_at": "2026-04-24T09:34:25.000Z",
-        "title": "Browser Use replaces the legacy changelog media pipeline",
-        "summary": "The Playwright- and Browserbase-based demo screenshot system is removed and replaced with an Anthropic-planned, Browser Use-driven capture flow, along with a new authenticated capture entry point in the app and server.",
+        "ended_at": "2026-04-24T10:00:29.000Z",
+        "title": "Browser Use replaces the legacy changelog screenshot pipeline",
+        "summary": "The old Browserbase/Playwright demo-screenshot stack was torn out and replaced with a Browser Use planning flow, a dedicated capture-login surface, and new gates that decide when a shot is publishable.",
         "items": [
           {
-            "text": "Removed the old changelog media publishing stack, including the publish/retry/sync GitHub workflows and the large demo-screenshot toolchain (publish-changelog-media, demo-seed-planner, demo-agent-brief, demo-browser-seed, produce-agent-demo-screenshots), trimming roughly 20k lines across ~68 files.",
+            "text": "Retired the demo-screenshot publishing stack — including the publish, retry, and history-sync workflows plus ~20k lines of seed, planner, and screenshot-runner code — in favor of an Anthropic-planned, Browser Use–driven capture flow with a new server-side capture auth guard and CaptureLoginView.",
             "commit_shas": [
               "888afbe54b40663a072507842a7e01418d213479"
             ],
             "confidence": "high"
           },
           {
-            "text": "Introduced a Browser Use-based planning pipeline: new scripts for plan-changelog-media, a changelog-media-planner library, a Browser Use trial runner, and a pipeline evaluator, wired to new BROWSER_USE_API_KEY/BROWSER_USE_MODEL env vars with Anthropic driving candidate selection before capture.",
+            "text": "Added quality and branding gates to the changelog media pipeline: an Anthropic vision judge plus structural checks decide whether a screenshot passes proof, and only then is a branded SVG wrapper generated around the native-resolution product shot.",
             "commit_shas": [
-              "888afbe54b40663a072507842a7e01418d213479"
+              "ff509bbaad88ca49ca6db28c3f157cb409d71a38"
             ],
             "confidence": "high"
           },
           {
-            "text": "Added a dedicated capture-auth path on the server (capture_auth.rs plus tests and router wiring) and a new CaptureLoginView in the interface, gated by an AURA_CHANGELOG_CAPTURE_SECRET, so automated changelog capture can sign in without touching normal user auth.",
+            "text": "Fixed capture login for deployments where the frontend and aura-os-server live on different hosts by moving /capture-login onto a query-param entry in App.tsx and threading a new AURA_DEMO_SCREENSHOT_API_URL through the Browser Use trial and preflight.",
             "commit_shas": [
-              "888afbe54b40663a072507842a7e01418d213479"
-            ],
-            "confidence": "high"
-          },
-          {
-            "text": "Refreshed supporting docs and tooling: added a Browser Use plan doc and an Aura navigation contract/sitemap generator for the interface, while removing the demo-screenshot-pipeline doc and associated navigation-lessons fixtures.",
-            "commit_shas": [
-              "888afbe54b40663a072507842a7e01418d213479"
+              "e7b602e4d46a22e9500212977b09f33b0506b409"
             ],
             "confidence": "high"
           }
@@ -327,10 +414,10 @@
       }
     ],
     "highlights": [
-      "Retired the legacy demo-screenshot and changelog-media pipeline",
-      "New Browser Use planning flow for changelog visuals",
-      "Added a dedicated capture-auth path and CaptureLoginView"
+      "Legacy demo-screenshot pipeline removed in favor of Browser Use planning",
+      "New quality and branding gates guard published changelog media",
+      "Capture login flow now works across split frontend and API hosts"
     ],
-    "raw_commit_count": 1
+    "raw_commit_count": 3
   }
 }

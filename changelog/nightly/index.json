@@ -2,18 +2,18 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.366.1",
+    "version": "0.1.0-nightly.367.1",
     "title": "Changelog media pipeline rebuilt around Browser Use",
-    "intro": "Today's nightly is a single large refactor: the old Playwright- and Browserbase-driven demo screenshot pipeline has been retired in favor of a leaner Browser Use planning flow, and a new capture-auth path lands in the server and interface to support it. Net result is a significant code reduction (~20k lines removed) and a cleaner foundation for automated changelog media.",
+    "intro": "Today's nightly retires the old screenshot-publishing machinery and replaces it with a leaner Browser Use–driven capture flow, complete with a dedicated capture login path, quality and branding gates, and support for split frontend/API hosts.",
     "entryCount": 1,
     "highlights": [
-      "Retired the legacy demo-screenshot and changelog-media pipeline",
-      "New Browser Use planning flow for changelog visuals",
-      "Added a dedicated capture-auth path and CaptureLoginView"
+      "Legacy demo-screenshot pipeline removed in favor of Browser Use planning",
+      "New quality and branding gates guard published changelog media",
+      "Capture login flow now works across split frontend and API hosts"
     ],
-    "rawCommitCount": 1,
-    "generatedAt": "2026-04-24T09:49:02.547Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.366.1",
+    "rawCommitCount": 3,
+    "generatedAt": "2026-04-24T10:14:18.563Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.367.1",
     "path": "history/2026-04-24.json"
   },
   {
