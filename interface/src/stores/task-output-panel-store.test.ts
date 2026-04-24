@@ -242,6 +242,68 @@ describe("task-output-panel-store", () => {
       expect(tasks[0].taskId).toBe("t1");
     });
   });
+
+  describe("demoteStaleActive", () => {
+    it("demotes an active row whose taskId is not in keepTaskIds", () => {
+      useTaskOutputPanelStore.setState({
+        tasks: [
+          makeTask({ taskId: "stale", status: "active", projectId: "p1" }),
+          makeTask({ taskId: "live", status: "active", projectId: "p1" }),
+        ],
+      });
+      useTaskOutputPanelStore.getState().demoteStaleActive("p1", ["live"]);
+      const tasks = useTaskOutputPanelStore.getState().tasks;
+      const stale = tasks.find((t) => t.taskId === "stale");
+      const live = tasks.find((t) => t.taskId === "live");
+      expect(stale?.status).toBe("interrupted");
+      expect(live?.status).toBe("active");
+    });
+
+    it("leaves non-active rows untouched", () => {
+      useTaskOutputPanelStore.setState({
+        tasks: [
+          makeTask({ taskId: "done", status: "completed", projectId: "p1" }),
+          makeTask({ taskId: "fail", status: "failed", projectId: "p1" }),
+        ],
+      });
+      const before = useTaskOutputPanelStore.getState().tasks;
+      useTaskOutputPanelStore.getState().demoteStaleActive("p1", []);
+      const after = useTaskOutputPanelStore.getState().tasks;
+      expect(after).toBe(before);
+    });
+
+    it("leaves rows from other projects untouched", () => {
+      useTaskOutputPanelStore.setState({
+        tasks: [
+          makeTask({ taskId: "other", status: "active", projectId: "p2" }),
+        ],
+      });
+      const before = useTaskOutputPanelStore.getState().tasks;
+      useTaskOutputPanelStore.getState().demoteStaleActive("p1", []);
+      expect(useTaskOutputPanelStore.getState().tasks).toBe(before);
+    });
+
+    it("is identity-stable when nothing changes", () => {
+      useTaskOutputPanelStore.setState({
+        tasks: [makeTask({ taskId: "keep", status: "active", projectId: "p1" })],
+      });
+      const before = useTaskOutputPanelStore.getState().tasks;
+      useTaskOutputPanelStore.getState().demoteStaleActive("p1", ["keep"]);
+      expect(useTaskOutputPanelStore.getState().tasks).toBe(before);
+    });
+
+    it("demotes every active row when keepTaskIds is empty", () => {
+      useTaskOutputPanelStore.setState({
+        tasks: [
+          makeTask({ taskId: "a", status: "active", projectId: "p1" }),
+          makeTask({ taskId: "b", status: "active", projectId: "p1" }),
+        ],
+      });
+      useTaskOutputPanelStore.getState().demoteStaleActive("p1", []);
+      const tasks = useTaskOutputPanelStore.getState().tasks;
+      expect(tasks.every((t) => t.status === "interrupted")).toBe(true);
+    });
+  });
 });
 
 describe("task-output-panel-store rehydration", () => {

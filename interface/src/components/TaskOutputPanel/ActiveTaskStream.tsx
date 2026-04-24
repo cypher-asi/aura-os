@@ -91,6 +91,7 @@ export function ActiveTaskStream({
               timeline={timeline}
               progressText={progressText}
               isWriting={isWriting}
+              showPhaseIndicator={false}
             />
           ) : (
             <CookingIndicator label="Waiting for output…" />

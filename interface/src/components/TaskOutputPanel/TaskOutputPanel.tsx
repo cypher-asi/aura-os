@@ -13,6 +13,17 @@ import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { useScrollAnchorV2 } from "../../hooks/use-scroll-anchor-v2";
 import { OverlayScrollbar } from "../OverlayScrollbar";
 import { TerminalPanelBody } from "../TerminalPanelBody";
+import { useTaskStream } from "../../hooks/use-task-stream";
+import {
+  useIsStreaming,
+  useIsWriting,
+  useStreamingText,
+  useThinkingText,
+  useActiveToolCalls,
+  useProgressText,
+} from "../../hooks/stream/hooks";
+import { getStreamingPhaseLabel } from "../../utils/streaming";
+import { CookingIndicator } from "../CookingIndicator";
 import { ActiveTaskStream } from "./ActiveTaskStream";
 import { CompletedTaskOutput } from "./CompletedTaskOutput";
 import styles from "./TaskOutputPanel.module.css";
@@ -144,6 +155,43 @@ function TerminalInstanceTabs() {
   );
 }
 
+/**
+ * Pinned cooking indicator for the Run pane's single active task.
+ *
+ * Rendered inside `.contentShell` but *outside* the scrolling `.content`
+ * region so the desktop shell's bottom fade gradient
+ * (`.sidekickPanelSlot::after` at `z-index: 1`) can't paint over the
+ * "Cooking..." / "Submitting plan..." label. Mirrors the pattern used
+ * by `ChatStreamingIndicator` above the chat input bar.
+ */
+function PinnedTaskStreamingIndicator({ taskId }: { taskId: string }) {
+  const { streamKey } = useTaskStream(taskId, true);
+  const isStreaming = useIsStreaming(streamKey);
+  const isWriting = useIsWriting(streamKey);
+  const streamingText = useStreamingText(streamKey);
+  const thinkingText = useThinkingText(streamKey);
+  const toolCalls = useActiveToolCalls(streamKey);
+  const progressText = useProgressText(streamKey);
+
+  const nowStreaming =
+    isStreaming || !!streamingText || !!thinkingText || toolCalls.length > 0;
+  if (!nowStreaming) return null;
+
+  const label = getStreamingPhaseLabel({
+    streamingText,
+    thinkingText,
+    toolCalls,
+    progressText,
+    isWriting,
+  });
+
+  return (
+    <div className={styles.pinnedStreamingIndicator} aria-live="polite">
+      <CookingIndicator label={label ?? "Cooking..."} hidden={!label} />
+    </div>
+  );
+}
+
 export function RunSidekickPane() {
   const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
   const ctx = useProjectActions();
@@ -151,6 +199,13 @@ export function RunSidekickPane() {
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
   const projectTasks = useTasksForProject(projectId, agentInstanceId);
   const hasCompleted = projectTasks.some((t) => t.status !== "active");
+  // After `demoteStaleActive`, at most one row should be "active" per
+  // pane. Pick it (the newest wins if a brief window ever produces
+  // two) so we can pin its cooking indicator above the sidekick fade.
+  const activeTask =
+    [...projectTasks]
+      .filter((t) => t.status === "active")
+      .sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null;
 
   const contentRef = useRef<HTMLDivElement>(null);
   const { handleScroll, isAutoFollowing } = useScrollAnchorV2(contentRef, {
@@ -208,6 +263,7 @@ export function RunSidekickPane() {
             )
           )}
         </div>
+        {activeTask && <PinnedTaskStreamingIndicator taskId={activeTask.taskId} />}
         <OverlayScrollbar scrollRef={contentRef} />
       </div>
     </div>

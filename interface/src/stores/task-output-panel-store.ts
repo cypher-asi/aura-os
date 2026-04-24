@@ -124,6 +124,17 @@ interface TaskOutputPanelState {
       executionNotes?: string | null;
     }>,
   ) => void;
+  /**
+   * Demote any `"active"` row for `projectId` whose `taskId` is NOT in
+   * `keepTaskIds` to `"interrupted"`. Used at `/loop/status` hydration
+   * points (boot, WS reconnect, `/loop/start`, `/loop/resume`) so a
+   * stale row from a stopped / refreshed prior run can't linger next to
+   * the new run's row and render a duplicate cooking indicator. A later
+   * `reconcileStatuses` pass will promote the row to `completed` /
+   * `failed` once `/projects/:pid/tasks` reports the true terminal
+   * status, so `"interrupted"` is only a transient holding state.
+   */
+  demoteStaleActive: (projectId: string, keepTaskIds: string[]) => void;
 }
 
 const restoredTasks = loadPersistedTasks();
@@ -239,6 +250,21 @@ export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get)
       const existingIds = new Set(s.tasks.map((t) => t.taskId));
       const newEntries = entries.filter((e) => !existingIds.has(e.taskId));
       return { tasks: [...s.tasks, ...newEntries] };
+    });
+  },
+
+  demoteStaleActive: (projectId, keepTaskIds) => {
+    const keep = new Set(keepTaskIds);
+    set((s) => {
+      let changed = false;
+      const nextTasks = s.tasks.map((t) => {
+        if (t.projectId !== projectId) return t;
+        if (t.status !== "active") return t;
+        if (keep.has(t.taskId)) return t;
+        changed = true;
+        return { ...t, status: "interrupted" as const, updatedAt: Date.now() };
+      });
+      return changed ? { tasks: nextTasks } : s;
     });
   },
 

@@ -21,9 +21,18 @@ function hydrateActiveTasksFromLoopStatus(
   res: LoopStatusResponse,
   projectId: ProjectId,
 ): void {
-  const active = res.active_tasks;
-  if (!active || active.length === 0) return;
+  const active = res.active_tasks ?? [];
   const panel = useTaskOutputPanelStore.getState();
+  // Reconcile BEFORE promoting the new rows: any locally-"active" row
+  // for this project whose task the server no longer reports as active
+  // is a leftover from a stopped / refreshed prior run, and would
+  // otherwise render its own cooking indicator alongside the new run's
+  // row. Demote to "interrupted" as a transient holding state — the
+  // subsequent `reconcilePanelStatuses` pass (driven by
+  // `/projects/:pid/tasks`) upgrades it to `completed` / `failed` once
+  // the authoritative per-task status loads.
+  const keepIds = active.map((t) => t.task_id).filter(Boolean);
+  panel.demoteStaleActive(projectId, keepIds);
   for (const entry of active) {
     if (!entry.task_id) continue;
     panel.hydrateActiveTask(entry.task_id, projectId, entry.agent_instance_id);
