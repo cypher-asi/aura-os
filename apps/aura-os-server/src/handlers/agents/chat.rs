@@ -2570,9 +2570,33 @@ pub(crate) async fn send_agent_event_stream(
     // source for `list_agents` / `get_fleet_status`). Normalising
     // here means session-open and dispatch agree on the bundle
     // post-CEO-promotion.
-    // When the caller binds the turn to a project via `body.project_id`,
-    // splice the self-project `ReadProject` / `WriteProject` caps into
-    // the agent's normalized bundle so project-scoped tools
+    // Resolve the project binding for this turn. Prefer the explicit
+    // `body.project_id` (the interface sends it whenever the user is
+    // talking to the agent in a project context), and fall back to
+    // the `persist_ctx.project_id` inferred from the agent's
+    // project-binding record (`find_matching_project_agents`) so the
+    // splice fires even for legacy clients that don't thread the
+    // project id through the chat body. Without this fallback the
+    // CEO-agent flow — where the LLM asks the agent to operate on
+    // specs for an implicit project — would still ship a bundle
+    // missing `ReadProject`/`WriteProject`, and the harness would
+    // deny `list_specs` / `create_spec` by name.
+    let effective_project_id = body
+        .project_id
+        .as_deref()
+        .filter(|pid| !pid.is_empty())
+        .map(|pid| pid.to_string())
+        .or_else(|| {
+            persist_ctx
+                .as_ref()
+                .map(|ctx| ctx.project_id.clone())
+                .filter(|pid| !pid.is_empty())
+        });
+
+    // When the turn is project-bound (either explicitly via the body
+    // or implicitly via the persistence context), splice the
+    // self-project `ReadProject` / `WriteProject` caps into the
+    // agent's normalized bundle so project-scoped tools
     // (`get_project`, `list_specs`, `create_spec`, `create_task`,
     // `run_task`, …) survive the `permissions_satisfy_requirements`
     // filter in `build_cross_agent_tools`. Without this splice, a
@@ -2582,16 +2606,15 @@ pub(crate) async fn send_agent_event_stream(
     // would deny each call with `"Tool 'X' is not allowed"`. Unlike
     // `agent_instance_chat` — where the binding is part of the
     // instance record — this handler is also used for non-project
-    // chats, so the splice is gated on `body.project_id` being
-    // present.
+    // chats, so the splice is gated on a project id being resolvable.
     let normalized_perms = {
         let base = agent
             .permissions
             .clone()
             .normalized_for_identity(&agent.name, Some(agent.role.as_str()));
-        match body.project_id.as_deref() {
-            Some(pid) if !pid.is_empty() => base.with_project_self_caps(pid),
-            _ => base,
+        match effective_project_id.as_deref() {
+            Some(pid) => base.with_project_self_caps(pid),
+            None => base,
         }
     };
     state
