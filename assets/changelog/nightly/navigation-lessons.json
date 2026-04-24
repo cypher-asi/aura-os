@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-04-24T07:05:32.721Z",
+  "retention": {
+    "maxLessons": 80,
+    "strategy": "Keep pinned lessons first, then the most-observed and most-recent auto-learned lessons."
+  },
+  "lessons": [
+    {
+      "id": "auto-agents-chat-input-model-picker",
+      "description": "Auto-learned navigation path for Agents: chat input model picker.",
+      "match": {
+        "keywords": [
+          "gpt",
+          "5.5",
+          "now",
+          "selectable",
+          "the",
+          "chat",
+          "model",
+          "picker",
+          "was",
+          "added",
+          "interface.",
+          "chatinputbar",
+          "updated",
+          "alongside"
+        ],
+        "changedFileGlobs": [
+          ".github/workflows/release-nightly.yml",
+          ".github/workflows/sync-release-changelog-media-history.yml",
+          "infra/scripts/release/prune-release-assets-with-retry.sh",
+          "infra/scripts/release/prune-release-assets-with-retry.test.mjs",
+          "infra/scripts/release/sync-changelog-history-media.mjs",
+          "infra/scripts/release/sync-changelog-history-media.test.mjs",
+          "infra/scripts/release/publish-changelog-media.mjs",
+          "infra/scripts/release/publish-changelog-media.test.mjs"
+        ]
+      },
+      "navigation": {
+        "targetAppId": "agents",
+        "surface": "chat input model picker",
+        "requiredUiSignals": [
+          "chatComposerVisible",
+          "modelPickerVisible"
+        ],
+        "steps": [
+          "Open or keep the Agents app visible.",
+          "Focus the chat composer area.",
+          "Open the model picker dropdown and keep it open.",
+          "Verify the exact model/version label is visible before capture.",
+          "Navigate to the Agents app using the visible taskbar or desktop launcher — do not type a URL.",
+          "If the agent list shows an empty state or a 'select an agent' prompt",
+          "click the first visible agent row or card to open its chat panel.",
+          "Once the chat panel with the composer bar is visible",
+          "locate the model selector control inside the ChatInputBar — it is typically a labeled button or pill showing the current model name near the bottom of the chat panel.",
+          "Click the model selector to open the dropdown list of available models.",
+          "Confirm that GPT-5.5 appears as a labeled option in the open dropdown before proceeding to capture."
+        ],
+        "forbiddenPhrases": [
+          "Select an agent to start",
+          "No agents yet",
+          "empty state",
+          "selection prompt",
+          "placeholder route"
+        ],
+        "captureMode": "contextual-proof"
+      },
+      "metadata": {
+        "source": "auto-navigation-learning",
+        "status": "auto-promoted",
+        "firstSeenAt": "2026-04-24T07:05:32.721Z",
+        "lastSeenAt": "2026-04-24T07:05:32.721Z",
+        "observations": 1,
+        "lastStory": "GPT-5.5 was added as a selectable model in the chat interface. The ChatInputBar model picker was updated alongside models.ts to include GPT-5.5 with correct pricing and server-side routing. This is the primary user-visible change from this…",
+        "lastOutputDir": "/home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-1-nightly-release-pruning-gh-pages-recovery-and-gpt-5-5-in-the-pic-1777014263046-browserbase/nightly-gpt-5-5-now-selectable-in-the-chat-model-picker-agents-20260424T070450",
+        "lastQualityScore": 95
+      }
+    }
+  ]
+}
