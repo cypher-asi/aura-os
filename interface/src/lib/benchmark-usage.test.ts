@@ -66,6 +66,33 @@ describe("summarizeSessionUsage", () => {
     expect(summary.promptInputFootprintTokens).toBe(500);
   });
 
+  it("understands DeepSeek/OpenAI-style token and cache usage fields", () => {
+    const summary = summarizeSessionUsage([
+      {
+        event_type: "assistant_message_end",
+        content: {
+          usage: {
+            prompt_tokens: 1000,
+            completion_tokens: 250,
+            prompt_cache_miss_tokens: 300,
+            prompt_cache_hit_tokens: 700,
+            model: "deepseek-v4-pro",
+            provider: "deepseek",
+          },
+        },
+      },
+    ]);
+
+    expect(summary.source).toBe("assistant_message_end");
+    expect(summary.inputTokens).toBe(1000);
+    expect(summary.outputTokens).toBe(250);
+    expect(summary.cacheCreationInputTokens).toBe(300);
+    expect(summary.cacheReadInputTokens).toBe(700);
+    expect(summary.promptInputFootprintTokens).toBe(2000);
+    expect(summary.models).toEqual(["deepseek-v4-pro"]);
+    expect(summary.providers).toEqual(["deepseek"]);
+  });
+
   it("recognizes storage rows that use type instead of event_type", () => {
     const summary = summarizeSessionUsage([
       {

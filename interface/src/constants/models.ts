@@ -51,7 +51,6 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
     tier: "opus",
     mode: "chat",
   },
-  { id: "aura-gpt-5-5", label: "GPT-5.5", tier: "gpt", mode: "chat" },
   { id: "aura-gpt-5-4", label: "GPT-5.4", tier: "gpt", mode: "chat" },
   {
     id: "aura-gpt-5-4-mini",
@@ -74,6 +73,18 @@ export const AURA_MANAGED_CHAT_MODELS: ModelOption[] = [
   {
     id: "aura-kimi-k2-6",
     label: "Kimi K2.6",
+    tier: "sonnet",
+    mode: "chat",
+  },
+  {
+    id: "aura-deepseek-v4-pro",
+    label: "DeepSeek V4 Pro",
+    tier: "opus",
+    mode: "chat",
+  },
+  {
+    id: "aura-deepseek-v4-flash",
+    label: "DeepSeek V4 Flash",
     tier: "sonnet",
     mode: "chat",
   },
@@ -124,7 +135,6 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "claude-haiku-4-5-20251001": "aura-claude-haiku-4-5",
   "aura-gpt-4.1": "aura-gpt-4.1",
   "gpt-4.1": "aura-gpt-4.1",
-  "gpt-5.5": "aura-gpt-5-5",
   "gpt-5.4": "aura-gpt-5-4",
   "gpt-5.4-mini": "aura-gpt-5-4-mini",
   "gpt-5.4-nano": "aura-gpt-5-4-nano",
@@ -136,6 +146,12 @@ const LEGACY_AURA_MODEL_IDS: Record<string, string> = {
   "aura-kimi-k2-6": "aura-kimi-k2-6",
   "kimi-k2p5": "aura-kimi-k2-5",
   "kimi-k2p6": "aura-kimi-k2-6",
+  "aura-deepseek-v4-pro": "aura-deepseek-v4-pro",
+  "aura-deepseek-v4-flash": "aura-deepseek-v4-flash",
+  "deepseek-v4-pro": "aura-deepseek-v4-pro",
+  "deepseek-v4-flash": "aura-deepseek-v4-flash",
+  "deepseek/deepseek-v4-pro": "aura-deepseek-v4-pro",
+  "deepseek/deepseek-v4-flash": "aura-deepseek-v4-flash",
   "aura-deepseek-v3-2": "aura-deepseek-v3-2",
   "aura-oss-120b": "aura-oss-120b",
   "aura-qwen2-5-coder-7b": "aura-qwen2-5-coder-7b",
@@ -167,7 +183,6 @@ export const GEMINI_MODELS: ModelOption[] = [
 
 export const OPENCODE_MODELS: ModelOption[] = [
   { id: "openai/gpt-5.2-codex", label: "openai/gpt-5.2-codex", tier: "sonnet", mode: "chat" },
-  { id: "openai/gpt-5.5", label: "openai/gpt-5.5", tier: "opus", mode: "chat" },
   { id: "openai/gpt-5.4", label: "openai/gpt-5.4", tier: "opus", mode: "chat" },
   { id: "openai/gpt-5.2", label: "openai/gpt-5.2", tier: "sonnet", mode: "chat" },
   { id: "openai/gpt-5.1-codex-max", label: "openai/gpt-5.1-codex-max", tier: "opus", mode: "chat" },

@@ -322,7 +322,6 @@ export const ChatInputBar = memo(
     const featuredModelIds = useMemo(
       () =>
         new Set([
-          "aura-gpt-5-5",
           "aura-gpt-5-4",
           "aura-gpt-5-4-mini",
           "aura-claude-opus-4-7",

@@ -59,6 +59,14 @@ function readNumber(record: Record<string, unknown>, snake: string, camel?: stri
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function readFirstNumber(record: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return undefined;
+}
+
 function readString(record: Record<string, unknown>, snake: string, camel?: string): string | undefined {
   const value = record[snake] ?? (camel ? record[camel] : undefined);
   return typeof value === "string" && value.trim() ? value : undefined;
@@ -75,8 +83,12 @@ function extractTurnUsage(content: unknown): SessionTurnUsage | null {
   const usage = readUsagePayload(content);
   if (!usage) return null;
 
-  const inputTokens = readNumber(usage, "input_tokens", "inputTokens");
-  const outputTokens = readNumber(usage, "output_tokens", "outputTokens");
+  const inputTokens = readFirstNumber(usage, ["input_tokens", "inputTokens", "prompt_tokens"]);
+  const outputTokens = readFirstNumber(usage, [
+    "output_tokens",
+    "outputTokens",
+    "completion_tokens",
+  ]);
   if (inputTokens == null || outputTokens == null) {
     return null;
   }
@@ -84,12 +96,18 @@ function extractTurnUsage(content: unknown): SessionTurnUsage | null {
   return {
     inputTokens,
     outputTokens,
-    cacheCreationInputTokens: readNumber(
-      usage,
-      "cache_creation_input_tokens",
-      "cacheCreationInputTokens",
-    ) ?? 0,
-    cacheReadInputTokens: readNumber(usage, "cache_read_input_tokens", "cacheReadInputTokens") ?? 0,
+    cacheCreationInputTokens:
+      readFirstNumber(usage, [
+        "cache_creation_input_tokens",
+        "cacheCreationInputTokens",
+        "prompt_cache_miss_tokens",
+      ]) ?? 0,
+    cacheReadInputTokens:
+      readFirstNumber(usage, [
+        "cache_read_input_tokens",
+        "cacheReadInputTokens",
+        "prompt_cache_hit_tokens",
+      ]) ?? 0,
     estimatedContextTokens: readNumber(
       usage,
       "estimated_context_tokens",
