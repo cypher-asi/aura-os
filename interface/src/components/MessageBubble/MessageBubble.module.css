@@ -83,6 +83,17 @@
 }
 
 /* File attachment block — content-specific styles (structure in ResponseBlock) */
+.fileAttachmentWrapper {
+  position: relative;
+}
+
+.fileAttachmentCopyBtn {
+  position: absolute;
+  top: 4px;
+  right: 32px;
+  z-index: 1;
+}
+
 .fileAttachmentBlock {
   background: var(--color-bg, #000);
 }

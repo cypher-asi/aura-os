@@ -2,6 +2,7 @@ import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../../../types/stream";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
 import { specFilename } from "../../../utils/format";
+import { CopyButton } from "../../CopyButton";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";
 import styles from "./renderers.module.css";
@@ -20,6 +21,7 @@ export function SpecBlock({ entry, defaultExpanded }: SpecBlockProps) {
   const highlightedHtml = useHighlightedHtml(content, "markdown");
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
+  const showCopyToolbar = content.length > 0 && !entry.pending;
 
   return (
     <Block
@@ -32,6 +34,11 @@ export function SpecBlock({ entry, defaultExpanded }: SpecBlockProps) {
       autoScroll={entry.pending}
       flushBody
     >
+      {showCopyToolbar ? (
+        <div className={styles.blockBodyToolbar}>
+          <CopyButton getText={() => content} ariaLabel={`Copy ${filename}`} />
+        </div>
+      ) : null}
       <div className={styles.codeArea}>
         <pre>
           <code

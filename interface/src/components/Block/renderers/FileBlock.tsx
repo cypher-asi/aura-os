@@ -5,6 +5,7 @@ import { langFromPath } from "../../../ide/lang";
 import { useHighlightedHtml } from "../../../hooks/use-highlighted-html";
 import { TOOL_PHASE_LABELS } from "../../../constants/tools";
 import { decodeCapturedOutput } from "../../../utils/format";
+import { CopyButton } from "../../CopyButton";
 import { Block } from "../Block";
 import blockStyles from "../Block.module.css";
 import styles from "./renderers.module.css";
@@ -208,6 +209,7 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
   const hasReadContent = !!entry.result;
 
   let body: ReactNode = null;
+  let copyPayload = "";
   if (isDelete) {
     body = null;
   } else if (isEdit && hasEditContent) {
@@ -219,8 +221,10 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
         streaming={entry.pending}
       />
     );
+    copyPayload = newText;
   } else if (isWrite && hasWriteContent) {
     body = <CodeView content={writeContent} language={lang} streaming={entry.pending} />;
+    copyPayload = writeContent;
   } else if (isRead && hasReadContent) {
     // `read_file` results arrive as a JSON envelope
     // `{ ok, stdout: <base64 file contents>, stderr, metadata }`. Decode it
@@ -235,8 +239,11 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
       );
     } else {
       body = <CodeView content={decoded.stdout} language={lang} />;
+      copyPayload = decoded.stdout;
     }
   }
+
+  const showCopyToolbar = copyPayload.length > 0 && !entry.pending;
 
   const status = entry.pending ? "pending" : entry.isError ? "error" : "done";
   // Only force the preview open while content is actually streaming in; an
@@ -256,6 +263,11 @@ export function FileBlock({ entry, defaultExpanded }: FileBlockProps) {
       autoScroll={entry.pending}
       flushBody
     >
+      {showCopyToolbar ? (
+        <div className={styles.blockBodyToolbar}>
+          <CopyButton getText={() => copyPayload} ariaLabel={`Copy ${fileName}`} />
+        </div>
+      ) : null}
       {body}
       {entry.isError && entry.result ? (
         <div className={styles.inlineError}>{String(entry.result).slice(0, 240)}</div>

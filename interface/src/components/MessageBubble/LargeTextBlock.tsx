@@ -3,6 +3,7 @@ import { FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import { CopyButton } from "../CopyButton";
 import styles from "./LargeTextBlock.module.css";
 
 const CHAR_THRESHOLD = 600;
@@ -55,6 +56,7 @@ export function LargeTextBlock({ text }: { text: string }) {
       <div className={styles.header}>
         <FileText size={14} className={styles.headerIcon} />
         <span className={styles.headerTitle}>{title}</span>
+        <CopyButton getText={() => text} className={styles.headerCopy} />
         <span className={styles.badge}>Doc</span>
       </div>
 

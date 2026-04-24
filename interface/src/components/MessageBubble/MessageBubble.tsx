@@ -6,6 +6,7 @@ import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import styles from "./MessageBubble.module.css";
 import { ResponseBlock } from "../ResponseBlock";
+import { CopyButton } from "../CopyButton";
 import { LLMOutput } from "../LLMOutput";
 import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 
@@ -21,29 +22,37 @@ const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
 function FileAttachmentBlock({ text }: { text: string }) {
   const match = text.match(FILE_PREFIX_RE);
   const fileName = match?.[1] ?? "";
+  const fileContents = match?.[2] ?? "";
   const language = langFromPath(fileName);
-  const highlightedHtml = useHighlightedHtml(match?.[2] ?? "", language);
+  const highlightedHtml = useHighlightedHtml(fileContents, language);
 
   if (!match) return <span>{text}</span>;
 
   return (
-    <ResponseBlock
-      header={
-        <>
-          <FileText size={14} className={styles.fileAttachmentIcon} />
-          <span className={styles.fileAttachmentName}>{fileName}</span>
-        </>
-      }
-      className={styles.fileAttachmentBlock}
-      contentClassName={styles.fileAttachmentContent}
-    >
-      <pre>
-        <code
-          className={language ? `hljs language-${language}` : "hljs"}
-          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-        />
-      </pre>
-    </ResponseBlock>
+    <div className={styles.fileAttachmentWrapper}>
+      <ResponseBlock
+        header={
+          <>
+            <FileText size={14} className={styles.fileAttachmentIcon} />
+            <span className={styles.fileAttachmentName}>{fileName}</span>
+          </>
+        }
+        className={styles.fileAttachmentBlock}
+        contentClassName={styles.fileAttachmentContent}
+      >
+        <pre>
+          <code
+            className={language ? `hljs language-${language}` : "hljs"}
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        </pre>
+      </ResponseBlock>
+      <CopyButton
+        getText={() => fileContents}
+        className={styles.fileAttachmentCopyBtn}
+        ariaLabel={`Copy ${fileName || "file"} contents`}
+      />
+    </div>
   );
 }
 
