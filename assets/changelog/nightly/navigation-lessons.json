@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-04-24T03:58:52.785Z",
+  "updatedAt": "2026-04-24T04:12:40.910Z",
   "retention": {
     "maxLessons": 80,
     "strategy": "Keep pinned lessons first, then the most-observed and most-recent auto-learned lessons."
@@ -24,7 +24,13 @@
           "composer",
           "picker.",
           "chatinputbar",
-          "component"
+          "component",
+          "input",
+          "gained",
+          "option.",
+          "changed",
+          "files",
+          "interface"
         ],
         "changedFileGlobs": [
           ".github/workflows/release-nightly.yml",
@@ -34,7 +40,9 @@
           "infra/scripts/release/sync-changelog-history-media.mjs",
           "infra/scripts/release/sync-changelog-history-media.test.mjs",
           ".github/workflows/republish-gh-pages.yml",
-          "infra/scripts/release/commit-gh-pages-with-retry.sh"
+          "infra/scripts/release/commit-gh-pages-with-retry.sh",
+          "infra/scripts/release/publish-changelog-media.mjs",
+          "infra/scripts/release/publish-changelog-media.test.mjs"
         ]
       },
       "navigation": {
@@ -70,10 +78,10 @@
         "source": "auto-navigation-learning",
         "status": "auto-promoted",
         "firstSeenAt": "2026-04-24T03:58:52.785Z",
-        "lastSeenAt": "2026-04-24T03:58:52.785Z",
-        "observations": 1,
-        "lastStory": "GPT-5.5 is now a first-class selectable model in the chat composer model picker. The ChatInputBar component and models constants were updated to include GPT-5.5 with matching benchmark pricing wired through the interface and server dev loo…",
-        "lastOutputDir": "/home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke-1777003077790-browserbase/nightly-gpt-5-5-in-the-chat-model-picker-agents-20260424T035825",
+        "lastSeenAt": "2026-04-24T04:12:40.910Z",
+        "observations": 2,
+        "lastStory": "The chat input model picker gained GPT-5.5 as a selectable option. The changed files interface/src/constants/models.ts and interface/src/components/ChatInputBar/ChatInputBar.tsx confirm this is a product-surface change in the Agents chat c…",
+        "lastOutputDir": "/home/runner/work/aura-os/aura-os/repo/interface/output/demo-screenshots/publish-changelog-media/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke-1777003889949-browserbase/nightly-gpt-5-5-now-selectable-in-the-chat-input-model-picker-agents-20260424T041157",
         "lastQualityScore": 95
       }
     }
