@@ -11,6 +11,7 @@ import {
   calculateBrandedCanvas,
   createBrandedMediaPngPreview,
   createBrandedMediaSvg,
+  createBrandingFocusScreenshot,
   readPngDimensionsFromFile,
   wrapTextForSvg,
 } from "./changelog-media-branding.mjs";
@@ -28,6 +29,17 @@ function writePng(filePath, width, height) {
   }
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, PNG.sync.write(png));
+}
+
+function readPixel(filePath, x, y) {
+  const png = PNG.sync.read(fs.readFileSync(filePath));
+  const offset = ((png.width * y) + x) * 4;
+  return {
+    r: png.data[offset],
+    g: png.data[offset + 1],
+    b: png.data[offset + 2],
+    a: png.data[offset + 3],
+  };
 }
 
 test("readPngDimensionsFromFile extracts PNG dimensions", () => {
@@ -78,6 +90,8 @@ test("createBrandedMediaSvg wraps the raw screenshot without scaling it", () => 
   assert.match(svg, /data:image\/png;base64,/);
   assert.match(svg, /GPT-5.5 available/);
   assert.match(svg, /<tspan x="/);
+  assert.doesNotMatch(svg, /#6ee7f9|#00ff00|green/i);
+  assert.match(svg, /#7dd3fc/);
 });
 
 test("assessBrandedMediaAsset rejects canvas and layout regressions", () => {
@@ -147,6 +161,48 @@ test("assessBrandedMediaAsset rejects low-resolution embedded proof", () => {
   assert.equal(report.ok, false);
   assert.ok(report.concerns.some((concern) => concern.includes("below production readability minimum")));
   assert.ok(report.concerns.some((concern) => concern.includes("too small")));
+});
+
+test("createBrandingFocusScreenshot caps oversized proof captures to production 4K", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
+  const screenshotPath = path.join(tempDir, "oversized.png");
+  const outputPath = path.join(tempDir, "focus.png");
+  writePng(screenshotPath, 7680, 4320);
+
+  const focus = await createBrandingFocusScreenshot({
+    screenshotPath,
+    outputPath,
+  });
+
+  assert.equal(fs.existsSync(outputPath), true);
+  assert.equal(focus.dimensions.width, 3840);
+  assert.equal(focus.dimensions.height, 2160);
+  assert.equal(focus.crop.resizedFrom.width, 7680);
+  assert.equal(focus.crop.resizedFrom.height, 4320);
+});
+
+test("createBrandingFocusScreenshot neutralizes green chroma in near-black product background", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-branding-"));
+  const screenshotPath = path.join(tempDir, "green-dark.png");
+  const outputPath = path.join(tempDir, "focus.png");
+  const png = new PNG({ width: 1920, height: 1080 });
+  for (let index = 0; index < png.data.length; index += 4) {
+    png.data[index] = 0;
+    png.data[index + 1] = 22;
+    png.data[index + 2] = 16;
+    png.data[index + 3] = 255;
+  }
+  fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
+  fs.writeFileSync(screenshotPath, PNG.sync.write(png));
+
+  await createBrandingFocusScreenshot({
+    screenshotPath,
+    outputPath,
+  });
+  const pixel = readPixel(outputPath, 20, 20);
+
+  assert.ok(pixel.g - pixel.r < 8);
+  assert.ok(pixel.g - pixel.b < 8);
 });
 
 test("wrapTextForSvg caps long marketing copy to bounded lines", () => {

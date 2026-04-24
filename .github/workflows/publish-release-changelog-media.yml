@@ -1,0 +1,232 @@
+name: Publish Release Changelog Media
+
+on:
+  workflow_run:
+    workflows:
+      - Publish Release Changelog
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Changelog channel to publish media for"
+        required: true
+        default: nightly
+        type: string
+      date:
+        description: "Optional changelog date. If omitted, latest.json date is used."
+        required: false
+        default: ""
+        type: string
+      refresh_existing:
+        description: "Regenerate entries that already have published media"
+        required: false
+        default: false
+        type: boolean
+      max_candidates:
+        description: "Maximum media candidates to attempt"
+        required: false
+        default: "3"
+        type: string
+      base_url:
+        description: "Optional Aura web app URL. Defaults to repository variable/secret."
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-release-changelog-media-${{ github.event.workflow_run.id || inputs.channel || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish-media:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download changelog publish metadata
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-publish-metadata
+          path: changelog-publish-metadata
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Resolve upstream media skip
+        id: upstream
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        run: |
+          metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
+          if [[ ! -f "$metadata_file" ]]; then
+            echo "No changelog publish metadata artifact was found. The upstream changelog workflow likely skipped because no release was produced."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.upstream.outputs.skip != 'true'
+        with:
+          fetch-depth: 0
+          path: repo
+
+      - uses: actions/checkout@v4
+        if: steps.upstream.outputs.skip != 'true'
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+          path: pages
+
+      - name: Resolve changelog target
+        id: target
+        if: steps.upstream.outputs.skip != 'true'
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            metadata_file="changelog-publish-metadata/changelog-publish-metadata.json"
+            channel="$(jq -er '.channel' "$metadata_file")"
+            date="$(jq -er '.date' "$metadata_file")"
+            version="$(jq -er '.version' "$metadata_file")"
+          else
+            channel="${{ inputs.channel }}"
+            date="${{ inputs.date }}"
+            version="manual"
+          fi
+
+          if [[ -z "$channel" ]]; then
+            echo "Changelog channel is required." >&2
+            exit 1
+          fi
+
+          latest_json="pages/changelog/${channel}/latest.json"
+          if [[ ! -f "$latest_json" ]]; then
+            echo "Missing ${latest_json}" >&2
+            exit 1
+          fi
+
+          if [[ -z "$date" ]]; then
+            date="$(jq -er '.date' "$latest_json")"
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+          echo "date=${date}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Node.js
+        if: steps.target.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.9.0
+          cache: npm
+          cache-dependency-path: repo/interface/package-lock.json
+
+      - name: Install interface dependencies
+        if: steps.target.outputs.skip != 'true'
+        run: npm ci --prefix repo/interface
+
+      - name: Install Chromium camera
+        if: steps.target.outputs.skip != 'true'
+        run: npm --prefix repo/interface exec -- playwright install chromium --with-deps
+
+      - name: Preflight media capture configuration
+        if: steps.target.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BROWSER_USE_API_KEY: ${{ secrets.BROWSER_USE_API_KEY }}
+          AURA_CHANGELOG_CAPTURE_SECRET: ${{ secrets.AURA_CHANGELOG_CAPTURE_SECRET }}
+          AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+        shell: bash
+        run: |
+          missing=()
+          [[ -n "$ANTHROPIC_API_KEY" ]] || missing+=("ANTHROPIC_API_KEY")
+          [[ -n "$BROWSER_USE_API_KEY" ]] || missing+=("BROWSER_USE_API_KEY")
+          [[ -n "$AURA_CHANGELOG_CAPTURE_SECRET" ]] || missing+=("AURA_CHANGELOG_CAPTURE_SECRET")
+          [[ -n "$AURA_DEMO_SCREENSHOT_BASE_URL" ]] || missing+=("AURA_DEMO_SCREENSHOT_BASE_URL")
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required changelog media configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Capture and validate changelog media
+        if: steps.target.outputs.skip != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BROWSER_USE_API_KEY: ${{ secrets.BROWSER_USE_API_KEY }}
+          AURA_CHANGELOG_CAPTURE_SECRET: ${{ secrets.AURA_CHANGELOG_CAPTURE_SECRET }}
+          AURA_DEMO_SCREENSHOT_BASE_URL: ${{ inputs.base_url || vars.AURA_DEMO_SCREENSHOT_BASE_URL || secrets.AURA_DEMO_SCREENSHOT_BASE_URL }}
+          AURA_DEMO_SCREENSHOT_API_URL: ${{ vars.AURA_DEMO_SCREENSHOT_API_URL || secrets.AURA_DEMO_SCREENSHOT_API_URL }}
+          CHANGELOG_MEDIA_ANTHROPIC_MODEL: ${{ vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-opus-4-7' }}
+          CHANGELOG_MEDIA_VISION_JUDGE_MODEL: ${{ vars.CHANGELOG_MEDIA_VISION_JUDGE_MODEL || vars.CHANGELOG_MEDIA_ANTHROPIC_MODEL || 'claude-opus-4-7' }}
+          CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
+          BROWSER_USE_MODEL: ${{ vars.BROWSER_USE_MODEL || 'claude-opus-4.6' }}
+          BROWSER_USE_MAX_COST_USD: ${{ vars.BROWSER_USE_MAX_COST_USD || '5' }}
+        shell: bash
+        run: |
+          args=(
+            --changelog-file "pages/changelog/${{ steps.target.outputs.channel }}/latest.json"
+            --output-dir changelog-media-output
+            --base-url "$AURA_DEMO_SCREENSHOT_BASE_URL"
+            --max-candidates "${{ inputs.max_candidates || '3' }}"
+          )
+          if [[ -n "$AURA_DEMO_SCREENSHOT_API_URL" ]]; then
+            args+=(--api-base-url "$AURA_DEMO_SCREENSHOT_API_URL")
+          fi
+          node repo/interface/scripts/evaluate-changelog-media-pipeline.mjs "${args[@]}"
+
+      - name: Publish accepted media into gh-pages
+        if: steps.target.outputs.skip != 'true'
+        env:
+          CHANGELOG_MEDIA_REFRESH_EXISTING: ${{ inputs.refresh_existing }}
+        shell: bash
+        run: |
+          args=(
+            --manifest-file changelog-media-output/publishable-media-manifest.json
+            --pages-dir pages
+            --channel "${{ steps.target.outputs.channel }}"
+            --date "${{ steps.target.outputs.date }}"
+          )
+          if [[ "$CHANGELOG_MEDIA_REFRESH_EXISTING" == "true" ]]; then
+            args+=(--refresh-existing)
+          fi
+          node repo/interface/scripts/publish-changelog-media.mjs "${args[@]}"
+
+      - name: Upload changelog media diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-media-output
+          path: changelog-media-output
+          if-no-files-found: ignore
+
+      - name: Commit and push accepted media
+        if: steps.target.outputs.skip != 'true'
+        shell: bash
+        run: |
+          bash repo/infra/scripts/release/commit-gh-pages-with-retry.sh \
+            pages \
+            "Publish ${{ steps.target.outputs.channel }} changelog media for ${{ steps.target.outputs.version }}" \
+            "changelog/${{ steps.target.outputs.channel }}" \
+            "assets/changelog/${{ steps.target.outputs.channel }}"
+
+      - name: Attach media summary
+        if: always() && hashFiles('changelog-media-output/evaluation-report.json') != ''
+        shell: bash
+        run: |
+          {
+            echo "## Changelog Media"
+            echo ""
+            jq '{
+              existingPublishedMedia: .counts.existingPublishedMedia,
+              plannedCandidates: .counts.plannedCandidates,
+              captureAccepted: .counts.captureAccepted,
+              publishReady: .counts.publishReady,
+              publishableMediaAssets: .counts.publishableMediaAssets
+            }' changelog-media-output/evaluation-report.json
+          } >> "$GITHUB_STEP_SUMMARY"

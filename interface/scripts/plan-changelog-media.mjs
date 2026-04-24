@@ -104,7 +104,12 @@ export async function main(argv = process.argv.slice(2)) {
 
   const outputDir = path.resolve(args["output-dir"] || path.join(process.cwd(), "output", "changelog-media-plan"));
   const changelog = JSON.parse(fs.readFileSync(changelogFile, "utf8"));
-  const changelogEntries = extractChangelogMediaEntries(changelog);
+  const allChangelogEntries = extractChangelogMediaEntries(changelog);
+  const refreshExisting = isEnabled(args["refresh-existing"] || process.env.CHANGELOG_MEDIA_REFRESH_EXISTING);
+  const changelogEntries = refreshExisting
+    ? allChangelogEntries
+    : allChangelogEntries.filter((entry) => !entry.mediaPublished);
+  const existingPublishedMediaCount = allChangelogEntries.length - changelogEntries.length;
   const sitemap = await buildAuraNavigationSitemap();
   const changedFiles = [...new Set([
     ...readChangedFiles(args),
@@ -127,6 +132,32 @@ export async function main(argv = process.argv.slice(2)) {
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
 
+  if (changelogEntries.length === 0) {
+    const emptyPlan = { schemaVersion: 1, generatedAt: new Date().toISOString(), candidates: [], skipped: [] };
+    writeJson(path.join(outputDir, "media-plan.raw.json"), emptyPlan);
+    writeJson(path.join(outputDir, "media-plan.json"), emptyPlan);
+    writeJson(path.join(outputDir, "media-plan-coverage.json"), {
+      ok: true,
+      missing: [],
+      duplicate: [],
+      unknown: [],
+    });
+    const summary = {
+      ok: true,
+      model,
+      candidateCount: 0,
+      skippedCount: 0,
+      forcedSkippedCount: 0,
+      existingPublishedMediaCount,
+      coverage: { ok: true, missing: [], duplicate: [], unknown: [] },
+      attemptCount: 0,
+      outputDir,
+    };
+    writeJson(path.join(outputDir, "media-plan-summary.json"), summary);
+    console.log(JSON.stringify(summary, null, 2));
+    return summary;
+  }
+
   if (isEnabled(args["dry-run"])) {
     const prompt = buildMediaPlannerPrompt({
       changelogEntries,
@@ -142,6 +173,7 @@ export async function main(argv = process.argv.slice(2)) {
       model,
       changelogFile,
       entryCount: changelogEntries.length,
+      existingPublishedMediaCount,
       changedFileCount: changedFiles.length,
       sitemapAppCount: sitemap.coverage.appCount,
       sitemapGapCount: sitemap.coverage.appGaps.length,
@@ -176,6 +208,7 @@ export async function main(argv = process.argv.slice(2)) {
     candidateCount: result.plan.candidates.length,
     skippedCount: result.plan.skipped.length,
     forcedSkippedCount: result.forcedSkipped?.length || 0,
+    existingPublishedMediaCount,
     coverage: result.coverage,
     attemptCount: result.attempts.length,
     outputDir,

@@ -327,14 +327,13 @@ jobs:
             "Update ${{ steps.metadata.outputs.channel }} changelog for ${{ steps.metadata.outputs.version }}" \
             "changelog/${{ steps.metadata.outputs.channel }}"
 
-      - name: Note changelog media capture is disabled
+      - name: Note changelog media handoff
         if: steps.release-check.outputs.released == 'true'
         shell: bash
         run: |
           {
             echo "## Changelog Media"
             echo ""
-            echo "Automatic screenshot publishing is intentionally disabled while the Browser Use Cloud capture path is evaluated."
-            echo "The Anthropic media planner ran before Browser Use and uploaded its plan as a workflow artifact when planning succeeded."
-            echo "The changelog has been published without media placeholders or gh-pages asset mutations."
+            echo "The changelog has been published first so release notes are never blocked by media generation."
+            echo "Publish Release Changelog Media will run after this workflow succeeds, skip entries that already have published media, and only publish assets that pass capture, branding, and vision gates."
           } >> "$GITHUB_STEP_SUMMARY"

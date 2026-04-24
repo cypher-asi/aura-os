@@ -690,6 +690,58 @@ function validateRenderedEntry(candidate, batches, totalCommitCount) {
   return rendered;
 }
 
+function getEntryCommitSignature(entry) {
+  const shas = unique(
+    (Array.isArray(entry?.items) ? entry.items : [])
+      .flatMap((item) => Array.isArray(item?.commit_shas) ? item.commit_shas : [])
+      .map((sha) => sanitizeText(sha))
+      .filter(Boolean),
+  ).sort();
+  return shas.length > 0 ? shas.join("|") : "";
+}
+
+function getPublishedEntryMedia(entry) {
+  const media = entry?.media && typeof entry.media === "object" ? entry.media : null;
+  const assetPath = sanitizeText(media?.assetPath || media?.asset_path || media?.url || media?.src || "");
+  if (!media || sanitizeText(media.status).toLowerCase() !== "published" || !assetPath) {
+    return null;
+  }
+  return JSON.parse(JSON.stringify(media));
+}
+
+function preservePublishedEntryMedia(rendered, previousRendered) {
+  const entries = Array.isArray(rendered?.entries) ? rendered.entries : [];
+  const previousEntries = Array.isArray(previousRendered?.entries) ? previousRendered.entries : [];
+  if (!entries.length || !previousEntries.length) {
+    return rendered;
+  }
+
+  const mediaByCommitSignature = new Map();
+  for (const previousEntry of previousEntries) {
+    const media = getPublishedEntryMedia(previousEntry);
+    const signature = getEntryCommitSignature(previousEntry);
+    if (media && signature) {
+      mediaByCommitSignature.set(signature, media);
+    }
+  }
+
+  if (mediaByCommitSignature.size === 0) {
+    return rendered;
+  }
+
+  return {
+    ...rendered,
+    entries: entries.map((entry) => {
+      if (getPublishedEntryMedia(entry)) {
+        return entry;
+      }
+      const signature = getEntryCommitSignature(entry);
+      const media = signature ? mediaByCommitSignature.get(signature) : null;
+      return media ? { ...entry, media } : entry;
+    }),
+  };
+}
+
 async function generateWithAnthropic(bundle, totalCommitCount) {
   assertStrictToolModelSupport(anthropicModel);
   const toolName = "submit_daily_changelog";
@@ -1016,6 +1068,11 @@ async function main() {
     process.exit(1);
   }
 
+  rendered = preservePublishedEntryMedia(
+    rendered,
+    existingToday?.rendered || (latestExisting?.date === dateKey ? latestExisting?.rendered : null),
+  );
+
   const doc = {
     schemaVersion: 1,
     promptVersion,
@@ -1093,6 +1150,7 @@ export {
   assertStrictToolModelSupport,
   batchCommits,
   buildAnthropicRequestBody,
+  preservePublishedEntryMedia,
   validateRenderedEntry,
 };
 

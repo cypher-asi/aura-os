@@ -6,6 +6,7 @@ import {
   assertStrictToolModelSupport,
   batchCommits,
   buildAnthropicRequestBody,
+  preservePublishedEntryMedia,
   validateRenderedEntry,
 } from "./generate-daily-changelog.mjs";
 
@@ -131,4 +132,54 @@ test("buildAnthropicRequestBody includes retry guidance when requested", () => {
   assert.match(request.messages[0].content, /validation failed/);
   assert.match(request.messages[0].content, /Call the tool again with corrected input\./);
   assert.equal("temperature" in request, false);
+});
+
+test("preservePublishedEntryMedia carries published media across regenerated changelog entries", () => {
+  const previousRendered = {
+    entries: [{
+      batch_id: "entry-1",
+      title: "Model picker",
+      items: [
+        { text: "GPT-5.5 available", commit_shas: ["bbb", "aaa"] },
+      ],
+      media: {
+        status: "published",
+        assetPath: "assets/changelog/nightly/2026-04-24/model-picker.png",
+        width: 3840,
+        height: 2160,
+      },
+    }],
+  };
+  const regenerated = {
+    entries: [{
+      batch_id: "entry-1",
+      title: "GPT-5.5 model picker",
+      items: [
+        { text: "GPT-5.5 is now visible in the chat model picker", commit_shas: ["aaa", "bbb"] },
+      ],
+    }],
+  };
+
+  const preserved = preservePublishedEntryMedia(regenerated, previousRendered);
+
+  assert.equal(preserved.entries[0].media.status, "published");
+  assert.equal(preserved.entries[0].media.assetPath, "assets/changelog/nightly/2026-04-24/model-picker.png");
+});
+
+test("preservePublishedEntryMedia does not carry media to unrelated regenerated entries", () => {
+  const previousRendered = {
+    entries: [{
+      items: [{ text: "Agent composer", commit_shas: ["111"] }],
+      media: { status: "published", assetPath: "assets/changelog/nightly/agent.png" },
+    }],
+  };
+  const regenerated = {
+    entries: [{
+      items: [{ text: "Release hardening", commit_shas: ["222"] }],
+    }],
+  };
+
+  const preserved = preservePublishedEntryMedia(regenerated, previousRendered);
+
+  assert.equal(preserved.entries[0].media, undefined);
 });

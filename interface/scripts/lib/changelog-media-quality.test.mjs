@@ -171,7 +171,7 @@ test("assessChangelogMediaQuality rejects weak or unrelated proof", () => {
   });
 
   assert.equal(report.ok, false);
-  assert.ok(report.concerns.some((concern) => concern.includes("mostly blank")));
+  assert.ok(report.concerns.some((concern) => concern.includes("below production readability minimum")));
   assert.ok(report.concerns.some((concern) => concern.includes("login")));
   assert.ok(report.concerns.some((concern) => concern.includes("expected agents")));
 });
@@ -255,6 +255,7 @@ test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async ()
       title: "GPT-5.5 available in the model picker",
       proofGoal: "Show GPT-5.5 in the picker.",
     },
+    stage: "branded",
     fetchImpl: async () => ({
       ok: true,
       status: 200,
@@ -266,7 +267,7 @@ test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async ()
               name: "submit_changelog_media_quality",
               input: {
                 pass: true,
-                score: 0.82,
+                score: 0.7,
                 reasons: ["The correct screen is visible, but text is soft."],
                 visibleProof: ["GPT-5.5 is present."],
                 rejectionCategory: null,
@@ -280,5 +281,41 @@ test("judgeChangelogMediaWithAnthropic rejects marginal vision scores", async ()
 
   assert.equal(report.ok, false);
   assert.equal(report.status, "rejected");
-  assert.ok(report.concerns.some((concern) => concern.includes("minimum 0.9")));
+  assert.ok(report.concerns.some((concern) => concern.includes("minimum 0.75")));
+});
+
+test("judgeChangelogMediaWithAnthropic rejects images with a rejection category even when scored high", async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "aura-media-quality-"));
+  const screenshotPath = path.join(tempDir, "desktop.png");
+  writePng(screenshotPath, 160, 90, (x, y) => ((x + y) % 24 < 12 ? [18, 24, 38] : [238, 242, 248]));
+
+  const report = await judgeChangelogMediaWithAnthropic({
+    apiKey: "test-key",
+    imagePath: screenshotPath,
+    stage: "raw",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async text() {
+        return JSON.stringify({
+          content: [
+            {
+              type: "tool_use",
+              name: "submit_changelog_media_quality",
+              input: {
+                pass: true,
+                score: 0.93,
+                reasons: ["A product screen is visible but it is the wrong area."],
+                visibleProof: ["Unrelated screen is visible."],
+                rejectionCategory: "wrong-screen",
+              },
+            },
+          ],
+        });
+      },
+    }),
+  });
+
+  assert.equal(report.ok, false);
+  assert.ok(report.concerns.some((concern) => concern.includes("wrong-screen")));
 });

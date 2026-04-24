@@ -103,7 +103,7 @@ export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = 
   const screenshotHeight = screenshotDimensions.height;
   const horizontalPad = clamp(Math.round(screenshotWidth * 0.16), 180, 360);
   const topPad = Math.max(
-    clamp(Math.round(screenshotHeight * 0.18), 140, 240),
+    clamp(Math.round(screenshotHeight * 0.22), 180, 300),
     Math.round(headerHeight || 0),
   );
   const bottomPad = clamp(Math.round(screenshotHeight * 0.12), 110, 200);
@@ -126,7 +126,7 @@ export function calculateBrandedCanvas(screenshotDimensions, { headerHeight } = 
     },
     title: {
       x: screenshotX,
-      y: Math.max(70, contentTop + 82),
+      y: Math.max(96, contentTop + 118),
     },
     label: {
       x: screenshotX,
@@ -156,6 +156,7 @@ export function createBrandedMediaSvg({
   const subtitleFontSize = clamp(Math.round(baseCanvas.width * 0.014), 18, 26);
   const titleLineHeight = Math.round(titleFontSize * 1.12);
   const subtitleLineHeight = Math.round(subtitleFontSize * 1.36);
+  const labelTitleGap = clamp(Math.round(baseCanvas.width * 0.012), 28, 52);
   const titleLines = wrapTextForSvg(title || "Aura product update", {
     fontSize: titleFontSize,
     maxWidth: dimensions.width,
@@ -167,11 +168,11 @@ export function createBrandedMediaSvg({
     maxLines: 2,
   });
   const headerHeight = labelFontSize
-    + Math.round(titleFontSize * 0.9)
+    + labelTitleGap
     + (titleLines.length * titleLineHeight)
     + (subtitleLines.length ? Math.round(subtitleFontSize * 0.95) : 0)
     + (subtitleLines.length * subtitleLineHeight)
-    + 34;
+    + 52;
   const canvas = calculateBrandedCanvas(dimensions, { headerHeight });
   const dataUri = `data:image/png;base64,${fs.readFileSync(screenshotPath).toString("base64")}`;
   const safeTitle = escapeXml(title || "Aura product update");
@@ -179,7 +180,7 @@ export function createBrandedMediaSvg({
   const radius = clamp(Math.round(dimensions.width * 0.018), 18, 32);
   const shadowOffset = clamp(Math.round(dimensions.height * 0.04), 24, 56);
   const labelText = `${safeLabel.toUpperCase()} CHANGELOG`;
-  const titleY = canvas.title.y;
+  const titleY = canvas.label.y + labelFontSize + labelTitleGap;
   const subtitleY = titleY
     + (Math.max(1, titleLines.length) * titleLineHeight)
     + Math.round(subtitleFontSize * 1.2);
@@ -188,14 +189,18 @@ export function createBrandedMediaSvg({
 <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" role="img" aria-label="${safeTitle}">
   <defs>
     <linearGradient id="aura-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#090b10"/>
-      <stop offset="0.42" stop-color="#111827"/>
-      <stop offset="1" stop-color="#020407"/>
+      <stop offset="0" stop-color="#05070c"/>
+      <stop offset="0.46" stop-color="#111827"/>
+      <stop offset="1" stop-color="#070a12"/>
     </linearGradient>
-    <radialGradient id="aura-glow" cx="50%" cy="8%" r="68%">
-      <stop offset="0" stop-color="#6ee7f9" stop-opacity="0.26"/>
-      <stop offset="0.42" stop-color="#60a5fa" stop-opacity="0.10"/>
-      <stop offset="1" stop-color="#020407" stop-opacity="0"/>
+    <radialGradient id="aura-glow" cx="52%" cy="0%" r="72%">
+      <stop offset="0" stop-color="#7dd3fc" stop-opacity="0.18"/>
+      <stop offset="0.42" stop-color="#60a5fa" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#070a12" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aura-corner" cx="84%" cy="20%" r="54%">
+      <stop offset="0" stop-color="#334155" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
     </radialGradient>
     <filter id="card-shadow" x="-8%" y="-8%" width="116%" height="124%">
       <feDropShadow dx="0" dy="${shadowOffset}" stdDeviation="${Math.round(shadowOffset * 0.58)}" flood-color="#000000" flood-opacity="0.44"/>
@@ -203,7 +208,8 @@ export function createBrandedMediaSvg({
   </defs>
   <rect width="100%" height="100%" fill="url(#aura-bg)"/>
   <rect width="100%" height="100%" fill="url(#aura-glow)"/>
-  <text x="${canvas.label.x}" y="${canvas.label.y}" fill="#94a3b8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${labelFontSize}" font-weight="700" letter-spacing="4">${labelText}</text>
+  <rect width="100%" height="100%" fill="url(#aura-corner)"/>
+  <text x="${canvas.label.x}" y="${canvas.label.y}" fill="#9aa8bd" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="${labelFontSize}" font-weight="750" letter-spacing="5.5">${labelText}</text>
 ${renderTextLines({
     lines: titleLines,
     x: canvas.title.x,
@@ -275,6 +281,116 @@ export async function createBrandedMediaPngPreview({ svgPath, outputPath } = {})
       height: info.height,
     },
     bytes: info.size,
+  };
+}
+
+async function neutralizeDarkChroma(sharp, inputBuffer) {
+  const image = sharp(inputBuffer).ensureAlpha();
+  const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+  const neutralBase = { r: 5, g: 7, b: 12 };
+
+  for (let index = 0; index < data.length; index += info.channels) {
+    const red = data[index];
+    const green = data[index + 1];
+    const blue = data[index + 2];
+    const maxChannel = Math.max(red, green, blue);
+    const minChannel = Math.min(red, green, blue);
+    const luma = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+    const chroma = maxChannel - minChannel;
+
+    if (luma < 36 && chroma > 3) {
+      const lift = Math.round(luma * 0.34);
+      data[index] = Math.min(255, neutralBase.r + lift);
+      data[index + 1] = Math.min(255, neutralBase.g + lift);
+      data[index + 2] = Math.min(255, neutralBase.b + lift);
+    }
+  }
+
+  return sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: info.channels,
+    },
+  }).png().toBuffer();
+}
+
+export async function createBrandingFocusScreenshot({
+  screenshotPath,
+  outputPath,
+  minWidth = 1920,
+  minHeight = 1080,
+  maxWidth = 3840,
+  maxHeight = 2160,
+  background = { r: 5, g: 7, b: 10, alpha: 1 },
+} = {}) {
+  if (!screenshotPath) {
+    throw new Error("screenshotPath is required.");
+  }
+  if (!outputPath) {
+    throw new Error("outputPath is required.");
+  }
+
+  const sharp = (await import("sharp")).default;
+  const trimmed = await sharp(screenshotPath)
+    .trim({ background, threshold: 20 })
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  const width = trimmed.info.width || minWidth;
+  const height = trimmed.info.height || minHeight;
+  const targetRatio = 16 / 9;
+  let targetWidth = Math.max(width, minWidth, Math.ceil(height * targetRatio));
+  let targetHeight = Math.max(height, minHeight, Math.ceil(targetWidth / targetRatio));
+  if (targetWidth / targetHeight > targetRatio) {
+    targetHeight = Math.ceil(targetWidth / targetRatio);
+  } else {
+    targetWidth = Math.ceil(targetHeight * targetRatio);
+  }
+  const left = Math.floor((targetWidth - width) / 2);
+  const right = targetWidth - width - left;
+  const top = Math.floor((targetHeight - height) / 2);
+  const bottom = targetHeight - height - top;
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  const extended = await sharp(trimmed.data)
+    .extend({ top, bottom, left, right, background })
+    .png()
+    .toBuffer();
+  const resized = await sharp(extended)
+    .resize({
+      width: maxWidth,
+      height: maxHeight,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .png()
+    .toBuffer();
+  const neutralized = await neutralizeDarkChroma(sharp, resized);
+  const info = await sharp(neutralized)
+    .png({ compressionLevel: 9 })
+    .toFile(outputPath);
+  return {
+    path: outputPath,
+    format: "png",
+    dimensions: {
+      width: info.width,
+      height: info.height,
+    },
+    bytes: info.size,
+    sourcePath: screenshotPath,
+    crop: {
+      trimmedWidth: width,
+      trimmedHeight: height,
+      left,
+      right,
+      top,
+      bottom,
+      maxWidth,
+      maxHeight,
+      resizedFrom: {
+        width: targetWidth,
+        height: targetHeight,
+      },
+    },
   };
 }
 

@@ -28,11 +28,15 @@ import {
   assessBrandedMediaAsset,
   createBrandedMediaPngPreview,
   createBrandedMediaSvg,
+  createBrandingFocusScreenshot,
 } from "./lib/changelog-media-branding.mjs";
 import {
   assessChangelogMediaQuality,
   judgeChangelogMediaWithAnthropic,
 } from "./lib/changelog-media-quality.mjs";
+import {
+  captureHighResolutionAuraProof,
+} from "./lib/changelog-media-highres-capture.mjs";
 
 function parseArgs(argv) {
   const args = {};
@@ -327,8 +331,12 @@ async function createBrandingArtifact({ candidate, screenshot, outputDir }) {
     };
   }
   try {
-    const asset = createBrandedMediaSvg({
+    const focusScreenshot = await createBrandingFocusScreenshot({
       screenshotPath: screenshot.path,
+      outputPath: path.join(outputDir, "branded-focus-source.png"),
+    });
+    const asset = createBrandedMediaSvg({
+      screenshotPath: focusScreenshot.path,
       outputPath: path.join(outputDir, "branded-media-card.svg"),
       title: candidate?.title || "Aura product update",
       subtitle: publicMediaCaption(candidate),
@@ -341,9 +349,10 @@ async function createBrandingArtifact({ candidate, screenshot, outputDir }) {
     return {
       status: quality.ok ? "created" : "rejected",
       reason: quality.ok
-        ? "Created a branded SVG wrapper while preserving the raw product screenshot at native pixel size."
+        ? "Created a branded SVG wrapper around a focused, non-upscaled product proof crop."
         : "Branded asset failed structural quality checks.",
       asset,
+      focusScreenshot,
       quality,
     };
   } catch (error) {
@@ -470,6 +479,7 @@ export async function runChangelogMediaEvaluation({
   preflightCaptureAuthImpl = preflightCaptureAuth,
   requestCaptureSessionImpl = requestCaptureSession,
   runBrowserUseTaskImpl = runBrowserUseTask,
+  runHighResolutionCaptureImpl = captureHighResolutionAuraProof,
   visionJudgeImpl = judgeChangelogMediaWithAnthropic,
   resolveCaptureApiBaseUrlImpl = resolveCaptureApiBaseUrl,
 } = {}) {
@@ -479,7 +489,12 @@ export async function runChangelogMediaEvaluation({
   }
   const changelog = JSON.parse(fs.readFileSync(resolvedChangelogFile, "utf8"));
   const sitemap = await buildAuraNavigationSitemap();
-  const changelogEntries = extractChangelogMediaEntries(changelog);
+  const allChangelogEntries = extractChangelogMediaEntries(changelog);
+  const refreshExistingMedia = isEnabled(process.env.CHANGELOG_MEDIA_REFRESH_EXISTING);
+  const changelogEntries = refreshExistingMedia
+    ? allChangelogEntries
+    : allChangelogEntries.filter((entry) => !entry.mediaPublished);
+  const existingPublishedMediaCount = allChangelogEntries.length - changelogEntries.length;
   const changedFiles = deriveChangedFilesFromChangelog(changelog);
   const commitLog = deriveCommitLogFromChangelog(changelog);
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
@@ -496,16 +511,25 @@ export async function runChangelogMediaEvaluation({
   fs.mkdirSync(outputDir, { recursive: true });
   writeJson(path.join(outputDir, "aura-navigation-sitemap.json"), sitemap);
 
-  const planning = await planChangelogMediaWithAnthropic({
-    apiKey,
-    model: anthropicModel,
-    changelogEntries,
-    sitemap,
-    commitLog,
-    changedFiles,
-    maxCandidates,
-    entryChunkSize,
-  });
+  const planning = changelogEntries.length > 0
+    ? await planChangelogMediaWithAnthropic({
+      apiKey,
+      model: anthropicModel,
+      changelogEntries,
+      sitemap,
+      commitLog,
+      changedFiles,
+      maxCandidates,
+      entryChunkSize,
+    })
+    : {
+      rawPlan: { schemaVersion: 1, generatedAt: new Date().toISOString(), candidates: [], skipped: [] },
+      plan: { schemaVersion: 1, generatedAt: new Date().toISOString(), candidates: [], skipped: [] },
+      forcedSkipped: [],
+      coverage: { ok: true, expectedCount: 0, classifiedCount: 0, missing: [], duplicate: [], unknown: [] },
+      attempts: [],
+      prompt: "All changelog entries already have published media; no media planning was needed.",
+    };
   writeJson(path.join(outputDir, "media-plan.raw.json"), planning.rawPlan);
   writeJson(path.join(outputDir, "media-plan.json"), planning.plan);
   writeJson(path.join(outputDir, "media-plan-forced-skips.json"), planning.forcedSkipped || []);
@@ -517,7 +541,6 @@ export async function runChangelogMediaEvaluation({
   fs.writeFileSync(path.join(outputDir, "anthropic-media-planner-prompt.md"), `${planning.prompt}\n`, "utf8");
 
   const browserUseKeyAvailable = Boolean(process.env.BROWSER_USE_API_KEY?.trim());
-  const openAiAvailable = Boolean(process.env.OPENAI_API_KEY?.trim());
   const resolvedApiBaseUrl = baseUrl
     ? await resolveCaptureApiBaseUrlImpl({ baseUrl, apiBaseUrl })
     : normalizeOrigin(apiBaseUrl);
@@ -642,16 +665,44 @@ export async function runChangelogMediaEvaluation({
       timeoutMs: browserUseTimeoutMs,
       intervalMs: browserUseIntervalMs,
     });
+    const highResolutionCapture = runHighResolutionCaptureImpl && captureSessionResult?.session
+      ? await runHighResolutionCaptureImpl({
+        baseUrl,
+        apiBaseUrl: resolvedApiBaseUrl,
+        captureSession: captureSessionResult.session,
+        targetPath: candidate.targetPath || contract.likelyApps?.[0]?.path || "/desktop",
+        targetAppId: candidate.targetAppId || contract.likelyApps?.[0]?.id || null,
+        outputPath: path.join(candidateDir, "high-resolution-proof.png"),
+        viewport: contract.desktopCapturePolicy.viewport,
+        story: [candidate.title, candidate.proofGoal, candidate.publicCaption].filter(Boolean).join("\n"),
+      })
+      : null;
+    if (highResolutionCapture) {
+      writeJson(path.join(candidateDir, "high-resolution-capture.json"), highResolutionCapture);
+    }
+    const proofResult = highResolutionCapture?.ok && highResolutionCapture?.screenshot
+      ? {
+        ...result,
+        provider: highResolutionCapture.provider,
+        output: highResolutionCapture.output,
+        screenshot: highResolutionCapture.screenshot,
+        highResolutionCapture,
+        browserUseResult: result,
+      }
+      : {
+        ...result,
+        highResolutionCapture,
+      };
     const desktopEvaluation = evaluateDesktopCapture({
-      output: result.output,
-      screenshot: result.screenshot,
+      output: proofResult.output,
+      screenshot: proofResult.screenshot,
       mediaEligibility: contract.mediaEligibility,
       minDesktopViewport: contract.desktopCapturePolicy.minimumViewport,
     });
     const qualityGate = assessChangelogMediaQuality({
       desktopEvaluation,
-      output: result.output,
-      screenshot: result.screenshot,
+      output: proofResult.output,
+      screenshot: proofResult.screenshot,
       candidate,
       stage: "raw",
     });
@@ -659,7 +710,7 @@ export async function runChangelogMediaEvaluation({
       ? await visionJudgeImpl({
         apiKey,
         model: visionJudgeModel,
-        imagePath: result.screenshot?.path,
+        imagePath: proofResult.screenshot?.path,
         candidate,
         stage: "raw",
       })
@@ -673,12 +724,12 @@ export async function runChangelogMediaEvaluation({
     const branding = captureAccepted
       ? await createBrandingArtifact({
         candidate,
-        screenshot: result.screenshot,
+        screenshot: proofResult.screenshot,
         outputDir: candidateDir,
       })
       : buildBlockedBrandingDecision({
         captureAccepted,
-        screenshot: result.screenshot,
+        screenshot: proofResult.screenshot,
       });
     const brandedVisionGate = branding.status === "created" && branding.asset?.path && visionJudge
       ? await visionJudgeImpl({
@@ -701,11 +752,13 @@ export async function runChangelogMediaEvaluation({
     const summary = {
       candidate,
       status: captureAccepted ? "accepted" : "rejected",
-      provider: "browser-use-cloud",
+      provider: proofResult.provider || "browser-use-cloud",
       model: browserUseModel,
       captureAccepted,
       publishReady: Boolean(captureAccepted && rawVisionAccepted && branding.status === "created" && branding.quality?.ok && brandedVisionAccepted),
-      result,
+      result: proofResult,
+      browserUseResult: result,
+      highResolutionCapture,
       desktopEvaluation,
       qualityGate,
       visionGate,
@@ -742,12 +795,13 @@ export async function runChangelogMediaEvaluation({
     env: {
       anthropicAvailable: true,
       browserUseAvailable: browserUseKeyAvailable,
-      openAiAvailable,
       captureAuthAvailable,
     },
     capturePreflight,
+    existingPublishedMediaCount,
     counts: {
       changelogEntries: changelogEntries.length,
+      existingPublishedMedia: existingPublishedMediaCount,
       rawCommits: Array.isArray(changelog?.rawCommits) ? changelog.rawCommits.length : 0,
       changedFiles: changedFiles.length,
       plannedCandidates: planning.plan.candidates.length,
@@ -837,6 +891,7 @@ export async function main(argv = process.argv.slice(2)) {
     baseUrl: report.baseUrl,
     apiBaseUrl: report.apiBaseUrl,
     counts: report.counts,
+    existingPublishedMediaCount: report.existingPublishedMediaCount,
     env: report.env,
     modelQualityGate: report.modelQualityGate,
     browserUseRunOptions: report.browserUseRunOptions,

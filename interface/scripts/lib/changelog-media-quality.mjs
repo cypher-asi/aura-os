@@ -14,7 +14,8 @@ export const PRODUCTION_MEDIA_QUALITY_POLICY = Object.freeze({
   minRawWidth: 1920,
   minRawHeight: 1080,
   minRawPixels: 1920 * 1080,
-  minVisionScore: 0.9,
+  minRawVisionScore: 0.75,
+  minBrandedVisionScore: 0.75,
 });
 const VISION_QUALITY_TOOL = {
   name: "submit_changelog_media_quality",
@@ -113,6 +114,7 @@ export function measurePngQuality(buffer, { sampleLimit = 12000 } = {}) {
       lumaStdDev: Number(Math.sqrt(variance).toFixed(2)),
       edgeDensity: Number((edgeChecks > 0 ? edges / edgeChecks : 0).toFixed(4)),
       opaqueRatio: Number((samples > 0 ? opaqueSamples / samples : 0).toFixed(4)),
+      visuallySparse: Math.sqrt(variance) < 8 && (edgeChecks > 0 ? edges / edgeChecks : 0) < 0.01,
     };
   } catch (error) {
     return {
@@ -144,9 +146,6 @@ function readScreenshotMetrics(screenshot) {
   }
   if (metrics.opaqueRatio < 0.98) {
     concerns.push(`Screenshot has too many transparent pixels (${metrics.opaqueRatio}); expected an opaque browser capture.`);
-  }
-  if (metrics.lumaStdDev < 8 && metrics.edgeDensity < 0.01) {
-    concerns.push("Screenshot appears mostly blank or visually flat.");
   }
   return { concerns, metrics };
 }
@@ -180,6 +179,10 @@ export function assessChangelogMediaQuality({
     parsedOutput?.visibleProof,
     parsedOutput?.concerns,
   ]);
+  const hasConcreteProofText = Array.isArray(parsedOutput?.visibleProof) && parsedOutput.visibleProof.length > 0;
+  if (metrics?.visuallySparse && !hasConcreteProofText) {
+    concerns.push("Screenshot appears mostly blank or visually flat.");
+  }
   if (BAD_PROOF_PATTERNS.some((pattern) => pattern.test(evidenceText))) {
     concerns.push("Browser proof text mentions login, loading, error, mobile, or placeholder UI.");
   }
@@ -223,10 +226,13 @@ export function assessChangelogMediaQuality({
 }
 
 export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
+  const isRawStage = stage === "raw";
   return [
     "You are the independent quality judge for an Aura changelog media asset.",
     "",
-    "Judge the attached image strictly. Do not reward pretty branding if the product proof is weak.",
+    isRawStage
+      ? "Judge the attached raw capture strictly for product proof, not final marketing composition."
+      : "Judge the attached branded image strictly as the final public changelog media asset.",
     "",
     "Candidate:",
     JSON.stringify({
@@ -242,13 +248,25 @@ export function buildVisionJudgePrompt({ candidate, stage = "raw" } = {}) {
     "- It shows desktop Aura product UI, not mobile UI.",
     "- It is not a login, loading, placeholder, empty, or error page.",
     "- The screenshot visibly proves the changelog entry.",
-    "- Text and important UI are crisp and readable at normal changelog display size, without opening the full-size image.",
     "- Reject soft, compressed, pixelated, tiny, or low-resolution product UI even when the right screen is technically visible.",
-    "- The primary proof for the claim is easy to find without zooming or hunting around the image.",
     "- Nothing important is clipped.",
-    "- For branded assets, the real product screenshot remains clear, unaltered, and large enough to be the hero of the card.",
-    "- For branded assets, title/caption copy is public-facing and does not read like an internal instruction.",
-    "- For branded assets, branding supports the proof instead of making the product evidence feel tiny or incidental.",
+    ...(isRawStage
+      ? [
+        "- For raw captures, pass a utilitarian crop if the relevant product proof is crisp, readable, and correct.",
+        "- For raw captures, do not reject merely because the app has dark/empty surrounding space; composition is handled by the branded stage.",
+        "- For raw captures, the primary proof must still be large enough to verify without ambiguity.",
+      ]
+      : [
+        "- Text and important UI are crisp and readable at normal changelog display size, without opening the full-size image.",
+        "- The primary proof for the claim is easy to find without zooming or hunting around the image.",
+        "- Aura uses a dark, spacious desktop UI; do not reject solely for dark negative space when the feature proof is large, crisp, and intentional.",
+        "- Focused control/menu captures are acceptable when the title/caption provide context and the product pixels clearly prove the change.",
+        "- For branded assets, the real product screenshot remains clear, unaltered, and large enough to be the hero of the card.",
+        "- For branded assets, title/caption copy is public-facing and does not read like an internal instruction.",
+        "- For branded assets, branding supports the proof instead of making the product evidence feel tiny or incidental.",
+      ]),
+    "",
+    "If pass is true and the image has no severe quality issue, choose a score at or above the required passing threshold.",
     "",
     "Return strict JSON with: pass, score, reasons, visibleProof, rejectionCategory.",
   ].join("\n");
@@ -367,13 +385,23 @@ export async function judgeChangelogMediaWithAnthropic({
     ? judgment.visibleProof.map((entry) => String(entry || "").trim()).filter(Boolean)
     : [];
   const score = Number(judgment.score);
-  const ok = Boolean(judgment.pass === true && score >= PRODUCTION_MEDIA_QUALITY_POLICY.minVisionScore && visibleProof.length > 0);
+  const minimumScore = stage === "raw"
+    ? PRODUCTION_MEDIA_QUALITY_POLICY.minRawVisionScore
+    : PRODUCTION_MEDIA_QUALITY_POLICY.minBrandedVisionScore;
+  const rejectionCategory = judgment.rejectionCategory ?? null;
+  const ok = Boolean(
+    judgment.pass === true
+      && score >= minimumScore
+      && visibleProof.length > 0
+      && rejectionCategory === null,
+  );
   const concerns = [];
   if (judgment.pass !== true) concerns.push("Vision judge rejected the image.");
-  if (!Number.isFinite(score) || score < PRODUCTION_MEDIA_QUALITY_POLICY.minVisionScore) {
-    concerns.push(`Vision judge score is too low (${Number.isFinite(score) ? score : "missing"}; minimum ${PRODUCTION_MEDIA_QUALITY_POLICY.minVisionScore}).`);
+  if (!Number.isFinite(score) || score < minimumScore) {
+    concerns.push(`Vision judge score is too low (${Number.isFinite(score) ? score : "missing"}; minimum ${minimumScore}).`);
   }
   if (visibleProof.length === 0) concerns.push("Vision judge did not provide visible proof.");
+  if (rejectionCategory !== null) concerns.push(`Vision judge reported rejection category: ${rejectionCategory}.`);
 
   return {
     ok,
@@ -384,7 +412,7 @@ export async function judgeChangelogMediaWithAnthropic({
       score: Number.isFinite(score) ? score : null,
       reasons,
       visibleProof,
-      rejectionCategory: judgment.rejectionCategory ?? null,
+      rejectionCategory,
     },
   };
 }

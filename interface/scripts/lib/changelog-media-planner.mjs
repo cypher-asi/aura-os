@@ -105,6 +105,14 @@ function extractEntryFiles(entry) {
   return unique([...directFiles, ...itemFiles, ...commitFiles]);
 }
 
+export function isChangelogEntryMediaPublished(entry) {
+  const media = entry?.media || entry?.changelogMedia || null;
+  if (!media || typeof media !== "object") return false;
+  const status = normalizeString(media.status).toLowerCase();
+  const assetPath = normalizeString(media.assetPath || media.asset_path || media.url || media.src);
+  return status === "published" && Boolean(assetPath);
+}
+
 export function extractChangelogMediaEntries(changelog) {
   const source = changelog?.rendered || changelog;
   const entries = Array.isArray(source?.entries) ? source.entries : [];
@@ -120,6 +128,8 @@ export function extractChangelogMediaEntries(changelog) {
       }))
       : [],
     changedFiles: extractEntryFiles(entry),
+    media: entry?.media || null,
+    mediaPublished: isChangelogEntryMediaPublished(entry),
   }));
 }
 

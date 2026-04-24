@@ -464,6 +464,27 @@ test("runChangelogMediaEvaluation creates branded media only after quality and v
         messages: [],
       };
       },
+      runHighResolutionCaptureImpl: async () => ({
+        ok: true,
+        status: "captured",
+        provider: "aura-high-res-browser-camera",
+        output: {
+          shouldCapture: true,
+          targetAppId: "agents",
+          targetPath: "/agents",
+          proofSurface: "chat model picker",
+          proofVisible: true,
+          visibleProof: ["GPT-5.5 is visible in the chat model picker."],
+          screenshotDescription: "High-resolution Aura desktop capture with model picker proof.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 1920, height: 1080 },
+        },
+      }),
       visionJudgeImpl: async () => ({
         ok: true,
         status: "accepted",
@@ -624,6 +645,27 @@ test("runChangelogMediaEvaluation does not publish when vision judge is disabled
           dimensions: { width: 1920, height: 1080 },
         },
         messages: [],
+      }),
+      runHighResolutionCaptureImpl: async () => ({
+        ok: true,
+        status: "captured",
+        provider: "aura-high-res-browser-camera",
+        output: {
+          shouldCapture: true,
+          targetAppId: "agents",
+          targetPath: "/agents",
+          proofSurface: "chat model picker",
+          proofVisible: true,
+          visibleProof: ["GPT-5.5 is visible in the chat model picker."],
+          screenshotDescription: "High-resolution Aura desktop capture with model picker proof.",
+          desktopLayoutVisible: true,
+          mobileLayoutVisible: false,
+          concerns: [],
+        },
+        screenshot: {
+          path: screenshotPath,
+          dimensions: { width: 1920, height: 1080 },
+        },
       }),
     });
 
