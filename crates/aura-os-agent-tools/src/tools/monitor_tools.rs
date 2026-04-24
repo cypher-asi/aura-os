@@ -168,7 +168,7 @@ impl AgentTool for GetProjectCostTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -334,7 +334,7 @@ impl AgentTool for ListSessionsTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "agent_instance_id": { "type": "string", "description": "Agent instance ID" }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["agent_instance_id"]
         })
     }
 

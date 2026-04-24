@@ -290,7 +290,7 @@ impl AgentTool for AssignAgentToProjectTool {
                 "project_id": { "type": "string", "description": "Target project ID" },
                 "agent_id": { "type": "string", "description": "Agent template ID to assign" }
             },
-            "required": ["project_id", "agent_id"]
+            "required": ["agent_id"]
         })
     }
 
@@ -547,7 +547,7 @@ impl AgentTool for ListAgentInstancesTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -603,7 +603,7 @@ impl AgentTool for UpdateAgentInstanceTool {
                     "description": "New status for the agent instance"
                 }
             },
-            "required": ["project_id", "agent_instance_id", "status"]
+            "required": ["agent_instance_id", "status"]
         })
     }
 
@@ -658,7 +658,7 @@ impl AgentTool for DeleteAgentInstanceTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "agent_instance_id": { "type": "string", "description": "Agent instance ID" }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["agent_instance_id"]
         })
     }
 

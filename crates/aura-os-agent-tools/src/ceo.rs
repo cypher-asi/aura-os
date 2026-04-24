@@ -498,7 +498,22 @@ mod tests {
         };
         check_required("send_to_agent", "agent_id");
         check_required("send_to_agent", "content");
-        check_required("get_project", "project_id");
+
+        // `project_id` is no longer in the `required` array for
+        // project-scoped tools (the aura-os-server dispatcher injects
+        // it from the `X-Aura-Project-Id` header before the capability
+        // check), but it MUST still appear in `properties` so the LLM
+        // can pass it explicitly for cross-project CEO calls.
+        let get_project_schema = &find("get_project").input_schema;
+        let properties = get_project_schema
+            .get("properties")
+            .and_then(|v| v.as_object())
+            .expect("`get_project` schema must carry a properties object");
+        assert!(
+            properties.contains_key("project_id"),
+            "`get_project` schema must still expose `project_id` in properties so CEO-style callers can pass it explicitly; got properties = {:?}",
+            properties.keys().collect::<Vec<_>>()
+        );
     }
 
     #[test]

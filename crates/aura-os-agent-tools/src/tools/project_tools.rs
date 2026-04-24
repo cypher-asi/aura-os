@@ -263,7 +263,7 @@ impl AgentTool for GetProjectTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -332,7 +332,7 @@ impl AgentTool for UpdateProjectTool {
                 "git_repo_url": { "type": "string" },
                 "git_branch": { "type": "string" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -393,7 +393,7 @@ impl AgentTool for DeleteProjectTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID to delete" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -444,7 +444,7 @@ impl AgentTool for ArchiveProjectTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID to archive" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -497,7 +497,7 @@ impl AgentTool for GetProjectStatsTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 

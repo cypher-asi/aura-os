@@ -39,7 +39,7 @@ impl AgentTool for ListTasksTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -90,7 +90,7 @@ impl AgentTool for ListTasksBySpecTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "spec_id": { "type": "string", "description": "Specification ID" }
             },
-            "required": ["project_id", "spec_id"]
+            "required": ["spec_id"]
         })
     }
 
@@ -142,7 +142,7 @@ impl AgentTool for GetTaskTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "task_id": { "type": "string", "description": "Task ID" }
             },
-            "required": ["project_id", "task_id"]
+            "required": ["task_id"]
         })
     }
 
@@ -197,7 +197,7 @@ impl AgentTool for CreateTaskTool {
                 "spec_id": { "type": "string", "description": "Spec ID to associate with" },
                 "status": { "type": "string", "description": "Initial status (e.g. pending, in_progress)" }
             },
-            "required": ["project_id", "title", "spec_id"]
+            "required": ["title", "spec_id"]
         })
     }
 
@@ -271,7 +271,7 @@ impl AgentTool for UpdateTaskTool {
                   "description": "Optional replacement dependency IDs"
                 }
             },
-            "required": ["project_id", "task_id"]
+            "required": ["task_id"]
         })
     }
 
@@ -331,7 +331,7 @@ impl AgentTool for DeleteTaskTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "task_id": { "type": "string", "description": "Task ID" }
             },
-            "required": ["project_id", "task_id"]
+            "required": ["task_id"]
         })
     }
 
@@ -382,7 +382,7 @@ impl AgentTool for ExtractTasksTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -435,7 +435,7 @@ impl AgentTool for TransitionTaskTool {
                 "task_id": { "type": "string", "description": "Task ID" },
                 "new_status": { "type": "string", "description": "Target status (e.g. pending, ready, in_progress, done, failed)" }
             },
-            "required": ["project_id", "task_id", "new_status"]
+            "required": ["task_id", "new_status"]
         })
     }
 
@@ -490,7 +490,7 @@ impl AgentTool for RetryTaskTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "task_id": { "type": "string", "description": "Task ID" }
             },
-            "required": ["project_id", "task_id"]
+            "required": ["task_id"]
         })
     }
 
@@ -543,7 +543,7 @@ impl AgentTool for RunTaskTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "task_id": { "type": "string", "description": "Task ID" }
             },
-            "required": ["project_id", "task_id"]
+            "required": ["task_id"]
         })
     }
 
@@ -596,7 +596,7 @@ impl AgentTool for GetTaskOutputTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "task_id": { "type": "string", "description": "Task ID" }
             },
-            "required": ["project_id", "task_id"]
+            "required": ["task_id"]
         })
     }
 

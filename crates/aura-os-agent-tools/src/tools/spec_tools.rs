@@ -40,7 +40,7 @@ impl AgentTool for ListSpecsTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -91,7 +91,7 @@ impl AgentTool for GetSpecTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "spec_id": { "type": "string", "description": "Specification ID" }
             },
-            "required": ["project_id", "spec_id"]
+            "required": ["spec_id"]
         })
     }
 
@@ -149,7 +149,7 @@ impl AgentTool for CreateSpecTool {
                 "markdown_contents": { "type": "string", "description": "Full markdown body for the spec. This is the canonical version; the tool streams it to the UI as it saves, so you should NOT also paste the same markdown as visible assistant text." },
                 "order_index": { "type": "integer", "description": "Optional sort order for the spec" }
             },
-            "required": ["project_id", "title"]
+            "required": ["title"]
         })
     }
 
@@ -216,7 +216,7 @@ impl AgentTool for UpdateSpecTool {
                 "markdown_contents": { "type": "string", "description": "Optional replacement markdown body. This is the canonical version; the tool streams it to the UI as it saves, so you should NOT also paste the same markdown as visible assistant text." },
                 "order_index": { "type": "integer", "description": "Optional replacement sort order" }
             },
-            "required": ["project_id", "spec_id"]
+            "required": ["spec_id"]
         })
     }
 
@@ -274,7 +274,7 @@ impl AgentTool for DeleteSpecTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "spec_id": { "type": "string", "description": "Specification ID" }
             },
-            "required": ["project_id", "spec_id"]
+            "required": ["spec_id"]
         })
     }
 
@@ -326,7 +326,7 @@ impl AgentTool for GenerateSpecsTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 
@@ -377,7 +377,7 @@ impl AgentTool for GenerateSpecsSummaryTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" }
             },
-            "required": ["project_id"]
+            "required": []
         })
     }
 

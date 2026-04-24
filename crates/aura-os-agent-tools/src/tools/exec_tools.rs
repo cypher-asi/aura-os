@@ -42,7 +42,7 @@ impl AgentTool for StartDevLoopTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "agent_instance_id": { "type": "string", "description": "Agent instance ID" }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["agent_instance_id"]
         })
     }
 
