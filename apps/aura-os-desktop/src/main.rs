@@ -507,6 +507,97 @@ fn is_local_bind_host(host: &str) -> bool {
     matches!(host, "127.0.0.1" | "localhost" | "::1")
 }
 
+/// Fetch a JSON-body response from `base_url + path` with the same
+/// short-timeout, no-redirect, TCP-level strategy as [`probe_http_ok`].
+///
+/// Returns `Some(parsed_json)` when the response is 200 OK and the body
+/// parses as JSON; `None` on any failure (DNS, connect, timeout, non-200,
+/// malformed body). Used by the `--external-harness` startup check to
+/// read the aura-harness `/health` tool-policy fields
+/// (`run_command_enabled`, `shell_enabled`, ...). Older harness versions
+/// that don't publish those fields still produce valid JSON here; the
+/// caller decides how to treat missing keys.
+///
+/// The body limit is deliberately loose (8 KiB) — the real /health
+/// response is under 300 bytes but a future version may include more
+/// diagnostics. We still cap it to keep a misbehaving endpoint from
+/// hanging desktop startup.
+fn probe_http_get_json(base_url: &str, path: &str) -> Option<serde_json::Value> {
+    let probe_url = format!(
+        "{}/{}",
+        base_url.trim_end_matches('/'),
+        path.trim_start_matches('/')
+    );
+    let uri: axum::http::Uri = probe_url.parse().ok()?;
+    let host = uri.host()?;
+    let port = uri.port_u16().unwrap_or_else(|| {
+        if uri.scheme_str() == Some("https") {
+            443
+        } else {
+            80
+        }
+    });
+    let addr = format!("{host}:{port}")
+        .to_socket_addrs()
+        .ok()
+        .and_then(|mut addrs| addrs.next())?;
+    let request_path = uri
+        .path_and_query()
+        .map(|value| value.as_str())
+        .unwrap_or("/");
+
+    let mut stream =
+        std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(500)).ok()?;
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(500)));
+
+    write!(
+        stream,
+        "GET {request_path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
+    )
+    .ok()?;
+
+    // Read up to 8 KiB of response (headers + body). With
+    // `Connection: close` the server signals end-of-message by closing
+    // the socket, so an ordinary read-to-EOF loop terminates naturally
+    // when the harness has finished writing.
+    let mut response = Vec::with_capacity(1024);
+    let mut buf = [0_u8; 1024];
+    loop {
+        match stream.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => {
+                response.extend_from_slice(&buf[..n]);
+                if response.len() >= 8192 {
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+
+    let response_text = std::str::from_utf8(&response).ok()?;
+    let mut status_line_end = response_text.find("\r\n")?;
+    let status_line = &response_text[..status_line_end];
+    if !(status_line.starts_with("HTTP/1.1 200") || status_line.starts_with("HTTP/1.0 200")) {
+        return None;
+    }
+    // `find` can return a position past the actual delimiter run when
+    // headers are all \n-terminated (rare but legal); use the canonical
+    // `\r\n\r\n` split and fall back to `\n\n` for tolerance.
+    status_line_end += 2;
+    let headers_end = response_text[status_line_end..]
+        .find("\r\n\r\n")
+        .map(|i| status_line_end + i + 4)
+        .or_else(|| {
+            response_text[status_line_end..]
+                .find("\n\n")
+                .map(|i| status_line_end + i + 2)
+        })?;
+    let body = &response_text[headers_end..];
+    serde_json::from_str(body).ok()
+}
+
 fn probe_http_ok(base_url: &str, path: &str) -> bool {
     let probe_url = format!(
         "{}/{}",
@@ -596,11 +687,62 @@ fn parse_cli_args() -> DesktopCliArgs {
     parse_cli_args_from(std::env::args().skip(1))
 }
 
+/// Outcome of the policy probe against an external harness `/health`
+/// response. Reused by [`enforce_external_harness_or_exit`] and its
+/// unit tests so the decision matrix is pinned in one place.
+#[derive(Debug, PartialEq, Eq)]
+enum ExternalHarnessPolicy {
+    /// Harness confirmed `run_command_enabled: true`. Safe to proceed.
+    RunCommandEnabled,
+    /// Harness confirmed `run_command_enabled: false`. We exit so the
+    /// operator restarts it with the autonomous-mode envs set, rather
+    /// than surface as a 20-second tool-callback timeout the first time
+    /// an agent tries `cargo check`.
+    RunCommandDisabled,
+    /// Health probe succeeded but the field is missing — this is a
+    /// pre-policy-disclosure harness (older than the /health schema
+    /// bump). Warn but proceed, matching the existing "unknown is
+    /// permissive" stance so mixed-version fleets keep working.
+    UnknownLegacyHarness,
+    /// `/health` responded 200 but returned something that isn't
+    /// parseable JSON. Same treatment as `UnknownLegacyHarness` — warn
+    /// and proceed.
+    UnparseableResponse,
+}
+
+/// Classify a parsed `/health` JSON body into an
+/// [`ExternalHarnessPolicy`]. Split out from
+/// [`enforce_external_harness_or_exit`] so unit tests can pin the
+/// decision matrix without spinning up a real harness.
+fn classify_external_harness_policy(
+    response: Option<&serde_json::Value>,
+) -> ExternalHarnessPolicy {
+    let Some(json) = response else {
+        return ExternalHarnessPolicy::UnparseableResponse;
+    };
+    match json.get("run_command_enabled").and_then(|v| v.as_bool()) {
+        Some(true) => ExternalHarnessPolicy::RunCommandEnabled,
+        Some(false) => ExternalHarnessPolicy::RunCommandDisabled,
+        None => ExternalHarnessPolicy::UnknownLegacyHarness,
+    }
+}
+
 /// Validate that an external harness is actually reachable before we let the
 /// desktop shell boot with bundled-sidecar autospawn disabled. If the env
 /// isn't set or the harness isn't up, exit fast with a clear message instead
 /// of silently coming up and surfacing as a 20-second tool-callback timeout
 /// the first time an agent tries to act.
+///
+/// Beyond liveness, we now also fetch the harness's `/health` policy
+/// fields (`run_command_enabled`, `shell_enabled`; added to aura-node
+/// in lockstep with this check) and refuse to boot when the external
+/// harness explicitly reports `run_command` is disabled. That is the
+/// 3.0-class DoD failure pattern in external-harness mode: the
+/// `aura-node` binary now honours `AURA_AUTONOMOUS_DEV_LOOP` (see
+/// `crates/aura-node/src/config/mod.rs::NodeConfig::from_env`), but
+/// the desktop no longer controls the env of the externally-spawned
+/// process, so if the operator forgot to set it, every `cargo check`
+/// the autonomous loop emits hits the kernel category gate.
 fn enforce_external_harness_or_exit() {
     let Some(url) = env_string("LOCAL_HARNESS_URL").map(|v| v.trim_end_matches('/').to_string())
     else {
@@ -617,6 +759,43 @@ fn enforce_external_harness_or_exit() {
              /health. Start the external harness first, then rerun."
         );
         std::process::exit(2);
+    }
+
+    let policy = classify_external_harness_policy(probe_http_get_json(&url, "/health").as_ref());
+    match policy {
+        ExternalHarnessPolicy::RunCommandEnabled => {
+            info!(url = %url, "external harness policy check: run_command enabled");
+        }
+        ExternalHarnessPolicy::RunCommandDisabled => {
+            eprintln!(
+                "--external-harness is pointed at {url} but that harness reports \
+                 run_command_enabled=false on /health. The autonomous dev loop cannot run \
+                 cargo/git/test commands in this mode.\n\n\
+                 Restart the external harness with the autonomous-mode envs set:\n\
+                 \n\
+                 \tAURA_AUTONOMOUS_DEV_LOOP=1 aura-node\n\
+                 \n\
+                 (or `AURA_ALLOW_RUN_COMMAND=1 AURA_ALLOW_SHELL=1` if you want a narrower \
+                 policy). Then rerun aura-os-desktop --external-harness."
+            );
+            std::process::exit(2);
+        }
+        ExternalHarnessPolicy::UnknownLegacyHarness => {
+            warn!(
+                url = %url,
+                "external harness /health did not publish run_command_enabled; \
+                 assuming a pre-policy-disclosure aura-node build. If run_command invocations \
+                 fail with 'command tools not enabled', upgrade the harness or restart it \
+                 with AURA_AUTONOMOUS_DEV_LOOP=1."
+            );
+        }
+        ExternalHarnessPolicy::UnparseableResponse => {
+            warn!(
+                url = %url,
+                "external harness /health returned a body that could not be parsed as JSON; \
+                 continuing without a policy check"
+            );
+        }
     }
 
     std::env::set_var("AURA_DESKTOP_EXTERNAL_HARNESS", "1");
@@ -1500,11 +1679,12 @@ fn set_square_corners(_window: &tao::window::Window) {
 mod tests {
     use super::{
         append_query_param, apply_restore_route, build_frontend_dev_server_candidate,
-        build_frontend_dev_server_config, build_initialization_script, harness_binary_name,
-        interface_dir_candidates, is_local_bind_host, parse_cli_args_from, parse_host_port,
+        build_frontend_dev_server_config, build_initialization_script,
+        classify_external_harness_policy, harness_binary_name, interface_dir_candidates,
+        is_local_bind_host, parse_cli_args_from, parse_host_port,
         resolve_frontend_target_with_probe, should_poll_for_frontend_dev_server,
         stage_bundled_harness_binary, wait_for_frontend_dev_server_with_probe,
-        BootstrappedAuthLiterals,
+        BootstrappedAuthLiterals, ExternalHarnessPolicy,
     };
     use std::cell::Cell;
     use std::path::{Path, PathBuf};
@@ -1526,6 +1706,84 @@ mod tests {
     fn parse_cli_args_tolerates_unknown_flags() {
         let args = parse_cli_args_from(["--some-installer-arg", "--external-harness", "ignored"]);
         assert!(args.external_harness);
+    }
+
+    // === External harness policy probe (3.0-class run_command fix) ===
+    //
+    // These pin the decision matrix for `enforce_external_harness_or_exit`
+    // so the cross-repo contract with aura-node's `/health` handler
+    // (crates/aura-node/src/router/mod.rs::health_handler) can't silently
+    // drift. If someone renames `run_command_enabled` on the harness
+    // side, or flips the default, this suite fails immediately.
+
+    #[test]
+    fn classify_policy_treats_explicit_true_as_enabled() {
+        let body = serde_json::json!({
+            "status": "ok",
+            "version": "0.1.0",
+            "run_command_enabled": true,
+            "shell_enabled": true,
+        });
+        assert_eq!(
+            classify_external_harness_policy(Some(&body)),
+            ExternalHarnessPolicy::RunCommandEnabled
+        );
+    }
+
+    #[test]
+    fn classify_policy_treats_explicit_false_as_disabled_and_will_exit() {
+        // This is the 3.0-class failure: operator started the external
+        // harness without AURA_AUTONOMOUS_DEV_LOOP=1. The desktop must
+        // detect it at startup and refuse to boot rather than letting
+        // the first agent `run_command` call time out after 20s.
+        let body = serde_json::json!({
+            "status": "ok",
+            "version": "0.1.0",
+            "run_command_enabled": false,
+            "shell_enabled": false,
+        });
+        assert_eq!(
+            classify_external_harness_policy(Some(&body)),
+            ExternalHarnessPolicy::RunCommandDisabled
+        );
+    }
+
+    #[test]
+    fn classify_policy_treats_missing_field_as_legacy_harness() {
+        // Older aura-node builds that don't yet publish the policy
+        // fields on /health must be allowed through with a warning —
+        // mixed-version fleets must keep working.
+        let body = serde_json::json!({
+            "status": "ok",
+            "version": "0.0.9",
+        });
+        assert_eq!(
+            classify_external_harness_policy(Some(&body)),
+            ExternalHarnessPolicy::UnknownLegacyHarness
+        );
+    }
+
+    #[test]
+    fn classify_policy_treats_non_bool_field_as_legacy_harness() {
+        // Defensive: a harness that returns a string "true" instead of
+        // a JSON boolean is treated the same as "missing" — warn and
+        // proceed rather than silently hard-fail on a typo upstream.
+        let body = serde_json::json!({
+            "status": "ok",
+            "run_command_enabled": "true",
+        });
+        assert_eq!(
+            classify_external_harness_policy(Some(&body)),
+            ExternalHarnessPolicy::UnknownLegacyHarness
+        );
+    }
+
+    #[test]
+    fn classify_policy_treats_none_response_as_unparseable() {
+        assert_eq!(
+            classify_external_harness_policy(None),
+            ExternalHarnessPolicy::UnparseableResponse
+        );
     }
 
     #[test]
