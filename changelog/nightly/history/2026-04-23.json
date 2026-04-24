@@ -1487,7 +1487,7 @@
         ],
         "media": {
           "requested": true,
-          "status": "pending",
+          "status": "published",
           "score": 8,
           "reason": "GPT-5.5 landing as a selectable option in the chat model picker is a concrete, screenshotable micro-UI surface. The rest of the entry (nightly release pipeline, gh-pages recovery, changelog media tooling, ZERO Pro usage field) is release/infra/backend and not screenshot-worthy.",
           "reasons": [
@@ -1537,7 +1537,17 @@
             "GPT-5.5",
             "Model picker dropdown"
           ],
-          "storyTitle": "Nightly release prune, gh-pages recovery, and GPT-5.5 in the picker"
+          "storyTitle": "GPT-5.5 in the Chat Model Picker",
+          "batchId": "entry-1",
+          "assetPath": "assets/changelog/nightly/0.1.0-nightly.362.1/entry-1-nightly-release-prune-gh-pages-recovery-and-gpt-5-5-in-the-picke.png",
+          "screenshotSource": "openai-polish",
+          "originalScreenshotSource": "capture-proof",
+          "polishProvider": "openai",
+          "polishModel": "gpt-image-2",
+          "polishJudgeModel": "gpt-4.1-mini",
+          "polishScore": 85,
+          "polishFallbackReason": "",
+          "updatedAt": "2026-04-24T04:01:09.243Z"
         }
       },
       {
