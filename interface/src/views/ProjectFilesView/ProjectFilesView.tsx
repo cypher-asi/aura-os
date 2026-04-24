@@ -212,17 +212,9 @@ function MobileProjectFilesContent({
     <div className={styles.container}>
       <div className={styles.mobileSummary}>
         <div className={styles.mobileSummaryText}>
-          <Text size="xs" variant="muted" className={styles.mobileRemoteEyebrow}>
-            Files
-          </Text>
           <Text size="sm" weight="medium">
             {workspaceSourceLabel}
           </Text>
-          {workspaceDisplay ? (
-            <Text variant="muted" size="sm" className={styles.desktopWorkspacePath}>
-              {workspaceDisplay}
-            </Text>
-          ) : null}
         </div>
       </div>
       <div className={styles.searchHeader}>
