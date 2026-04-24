@@ -2,18 +2,19 @@
   {
     "date": "2026-04-24",
     "channel": "nightly",
-    "version": "0.1.0-nightly.367.1",
-    "title": "Changelog media pipeline rebuilt around Browser Use",
-    "intro": "Today's nightly retires the old screenshot-publishing machinery and replaces it with a leaner Browser Use–driven capture flow, complete with a dedicated capture login path, quality and branding gates, and support for split frontend/API hosts.",
+    "version": "0.1.0-nightly.368.1",
+    "title": "Changelog media pipeline rebuilt on Browser Use",
+    "intro": "Today's nightly retires the old screenshot publishing stack and replaces it with a leaner Browser Use-driven capture pipeline. The work spans a large infrastructure swap, new quality and branding gates, a fix for split-host deployments, and safer seeded capture sessions — all landing in one early-morning batch alongside standard Desktop builds for Mac, Windows, and Linux.",
     "entryCount": 1,
     "highlights": [
-      "Legacy demo-screenshot pipeline removed in favor of Browser Use planning",
-      "New quality and branding gates guard published changelog media",
-      "Capture login flow now works across split frontend and API hosts"
+      "Browser Use replaces the legacy screenshot pipeline",
+      "New quality and branding gates guard changelog media",
+      "Split-host frontend/API deployments now capture correctly",
+      "Seeded, redacted capture sessions replace shared secrets"
     ],
-    "rawCommitCount": 3,
-    "generatedAt": "2026-04-24T10:14:18.563Z",
-    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.367.1",
+    "rawCommitCount": 4,
+    "generatedAt": "2026-04-24T10:28:07.584Z",
+    "releaseUrl": "https://github.com/cypher-asi/aura-os/releases/tag/v0.1.0-nightly.368.1",
     "path": "history/2026-04-24.json"
   },
   {
