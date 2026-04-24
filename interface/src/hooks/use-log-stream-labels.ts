@@ -72,6 +72,7 @@ export const EVENT_LABELS: Record<EventType, string> = {
   [EventType.SessionReady]: "Session",
   [EventType.AssistantMessageStart]: "Message",
   [EventType.AssistantMessageEnd]: "Message",
+  [EventType.AssistantTurnProgress]: "Message",
   [EventType.TextDelta]: "Message",
   [EventType.ToolUseStart]: "Tool",
   [EventType.GenerationStart]: "Generation",

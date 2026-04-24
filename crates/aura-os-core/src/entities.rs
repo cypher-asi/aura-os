@@ -446,6 +446,20 @@ pub struct SessionEvent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thinking_duration_ms: Option<u64>,
     pub created_at: DateTime<Utc>,
+    /// `Some(true)` when this row is a synthesized snapshot of an
+    /// assistant turn that has been started (we have an
+    /// `assistant_message_start` row) but not yet terminated by an
+    /// `assistant_message_end`. Used by the UI to keep rendering the
+    /// partial response (text + tool cards) and to flip the streaming
+    /// state flag back on after a mid-turn page refresh, so chat and
+    /// sidekick pending artifacts survive across reloads instead of
+    /// disappearing until the turn finally completes.
+    ///
+    /// `None` (the default) on terminal turns reconstructed from
+    /// `assistant_message_end` and on `user_message` / `task_output`
+    /// rows so existing wire/storage payloads round-trip unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub in_flight: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

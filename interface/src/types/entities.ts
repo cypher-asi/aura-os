@@ -226,6 +226,15 @@ export interface SessionEvent {
   thinking?: string;
   thinking_duration_ms?: number;
   created_at: string;
+  /**
+   * `true` when this row is a server-reconstructed snapshot of an
+   * assistant turn that has been started but not yet terminated by an
+   * `assistant_message_end`. The chat panel uses this flag to keep
+   * `streamingAgentInstanceId` set after a mid-turn page refresh, and
+   * the sidekick uses it to rebuild `pending-*` spec/task placeholders
+   * from the partial `content_blocks` it carries.
+   */
+  in_flight?: boolean;
 }
 
 export interface ZeroUser {

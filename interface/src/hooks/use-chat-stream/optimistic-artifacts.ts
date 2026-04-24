@@ -1,5 +1,5 @@
 import type { useSidekickStore } from "../../stores/sidekick-store";
-import type { ToolCallEntry } from "../../types/stream";
+import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
 import { orderIndexFromTitle } from "../../utils/collections";
 
 type SidekickState = ReturnType<typeof useSidekickStore.getState>;
@@ -271,4 +271,75 @@ export function backfillToolCallInput(
  */
 export function isTaskBackfillTool(name: string): boolean {
   return TASK_TOOL_NAMES.has(name);
+}
+
+const SPEC_TOOL_NAMES = new Set(["create_spec"]);
+const TASK_PLACEHOLDER_TOOL_NAMES = new Set(["create_task"]);
+
+/**
+ * After a mid-turn page refresh, the in-flight assistant turn comes back
+ * from the server with its `toolCalls` array but the local sidekick has
+ * lost its `pending-*` placeholders (they live in memory only). Walk the
+ * trailing in-flight turn's tool calls and re-push placeholder
+ * specs/tasks for any tool calls that have not yet produced a result, so
+ * the sidekick spec/task lists keep showing the in-progress rows the
+ * agent is about to create.
+ *
+ * Tool calls that already carry a `result` are skipped — `SpecSaved` /
+ * `TaskSaved` will (re)materialize the real entry from the server-side
+ * specs/tasks list, and the live progress refetch loop will keep them in
+ * sync. Tool calls already tracked in `pendingSpecIdsRef` /
+ * `pendingTaskIdsRef` are also skipped so concurrent local writes are
+ * not duplicated.
+ *
+ * Returns the placeholder ids that were pushed so callers can append
+ * them to their respective tracking refs.
+ */
+export function rebuildPendingArtifactsFromHistory(
+  historyMessages: DisplaySessionEvent[],
+  projectId: string,
+  sidekick: SidekickState,
+  refs: {
+    pendingSpecIdsRef: { current: string[] };
+    pendingTaskIdsRef: { current: string[] };
+  },
+): void {
+  const trailing = findTrailingInFlightAssistant(historyMessages);
+  if (!trailing) return;
+  const toolCalls = trailing.toolCalls ?? [];
+  for (const call of toolCalls) {
+    if (call.result != null) continue;
+    if (!call.id) continue;
+    if (SPEC_TOOL_NAMES.has(call.name)) {
+      pushPendingSpec(
+        { id: call.id, name: call.name, input: call.input },
+        projectId,
+        sidekick,
+        refs.pendingSpecIdsRef,
+      );
+    } else if (TASK_PLACEHOLDER_TOOL_NAMES.has(call.name)) {
+      pushPendingTask(
+        { id: call.id, name: call.name, input: call.input },
+        projectId,
+        sidekick,
+        refs.pendingTaskIdsRef,
+      );
+    }
+  }
+}
+
+/**
+ * Returns the trailing assistant message of the conversation if and only
+ * if it carries the `inFlight` flag (server-reconstructed mid-turn
+ * snapshot). Used to scope mid-turn refresh recovery effects to the
+ * single in-progress turn rather than the entire transcript.
+ */
+export function findTrailingInFlightAssistant(
+  messages: DisplaySessionEvent[],
+): DisplaySessionEvent | undefined {
+  if (messages.length === 0) return undefined;
+  const last = messages[messages.length - 1];
+  if (last.role !== "assistant") return undefined;
+  if (!last.inFlight) return undefined;
+  return last;
 }

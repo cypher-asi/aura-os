@@ -90,6 +90,32 @@ vi.mock("../stores/event-store/index", () => ({
   useEventStore: mocks.useEventStore,
 }));
 
+const sidekickMocks = vi.hoisted(() => {
+  const state = {
+    streamingAgentInstanceId: null as string | null,
+    setStreamingAgentInstanceId: vi.fn((id: string | null) => {
+      state.streamingAgentInstanceId = id;
+    }),
+    specs: [] as Array<{ spec_id: string; title: string }>,
+    tasks: [] as Array<{ task_id: string; title: string }>,
+    pushSpec: vi.fn(),
+    pushTask: vi.fn(),
+  };
+  return {
+    state,
+    useSidekickStore: Object.assign(
+      vi.fn(),
+      {
+        getState: () => state,
+      },
+    ),
+  };
+});
+
+vi.mock("../stores/sidekick-store", () => ({
+  useSidekickStore: sidekickMocks.useSidekickStore,
+}));
+
 function emit(type: string, event: { content: Record<string, unknown> }): void {
   const listeners = mocks.eventListeners.get(type);
   if (!listeners) return;
@@ -320,6 +346,133 @@ describe("useChatHistorySync", () => {
         "agent:agent-1",
         fetchFn,
         { force: true },
+      );
+    });
+  });
+
+  it("debounces refetches triggered by assistant_turn_progress events", async () => {
+    vi.useFakeTimers();
+    try {
+      const resetEvents = vi.fn();
+      const fetchFn = vi.fn(async () => []);
+
+      renderHook(() =>
+        useChatHistorySync({
+          historyKey: "agent:agent-1",
+          streamKey: "agent-1",
+          fetchFn,
+          resetEvents,
+          watchAgentInstanceId: "pa-42",
+        }),
+      );
+      mocks.state.fetchHistory.mockClear();
+
+      // Burst of progress publishes — only one trailing-edge fetch
+      // should fire after the debounce window elapses.
+      for (let i = 0; i < 5; i++) {
+        emit("assistant_turn_progress", {
+          content: { project_agent_id: "pa-42", session_id: "s-1" },
+        });
+      }
+      expect(mocks.state.fetchHistory).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(300);
+      expect(mocks.state.fetchHistory).toHaveBeenCalledTimes(1);
+      expect(mocks.state.fetchHistory).toHaveBeenCalledWith(
+        "agent:agent-1",
+        fetchFn,
+        { force: true },
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("re-arms streamingAgentInstanceId when history reports an in-flight assistant turn", async () => {
+    sidekickMocks.state.streamingAgentInstanceId = null;
+    sidekickMocks.state.setStreamingAgentInstanceId.mockClear();
+    const inFlightMessages: DisplaySessionEvent[] = [
+      { id: "evt-1", role: "user", content: "hi" },
+      {
+        id: "evt-2",
+        role: "assistant",
+        content: "Working on it…",
+        inFlight: true,
+        toolCalls: [],
+      },
+    ];
+    mocks.useChatHistory.mockReturnValue({
+      events: inFlightMessages,
+      status: "ready",
+      error: null,
+    });
+
+    renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents: vi.fn(),
+        watchAgentInstanceId: "pa-42",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(sidekickMocks.state.setStreamingAgentInstanceId).toHaveBeenCalledWith(
+        "pa-42",
+      );
+    });
+  });
+
+  it("clears streamingAgentInstanceId when the in-flight marker disappears", async () => {
+    sidekickMocks.state.streamingAgentInstanceId = null;
+    sidekickMocks.state.setStreamingAgentInstanceId.mockClear();
+    const inFlight: DisplaySessionEvent[] = [
+      {
+        id: "evt-2",
+        role: "assistant",
+        content: "Working…",
+        inFlight: true,
+        toolCalls: [],
+      },
+    ];
+    const settled: DisplaySessionEvent[] = [
+      { id: "evt-2", role: "assistant", content: "Done.", inFlight: false },
+    ];
+
+    mocks.useChatHistory.mockReturnValue({
+      events: inFlight,
+      status: "ready",
+      error: null,
+    });
+
+    const { rerender } = renderHook(() =>
+      useChatHistorySync({
+        historyKey: "agent:agent-1",
+        streamKey: "agent-1",
+        fetchFn: vi.fn(async () => []),
+        resetEvents: vi.fn(),
+        watchAgentInstanceId: "pa-42",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(sidekickMocks.state.setStreamingAgentInstanceId).toHaveBeenCalledWith(
+        "pa-42",
+      );
+    });
+    sidekickMocks.state.setStreamingAgentInstanceId.mockClear();
+
+    mocks.useChatHistory.mockReturnValue({
+      events: settled,
+      status: "ready",
+      error: null,
+    });
+    rerender();
+
+    await waitFor(() => {
+      expect(sidekickMocks.state.setStreamingAgentInstanceId).toHaveBeenCalledWith(
+        null,
       );
     });
   });

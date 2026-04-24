@@ -381,6 +381,7 @@ function ProjectAgentChatPanel({
     onClear,
     watchAgentInstanceId: agentInstanceId,
     watchSessionId: sessionId ?? undefined,
+    projectIdForSidekick: projectId,
   });
 
   const hasHistory = historyMessages.length > 0;

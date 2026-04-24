@@ -72,6 +72,19 @@ export enum EventType {
   TextDelta                 = "text_delta",
   ToolUseStart              = "tool_use_start",
 
+  /**
+   * Throttled live-progress heartbeat published by
+   * `spawn_chat_persist_task` on the backend every
+   * ~`ASSISTANT_TURN_PROGRESS_THROTTLE` ms while an assistant turn is
+   * still streaming. Carries no payload beyond the routing keys
+   * (`session_id`, `project_id`, `agent_instance_id`,
+   * `message_id`). The client uses it to debounce-refetch the
+   * persisted chat history so a mid-turn page refresh keeps showing
+   * the partial response (text + tool cards + sidekick `pending-*`
+   * placeholders) until `assistant_message_end` finally lands.
+   */
+  AssistantTurnProgress     = "assistant_turn_progress",
+
   // Agent state
   AgentInstanceUpdated      = "agent_instance_updated",
   RemoteAgentStateChanged   = "remote_agent_state_changed",
@@ -569,6 +582,13 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.AssistantMessageEnd; content: HarnessAssistantMessageEnd }
   | { type: EventType.TextDelta; content: HarnessTextDelta }
   | { type: EventType.ToolUseStart; content: HarnessToolUseStart }
+  | { type: EventType.AssistantTurnProgress; content: {
+      message_id?: string;
+      project_id?: string;
+      session_id?: string;
+      agent_instance_id?: string;
+      agent_id?: string;
+    } }
 
   // ── Billing ────────────────────────────────────────────────
   | { type: EventType.CreditBalanceUpdated; content: {

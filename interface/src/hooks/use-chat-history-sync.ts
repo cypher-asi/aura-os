@@ -1,12 +1,26 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useChatHistoryStore, useChatHistory } from "../stores/chat-history-store";
+import { useSidekickStore } from "../stores/sidekick-store";
 import { useIsStreaming } from "./stream/hooks";
 import { getStreamEntry } from "./stream/store";
 import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../types/aura-events";
 import type { SessionEvent } from "../types";
 import type { DisplaySessionEvent } from "../types/stream";
+import {
+  findTrailingInFlightAssistant,
+  rebuildPendingArtifactsFromHistory,
+} from "./use-chat-stream/optimistic-artifacts";
+
+/**
+ * Trailing-edge debounce window for refetches triggered by
+ * `assistant_turn_progress` heartbeats. The server already throttles
+ * publishes to roughly one every 400ms; this window adds a second
+ * coalescing layer so concurrent listeners never produce more than one
+ * history fetch per ~250ms while a turn is streaming.
+ */
+const PROGRESS_REFETCH_DEBOUNCE_MS = 250;
 
 interface ChatHistorySyncOptions {
   historyKey: string | undefined;
@@ -43,6 +57,16 @@ interface ChatHistorySyncOptions {
    * about updates to the pinned session.
    */
   watchSessionId?: string;
+  /**
+   * When provided alongside `watchAgentInstanceId`, enables sidekick
+   * `pending-*` placeholder rebuilding on mid-turn refresh — i.e. if
+   * the server reports an in-flight assistant turn for this agent
+   * with `create_spec` / `create_task` tool calls that haven't
+   * resolved yet, the corresponding placeholder rows are re-pushed
+   * into the sidekick spec/task lists so they reappear after a hard
+   * reload. Project-scoped chat panels pass their project id here.
+   */
+  projectIdForSidekick?: string;
 }
 
 interface ChatHistorySyncResult {
@@ -70,6 +94,7 @@ export function useChatHistorySync({
   watchAgentInstanceId,
   watchAgentId,
   watchSessionId,
+  projectIdForSidekick,
 }: ChatHistorySyncOptions): ChatHistorySyncResult {
   const {
     events: historyMessages,
@@ -146,14 +171,38 @@ export function useChatHistorySync({
         .fetchHistory(historyKey, fetchFn, { force: true });
     };
 
+    // `assistant_turn_progress` is throttled to ~one publish per 400ms by
+    // the backend, but multiple turns and panels may share a single bus
+    // burst. Coalesce into a single trailing-edge fetch per
+    // `PROGRESS_REFETCH_DEBOUNCE_MS` window so the in-flight reconstruction
+    // (powered by `events_to_session_history`) is pulled fresh enough to
+    // feel live without thrashing the history endpoint.
+    let progressTimer: ReturnType<typeof setTimeout> | undefined;
+    const onProgress = (event: { content?: Record<string, unknown> }) => {
+      if (!matches(event.content)) return;
+      if (progressTimer !== undefined) return;
+      progressTimer = setTimeout(() => {
+        progressTimer = undefined;
+        useChatHistoryStore
+          .getState()
+          .fetchHistory(historyKey, fetchFn, { force: true });
+      }, PROGRESS_REFETCH_DEBOUNCE_MS);
+    };
+
     const unsubUser = subscribe(EventType.UserMessage, onChatEvent as never);
     const unsubEnd = subscribe(
       EventType.AssistantMessageEnd,
       onChatEvent as never,
     );
+    const unsubProgress = subscribe(
+      EventType.AssistantTurnProgress,
+      onProgress as never,
+    );
     return () => {
       unsubUser();
       unsubEnd();
+      unsubProgress();
+      if (progressTimer !== undefined) clearTimeout(progressTimer);
     };
   }, [
     historyKey,
@@ -243,6 +292,59 @@ export function useChatHistorySync({
     isStreaming,
     streamKey,
   ]);
+
+  // Mid-turn refresh recovery: when the server reports an in-flight
+  // assistant turn for the agent we are watching, re-arm
+  // `streamingAgentInstanceId` so SpecList / TaskList / ChatPanel keep
+  // rendering the streaming affordances after a hard reload. The flag
+  // is cleared again when the in-flight marker disappears (turn ended)
+  // or when a local stream takes over via `useChatStream.sendMessage`.
+  const inFlightRecoveryRef = useRef<string | null>(null);
+  // Per-hook tracking of placeholder ids we have re-pushed from the
+  // server-reported in-flight turn. Carries the same role
+  // `pendingSpecIdsRef` plays inside `useChatStream`, but scoped to the
+  // refresh-recovery flow (where we don't own the original ref). The
+  // helpers in `optimistic-artifacts` skip duplicate pushes when the
+  // pending id is already tracked here.
+  const recoveredPendingSpecIdsRef = useRef<string[]>([]);
+  const recoveredPendingTaskIdsRef = useRef<string[]>([]);
+  useEffect(() => {
+    if (!watchAgentInstanceId) return;
+    const trailing = findTrailingInFlightAssistant(historyMessages);
+    const sidekick = useSidekickStore.getState();
+    if (trailing) {
+      const localStream = getStreamEntry(streamKey);
+      const localIsStreaming = !!localStream?.isStreaming;
+      if (localIsStreaming) return;
+      if (sidekick.streamingAgentInstanceId !== watchAgentInstanceId) {
+        sidekick.setStreamingAgentInstanceId(watchAgentInstanceId);
+      }
+      inFlightRecoveryRef.current = watchAgentInstanceId;
+      if (projectIdForSidekick) {
+        rebuildPendingArtifactsFromHistory(
+          historyMessages,
+          projectIdForSidekick,
+          sidekick,
+          {
+            pendingSpecIdsRef: recoveredPendingSpecIdsRef,
+            pendingTaskIdsRef: recoveredPendingTaskIdsRef,
+          },
+        );
+      }
+    } else if (
+      inFlightRecoveryRef.current === watchAgentInstanceId &&
+      sidekick.streamingAgentInstanceId === watchAgentInstanceId
+    ) {
+      sidekick.setStreamingAgentInstanceId(null);
+      inFlightRecoveryRef.current = null;
+      // Drop tracked placeholder ids — once the in-flight marker is
+      // gone the matching real spec/task entries should already have
+      // landed via WS (`SpecSaved` / `TaskSaved`) or will arrive on
+      // the next history refetch.
+      recoveredPendingSpecIdsRef.current = [];
+      recoveredPendingTaskIdsRef.current = [];
+    }
+  }, [historyMessages, streamKey, watchAgentInstanceId, projectIdForSidekick]);
 
   // After invalidateHistory the entry keeps status "ready" with fetchedAt=0
   // while the background re-fetch is in flight. Treat this as unresolved so

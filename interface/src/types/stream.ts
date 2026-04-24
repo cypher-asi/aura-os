@@ -39,6 +39,14 @@ export interface DisplaySessionEvent {
   thinkingText?: string;
   thinkingDurationMs?: number | null;
   timeline?: TimelineItem[];
+  /**
+   * Mirrors `SessionEvent.in_flight`: `true` when the server is still
+   * streaming this assistant turn. Drives mid-turn refresh recovery —
+   * see `useChatHistorySync` (re-arms `streamingAgentInstanceId`) and
+   * `useChatStream` (skips `clearGeneratedArtifacts` so sidekick
+   * pending placeholders survive the reload).
+   */
+  inFlight?: boolean;
 }
 
 export interface ToolCallEntry {

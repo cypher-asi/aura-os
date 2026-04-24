@@ -366,6 +366,7 @@ pub fn build_test_app_from_store(
         agent_runtime,
         loop_log,
         permissions_cache: aura_os_agent_runtime::policy::PermissionsCache::new(),
+        orbit_capacity_guard: Arc::new(aura_os_server::orbit_guard::OrbitCapacityGuard::new()),
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);

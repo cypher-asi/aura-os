@@ -352,6 +352,7 @@ pub fn events_to_session_history(
                     thinking: None,
                     thinking_duration_ms: None,
                     created_at: parse_dt(&event.created_at),
+                    in_flight: None,
                 });
             }
             "assistant_message_end" => {
@@ -394,6 +395,7 @@ pub fn events_to_session_history(
                     thinking,
                     thinking_duration_ms: None,
                     created_at: parse_dt(&event.created_at),
+                    in_flight: None,
                 });
             }
             "task_output" => {
@@ -414,13 +416,225 @@ pub fn events_to_session_history(
                     thinking: None,
                     thinking_duration_ms: None,
                     created_at: parse_dt(&event.created_at),
+                    in_flight: None,
                 });
             }
             _ => {}
         }
     }
 
+    if let Some(partial) = reconstruct_in_flight_assistant_turn(&sorted, agent_instance_id, pid) {
+        messages.push(partial);
+    }
+
     messages
+}
+
+/// Walk the persisted incremental events for the latest assistant turn that
+/// has been started but not yet terminated by `assistant_message_end`, and
+/// rebuild a snapshot `SessionEvent` from the deltas. Returns `None` when
+/// every started turn has a matching end row, when no `assistant_message_start`
+/// has been persisted yet, or when the trailing turn has produced no
+/// observable text / thinking / tool blocks at all.
+///
+/// The reconstruction mirrors `spawn_chat_persist_task` (in `chat.rs`) so the
+/// snapshot matches what would have been written out as
+/// `assistant_message_end` had the stream completed at this instant. This is
+/// what powers mid-turn refresh recovery: the UI gets back the partial text,
+/// thinking, and tool cards (including `pending-*` spec/task placeholders) it
+/// would have seen had it not lost its in-memory state.
+fn reconstruct_in_flight_assistant_turn(
+    sorted: &[StorageSessionEvent],
+    agent_instance_id: AgentInstanceId,
+    project_id: ProjectId,
+) -> Option<SessionEvent> {
+    fn message_id_of(event: &StorageSessionEvent) -> Option<&str> {
+        event
+            .content
+            .as_ref()
+            .and_then(|c| c.get("message_id"))
+            .and_then(|v| v.as_str())
+    }
+
+    let mut latest_start_idx: Option<usize> = None;
+    let mut latest_message_id: Option<String> = None;
+
+    for (idx, event) in sorted.iter().enumerate() {
+        let event_type = event.event_type.as_deref().unwrap_or("");
+        if event_type == "assistant_message_start" {
+            if let Some(mid) = message_id_of(event) {
+                latest_start_idx = Some(idx);
+                latest_message_id = Some(mid.to_string());
+            }
+        }
+    }
+
+    let start_idx = latest_start_idx?;
+    let target_message_id = latest_message_id?;
+
+    let already_ended = sorted.iter().skip(start_idx + 1).any(|event| {
+        event.event_type.as_deref() == Some("assistant_message_end")
+            && message_id_of(event) == Some(target_message_id.as_str())
+    });
+    if already_ended {
+        return None;
+    }
+
+    let start_event = &sorted[start_idx];
+
+    let mut full_text = String::new();
+    let mut text_segment = String::new();
+    let mut thinking_buf = String::new();
+    let mut content_blocks: Vec<ChatContentBlock> = Vec::new();
+    let mut last_tool_use_id = String::new();
+
+    for event in sorted.iter().skip(start_idx + 1) {
+        if message_id_of(event) != Some(target_message_id.as_str()) {
+            continue;
+        }
+        let event_type = event.event_type.as_deref().unwrap_or("");
+        let content = event.content.as_ref();
+        match event_type {
+            "text_delta" => {
+                if let Some(text) = content.and_then(|c| c.get("text")).and_then(|v| v.as_str()) {
+                    full_text.push_str(text);
+                    text_segment.push_str(text);
+                }
+            }
+            "thinking_delta" => {
+                if let Some(text) = content
+                    .and_then(|c| c.get("thinking"))
+                    .and_then(|v| v.as_str())
+                {
+                    thinking_buf.push_str(text);
+                }
+            }
+            "tool_use_start" => {
+                if !text_segment.is_empty() {
+                    content_blocks.push(ChatContentBlock::Text {
+                        text: std::mem::take(&mut text_segment),
+                    });
+                }
+                let id = content
+                    .and_then(|c| c.get("id"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let name = content
+                    .and_then(|c| c.get("name"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                if id.is_empty() && name.is_empty() {
+                    continue;
+                }
+                last_tool_use_id = id.clone();
+                content_blocks.push(ChatContentBlock::ToolUse {
+                    id,
+                    name,
+                    input: serde_json::Value::Null,
+                });
+            }
+            "tool_call_snapshot" => {
+                let snap_id = content
+                    .and_then(|c| c.get("id"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let snap_input = content
+                    .and_then(|c| c.get("input"))
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
+                let snap_name = content
+                    .and_then(|c| c.get("name"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let mut patched = false;
+                for block in content_blocks.iter_mut().rev() {
+                    if let ChatContentBlock::ToolUse { id, input, .. } = block {
+                        if *id == snap_id {
+                            *input = snap_input.clone();
+                            patched = true;
+                            break;
+                        }
+                    }
+                }
+                if !patched && !snap_id.is_empty() {
+                    content_blocks.push(ChatContentBlock::ToolUse {
+                        id: snap_id,
+                        name: snap_name,
+                        input: snap_input,
+                    });
+                }
+            }
+            "tool_result" => {
+                let tool_use_id = content
+                    .and_then(|c| c.get("tool_use_id"))
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string)
+                    .unwrap_or_else(|| last_tool_use_id.clone());
+                let result_text = content
+                    .and_then(|c| c.get("result"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let is_error = content
+                    .and_then(|c| c.get("is_error"))
+                    .and_then(|v| v.as_bool());
+                // Mirror chat.rs: any tool_use still carrying `Null` input
+                // gets normalized to `{}` so replays don't fail validation.
+                for block in content_blocks.iter_mut().rev() {
+                    if let ChatContentBlock::ToolUse { id, input, .. } = block {
+                        if *id == tool_use_id && matches!(input, serde_json::Value::Null) {
+                            *input = serde_json::json!({});
+                            break;
+                        }
+                    }
+                }
+                content_blocks.push(ChatContentBlock::ToolResult {
+                    tool_use_id,
+                    content: result_text,
+                    is_error,
+                });
+            }
+            _ => {}
+        }
+    }
+
+    if !text_segment.is_empty() {
+        content_blocks.push(ChatContentBlock::Text {
+            text: std::mem::take(&mut text_segment),
+        });
+    }
+
+    let blocks_opt = if content_blocks.is_empty() {
+        None
+    } else {
+        Some(content_blocks)
+    };
+    let thinking_opt = if thinking_buf.is_empty() {
+        None
+    } else {
+        Some(thinking_buf)
+    };
+
+    if full_text.is_empty() && blocks_opt.is_none() && thinking_opt.is_none() {
+        return None;
+    }
+
+    Some(SessionEvent {
+        event_id: SessionEventId::new(),
+        agent_instance_id,
+        project_id,
+        role: ChatRole::Assistant,
+        content: full_text,
+        content_blocks: blocks_opt,
+        thinking: thinking_opt,
+        thinking_duration_ms: None,
+        created_at: parse_dt(&start_event.created_at),
+        in_flight: Some(true),
+    })
 }
 
 /// Deserialize a stored `content_blocks` JSON array per-entry so that one
@@ -495,7 +709,7 @@ fn is_incomplete_write_tool_use(name: &str, input: &serde_json::Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{agent_from_network, events_to_session_history};
-    use aura_os_core::{AgentPermissions, ChatContentBlock};
+    use aura_os_core::{AgentPermissions, ChatContentBlock, ChatRole};
     use aura_os_network::NetworkAgent;
     use aura_os_storage::StorageSessionEvent;
 
@@ -766,5 +980,255 @@ mod tests {
         let history = events_to_session_history(&events, "agent-1", "project-1");
 
         assert!(history.is_empty());
+    }
+
+    fn raw_event(id: &str, ts: &str, event_type: &str, content: serde_json::Value) -> StorageSessionEvent {
+        StorageSessionEvent {
+            id: id.to_string(),
+            session_id: Some("session-1".to_string()),
+            user_id: None,
+            agent_id: None,
+            sender: None,
+            project_id: Some("project-1".to_string()),
+            org_id: None,
+            event_type: Some(event_type.to_string()),
+            content: Some(content),
+            created_at: Some(ts.to_string()),
+        }
+    }
+
+    #[test]
+    fn events_to_session_history_reconstructs_partial_assistant_turn_text_only() {
+        // Mid-turn refresh recovery: a turn that has streamed some `text_delta`
+        // rows but not yet emitted `assistant_message_end` must surface as a
+        // synthesized in-flight `SessionEvent` so the chat panel keeps
+        // rendering the partial response after the page is reloaded.
+        let events = vec![
+            raw_event(
+                "evt-user",
+                "2026-01-01T00:00:00Z",
+                "user_message",
+                serde_json::json!({ "text": "hi" }),
+            ),
+            raw_event(
+                "evt-start",
+                "2026-01-01T00:00:01Z",
+                "assistant_message_start",
+                serde_json::json!({ "message_id": "m1", "seq": 1 }),
+            ),
+            raw_event(
+                "evt-d1",
+                "2026-01-01T00:00:02Z",
+                "text_delta",
+                serde_json::json!({ "message_id": "m1", "text": "Hello, " }),
+            ),
+            raw_event(
+                "evt-d2",
+                "2026-01-01T00:00:03Z",
+                "text_delta",
+                serde_json::json!({ "message_id": "m1", "text": "world" }),
+            ),
+        ];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 2, "user + reconstructed assistant in-flight");
+        assert_eq!(history[0].role, ChatRole::User);
+        let assistant = &history[1];
+        assert_eq!(assistant.role, ChatRole::Assistant);
+        assert_eq!(assistant.content, "Hello, world");
+        assert_eq!(assistant.in_flight, Some(true));
+        let blocks = assistant.content_blocks.as_ref().expect("text block flushed");
+        assert_eq!(blocks.len(), 1);
+        assert!(matches!(&blocks[0], ChatContentBlock::Text { text } if text == "Hello, world"));
+    }
+
+    #[test]
+    fn events_to_session_history_reconstructs_partial_turn_with_tool_blocks() {
+        // Tool calls fired during an in-flight turn must come back as
+        // `tool_use` (+ optional `tool_result`) blocks so the UI can rebuild
+        // its tool cards and `pending-*` spec/task placeholders on refresh.
+        let events = vec![
+            raw_event(
+                "evt-start",
+                "2026-01-01T00:00:01Z",
+                "assistant_message_start",
+                serde_json::json!({ "message_id": "m1", "seq": 1 }),
+            ),
+            raw_event(
+                "evt-text",
+                "2026-01-01T00:00:02Z",
+                "text_delta",
+                serde_json::json!({ "message_id": "m1", "text": "calling " }),
+            ),
+            raw_event(
+                "evt-tool-start",
+                "2026-01-01T00:00:03Z",
+                "tool_use_start",
+                serde_json::json!({ "message_id": "m1", "id": "tool-1", "name": "create_spec", "seq": 2 }),
+            ),
+            raw_event(
+                "evt-snap",
+                "2026-01-01T00:00:04Z",
+                "tool_call_snapshot",
+                serde_json::json!({
+                    "message_id": "m1",
+                    "id": "tool-1",
+                    "name": "create_spec",
+                    "input": { "title": "Hello" },
+                }),
+            ),
+            raw_event(
+                "evt-result",
+                "2026-01-01T00:00:05Z",
+                "tool_result",
+                serde_json::json!({
+                    "message_id": "m1",
+                    "tool_use_id": "tool-1",
+                    "name": "create_spec",
+                    "result": "spec-123",
+                    "is_error": false,
+                }),
+            ),
+        ];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 1);
+        let assistant = &history[0];
+        assert_eq!(assistant.in_flight, Some(true));
+        let blocks = assistant.content_blocks.as_ref().expect("blocks");
+        assert_eq!(blocks.len(), 3, "text, tool_use, tool_result");
+        assert!(matches!(&blocks[0], ChatContentBlock::Text { text } if text == "calling "));
+        match &blocks[1] {
+            ChatContentBlock::ToolUse { id, name, input } => {
+                assert_eq!(id, "tool-1");
+                assert_eq!(name, "create_spec");
+                assert_eq!(input.get("title").and_then(|v| v.as_str()), Some("Hello"));
+            }
+            other => panic!("expected tool_use, got {:?}", other),
+        }
+        match &blocks[2] {
+            ChatContentBlock::ToolResult { tool_use_id, content, is_error } => {
+                assert_eq!(tool_use_id, "tool-1");
+                assert_eq!(content, "spec-123");
+                assert_eq!(*is_error, Some(false));
+            }
+            other => panic!("expected tool_result, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn events_to_session_history_skips_reconstruction_when_end_present() {
+        // Once `assistant_message_end` has landed, the in-flight reconstruction
+        // path must not double-render the turn — the existing terminal-row
+        // branch already produced a complete `SessionEvent`.
+        let events = vec![
+            raw_event(
+                "evt-start",
+                "2026-01-01T00:00:01Z",
+                "assistant_message_start",
+                serde_json::json!({ "message_id": "m1", "seq": 1 }),
+            ),
+            raw_event(
+                "evt-d1",
+                "2026-01-01T00:00:02Z",
+                "text_delta",
+                serde_json::json!({ "message_id": "m1", "text": "hello" }),
+            ),
+            raw_event(
+                "evt-end",
+                "2026-01-01T00:00:03Z",
+                "assistant_message_end",
+                serde_json::json!({
+                    "message_id": "m1",
+                    "text": "hello",
+                    "thinking": null,
+                    "content_blocks": [{ "type": "text", "text": "hello" }],
+                }),
+            ),
+        ];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 1, "only the terminal turn");
+        assert_eq!(history[0].in_flight, None, "terminal turn is not in-flight");
+    }
+
+    #[test]
+    fn events_to_session_history_reconstruction_captures_thinking() {
+        let events = vec![
+            raw_event(
+                "evt-start",
+                "2026-01-01T00:00:01Z",
+                "assistant_message_start",
+                serde_json::json!({ "message_id": "m1", "seq": 1 }),
+            ),
+            raw_event(
+                "evt-think",
+                "2026-01-01T00:00:02Z",
+                "thinking_delta",
+                serde_json::json!({ "message_id": "m1", "thinking": "Considering options..." }),
+            ),
+        ];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 1);
+        let assistant = &history[0];
+        assert_eq!(assistant.in_flight, Some(true));
+        assert_eq!(
+            assistant.thinking.as_deref(),
+            Some("Considering options...")
+        );
+        assert!(assistant.content.is_empty(), "no text yet");
+        assert!(assistant.content_blocks.is_none(), "no blocks yet");
+    }
+
+    #[test]
+    fn events_to_session_history_reconstruction_only_uses_latest_message_id() {
+        // Multiple turns in the same session: only the trailing in-flight one
+        // (its `message_id` lacks an `assistant_message_end`) should be
+        // reconstructed. Earlier completed turns are produced by the normal
+        // `assistant_message_end` branch.
+        let events = vec![
+            raw_event(
+                "evt-start-1",
+                "2026-01-01T00:00:00Z",
+                "assistant_message_start",
+                serde_json::json!({ "message_id": "old", "seq": 1 }),
+            ),
+            raw_event(
+                "evt-end-1",
+                "2026-01-01T00:00:01Z",
+                "assistant_message_end",
+                serde_json::json!({
+                    "message_id": "old",
+                    "text": "first turn",
+                    "thinking": null,
+                    "content_blocks": [{ "type": "text", "text": "first turn" }],
+                }),
+            ),
+            raw_event(
+                "evt-start-2",
+                "2026-01-01T00:00:02Z",
+                "assistant_message_start",
+                serde_json::json!({ "message_id": "new", "seq": 2 }),
+            ),
+            raw_event(
+                "evt-d-2",
+                "2026-01-01T00:00:03Z",
+                "text_delta",
+                serde_json::json!({ "message_id": "new", "text": "second " }),
+            ),
+        ];
+
+        let history = events_to_session_history(&events, "agent-1", "project-1");
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].in_flight, None, "completed turn unchanged");
+        assert_eq!(history[0].content, "first turn");
+        assert_eq!(history[1].in_flight, Some(true));
+        assert_eq!(history[1].content, "second ");
     }
 }

@@ -493,6 +493,41 @@ fn publish_assistant_message_end_event(
     }));
 }
 
+/// Publish a heartbeat-style progress event on the WS bus for an
+/// in-flight assistant turn. Carries no payload beyond the routing
+/// keys so the chat-history-sync hook on the client can throttle
+/// itself into a single force-refetch per emission and pull the
+/// latest reconstructed partial turn from `events_to_session_history`
+/// — rather than us trying to ship token-level deltas over the bus.
+///
+/// Throttled to at most ~one publish per
+/// `ASSISTANT_TURN_PROGRESS_THROTTLE` (currently 400ms) inside
+/// `spawn_chat_persist_task`. Final state is delivered by the
+/// existing `assistant_message_end` publish, so a missed progress
+/// event just means slightly later refresh; correctness is preserved.
+fn publish_assistant_turn_progress_event(
+    bus: &tokio::sync::broadcast::Sender<serde_json::Value>,
+    ctx: &ChatPersistCtx,
+    message_id: &str,
+) {
+    let _ = bus.send(serde_json::json!({
+        "type": "assistant_turn_progress",
+        "message_id": message_id,
+        "session_id": ctx.session_id,
+        "project_id": ctx.project_id,
+        "project_agent_id": ctx.project_agent_id,
+        "agent_instance_id": ctx.project_agent_id,
+        "agent_id": ctx.agent_id,
+    }));
+}
+
+/// Minimum time between consecutive `assistant_turn_progress`
+/// publishes for a single turn. Tuned to balance UI responsiveness
+/// after a refresh against history-API request load — on the order
+/// of two refetches per second is enough to feel "live".
+const ASSISTANT_TURN_PROGRESS_THROTTLE: std::time::Duration =
+    std::time::Duration::from_millis(400);
+
 pub(crate) fn spawn_chat_persist_task(
     rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
     ctx: ChatPersistCtx,
@@ -509,6 +544,11 @@ pub(crate) fn spawn_chat_persist_task(
         let mut last_tool_use_id = String::new();
         let mut persisted_events: u32 = 0;
         let mut end_persisted = false;
+        // Last time we emitted an `assistant_turn_progress` for this
+        // turn; gates the throttled WS heartbeat so the client can
+        // refetch reconstructed partial turns after a mid-turn refresh
+        // without us flooding the bus with one event per token.
+        let mut last_progress_at: Option<std::time::Instant> = None;
 
         let persist = |event_type: &str, content: serde_json::Value| {
             let ctx = ctx.clone();
@@ -548,6 +588,12 @@ pub(crate) fn spawn_chat_persist_task(
             match rx.recv().await {
                 Ok(evt) => {
                     seq += 1;
+                    // Tracks whether the current event represents user-visible
+                    // turn progress (new text, thinking, or tool activity). Set
+                    // by each delta arm below so the throttled progress publish
+                    // at the end of the loop iteration only fires when there's
+                    // something new to refetch.
+                    let mut produced_progress = false;
                     match evt {
                         HarnessOutbound::SessionReady(_) => {}
                         HarnessOutbound::AssistantMessageStart(ref start) => {
@@ -563,6 +609,11 @@ pub(crate) fn spawn_chat_persist_task(
                             {
                                 persisted_events += 1;
                             }
+                            // Tell clients that just refreshed mid-turn that
+                            // a new turn has begun, so they can flip
+                            // `streamingAgentInstanceId` back on even before
+                            // any deltas land.
+                            produced_progress = true;
                         }
                         HarnessOutbound::TextDelta(ref delta) => {
                             full_text.push_str(&delta.text);
@@ -579,6 +630,7 @@ pub(crate) fn spawn_chat_persist_task(
                             {
                                 persisted_events += 1;
                             }
+                            produced_progress = true;
                         }
                         HarnessOutbound::ThinkingDelta(ref delta) => {
                             thinking_buf.push_str(&delta.thinking);
@@ -594,6 +646,7 @@ pub(crate) fn spawn_chat_persist_task(
                             {
                                 persisted_events += 1;
                             }
+                            produced_progress = true;
                         }
                         HarnessOutbound::ToolUseStart(ref tool) => {
                             if !text_segment.is_empty() {
@@ -622,6 +675,7 @@ pub(crate) fn spawn_chat_persist_task(
                             {
                                 persisted_events += 1;
                             }
+                            produced_progress = true;
                         }
                         HarnessOutbound::ToolCallSnapshot(ref snap) => {
                             if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
@@ -651,6 +705,7 @@ pub(crate) fn spawn_chat_persist_task(
                             {
                                 persisted_events += 1;
                             }
+                            produced_progress = true;
                         }
                         HarnessOutbound::ToolResult(ref result) => {
                             // Fill in any tool_use block that still has a null
@@ -689,6 +744,7 @@ pub(crate) fn spawn_chat_persist_task(
                             {
                                 persisted_events += 1;
                             }
+                            produced_progress = true;
                         }
                         HarnessOutbound::AssistantMessageEnd(ref end) => {
                             if !text_segment.is_empty() {
@@ -802,6 +858,35 @@ pub(crate) fn spawn_chat_persist_task(
                         | HarnessOutbound::GenerationPartialImage(_)
                         | HarnessOutbound::GenerationCompleted(_)
                         | HarnessOutbound::GenerationError(_) => {}
+                    }
+
+                    // Throttled live-progress heartbeat. The client uses this
+                    // signal (carried over the WS event bus) to refetch the
+                    // chat history and pick up the in-flight reconstructed
+                    // assistant turn — supporting mid-turn page refreshes
+                    // without losing chat / sidekick state. We deliberately
+                    // do not ship token-level deltas here; the periodic
+                    // refetch is enough because `events_to_session_history`
+                    // already rebuilds the partial turn from the persisted
+                    // delta rows. `assistant_message_end` continues to be
+                    // the authoritative finalization signal.
+                    if produced_progress {
+                        let now = std::time::Instant::now();
+                        let should_publish = match last_progress_at {
+                            None => true,
+                            Some(prev) => {
+                                now.saturating_duration_since(prev)
+                                    >= ASSISTANT_TURN_PROGRESS_THROTTLE
+                            }
+                        };
+                        if should_publish && !message_id.is_empty() {
+                            publish_assistant_turn_progress_event(
+                                &event_bus,
+                                &ctx,
+                                &message_id,
+                            );
+                            last_progress_at = Some(now);
+                        }
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
@@ -3143,6 +3228,7 @@ mod tests {
             thinking: None,
             thinking_duration_ms: None,
             created_at: parse_dt(&None),
+            in_flight: None,
         }
     }
 
@@ -3162,6 +3248,7 @@ mod tests {
             thinking: None,
             thinking_duration_ms: None,
             created_at: parse_dt(&None),
+            in_flight: None,
         };
         let assistant = assistant_event(
             "",
@@ -3321,6 +3408,7 @@ mod tests {
             thinking: None,
             thinking_duration_ms: None,
             created_at: parse_dt(&None),
+            in_flight: None,
         };
         let recent_assistant = assistant_event(
             "",
@@ -3347,6 +3435,7 @@ mod tests {
             thinking: None,
             thinking_duration_ms: None,
             created_at: parse_dt(&None),
+            in_flight: None,
         };
 
         let history = session_events_to_conversation_history(&[

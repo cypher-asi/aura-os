@@ -39,6 +39,7 @@ export function buildDisplayEvents(msgs: SessionEvent[]): DisplaySessionEvent[] 
           m.role === "assistant"
             ? buildTimelineFromBlocks(allBlocks, thinking, m.content)
             : undefined,
+        inFlight: m.in_flight ?? undefined,
       };
     });
 }

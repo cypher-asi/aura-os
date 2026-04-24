@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Spec, Task } from "../../types";
+import type { DisplaySessionEvent } from "../../types/stream";
 import {
   clearAllPendingArtifacts,
   dropPendingByTitle,
+  findTrailingInFlightAssistant,
   pushPendingSpec,
   pushPendingTask,
+  rebuildPendingArtifactsFromHistory,
   removePendingArtifact,
 } from "./optimistic-artifacts";
 
@@ -204,6 +207,124 @@ describe("optimistic-artifacts", () => {
       const remove = vi.fn();
       clearAllPendingArtifacts(pendingRef, remove);
       expect(remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("findTrailingInFlightAssistant", () => {
+    it("returns undefined when the transcript is empty", () => {
+      expect(findTrailingInFlightAssistant([])).toBeUndefined();
+    });
+
+    it("returns undefined when the trailing message is not in-flight", () => {
+      const msgs: DisplaySessionEvent[] = [
+        { id: "a", role: "assistant", content: "done", inFlight: false },
+      ];
+      expect(findTrailingInFlightAssistant(msgs)).toBeUndefined();
+    });
+
+    it("returns the trailing assistant message when it is in-flight", () => {
+      const msgs: DisplaySessionEvent[] = [
+        { id: "u", role: "user", content: "hi" },
+        { id: "a", role: "assistant", content: "...", inFlight: true },
+      ];
+      expect(findTrailingInFlightAssistant(msgs)?.id).toBe("a");
+    });
+
+    it("ignores in-flight markers on non-trailing turns", () => {
+      const msgs: DisplaySessionEvent[] = [
+        { id: "a1", role: "assistant", content: "x", inFlight: true },
+        { id: "u", role: "user", content: "hi" },
+        { id: "a2", role: "assistant", content: "y", inFlight: false },
+      ];
+      expect(findTrailingInFlightAssistant(msgs)).toBeUndefined();
+    });
+  });
+
+  describe("rebuildPendingArtifactsFromHistory", () => {
+    it("re-pushes pending spec/task placeholders for unresolved tool calls in the trailing in-flight turn", () => {
+      const sk = makeSidekick();
+      const refs = {
+        pendingSpecIdsRef: { current: [] as string[] },
+        pendingTaskIdsRef: { current: [] as string[] },
+      };
+      const messages: DisplaySessionEvent[] = [
+        {
+          id: "a1",
+          role: "assistant",
+          content: "Working…",
+          inFlight: true,
+          toolCalls: [
+            {
+              id: "tc-spec",
+              name: "create_spec",
+              input: { title: "01: Core" },
+              pending: true,
+            } as never,
+            {
+              id: "tc-task",
+              name: "create_task",
+              input: { title: "Implement core" },
+              pending: true,
+            } as never,
+          ],
+        },
+      ];
+
+      rebuildPendingArtifactsFromHistory(messages, "p1", sk as never, refs);
+
+      expect(sk.pushSpec).toHaveBeenCalledTimes(1);
+      expect(sk.pushSpec.mock.calls[0][0].spec_id).toBe("pending-tc-spec");
+      expect(refs.pendingSpecIdsRef.current).toEqual(["pending-tc-spec"]);
+
+      expect(sk.pushTask).toHaveBeenCalledTimes(1);
+      expect(sk.pushTask.mock.calls[0][0].task_id).toBe("pending-tc-task");
+      expect(refs.pendingTaskIdsRef.current).toEqual(["pending-tc-task"]);
+    });
+
+    it("skips tool calls that already have a result (the real entry will land via SpecSaved/TaskSaved)", () => {
+      const sk = makeSidekick();
+      const refs = {
+        pendingSpecIdsRef: { current: [] as string[] },
+        pendingTaskIdsRef: { current: [] as string[] },
+      };
+      const messages: DisplaySessionEvent[] = [
+        {
+          id: "a1",
+          role: "assistant",
+          content: "Working…",
+          inFlight: true,
+          toolCalls: [
+            {
+              id: "tc-spec",
+              name: "create_spec",
+              input: { title: "01: Core" },
+              result: '{"spec":{"spec_id":"real","title":"01: Core"}}',
+              pending: false,
+            } as never,
+          ],
+        },
+      ];
+
+      rebuildPendingArtifactsFromHistory(messages, "p1", sk as never, refs);
+
+      expect(sk.pushSpec).not.toHaveBeenCalled();
+      expect(refs.pendingSpecIdsRef.current).toEqual([]);
+    });
+
+    it("is a no-op when there is no trailing in-flight assistant turn", () => {
+      const sk = makeSidekick();
+      const refs = {
+        pendingSpecIdsRef: { current: [] as string[] },
+        pendingTaskIdsRef: { current: [] as string[] },
+      };
+      rebuildPendingArtifactsFromHistory(
+        [{ id: "a", role: "assistant", content: "done", inFlight: false }],
+        "p1",
+        sk as never,
+        refs,
+      );
+      expect(sk.pushSpec).not.toHaveBeenCalled();
+      expect(sk.pushTask).not.toHaveBeenCalled();
     });
   });
 

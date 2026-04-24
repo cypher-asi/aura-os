@@ -202,6 +202,7 @@ async fn session_events_to_conversation_history_correct_roles() {
             thinking: None,
             thinking_duration_ms: None,
             created_at: now,
+            in_flight: None,
         },
         SessionEvent {
             event_id: SessionEventId::new(),
@@ -213,6 +214,7 @@ async fn session_events_to_conversation_history_correct_roles() {
             thinking: Some("thinking...".into()),
             thinking_duration_ms: None,
             created_at: now,
+            in_flight: None,
         },
         SessionEvent {
             event_id: SessionEventId::new(),
@@ -224,6 +226,7 @@ async fn session_events_to_conversation_history_correct_roles() {
             thinking: None,
             thinking_duration_ms: None,
             created_at: now,
+            in_flight: None,
         },
         SessionEvent {
             event_id: SessionEventId::new(),
@@ -235,6 +238,7 @@ async fn session_events_to_conversation_history_correct_roles() {
             thinking: None,
             thinking_duration_ms: None,
             created_at: now,
+            in_flight: None,
         },
     ];
 
@@ -615,6 +619,7 @@ fn make_assistant_event_with_blocks(content_blocks: Vec<ChatContentBlock>) -> Se
         thinking: None,
         thinking_duration_ms: None,
         created_at: chrono::Utc::now(),
+        in_flight: None,
     }
 }
 
@@ -639,6 +644,7 @@ async fn test_agent_harness_history_strips_dangling_tool_use_block() {
             thinking: None,
             thinking_duration_ms: None,
             created_at: chrono::Utc::now(),
+            in_flight: None,
         },
         make_assistant_event_with_blocks(vec![
             ChatContentBlock::Text {

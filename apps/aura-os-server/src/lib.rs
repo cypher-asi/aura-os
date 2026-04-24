@@ -9,7 +9,7 @@ pub mod handlers;
 pub mod harness_client;
 pub(crate) mod harness_gateway;
 mod network_bridge;
-pub(crate) mod orbit_guard;
+pub mod orbit_guard;
 
 pub mod loop_log;
 

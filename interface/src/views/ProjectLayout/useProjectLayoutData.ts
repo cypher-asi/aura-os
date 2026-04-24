@@ -20,6 +20,7 @@ import {
   useTaskOutputPanelStore,
   type PanelTaskStatus,
 } from "../../stores/task-output-panel-store";
+import { useSidekickPreviewUrlSync } from "../../hooks/use-sidekick-preview-url-sync";
 
 interface ProjectLayoutData {
   displayProject: Project | null;
@@ -287,6 +288,14 @@ export function useProjectLayoutData(): ProjectLayoutData {
   // Preserve the registered project actions across query/cache updates so the
   // sidekick does not briefly lose context and blink out between re-renders.
   useEffect(() => unregister, [unregister]);
+
+  // Mid-refresh recovery for the sidekick preview pane: rehydrate the
+  // open spec / task panel from the `?preview=...` URL hint once the
+  // matching list has loaded, and keep that hint up to date as the
+  // user navigates the previews. Owned here because this is the
+  // highest-level hook that already has both `initialSpecs` and
+  // `initialTasks` in hand.
+  useSidekickPreviewUrlSync({ specs: initialSpecs, tasks: initialTasks });
 
   return { displayProject, initialSpecs, initialTasks, loading, loadingProjects, projects };
 }
