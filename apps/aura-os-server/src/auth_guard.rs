@@ -395,23 +395,6 @@ mod tests {
         );
         let (event_broadcast, _) = tokio::sync::broadcast::channel(16);
         let router_url = "http://localhost:9998".to_string();
-        let agent_service_arc = Arc::new(aura_os_agents::AgentService::new(store.clone(), None));
-        let task_service_arc = Arc::new(aura_os_tasks::TaskService::new(store.clone(), None));
-        let org_service_arc = Arc::new(aura_os_orgs::OrgService::new(store.clone()));
-        let automaton_client_arc =
-            Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999"));
-        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
-            event_broadcast.clone(),
-            std::env::temp_dir(),
-            store.clone(),
-            agent_service_arc.clone(),
-            org_service_arc.clone(),
-            automaton_client_arc.clone(),
-            None,
-            task_service_arc.clone(),
-            router_url.clone(),
-            reqwest::Client::new(),
-        ));
         let agent_event_listener = Arc::new(crate::agent_events::AgentEventListener::new(100));
         agent_event_listener.spawn(event_broadcast.subscribe());
 
@@ -463,7 +446,6 @@ mod tests {
             agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
             router_url,
             http_client: reqwest::Client::new(),
-            process_executor,
             agent_event_listener,
             loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
                 std::env::temp_dir().join(format!("aura-test-loop-{}-{id}", std::process::id())),

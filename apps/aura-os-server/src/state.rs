@@ -510,7 +510,6 @@ pub struct AppState {
     pub agent_discovery_cache: AgentDiscoveryCache,
     pub router_url: String,
     pub http_client: reqwest::Client,
-    pub process_executor: Arc<aura_os_process::ProcessExecutor>,
     pub agent_event_listener: Arc<AgentEventListener>,
     /// Filesystem logger for the dev automation loop. Every active
     /// automaton gets a run bundle on disk containing the full event

@@ -277,18 +277,6 @@ mod tests {
         let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
         let harness_http = Arc::new(HarnessHttpGateway::new(harness_base.clone()));
         let router_url = "http://localhost:19080".to_string();
-        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
-            event_broadcast.clone(),
-            store_dir.path().to_path_buf(),
-            store.clone(),
-            agent_service.clone(),
-            org_service.clone(),
-            automaton_client.clone(),
-            None,
-            task_service.clone(),
-            router_url.clone(),
-            reqwest::Client::new(),
-        ));
         let agent_event_listener = Arc::new(crate::agent_events::AgentEventListener::new(100));
         agent_event_listener.spawn(event_broadcast.subscribe());
 
@@ -330,7 +318,6 @@ mod tests {
                 agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
                 router_url,
                 http_client: reqwest::Client::new(),
-                process_executor,
                 agent_event_listener,
                 loop_log: Arc::new(crate::loop_log::LoopLogWriter::new(
                     store_dir.path().join("loop_logs"),

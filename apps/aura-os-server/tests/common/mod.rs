@@ -288,18 +288,6 @@ pub fn build_test_app_from_store(
     );
 
     let router_url = "http://localhost:19080".to_string();
-    let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
-        event_broadcast.clone(),
-        data_dir.clone(),
-        store.clone(),
-        agent_service.clone(),
-        org_service.clone(),
-        automaton_client.clone(),
-        storage_client.clone(),
-        task_service.clone(),
-        router_url.clone(),
-        reqwest::Client::new(),
-    ));
     let agent_event_listener = Arc::new(aura_os_server::agent_events::AgentEventListener::new(100));
     agent_event_listener.spawn(event_broadcast.subscribe());
 
@@ -342,7 +330,6 @@ pub fn build_test_app_from_store(
         agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
         router_url,
         http_client: reqwest::Client::new(),
-        process_executor,
         agent_event_listener,
         loop_log,
         orbit_capacity_guard: Arc::new(aura_os_server::orbit_guard::OrbitCapacityGuard::new()),

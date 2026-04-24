@@ -62,6 +62,28 @@ pub struct HarnessProbeResult {
     pub error: Option<String>,
 }
 
+/// Request payload for `POST /automaton/start` when starting harness-owned work.
+#[derive(Debug, Clone, Serialize)]
+pub struct HarnessAutomatonStartParams {
+    pub kind: String,
+    pub project_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub process_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input: Option<serde_json::Value>,
+}
+
+/// Response payload from `POST /automaton/start`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct HarnessAutomatonStartResponse {
+    #[serde(alias = "id")]
+    pub automaton_id: String,
+    #[serde(alias = "ws_url", alias = "stream_url")]
+    pub event_stream_url: String,
+}
+
 /// Errors produced by [`HarnessClient`].
 #[derive(Debug, thiserror::Error)]
 pub enum HarnessClientError {
@@ -140,6 +162,21 @@ impl HarnessClient {
     ) -> Result<SubmitTxResponse, HarnessClientError> {
         self.submit_tx(agent_id, HarnessTxKind::UserPrompt, prompt.as_bytes(), jwt)
             .await
+    }
+
+    /// Start an automaton through the harness HTTP API.
+    #[instrument(skip(self, params, jwt), fields(kind = %params.kind, project_id = %params.project_id))]
+    pub async fn start_automaton(
+        &self,
+        params: &HarnessAutomatonStartParams,
+        jwt: Option<&str>,
+    ) -> Result<HarnessAutomatonStartResponse, HarnessClientError> {
+        let req = self
+            .http
+            .post(format!("{}/automaton/start", self.base_url))
+            .json(params);
+        let resp = apply_jwt(req, jwt)?.send().await?;
+        json_response(resp).await
     }
 
     /// Fetch the current head sequence number for an agent.

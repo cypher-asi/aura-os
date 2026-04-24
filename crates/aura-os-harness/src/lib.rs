@@ -26,8 +26,8 @@ pub use aura_os_link::{
 };
 
 pub use client::{
-    bearer_headers, GetHeadResponse, HarnessClient, HarnessClientError, HarnessProbeResult,
-    HarnessTxKind, SubmitTxResponse,
+    bearer_headers, GetHeadResponse, HarnessAutomatonStartParams, HarnessAutomatonStartResponse,
+    HarnessClient, HarnessClientError, HarnessProbeResult, HarnessTxKind, SubmitTxResponse,
 };
 pub use session::{SessionBridge, SessionBridgeError, SessionBridgeStarted, SessionBridgeTurn};
 pub use signals::{HarnessFailureKind, HarnessSignal};

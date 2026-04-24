@@ -6,8 +6,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use aura_os_core::{
-    AgentId, OrgId, Process, ProcessArtifact, ProcessEvent, ProcessFolder, ProcessId, ProcessNode,
-    ProcessNodeConnection, ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTrigger, ProjectId,
+    AgentId, OrgId, Process, ProcessArtifact, ProcessEvent, ProcessFolder, ProcessNode,
+    ProcessNodeConnection, ProcessNodeType, ProcessRun, ProcessRunTrigger, ProjectId,
 };
 use aura_os_storage::{
     StorageClient, StorageProcess, StorageProcessArtifact, StorageProcessEvent,
@@ -528,24 +528,17 @@ pub(crate) async fn trigger_process(
     AuthSession(_session): AuthSession,
     Path(id): Path<String>,
 ) -> ApiResult<Json<ProcessRun>> {
-    let _ = require_process_storage_client(&state)?;
-    let process_id: ProcessId = id
-        .parse()
-        .map_err(|_| ApiError::bad_request("invalid process ID"))?;
+    let client = require_process_storage_client(&state)?;
+    let run = crate::process_automaton::trigger_process_run(
+        &state,
+        client,
+        &id,
+        ProcessRunTrigger::Manual,
+        &jwt,
+    )
+    .await?;
 
-    let run = state
-        .process_executor
-        .trigger_with_auth(&process_id, ProcessRunTrigger::Manual, Some(&jwt))
-        .await
-        .map_err(|e| {
-            if matches!(e, aura_os_process::ProcessError::RunAlreadyActive) {
-                ApiError::conflict(e.to_string())
-            } else {
-                ApiError::internal(e.to_string())
-            }
-        })?;
-
-    Ok(Json(run))
+    Ok(Json(conv_run(run)))
 }
 
 // ---------------------------------------------------------------------------
@@ -733,25 +726,8 @@ pub(crate) async fn cancel_run(
     AuthSession(_session): AuthSession,
     Path((id, run_id_str)): Path<(String, String)>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let _ = require_process_storage_client(&state)?;
-    let process_id: ProcessId = id
-        .parse()
-        .map_err(|_| ApiError::bad_request("invalid process ID"))?;
-    let run_id: ProcessRunId = run_id_str
-        .parse()
-        .map_err(|_| ApiError::bad_request("invalid run ID"))?;
-
-    state
-        .process_executor
-        .cancel_run(&process_id, &run_id, Some(&jwt))
-        .await
-        .map_err(|e| {
-            if matches!(e, aura_os_process::ProcessError::RunNotActive) {
-                ApiError::conflict(e.to_string())
-            } else {
-                ApiError::internal(e.to_string())
-            }
-        })?;
+    let client = require_process_storage_client(&state)?;
+    crate::process_automaton::cancel_process_run(client, &id, &run_id_str, &jwt).await?;
 
     Ok(Json(serde_json::json!({ "status": "cancelled" })))
 }

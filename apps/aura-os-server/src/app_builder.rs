@@ -36,12 +36,10 @@ fn spawn_health_checks(
 ) {
     if let Some(ref client) = storage_client {
         if client.has_internal_token() {
-            info!(
-                "aura-storage internal token configured; remote process proxy and scheduler sync are enabled"
-            );
+            info!("aura-storage internal token configured; remote process proxy is enabled");
         } else {
             info!(
-                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; process CRUD remains available, but scheduled execution requires the internal token"
+                "aura-storage is configured without AURA_STORAGE_INTERNAL_TOKEN; process CRUD remains available through user JWTs"
             );
         }
         let health_client = client.clone();
@@ -104,26 +102,6 @@ fn build_local_http_client() -> reqwest::Client {
         .connect_timeout(std::time::Duration::from_secs(3))
         .build()
         .expect("failed to build local HTTP client")
-}
-
-fn spawn_process_scheduler(
-    process_executor: Arc<aura_os_process::ProcessExecutor>,
-    storage_client: &Option<Arc<StorageClient>>,
-) {
-    let Some(storage_client) = storage_client.clone() else {
-        info!("Process scheduler disabled: aura-storage is not configured");
-        return;
-    };
-    if !storage_client.has_internal_token() {
-        info!("Process scheduler disabled: AURA_STORAGE_INTERNAL_TOKEN is not configured");
-        return;
-    }
-    let process_sched = Arc::new(aura_os_process::ProcessScheduler::new(
-        process_executor,
-        Some(storage_client),
-    ));
-    process_sched.spawn();
-    info!("Process scheduler spawned");
 }
 
 /// Build the [`aura_os_browser::BrowserManager`] using the real Chromium
@@ -425,22 +403,8 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
     let local_server_base_url = resolve_local_server_base_url();
     let http_client = build_local_http_client();
-    let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
-        event_broadcast.clone(),
-        data_dir.clone(),
-        store.clone(),
-        domain.agent_service.clone(),
-        core.org_service.clone(),
-        automaton_client.clone(),
-        storage_client.clone(),
-        domain.task_service.clone(),
-        router_url.clone(),
-        http_client.clone(),
-    ));
     let _local_server_base_url = local_server_base_url;
 
-    // Spawn scheduled process execution.
-    spawn_process_scheduler(process_executor.clone(), &storage_client);
     let agent_event_listener = Arc::new(AgentEventListener::new(100));
     agent_event_listener.spawn(event_broadcast.subscribe());
 
@@ -498,7 +462,6 @@ pub fn build_app_state(store_path: &Path) -> Result<AppState, StoreError> {
         agent_discovery_cache: Arc::new(dashmap::DashMap::new()),
         router_url,
         http_client,
-        process_executor,
         agent_event_listener,
         loop_log,
     })

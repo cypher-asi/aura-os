@@ -16,6 +16,7 @@ pub mod loop_log;
 
 pub(crate) mod orchestration_store;
 pub(crate) mod persistence;
+pub(crate) mod process_automaton;
 pub(crate) mod reconciler;
 pub(crate) mod router;
 pub(crate) mod state;
