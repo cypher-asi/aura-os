@@ -366,8 +366,8 @@ pub struct CachedTaskOutput {
     /// gate (see `completion_validation_failure_reason`) so a generic
     /// "no build step" rejection can be upgraded to a specific diagnostic
     /// when the real cause is a kernel policy denial (e.g. `run_command`
-    /// being blocked when the harness sidecar wasn't started with
-    /// `AURA_AUTONOMOUS_DEV_LOOP=1` / `AURA_ALLOW_RUN_COMMAND=1`).
+    /// being blocked because the harness was deliberately locked down
+    /// with `AURA_STRICT_MODE=1` or `ENABLE_CMD_TOOLS=false`).
     ///
     /// Populated by the event-handler loop; stays empty on runtimes that
     /// don't yet emit `tool_call_failed`, leaving the generic DoD reasons

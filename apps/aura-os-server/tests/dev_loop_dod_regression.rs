@@ -481,12 +481,10 @@ fn reset_rearms_project_push_stuck_for_next_streak() {
 
 // ---------------------------------------------------------------------------
 // DoD gate: specific diagnostic for kernel-policy-denied `run_command`.
-// See `fix(dev-loop): specific diagnostic when run_command denied by
-// kernel policy` -- when the harness sidecar launches without
-// `AURA_AUTONOMOUS_DEV_LOOP=1` / `AURA_ALLOW_RUN_COMMAND=1` every shell
-// invocation fails with `Tool 'run_command' is not allowed`. The gate
-// should surface that root cause instead of the misleading "no build
-// step was run" message.
+// `run_command` is on by default now, so this fires only when the
+// harness is deliberately locked down (`AURA_STRICT_MODE=1` /
+// `ENABLE_CMD_TOOLS=false`). The gate should surface that root cause
+// instead of the misleading "no build step was run" message.
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -513,9 +511,8 @@ fn gate_emits_policy_denial_diagnostic_when_run_command_denied() {
         "expected kernel-policy-denial diagnostic, got: {reason}"
     );
     assert!(
-        reason.contains("AURA_AUTONOMOUS_DEV_LOOP=1")
-            && reason.contains("AURA_ALLOW_RUN_COMMAND=1"),
-        "diagnostic must name both permissive env vars so the operator knows the fix, got: {reason}"
+        reason.contains("AURA_STRICT_MODE=1") && reason.contains("ENABLE_CMD_TOOLS=false"),
+        "diagnostic must name both lock-down knobs so the operator knows which to flip, got: {reason}"
     );
     assert!(
         !reason.contains("no build/compile step was run"),

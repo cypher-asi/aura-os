@@ -1030,20 +1030,18 @@ fn completion_validation_failure_reason(cached: &CachedTaskOutput) -> Option<&'s
         // If the automaton never got to run a build step because
         // `run_command` itself was denied by the kernel tool-policy
         // gate, surface the real cause instead of the generic "no
-        // build" message. Defense-in-depth against regressions of
-        // `feat(desktop): spawn autonomous harness sidecar with
-        // permissive policy` (commit a41c273b) -- if the sidecar
-        // launches without `AURA_AUTONOMOUS_DEV_LOOP=1` /
-        // `AURA_ALLOW_RUN_COMMAND=1`, every shell invocation fails
-        // with `Tool 'run_command' is not allowed` and the DoD
-        // rejection would otherwise blame the automaton.
+        // build" message. `run_command` is on by default now, so the
+        // only way this fires is a deliberate lock-down:
+        // `AURA_STRICT_MODE=1` or `ENABLE_CMD_TOOLS=false` on the
+        // harness. Name both in the diagnostic so the operator knows
+        // exactly which knob to flip.
         if cached
             .tool_call_failures
             .iter()
             .any(|f| f.tool_name == "run_command" && f.reason.contains("is not allowed"))
         {
             return Some(
-                "run_command is denied by kernel policy -- ensure AURA_AUTONOMOUS_DEV_LOOP=1 or AURA_ALLOW_RUN_COMMAND=1 on the harness sidecar",
+                "run_command is denied by kernel policy -- check that the harness is not running with AURA_STRICT_MODE=1 or ENABLE_CMD_TOOLS=false",
             );
         }
         return Some(
@@ -3585,9 +3583,9 @@ fn forward_automaton_events(params: ForwardParams) -> tokio::task::AbortHandle {
                                     // Definition-of-Done gate can
                                     // distinguish kernel-policy denials
                                     // (e.g. `run_command` blocked because
-                                    // the harness sidecar wasn't started
-                                    // with `AURA_AUTONOMOUS_DEV_LOOP=1` /
-                                    // `AURA_ALLOW_RUN_COMMAND=1`) from
+                                    // the harness sidecar was deliberately
+                                    // locked down with `AURA_STRICT_MODE=1`
+                                    // or `ENABLE_CMD_TOOLS=false`) from
                                     // genuine "automaton never ran a
                                     // build" failures. The harness emits
                                     // this event once its internal

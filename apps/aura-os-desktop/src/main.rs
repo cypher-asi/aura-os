@@ -690,14 +690,20 @@ fn parse_cli_args() -> DesktopCliArgs {
 /// Outcome of the policy probe against an external harness `/health`
 /// response. Reused by [`enforce_external_harness_or_exit`] and its
 /// unit tests so the decision matrix is pinned in one place.
+///
+/// `run_command` is on by default in aura-harness now (see
+/// `crates/aura-node/src/config/mod.rs::NodeConfig::default`), so the
+/// probe only *warns* when the advertised policy disagrees — the
+/// desktop no longer refuses to boot on a locked-down harness, because
+/// an operator may deliberately want that (e.g. `AURA_STRICT_MODE=1`
+/// in a shared environment).
 #[derive(Debug, PartialEq, Eq)]
 enum ExternalHarnessPolicy {
     /// Harness confirmed `run_command_enabled: true`. Safe to proceed.
     RunCommandEnabled,
-    /// Harness confirmed `run_command_enabled: false`. We exit so the
-    /// operator restarts it with the autonomous-mode envs set, rather
-    /// than surface as a 20-second tool-callback timeout the first time
-    /// an agent tries `cargo check`.
+    /// Harness confirmed `run_command_enabled: false`. Warn — the
+    /// autonomous dev loop will fail to run cargo/git/test commands —
+    /// but let the desktop boot anyway.
     RunCommandDisabled,
     /// Health probe succeeded but the field is missing — this is a
     /// pre-policy-disclosure harness (older than the /health schema
@@ -733,16 +739,12 @@ fn classify_external_harness_policy(
 /// of silently coming up and surfacing as a 20-second tool-callback timeout
 /// the first time an agent tries to act.
 ///
-/// Beyond liveness, we now also fetch the harness's `/health` policy
-/// fields (`run_command_enabled`, `shell_enabled`; added to aura-node
-/// in lockstep with this check) and refuse to boot when the external
-/// harness explicitly reports `run_command` is disabled. That is the
-/// 3.0-class DoD failure pattern in external-harness mode: the
-/// `aura-node` binary now honours `AURA_AUTONOMOUS_DEV_LOOP` (see
-/// `crates/aura-node/src/config/mod.rs::NodeConfig::from_env`), but
-/// the desktop no longer controls the env of the externally-spawned
-/// process, so if the operator forgot to set it, every `cargo check`
-/// the autonomous loop emits hits the kernel category gate.
+/// After the `run_command`-by-default refactor this check is strictly
+/// a diagnostic: we still fetch `/health` and emit a warning when the
+/// harness advertises `run_command_enabled=false`, but we no longer
+/// refuse to boot — an operator running a hardened harness
+/// (`AURA_STRICT_MODE=1`, `ENABLE_CMD_TOOLS=false`) is a legitimate
+/// deployment shape, not a misconfiguration.
 fn enforce_external_harness_or_exit() {
     let Some(url) = env_string("LOCAL_HARNESS_URL").map(|v| v.trim_end_matches('/').to_string())
     else {
@@ -767,26 +769,20 @@ fn enforce_external_harness_or_exit() {
             info!(url = %url, "external harness policy check: run_command enabled");
         }
         ExternalHarnessPolicy::RunCommandDisabled => {
-            eprintln!(
-                "--external-harness is pointed at {url} but that harness reports \
-                 run_command_enabled=false on /health. The autonomous dev loop cannot run \
-                 cargo/git/test commands in this mode.\n\n\
-                 Restart the external harness with the autonomous-mode envs set:\n\
-                 \n\
-                 \tAURA_AUTONOMOUS_DEV_LOOP=1 aura-node\n\
-                 \n\
-                 (or `AURA_ALLOW_RUN_COMMAND=1 AURA_ALLOW_SHELL=1` if you want a narrower \
-                 policy). Then rerun aura-os-desktop --external-harness."
+            warn!(
+                url = %url,
+                "external harness reports run_command_enabled=false on /health. \
+                 Continuing, but the autonomous dev loop will not be able to run \
+                 cargo/git/test commands. To re-enable, either unset \
+                 AURA_STRICT_MODE on the harness or set ENABLE_CMD_TOOLS=true."
             );
-            std::process::exit(2);
         }
         ExternalHarnessPolicy::UnknownLegacyHarness => {
             warn!(
                 url = %url,
                 "external harness /health did not publish run_command_enabled; \
-                 assuming a pre-policy-disclosure aura-node build. If run_command invocations \
-                 fail with 'command tools not enabled', upgrade the harness or restart it \
-                 with AURA_AUTONOMOUS_DEV_LOOP=1."
+                 assuming a pre-policy-disclosure aura-node build. Upgrade the \
+                 harness if run_command invocations start failing."
             );
         }
         ExternalHarnessPolicy::UnparseableResponse => {
@@ -854,19 +850,15 @@ fn maybe_spawn_local_harness_sidecar(data_dir: &Path) -> Option<Child> {
     }
 
     let mut command = Command::new(&harness_binary);
-    // Autonomous dev-loop sidecar: run fully permissive so agents can
-    // exercise cargo check/test/fmt/clippy — the DoD gate the
-    // harness enforces demands it. The interactive TUI flow is
-    // unaffected (no env flag set there). `AURA_ALLOW_RUN_COMMAND` +
-    // `AURA_ALLOW_SHELL` are belt-and-braces in case an operator
-    // overrides `AURA_AUTONOMOUS_DEV_LOOP=0` downstream. We
-    // deliberately leave `AURA_ALLOWED_COMMANDS` unset so the empty
-    // `binary_allowlist` keeps its "all binaries allowed" semantics.
+    // Bundled sidecar: `run_command` is on by default in aura-node
+    // now, so we only need to opt into shell fan-out (still gated
+    // separately because `sh`/`bash`/`pwsh` fan-out is a distinct
+    // blast-radius concern). `AURA_ALLOWED_COMMANDS` is deliberately
+    // left unset so the empty `binary_allowlist` keeps its "all
+    // binaries allowed" semantics for the autonomous dev loop.
     command
         .env("AURA_LISTEN_ADDR", &listen_addr)
         .env("AURA_DATA_DIR", &harness_data_dir)
-        .env("AURA_AUTONOMOUS_DEV_LOOP", "1")
-        .env("AURA_ALLOW_RUN_COMMAND", "1")
         .env("AURA_ALLOW_SHELL", "1");
     configure_background_child(&mut command, &harness_data_dir.join("sidecar.log"));
 
@@ -1731,11 +1723,12 @@ mod tests {
     }
 
     #[test]
-    fn classify_policy_treats_explicit_false_as_disabled_and_will_exit() {
-        // This is the 3.0-class failure: operator started the external
-        // harness without AURA_AUTONOMOUS_DEV_LOOP=1. The desktop must
-        // detect it at startup and refuse to boot rather than letting
-        // the first agent `run_command` call time out after 20s.
+    fn classify_policy_treats_explicit_false_as_disabled() {
+        // A harness intentionally locked down with AURA_STRICT_MODE=1
+        // or ENABLE_CMD_TOOLS=false is a legitimate deployment shape.
+        // We classify it as `RunCommandDisabled` so the desktop can
+        // log a warning, but no longer refuse to boot (see
+        // `enforce_external_harness_or_exit`).
         let body = serde_json::json!({
             "status": "ok",
             "version": "0.1.0",
